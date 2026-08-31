@@ -48,9 +48,14 @@ call-site TODO wires to it when you merge.
    overwrite a field a human has edited — 101's writer API enforces this;
    your design doc documents the precedence rule you agree on.
 5. **Model adapter + eval (D-32)**: implement `ExtractionModel` for GPT-5.6
-   Luna (presumptive default), Claude Haiku 4.5, and Workers AI Llama 3.1
-   8B behind one interface. Re-verify current pricing and model lineup at
-   design time — this space moved twice in summer 2026 alone. Design-phase eval: ~20 real product pages
+   Luna (presumptive default), Claude Haiku 4.5, and DeepSeek V4 Flash via
+   Workers AI (`@cf/deepseek-ai/deepseek-v4-flash-0731` — on-platform, no
+   new vendor, free-tier neurons) behind one interface. Re-verify current
+   pricing and model lineup at design time — this space moved three times
+   in summer 2026 alone.
+5b. **Prompt hygiene rule (all vendors)**: enrichment prompts contain page
+   content and the URL only — never user identifiers, run data, or any
+   user-linked context. Public data in, public data out. Design-phase eval: ~20 real product pages
    (fixture snapshots committed, including at least two multi-part garments —
    e.g. two-layer shorts, a lined jacket) hand-labeled for composition/weight/wind/
    water; report per-field accuracy per model in the design doc. Ship the
