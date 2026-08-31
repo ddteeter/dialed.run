@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #0B0B0E; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; color: #0B0B0E; background: #F4F3EF; overflow-x: hidden;">
+
+  <!-- HERO -->
+  <section style="background: #0B0B0E; color: #F4F3EF; padding: 56px 48px 0;">
+    <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Brand Brief &nbsp;/&nbsp; v0.2 &nbsp;/&nbsp; Aug 2026</span>
+        <span style="color: #FF2D8A;">Name locked: dialed.run</span>
+      </div>
+
+      <h1 style="font-family: 'Archivo Black', Helvetica, sans-serif; font-size: clamp(56px, 11vw, 148px); line-height: 0.86; letter-spacing: -0.035em; margin: 0; text-transform: uppercase;">
+        Every run<br />
+        has an <span style="color: #FF2D8A;">outfit.</span><br />
+        <span style="color: #00E0C6;">Log it.</span>
+      </h1>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 32px; padding-bottom: 56px; border-bottom: 1px solid #24242B;">
+        <p style="grid-column: span 2; margin: 0; font-size: 21px; line-height: 1.45; max-width: 620px; text-wrap: pretty; color: #DEDDD6;">
+          A virtual wardrobe for runners. Log what you wore, on which run, in which weather — then get told what to wear next time. Social by default, useful alone.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; color: #8B8B93; letter-spacing: 0.04em;">
+          <span style="color: #F4F3EF;">IN THIS BRIEF</span>
+          <a href="#names">01 &nbsp;Name</a>
+          <a href="#logo">02 &nbsp;Logo direction</a>
+          <a href="#color">03 &nbsp;Color</a>
+          <a href="#type">04 &nbsp;Typography</a>
+          <a href="#voice">05 &nbsp;Voice</a>
+          <a href="#principles">06 &nbsp;Principles</a>
+          <a href="#lexicon">07 &nbsp;Feature names</a>
+          <a href="#ui">08 &nbsp;UI application</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="overflow: hidden; white-space: nowrap; padding: 22px 0; background: #FF2D8A; color: #0B0B0E; margin-top: 0; width: 100vw; margin-left: calc(50% - 50vw);">
+      <div style="display: inline-block; animation: ticker 28s linear infinite; font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.01em; text-transform: uppercase;">
+        <span>38°F · light rain · 12mph wind &nbsp;✳&nbsp; long sleeve + shorts + gloves &nbsp;✳&nbsp; worked &nbsp;✳&nbsp; 52°F · clear &nbsp;✳&nbsp; singlet + split shorts &nbsp;✳&nbsp; too cold at mile 1 &nbsp;✳&nbsp; 22°F · snow &nbsp;✳&nbsp; two layers + buff &nbsp;✳&nbsp; nailed it &nbsp;✳&nbsp; </span>
+        <span>38°F · light rain · 12mph wind &nbsp;✳&nbsp; long sleeve + shorts + gloves &nbsp;✳&nbsp; worked &nbsp;✳&nbsp; 52°F · clear &nbsp;✳&nbsp; singlet + split shorts &nbsp;✳&nbsp; too cold at mile 1 &nbsp;✳&nbsp; 22°F · snow &nbsp;✳&nbsp; two layers + buff &nbsp;✳&nbsp; nailed it &nbsp;✳&nbsp; </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRAME -->
+  <section style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">00 / The frame</div>
+      <div style="display: flex; flex-direction: column; gap: 40px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(30px, 4vw, 46px); line-height: 1.03; letter-spacing: -0.02em; margin: 0; max-width: 780px;">Runners solve the same dressing problem 300 times a year, from memory. We turn that memory into data.</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">CATEGORY TRUTH</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Every runner owns 40+ pieces of technical clothing and mentally re-derives the same rules every morning.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">THE GAP</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Training apps log the run. Nobody logs the kit. The most-repeated decision in the sport is the least-instrumented.</p>
+          </div>
+          <div style="background: #FF2D8A; color: #0B0B0E; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">OUR CLAIM</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5; font-weight: 600;">Your closet, indexed by weather and by what actually worked — yours and everyone else's.</p>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Habit runners · 15–30 mi/wk</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Race-focused amateurs</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Gear trackers</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px; background: #F5FF3D;">Variable-climate runners</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 01 NAME -->
+  <section id="names" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">01 / Name rationale</div>
+      <div style="display: flex; flex-direction: column; gap: 36px;">
+        <div style="background: #0B0B0E; color: #F4F3EF; padding: 32px; display: flex; flex-direction: column; gap: 18px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #F5FF3D;">Decided</span>
+          <div style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: clamp(38px, 6vw, 68px); letter-spacing: -0.045em; line-height: 1;">
+            <span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span>
+          </div>
+          <p style="margin: 0; font-size: 17px; line-height: 1.55; max-width: 760px; color: #DEDDD6; text-wrap: pretty;">Names the verdict, not the garment. It's already the word runners use for a nailed outfit, so the name, the success state, and the payoff of the recommendation collapse into one idea. Spells itself on first hearing, and it's native slang in cycling and skiing too — so the word survives a second sport where <em>singlet</em> could not.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 22px; padding-top: 6px; border-top: 1px solid #24242B;">
+            <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">SAY IT</span><span style="font-size: 15px; line-height: 1.45; color: #DEDDD6;">"Get dialed." Lowercase always, including at the start of a sentence.</span></div>
+            <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">HOLD</span><span style="font-size: 15px; line-height: 1.45; color: #DEDDD6;">dialed.bike, dialed.ski, dialed.cc — cheap insurance, no commitment.</span></div>
+            <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">WATCH FOR</span><span style="font-size: 15px; line-height: 1.45; color: #DEDDD6;">The name says nothing about clothing alone. The tagline has to carry that.</span></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ showRejected }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; max-width: 720px; color: #7A7A70; text-wrap: pretty;">How we got here — the five candidates considered, kept for the record. All were available on .run, a TLD that does real work here, reading as a verb rather than a domain hack.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+          <div style="border: 2px solid #0B0B0E; background: #F4F3EF; padding: 28px; display: flex; flex-direction: column; gap: 18px;">
+            <div style="font-family: 'Archivo Black', sans-serif; font-size: 38px; letter-spacing: -0.03em;">singlet<span style="color: #FF2D8A;">.run</span></div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.5;">
+              <p style="margin: 0;"><strong>Reads as:</strong> an insider noun. A singlet is the most iconic piece of running clothing there is — earned, race-day, tribal.</p>
+              <p style="margin: 0;"><strong>Strength:</strong> short, memorable, obviously about apparel, obviously about running. Great as a wordmark; the "t" is a hanger hook waiting to happen.</p>
+              <p style="margin: 0;"><strong>Risk:</strong> semantically narrow — a singlet is one summer garment, and half the value here is cold-weather layering. Could read race-only to habit runners.</p>
+            </div>
+            <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #7A7A70;">Recall: high &nbsp;·&nbsp; Scope: narrow &nbsp;·&nbsp; Warmth: high</div>
+          </div>
+
+          <div style="border: 2px solid #0B0B0E; background: #0B0B0E; color: #F4F3EF; padding: 28px; display: flex; flex-direction: column; gap: 18px;">
+            <div style="font-family: 'Archivo Black', sans-serif; font-size: 38px; letter-spacing: -0.03em;">outkitted<span style="color: #00E0C6;">.run</span></div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.5; color: #DEDDD6;">
+              <p style="margin: 0;"><strong style="color: #F4F3EF;">Reads as:</strong> a verb-ish state. "Kit" covers every layer, every season, plus shoes and accessories — the whole wardrobe.</p>
+              <p style="margin: 0;"><strong style="color: #F4F3EF;">Strength:</strong> scope matches the product, including future gear recommendations. "Get outkitted" is a usable command.</p>
+              <p style="margin: 0;"><strong style="color: #F4F3EF;">Risk:</strong> longer, easy to mistype (outfitted / outkit), and "out-kitted" can imply being beaten on gear. Less pronounceable on first read.</p>
+            </div>
+            <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #24242B; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #8B8B93;">Recall: medium &nbsp;·&nbsp; Scope: broad &nbsp;·&nbsp; Warmth: medium</div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #DCDBD2; padding-bottom: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">Name territories &nbsp;·&nbsp; all .run domains confirmed available</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">CHECKED AUG 2026</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+            <div style="background: #F4F3EF; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: #7A7A70;">TERRITORY · NAME THE PROBLEM</span>
+              <div style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em;">layers<span style="color: #00E0C6;">.run</span></div>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">Layering <em>is</em> the decision the app makes. Spells itself, works as a verb, covers every season plus shoes and accessories — scope never outgrows it.</p>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Risk: generic. Needs the loudest identity of the three to feel like a brand rather than a category.</p>
+              <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">RECALL: MED-HIGH · SCOPE: BROADEST · SPELLING: PERFECT</div>
+            </div>
+            <div style="background: #F4F3EF; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: #7A7A70;">TERRITORY · NAME THE VERDICT</span>
+              <div style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em;">dialed<span style="color: #FF2D8A;">.run</span></div>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">The success state, as the brand. Already our word for a nailed outfit — the name, the verdict, and the payoff of the recommendation all become one idea. "Get dialed."</p>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Risk: says nothing about clothing on its own. Carries the most attitude and the least literal meaning.</p>
+              <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">RECALL: HIGH · SCOPE: OPEN · SPELLING: PERFECT</div>
+            </div>
+            <div style="background: #F4F3EF; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: #7A7A70;">TERRITORY · NAME THE PHYSICS</span>
+              <div style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em;">feelslike<span style="color: #F5FF3D; -webkit-text-stroke: 1px #0B0B0E;">.run</span></div>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">The literal thesis: you dress for feels-like, not the thermometer. The most intellectually honest name here, and instantly meaningful to any cold-climate runner.</p>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Risk: two words jammed together, longest to type, and reads as a weather app before an apparel app.</p>
+              <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">RECALL: MED · SCOPE: BROAD · SPELLING: RISKY</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px; padding-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #DCDBD2; padding-bottom: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">Name durability &nbsp;·&nbsp; will this word survive a second sport?</span>
+          </div>
+          <p style="margin: 0; font-size: 16px; line-height: 1.55; max-width: 760px; text-wrap: pretty;">A domain is a cheap, swappable asset. A name whose <em>meaning</em> is locked to running is not. If cycling, skiing, or trail-adjacent sports are ever on the table, the word has to travel — the TLD can simply be swapped per sport (<strong>dialed.run → dialed.bike → dialed.ski</strong>), keeping one wordmark while each vertical gets an address that looks purpose-built for it.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+            <div style="background: #EDECE3; padding: 12px 20px; display: grid; grid-template-columns: 150px 130px 1fr; gap: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">
+              <span>CANDIDATE</span><span>PORTABILITY</span><span>WHY</span>
+            </div>
+            <div style="background: #F4F3EF; padding: 16px 20px; display: grid; grid-template-columns: 150px 130px 1fr; gap: 20px; align-items: baseline;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.025em;">dialed</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; background: #00E0C6; padding: 4px 8px; justify-self: start;">TRAVELS BEST</span>
+              <span style="font-size: 15px; line-height: 1.45;">Already native slang in cycling and MTB. Sport-neutral by construction, and it names the outcome rather than the activity.</span>
+            </div>
+            <div style="background: #F4F3EF; padding: 16px 20px; display: grid; grid-template-columns: 150px 130px 1fr; gap: 20px; align-items: baseline;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.025em;">layers</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; background: #00E0C6; padding: 4px 8px; justify-self: start;">FULLY PORTABLE</span>
+              <span style="font-size: 15px; line-height: 1.45;">Every cold-weather sport has a layering problem. No running-specific baggage at all.</span>
+            </div>
+            <div style="background: #F4F3EF; padding: 16px 20px; display: grid; grid-template-columns: 150px 130px 1fr; gap: 20px; align-items: baseline;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.025em;">feelslike</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; background: #00E0C6; padding: 4px 8px; justify-self: start;">FULLY PORTABLE</span>
+              <span style="font-size: 15px; line-height: 1.45;">It's physics, not a sport. Portable, but pays the spelling tax in every vertical.</span>
+            </div>
+            <div style="background: #F4F3EF; padding: 16px 20px; display: grid; grid-template-columns: 150px 130px 1fr; gap: 20px; align-items: baseline;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.025em;">outkitted</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; background: #F5FF3D; padding: 4px 8px; justify-self: start;">SEMI-LOCKED</span>
+              <span style="font-size: 15px; line-height: 1.45;">"Kit" travels, but skews cycling harder than running — it reads as someone else's vocabulary in both.</span>
+            </div>
+            <div style="background: #F4F3EF; padding: 16px 20px; display: grid; grid-template-columns: 150px 130px 1fr; gap: 20px; align-items: baseline;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.025em;">singlet</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; background: #FF2D8A; color: #0B0B0E; padding: 4px 8px; justify-self: start;">LOCKED</span>
+              <span style="font-size: 15px; line-height: 1.45;">Running, track, wrestling — nothing else. The strongest recall on the list and the shortest ceiling.</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; padding-top: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Hold, don't build</span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">Secure the second-sport TLDs (.bike, .ski, .cc) with the launch domain. Cheap insurance; no product commitment implied.</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Don't pay today</span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">Never soften the running-specific identity for a sport three years out. Vertical credibility now beats optionality later.</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Verbal fallback</span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">If a locked name wins on merit anyway, the expansion path is a house brand above it — not a rename of the running app.</p>
+            </div>
+          </div>
+        </div>
+
+        </sc-if>
+
+        <div style="background: #F5FF3D; padding: 28px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Why dialed beat the shortlist</span>
+          <p style="margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; max-width: 820px; text-wrap: pretty;">Perfect spelling, high recall, and zero semantic debt — the only candidate that scores well on all three.</p>
+          <p style="margin: 0; font-size: 15px; line-height: 1.55; max-width: 820px;"><strong>singlet</strong> had the best recall but locked the brand to one summer garment and one sport. <strong>outkitted</strong> matched the scope but invited mistyping and read as cycling vocabulary. <strong>layers</strong> was the most durable and the most generic. <strong>feelslike</strong> was the most honest and the hardest to spell. Dialed gives up literal meaning about clothing — a tagline's job, not a name's.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 LOGO -->
+  <section id="logo" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2; background: #EDECE3;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">02 / Logo direction</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 800px;">Brackets. Dialed means <em>inside the bounds</em> — so the identity is a notation, not a mascot.</h2>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; max-width: 740px;">Engineering notation for "within spec." It escapes being a logo and becomes a way of writing: every range the product shows gets bracketed, so the brand appears hundreds of times a session without ever being a badge stuck in a corner. Type-only — nothing to redraw per sport, nothing to maintain as artwork.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 36px 28px; display: flex; flex-direction: column; gap: 24px; align-items: flex-start;">
+            <div style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.045em; line-height: 1;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #9A9A90;">.run</span><span style="color: #FF2D8A;">]</span></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #7A7A70; letter-spacing: 0.04em;">A · PRIMARY LOCKUP<br />Pink brackets, grey TLD. Bracket gap 0.10em. Default for headers and nav.</div>
+          </div>
+          <div style="background: #F4F3EF; padding: 36px 28px; display: flex; flex-direction: column; gap: 24px; align-items: flex-start;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+              <div style="width: 62px; height: 62px; border-radius: 14px; background: #0B0B0E; display: flex; align-items: center; justify-content: center; gap: 0.06em; font-family: 'Archivo Black', sans-serif; font-size: 34px; line-height: 1; letter-spacing: -0.04em;"><span style="color: #FF2D8A;">[</span><span style="color: #F4F3EF;">d</span><span style="color: #FF2D8A;">]</span></div>
+              <div style="width: 34px; height: 34px; border-radius: 8px; background: #0B0B0E; display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif; font-size: 19px; line-height: 1; letter-spacing: -0.04em;"><span style="color: #FF2D8A;">[</span><span style="color: #F4F3EF;">d</span><span style="color: #FF2D8A;">]</span></div>
+              <div style="width: 18px; height: 18px; border-radius: 5px; background: #0B0B0E; display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif; font-size: 11px; line-height: 1;"><span style="color: #FF2D8A;">[</span><span style="color: #F4F3EF;">d</span><span style="color: #FF2D8A;">]</span></div>
+            </div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #7A7A70; letter-spacing: 0.04em;">B · BRACKETED MONOGRAM<br />App icon, avatar, favicon. Legible to 18px.</div>
+          </div>
+          <div style="background: #F4F3EF; padding: 36px 28px; display: flex; flex-direction: column; gap: 24px; align-items: flex-start;">
+            <div style="display: flex; flex-direction: column; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.04em; color: #0B0B0E;">
+              <span>[38–46°]</span>
+              <span>[DIALED]</span>
+              <span>[8 OF 9]</span>
+              <span>[LOW CONFIDENCE]</span>
+            </div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #7A7A70; letter-spacing: 0.04em;">C · THE NOTATION<br />The system doing real work. Any bounded value, in mono, wears brackets.</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; padding-top: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Bracket rules</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Brackets are pink when the wordmark is the subject, and inherit the text colour everywhere else. Never both in one viewport. Tracking stays tight (−4.5%); gap between bracket and word is 0.10em.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">What earns brackets</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Bounded, measured values only: temperature ranges, verdict counts, confidence states, sweet spots. Never a garment name, a username, or free prose — that would make the device meaningless.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Don't</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Round the brackets, outline them, gradient them, or swap them for parentheses or chevrons. No running-figure icon, no arch, no italics for "speed."</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Clearspace &amp; secondary mark</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">One cap-height on all sides; minimum 96px wide for the lockup. A registration crosshair is held in reserve as a wordless mark for merch and embroidery.</p>
+          </div>
+        </div>
+
+        <div style="background: #0B0B0E; color: #F4F3EF; padding: 24px 28px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #F5FF3D;">Still to draw</span>
+          <p style="margin: 0; font-size: 15px; line-height: 1.55; max-width: 780px; color: #DEDDD6;">These are direction studies set in Archivo Black, not final artwork. A type designer should draw the brackets as real vectors — weight matched to the word, optical spacing, and a heavier variant that survives embroidery and screen print.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 COLOR -->
+  <section id="color" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">03 / Color system</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 780px;">One loud pink, two loud supports, and enough near-black to make them louder.</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #FF2D8A; color: #0B0B0E; padding: 24px; min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.02em;">Course Pink</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;">#FF2D8A<br />oklch(66% .25 355)<br /><span style="opacity: .7;">PRIMARY · brand, CTAs, "worked" state</span></div>
+          </div>
+          <div style="background: #F5FF3D; color: #0B0B0E; padding: 24px; min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.02em;">Hi-Viz</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;">#F5FF3D<br />oklch(96% .21 111)<br /><span style="opacity: .7;">ALERT · recommendations, highlights</span></div>
+          </div>
+          <div style="background: #00E0C6; color: #0B0B0E; padding: 24px; min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.02em;">Split Teal</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;">#00E0C6<br />oklch(83% .15 178)<br /><span style="opacity: .7;">DATA · weather, charts, social</span></div>
+          </div>
+          <div style="background: #0B0B0E; color: #F4F3EF; padding: 24px; min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.02em;">Night Run</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em; color: #8B8B93;">#0B0B0E<br />oklch(15% .01 285)<br /><span>INK · type, hero fields, feed shell</span></div>
+          </div>
+          <div style="background: #F4F3EF; color: #0B0B0E; padding: 24px; min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.02em;">Chalk</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em; color: #7A7A70;">#F4F3EF<br />oklch(96% .005 95)<br /><span>PAPER · surfaces, cards, reading</span></div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Ratio rule</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">60% ink or chalk, 30% one accent, 10% the other two. Never three accents fighting in one viewport.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Semantic locks</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Teal always means measured conditions. Yellow always means the app is telling you something. Pink is brand and approval.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Contrast</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">All three accents carry ink type only — never chalk on pink or yellow at body sizes. Ink on accent clears 4.5:1.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Photography</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Outfit photos are the real color in the product. Accents step back to labels and edges wherever a user photo appears.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 TYPE -->
+  <section id="type" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2; background: #0B0B0E; color: #F4F3EF;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">04 / Typography</div>
+      <div style="display: flex; flex-direction: column; gap: 40px;">
+        <div style="display: flex; flex-direction: column; gap: 18px; padding-bottom: 32px; border-bottom: 1px solid #24242B;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #FF2D8A;">DISPLAY — ARCHIVO BLACK</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">clamp(32–148px) · tracking −3.5% · uppercase</span>
+          </div>
+          <div style="font-family: 'Archivo Black', sans-serif; font-size: clamp(38px, 7vw, 86px); line-height: 0.9; letter-spacing: -0.035em; text-transform: uppercase;">38° AND RAINING</div>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 620px;">Headlines, temperatures, verdicts. Always short — five words maximum. If it needs a second line it probably isn't display copy.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px; padding-bottom: 32px; border-bottom: 1px solid #24242B;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #00E0C6;">TEXT — ARCHIVO 400 / 600 / 800</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">15 / 17 / 21px · line-height 1.5</span>
+          </div>
+          <p style="margin: 0; font-size: 21px; line-height: 1.45; max-width: 720px;">Interface copy, feed text, comments, onboarding. Archivo's slightly condensed grotesque holds up in dense feed rows and stays friendly at reading sizes.</p>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 620px;"><strong style="color: #F4F3EF;">Semibold</strong> for garment names and usernames. Regular for everything else. Never light weights.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #F5FF3D;">DATA — IBM PLEX MONO 400 / 500</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">11 / 12 / 13px · tracking +8% · uppercase labels</span>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: 0.02em;">6.2 MI · 8:41 /MI · 41°F · 88% HUM · SE 9MPH</div>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 620px;">Every measured value — pace, distance, weather, timestamps, wear counts. Mono is the tell that a number came from a sensor, not a person.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 VOICE -->
+  <section id="voice" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">05 / Voice &amp; tone</div>
+      <div style="display: flex; flex-direction: column; gap: 36px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 780px;">Talk like a fast friend at the trailhead: certain, brief, never precious about gear.</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">We sound like</span>
+            <p style="margin: 0; font-size: 16px; line-height: 1.5;">Declarative. Numeric when numbers help. Confident enough to make a call: "Long sleeve. Not the jacket."</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">We never sound like</span>
+            <p style="margin: 0; font-size: 16px; line-height: 1.5;">A hype coach ("CRUSH IT"), a fashion app ("curate your looks"), or a hedging assistant ("you may want to consider").</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">On being wrong</span>
+            <p style="margin: 0; font-size: 16px; line-height: 1.5;">Own it plainly and learn out loud. "Too warm. Noted — we'll drop the vest above 45°."</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 26px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">RECOMMENDATION</span>
+            <p style="margin: 0; font-size: 19px; line-height: 1.35; font-weight: 700;">"41° and damp at 6am. Long sleeve, shorts, thin gloves. You'll want the gloves for two miles and then you won't."</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Specific, opinionated, one dry observation. Never a list of options.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 26px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMPTY WARDROBE</span>
+            <p style="margin: 0; font-size: 19px; line-height: 1.35; font-weight: 700;">"Nothing in here yet. Add the five things you actually reach for — the rest can wait."</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Lower the bar. Never ask for a full inventory up front.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 26px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">POST-RUN PROMPT</span>
+            <p style="margin: 0; font-size: 19px; line-height: 1.35; font-weight: 700;">"6.2 at 41°. Did it work?"</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Three taps maximum. The feedback loop is the product; never make it feel like a survey.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 26px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">SOCIAL / NOTIFICATION</span>
+            <p style="margin: 0; font-size: 19px; line-height: 1.35; font-weight: 700;">"Dana ran your conditions yesterday. She wore less than you did."</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A7A70;">Comparison as usefulness, with a light needle. Never shame, never leaderboards for clothing.</p>
+          </div>
+        </div>
+
+        <div style="background: #0B0B0E; color: #F4F3EF; padding: 28px; display: flex; flex-wrap: wrap; gap: 32px;">
+          <div style="flex: 1 1 240px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WORDS WE USE</span>
+            <p style="margin: 8px 0 0; font-size: 16px; line-height: 1.6;">kit · layer · worked · too warm · conditions · wore · reach for · dial in</p>
+          </div>
+          <div style="flex: 1 1 240px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">WORDS WE DON'T</span>
+            <p style="margin: 8px 0 0; font-size: 16px; line-height: 1.6;">outfit of the day · look · style · curate · fit check · journey · unlock · optimize</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 PRINCIPLES -->
+  <section id="principles" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2; background: #EDECE3;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">06 / Product principles</div>
+      <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+        <div style="background: #F4F3EF; padding: 28px; display: grid; grid-template-columns: 72px 1fr; gap: 24px; align-items: start;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 40px; line-height: 0.8; color: #FF2D8A; letter-spacing: -0.04em;">01</span>
+          <div><h3 style="margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em;">Logging must be cheaper than remembering</h3><p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 680px;">Associating an outfit to a run is taps, not forms. Pre-fill from the last similar run and let the user correct it.</p></div>
+        </div>
+        <div style="background: #F4F3EF; padding: 28px; display: grid; grid-template-columns: 72px 1fr; gap: 24px; align-items: start;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 40px; line-height: 0.8; color: #FF2D8A; letter-spacing: -0.04em;">02</span>
+          <div><h3 style="margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em;">Weather is never typed by a human</h3><p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 680px;">Conditions are derived from GPS and time, always. Automatic truth is what makes the dataset worth anything.</p></div>
+        </div>
+        <div style="background: #F4F3EF; padding: 28px; display: grid; grid-template-columns: 72px 1fr; gap: 24px; align-items: start;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 40px; line-height: 0.8; color: #FF2D8A; letter-spacing: -0.04em;">03</span>
+          <div><h3 style="margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em;">Recommend, don't present options</h3><p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 680px;">One outfit, with a reason, from clothes they own. Alternatives live one tap behind the answer — never beside it.</p></div>
+        </div>
+        <div style="background: #F4F3EF; padding: 28px; display: grid; grid-template-columns: 72px 1fr; gap: 24px; align-items: start;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 40px; line-height: 0.8; color: #FF2D8A; letter-spacing: -0.04em;">04</span>
+          <div><h3 style="margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em;">The feed is reference, not performance</h3><p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 680px;">People follow others to see what worked in weather they're about to run in. Sort and surface for usefulness before recency.</p></div>
+        </div>
+        <div style="background: #F4F3EF; padding: 28px; display: grid; grid-template-columns: 72px 1fr; gap: 24px; align-items: start;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 40px; line-height: 0.8; color: #FF2D8A; letter-spacing: -0.04em;">05</span>
+          <div><h3 style="margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em;">Gear talk stays honest</h3><p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 680px;">When purchase suggestions arrive, they're earned by gaps in the user's own data and clearly marked. Never dressed as a recommendation.</p></div>
+        </div>
+        <div style="background: #F4F3EF; padding: 28px; display: grid; grid-template-columns: 72px 1fr; gap: 24px; align-items: start;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 40px; line-height: 0.8; color: #FF2D8A; letter-spacing: -0.04em;">06</span>
+          <div><h3 style="margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em;">Running on the surface, sport-agnostic underneath</h3><p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 680px;">The engine is a wardrobe, a conditions record, and a comfort verdict — none of which are inherently about running. Keep garment categories out of running-only vocabulary and don't let the activity record assume pace-per-mile. The interface stays unapologetically for runners; the data model quietly doesn't care. Costs nothing now, saves a migration if cycling or skiing ever earns its own front door.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 LEXICON -->
+  <section id="lexicon" style="padding: 88px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">07 / Feature names</div>
+      <div style="display: flex; flex-direction: column; gap: 28px;">
+        <p style="margin: 0; font-size: 19px; line-height: 1.5; max-width: 720px; text-wrap: pretty;">Plain nouns runners already say. One coined term maximum — everything else should be guessable without a tutorial.</p>
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 20px 24px; display: grid; grid-template-columns: 200px 1fr 1fr; gap: 20px; align-items: baseline;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">The Closet</span>
+            <span style="font-size: 15px; line-height: 1.45;">Your wardrobe of owned pieces</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70; line-height: 1.5;">Warmer than "wardrobe," less twee than "gear bag"</span>
+          </div>
+          <div style="background: #F4F3EF; padding: 20px 24px; display: grid; grid-template-columns: 200px 1fr 1fr; gap: 20px; align-items: baseline;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">A Kit</span>
+            <span style="font-size: 15px; line-height: 1.45;">One saved combination of pieces</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70; line-height: 1.5;">Reusable, nameable: "Cold Rain Kit"</span>
+          </div>
+          <div style="background: #F4F3EF; padding: 20px 24px; display: grid; grid-template-columns: 200px 1fr 1fr; gap: 20px; align-items: baseline;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">The Call</span>
+            <span style="font-size: 15px; line-height: 1.45;">The outfit recommendation</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70; line-height: 1.5;">"Make the call" · verby, decisive, short in UI</span>
+          </div>
+          <div style="background: #F4F3EF; padding: 20px 24px; display: grid; grid-template-columns: 200px 1fr 1fr; gap: 20px; align-items: baseline;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">Verdict</span>
+            <span style="font-size: 15px; line-height: 1.45;">Post-run feedback on what you wore</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70; line-height: 1.5;">Five states: way cold · a bit cold · dialed · a bit warm · way warm</span>
+          </div>
+          <div style="background: #F4F3EF; padding: 20px 24px; display: grid; grid-template-columns: 200px 1fr 1fr; gap: 20px; align-items: baseline;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">Conditions</span>
+            <span style="font-size: 15px; line-height: 1.45;">Auto-attached weather for a run</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70; line-height: 1.5;">Always mono, always teal</span>
+          </div>
+          <div style="background: #F4F3EF; padding: 20px 24px; display: grid; grid-template-columns: 200px 1fr 1fr; gap: 20px; align-items: baseline;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">Mileage</span>
+            <span style="font-size: 15px; line-height: 1.45;">Miles logged per garment</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70; line-height: 1.5;">The retention hook nobody else offers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 UI -->
+  <section id="ui" style="padding: 88px 48px 96px; background: #0B0B0E; color: #F4F3EF;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">08 / UI application</div>
+      <div style="display: flex; flex-direction: column; gap: 36px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 780px;">Two screens carry the brand: the feed and the call.</h2>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 32px;">
+          <!-- FEED -->
+          <div style="flex: 1 1 320px; max-width: 400px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">A · FEED</span>
+            <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; background: #0B0B0E; color: #F4F3EF;">
+                <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
+              </div>
+              <div style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 36px; height: 36px; border-radius: 100px; background: #FF2D8A;"></div>
+                  <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 15px; font-weight: 600;">dana_k</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">YESTERDAY · 6:04 AM</span>
+                  </div>
+                  <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; background: #F5FF3D; padding: 5px 9px; border-radius: 100px;">DIALED</span>
+                </div>
+                <div style="height: 190px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); display: flex; align-items: flex-end; padding: 12px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 5px 8px; border-radius: 4px;">USER OUTFIT PHOTO</span>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.05em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">L/S HALF-ZIP</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.05em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">5" SPLIT SHORTS</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.05em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">THIN GLOVES</span>
+                </div>
+                <div style="display: flex; gap: 14px; padding: 10px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.04em; color: #0B0B0E;">
+                  <span>8.1 MI</span><span style="color: #DCDBD2;">|</span><span>7:52 /MI</span><span style="color: #DCDBD2;">|</span><span style="color: #009F8C;">41°F · SE 11MPH</span>
+                </div>
+                <p style="margin: 0; font-size: 14px; line-height: 1.45;"><strong style="font-weight: 600;">mark_t</strong> &nbsp;Gloves at 41 is the move, I keep getting this wrong.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- CALL -->
+          <div style="flex: 1 1 320px; max-width: 400px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">B · THE CALL</span>
+            <div style="background: #F5FF3D; color: #0B0B0E; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">TOMORROW · 6:00 AM · 8 MI EASY</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 46px; line-height: 0.9; letter-spacing: -0.04em;">41° DAMP</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.04em; color: #4E4E44;">FEELS 36° · 88% HUM · SE 9MPH · NO RAIN</span>
+              </div>
+              <div style="background: #0B0B0E; color: #F4F3EF; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WEAR THIS</span>
+                <div style="display: flex; flex-direction: column; gap: 1px; background: #24242B;">
+                  <div style="background: #14141A; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background-color: #24242B; background-image: repeating-linear-gradient(135deg, #2E2E36 0 6px, #24242B 6px 12px);"></div>
+                    <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">Blue L/S Half-Zip</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">WORKED 7 OF 8 RUNS, 38–46°</span></div>
+                  </div>
+                  <div style="background: #14141A; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background-color: #24242B; background-image: repeating-linear-gradient(135deg, #2E2E36 0 6px, #24242B 6px 12px);"></div>
+                    <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">Black 5" Split Shorts</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">YOUR DEFAULT ABOVE 38°</span></div>
+                  </div>
+                  <div style="background: #14141A; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background-color: #24242B; background-image: repeating-linear-gradient(135deg, #2E2E36 0 6px, #24242B 6px 12px);"></div>
+                    <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">Thin Gloves</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6;">4 RUNNERS AGREE IN THESE CONDITIONS</span></div>
+                  </div>
+                </div>
+                <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #DEDDD6;">Damp air makes 41° feel like 36° for the first mile. You've been too cold twice in this range — the half-zip fixes it.</p>
+                <div style="display: flex; gap: 10px;">
+                  <button style="flex: 1; background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 14px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Save as kit</button>
+                  <button style="background: transparent; color: #F4F3EF; border: 1px solid #4A4A52; border-radius: 100px; padding: 14px 18px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;" style-hover="border-color: #F4F3EF;">Swap a layer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; padding-top: 20px; border-top: 1px solid #24242B;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">SURFACE RULE</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;">Feed on chalk, the call on an accent field. Color tells you whether you're reading other people or being told something.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">GARMENT CHIPS</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;">Every piece is a mono chip, tappable to its wardrobe entry. Chips are the connective tissue of the whole app.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">OPEN QUESTIONS</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;">Do verdicts stay private? How much of the social signal enters the call before it stops feeling like <em>your</em> closet?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showRejected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Identity&quot;}}">
+class Component extends DCLogic {
+  // Name locked to dialed.run as of v0.2. showRejected hides the considered-candidates record.
+  renderVals() {
+    return { showRejected: this.props.showRejected ?? true };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px;">
+
+    <!-- HEADER -->
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Social, closet &amp; gear &nbsp;/&nbsp; v0.1 &nbsp;/&nbsp; hi-fi</span>
+        <span style="color: #FF2D8A;">{{ brandWord }}.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 980px; text-transform: uppercase;">The rest of the app.</h1>
+      <p style="margin: 0; font-size: 18px; line-height: 1.5; max-width: 760px; color: #DEDDD6; text-wrap: pretty;">Feed, add-a-garment, profiles, discovery, and the gear-gap surface. Screens marked <strong style="color: #F4F3EF;">V1</strong> are the first release; <strong style="color: #F4F3EF;">post-V1 target</strong> screens are the shape to build toward once the call and cohort math exist. Garments show "Brand Model" as plain text wherever they're named, and a <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px;">[GENERIC]</span> badge where they aren't — never logos, never links.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;">
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">E Feed</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">F Add a garment</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">G Your profile</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">H Someone else</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">I Discovery</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">J Gear gaps</span>
+      </div>
+    </div>
+
+    <!-- E · FEED -->
+    <div style="display: flex; flex-direction: column; gap: 28px;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">E · Feed</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 660px; line-height: 1.45;">Two tabs, and the second one is the differentiator: <strong style="color: #F4F3EF;">Your conditions</strong> surfaces runs from anyone — followed or not — who ran weather close to what you're about to run.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="E1 Feed following" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E1 · FOLLOWING</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:14</span><span>▮▮▮ 76%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
+            </div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+              <span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 8px;">Following</span>
+              <span style="color: #8B8B93; padding-bottom: 8px;">Your conditions</span>
+            </div>
+
+            <div style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
+              <div style="border-bottom: 1px solid #DCDBD2; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 36px; height: 36px; border-radius: 100px; background: #FF2D8A;"></div>
+                  <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">dana_k</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">2H AGO · 6:04 AM</span></div>
+                  <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #F5FF3D; padding: 5px 9px; border-radius: 100px;">DIALED</span>
+                </div>
+                <div style="height: 210px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); display: flex; align-items: flex-end; padding: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px; border-radius: 3px;">OUTFIT PHOTO</span></div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;">
+                  <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">JANJI ROVER HALF-ZIP</span>
+                  <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">BANDIT 5" SPLIT</span>
+                  <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">SMARTWOOL LINERS</span>
+                </div>
+                <div style="display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;"><span>8.1 MI</span><span style="color: #DCDBD2;">|</span><span>7:52 /MI</span><span style="color: #DCDBD2;">|</span><span style="color: #009F8C;">41°F · RAIN</span></div>
+                <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;"><span style="color: #C21A6B; font-weight: 600;">♥ 24 USEFUL</span></div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 36px; height: 36px; border-radius: 100px; background: #00E0C6;"></div>
+                  <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">mark_t</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">YESTERDAY · 5:40 PM</span></div>
+                  <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">TOO WARM</span>
+                </div>
+                <p style="margin: 0; font-size: 14px; line-height: 1.45;">Wore the shell for a 20mph forecast that never showed up. Cooked by mile 3.</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;">
+                  <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">PATAGONIA HOUDINI</span>
+                  <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">L/S CREW <span style="color: #6E6E64;">[GENERIC]</span></span>
+                  <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">TIGHTS <span style="color: #6E6E64;">[GENERIC]</span></span>
+                </div>
+                <div style="display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;"><span>5.4 MI</span><span style="color: #DCDBD2;">|</span><span>8:36 /MI</span><span style="color: #DCDBD2;">|</span><span style="color: #009F8C;">47°F · WIND 6MPH</span></div>
+                <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;"><span>♡ 11 USEFUL</span></div>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">A "too warm" post with no photo is still a useful post. Text-only entries keep the logging bar low and the feed honest.</p>
+        </div>
+
+        <div data-screen-label="E2 Feed your conditions" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">E2 · YOUR CONDITIONS · POST-MVP TARGET</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
+            </div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+              <span style="color: #8B8B93; padding-bottom: 8px;">Following</span>
+              <span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span>
+            </div>
+
+            <div style="background: #00E0C6; color: #0B0B0E; padding: 16px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; flex-direction: column; gap: 5px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">MATCHING 41–47° · DAMP · LOW WIND</span>
+                <span style="font-size: 15px; line-height: 1.4; font-weight: 600;">18 runners logged your conditions in the last 3 days.</span>
+              </div>
+            </div>
+
+            <div style="padding: 18px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT THEY WORE · CONSENSUS</span>
+                <div style="display: flex; flex-direction: column; gap: 7px;">
+                  <div style="display: flex; align-items: center; gap: 10px;"><div style="flex: 0 0 88px; height: 22px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 83%; height: 100%; background: #FF2D8A;"></div></div><span style="font-size: 14px;">Long sleeve <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">15/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 10px;"><div style="flex: 0 0 88px; height: 22px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 72%; height: 100%; background: #FF2D8A;"></div></div><span style="font-size: 14px;">Shorts <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">13/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 10px;"><div style="flex: 0 0 88px; height: 22px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 39%; height: 100%; background: #B9B8AE;"></div></div><span style="font-size: 14px;">Gloves <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">7/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 10px;"><div style="flex: 0 0 88px; height: 22px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 11%; height: 100%; background: #B9B8AE;"></div></div><span style="font-size: 14px;">Jacket <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">2/18</span></span></div>
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid #DCDBD2; padding-top: 16px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; gap: 12px;">
+                  <div style="flex: 0 0 96px; height: 118px; border-radius: 10px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 7px, #E3E2D8 7px 14px);"></div>
+                  <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 7px;"><span style="font-size: 14px; font-weight: 600;">jules.p</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; background: #F5FF3D; padding: 3px 7px; border-radius: 100px;">DIALED</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">42°F · 91% HUM · 6.0 MI</span>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">L/S half-zip, shorts, no gloves. "Hands fine after a mile."</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #FF2D8A; font-weight: 600;">+ FOLLOW</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                  <div style="flex: 0 0 96px; height: 118px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"></div>
+                  <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 7px;"><span style="font-size: 14px; font-weight: 600;">t.oyelaran</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; border: 1px solid #0B0B0E; padding: 3px 7px; border-radius: 100px;">TOO COLD</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">40°F · RAIN · 9.2 MI</span>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">Singlet and shorts. "Ambitious. Regretted it at mile 2."</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #FF2D8A; font-weight: 600;">+ FOLLOW</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                  <div style="flex: 0 0 96px; height: 118px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"></div>
+                  <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 7px;"><span style="font-size: 14px; font-weight: 600;">rk_miles</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; background: #F5FF3D; padding: 3px 7px; border-radius: 100px;">DIALED</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">45°F · 84% HUM · 12.0 MI</span>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">Long sleeve, shorts, buff. Long run pace.</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #FF2D8A; font-weight: 600;">+ FOLLOW</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The full surface, kept as the target state. Stranger cards and follow CTAs need a follow graph and a moderation path — v1 ships the consensus block alone (E2-lite).</p>
+        </div>
+
+        <div data-screen-label="E2-lite Consensus only" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E2-LITE · V1 · CONSENSUS ONLY</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
+            </div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+              <span style="color: #8B8B93; padding-bottom: 8px;">Following</span>
+              <span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span>
+            </div>
+
+            <div style="background: #00E0C6; color: #0B0B0E; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">MATCHING [41–47°] · DAMP · LOW WIND</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em; line-height: 1.05;">18 RUNNERS<br />LOGGED THIS</span>
+              <span style="font-size: 14px; line-height: 1.4;">In the last three days, near you.</span>
+            </div>
+
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT THEY WORE</span>
+                <div style="display: flex; flex-direction: column; gap: 9px;">
+                  <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 83%; height: 100%; background: #FF2D8A;"></div></div><span style="font-size: 15px;">Long sleeve <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">15/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 72%; height: 100%; background: #FF2D8A;"></div></div><span style="font-size: 15px;">Shorts <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">13/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 39%; height: 100%; background: #B9B8AE;"></div></div><span style="font-size: 15px;">Gloves <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">7/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 28%; height: 100%; background: #B9B8AE;"></div></div><span style="font-size: 15px;">Buff or headband <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">5/18</span></span></div>
+                  <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 11%; height: 100%; background: #B9B8AE;"></div></div><span style="font-size: 15px;">Jacket <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">2/18</span></span></div>
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid #DCDBD2; padding-top: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">HOW IT WENT FOR THEM</span>
+                <div style="display: flex; gap: 5px; align-items: flex-end; height: 76px;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; align-items: center;"><div style="width: 100%; height: 22%; background: #B9B8AE; border-radius: 3px;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: #7A7A70; text-align: center; line-height: 1.2;">WAY<br />COLD</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; align-items: center;"><div style="width: 100%; height: 44%; background: #B9B8AE; border-radius: 3px;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: #7A7A70; text-align: center; line-height: 1.2;">A BIT<br />COLD</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; align-items: center;"><div style="width: 100%; height: 100%; background: #FF2D8A; border-radius: 3px;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: #0B0B0E; text-align: center; line-height: 1.2; font-weight: 600;">DIALED<br />&nbsp;</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; align-items: center;"><div style="width: 100%; height: 33%; background: #B9B8AE; border-radius: 3px;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: #7A7A70; text-align: center; line-height: 1.2;">A BIT<br />WARM</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; align-items: center;"><div style="width: 100%; height: 11%; background: #B9B8AE; border-radius: 3px;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: #7A7A70; text-align: center; line-height: 1.2;">WAY<br />WARM</span></div>
+                </div>
+                <p style="margin: 0; font-size: 14px; line-height: 1.5;">Most people got it right in long sleeve and shorts. The two who wore jackets were both too warm.</p>
+              </div>
+
+              <div style="margin-top: auto; background: #EDECE3; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #4E4E44;">V1 SCOPE</span>
+                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Aggregate only — no individual cards, no follow buttons, no usernames. Nothing here identifies anyone, so it ships before any moderation work.</p>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Anonymous aggregate is the whole v1 social product — and arguably the more useful half. The verdict distribution replaces the stranger cards and answers the same question faster.</p>
+        </div>
+
+        <div style="flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">SORT FOR USEFULNESS</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Following is chronological — social contracts demand it. Your conditions is ranked by conditions proximity, then verdict clarity. A "too cold" verdict is as valuable as a "dialed" one.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">CONSENSUS BLOCK</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Aggregate first, individuals second. Most runners want the answer, not the browsing — and the aggregate is defensible in a way a single stranger's photo isn't.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">COLD-START PROOF</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A new user with no follows lands on the conditions tab by default. It's the one social surface that works on day one — and in E2-lite form it needs no follow graph at all.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">FINDING PEOPLE IN V1</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The Following empty state points at <strong style="color: #F4F3EF;">username search</strong>, not the overlap-ranked Discovery screen — that ranking needs cohort math the first release won't have. You follow people you already know.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">MODERATION NOTE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Outfit photos of real bodies need a reporting path and a "faces blurred by default" option before this tab opens to strangers. Design debt, flagged now.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F · ADD A GARMENT -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">F · Add a garment</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 660px; line-height: 1.45;">Brand and model come first — a named piece learns its own temperature range, a generic category can only inherit an average.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="F Add garment" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">F · IDENTITY FIRST</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 820px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:22</span><span>▮▮▮ 64%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;">
+              <span style="font-size: 19px; line-height: 1;">✕</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Add a garment</span>
+            </div>
+
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT IS IT?</span>
+                <div style="border: 2px solid #0B0B0E; border-radius: 14px; padding: 15px; background: #FFFFFF; display: flex; flex-direction: column; gap: 9px;">
+                  <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; font-weight: 600;">Tracksmith</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #9A9A90;">BRAND</span></div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.03em;">
+                    <span style="background: #EDECE3; padding: 6px 10px; border-radius: 100px;">TRACKSMITH</span>
+                    <span style="background: #EDECE3; padding: 6px 10px; border-radius: 100px;">TRACK CLUB</span>
+                  </div>
+                  <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; font-weight: 600;">Harrier Long Sleeve</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #9A9A90;">MODEL</span></div>
+                  <div style="border: 1px dashed #B9B8AE; border-radius: 9px; padding: 10px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 13px; color: #9A9A90;">Or paste a product link</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #C21A6B; font-weight: 600;">READ</span></div>
+                </div>
+                <span style="font-size: 12px; line-height: 1.45; color: #7A7A70;">Naming it is what makes it learn. Skip this and it's filed as <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">[GENERIC]</span>.</span>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: stretch;">
+                <div style="flex: 0 0 88px; height: 88px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 7px, #E3E2D8 7px 14px);"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">CATEGORY</span>
+                  <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; font-weight: 600;">Top · long sleeve</span><span style="font-size: 14px; color: #9A9A90;">›</span></div>
+                  <span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">Required. Everything below is optional.</span>
+                </div>
+              </div>
+
+              <div style="border: 1px solid #DCDBD2; border-radius: 14px; background: #FFFFFF; overflow: hidden;">
+                <div style="padding: 13px 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">Attributes</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">WEIGHT · FABRIC · WIND · VISIBILITY</span></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;">[OPTIONAL] ˅</span>
+                </div>
+                <div style="border-top: 1px solid #DCDBD2; padding: 12px 15px; background: #F9F8F4;">
+                  <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Collapsed by default. Filling these in gives an estimated range before you've worn it — or skip them and let the runs do the work.</p>
+                </div>
+              </div>
+
+              <div style="background: #0B0B0E; color: #F4F3EF; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">ESTIMATED RANGE · FROM ATTRIBUTES</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.035em;">36–52°F</span>
+                <div style="height: 10px; border-radius: 100px; background: #24242B; position: relative; overflow: hidden;"><div style="position: absolute; left: 26%; right: 38%; top: 0; bottom: 0; background: #00E0C6; border-radius: 100px;"></div></div>
+                <span style="font-size: 13px; line-height: 1.45; color: #8B8B93;">Shown once weight and fabric are set. Tightens to your body after three or four verdicts.</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TAGS · OPTIONAL</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;">
+                  <span style="background: #0B0B0E; color: #F4F3EF; padding: 6px 10px; border-radius: 100px;">RACE DAY ✕</span>
+                  <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px; color: #4E4E44;">+ TRAIL</span>
+                  <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px; color: #4E4E44;">+ LONG RUN</span>
+                  <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px; color: #4E4E44;">+ HAND-WASH</span>
+                </div>
+              </div>
+
+              <button style="margin-top: auto; background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 16px; font-family: Archivo, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Add to closet</button>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Brand and model lead, because the specific piece is what accumulates a range. Category is the only other required field; attributes collapse. Photo-reading returns with the call epic and slots into the same shape.</p>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">F2 · LINK ENRICHMENT STATES</span>
+
+          <div data-screen-label="F2a Enriching" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">READING THE PAGE</span>
+            <div style="border: 1px solid #00E0C6; border-radius: 14px; padding: 15px; background: #FFFFFF; display: flex; gap: 12px; align-items: flex-start;">
+              <div style="flex: 0 0 52px; height: 52px; border-radius: 9px; background: #EDECE3; display: flex; align-items: center; justify-content: center;"><div style="width: 18px; height: 18px; border-radius: 100px; border: 2px solid #DCDBD2; border-top-color: #00E0C6;"></div></div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 7px; min-width: 0;">
+                <span style="font-size: 15px; font-weight: 600;">Janji Rover Wind Shell</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">DETAILS FILLING IN…</span>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                  <div style="height: 9px; border-radius: 3px; background: #EDECE3; width: 82%;"></div>
+                  <div style="height: 9px; border-radius: 3px; background: #EDECE3; width: 54%;"></div>
+                </div>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Name and brand land immediately from the URL; fabric, weight and image fill in behind them. The Add button stays enabled throughout — enrichment never blocks the save.</p>
+          </div>
+
+          <div data-screen-label="F2b Enrichment failed" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">COULDN'T READ IT</span>
+            <div style="border: 2px solid #FF2D8A; border-radius: 14px; padding: 15px; background: #FFFFFF; display: flex; flex-direction: column; gap: 11px;">
+              <span style="font-size: 15px; font-weight: 700;">Couldn't read that page.</span>
+              <p style="margin: 0; font-size: 14px; line-height: 1.5;">Type the brand and model instead — it's two fields and it works just as well.</p>
+              <div style="display: flex; gap: 8px;">
+                <button style="flex: 1; background: #0B0B0E; color: #F4F3EF; border: 0; border-radius: 100px; padding: 12px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #24242B;">Enter by hand</button>
+                <button style="background: transparent; color: #0B0B0E; border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">Retry</button>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Own it plainly, offer the manual path, don't lose what was already typed. Never a modal — this replaces the link row in place.</p>
+          </div>
+
+          <div data-screen-label="F2c Editable claims" style="background: #24242B; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">EVERYTHING ENRICHED IS A CLAIM</span>
+            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #DEDDD6;">Same philosophy as photo-reading: pulled values render as ordinary editable fields, not locked facts. A brand page saying "midweight" is a starting guess, and the runner's correction is the better data.</p>
+          </div>
+        </div>
+
+        <!-- G · PROFILE -->
+        <div data-screen-label="G Your profile" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">G · YOUR PROFILE · V1</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 820px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:30</span><span>▮▮▮ 62%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 52px; height: 52px; border-radius: 100px; background: #F5FF3D;"></div>
+                <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 21px; letter-spacing: -0.025em;">drew.t</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">MINNEAPOLIS · RUNS AVERAGE · 0° OFFSET</span></div>
+                <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">EDIT</span>
+              </div>
+              <div style="display: flex; gap: 20px;">
+                <div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">47</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #8B8B93;">PIECES</span></div>
+                <div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">186</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #8B8B93;">RUNS LOGGED</span></div>
+                <div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">31</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #8B8B93;">VERDICTS</span></div>
+              </div>
+            </div>
+
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TEMPERATURE COVERAGE</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">31 VERDICTS</span></div>
+                <div style="display: flex; gap: 3px;">
+                  <div style="flex: 1; height: 40px; background: #DCDBD2; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #00E0C6; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #FF2D8A; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #FF2D8A; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #FF2D8A; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #FF2D8A; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #00E0C6; border-radius: 3px;"></div>
+                  <div style="flex: 1; height: 40px; background: #DCDBD2; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;"><span>0°</span><span>20°</span><span>40°</span><span>60°</span><span>80°+</span></div>
+                <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #4E4E44;">Thin below 10° and above 80°. Log a verdict on your next hot run and the summer call gets sharper.</p>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">MOST-WORN PIECES</span>
+                <div style="display: flex; gap: 8px;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><div style="height: 74px; border-radius: 10px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 6px, #E3E2D8 6px 12px);"></div><span style="font-size: 11px; font-weight: 600; line-height: 1.2;">Tracksmith Harrier</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">142 MI</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><div style="height: 74px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><span style="font-size: 11px; font-weight: 600; line-height: 1.2;">Bandit 5" Split</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">118 MI</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><div style="height: 74px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><span style="font-size: 11px; font-weight: 600; line-height: 1.2; color: #6E6E64;">Merino base</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #9A9A90;">96 MI · [GENERIC]</span></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><div style="height: 74px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><span style="font-size: 11px; font-weight: 600; line-height: 1.2; color: #6E6E64;">Gloves</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #9A9A90;">71 MI · [GENERIC]</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;"><span>FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span style="color: #0B0B0E; font-weight: 600;">YOU</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Coverage is the profile's centrepiece — it's the same data the Call teaser shows, so a user always knows where they stand. Saved kits and a "calls dialed" accuracy stat arrive with the call.</p>
+        </div>
+
+        <!-- H · SOMEONE ELSE -->
+        <div data-screen-label="H Other profile" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">H · SOMEONE ELSE · V1</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 820px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:34</span><span>▮▮▮ 61%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 22px; display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 20px; line-height: 1;">←</span>
+                <div style="width: 46px; height: 46px; border-radius: 100px; background: #FF2D8A;"></div>
+                <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.025em;">dana_k</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">ST. PAUL · RUNS A LITTLE WARM</span></div>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 13px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Following</button>
+                <button style="background: transparent; color: #F4F3EF; border: 1px solid #4A4A52; border-radius: 100px; padding: 13px 16px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;">Message</button>
+              </div>
+            </div>
+
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1;">
+              <div style="display: flex; gap: 18px;">
+                <div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">212</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70;">RUNS</span></div>
+                <div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">38</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70;">PUBLIC PIECES</span></div>
+                <div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">1.2K</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70;">USEFUL</span></div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">HER CLOSET · PUBLIC</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #FF2D8A;">FILTER BY 41° ›</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                  <div style="display: flex; flex-direction: column; gap: 5px;"><div style="height: 88px; border-radius: 10px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 6px, #E3E2D8 6px 12px);"></div><span style="font-size: 12px; font-weight: 600; line-height: 1.2;">Janji Rover Half-Zip</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">YOU OWN SIMILAR</span></div>
+                  <div style="display: flex; flex-direction: column; gap: 5px;"><div style="height: 88px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><span style="font-size: 12px; font-weight: 600; line-height: 1.2;">Bandit 5" Split</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #009F8C;">YOU OWN THIS</span></div>
+                  <div style="display: flex; flex-direction: column; gap: 5px;"><div style="height: 88px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><span style="font-size: 12px; font-weight: 600; line-height: 1.2;">Merino buff</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">NOT IN YOUR CLOSET</span></div>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">RECENT RUNS</span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div style="border-radius: 10px; overflow: hidden; background: #FFFFFF; border: 1px solid #DCDBD2;"><div style="height: 104px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 6px, #E3E2D8 6px 12px);"></div><div style="padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #009F8C;">41°F · RAIN</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">DIALED · 8.1 MI</span></div></div>
+                  <div style="border-radius: 10px; overflow: hidden; background: #FFFFFF; border: 1px solid #DCDBD2;"><div style="height: 104px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #009F8C;">38°F · CLEAR</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">TOO WARM · 5.0 MI</span></div></div>
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid #DCDBD2; padding-top: 14px;">
+                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #6E6E64;">You see the runs she chose to share — kit, conditions, and her verdict. Her closet, her coverage, and anything unshared stay private.</p>
+              </div>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The v1 profile is a record, not a translation. An "expect to add a layer" comparison block is the eventual payoff of following someone — it needs cohort math, so it lands with the call.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- I + J -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">I · Discovery &nbsp;&nbsp;J · Gear gaps</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 620px; line-height: 1.45;">Both are post-v1. Discovery needs cohort overlap math; gear gaps need 15+ verdicts per user before they can be honest.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="I Discovery" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">I · FIND RUNNERS · POST-V1 TARGET</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 760px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:41</span><span>▮▮▮ 58%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">Find runners</span>
+              <div style="border: 1px solid #2A2A31; border-radius: 100px; padding: 11px 16px; background: #14141A;"><span style="font-size: 14px; color: #8B8B93;">Search by name…</span></div>
+            </div>
+
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SORT BY</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;">
+                  <span style="background: #0B0B0E; color: #F4F3EF; padding: 8px 12px; border-radius: 100px;">CONDITIONS OVERLAP</span>
+                  <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">SIMILAR BODY TEMP</span>
+                  <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">SAME CLOSET</span>
+                  <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">NEARBY</span>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="border: 1px solid #DCDBD2; border-radius: 14px; padding: 14px; background: #FFFFFF; display: flex; gap: 12px; align-items: flex-start;">
+                  <div style="flex: 0 0 42px; height: 42px; border-radius: 100px; background: #00E0C6;"></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+                    <span style="font-size: 15px; font-weight: 600;">jules.p</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">94% OVERLAP · SAME OFFSET · 2 MI AWAY</span>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">Runs your conditions at your pace. 62 verdicts logged.</span>
+                  </div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #FF2D8A; padding: 7px 12px; border-radius: 100px;">FOLLOW</span>
+                </div>
+                <div style="border: 1px solid #DCDBD2; border-radius: 14px; padding: 14px; background: #FFFFFF; display: flex; gap: 12px; align-items: flex-start;">
+                  <div style="flex: 0 0 42px; height: 42px; border-radius: 100px; background: #F5FF3D;"></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+                    <span style="font-size: 15px; font-weight: 600;">rk_miles</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">88% OVERLAP · RUNS 3° COLDER</span>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">Marathon block, long runs in the dark. Heavy layerer.</span>
+                  </div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #FF2D8A; padding: 7px 12px; border-radius: 100px;">FOLLOW</span>
+                </div>
+                <div style="border: 1px solid #DCDBD2; border-radius: 14px; padding: 14px; background: #FFFFFF; display: flex; gap: 12px; align-items: flex-start;">
+                  <div style="flex: 0 0 42px; height: 42px; border-radius: 100px; background: #FF2D8A;"></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+                    <span style="font-size: 15px; font-weight: 600;">t.oyelaran</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">76% OVERLAP · RUNS 7° WARMER</span>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">Minimalist. Useful as your "how little can I get away with" reference.</span>
+                  </div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #FF2D8A; padding: 7px 12px; border-radius: 100px;">FOLLOW</span>
+                </div>
+              </div>
+
+              <div style="background: #F5FF3D; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">WHY THESE THREE</span>
+                <p style="margin: 0; font-size: 14px; line-height: 1.45;">Follow one runner colder than you, one warmer, one the same. That trio brackets almost every decision you'll face.</p>
+              </div>
+
+              <div style="border-top: 1px solid #DCDBD2; padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">FROM YOUR CONTACTS</span>
+                <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #6E6E64;">Opt-in, never automatic. Running clubs and race rosters are the better import path — noted for v2.</p>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Overlap percentage replaces follower counts entirely — nobody here is famous, they're just useful. Needs cohort math, so v1 ships username search instead and this becomes the target state.</p>
+        </div>
+
+        <sc-if value="{{ showGearGaps }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="J Gear gaps" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">J · GEAR GAPS · LATER STAGE</span>
+            <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 760px;">
+              <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:46</span><span>▮▮▮ 56%</span></div>
+              <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em; line-height: 1.05;">Holes in your closet</span>
+                <span style="font-size: 14px; line-height: 1.45; color: #8B8B93;">Found by looking at conditions you run in and have nothing good for. Not sponsored.</span>
+              </div>
+
+              <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                <div style="border: 2px solid #0B0B0E; border-radius: 16px; overflow: hidden; background: #FFFFFF;">
+                  <div style="background: #F5FF3D; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">BIGGEST GAP</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px;">14 RUNS AFFECTED</span></div>
+                  <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <span style="font-family: 'Archivo Black', sans-serif; font-size: 21px; letter-spacing: -0.025em; line-height: 1.1;">Nothing wind-resistant under 25°</span>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.5;">You ran 14 times below 25° last winter and rated 9 of them too cold. Every time, you layered two knits — which don't stop wind. A light wind shell is the missing piece, not another base layer.</p>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">EVIDENCE</span>
+                      <div style="display: flex; gap: 3px;">
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #FF2D8A; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #DCDBD2; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #DCDBD2; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #DCDBD2; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #DCDBD2; border-radius: 2px;"></div>
+                        <div style="flex: 1; height: 26px; background: #DCDBD2; border-radius: 2px;"></div>
+                      </div>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">PINK = RATED TOO COLD</span>
+                    </div>
+                  </div>
+                  <div style="border-top: 1px solid #DCDBD2; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT RUNNERS LIKE YOU USE</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; border: 1px solid #B9B8AE; padding: 4px 8px; border-radius: 100px; color: #6E6E64;">NOT PAID</span></div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <div style="display: flex; align-items: center; gap: 10px;"><div style="width: 38px; height: 38px; border-radius: 8px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 6px, #E3E2D8 6px 12px);"></div><div style="display: flex; flex-direction: column;"><span style="font-size: 14px; font-weight: 600;">Light wind shell</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">OWNED BY 71% OF YOUR COHORT</span></div></div>
+                      <div style="display: flex; align-items: center; gap: 10px;"><div style="width: 38px; height: 38px; border-radius: 8px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="display: flex; flex-direction: column;"><span style="font-size: 14px; font-weight: 600;">Wind-front tights</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">OWNED BY 44% OF YOUR COHORT</span></div></div>
+                    </div>
+                    <span style="font-size: 12px; line-height: 1.45; color: #6E6E64;">Categories, not products. We'll never rank a specific brand for money without saying so.</span>
+                  </div>
+                </div>
+
+                <div style="border: 1px solid #DCDBD2; border-radius: 14px; padding: 14px; background: #FFFFFF; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Nothing for rain above 60°</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">3 RUNS</span></div>
+                  <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #4E4E44;">Low priority — you rated all three fine. Probably don't buy anything.</p>
+                </div>
+
+                <div style="border: 1px solid #DCDBD2; border-radius: 14px; padding: 14px; background: #FFFFFF; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Two jackets you never wear</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">RETIRE?</span></div>
+                  <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #4E4E44;">Zero runs in 14 months. Telling you what to get rid of buys the right to suggest what to buy.</p>
+                </div>
+
+                <div style="margin-top: auto; background: #EDECE3; border-radius: 12px; padding: 14px;">
+                  <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Gaps appear only after 15+ verdicts and only where the data is unambiguous. No gaps is a valid state, and a good one.</p>
+                </div>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Toggle this surface off in Tweaks to see the product without any commercial layer.</p>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">THE HONESTY TEST</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Gear gaps recommend <em>categories</em>, show the evidence that produced them, and include retirement suggestions. If affiliate revenue ever arrives, the "NOT PAID" chip flips to a disclosure rather than disappearing.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">STILL NOT DESIGNED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Blocked-runners list, report flow, faces-blurred option, the desktop feed, and shoe mileage as its own object. Notifications, settings, Strava connect, manual entry, naming, and the Call teaser live in <a href="V1%20Screens.dc.html">V1 Screens</a>.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">DECIDED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Laundry state lands with the call epic, not v1 — it matters most when a recommendation has to say "that's in the wash." Nothing in the market handles it, so it stays a differentiator worth building properly.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;brandWord&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;dialed&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Brand&quot;},&quot;showGearGaps&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Product decisions&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      brandWord: this.props.brandWord ?? "dialed",
+      showGearGaps: this.props.showGearGaps ?? true
+    };
+  }
+}
+
+</script>
+</body>
+</html>
