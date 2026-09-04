@@ -50,7 +50,14 @@ call-site TODO wires to it when you merge.
 5. **Model adapter + eval (D-32)**: implement `ExtractionModel` for GPT-5.6
    Luna (presumptive default), Claude Haiku 4.5, and DeepSeek V4 Flash via
    Workers AI (`@cf/deepseek-ai/deepseek-v4-flash-0731` — on-platform, no
-   new vendor, free-tier neurons) behind one interface. Re-verify current
+   new vendor, free-tier neurons) behind one interface. The external-API
+   implementation should target OpenRouter's OpenAI-compatible endpoint so
+   ONE key covers Luna, Haiku, and any future candidate (and widening the
+   eval is a model-string change, not a new account). Two requirements on
+   any OpenRouter route: pin the underlying provider for open-weight
+   models (routing variance means the "same" model can land on different
+   quantizations — silent accuracy drift the eval can't see) and verify
+   the pinned route supports strict structured outputs. Re-verify current
    pricing and model lineup at design time — this space moved three times
    in summer 2026 alone.
 5b. **Prompt hygiene rule (all vendors)**: enrichment prompts contain page
