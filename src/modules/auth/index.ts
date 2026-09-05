@@ -1,0 +1,19 @@
+import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { drizzle } from "drizzle-orm/d1";
+
+import { env } from "../../env";
+import { createAuth } from "./create-auth";
+
+/**
+The app auth instance. Server-side only — never import from client code.
+*/
+export const auth = createAuth({
+  db: drizzle(env.DIALED_CORE),
+  secret: env.BETTER_AUTH_SECRET,
+  plugins: [tanstackStartCookies()],
+});
+
+// Session type export returns when a lane consumes it (knip keeps us honest).
+
+// Server-fn glue lives in ./functions (imported directly by routes) so this
+// barrel stays loadable in the vitest workers pool (no TanStack virtual entries).

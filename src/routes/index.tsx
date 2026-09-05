@@ -1,10 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 
-import { Bracketed, Layout, Wordmark } from "../ui";
+import { getSession } from "../modules/auth/functions";
+// Client entry imported directly by design — see modules/auth/client.ts.
+import { authClient } from "../modules/auth/client";
+import { Bracketed, Layout, Mono, Wordmark } from "../ui";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+  loader: async () => ({ session: await getSession() }),
+  component: Home,
+});
 
 function Home() {
+  const { session } = Route.useLoaderData();
+  const router = useRouter();
+
+  async function signOut() {
+    await authClient.signOut();
+    await router.invalidate();
+  }
+
   return (
     <Layout>
       <main className="mx-auto flex w-full max-w-xl flex-col items-start gap-6 px-6 pt-16">
@@ -16,6 +30,32 @@ function Home() {
           A virtual wardrobe for runners: what you wore, on which run, in which
           weather.
         </p>
+        {session === null ? (
+          <div className="flex items-center gap-4">
+            <Link
+              to="/auth/signup"
+              className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
+            >
+              Sign up
+            </Link>
+            <Link to="/auth/login" className="font-semibold text-pink">
+              Log in
+            </Link>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <Mono className="text-xs">{session.user.email}</Mono>
+            <button
+              type="button"
+              onClick={() => {
+                void signOut();
+              }}
+              className="font-semibold text-pink"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
         <Bracketed className="text-sm">Phase 0</Bracketed>
       </main>
     </Layout>

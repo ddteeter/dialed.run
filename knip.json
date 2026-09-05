@@ -12,9 +12,17 @@
     "src/lib/contracts.ts",
     "src/lib/ids.ts",
     "src/db/schema-core.ts",
+    "src/db/schema-auth.ts",
     "src/db/schema-weather.ts",
     "src/env/index.ts"
   ],
-  "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
-  "ignoreDependencies": ["tailwindcss", "@tailwindcss/typography", "cloudflare"]
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "test/**/*.{ts,tsx}"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "@tailwindcss/typography",
+    "cloudflare"
+  ]
 }
