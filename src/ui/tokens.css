@@ -1,0 +1,29 @@
+/**
+ * dialed.run brand tokens — docs/product.md §Brand application.
+ * The five colors and three families are the whole palette; do not add
+ * accents here without a product-doc change.
+ */
+:root {
+  /* brand, CTAs, "dialed" state */
+  --course-pink: #ff2d8a;
+  /* the app telling you something (call epic; sparingly in v1) */
+  --hi-viz: #f5ff3d;
+  /* measured conditions, data, social counts */
+  --split-teal: #00e0c6;
+  /* ink, hero fields, feed shell */
+  --night-run: #0b0b0e;
+  /* surfaces, cards, reading */
+  --chalk: #f4f3ef;
+
+  /* Archivo 400/600/800 — interface */
+  --font-family-interface: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  /* Archivo Black — display (uppercase, ≤5 words) */
+  --font-family-display:
+    "Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  /* IBM Plex Mono 400/500 — every measured value */
+  --font-family-mono:
+    "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* chalk/ink light-first; no dark theme in v1 */
+  color-scheme: light;
+}

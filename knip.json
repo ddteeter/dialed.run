@@ -7,7 +7,7 @@
     "vitest.config.ts",
     "drizzle-core.config.ts",
     "drizzle-weather.config.ts",
-    "test/**/*.test.ts",
+    "test/**/*.test.{ts,tsx}",
     "test/apply-migrations.ts",
     "src/lib/contracts.ts",
     "src/lib/ids.ts",
