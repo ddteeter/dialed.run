@@ -19,7 +19,12 @@
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "guardrails-core install-hooks"
+    "prepare": "guardrails-core install-hooks",
+    "db:generate:core": "drizzle-kit generate --config drizzle-core.config.ts",
+    "db:generate:weather": "drizzle-kit generate --config drizzle-weather.config.ts",
+    "db:migrate:local:core": "wrangler d1 migrations apply dialed-core --local",
+    "db:migrate:local:weather": "wrangler d1 migrations apply dialed-weather --local",
+    "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -27,9 +32,12 @@
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-router-devtools": "^1.167.1",
     "@tanstack/react-start": "^1.168.49",
+    "drizzle-orm": "^0.45.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "ulidx": "^2.4.1",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
@@ -43,6 +51,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "dependency-cruiser": "^18.2.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-sonarjs": "^4.2.0",

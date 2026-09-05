@@ -5,14 +5,16 @@
     "src/routes/**/*.tsx",
     "vite.config.ts",
     "vitest.config.ts",
-    "test/**/*.test.ts"
+    "drizzle-core.config.ts",
+    "drizzle-weather.config.ts",
+    "test/**/*.test.ts",
+    "test/apply-migrations.ts",
+    "src/lib/contracts.ts",
+    "src/lib/ids.ts",
+    "src/db/schema-core.ts",
+    "src/db/schema-weather.ts",
+    "src/env/index.ts"
   ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "test/**/*.{ts,tsx}"
-  ],
-  "ignoreDependencies": [
-    "tailwindcss",
-    "@tailwindcss/typography"
-  ]
+  "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+  "ignoreDependencies": ["tailwindcss", "@tailwindcss/typography", "cloudflare"]
 }

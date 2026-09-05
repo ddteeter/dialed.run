@@ -14,6 +14,7 @@ export default tseslint.config(
       "worker-configuration.d.ts",
       "design/",
       "plan/",
+      ".dependency-cruiser.cjs",
     ],
   },
   js.configs.recommended,
@@ -52,6 +53,7 @@ export default tseslint.config(
       ],
       // Workers/React codebase adjustments to unicorn defaults:
       "unicorn/prevent-abbreviations": "off",
+      "unicorn/name-replacements": "off",
       "unicorn/filename-case": [
         "error",
         { cases: { kebabCase: true, pascalCase: true } },

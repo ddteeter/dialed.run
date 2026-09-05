@@ -1,0 +1,29 @@
+/**
+ * Test-only Worker config: the app's bindings WITHOUT its `main`
+ * (@tanstack/react-start/server-entry is a Vite virtual entry the vitest
+ * pool cannot load). Keep bindings in sync with ../wrangler.jsonc.
+ */
+{
+  "name": "dialed-test",
+  "compatibility_date": "2025-09-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DIALED_CORE",
+      "database_name": "dialed-core",
+      "database_id": "test-core",
+    },
+    {
+      "binding": "DIALED_WEATHER",
+      "database_name": "dialed-weather",
+      "database_id": "test-weather",
+    },
+  ],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "dialed-photos" }],
+  "queues": {
+    "producers": [
+      { "binding": "IMPORTS_QUEUE", "queue": "dialed-imports" },
+      { "binding": "ENRICHMENT_QUEUE", "queue": "dialed-enrichment" },
+    ],
+  },
+}

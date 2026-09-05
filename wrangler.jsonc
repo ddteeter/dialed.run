@@ -1,6 +1,8 @@
 /**
- * For more details on how to configure Wrangler, refer to:
- * https://developers.cloudflare.com/workers/wrangler/configuration/
+ * Wrangler configuration — bindings are human-managed (CLAUDE.md forbidden
+ * zones). D1 database_ids are placeholders until `wrangler d1 create` runs
+ * against the real account. Queue consumers + cron triggers land with the
+ * custom server entry (docs/tasks/000 §10).
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -12,32 +14,30 @@
     "enabled": true,
   },
   "upload_source_maps": true,
-  /**
-   * Smart Placement
-   * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-   */
-  // "placement": {  "mode": "smart" }
-  /**
-   * Bindings
-   * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-   * databases, object storage, AI inference, real-time communication and more.
-   * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-   */
-  /**
-   * Environment Variables
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-   * Note: Use secrets to store sensitive data.
-   * https://developers.cloudflare.com/workers/configuration/secrets/
-   */
-  // "vars": {  "MY_VARIABLE": "production_value" }
-  /**
-   * Static Assets
-   * https://developers.cloudflare.com/workers/static-assets/binding/
-   */
-  // "assets": {  "directory": "./public/",  "binding": "ASSETS" }
-  /**
-   * Service Bindings (communicate between multiple Workers)
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-   */
-  // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+  "d1_databases": [
+    {
+      "binding": "DIALED_CORE",
+      "database_name": "dialed-core",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "src/db/migrations/core",
+    },
+    {
+      "binding": "DIALED_WEATHER",
+      "database_name": "dialed-weather",
+      "database_id": "00000000-0000-0000-0000-000000000002",
+      "migrations_dir": "src/db/migrations/weather",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "dialed-photos",
+    },
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "IMPORTS_QUEUE", "queue": "dialed-imports" },
+      { "binding": "ENRICHMENT_QUEUE", "queue": "dialed-enrichment" },
+    ],
+  },
 }
