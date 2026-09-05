@@ -133,6 +133,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
   boundary violations block the commit. Delete dead code; don't ignore it.
 - Fix the code, not the rule. If a rule seems genuinely wrong, note it in your
   design doc for human review instead of suppressing it.
+- Adding/removing routes regenerates `src/routeTree.gen.ts` and changes its
+  sanctioned `as any` count: update the `count` in `guardrails.config.json`'s
+  sanctionedSuppressions entry in the same commit (sanctions-check enforces
+  the exact number).
 
 ## Workflow expectations
 
