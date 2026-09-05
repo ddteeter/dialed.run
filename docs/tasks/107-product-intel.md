@@ -60,7 +60,7 @@ call-site TODO wires to it when you merge.
    the pinned route supports strict structured outputs. Re-verify current
    pricing and model lineup at design time — this space moved three times
    in summer 2026 alone.
-5b. **Prompt hygiene rule (all vendors)**: enrichment prompts contain page
+   5b. **Prompt hygiene rule (all vendors)**: enrichment prompts contain page
    content and the URL only — never user identifiers, run data, or any
    user-linked context. Public data in, public data out. Design-phase eval: ~20 real product pages
    (fixture snapshots committed, including at least two multi-part garments —

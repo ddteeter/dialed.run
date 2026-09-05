@@ -13,7 +13,7 @@ posts. A run appears in the feed only once it has an outfit entry.
 - Tests under `test/feed/**`
 
 You consume via index.ts only: `wardrobe` (item picker data), `runs` (run
-lookup + the entry-creation route your notification deep-links to — 
+lookup + the entry-creation route your notification deep-links to —
 coordinate the route name in your design doc), `weather` module's
 `WeatherAttribution` fragment.
 

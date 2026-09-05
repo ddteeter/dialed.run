@@ -36,22 +36,22 @@ You consume (read-only): `db` schema as-is, `ui`, `lib`, `env`, auth session.
    entries, top 2).
 3. **Add/edit (screen F, v1 — identity-first, D-27)**: the form leads with
    "What is it?" — brand (autocomplete against `brands`, create-if-missing)
-   + model name; picking/creating both resolves a `products` row
-   (create-if-missing on normalized brand+name, D-30) and links
-   `product_id`. Category one tap; attribute fields (per the discriminated
-   union) collapsed below, pre-filled from product attributes where the
-   product has them (garment columns override). Generic entry (category
-   only) still possible, just not the path of least resistance. Estimated
-   range shown when attributes support it (thermal defaults table in `lib/`,
-   hand-built, per category × weight × wind; product `fabric_composition`
-   noted for the call epic, unused by the v1 table). Product URL https-only,
-   zod-validated; on paste, call `enrichment.requestEnrichment(productId,
-   url)` **if lane 107 has merged; otherwise leave the documented TODO
-   call-site** — saving never waits on it.
-3b. **Brands + products module**: seed the curated running-brand list
-   (~50 brands) as a migration-seeded table; prefix autocomplete server
-   functions for brands and products (products scoped `status='active'`);
-   normalization util (casefold, punctuation/whitespace fold) in `lib/`.
+   - model name; picking/creating both resolves a `products` row
+     (create-if-missing on normalized brand+name, D-30) and links
+     `product_id`. Category one tap; attribute fields (per the discriminated
+     union) collapsed below, pre-filled from product attributes where the
+     product has them (garment columns override). Generic entry (category
+     only) still possible, just not the path of least resistance. Estimated
+     range shown when attributes support it (thermal defaults table in `lib/`,
+     hand-built, per category × weight × wind; product `fabric_composition`
+     noted for the call epic, unused by the v1 table). Product URL https-only,
+     zod-validated; on paste, call `enrichment.requestEnrichment(productId,
+url)` **if lane 107 has merged; otherwise leave the documented TODO
+     call-site** — saving never waits on it.
+     3b. **Brands + products module**: seed the curated running-brand list
+     (~50 brands) as a migration-seeded table; prefix autocomplete server
+     functions for brands and products (products scoped `status='active'`);
+     normalization util (casefold, punctuation/whitespace fold) in `lib/`.
 4. **Tap-list data**: implement the curated per-climate garment starter lists
    (a static table in your module: category defaults keyed by rough climate
    band) + a server function `closet.addFromTapList(items[])` creating

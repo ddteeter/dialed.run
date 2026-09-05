@@ -86,8 +86,16 @@ UNIQUE(lat_r, lng_r, hour_bucket)   -- the cache key: lat/lng rounded to 2dp
 import { z } from "zod";
 
 export const bodyParts = [
-  "head", "neck", "torso_base", "torso_mid", "torso_outer",
-  "hands", "legs", "socks", "shoes", "accessory",
+  "head",
+  "neck",
+  "torso_base",
+  "torso_mid",
+  "torso_outer",
+  "hands",
+  "legs",
+  "socks",
+  "shoes",
+  "accessory",
 ] as const;
 export const bodyPartSchema = z.enum(bodyParts);
 

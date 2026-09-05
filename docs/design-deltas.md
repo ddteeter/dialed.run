@@ -29,5 +29,3 @@ in sync.
 Skipping the name in F/P2.5 files the garment as `[GENERIC]`; the contract
 requires `name`, so generic saves default it to the category/tap-list label
 (taplist rows already work this way). Noted in task 101.
-
-

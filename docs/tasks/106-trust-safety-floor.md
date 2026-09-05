@@ -34,7 +34,7 @@ per the schema protocol before implementation.
    (D-26): reportable, and review can set `products.status='hidden'`
    (hidden products drop out of autocomplete; linked garments fall back to
    their own text fields).
-2b. **Product duplicates report** (D-30): a read-only admin list of probable
+   2b. **Product duplicates report** (D-30): a read-only admin list of probable
    duplicate products (same brand, near-identical normalized names). No
    merge tooling in v1 — the report just makes the mess visible.
 3. **Link hygiene** for product URLs: https-only (already enforced in 101),

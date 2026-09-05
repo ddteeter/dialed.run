@@ -45,7 +45,7 @@ notification row.
 7. **Resilience specifics for this lane** (on top of the CLAUDE.md laws):
    - **Webhook dedupe**: Strava redelivers events. Dedupe via a
      `processed_webhook_events` table with `UNIQUE(object_id, aspect_type,
-     event_time)` and `INSERT OR IGNORE` — duplicate events are 200 no-ops.
+event_time)` and `INSERT OR IGNORE` — duplicate events are 200 no-ops.
    - **DLQ ownership**: complete the Phase 0 DLQ consumer stub — a
      dead-lettered ImportJob marks the import row `failed` with a
      user-facing reason and notifies the user. No import ends in silence.

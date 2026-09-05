@@ -81,14 +81,14 @@ created_at       int
 stays flat/nullable so closet filters (wind, water, temp range) are plain
 indexed SQL. Closet UI groups are derived, not stored:
 
-| UI group (design C) | Predicate |
-|---|---|
-| Tops | `category='top' AND (layer IS NULL OR layer != 'outer')` |
-| Bottoms | `category='bottom' AND (layer IS NULL OR layer != 'outer')` |
-| Outer | `layer='outer'` |
-| Hands / head | `category IN ('headwear','neckwear','gloves')` |
-| Shoes | `category='shoes'` |
-| Socks / extras | `category IN ('socks','accessory')` |
+| UI group (design C) | Predicate                                                   |
+| ------------------- | ----------------------------------------------------------- |
+| Tops                | `category='top' AND (layer IS NULL OR layer != 'outer')`    |
+| Bottoms             | `category='bottom' AND (layer IS NULL OR layer != 'outer')` |
+| Outer               | `layer='outer'`                                             |
+| Hands / head        | `category IN ('headwear','neckwear','gloves')`              |
+| Shoes               | `category='shoes'`                                          |
+| Socks / extras      | `category IN ('socks','accessory')`                         |
 
 ### brands (curated seed + user additions — lane 101)
 
@@ -261,7 +261,13 @@ import { z } from "zod";
 // ---- Garments: discriminated union on category ----------------------------
 export const layerSchema = z.enum(["base", "mid", "outer"]);
 export const weightSchema = z.enum(["light", "mid", "heavy"]);
-export const fabricSchema = z.enum(["synthetic", "merino", "cotton", "blend", "down"]);
+export const fabricSchema = z.enum([
+  "synthetic",
+  "merino",
+  "cotton",
+  "blend",
+  "down",
+]);
 
 const garmentBase = z.object({
   name: z.string().min(1).max(80),
@@ -283,18 +289,32 @@ const layered = garmentBase.extend({
 export const garmentSchema = z.discriminatedUnion("category", [
   layered.extend({ category: z.literal("top") }),
   layered.extend({ category: z.literal("bottom") }),
-  garmentBase.extend({ category: z.literal("headwear"),
-    weight: weightSchema.optional(), fabric: fabricSchema.optional(),
-    windResistant: z.boolean().optional() }),
-  garmentBase.extend({ category: z.literal("neckwear"),
-    weight: weightSchema.optional(), fabric: fabricSchema.optional() }),
-  garmentBase.extend({ category: z.literal("gloves"),
-    weight: weightSchema.optional(), windResistant: z.boolean().optional(),
-    waterResistant: z.boolean().optional() }),
-  garmentBase.extend({ category: z.literal("socks"),
-    weight: weightSchema.optional(), fabric: fabricSchema.optional() }),
-  garmentBase.extend({ category: z.literal("shoes"),
-    waterResistant: z.boolean().optional() }),
+  garmentBase.extend({
+    category: z.literal("headwear"),
+    weight: weightSchema.optional(),
+    fabric: fabricSchema.optional(),
+    windResistant: z.boolean().optional(),
+  }),
+  garmentBase.extend({
+    category: z.literal("neckwear"),
+    weight: weightSchema.optional(),
+    fabric: fabricSchema.optional(),
+  }),
+  garmentBase.extend({
+    category: z.literal("gloves"),
+    weight: weightSchema.optional(),
+    windResistant: z.boolean().optional(),
+    waterResistant: z.boolean().optional(),
+  }),
+  garmentBase.extend({
+    category: z.literal("socks"),
+    weight: weightSchema.optional(),
+    fabric: fabricSchema.optional(),
+  }),
+  garmentBase.extend({
+    category: z.literal("shoes"),
+    waterResistant: z.boolean().optional(),
+  }),
   garmentBase.extend({ category: z.literal("accessory") }),
 ]);
 export type Garment = z.infer<typeof garmentSchema>;
@@ -311,10 +331,14 @@ export const productDraftSchema = z.object({
  *  is always kept exactly as published; `parts` is best-effort parse. */
 export const fabricPartSchema = z.object({
   part: z.string().optional(), // "body" | "liner" | "shell" | "panels" ... ; absent when unlabeled
-  materials: z.array(z.object({
-    material: z.string(),      // "polyester", "merino wool", "elastane"
-    pct: z.number().min(0).max(100).optional(),
-  })).min(1),
+  materials: z
+    .array(
+      z.object({
+        material: z.string(), // "polyester", "merino wool", "elastane"
+        pct: z.number().min(0).max(100).optional(),
+      }),
+    )
+    .min(1),
 });
 export const fabricCompositionSchema = z.object({
   verbatim: z.string(),
@@ -350,13 +374,23 @@ export interface ExtractionModel {
 // ---- Verdicts -------------------------------------------------------------
 export const verdictSchema = z.number().int().min(-2).max(2);
 export const verdictLabels = {
-  "-2": "way_cold", "-1": "bit_cold", "0": "dialed",
-  "1": "bit_warm", "2": "way_warm",
+  "-2": "way_cold",
+  "-1": "bit_cold",
+  "0": "dialed",
+  "1": "bit_warm",
+  "2": "way_warm",
 } as const;
 export const itemFlagSchema = z.enum(["too_much", "not_enough"]);
 export const entryTags = [
-  "cold_first_mile", "cold_throughout", "overheated_late", "sleeves_damp",
-  "chafed", "perfect_warmup", "wind_cut_through", "hands_cold", "hands_sweaty",
+  "cold_first_mile",
+  "cold_throughout",
+  "overheated_late",
+  "sleeves_damp",
+  "chafed",
+  "perfect_warmup",
+  "wind_cut_through",
+  "hands_cold",
+  "hands_sweaty",
 ] as const;
 export const entryTagSchema = z.enum(entryTags);
 
@@ -429,7 +463,7 @@ src/routes/
   → render module components).
 - Reserved server-function namespaces mirror modules: `auth.*`, `closet.*`,
   `runs.*`, `weather.*` (internal only), `feed.*`, `onboarding.*`, `products.*`
-(101: CRUD/autocomplete) and `enrichment.*` (107: internal only).
+  (101: CRUD/autocomplete) and `enrichment.*` (107: internal only).
 
 ## Component convention
 

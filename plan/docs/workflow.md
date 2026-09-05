@@ -99,6 +99,7 @@ When a lane's design doc requests a schema change:
 ## After MVP lanes land
 
 **Before opening public sign-ups** (launch-gate checklist):
+
 1. Run Task 105 (trust & safety floor) as a sequential lane on main.
 2. Enable Cloudflare's CSAM scanning tool in the dashboard (free; zone
    setting, not code).

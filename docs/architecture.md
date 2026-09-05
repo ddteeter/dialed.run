@@ -183,11 +183,11 @@ cards and follow CTAs are the full-E2 epic, post-MVP.
 
 ## Rungs of verification
 
-| Rung | Runs | Tools |
-|---|---|---|
-| Stop gate (per agent turn) | diff-scoped | eslint, tsc |
-| Commit gate | merge-base diff + whole graph | + knip, dependency-cruiser |
-| CI (authoritative) | whole repo | + vitest (workers pool), Playwright smoke, `wrangler deploy --dry-run` |
+| Rung                       | Runs                          | Tools                                                                  |
+| -------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
+| Stop gate (per agent turn) | diff-scoped                   | eslint, tsc                                                            |
+| Commit gate                | merge-base diff + whole graph | + knip, dependency-cruiser                                             |
+| CI (authoritative)         | whole repo                    | + vitest (workers pool), Playwright smoke, `wrangler deploy --dry-run` |
 
 ## Runtime resilience & solo-ops posture
 

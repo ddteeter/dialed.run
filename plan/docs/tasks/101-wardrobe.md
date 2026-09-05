@@ -42,7 +42,7 @@ middleware. **No schema changes are expected for this lane** — the tables in
 ## Out of scope (do not build)
 
 Affiliate anything, auto-discovery of product photos, body measurements,
-item recommendations, sharing/visibility settings. Photo *moderation* is
+item recommendations, sharing/visibility settings. Photo _moderation_ is
 Task 105 (sequential, later) — but store photos with a `visibility` column
 (`'ok'` for now) so 105 can add states without a migration.
 

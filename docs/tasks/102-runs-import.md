@@ -3,7 +3,7 @@
 ## Goal
 
 Runs enter dialed three ways: (a) manual entry, (b) FIT/GPX/TCX single-file
-upload parsed asynchronously, (c) *reminders* from Strava. Compliance rule
+upload parsed asynchronously, (c) _reminders_ from Strava. Compliance rule
 (non-negotiable): **no Strava activity data is stored, displayed, or used —
 ever.** The webhook event's only effect is a notification row. Implements
 screen A1 plus the undesigned manual-entry, notifications, and Strava

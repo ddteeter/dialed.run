@@ -6,7 +6,7 @@ focused on the technical/architectural plan. **Not yet reconciled with
 
 ## Layout
 
-The archive contained a flattened copy *and* a nested `dialed-handoff.zip`
+The archive contained a flattened copy _and_ a nested `dialed-handoff.zip`
 holding the same 11 files (byte-identical) with their intended structure.
 The structured version is what's preserved here, because the docs
 cross-reference `docs/...` paths that only resolve in this layout.
@@ -50,12 +50,13 @@ Architecture rules are machine-enforced via dependency-cruiser.
   directives ("Stack (fixed — do not substitute)", "Forbidden zones"). The
   rename keeps it inert.
 
-  It is written to become the *repository root* `CLAUDE.md`. Promote it with
+  It is written to become the _repository root_ `CLAUDE.md`. Promote it with
   `git mv plan/proposed-CLAUDE.md CLAUDE.md` once the stack is agreed and the
   design/plan merge has settled — at the root, its internal `docs/...`
   references resolve as the author intended. The other imported docs still
   refer to it as "CLAUDE.md"; that is correct for the promoted state and was
   deliberately left unedited.
+
 - **One referenced file is absent from the archive:**
   `docs/live-loop-verification.md`, cited by `docs/workflow.md:11`.
 
@@ -67,8 +68,8 @@ Points where the two documents will need a decision, noted but not resolved:
   the design specifies app-like mobile flows with sheets, multi-select, and a
   dial-settling animation on the call. Reconcilable, but it constrains how
   several screens are built.
-- **Wardrobe organization.** The plan's entity model organizes apparel *by
-  body part*; `design/Product Screens.dc.html` explicitly rejects a body-part
+- **Wardrobe organization.** The plan's entity model organizes apparel _by
+  body part_; `design/Product Screens.dc.html` explicitly rejects a body-part
   wizard, filtering the closet by run conditions instead.
 - **Coverage.** The plan's lanes (101–105) don't obviously cover onboarding
   O1–O6, the recommendation engine itself, or gear gaps (J) — which is where

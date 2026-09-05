@@ -93,7 +93,7 @@ explicitly says the migration is yours.
 ## D1 query discipline
 
 - Every query that backs a page or fragment must be covered by an index.
-  Rows *scanned* are billed, not rows returned.
+  Rows _scanned_ are billed, not rows returned.
 - Feed and list queries: fanout-on-read with covering indexes. Never
   fanout-on-write (no per-follower insert loops).
 - Batch related reads with `db.batch()` where possible.
@@ -143,7 +143,7 @@ Dialed must run unattended. These are laws, not suggestions:
    cannot double-process.
 3. **No hand-rolled retry loops in request handlers.** If work can fail
    transiently, it belongs on the queue; queue redelivery + `max_retries` +
-   the DLQ *is* the retry mechanism. Request handlers do one attempt.
+   the DLQ _is_ the retry mechanism. Request handlers do one attempt.
 4. **Every outbound fetch** gets `AbortSignal.timeout(...)` (10s default) and
    a zod parse. A slow or weird upstream must never wedge a request or a
    consumer.

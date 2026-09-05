@@ -1,0 +1,7 @@
+dist/
+coverage/
+src/routeTree.gen.ts
+worker-configuration.d.ts
+package-lock.json
+design/
+.guardrails/
