@@ -15,3 +15,12 @@ todos.json
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# --- guardrails:start ---
+.guardrails/state/*
+!.guardrails/state/recurrence.json
+reports/mutation/
+reports/stryker-incremental.json
+.stryker-tmp/
+.claude/worktrees/
+# --- guardrails:end ---

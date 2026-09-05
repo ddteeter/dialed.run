@@ -1,0 +1,50 @@
+# Consumer-facing CI template, written into a target repo by `guardrails init`.
+# Uses floating major tags (@v6), not the pinned commit SHAs this repo's own
+# workflows use: a SHA pinned into a consumer's repository would rot silently
+# under THEIR Dependabot policy, and we cannot update it for them. This repo
+# pins because it controls its own supply chain; a consumer controls theirs.
+#
+# The MAJOR still has to be kept current, which floating does not do for us:
+# @v4 rides the node20 runner GitHub is retiring, so every repo scaffolded
+# with it inherits deprecation warnings fixable only by editing an OWNED
+# file. Keep this in step with the majors `.github/workflows/ci.yml` pins.
+name: Guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The commit gate diffs against the merge-base, which needs history.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # `gate --mode=ci` runs verify PLUS the diff-auditor PLUS the sanction
+      # budget. Bare `verify` runs none of the last two.
+      #
+      # `--mode=ci`, NOT `--mode=commit`: the commit rung scopes the
+      # diff-scoped analyzers to the STAGED files, which keeps local commits
+      # fast but is empty in a CI checkout, where nothing is staged. `ci` (and
+      # its local twin `push`) scope to the branch diff instead, which is the
+      # question CI is actually asking.
+      #
+      # Invoked by explicit path rather than `npx guardrails-core`. The bin is
+      # named after the package, so an npx miss resolves THIS package rather
+      # than a stranger's -- but it can still fetch a different VERSION than
+      # `npm ci` installed. CI must run exactly what it installed, and only the
+      # path form guarantees that.
+      - run: node ./node_modules/guardrails-core/dist/cli.mjs gate --mode=ci
+      - run: node ./node_modules/guardrails-core/dist/cli.mjs sanctions-check

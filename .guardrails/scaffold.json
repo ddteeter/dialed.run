@@ -1,0 +1,19 @@
+{
+  "guardrailsVersion": "0.1.0",
+  "files": {
+    ".claude/agents/guardrail-fixer-thorough.md": "sha256-97352a9794d1fe3dae4fc9fe9d906c056c764cdfd80f426c84b08a725c96160c",
+    ".claude/agents/guardrail-fixer.md": "sha256-c4a5feb0a102ad1a9ad2c64b6e12f004db03312ec336a2b39750c727c488f6fd",
+    ".claude/skills/boundary-validation/SKILL.md": "sha256-ef34efdc0a324d09084671dbe5aa43aca3150d7709fd2a2a86b06a8a78efa285",
+    ".claude/skills/crushing-mutants/SKILL.md": "sha256-7db8aedafb821c32821ac43bd68595c0043ed39b89859ba2ad1523e82ce15777",
+    ".codex/agents/guardrail-fixer-thorough.toml": "sha256-1dbba4550b6b872fbaf2d1bf862e6179d47d88c1b0e5322e54c16572f3cc52e6",
+    ".codex/agents/guardrail-fixer.toml": "sha256-0a4dbc40b18a962b28e885a3bded8523fec96d9b53c9fd4995436ff091e547e1",
+    ".githooks/pre-commit": "sha256-c393e7b9c9c7cc22ae593164519cb0d1de4d322cfa692e8320579e432594bb18",
+    ".githooks/pre-push": "sha256-03005463ebb9636a0623aa6014e194d8b9b2bba5fab0c8916452d51eb3da283c",
+    ".github/agents/guardrail-fixer-thorough.agent.md": "sha256-1cc0b3bacb543468c6f3729965d6dfd682fed5b5701abbcaabfebee9ae9303fa",
+    ".github/agents/guardrail-fixer.agent.md": "sha256-4c9b4c5566558a238f641a986450a0745df1b8b17f2dee35809c03936527d7b3",
+    ".github/hooks/guardrails.json": "sha256-ad00756dd1c65de70db76137cc65b68ca7fb1d6c982d70690e850b414a7c976f",
+    ".github/workflows/guardrails.yml": "sha256-4fe0411fbef645d11eb2cf9c34e0ac3a3a87b88fe7822576774c4da2fb37a836",
+    "docs/guardrails/boundary-validation.md": "sha256-48e286a6a7edc7385818bd66561abfdc35925aee1faf7ab58844ee6fa6ff0ecb",
+    "docs/guardrails/crushing-mutants.md": "sha256-ab8e7d2d2a8ffbcda443d87184d96d2509f941ccc4d7e99b7ba8f4f817a1de5e"
+  }
+}

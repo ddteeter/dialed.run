@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "disableAllHooks": false,
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "edit|create|str_replace_editor|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails autofix"
+          }
+        ]
+      }
+    ],
+    "preToolUse": [
+      {
+        "matcher": "bash|shell|powershell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails gate --mode=pretooluse --dialect=copilot"
+          }
+        ]
+      },
+      {
+        "matcher": "edit|create|str_replace_editor|apply_patch|view",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails scope-check --dialect=copilot"
+          }
+        ]
+      }
+    ],
+    "agentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails gate --mode=stop --dialect=copilot"
+          }
+        ]
+      }
+    ]
+  }
+}

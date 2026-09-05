@@ -1,0 +1,81 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails session-start",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails session-end",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Shell|PowerShell|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails scope-check --dialect=codex",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Shell|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails gate --mode=pretooluse --dialect=codex",
+            "timeout": 300
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails scope-check --dialect=codex",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails autofix",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"import('guardrails-core/cli')\" guardrails gate --mode=stop --dialect=codex",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

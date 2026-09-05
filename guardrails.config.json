@@ -1,0 +1,13 @@
+{
+  "baseBranch": "main",
+  "enforcement": "block",
+  "distribution": "solo",
+  "analyzers": {
+    "eslint": "required",
+    "tsc": "required",
+    "knip": "required",
+    "dependency-cruiser": "required",
+    "stryker": "off"
+  },
+  "sanctionedSuppressions": []
+}
