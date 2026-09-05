@@ -24,3 +24,7 @@ reports/stryker-incremental.json
 .stryker-tmp/
 .claude/worktrees/
 # --- guardrails:end ---
+
+# playwright
+test-results/
+playwright-report/

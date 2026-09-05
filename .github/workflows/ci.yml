@@ -43,7 +43,20 @@ jobs:
       - name: Wrangler deploy (dry run)
         run: npx wrangler deploy --dry-run
 
-      # TODO(phase-0 §8): Playwright smoke (login + home) once auth lands
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: echo "BETTER_AUTH_SECRET=ci-only-secret" > .dev.vars
+      - run: npx wrangler d1 migrations apply dialed-core --local
+      - run: npx wrangler d1 migrations apply dialed-weather --local
+      - run: npx playwright test
 
   deploy:
     name: Deploy to workers.dev

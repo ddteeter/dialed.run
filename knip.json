@@ -14,7 +14,9 @@
     "src/db/schema-core.ts",
     "src/db/schema-auth.ts",
     "src/db/schema-weather.ts",
-    "src/env/index.ts"
+    "src/env/index.ts",
+    "playwright.config.ts",
+    "e2e/**/*.spec.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}",
