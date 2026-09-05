@@ -1,2 +1,4 @@
 # Copy to .dev.vars (gitignored). Prod values are Wrangler secrets.
 BETTER_AUTH_SECRET=generate-a-long-random-string
+# Optional locally; set in prod:
+# SENTRY_DSN=
