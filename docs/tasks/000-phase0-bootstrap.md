@@ -25,7 +25,7 @@ exists as code.
    - `guardrails.config.json`, `.claude/settings.json` (PostToolUse autofix +
      Stop gate), fixer agents in `.claude/agents/`,
      `.githooks/pre-commit` + `git config core.hooksPath .githooks`,
-     CI workflow running `guardrails verify`.
+     CI workflow running the verify step per the adoption docs.
    - House rules replacing the old htmx bans: `no-restricted-syntax` banning
      string-literal URLs in `href`/`fetch`/`window.location` (typed
      `Link`/`navigate` only) and banning structural `as` casts on

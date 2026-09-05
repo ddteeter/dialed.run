@@ -6,13 +6,15 @@ renumbered; stack changed per D-03).
 
 ## Prerequisites (once, before Phase 0)
 
-1. In agentic-guardrails-scaffolding: tag a release (e.g. `v0.1.0`) and ensure
-   a `prepare` script builds `dist/` on install, so dialed can depend on
-   `github:ddteeter/agentic-guardrails-scaffolding#v0.1.0` (or commit dist).
-2. Run the guardrails live-loop acceptance test once — the scope-lock has
-   never been observed firing live. **The referenced
-   `live-loop-verification.md` was missing from the imported archive** —
-   recreate or locate it in the guardrails repo before betting on the loop.
+1. ✅ Done 2026-09-05: guardrails v0.1.0 is tagged with a working `prepare`
+   build — dialed depends on
+   `github:ddteeter/agentic-guardrails-scaffolding#v0.1.0`. The CLI bin is
+   `agentic-guardrails`; adoption goes through the repo's adoption.md/init
+   flow.
+2. Run the guardrails live-loop acceptance test
+   (`docs/live-loop-verification.md` in the guardrails repo — it exists at
+   v0.1.0; the dialed archive merely referenced it) — folded into Phase 0's
+   done criteria, which prove the loop on this repo.
 3. Accounts/keys: Visual Crossing API key, Strava API app (callback URL can
    be workers.dev initially), Google OAuth client, extraction-model API key — OpenAI presumptive, per D-32 (107's
    extraction rung; the eval may change the vendor), Sentry project (free tier), UptimeRobot (or

@@ -120,9 +120,10 @@ explicitly says the migration is yours.
 
 ## Guardrails (the enforcement loop)
 
-This repo runs `guardrails` (agentic-guardrails-scaffolding):
+This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
+`agentic-guardrails` — invoked here via the npm scripts Phase 0 wires up):
 
-- **Stop gate**: when you try to end a turn, `guardrails gate --mode=stop`
+- **Stop gate**: when you try to end a turn, the configured stop-gate hook
   runs eslint + tsc on your diff. If it blocks with a pointer to a manifest,
   spawn the named fixer subagent as instructed — do not read the manifest
   yourself, and do not argue with the gate.
