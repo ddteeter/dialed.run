@@ -21,6 +21,23 @@ export default defineConfig(async () => {
     test: {
       include: ["test/**/*.test.{ts,tsx}"],
       setupFiles: ["test/apply-migrations.ts"],
+      // better-auth's dispatch floats a duplicate rejection for expected
+      // auth failures (the awaited path still rejects/responds correctly —
+      // covered by test/auth.test.ts). Ignore ONLY that shape.
+      onUnhandledError(error: unknown): boolean | undefined {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "body" in error &&
+          typeof error.body === "object" &&
+          error.body !== null &&
+          "code" in error.body &&
+          error.body.code === "INVALID_EMAIL_OR_PASSWORD"
+        ) {
+          return false;
+        }
+        return undefined;
+      },
     },
   };
 });

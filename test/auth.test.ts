@@ -27,15 +27,24 @@ describe("auth (better-auth on real D1)", () => {
     });
     expect(signIn.token).toBeTruthy();
 
-    let caught: unknown;
-    try {
-      await auth.api.signInEmail({
-        body: { email: credentials.email, password: ["not", "the", "password"].join("-") },
-      });
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(Error);
-    expect(String(caught)).toMatch(/Invalid email or password/);
+    // Wrong password through the HTTP surface: a 401 response, no throw
+    // (better-auth's api.* double-rejects internally; the handler doesn't).
+    const wrongPasswordBody = JSON.stringify({
+      email: credentials.email,
+      password: ["not", "the", "password"].join("-"),
+    });
+    const signInRequest = new Request(
+      "http://localhost/api/auth/sign-in/email",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+        },
+        body: wrongPasswordBody,
+      },
+    );
+    const response = await auth.handler(signInRequest);
+    expect(response.status).toBe(401);
   });
 });
