@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 
 import { TabBar } from "./TabBar";
 
@@ -7,6 +8,13 @@ import { TabBar } from "./TabBar";
  * top-right slot where the notification bell will live.
  */
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  // Deterministic hydration signal: controlled inputs are only safe to
+  // drive (by humans or Playwright) once React has attached. E2e specs
+  // wait for html[data-hydrated="true"] instead of racing hydration.
+  useEffect(() => {
+    document.documentElement.dataset.hydrated = "true";
+  }, []);
+
   return (
     <div className="flex min-h-dvh flex-col bg-chalk text-night">
       <header className="flex items-center justify-end px-5 pt-4">
