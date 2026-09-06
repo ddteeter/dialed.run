@@ -27,11 +27,19 @@ in sync.
    placeholder-faithful layouts; the packet referenced these as deltas
    #2/#3/#6 but a renumbering dropped them from this queue): manual run
    entry, the notifications bell + notification list (the bell currently
-   renders a raw 🔔 emoji — an off-brand improvisation to replace, not a
-   design decision), Strava connect/disconnect, and import status. All
+   renders a raw 🔔 emoji — replace with `<Icon name="bell">` now that the
+   Icon Pack landed), Strava connect/disconnect, and import status. All
    need real design before launch gate.
 5. **Settings/privacy screen** (You tab) — product.md marks it "needs
    design"; lane 104 ships whatever placeholder its packet requires.
+6. **Icon Pack nav drift** (imported 2026-09-06, `design/icons.js` +
+   `Icon Pack.dc.html`; ported to `src/ui/icons.tsx`): the pack's nav
+   group is feed / closet / log / discover / **profile**, but product.md's
+   tab bar is Feed / Closet / +Add / **Call** (teaser) / You — the pack
+   has a `discover` glyph and no `call` glyph. Needs a call (ha): either
+   design draws a Call-teaser glyph, or the tab uses `verdictPending`/text
+   until Epic 200. Also: no glyph maps to sports-bra or arm-sleeves if
+   those categories ship.
 
 ## Resolved design↔contract nit (no upstream change needed)
 
