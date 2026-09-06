@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
@@ -18,6 +19,8 @@ import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as RunsManualRouteImport } from './routes/runs/manual'
 import { Route as RunsNewRouteImport } from './routes/runs/new'
 import { Route as RunsNotificationsRouteImport } from './routes/runs/notifications'
+import { Route as RunsStravaRouteImport } from './routes/runs/strava'
+import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
 
@@ -29,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStravaRoute = ApiStravaRouteImport.update({
+  id: '/api/strava',
+  path: '/api/strava',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -66,6 +74,16 @@ const RunsNotificationsRoute = RunsNotificationsRouteImport.update({
   path: '/runs/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RunsStravaRoute = RunsStravaRouteImport.update({
+  id: '/runs/strava',
+  path: '/runs/strava',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsStravaCallbackRoute = RunsStravaCallbackRouteImport.update({
+  id: '/runs/strava-callback',
+  path: '/runs/strava-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -80,12 +98,15 @@ const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/notifications': typeof RunsNotificationsRoute
+  '/runs/strava': typeof RunsStravaRoute
+  '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
@@ -93,12 +114,15 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/notifications': typeof RunsNotificationsRoute
+  '/runs/strava': typeof RunsStravaRoute
+  '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/runs': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
@@ -107,12 +131,15 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/notifications': typeof RunsNotificationsRoute
+  '/runs/strava': typeof RunsStravaRoute
+  '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
@@ -122,12 +149,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/health'
+    | '/api/strava'
     | '/auth/login'
     | '/auth/signup'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/notifications'
+    | '/runs/strava'
+    | '/runs/strava-callback'
     | '/runs/'
     | '/api/auth/$'
     | '/runs/import/$importId'
@@ -135,12 +165,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/api/health'
+    | '/api/strava'
     | '/auth/login'
     | '/auth/signup'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/notifications'
+    | '/runs/strava'
+    | '/runs/strava-callback'
     | '/runs'
     | '/api/auth/$'
     | '/runs/import/$importId'
@@ -148,12 +181,15 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/api/health'
+    | '/api/strava'
     | '/auth/login'
     | '/auth/signup'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/notifications'
+    | '/runs/strava'
+    | '/runs/strava-callback'
     | '/runs/'
     | '/api/auth/$'
     | '/runs/import/$importId'
@@ -162,12 +198,15 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiStravaRoute: typeof ApiStravaRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsManualRoute: typeof RunsManualRoute
   RunsNewRoute: typeof RunsNewRoute
   RunsNotificationsRoute: typeof RunsNotificationsRoute
+  RunsStravaRoute: typeof RunsStravaRoute
+  RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
   RunsIndexRoute: typeof RunsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
@@ -187,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/strava': {
+      id: '/api/strava'
+      path: '/api/strava'
+      fullPath: '/api/strava'
+      preLoaderRoute: typeof ApiStravaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
@@ -238,6 +284,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runs/strava': {
+      id: '/runs/strava'
+      path: '/runs/strava'
+      fullPath: '/runs/strava'
+      preLoaderRoute: typeof RunsStravaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/strava-callback': {
+      id: '/runs/strava-callback'
+      path: '/runs/strava-callback'
+      fullPath: '/runs/strava-callback'
+      preLoaderRoute: typeof RunsStravaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -258,12 +318,15 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiStravaRoute: ApiStravaRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
   RunsRunIdRoute: RunsRunIdRoute,
   RunsManualRoute: RunsManualRoute,
   RunsNewRoute: RunsNewRoute,
   RunsNotificationsRoute: RunsNotificationsRoute,
+  RunsStravaRoute: RunsStravaRoute,
+  RunsStravaCallbackRoute: RunsStravaCallbackRoute,
   RunsIndexRoute: RunsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,

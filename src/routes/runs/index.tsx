@@ -34,6 +34,9 @@ function RunsIndexPage() {
           </Link>
         </div>
         <RunList runs={runs} />
+        <Link to="/runs/strava" className="text-sm text-night/50 underline">
+          Strava reminders
+        </Link>
       </div>
     </Layout>
   );

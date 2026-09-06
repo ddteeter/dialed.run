@@ -5,11 +5,18 @@
  * Start's virtual server entry.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
+import {
+  deleteCookie,
+  getCookie,
+  getRequestHeaders,
+  getRequestUrl,
+  setCookie,
+} from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import { auth } from "../auth";
 import { runDraftSchema } from "../../lib/contracts";
+import { newUlid } from "../../lib/ids";
 import { coreDb } from "./core-db";
 import { MAX_IMPORT_BYTES, getImportStatus, startImport } from "./imports";
 import {
@@ -24,6 +31,14 @@ import {
   markAllNotificationsRead,
   unreadNotificationCount,
 } from "./notifications";
+import { createStravaApi } from "./strava/api";
+import type { StravaConfig } from "./strava/api";
+import {
+  completeStravaConnect,
+  disconnectStrava,
+  getStravaConnection,
+  stravaAuthorizeUrl,
+} from "./strava/oauth";
 
 class UnauthenticatedError extends Error {
   constructor() {
@@ -129,3 +144,94 @@ export const markAllNotificationsReadFn = createServerFn({
   const userId = await requireUserId();
   await markAllNotificationsRead(coreDb(), userId);
 });
+
+// ---- Strava connect/disconnect (102 §6) ------------------------------
+//
+// Credentials don't exist yet (CLAUDE.md law 5): `stravaConfig()` returns
+// undefined until a human sets STRAVA_CLIENT_ID/SECRET via `wrangler
+// secret`, and every function below degrades cleanly when it does.
+
+const STRAVA_STATE_COOKIE = "strava_oauth_state";
+
+function stravaConfig(): StravaConfig | undefined {
+  if (env.STRAVA_CLIENT_ID === undefined || env.STRAVA_CLIENT_SECRET === undefined) {
+    return undefined;
+  }
+  return { clientId: env.STRAVA_CLIENT_ID, clientSecret: env.STRAVA_CLIENT_SECRET };
+}
+
+export const getStravaStatusFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const userId = await requireUserId();
+    const connection = await getStravaConnection(coreDb(), userId);
+    return {
+      configured: stravaConfig() !== undefined,
+      status: connection?.status,
+    };
+  },
+);
+
+/**
+Undefined when Strava isn't configured — the route hides the connect CTA.
+*/
+export const getStravaAuthorizeUrlFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  await requireUserId();
+  const config = stravaConfig();
+  if (config === undefined) return;
+  // CSRF guard: a short-lived state nonce, round-tripped via an httpOnly
+  // cookie and checked against the callback's `state` query param.
+  const state = newUlid();
+  setCookie(STRAVA_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 600,
+  });
+  const redirectUri = `${getRequestUrl().origin}/runs/strava-callback`;
+  return stravaAuthorizeUrl(config.clientId, redirectUri, state);
+});
+
+const stravaCallbackInput = z.object({
+  code: z.string().min(1).optional(),
+  state: z.string().min(1).optional(),
+  error: z.string().optional(),
+});
+
+export const completeStravaConnectFn = createServerFn({ method: "POST" })
+  .validator(stravaCallbackInput)
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    const expectedState = getCookie(STRAVA_STATE_COOKIE);
+    deleteCookie(STRAVA_STATE_COOKIE);
+    if (data.error !== undefined) {
+      return { ok: false as const, reason: "Strava connection was cancelled." };
+    }
+    if (
+      expectedState === undefined ||
+      data.code === undefined ||
+      data.state === undefined ||
+      data.state !== expectedState
+    ) {
+      return { ok: false as const, reason: "That connection link expired. Try again." };
+    }
+    const config = stravaConfig();
+    if (config === undefined) {
+      return { ok: false as const, reason: "Strava isn't configured yet." };
+    }
+    await completeStravaConnect(coreDb(), createStravaApi(config), userId, data.code);
+    return { ok: true as const };
+  });
+
+export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
+  async () => {
+    const userId = await requireUserId();
+    const config = stravaConfig();
+    await disconnectStrava(
+      coreDb(),
+      config === undefined ? undefined : createStravaApi(config),
+      userId,
+    );
+  },
+);

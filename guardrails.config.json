@@ -13,7 +13,7 @@
     {
       "key": "src/routeTree.gen.ts|cast-any|} as any)",
       "reason": "TanStack Router generated file (tsr generate); casts are the generator's, not hand-written. File is lint/format-ignored; regenerated on route changes.",
-      "count": 11
+      "count": 14
     }
   ]
 }
