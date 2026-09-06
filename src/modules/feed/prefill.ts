@@ -10,8 +10,9 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
 import { env } from "../../env";
+import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { observationsForRuns, precipClassOf } from "./conditions";
+import { observationsForRuns } from "./conditions";
 
 const HISTORY_LIMIT = 200;
 

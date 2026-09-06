@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { getSession } from "../../modules/auth/functions";
-import { formatTemp } from "../../modules/feed/conditions";
 import {
   attachKitAction,
   pickerGroupsQuery,
@@ -12,6 +11,7 @@ import type { PickerGroup } from "../../modules/feed/picker";
 import type { PrefillCandidate } from "../../modules/feed/prefill";
 import { uiGroupLabels } from "../../modules/feed/groups";
 import { redirectTo } from "../../modules/feed/redirect";
+import { formatTemp } from "../../lib/temperature";
 import { Bracketed, Layout, Mono, Skeleton } from "../../ui";
 
 export const Route = createFileRoute("/feed/attach/$runId")({

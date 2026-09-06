@@ -7,14 +7,18 @@
  * dialed-core and dialed-weather are separate D1 databases, so there is no
  * SQL join: observations are resolved by unique-index seeks on
  * (lat_r, lng_r, hour_bucket), never by scanning dialed-weather.
+ *
+ * Pure classification/formatting helpers (precipClassOf, bandFloorC,
+ * bandLabel, formatTemp) live in lib/temperature.ts, not here — this file
+ * imports `env`, and a route component that value-imports anything from an
+ * env-touching file breaks the client build (Vite/Rolldown must resolve
+ * `cloudflare:workers` even for bindings the component never uses).
  */
 import { and, desc, eq, ne, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
-
-export type PrecipClass = "dry" | "damp" | "wet";
 
 export interface Conditions {
   tempC: number;
@@ -23,38 +27,6 @@ export interface Conditions {
   condition: string;
   windKph: number;
   source: "visualcrossing" | "manual";
-}
-
-export function precipClassOf(precipMm: number): PrecipClass {
-  if (precipMm <= 0.1) return "dry";
-  if (precipMm <= 2.5) return "damp";
-  return "wet";
-}
-
-/**
-5 °C coverage bands: floor of the band containing feelsLikeC.
-*/
-export function bandFloorC(feelsLikeC: number): number {
-  return Math.floor(feelsLikeC / 5) * 5;
-}
-
-function cToF(c: number): number {
-  return Math.round((c * 9) / 5 + 32);
-}
-
-/**
-"[38–46°]"-style band text in the user's unit (docs/product.md).
-*/
-export function bandLabel(bandFloor: number, unit: "f" | "c"): string {
-  return unit === "c"
-    ? `${String(bandFloor)}–${String(bandFloor + 5)}°`
-    : `${String(cToF(bandFloor))}–${String(cToF(bandFloor + 5))}°`;
-}
-
-export function formatTemp(tempC: number, unit: "f" | "c"): string {
-  return unit === "c"
-    ? `${String(Math.round(tempC))}°`
-    : `${String(cToF(tempC))}°`;
 }
 
 interface CacheKey {

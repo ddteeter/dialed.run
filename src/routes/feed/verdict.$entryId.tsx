@@ -3,8 +3,8 @@ import type { ChangeEvent } from "react";
 import { useState } from "react";
 
 import { entryTags } from "../../lib/contracts";
+import { bandFloorC } from "../../lib/temperature";
 import { getSession } from "../../modules/auth/functions";
-import { bandFloorC } from "../../modules/feed/conditions";
 import {
   entryDetailQuery,
   itemBandWearStatQuery,

@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { getSession } from "../../modules/auth/functions";
-import { formatTemp } from "../../modules/feed/conditions";
 import {
   entryDetailQuery,
   recordVerdictPromptedAction,
@@ -10,6 +9,7 @@ import {
   verdictPromptQuery,
 } from "../../modules/feed/functions";
 import { redirectTo } from "../../modules/feed/redirect";
+import { formatTemp } from "../../lib/temperature";
 import { Bracketed, Layout, Mono } from "../../ui";
 
 const VERDICT_LABELS: Record<number, string> = {

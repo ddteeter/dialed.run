@@ -28,8 +28,9 @@ import {
 import { env } from "../../env";
 import type { entryTags, itemFlagSchema } from "../../lib/contracts";
 import { newUlid } from "../../lib/ids";
+import { bandFloorC } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { bandFloorC, observationsForRuns } from "./conditions";
+import { observationsForRuns } from "./conditions";
 
 type EntryTag = (typeof entryTags)[number];
 type ItemFlag = z.infer<typeof itemFlagSchema>;

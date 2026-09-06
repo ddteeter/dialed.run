@@ -5,9 +5,9 @@ import { getSession } from "../../modules/auth/functions";
 import type { FeedItem } from "../../modules/feed/feed";
 import { followingFeedQuery, yourConditionsQuery } from "../../modules/feed/functions";
 import type { ConsensusResult } from "../../modules/feed/consensus";
-import { formatTemp } from "../../modules/feed/conditions";
 import { uiGroupLabels, uiGroups } from "../../modules/feed/groups";
 import { redirectTo } from "../../modules/feed/redirect";
+import { formatTemp } from "../../lib/temperature";
 import { Bracketed, Layout, Mono, Skeleton } from "../../ui";
 
 export const Route = createFileRoute("/feed/")({

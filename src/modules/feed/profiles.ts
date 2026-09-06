@@ -15,7 +15,8 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { bandFloorC, bandLabel, observationsForRuns } from "./conditions";
+import { bandFloorC, bandLabel } from "../../lib/temperature";
+import { observationsForRuns } from "./conditions";
 import { followerCount, followingCount } from "./follows";
 
 function db() {
