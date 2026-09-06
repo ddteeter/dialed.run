@@ -55,8 +55,11 @@ Three facts constrain this:
   `smoke-${Date.now()}@example.com`. That cannot build a closet of 20
   garments or a feed containing other people's posts.
 
-**Decision: seed through `getPlatformProxy()`** (verified present in the
-installed wrangler 4.129.0). A Node-side helper opens the *same* local
+**Decision: seed through `getPlatformProxy()`** (wrangler 4.129.0). State
+sharing with the dev server is verified in both directions: rows written from
+Node are readable by `wrangler d1 execute --local`, and rows the dev server
+writes (a Playwright signup) are readable from Node. Concurrent access while
+the dev server is running works — no SQLite lock contention. A Node-side helper opens the *same* local
 bindings the dev server uses and writes with Drizzle and the real schema:
 
 ```ts
@@ -111,6 +114,12 @@ Each feature directory holds exactly one `*.demo.spec.ts` — the happy-path
 journey, carrying real assertions, **video on** — plus any number of
 `*.spec.ts` edge-case specs with **video off** (30 validation tests make an
 unwatchable video).
+
+**As built:** a demo spec holds exactly one `test()`. Playwright records one
+video per test, so the first cut of `auth.demo.spec.ts` (two tests) produced
+two videos and left no answer to "which one does the reviewer watch". The
+standalone assertion moved to `e2e/auth/home.spec.ts`; one journey now yields
+one video.
 
 The feature set grows organically; agents add directories as needed. Seeds
 from the `docs/product.md` screen inventory: `logging-loop/` (A1, A2, A2b,
