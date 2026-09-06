@@ -59,15 +59,18 @@ export default defineConfig({
         // A demo that runs at machine speed is unwatchable — the first
         // recording of the auth journey was 1.7s end to end. slowMo paces
         // every action so a reviewer can follow what happened, without
-        // sleeps polluting the spec.
-        launchOptions: { slowMo: 450 },
+        // sleeps polluting the spec. 900 after review feedback: 450 still
+        // read as things changing before the eye caught the cause.
+        launchOptions: { slowMo: 900 },
         video: { mode: "on", size: { width: 1280, height: 720 } },
       },
     },
   ],
   webServer: {
     command: "npm run dev",
-    env: { PORT: String(port) },
+    // VITE_DEVTOOLS=off keeps the floating devtools button out of demo
+    // recordings (it covers the tab bar's last item at 1280×720).
+    env: { PORT: String(port), VITE_DEVTOOLS: "off" },
     url: `http://localhost:${String(port)}`,
     // Never reuse: with per-worktree ports there is nothing legitimate to
     // reuse, and a busy port must fail loudly rather than hand these tests a
