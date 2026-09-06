@@ -1,6 +1,6 @@
 ---
 name: pr-demo-video
-description: Use when opening a PR whose branch diff touches the UI — any `.tsx`, or any `.css` under `src/ui/`. Covers finding or writing the feature's demo spec, recording it, and attaching the video to the PR so a reviewer can watch the feature instead of inferring it from a diff.
+description: Use when opening a PR that changes anything a user would see — a new or altered screen, and equally a screen whose behaviour changed behind an unchanged UI, such as stubbed data replaced by a real backend. Covers finding or writing the feature's demo spec, recording it, and attaching the video to the PR so a reviewer can watch the feature instead of inferring it from a diff.
 ---
 
 # PR demo videos
@@ -12,16 +12,38 @@ suite, recorded.
 
 ## Does this PR need one?
 
+The question is behavioural, not path-based: **would a reviewer opening the
+app see something different than they would on `main`?** If yes, demo it.
+
+The diff is a prompt for that question, never the answer to it:
+
 ```bash
 git diff --name-only origin/main...HEAD | grep -E '\.tsx$|^src/ui/.*\.css$'
 ```
 
-Any hit means yes. This is deliberately diff-derived, not packet-derived —
-`.tsx` lives in `src/ui/` and module directories as well as `src/routes/`, so
-"my packet owns routes" is the wrong question.
+A hit means almost certainly yes.
 
-No hit means no video. A weather-cache change or a queue consumer has nothing
-to show, and a video of it is theatre.
+**A miss does not mean no.** The most valuable demo in this repo is one whose
+diff contains no `.tsx` at all: a screen built against stubs, now wired to a
+real backend. Routes here are thin by mandate, so behaviour lives in
+`modules/` — the closet finally listing real garments, conditions resolving
+from a real observation instead of a fixture. Nothing changed shape;
+everything a user cares about changed.
+
+Ask in this order:
+
+1. Does a screen now **do** something it did not before — show real data where
+   it showed a stub, gain a state, let a user complete something they could
+   not? **Demo it**, whatever the diff touched.
+2. Did a screen only change **shape** — copy, layout, styling? **Demo it.**
+   This is where a `.tsx` hit usually lands.
+3. Did nothing user-visible change — a refactor rendering identical output, a
+   queue consumer, a cache-eviction rule, an index? **No demo.** Re-recording
+   an unchanged journey to satisfy a rule wastes your time and the
+   reviewer's, and a video of a queue consumer is theatre.
+
+Unsure? The tiebreaker is cheap: run the feature's demo and watch it. If you
+cannot tell it from the recording on `main`, you did not need one.
 
 ## Find the demo that already owns your screens
 
