@@ -23,6 +23,15 @@ in sync.
 3. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
    Epic 200 opens, incl. multi-part fabric display on garment/product
    detail (D-34) if composition surfaces there.
+4. **Lane 102's placeholder surfaces** (shipped in PR #4 on
+   placeholder-faithful layouts; the packet referenced these as deltas
+   #2/#3/#6 but a renumbering dropped them from this queue): manual run
+   entry, the notifications bell + notification list (the bell currently
+   renders a raw 🔔 emoji — an off-brand improvisation to replace, not a
+   design decision), Strava connect/disconnect, and import status. All
+   need real design before launch gate.
+5. **Settings/privacy screen** (You tab) — product.md marks it "needs
+   design"; lane 104 ships whatever placeholder its packet requires.
 
 ## Resolved design↔contract nit (no upstream change needed)
 

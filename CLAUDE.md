@@ -118,6 +118,23 @@ explicitly says the migration is yours.
   a Kit, the Call, Verdict, Conditions, Mileage. "useful", never "like".
   Measured values render in mono with bracket notation per `docs/product.md`.
 
+## Undesigned surfaces (placeholder protocol)
+
+Some packets require UI that has no artboard or `docs/product.md` screen ID.
+Building it is fine — inventing design language is not:
+
+- Compose ONLY existing `ui/` primitives, the brand tokens, and
+  bracket-notation text. Never introduce a new glyph, emoji, icon, icon
+  library, color, or font on an undesigned surface — a text label in the
+  existing system is always the correct placeholder. (The 🔔-emoji bell is
+  the canonical violation.)
+- In the same PR: add (or extend) the surface's entry in
+  `docs/design-deltas.md`'s open queue, so it is tracked for the design
+  round-trip.
+- In the PR body: list every undesigned surface you shipped under a
+  **"Design deltas"** heading, so the reviewer can kick them to the design
+  agent instead of discovering them in a demo video.
+
 ## Guardrails (the enforcement loop)
 
 This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
