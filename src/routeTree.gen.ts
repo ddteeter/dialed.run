@@ -13,7 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as RunsIndexRouteImport } from './routes/runs/index'
+import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
+import { Route as RunsManualRouteImport } from './routes/runs/manual'
+import { Route as RunsNewRouteImport } from './routes/runs/new'
+import { Route as RunsNotificationsRouteImport } from './routes/runs/notifications'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,9 +41,39 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RunsIndexRoute = RunsIndexRouteImport.update({
+  id: '/runs/',
+  path: '/runs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsRunIdRoute = RunsRunIdRouteImport.update({
+  id: '/runs/$runId',
+  path: '/runs/$runId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsManualRoute = RunsManualRouteImport.update({
+  id: '/runs/manual',
+  path: '/runs/manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsNewRoute = RunsNewRouteImport.update({
+  id: '/runs/new',
+  path: '/runs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsNotificationsRoute = RunsNotificationsRouteImport.update({
+  id: '/runs/notifications',
+  path: '/runs/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
+  id: '/runs/import/$importId',
+  path: '/runs/import/$importId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -46,14 +82,26 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/manual': typeof RunsManualRoute
+  '/runs/new': typeof RunsNewRoute
+  '/runs/notifications': typeof RunsNotificationsRoute
+  '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/runs/import/$importId': typeof RunsImportImportIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/manual': typeof RunsManualRoute
+  '/runs/new': typeof RunsNewRoute
+  '/runs/notifications': typeof RunsNotificationsRoute
+  '/runs': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/runs/import/$importId': typeof RunsImportImportIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,21 +109,54 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/manual': typeof RunsManualRoute
+  '/runs/new': typeof RunsNewRoute
+  '/runs/notifications': typeof RunsNotificationsRoute
+  '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/runs/import/$importId': typeof RunsImportImportIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/health' | '/auth/login' | '/auth/signup' | '/api/auth/$'
+    | '/'
+    | '/api/health'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/runs/$runId'
+    | '/runs/manual'
+    | '/runs/new'
+    | '/runs/notifications'
+    | '/runs/'
+    | '/api/auth/$'
+    | '/runs/import/$importId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/auth/login' | '/auth/signup' | '/api/auth/$'
+  to:
+    | '/'
+    | '/api/health'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/runs/$runId'
+    | '/runs/manual'
+    | '/runs/new'
+    | '/runs/notifications'
+    | '/runs'
+    | '/api/auth/$'
+    | '/runs/import/$importId'
   id:
     | '__root__'
     | '/'
     | '/api/health'
     | '/auth/login'
     | '/auth/signup'
+    | '/runs/$runId'
+    | '/runs/manual'
+    | '/runs/new'
+    | '/runs/notifications'
+    | '/runs/'
     | '/api/auth/$'
+    | '/runs/import/$importId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,7 +164,13 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  RunsRunIdRoute: typeof RunsRunIdRoute
+  RunsManualRoute: typeof RunsManualRoute
+  RunsNewRoute: typeof RunsNewRoute
+  RunsNotificationsRoute: typeof RunsNotificationsRoute
+  RunsIndexRoute: typeof RunsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  RunsImportImportIdRoute: typeof RunsImportImportIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,11 +203,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runs/': {
+      id: '/runs/'
+      path: '/runs'
+      fullPath: '/runs/'
+      preLoaderRoute: typeof RunsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/$runId': {
+      id: '/runs/$runId'
+      path: '/runs/$runId'
+      fullPath: '/runs/$runId'
+      preLoaderRoute: typeof RunsRunIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/manual': {
+      id: '/runs/manual'
+      path: '/runs/manual'
+      fullPath: '/runs/manual'
+      preLoaderRoute: typeof RunsManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/new': {
+      id: '/runs/new'
+      path: '/runs/new'
+      fullPath: '/runs/new'
+      preLoaderRoute: typeof RunsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/notifications': {
+      id: '/runs/notifications'
+      path: '/runs/notifications'
+      fullPath: '/runs/notifications'
+      preLoaderRoute: typeof RunsNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/import/$importId': {
+      id: '/runs/import/$importId'
+      path: '/runs/import/$importId'
+      fullPath: '/runs/import/$importId'
+      preLoaderRoute: typeof RunsImportImportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -131,17 +260,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
+  RunsRunIdRoute: RunsRunIdRoute,
+  RunsManualRoute: RunsManualRoute,
+  RunsNewRoute: RunsNewRoute,
+  RunsNotificationsRoute: RunsNotificationsRoute,
+  RunsIndexRoute: RunsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  RunsImportImportIdRoute: RunsImportImportIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
