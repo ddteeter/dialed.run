@@ -151,9 +151,19 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
 3. Implement in small commits. Each commit passes the commit gate.
 4. Tests are part of done, not an afterthought. Match the test expectations
    in your packet.
-5. If you change module boundaries or add a queue/cron/binding, update the
+5. **Demo what a user would see change.** If a reviewer opening the app would
+   see anything different than on `main`, your feature's demo spec must exist,
+   pass, and be re-recorded onto the PR — invoke the `pr-demo-video` skill.
+   That includes a screen whose behaviour changed behind an unchanged UI:
+   replacing stubbed data with a real backend touches no `.tsx` and is exactly
+   the demo worth watching. Work with no user-visible effect — a refactor, a
+   queue consumer, an index — needs no video. E2E specs are organised by
+   product feature (`e2e/<feature>/`), never by lane; find the demo that
+   already owns your screens by grepping `Covers:` before creating a new
+   directory.
+6. If you change module boundaries or add a queue/cron/binding, update the
    relevant diagram in `docs/architecture.md` in the same PR.
-6. Before ending your final turn: run `npm run verify && npm test`, then
+7. Before ending your final turn: run `npm run verify && npm test`, then
    summarize what you built, what you did not do, and any open questions —
    in five sentences or fewer.
 

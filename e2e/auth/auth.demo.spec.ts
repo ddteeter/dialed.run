@@ -1,17 +1,24 @@
-import { expect, test } from "@playwright/test";
+/**
+ * Covers: account creation and sign-out — one journey, one video.
+ *
+ * Exactly one test() per demo spec. A second test here would record a
+ * second video beside the one the reviewer is meant to watch; standalone
+ * assertions belong in a sibling *.spec.ts (see home.spec.ts).
+ *
+ * No docs/product.md screen ID — auth is not in the screen inventory. When a
+ * demo covers inventoried screens, list the IDs here instead; those IDs, not
+ * this directory's name, are what other lanes grep to find the demo that
+ * already owns a screen.
+ */
+import { expect, test } from "../support/demo";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
 async function hydrated(page: import("@playwright/test").Page): Promise<void> {
-  await page.locator('html[data-hydrated="true"]').waitFor({ state: "attached" });
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
 }
-
-test("home renders the brand hero", async ({ page }) => {
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /every run has an outfit/i }),
-  ).toBeVisible();
-});
 
 test("signup -> authenticated home -> sign out", async ({ page }) => {
   const email = `smoke-${String(Date.now())}@example.com`;
