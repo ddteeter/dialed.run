@@ -15,6 +15,7 @@
     "src/db/schema-auth.ts",
     "src/db/schema-weather.ts",
     "src/env/index.ts",
+    "src/ui/icons.tsx",
     "playwright.config.ts",
     "e2e/**/*.spec.ts"
   ],

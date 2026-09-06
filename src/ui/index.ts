@@ -1,4 +1,5 @@
 export { Bracketed } from "./Bracketed";
+export { Icon, ICONS } from "./icons";
 export { Layout } from "./Layout";
 export { Mono } from "./Mono";
 export { Sheet } from "./Sheet";

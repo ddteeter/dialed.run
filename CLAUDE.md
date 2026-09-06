@@ -128,6 +128,10 @@ Building it is fine — inventing design language is not:
   library, color, or font on an undesigned surface — a text label in the
   existing system is always the correct placeholder. (The 🔔-emoji bell is
   the canonical violation.)
+- **Icons come from `ui/`'s `<Icon name="…">`** — the typed port of the
+  design Icon Pack (75 glyphs; manifest in `src/ui/icons.tsx`). A glyph
+  that is not in the manifest is itself an undesigned surface: request it
+  via `docs/design-deltas.md`, never draw or import one.
 - In the same PR: add (or extend) the surface's entry in
   `docs/design-deltas.md`'s open queue, so it is tracked for the design
   round-trip.
