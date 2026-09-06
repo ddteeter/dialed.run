@@ -13,7 +13,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as FeedIndexRouteImport } from './routes/feed/index'
+import { Route as FeedMeRouteImport } from './routes/feed/me'
+import { Route as FeedSearchRouteImport } from './routes/feed/search'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
+import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entryId'
+import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
+import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
+import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,9 +43,49 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedIndexRoute = FeedIndexRouteImport.update({
+  id: '/feed/',
+  path: '/feed/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedMeRoute = FeedMeRouteImport.update({
+  id: '/feed/me',
+  path: '/feed/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedSearchRoute = FeedSearchRouteImport.update({
+  id: '/feed/search',
+  path: '/feed/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedAttachRunIdRoute = FeedAttachRunIdRouteImport.update({
+  id: '/feed/attach/$runId',
+  path: '/feed/attach/$runId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedEntryEntryIdRoute = FeedEntryEntryIdRouteImport.update({
+  id: '/feed/entry/$entryId',
+  path: '/feed/entry/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedPhotoSplatRoute = FeedPhotoSplatRouteImport.update({
+  id: '/feed/photo/$',
+  path: '/feed/photo/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedUUserIdRoute = FeedUUserIdRouteImport.update({
+  id: '/feed/u/$userId',
+  path: '/feed/u/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedVerdictEntryIdRoute = FeedVerdictEntryIdRouteImport.update({
+  id: '/feed/verdict/$entryId',
+  path: '/feed/verdict/$entryId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -46,14 +94,30 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/feed/me': typeof FeedMeRoute
+  '/feed/search': typeof FeedSearchRoute
+  '/feed/': typeof FeedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/feed/attach/$runId': typeof FeedAttachRunIdRoute
+  '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
+  '/feed/photo/$': typeof FeedPhotoSplatRoute
+  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/feed/me': typeof FeedMeRoute
+  '/feed/search': typeof FeedSearchRoute
+  '/feed': typeof FeedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/feed/attach/$runId': typeof FeedAttachRunIdRoute
+  '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
+  '/feed/photo/$': typeof FeedPhotoSplatRoute
+  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,21 +125,62 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/feed/me': typeof FeedMeRoute
+  '/feed/search': typeof FeedSearchRoute
+  '/feed/': typeof FeedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/feed/attach/$runId': typeof FeedAttachRunIdRoute
+  '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
+  '/feed/photo/$': typeof FeedPhotoSplatRoute
+  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/health' | '/auth/login' | '/auth/signup' | '/api/auth/$'
+    | '/'
+    | '/api/health'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/feed/me'
+    | '/feed/search'
+    | '/feed/'
+    | '/api/auth/$'
+    | '/feed/attach/$runId'
+    | '/feed/entry/$entryId'
+    | '/feed/photo/$'
+    | '/feed/u/$userId'
+    | '/feed/verdict/$entryId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/auth/login' | '/auth/signup' | '/api/auth/$'
+  to:
+    | '/'
+    | '/api/health'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/feed/me'
+    | '/feed/search'
+    | '/feed'
+    | '/api/auth/$'
+    | '/feed/attach/$runId'
+    | '/feed/entry/$entryId'
+    | '/feed/photo/$'
+    | '/feed/u/$userId'
+    | '/feed/verdict/$entryId'
   id:
     | '__root__'
     | '/'
     | '/api/health'
     | '/auth/login'
     | '/auth/signup'
+    | '/feed/me'
+    | '/feed/search'
+    | '/feed/'
     | '/api/auth/$'
+    | '/feed/attach/$runId'
+    | '/feed/entry/$entryId'
+    | '/feed/photo/$'
+    | '/feed/u/$userId'
+    | '/feed/verdict/$entryId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,7 +188,15 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  FeedMeRoute: typeof FeedMeRoute
+  FeedSearchRoute: typeof FeedSearchRoute
+  FeedIndexRoute: typeof FeedIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  FeedAttachRunIdRoute: typeof FeedAttachRunIdRoute
+  FeedEntryEntryIdRoute: typeof FeedEntryEntryIdRoute
+  FeedPhotoSplatRoute: typeof FeedPhotoSplatRoute
+  FeedUUserIdRoute: typeof FeedUUserIdRoute
+  FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,11 +229,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feed/': {
+      id: '/feed/'
+      path: '/feed'
+      fullPath: '/feed/'
+      preLoaderRoute: typeof FeedIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/me': {
+      id: '/feed/me'
+      path: '/feed/me'
+      fullPath: '/feed/me'
+      preLoaderRoute: typeof FeedMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/search': {
+      id: '/feed/search'
+      path: '/feed/search'
+      fullPath: '/feed/search'
+      preLoaderRoute: typeof FeedSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/attach/$runId': {
+      id: '/feed/attach/$runId'
+      path: '/feed/attach/$runId'
+      fullPath: '/feed/attach/$runId'
+      preLoaderRoute: typeof FeedAttachRunIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/entry/$entryId': {
+      id: '/feed/entry/$entryId'
+      path: '/feed/entry/$entryId'
+      fullPath: '/feed/entry/$entryId'
+      preLoaderRoute: typeof FeedEntryEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/photo/$': {
+      id: '/feed/photo/$'
+      path: '/feed/photo/$'
+      fullPath: '/feed/photo/$'
+      preLoaderRoute: typeof FeedPhotoSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/u/$userId': {
+      id: '/feed/u/$userId'
+      path: '/feed/u/$userId'
+      fullPath: '/feed/u/$userId'
+      preLoaderRoute: typeof FeedUUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/verdict/$entryId': {
+      id: '/feed/verdict/$entryId'
+      path: '/feed/verdict/$entryId'
+      fullPath: '/feed/verdict/$entryId'
+      preLoaderRoute: typeof FeedVerdictEntryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -131,17 +300,16 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
+  FeedMeRoute: FeedMeRoute,
+  FeedSearchRoute: FeedSearchRoute,
+  FeedIndexRoute: FeedIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  FeedAttachRunIdRoute: FeedAttachRunIdRoute,
+  FeedEntryEntryIdRoute: FeedEntryEntryIdRoute,
+  FeedPhotoSplatRoute: FeedPhotoSplatRoute,
+  FeedUUserIdRoute: FeedUUserIdRoute,
+  FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

@@ -3,21 +3,21 @@ import { Link } from "@tanstack/react-router";
 /**
  * The five-tab shell footer (docs/product.md §Navigation). Every tab
  * points at "/" until its lane lands a real route — the typed Link is
- * mandatory (string hrefs are a lint error), and "/" is the only route
- * that exists in phase 0.
+ * mandatory (string hrefs are a lint error). Lane 104 repoints Feed/You
+ * here per its design doc; Closet/+Add/Call stay on "/" until their lanes
+ * land.
  */
 const TABS = [
-  // Placeholder target: lane 104 repoints this at /feed.
-  { label: "Feed" },
+  { label: "Feed", to: "/feed" },
   // Placeholder target: lane 101 repoints this at /closet.
-  { label: "Closet" },
+  { label: "Closet", to: "/" },
   // Placeholder target: lane 102 repoints this at /add.
-  { label: "+ Add" },
+  { label: "+ Add", to: "/" },
   // Placeholder target: lane 105 repoints this at /call.
-  { label: "Call" },
-  // Placeholder target: lane 104 repoints this at /you.
-  { label: "You" },
-];
+  { label: "Call", to: "/" },
+  // You tab points at lane 104's own profile route until a `you/` lane exists.
+  { label: "You", to: "/feed/me" },
+] as const;
 
 export function TabBar() {
   return (
@@ -29,7 +29,7 @@ export function TabBar() {
         {TABS.map((tab) => (
           <li key={tab.label}>
             <Link
-              to="/"
+              to={tab.to}
               className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-night/50 no-underline"
             >
               {tab.label}
