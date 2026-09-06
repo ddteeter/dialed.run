@@ -67,7 +67,9 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run dev",
-    env: { PORT: String(port) },
+    // VITE_DEVTOOLS=off keeps the floating devtools button out of demo
+    // recordings (it covers the tab bar's last item at 1280×720).
+    env: { PORT: String(port), VITE_DEVTOOLS: "off" },
     url: `http://localhost:${String(port)}`,
     // Never reuse: with per-worktree ports there is nothing legitimate to
     // reuse, and a busy port must fail loudly rather than hand these tests a
