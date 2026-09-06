@@ -56,6 +56,11 @@ export default defineConfig({
       use: {
         viewport: { width: 1280, height: 720 },
         reducedMotion: "reduce",
+        // A demo that runs at machine speed is unwatchable — the first
+        // recording of the auth journey was 1.7s end to end. slowMo paces
+        // every action so a reviewer can follow what happened, without
+        // sleeps polluting the spec.
+        launchOptions: { slowMo: 450 },
         video: { mode: "on", size: { width: 1280, height: 720 } },
       },
     },
