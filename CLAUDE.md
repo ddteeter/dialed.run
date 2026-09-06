@@ -163,7 +163,11 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
    directory.
 6. If you change module boundaries or add a queue/cron/binding, update the
    relevant diagram in `docs/architecture.md` in the same PR.
-7. Before ending your final turn: run `npm run verify && npm test`, then
+7. **A push is not done until its checks are green.** After every push to a
+   PR branch, watch the checks (`gh pr checks <n> --watch`) and fix failures
+   before ending your turn. CI covers ground the local gates don't (the
+   client-bundle build, browser e2e) — local green is not proof.
+8. Before ending your final turn: run `npm run verify && npm test`, then
    summarize what you built, what you did not do, and any open questions —
    in five sentences or fewer.
 
