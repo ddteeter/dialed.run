@@ -47,4 +47,19 @@ describe("auth (better-auth on real D1)", () => {
     const response = await auth.handler(signInRequest);
     expect(response.status).toBe(401);
   });
+
+  it("offers Google sign-in when credentials are configured", async () => {
+    const authWithGoogle = createAuth({
+      db: drizzle(env.DIALED_CORE),
+      secret: "test-secret-not-for-production",
+      google: {
+        clientId: "test-client-id.apps.googleusercontent.com",
+        clientSecret: "test-client-secret",
+      },
+    });
+    const social = await authWithGoogle.api.signInSocial({
+      body: { provider: "google", callbackURL: "/" },
+    });
+    expect(social.url).toContain("accounts.google.com");
+  });
 });

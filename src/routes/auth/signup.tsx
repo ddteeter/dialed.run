@@ -3,6 +3,7 @@ import { useState } from "react";
 
 // Client entry imported directly by design — see modules/auth/client.ts.
 import { authClient } from "../../modules/auth/client";
+import { GoogleButton } from "../../modules/auth/google-button";
 import { Layout, Wordmark } from "../../ui";
 
 export const Route = createFileRoute("/auth/signup")({ component: SignupPage });
@@ -88,6 +89,8 @@ function SignupPage() {
             Sign up
           </button>
         </form>
+        <p className="text-center text-xs uppercase text-night/40">or</p>
+        <GoogleButton />
         <p className="text-sm">
           Already dialed?{" "}
           <Link to="/auth/login" className="font-semibold text-pink">

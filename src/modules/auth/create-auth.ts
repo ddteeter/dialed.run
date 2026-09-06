@@ -13,12 +13,15 @@ export interface AuthConfig {
   db: ReturnType<typeof drizzle>;
   secret: string;
   baseUrl?: string | undefined;
+  /** Absent when the deployment has no Google credentials — email/password
+   *  still works (CLAUDE.md law 5). */
+  google?: { clientId: string; clientSecret: string } | undefined;
   /** Framework cookie plugin — injected so this file never imports
    *  TanStack Start internals (which the vitest workers pool can't load). */
   plugins?: BetterAuthPlugin[] | undefined;
 }
 
-export function createAuth({ db, secret, baseUrl, plugins }: AuthConfig) {
+export function createAuth({ db, secret, baseUrl, google, plugins }: AuthConfig) {
   return betterAuth({
     secret,
     telemetry: { enabled: false },
@@ -30,6 +33,7 @@ export function createAuth({ db, secret, baseUrl, plugins }: AuthConfig) {
     emailAndPassword: {
       enabled: true,
     },
+    ...(google !== undefined && { socialProviders: { google } }),
     plugins: plugins ?? [],
   });
 }

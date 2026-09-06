@@ -2,3 +2,6 @@
 BETTER_AUTH_SECRET=generate-a-long-random-string
 # Optional locally; set in prod:
 # SENTRY_DSN=
+# Google OAuth (both or neither — the Google button 500s without them):
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

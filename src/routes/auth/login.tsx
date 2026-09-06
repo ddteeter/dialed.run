@@ -3,6 +3,7 @@ import { useState } from "react";
 
 // Client entry imported directly by design — see modules/auth/client.ts.
 import { authClient } from "../../modules/auth/client";
+import { GoogleButton } from "../../modules/auth/google-button";
 import { Layout, Wordmark } from "../../ui";
 
 export const Route = createFileRoute("/auth/login")({ component: LoginPage });
@@ -73,6 +74,8 @@ function LoginPage() {
             Log in
           </button>
         </form>
+        <p className="text-center text-xs uppercase text-night/40">or</p>
+        <GoogleButton />
         <p className="text-sm">
           New here?{" "}
           <Link to="/auth/signup" className="font-semibold text-pink">

@@ -6,5 +6,7 @@
 declare namespace Cloudflare {
   interface Env {
     SENTRY_DSN?: string;
+    GOOGLE_CLIENT_ID?: string;
+    GOOGLE_CLIENT_SECRET?: string;
   }
 }
