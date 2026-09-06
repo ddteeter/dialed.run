@@ -13,7 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as ClosetIndexRouteImport } from './routes/closet/index'
+import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
+import { Route as ClosetNewRouteImport } from './routes/closet/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
+import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,9 +40,34 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClosetIndexRoute = ClosetIndexRouteImport.update({
+  id: '/closet/',
+  path: '/closet/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetItemIdRoute = ClosetItemIdRouteImport.update({
+  id: '/closet/$itemId',
+  path: '/closet/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetNewRoute = ClosetNewRouteImport.update({
+  id: '/closet/new',
+  path: '/closet/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetEditItemIdRoute = ClosetEditItemIdRouteImport.update({
+  id: '/closet/edit/$itemId',
+  path: '/closet/edit/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
+  id: '/closet/photo/$itemId/$size',
+  path: '/closet/photo/$itemId/$size',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -46,14 +76,24 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/closet/$itemId': typeof ClosetItemIdRoute
+  '/closet/new': typeof ClosetNewRoute
+  '/closet/': typeof ClosetIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/closet/$itemId': typeof ClosetItemIdRoute
+  '/closet/new': typeof ClosetNewRoute
+  '/closet': typeof ClosetIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,21 +101,50 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/closet/$itemId': typeof ClosetItemIdRoute
+  '/closet/new': typeof ClosetNewRoute
+  '/closet/': typeof ClosetIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/health' | '/auth/login' | '/auth/signup' | '/api/auth/$'
+    | '/'
+    | '/api/health'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/closet/$itemId'
+    | '/closet/new'
+    | '/closet/'
+    | '/api/auth/$'
+    | '/closet/edit/$itemId'
+    | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/auth/login' | '/auth/signup' | '/api/auth/$'
+  to:
+    | '/'
+    | '/api/health'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/closet/$itemId'
+    | '/closet/new'
+    | '/closet'
+    | '/api/auth/$'
+    | '/closet/edit/$itemId'
+    | '/closet/photo/$itemId/$size'
   id:
     | '__root__'
     | '/'
     | '/api/health'
     | '/auth/login'
     | '/auth/signup'
+    | '/closet/$itemId'
+    | '/closet/new'
+    | '/closet/'
     | '/api/auth/$'
+    | '/closet/edit/$itemId'
+    | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,7 +152,12 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  ClosetItemIdRoute: typeof ClosetItemIdRoute
+  ClosetNewRoute: typeof ClosetNewRoute
+  ClosetIndexRoute: typeof ClosetIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ClosetEditItemIdRoute: typeof ClosetEditItemIdRoute
+  ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,11 +190,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/closet/': {
+      id: '/closet/'
+      path: '/closet'
+      fullPath: '/closet/'
+      preLoaderRoute: typeof ClosetIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/$itemId': {
+      id: '/closet/$itemId'
+      path: '/closet/$itemId'
+      fullPath: '/closet/$itemId'
+      preLoaderRoute: typeof ClosetItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/new': {
+      id: '/closet/new'
+      path: '/closet/new'
+      fullPath: '/closet/new'
+      preLoaderRoute: typeof ClosetNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/edit/$itemId': {
+      id: '/closet/edit/$itemId'
+      path: '/closet/edit/$itemId'
+      fullPath: '/closet/edit/$itemId'
+      preLoaderRoute: typeof ClosetEditItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/photo/$itemId/$size': {
+      id: '/closet/photo/$itemId/$size'
+      path: '/closet/photo/$itemId/$size'
+      fullPath: '/closet/photo/$itemId/$size'
+      preLoaderRoute: typeof ClosetPhotoItemIdSizeRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -131,17 +240,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
+  ClosetItemIdRoute: ClosetItemIdRoute,
+  ClosetNewRoute: ClosetNewRoute,
+  ClosetIndexRoute: ClosetIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ClosetEditItemIdRoute: ClosetEditItemIdRoute,
+  ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
