@@ -1,12 +1,58 @@
+import { readFileSync, statSync } from "node:fs";
+import path from "node:path";
+
 import { defineConfig } from "@playwright/test";
+
+/** The checked-out branch, read from git's own files rather than the `git`
+ *  binary (shelling out to a PATH lookup trips sonarjs/no-os-command-from-path).
+ *  In a worktree `.git` is a file pointing at the real gitdir, so both plain
+ *  checkouts and lane worktrees resolve. */
+function currentBranch(): string | undefined {
+  try {
+    let gitDir = path.join(process.cwd(), ".git");
+    if (statSync(gitDir).isFile()) {
+      const pointer = /^gitdir: (?<dir>.+)$/mu.exec(
+        readFileSync(gitDir, "utf8"),
+      )?.groups?.dir;
+      if (pointer === undefined) return undefined;
+      gitDir = path.resolve(path.dirname(gitDir), pointer.trim());
+    }
+    const head = readFileSync(path.join(gitDir, "HEAD"), "utf8").trim();
+    return /^ref: refs\/heads\/(?<branch>.+)$/u.exec(head)?.groups?.branch;
+  } catch {
+    // Not a git checkout, or HEAD is unreadable — the caller falls back.
+    return undefined;
+  }
+}
+
+/** Lane worktrees run concurrently (docs/workflow.md §Fan-out). A shared port
+ *  plus `reuseExistingServer` silently pointed one lane's tests at another
+ *  lane's dev server, so each worktree gets its own: an explicit
+ *  DIALED_E2E_PORT wins, else `lane/<N>-*` maps to 3000+N, else 3000 — which
+ *  covers CI and any non-lane branch. */
+function resolvePort(): number {
+  const explicit = process.env.DIALED_E2E_PORT;
+  if (explicit !== undefined && explicit !== "") return Number(explicit);
+
+  const branch = currentBranch() ?? path.basename(process.cwd());
+  const lane = /^(?:lane\/|dialed-)(?<number>\d+)(?:-|$)/u.exec(branch)?.groups
+    ?.number;
+  return lane === undefined ? 3000 : 3000 + Number(lane);
+}
+
+const port = resolvePort();
 
 export default defineConfig({
   testDir: "e2e",
-  use: { baseURL: "http://localhost:3000" },
+  use: { baseURL: `http://localhost:${String(port)}` },
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: true,
+    env: { PORT: String(port) },
+    url: `http://localhost:${String(port)}`,
+    // Never reuse: with per-worktree ports there is nothing legitimate to
+    // reuse, and a busy port must fail loudly rather than hand these tests a
+    // server built from a different worktree.
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });
