@@ -19,6 +19,10 @@
       "database_id": "test-weather",
     },
   ],
+  // Test-only stand-in secret so modules/weather's success path is
+  // exercisable against a mocked `fetch` (the real key doesn't exist yet —
+  // docs/designs/103-weather.md).
+  "vars": { "VISUAL_CROSSING_API_KEY": "test-key" },
   "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "dialed-photos" }],
   "queues": {
     "producers": [

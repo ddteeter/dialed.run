@@ -8,5 +8,8 @@ declare namespace Cloudflare {
     SENTRY_DSN?: string;
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
+    /** Visual Crossing Timeline API key (000/103) — does not exist yet;
+     * modules/weather degrades to `weather_pending` while absent. */
+    VISUAL_CROSSING_API_KEY?: string;
   }
 }

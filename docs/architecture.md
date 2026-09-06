@@ -50,7 +50,11 @@ Key decisions embedded here:
 - **Weather is an adapter** (`modules/weather/provider/`). Visual Crossing is
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
-  a decision; see `docs/design-deltas.md`.)
+  a decision; see `docs/design-deltas.md`.) Weather also reads/writes
+  `runs.weather_status` in `dialed-core` directly (the only column it
+  touches there) since that status lives on the run, not the cache; other
+  modules reach cached conditions only through weather's `index.ts` reads.
+  The hourly retry cron is dispatched from `modules/ops/scheduled.ts`.
 
 ## Frontend architecture (TanStack Start)
 
@@ -90,13 +94,16 @@ flowchart TD
     ENR[modules/enrichment] --> DB
     ENR -->|index.ts only| PROD
     WX[modules/weather] --> DBW[db - weather]
+    WX --> DB
 
     RUNS -->|index.ts only| WX
     FEED -->|index.ts only| CLOSET
     FEED -->|index.ts only| RUNS
+    FEED -->|index.ts only| WX
     ONB -->|index.ts only| CLOSET
     CLOSET -->|index.ts only| PROD
     FEED -->|index.ts only| PROD
+    OPS[modules/ops] -->|index.ts only| WX
 
     CLOSET --> UI[ui]
     RUNS --> UI
