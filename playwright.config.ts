@@ -45,6 +45,21 @@ const port = resolvePort();
 export default defineConfig({
   testDir: "e2e",
   use: { baseURL: `http://localhost:${String(port)}` },
+  // One demo per feature carries the happy-path journey and is recorded; the
+  // edge-case specs around it are not. Recording everything would bury the
+  // journey in thirty validation cases and make the video unwatchable.
+  projects: [
+    { name: "e2e", testIgnore: "**/*.demo.spec.ts" },
+    {
+      name: "demo",
+      testMatch: "**/*.demo.spec.ts",
+      use: {
+        viewport: { width: 1280, height: 720 },
+        reducedMotion: "reduce",
+        video: { mode: "on", size: { width: 1280, height: 720 } },
+      },
+    },
+  ],
   webServer: {
     command: "npm run dev",
     env: { PORT: String(port) },
