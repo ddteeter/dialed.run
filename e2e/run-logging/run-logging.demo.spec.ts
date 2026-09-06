@@ -31,7 +31,11 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
 
 test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   page,
-}) => {
+}, testInfo) => {
+  // slowMo doubled to 900 (demo-legibility upgrade, PR #8) roughly doubles
+  // per-action overhead across this journey's ~20 interactions; the default
+  // 30s test timeout is too tight for that plus real network round-trips.
+  testInfo.setTimeout(60_000);
   const email = `demo-${String(Date.now())}@example.com`;
 
   await page.goto("/auth/signup");
