@@ -35,14 +35,23 @@ function tempLabel(view: ClosetItemView): string {
 
 export interface ClosetGridProps {
   listing: ClosetListing;
+  /**
+  Open with retired items shown. Set after retiring one, so the user lands
+  on the item still present and marked, rather than on a grid it has just
+  vanished from.
+  */
+  initialShowRetired?: boolean;
 }
 
 /**
  * Screen C: the closet grid, grouped by the derived UI groups, with the
  * quiet enrichment nudge (D-27/D-28) and retired items behind a toggle.
  */
-export function ClosetGrid({ listing }: Readonly<ClosetGridProps>) {
-  const [showRetired, setShowRetired] = useState(false);
+export function ClosetGrid({
+  listing,
+  initialShowRetired = false,
+}: Readonly<ClosetGridProps>) {
+  const [showRetired, setShowRetired] = useState(initialShowRetired);
 
   const visible = listing.items.filter(
     (view) => showRetired || view.item.retired === 0,

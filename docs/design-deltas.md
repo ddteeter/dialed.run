@@ -56,3 +56,18 @@ in sync.
 Skipping the name in F/P2.5 files the garment as `[GENERIC]`; the contract
 requires `name`, so generic saves default it to the category/tap-list label
 (taplist rows already work this way). Noted in task 101.
+
+8. **Transient feedback ("toast") — unspecced, and currently worked
+   around.** Raised in the PR #3 review: retiring a garment changed the
+   page with no confirmation, so the user could not tell whether it worked.
+   The v1 fix avoids the gap rather than filling it — retiring returns to
+   the closet, where the item is visibly present and marked `[Retired]`,
+   which is stronger feedback than a toast because it also shows *where the
+   thing went*.
+   That works because retire has somewhere meaningful to land. Actions that
+   do not — marking a notification read, copying a link, an autosave — have
+   no such answer, and each lane inventing its own would repeat the
+   four-forms problem. Wanted before the second such action, not the first:
+   what it looks like, where it appears, how long it stays, how it behaves
+   under the Motion Doctrine, and how a screen reader is told (an
+   `aria-live` region, presumably). Not needed for v1 as scoped.

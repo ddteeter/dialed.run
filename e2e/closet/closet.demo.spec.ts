@@ -87,19 +87,23 @@ test("add garments with product identity -> browse the closet -> retire, don't d
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toBeVisible();
 
-  // Retire, don't delete: the shoes drop out of the default view but stay
-  // reachable behind the retired toggle — never gone.
+  // Retire, don't delete. Retiring lands back on the closet with retired
+  // items already shown, so the shoes are visibly still there and marked —
+  // the point of the product rule, and the answer to "where did it go?".
   await page.getByRole("link", { name: /Nike Pegasus 41/ }).click();
   await page.getByRole("button", { name: "Retire" }).click();
-  await expect(page.getByRole("button", { name: "Unretire" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Nike Pegasus 41/ }),
+  ).toBeVisible();
   await expect(page.getByText("[Retired]", { exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Closet" }).click();
+  // And they are genuinely retired: hiding them takes the shoes out of the
+  // default view, where the jacket stays.
+  await page.getByRole("button", { name: "Hide retired (1)" }).click();
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Show retired (1)" }).click();
   await expect(
-    page.getByRole("link", { name: /Nike Pegasus 41/ }),
+    page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toBeVisible();
 });

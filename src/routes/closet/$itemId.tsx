@@ -55,11 +55,24 @@ function GarmentDetailPage() {
 
   async function handleRetireToggle() {
     if (item.retired === 1) {
+      // Un-retiring: stay put. The badge disappearing is the confirmation,
+      // and you are probably here because you wanted this item back.
       await unretireItemFn({ data: { itemId: item.id } });
-    } else {
-      await retireItemFn({ data: { itemId: item.id } });
+      await router.invalidate();
+      return;
     }
+    await retireItemFn({ data: { itemId: item.id } });
     await router.invalidate();
+    // Retiring: land on the closet with retired items shown, so the item
+    // is visibly *there* and marked [Retired]. Navigating without the
+    // filter would be worse than staying put — the grid hides retired
+    // items by default, so it would simply appear to have vanished.
+    //
+    // There is no toast primitive in ui/ (an unspecced gap, now queued in
+    // docs/design-deltas.md), and for this action showing where the thing
+    // went beats announcing that something happened: the product rule is
+    // retire, not delete, and this is what makes that visible.
+    await navigate({ to: "/closet", search: { retired: true } });
   }
 
   async function handleDelete() {

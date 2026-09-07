@@ -6,6 +6,15 @@ import { listItemsFn } from "../../modules/closet/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/")({
+  // `?retired=1` opens with retired items shown. Set when arriving from a
+  // retire action, so the item is visibly present and marked rather than
+  // absent from a grid that hides retired items by default.
+  // Optional: every other link to /closet omits it, and requiring the
+  // param would make each of those a type error.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { retired?: true } =>
+    search.retired === "1" || search.retired === true ? { retired: true } : {},
   loader: async () => {
     await requireSession();
     const listing = await listItemsFn({ data: { includeRetired: true } });
@@ -15,6 +24,7 @@ export const Route = createFileRoute("/closet/")({
 });
 
 function ClosetPage() {
+  const search = Route.useSearch();
   const { listing } = Route.useLoaderData();
   return (
     <Layout>
@@ -29,7 +39,7 @@ function ClosetPage() {
           Add
         </Link>
       </div>
-      <ClosetGrid listing={listing} />
+      <ClosetGrid listing={listing} initialShowRetired={search.retired ?? false} />
     </Layout>
   );
 }
