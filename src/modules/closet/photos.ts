@@ -12,17 +12,15 @@ import { and, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
+import {
+  isAllowedPhotoType,
+  maxPhotoBytes,
+} from "../../lib/photo-constraints";
 import { env } from "../../env";
 import { getOwnedItem } from "./service";
 
 type Db = ReturnType<typeof drizzle>;
 
-const ALLOWED_CONTENT_TYPES: ReadonlySet<string> = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
-const MAX_BYTES = 10 * 1024 * 1024;
 
 export const photoSizes = ["thumb", "card", "full"] as const;
 export type PhotoSize = (typeof photoSizes)[number];
@@ -40,21 +38,35 @@ function isPhotoSize(value: string): value is PhotoSize {
 
 export class PhotoValidationError extends Error {}
 
+/**
+ * Exhaustive over AllowedPhotoType, so adding a type to lib is a compile
+ * error here rather than a runtime throw on the first upload of it.
+ */
 function extensionFor(contentType: string): string {
-  if (contentType === "image/jpeg") return "jpg";
-  if (contentType === "image/png") return "png";
-  if (contentType === "image/webp") return "webp";
-  throw new PhotoValidationError("Photo must be JPEG, PNG, or WEBP.");
+  if (!isAllowedPhotoType(contentType)) {
+    throw new PhotoValidationError("Photo must be JPEG, PNG, or WEBP.");
+  }
+  switch (contentType) {
+    case "image/jpeg": {
+      return "jpg";
+    }
+    case "image/png": {
+      return "png";
+    }
+    case "image/webp": {
+      return "webp";
+    }
+  }
 }
 
 export function validatePhoto(contentType: string, byteLength: number): void {
-  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+  if (!isAllowedPhotoType(contentType)) {
     throw new PhotoValidationError("Photo must be JPEG, PNG, or WEBP.");
   }
   if (byteLength === 0) {
     throw new PhotoValidationError("Photo file is empty.");
   }
-  if (byteLength > MAX_BYTES) {
+  if (byteLength > maxPhotoBytes) {
     throw new PhotoValidationError("Photo must be 10 MB or smaller.");
   }
 }
