@@ -127,6 +127,23 @@ PR #2–#5 review "this needs a schema change so it stops here" was simply
 wrong — the columns already existed and the work was wiring, not migration.
 Read the schema before declaring yourself blocked by it.
 
+**Migrations get logical names, always.** `drizzle-kit generate` invents one
+(`0002_misty_corsair`), which tells a reader nothing and makes a migration
+history unreadable at exactly the moment it matters — when something has gone
+wrong in production and you are scanning filenames. Pass `--name`:
+
+```sh
+npm run db:generate:core -- --name=strava_refresh_failure_tracking
+```
+
+Name it for what it does to the schema, not for the feature that wanted it:
+`add_run_idempotency_key`, not `manual_run_fixes`. If you cannot name it in a
+few words, it is probably two migrations.
+
+Renaming after the fact means editing the `tag` in
+`src/db/migrations/*/meta/_journal.json` to match the new filename, and is
+only safe before the migration has been applied anywhere real.
+
 Never run `drizzle-kit generate` inside a feature branch unless your packet
 explicitly says the migration is yours — or the owner has said yes.
 
