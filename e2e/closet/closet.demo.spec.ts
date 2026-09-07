@@ -85,7 +85,7 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   await page.getByRole("link", { name: /Nike Pegasus 41/ }).click();
   await page.getByRole("button", { name: "Retire" }).click();
   await expect(page.getByRole("button", { name: "Unretire" })).toBeVisible();
-  await expect(page.getByText("[RETIRED]", { exact: true })).toBeVisible();
+  await expect(page.getByText("[Retired]", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Closet" }).click();
   await expect(
