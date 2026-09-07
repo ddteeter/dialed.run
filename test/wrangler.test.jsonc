@@ -19,7 +19,10 @@
       "database_id": "test-weather",
     },
   ],
-  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "dialed-photos" }],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "dialed-media" },
+    { "binding": "IMPORTS", "bucket_name": "dialed-imports" },
+  ],
   "queues": {
     "producers": [
       { "binding": "IMPORTS_QUEUE", "queue": "dialed-imports" },

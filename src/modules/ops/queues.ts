@@ -34,7 +34,7 @@ export async function handleQueueBatch(
     case "dialed-imports": {
       await handleImportsBatch(batch, {
         db: drizzle(env.DIALED_CORE),
-        photos: env.PHOTOS,
+        importBucket: env.IMPORTS,
         captureException,
       });
       break;
@@ -49,7 +49,7 @@ export async function handleQueueBatch(
     case "dialed-imports-dlq": {
       await handleImportsDlqBatch(batch, {
         db: drizzle(env.DIALED_CORE),
-        photos: env.PHOTOS,
+        importBucket: env.IMPORTS,
         captureException,
       });
       break;

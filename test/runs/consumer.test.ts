@@ -67,7 +67,7 @@ function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
     [];
   return {
     db: coreDb(),
-    photos: env.PHOTOS,
+    importBucket: env.IMPORTS,
     captureException: (error, context) => {
       exceptions.push({ error, context });
     },
@@ -84,7 +84,7 @@ async function seedImport(
 ): Promise<string> {
   const importId = newUlid();
   const r2Key = `imports/${userId}/${importId}.${extension}`;
-  await env.PHOTOS.put(r2Key, new TextEncoder().encode(content));
+  await env.IMPORTS.put(r2Key, new TextEncoder().encode(content));
   await db.insert(imports).values({
     id: importId,
     userId,

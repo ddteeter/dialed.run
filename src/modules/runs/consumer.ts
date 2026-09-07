@@ -26,7 +26,7 @@ import { findDuplicateRun, initialWeatherStatus } from "./service";
 
 export interface ConsumerDeps {
   db: CoreDb;
-  photos: R2Bucket;
+  importBucket: R2Bucket;
   captureException: (
     error: unknown,
     context: Record<string, string>,
@@ -100,7 +100,7 @@ async function processImportJob(
   const didClaim = await didClaimImport(deps.db, job.importId);
   if (!didClaim) return; // lost the race to another invocation, or terminal
 
-  const object = await deps.photos.get(importRow.r2Key);
+  const object = await deps.importBucket.get(importRow.r2Key);
   if (object === null) {
     await failImport(
       deps.db,

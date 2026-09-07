@@ -80,7 +80,7 @@ export const startFileImport = createServerFn({ method: "POST" })
       throw new Error("That file is larger than 25 MB.");
     }
     const bytes = await file.arrayBuffer();
-    return startImport(coreDb(), env.PHOTOS, env.IMPORTS_QUEUE, {
+    return startImport(coreDb(), env.IMPORTS, env.IMPORTS_QUEUE, {
       userId,
       filename: file.name,
       bytes,

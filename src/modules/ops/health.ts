@@ -13,7 +13,7 @@ export async function checkHealth(): Promise<HealthReport> {
   const checks: HealthReport["checks"] = {
     coreDb: "failed",
     weatherDb: "failed",
-    photos: "failed",
+    media: "failed",
   };
   try {
     await env.DIALED_CORE.prepare("SELECT 1").first();
@@ -32,8 +32,8 @@ export async function checkHealth(): Promise<HealthReport> {
     */
   }
   try {
-    await env.PHOTOS.head("health-probe");
-    checks.photos = "ok";
+    await env.MEDIA.head("health-probe");
+    checks.media = "ok";
   } catch {
     /*
     reported via ok:false

@@ -47,7 +47,7 @@ on inputs the upload step itself can reject outright (size, extension).
 */
 export async function startImport(
   db: CoreDb,
-  photos: R2Bucket,
+  importBucket: R2Bucket,
   queue: ImportsQueueProducer,
   input: StartImportInput,
 ): Promise<{ importId: string }> {
@@ -61,7 +61,7 @@ export async function startImport(
 
   const importId = newUlid();
   const r2Key = `imports/${input.userId}/${importId}.${extension}`;
-  await photos.put(r2Key, input.bytes);
+  await importBucket.put(r2Key, input.bytes);
 
   await db.insert(imports).values({
     id: importId,
