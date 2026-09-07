@@ -97,7 +97,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     .where(eq(userProfiles.userId, userId))
     .limit(1);
 
-  const ownEntries = await database
+  const profileEntries = await database
     .select({
       id: outfitEntries.id,
       runId: outfitEntries.runId,
@@ -109,8 +109,8 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     .orderBy(desc(outfitEntries.createdAt))
     .limit(HISTORY_LIMIT);
 
-  const theirRuns =
-    ownEntries.length === 0
+  const profileRuns =
+    profileEntries.length === 0
       ? []
       : await database
           .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
@@ -118,14 +118,14 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
           .where(
             inArray(
               runs.id,
-              ownEntries.map((e) => e.runId),
+              profileEntries.map((e) => e.runId),
             ),
           );
-  const observations = await observationsForRuns(theirRuns);
+  const observations = await observationsForRuns(profileRuns);
 
   const bands = new Map<number, CoverageBand>();
   let bandRange: { min: number; max: number } | undefined;
-  for (const entry of ownEntries) {
+  for (const entry of profileEntries) {
     if (entry.verdict === null) continue;
     const observation = observations.get(entry.runId);
     if (!observation) continue;
@@ -146,7 +146,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
       : { min: floor, max: floor };
   }
 
-  const entryIds = ownEntries.map((e) => e.id);
+  const entryIds = profileEntries.map((e) => e.id);
   const itemRows =
     entryIds.length === 0
       ? []
@@ -180,14 +180,14 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     thermalLevel: profile?.thermalLevel ?? undefined,
     followerCount: followers,
     followingCount: following,
-    entryCount: ownEntries.length,
+    entryCount: profileEntries.length,
     coverage: bandsAscending(bands, bandRange),
     mostWornItems: topItemIds.map((itemId) => ({
       itemId,
       name: nameById.get(itemId) ?? "[removed item]",
       wearCount: wearCounts.get(itemId) ?? 0,
     })),
-    recentEntries: ownEntries.slice(0, RECENT_LIMIT).map((e) => ({
+    recentEntries: profileEntries.slice(0, RECENT_LIMIT).map((e) => ({
       entryId: e.id,
       createdAt: e.createdAt,
       verdict: e.verdict,

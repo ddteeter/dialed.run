@@ -49,7 +49,7 @@ export async function nearestPriorEntry(
     .limit(HISTORY_LIMIT);
   if (own.length === 0) return undefined;
 
-  const theirRuns = await database
+  const ownRuns = await database
     .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
     .from(runs)
     .where(
@@ -58,7 +58,7 @@ export async function nearestPriorEntry(
         own.map((e) => e.runId),
       ),
     );
-  const observations = await observationsForRuns(theirRuns);
+  const observations = await observationsForRuns(ownRuns);
   const targetPrecip = precipClassOf(currentConditions.precipMm);
 
   let best: BestMatch | undefined;

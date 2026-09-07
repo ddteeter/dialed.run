@@ -277,11 +277,11 @@ export async function verdictBandCounts(
   const verdicted = own.filter(hasVerdict);
   if (verdicted.length === 0) return counts;
   const runIds = verdicted.map((entry) => entry.runId);
-  const theirRuns = await db()
+  const ownRuns = await db()
     .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
     .from(runs)
     .where(inArray(runs.id, runIds));
-  const observations = await observationsForRuns(theirRuns);
+  const observations = await observationsForRuns(ownRuns);
   for (const entry of verdicted) {
     const observation = observations.get(entry.runId);
     if (!observation) continue;
@@ -314,11 +314,11 @@ export async function itemBandWearStat(
     .limit(200);
   if (own.length === 0) return { worn: 0, total: 0 };
   const ownRunIds = own.map((entry) => entry.runId);
-  const theirRuns = await db()
+  const ownRuns = await db()
     .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
     .from(runs)
     .where(inArray(runs.id, ownRunIds));
-  const observations = await observationsForRuns(theirRuns);
+  const observations = await observationsForRuns(ownRuns);
   const inBand = own.filter((entry) => {
     const observation = observations.get(entry.runId);
     return observation !== undefined && bandFloorC(observation.feelsLikeC) === targetBandFloorC;
