@@ -5,32 +5,21 @@ import type { Page } from "@playwright/test";
  * The base test for `*.demo.spec.ts`. Recording is configured by the `demo`
  * Playwright project; this adds the parts a project cannot express:
  *
- * - motion is stripped, so a recording captures settled frames rather than
- *   whatever a transition happened to be mid-way through, and re-records stay
- *   comparable;
  * - a synthetic cursor (dot + click ripple) is drawn where the mouse acts,
  *   because otherwise a click reads as content mutating for no visible
- *   reason — animated from rAF so the motion-strip stylesheet can't kill it;
+ *   reason — animated from rAF, independent of page CSS;
  * - `goto` resolves only after `document.fonts.ready`, so a recording never
  *   opens on fallback-font frames mid-swap (the FOUT window).
+ *
+ * Motion is deliberately NOT stripped: demos are a primary review surface
+ * and must show the Motion Doctrine's real behavior (owner decision,
+ * 2026-09-06 — see docs/design-deltas.md). Doctrine moves cap at 320ms,
+ * well inside the demo project's slowMo gaps, and Playwright's
+ * actionability checks wait out moving targets. If a demo flakes on
+ * timing, fix its waits — do not re-add a motion-strip stylesheet.
  */
 export const test = base.extend({
   page: async ({ page }, use) => {
-    await page.addInitScript(() => {
-      const style = document.createElement("style");
-      style.textContent = `*, *::before, *::after {
-        animation-duration: 0s !important;
-        animation-delay: 0s !important;
-        transition-duration: 0s !important;
-        transition-delay: 0s !important;
-        scroll-behavior: auto !important;
-      }`;
-      // `append` here resolves against the Workers HTMLRewriter types rather
-      // than the DOM, and `appendChild` trips unicorn/prefer-dom-node-append;
-      // insertAdjacentElement is unambiguous to both.
-      document.head.insertAdjacentElement("beforeend", style);
-    });
-
     await page.addInitScript(() => {
       const layer = "pointer-events:none;z-index:2147483647;position:fixed;";
       const pink = "255,45,135";

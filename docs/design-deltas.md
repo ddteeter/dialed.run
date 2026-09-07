@@ -37,10 +37,11 @@ in sync.
    `ui/motion.ts`; icon manifest gained `bracketLeft`/`bracketRight` for
    the reveal moves): shipped v1 surfaces predate it and animate either
    not at all or ad hoc — lanes adopt the per-surface map opportunistically,
-   audited at the launch gate. Open tension to decide: the e2e demo
-   fixture strips ALL motion for stable recordings, so demo videos will
-   not show doctrine motion (verdict-commit bracket close, etc.) — either
-   accept that or let demos record sanctioned motion once it exists.
+   audited at the launch gate (workflow.md launch-gate checklist #5).
+   RESOLVED 2026-09-06: demos record full motion — the fixture's
+   motion-strip and the demo project's reduced-motion emulation were
+   removed, because demo videos are a primary review surface and must
+   show the doctrine's real behavior.
 7. **Icon Pack nav drift** (imported 2026-09-06, `design/icons.js` +
    `Icon Pack.dc.html`; ported to `src/ui/icons.tsx`): the pack's nav
    group is feed / closet / log / discover / **profile**, but product.md's

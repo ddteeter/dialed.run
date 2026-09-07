@@ -119,9 +119,16 @@ When a lane's design doc requests a schema change:
    setting, not code).
 3. Confirm observability config: tracing OFF (billable), logs at full sample
    (`head_sampling_rate: 1` is fine at launch volume).
-4. Send `docs/design-deltas.md` items 1–6 back through Claude Design if not
+4. Send `docs/design-deltas.md` items back through Claude Design if not
    already done — undesigned surfaces shipped on placeholder layouts should
    be reconciled before strangers see them.
+5. **Motion Doctrine sweep**: v1 lanes predate the doctrine and adopt it
+   opportunistically — before launch, audit every surface in
+   `design/motion.js`'s per-surface map against the shipped UI: each mapped
+   surface animates per the map (tokens only), everything else is still,
+   the NEVER list holds, and reduced-motion collapses to 90ms opacity
+   (never zero). Verify by watching the demo videos — they record full
+   motion by design.
 
 Dogfooding with invited runners is fine before the gate; strangers are not.
 
