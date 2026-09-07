@@ -32,7 +32,16 @@ in sync.
    need real design before launch gate.
 5. **Settings/privacy screen** (You tab) — product.md marks it "needs
    design"; lane 104 ships whatever placeholder its packet requires.
-6. **Icon Pack nav drift** (imported 2026-09-06, `design/icons.js` +
+6. **Motion Doctrine adoption** (imported 2026-09-06 — `design/motion.js`
+   + `Motion Doctrine.dc.html`; ported to `src/ui/motion.css` +
+   `ui/motion.ts`; icon manifest gained `bracketLeft`/`bracketRight` for
+   the reveal moves): shipped v1 surfaces predate it and animate either
+   not at all or ad hoc — lanes adopt the per-surface map opportunistically,
+   audited at the launch gate. Open tension to decide: the e2e demo
+   fixture strips ALL motion for stable recordings, so demo videos will
+   not show doctrine motion (verdict-commit bracket close, etc.) — either
+   accept that or let demos record sanctioned motion once it exists.
+7. **Icon Pack nav drift** (imported 2026-09-06, `design/icons.js` +
    `Icon Pack.dc.html`; ported to `src/ui/icons.tsx`): the pack's nav
    group is feed / closet / log / discover / **profile**, but product.md's
    tab bar is Feed / Closet / +Add / **Call** (teaser) / You — the pack

@@ -92,6 +92,8 @@ export const ICONS = {
   location: { group: "system", d: "M12 3a6 6 0 016 6c0 5-6 12-6 12S6 14 6 9a6 6 0 016-6zM12 7a2.5 2.5 0 100 5 2.5 2.5 0 000-5z" },
   clock: { group: "system", d: "M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l4 2" },
   bracket: { group: "system", d: "M8 3H3v18h5M16 3h5v18h-5" },
+  bracketLeft: { group: "system", d: "M8 3H3v18h5" },
+  bracketRight: { group: "system", d: "M16 3h5v18h-5" },
 } as const;
 
 export type IconName = keyof typeof ICONS;
