@@ -4,22 +4,25 @@ import { useState } from "react";
 
 import { Bracketed, Mono, Skeleton } from "../../../ui";
 import { getImportStatusFn } from "../functions";
-
-const POLL_INTERVAL_MS = 2000;
+import { hasStalledImport, importPollIntervalMs } from "../import-polling";
 
 function ImportStatusInner({
   importId,
 }: Readonly<{
   importId: string;
 }>) {
+  // Fixed at mount: how long this tab has been watching, which is what the
+  // stall message keys off.
+  const [startedWatchingAt] = useState(() => Date.now());
   const query = useQuery({
     queryKey: ["runs", "import", importId],
     queryFn: async () => getImportStatusFn({ data: { importId } }),
     refetchInterval: (q) => {
-      const status = q.state.data?.status;
-      return status === "pending" || status === "processing"
-        ? POLL_INTERVAL_MS
-        : false;
+      const delay = importPollIntervalMs(
+        q.state.data?.status,
+        q.state.dataUpdateCount,
+      );
+      return delay === 0 ? false : delay;
     },
   });
 
@@ -35,6 +38,14 @@ function ImportStatusInner({
   }
 
   const importRow = query.data;
+  if (hasStalledImport(importRow.status, Date.now() - startedWatchingAt)) {
+    return (
+      <p className="text-sm text-night/70">
+        This is taking longer than usual. We&rsquo;ll keep working on it —
+        check back shortly.
+      </p>
+    );
+  }
   switch (importRow.status) {
     case "pending":
     case "processing": {
