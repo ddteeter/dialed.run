@@ -74,11 +74,30 @@ describe("photo pipeline: store + retrieve + benchmark", () => {
     expect(updated.photoKey).toBe(result.photoKey);
 
     for (const size of photoSizes) {
+      // No if-none-match, so R2 always returns a body.
       const object = await getItemPhotoObject(client, userId, item.id, size);
       expect(object).toBeDefined();
-      const derivedBytes = await object?.arrayBuffer();
-      expect(derivedBytes?.byteLength).toBeGreaterThan(0);
+      if (object === undefined || !("body" in object)) {
+        throw new Error(`expected a body for ${size}`);
+      }
+      const derivedBytes = await object.arrayBuffer();
+      expect(derivedBytes.byteLength).toBeGreaterThan(0);
     }
+
+    // A matching etag comes back without a body, so the bytes are never
+    // read out of storage — that is what makes serving these through the
+    // Worker cheap on repeat views.
+    const first = await getItemPhotoObject(client, userId, item.id, "thumb");
+    if (first === undefined) throw new Error("expected an object");
+    const conditional = await getItemPhotoObject(
+      client,
+      userId,
+      item.id,
+      "thumb",
+      first.httpEtag,
+    );
+    expect(conditional).toBeDefined();
+    expect(conditional !== undefined && "body" in conditional).toBe(false);
 
     const original = await env.PHOTOS.get(`${result.photoKey}/original.jpg`);
     expect(original).not.toBeNull();

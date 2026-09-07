@@ -25,12 +25,16 @@ export const Route = createFileRoute("/closet/photo/$itemId/$size")({
             session.user.id,
             params.itemId,
             params.size,
+            request.headers.get("if-none-match"),
           );
           if (!object) return new Response("Not found", { status: 404 });
           const headers = new Headers();
           object.writeHttpMetadata(headers);
           headers.set("etag", object.httpEtag);
           headers.set("cache-control", "private, max-age=31536000, immutable");
+          // R2 returns no body when the caller's etag still matches, so the
+          // bytes are never read or streamed — a 304 instead of the image.
+          if (!("body" in object)) return new Response(undefined, { status: 304, headers });
           return new Response(object.body, { headers });
         } catch (error) {
           if (error instanceof NotFoundError) {

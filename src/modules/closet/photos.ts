@@ -156,15 +156,48 @@ export async function uploadItemPhoto(
  * Owner-scoped fetch for the cached GET route. Returns undefined (route
  * answers 404) rather than throwing when there's simply no photo yet.
  */
+/**
+ * R2's `onlyIf` rejects a quoted etag outright — but `httpEtag` is quoted,
+ * and so is every browser's If-None-Match, so passing one straight through
+ * throws on exactly the requests this optimisation exists for. Strips the
+ * quotes and the weak-comparison prefix, and gives up on the multi-etag
+ * form (`a, b`) rather than guessing, since R2 takes a single value.
+ */
+function unquoteEtag(value: string | null | undefined): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const trimmed = value.trim().replace(/^W\//, "");
+  if (trimmed === "" || trimmed === "*" || trimmed.includes(",")) return undefined;
+  const unquoted = trimmed.replaceAll(/^"|"$/g, "");
+  return unquoted === "" ? undefined : unquoted;
+}
+
+/**
+ * The stored object, or a bodyless hit when the caller already has this
+ * exact version.
+ *
+ * `onlyIf` hands the conditional request to R2 itself: on an etag match it
+ * returns metadata with no `body`, so the bytes are never read out of
+ * storage or streamed back. Repeat views of a wardrobe grid are the common
+ * case — several photos, revisited constantly — and this is what makes
+ * serving them through the Worker cheap rather than merely correct.
+ */
 export async function getItemPhotoObject(
   db: Db,
   userId: string,
   itemId: string,
   size: string,
-): Promise<R2ObjectBody | undefined> {
+  ifNoneMatch?: string | null,
+): Promise<R2Object | R2ObjectBody | undefined> {
   const item = await getOwnedItem(db, userId, itemId);
   if (item.photoKey === null) return undefined;
   if (!isPhotoSize(size)) return undefined;
-  const object = await env.PHOTOS.get(`${item.photoKey}/${size}.webp`);
+  const key = `${item.photoKey}/${size}.webp`;
+  const conditionalEtag = unquoteEtag(ifNoneMatch);
+  const object =
+    conditionalEtag === undefined
+      ? await env.PHOTOS.get(key)
+      : await env.PHOTOS.get(key, {
+          onlyIf: { etagDoesNotMatch: conditionalEtag },
+        });
   return object ?? undefined;
 }
