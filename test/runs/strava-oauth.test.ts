@@ -46,7 +46,10 @@ function fakeApi(
       overrides.exchangeCode ??
       (() =>
         Promise.resolve({
-          athleteId: "111",
+          // Unique per fixture: strava_connections.athlete_id is UNIQUE
+          // (one athlete belongs to one user), and these tests share a
+          // database within the file.
+          athleteId: newUlid(),
           accessToken: "access-1",
           refreshToken: "refresh-1",
           expiresAt: nowS() + 3600,
@@ -98,10 +101,24 @@ describe("completeStravaConnect (102 §6)", () => {
   it("inserts a connection row from the exchanged tokens", async () => {
     const db = coreDb();
     const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
+    const athleteId = newUlid();
+    await completeStravaConnect(
+      db,
+      fakeApi({
+        exchangeCode: () =>
+          Promise.resolve({
+            athleteId,
+            accessToken: "access-1",
+            refreshToken: "refresh-1",
+            expiresAt: nowS() + 3600,
+          }),
+      }),
+      userId,
+      "auth-code",
+    );
 
     const connection = await getStravaConnection(db, userId);
-    expect(connection?.athleteId).toBe("111");
+    expect(connection?.athleteId).toBe(athleteId);
     expect(connection?.status).toBe("ok");
   });
 

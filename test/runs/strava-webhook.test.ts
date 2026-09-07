@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { stravaConnections } from "../../src/db/schema-core";
-import { newUlid } from "../../src/lib/ids";
-import { coreDb } from "../../src/modules/runs/core-db";
-import { unreadNotificationCount } from "../../src/modules/runs/notifications";
 import type { ReminderJob } from "../../src/modules/runs/queue-messages";
 import {
   handleStravaWebhookEvent,
@@ -29,22 +25,6 @@ function fakeCaptureException() {
       errors.push({ error, context });
     },
   };
-}
-
-async function connectAthlete(
-  db: ReturnType<typeof coreDb>,
-  athleteId: string,
-): Promise<string> {
-  const userId = newUlid();
-  await db.insert(stravaConnections).values({
-    userId,
-    athleteId,
-    accessToken: "access",
-    refreshToken: "refresh",
-    expiresAt: Math.floor(Date.now() / 1000) + 3600,
-    status: "ok",
-  });
-  return userId;
 }
 
 // Dedupe is keyed on (object_id, aspect_type, event_time); the D1 instance
@@ -109,43 +89,53 @@ describe("verifyStravaChallenge (GET subscription handshake)", () => {
 });
 
 describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
-  it("enqueues a reminder with zero activity data for a connected athlete", async () => {
-    const db = coreDb();
+  /**
+   * The handler no longer touches the database at all. Strava disables a
+   * subscription that does not answer promptly, so the connection lookup
+   * and the dedupe moved to the consumer, which had to be idempotent
+   * anyway. These tests assert the response path stays that thin.
+   */
+  it("enqueues a reminder carrying only ids, without a database round trip", async () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
-    const userId = await connectAthlete(db, "111");
     const event = activityCreateEvent();
 
-    await handleStravaWebhookEvent(db, queue, capture.captureException, event);
+    await handleStravaWebhookEvent(queue, capture.captureException, event);
 
     expect(queue.sent).toEqual([
-      { type: "strava_reminder", userId, subjectId: String(event.object_id) },
+      {
+        type: "strava_reminder",
+        athleteId: String(event.owner_id),
+        objectId: String(event.object_id),
+        aspectType: "create",
+        eventTime: event.event_time,
+      },
     ]);
   });
 
-  it("is a no-op for an unknown/unconnected athlete", async () => {
-    const db = coreDb();
+  it("enqueues for an athlete it cannot resolve — that is the consumer's job", async () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
     await handleStravaWebhookEvent(
-      db,
       queue,
       capture.captureException,
       activityCreateEvent({ owner_id: 999_999 }),
     );
 
-    expect(queue.sent).toHaveLength(0);
+    // Deliberately enqueued: resolving athlete -> user needs a query, and
+    // a query is what we are keeping off the response path. An unknown
+    // athlete is dropped by the consumer.
+    expect(queue.sent).toHaveLength(1);
     expect(capture.errors).toHaveLength(0);
   });
 
   it("logs and never throws on an invalid payload", async () => {
-    const db = coreDb();
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
     await expect(
-      handleStravaWebhookEvent(db, queue, capture.captureException, {
+      handleStravaWebhookEvent(queue, capture.captureException, {
         garbage: true,
       }),
     ).resolves.toBeUndefined();
@@ -155,19 +145,15 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
   });
 
   it("ignores non-activity and non-create events", async () => {
-    const db = coreDb();
     const queue = fakeQueue();
     const capture = fakeCaptureException();
-    await connectAthlete(db, "111");
 
     await handleStravaWebhookEvent(
-      db,
       queue,
       capture.captureException,
       activityCreateEvent({ aspect_type: "update" }),
     );
     await handleStravaWebhookEvent(
-      db,
       queue,
       capture.captureException,
       activityCreateEvent({ object_type: "athlete" }),
@@ -176,40 +162,18 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     expect(queue.sent).toHaveLength(0);
   });
 
-  it("dedupes redelivered events via processed_webhook_events", async () => {
-    const db = coreDb();
+  it("carries no distance, pace or time — only ids and the event time (D-33)", async () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
-    await connectAthlete(db, "111");
-    const event = activityCreateEvent();
-
-    await handleStravaWebhookEvent(db, queue, capture.captureException, event);
-    await handleStravaWebhookEvent(db, queue, capture.captureException, event);
-
-    expect(queue.sent).toHaveLength(1);
-  });
-});
-
-describe("consumer wiring: strava_reminder job produces the notification", () => {
-  it("carries no distance/pace/time — the body is fixed copy (D-33)", async () => {
-    const db = coreDb();
-    const queue = fakeQueue();
-    const capture = fakeCaptureException();
-    const userId = await connectAthlete(db, "111");
 
     await handleStravaWebhookEvent(
-      db,
       queue,
       capture.captureException,
       activityCreateEvent(),
     );
 
-    // The webhook itself never creates the notification directly (that's
-    // consumer.ts's processReminderJob, tested in consumer.test.ts) — this
-    // asserts the job handed to the queue carries nothing but ids.
     expect(new Set(Object.keys(queue.sent[0] ?? {}))).toEqual(
-      new Set(["subjectId", "type", "userId"]),
+      new Set(["type", "athleteId", "objectId", "aspectType", "eventTime"]),
     );
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
   });
 });

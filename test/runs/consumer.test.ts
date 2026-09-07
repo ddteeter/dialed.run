@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { imports, runs } from "../../src/db/schema-core";
+import { stravaConnections, imports, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
@@ -217,17 +217,77 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     expect(wrapped[0]?.wasRetried).toBe(false);
   });
 
-  it("a strava_reminder job creates a notification with zero activity data (D-33)", async () => {
+  /**
+   * The webhook now enqueues and returns, so resolving athlete -> user and
+   * deduping the event both happen here. These moved with the logic.
+   */
+  it("a strava_reminder job resolves the athlete and notifies (D-33)", async () => {
     const deps = makeDeps();
-    const userId = newUlid();
-    const subjectId = newUlid();
-    const { batch } = fakeBatch([
-      { body: { type: "strava_reminder", userId, subjectId } },
-    ]);
+    const athleteId = newUlid();
+    const userId = await connectAthlete(deps.db, athleteId);
+    const { batch } = fakeBatch([{ body: reminderJob({ athleteId }) }]);
+
     await handleImportsBatch(batch, deps);
+
     expect(await unreadNotificationCount(deps.db, userId)).toBe(1);
   });
+
+  it("notifies once when the same event is delivered twice", async () => {
+    const deps = makeDeps();
+    const athleteId = newUlid();
+    const userId = await connectAthlete(deps.db, athleteId);
+    const job = reminderJob({ athleteId });
+
+    await handleImportsBatch(fakeBatch([{ body: job }]).batch, deps);
+    await handleImportsBatch(fakeBatch([{ body: job }]).batch, deps);
+
+    // Queue delivery is at-least-once, so this is the ordinary case, not
+    // an edge one. The claim is an INSERT OR IGNORE on the event key.
+    expect(await unreadNotificationCount(deps.db, userId)).toBe(1);
+  });
+
+  it("drops an event for an athlete nobody has connected", async () => {
+    const deps = makeDeps();
+    const { batch, wrapped } = fakeBatch([
+      { body: reminderJob({ athleteId: "999999" }) },
+    ]);
+
+    await handleImportsBatch(batch, deps);
+
+    // Acked, not retried: an unknown athlete is a permanent condition, and
+    // the webhook enqueues before it can know.
+    expect(wrapped[0]?.wasAcked).toBe(true);
+    expect(wrapped[0]?.wasRetried).toBe(false);
+  });
 });
+
+function reminderJob(
+  overrides: Partial<{ athleteId: string; objectId: string }> = {},
+): Record<string, unknown> {
+  return {
+    type: "strava_reminder",
+    athleteId: overrides.athleteId ?? "111",
+    objectId: overrides.objectId ?? newUlid(),
+    aspectType: "create",
+    eventTime: Math.floor(Date.now() / 1000),
+  };
+}
+
+async function connectAthlete(
+  db: ReturnType<typeof coreDb>,
+  athleteId: string,
+): Promise<string> {
+  const userId = newUlid();
+  await db.insert(stravaConnections).values({
+    userId,
+    athleteId,
+    accessToken: "access",
+    refreshToken: "refresh",
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    status: "ok",
+  });
+  return userId;
+}
 
 describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
   it("marks a dead-lettered import failed and notifies the user; no import ends in silence", async () => {

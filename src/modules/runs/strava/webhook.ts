@@ -7,11 +7,8 @@
  * time from Strava, ever. This module never reads or stores anything
  * beyond the athlete id (to find the connected user) and the dedupe key.
  */
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { processedWebhookEvents, stravaConnections } from "../../../db/schema-core";
-import type { CoreDb } from "../core-db";
 import type { ReminderJob } from "../queue-messages";
 
 export interface ReminderQueueProducer {
@@ -52,7 +49,6 @@ respond 200 within 2s regardless of payload shape or dedupe outcome —
 Strava disables webhooks that don't get a fast 200.
 */
 export async function handleStravaWebhookEvent(
-  db: CoreDb,
   queue: ReminderQueueProducer,
   captureException: (error: unknown, context: Record<string, string>) => void,
   body: unknown,
@@ -69,25 +65,20 @@ export async function handleStravaWebhookEvent(
     return; // only a new activity is a "log your kit?" moment
   }
 
-  const athleteId = String(event.owner_id);
-  const connected = await db
-    .select({ userId: stravaConnections.userId })
-    .from(stravaConnections)
-    .where(eq(stravaConnections.athleteId, athleteId))
-    .limit(1);
-  const userId = connected[0]?.userId;
-  if (userId === undefined) return; // unknown/unconnected athlete -> no-op
-
-  const subjectId = String(event.object_id);
-  const inserted = await db
-    .insert(processedWebhookEvents)
-    .values({
-      objectId: subjectId,
-      aspectType: event.aspect_type,
-      eventTime: event.event_time,
-    })
-    .onConflictDoNothing();
-  if (inserted.meta.changes === 0) return; // already processed — no-op
-
-  await queue.send({ type: "strava_reminder", userId, subjectId });
+  // Enqueue and return. Strava disables a subscription that does not answer
+  // promptly, and this used to do two D1 round trips first — a connection
+  // lookup and a dedupe insert — before it could respond. Neither needs to
+  // happen here: the consumer has to be idempotent anyway, because queue
+  // redelivery is at-least-once, so doing the dedupe there costs nothing
+  // and removes it from the response path.
+  //
+  // Nothing about the activity travels with the message beyond its id and
+  // timestamp, which are the dedupe key (D-33: zero activity data).
+  await queue.send({
+    type: "strava_reminder",
+    athleteId: String(event.owner_id),
+    objectId: String(event.object_id),
+    aspectType: event.aspect_type,
+    eventTime: event.event_time,
+  });
 }

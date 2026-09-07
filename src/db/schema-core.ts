@@ -266,7 +266,16 @@ export const stravaConnections = sqliteTable("strava_connections", {
   // revocation. Reset to 0/NULL on success.
   refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
   refreshFirstFailedAt: integer("refresh_first_failed_at"),
-});
+},
+  (t) => [
+    // One Strava athlete maps to at most one user. Without this, two
+    // accounts could connect the same athlete and the webhook's
+    // athlete -> user lookup would pick between them arbitrarily, sending
+    // someone else's run reminder to the wrong person. Found by a
+    // consumer test that reused an athlete id.
+    uniqueIndex("strava_connections_athlete").on(t.athleteId),
+  ],
+);
 
 export const processedWebhookEvents = sqliteTable(
   "processed_webhook_events",

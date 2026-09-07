@@ -12,7 +12,12 @@
  */
 import { and, eq, inArray } from "drizzle-orm";
 
-import { imports, runs } from "../../db/schema-core";
+import {
+  imports,
+  processedWebhookEvents,
+  runs,
+  stravaConnections,
+} from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { createNotification } from "./notifications";
@@ -176,16 +181,42 @@ async function processImportJob(
   });
 }
 
+/**
+ * The work the webhook used to do before it could reply. Doing it here
+ * costs nothing extra: the consumer has to be idempotent regardless,
+ * because queue delivery is at-least-once.
+ */
 async function processReminderJob(
   deps: ConsumerDeps,
   job: ReminderJob,
 ): Promise<void> {
+  // Claim the event first. INSERT OR IGNORE on the (object, aspect, time)
+  // key, and proceed only if this delivery is the one that inserted it —
+  // so a redelivered message, or the same event sent twice by Strava,
+  // notifies once.
+  const claim = await deps.db
+    .insert(processedWebhookEvents)
+    .values({
+      objectId: job.objectId,
+      aspectType: job.aspectType,
+      eventTime: job.eventTime,
+    })
+    .onConflictDoNothing();
+  if (claim.meta.changes === 0) return;
+
+  const [connected] = await deps.db
+    .select({ userId: stravaConnections.userId })
+    .from(stravaConnections)
+    .where(eq(stravaConnections.athleteId, job.athleteId))
+    .limit(1);
+  if (connected === undefined) return; // unknown or disconnected athlete
+
   // D-33: zero activity data in the body — deep link is /runs/new, not a
   // pre-created run.
   await createNotification(deps.db, {
-    userId: job.userId,
+    userId: connected.userId,
     kind: "strava_reminder",
-    subjectId: job.subjectId,
+    subjectId: job.objectId,
     body: "New run on Strava — log your kit?",
   });
 }

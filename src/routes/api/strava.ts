@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { captureException } from "../../modules/ops";
@@ -34,12 +33,7 @@ export const Route = createFileRoute("/api/strava")({
         } catch {
           body = undefined;
         }
-        await handleStravaWebhookEvent(
-          drizzle(env.DIALED_CORE),
-          env.IMPORTS_QUEUE,
-          captureException,
-          body,
-        );
+        await handleStravaWebhookEvent(env.IMPORTS_QUEUE, captureException, body);
         return new Response(undefined, { status: 200 });
       },
     },
