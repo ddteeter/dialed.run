@@ -114,10 +114,31 @@ export async function observationsForRuns(
 }
 
 /**
+ * How many hour-buckets back "now" is allowed to reach.
+ *
+ * Was 3 (up to three hours stale), which is long enough for a front to come
+ * through: the consensus surface would show kit chosen for conditions that
+ * no longer existed, and do it silently, because a stale reading looks
+ * exactly like a fresh one on screen.
+ *
+ * 2 is the closest expressible thing to the 60 minutes we actually want.
+ * Observations are keyed by whole hour, so a bucket describes an hour, not
+ * an instant: the current bucket plus one gives "this hour or last hour",
+ * which is ~0-60 minutes stale in the common case and up to ~120 at the
+ * pathological edge. Reaching only the current bucket would be tighter but
+ * returns nothing at all for the first minutes after the hour turns.
+ *
+ * Tightening this to a true 30 or 60 minutes needs sub-hour buckets, which
+ * is a weather-lane change to the cache key, not a constant here.
+ */
+const FRESH_BUCKETS = 2;
+
+/**
  * The viewer's current conditions from the shared cache: the freshest
- * non-manual observation at their rounded location within the last 3 hours.
- * Undefined degrades to the widened/empty consensus state (law 5) —
- * fetching a fresh observation is the weather lane's job.
+ * non-manual observation at their rounded location, within
+ * FRESH_BUCKETS hour-buckets. Undefined degrades to the widened/empty
+ * consensus state (law 5) — fetching a fresh observation is the weather
+ * lane's job.
  */
 export async function currentConditions(
   lat: number,
@@ -125,7 +146,10 @@ export async function currentConditions(
   nowEpochSeconds: number,
 ): Promise<Conditions | undefined> {
   const nowBucket = Math.floor(nowEpochSeconds / 3600);
-  const buckets = [nowBucket, nowBucket - 1, nowBucket - 2];
+  const buckets = Array.from(
+    { length: FRESH_BUCKETS },
+    (_unused, index) => nowBucket - index,
+  );
   const atBucket = (bucket: number) =>
     and(
       eq(weatherObservations.latR, round2(lat)),

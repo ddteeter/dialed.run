@@ -16,7 +16,12 @@ import { attachKit, getEntryDetail, itemBandWearStat, recordVerdictPrompted, sho
 import { followingFeed } from "./feed";
 import { follow, isFollowing, unfollow } from "./follows";
 import { pickerGroups } from "./picker";
-import { ALLOWED_CONTENT_TYPES, MAX_PHOTO_BYTES, uploadPhoto } from "./photos";
+import {
+  ALLOWED_CONTENT_TYPES,
+  InvalidPhotoError,
+  MAX_PHOTO_BYTES,
+  uploadPhoto,
+} from "./photos";
 import { nearestPriorEntry } from "./prefill";
 import { otherProfile, ownProfile } from "./profiles";
 import { hasReacted, toggleUsefulReaction, usefulCount } from "./reactions";
@@ -250,26 +255,51 @@ export const searchQuery = createServerFn({ method: "GET" })
 
 // ---- Photos -----------------------------------------------------------------
 
-const uploadPhotoInput = z.object({
+/**
+ * Multipart, not base64.
+ *
+ * The previous version encoded the file to base64 in the browser and
+ * decoded it here with a byte-at-a-time loop. That is ~33% more bytes on
+ * the wire, plus two full passes over up to 10MB inside a 128MB isolate —
+ * pure overhead, and it stacked badly against the image resize that runs
+ * next. TanStack's types special-case FormData for POST server functions
+ * (see ValidateValidatorInput), so the file streams as multipart and the
+ * handler gets bytes with no transcode. No URL is involved, so this stays
+ * a called server function rather than a fetch to a string path.
+ *
+ * Size is checked before the bytes are read, so an oversized upload is
+ * rejected without allocating it.
+ */
+const uploadPhotoFields = z.object({
   entryId: ulidSchema,
   contentType: z.enum(ALLOWED_CONTENT_TYPES),
-  dataBase64: z.string().max(Math.ceil((MAX_PHOTO_BYTES * 4) / 3) + 100),
 });
 
 export const uploadPhotoAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => uploadPhotoInput.parse(input))
+  .validator((input: unknown) => {
+    if (!(input instanceof FormData)) {
+      throw new InvalidPhotoError("expected multipart form data");
+    }
+    const file = input.get("photo");
+    if (!(file instanceof File)) {
+      throw new InvalidPhotoError("no photo in upload");
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      throw new InvalidPhotoError("photo too large");
+    }
+    const fields = uploadPhotoFields.parse({
+      entryId: input.get("entryId"),
+      contentType: file.type,
+    });
+    return { ...fields, file };
+  })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const binary = atob(data.dataBase64);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.codePointAt(index) ?? 0;
-    }
     const key = await uploadPhoto({
       userId,
       entryId: data.entryId,
       contentType: data.contentType,
-      bytes: bytes.buffer,
+      bytes: await data.file.arrayBuffer(),
     });
     return { key };
   });

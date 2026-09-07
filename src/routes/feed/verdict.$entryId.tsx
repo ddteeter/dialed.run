@@ -19,15 +19,6 @@ import {
 import { redirectTo } from "../../modules/feed/redirect";
 import { Bracketed, Layout } from "../../ui";
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const CHUNK = 0x80_00;
-  for (let index = 0; index < bytes.length; index += CHUNK) {
-    binary += String.fromCodePoint(...bytes.subarray(index, index + CHUNK));
-  }
-  return btoa(binary);
-}
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
   beforeLoad: async () => {
@@ -65,9 +56,14 @@ function VerdictPage() {
   const [uploading, setUploading] = useState(false);
 
   async function handlePhotoSelect(event: ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files;
+    // Copy out of the live FileList BEFORE clearing the input. `files` is
+    // a live view onto the input, so resetting `value` first empties it —
+    // the loop below then saw zero files and the upload silently did
+    // nothing, with no error to show for it. Clearing is still needed so
+    // re-picking the same file fires `change` again.
+    const files = event.target.files ? [...event.target.files] : [];
     event.target.value = "";
-    if (!files || files.length === 0) return;
+    if (files.length === 0) return;
     setPhotoError(undefined);
     setUploading(true);
     try {
@@ -80,10 +76,13 @@ function VerdictPage() {
           setPhotoError("Photos must be JPEG, PNG, or WebP.");
           continue;
         }
-        const photoBase64 = arrayBufferToBase64(await file.arrayBuffer());
-        const { key } = await uploadPhotoAction({
-          data: { entryId, contentType: file.type, dataBase64: photoBase64 },
-        });
+        // Multipart: the browser streams the file and nothing transcodes
+        // it. TanStack passes FormData through to the server function
+        // untouched (its types special-case it for POST).
+        const upload = new FormData();
+        upload.append("entryId", entryId);
+        upload.append("photo", file);
+        const { key } = await uploadPhotoAction({ data: upload });
         setPhotoKeys((prev) => [...prev, key]);
       }
     } catch {
