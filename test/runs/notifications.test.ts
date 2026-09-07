@@ -58,7 +58,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
     expect(await unreadNotificationCount(db, userId)).toBe(0);
 
     const rows = await listNotifications(db, userId);
-    expect(rows.every((row) => row.read === 1)).toBe(true);
+    expect(rows.every((row) => row.read)).toBe(true);
   });
 
   it("lists only the requesting user's notifications", async () => {

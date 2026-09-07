@@ -139,7 +139,13 @@ export const runs = sqliteTable(
     distanceM: real("distance_m").notNull(),
     lat: real("lat"),
     lng: real("lng"),
-    indoor: integer("indoor").notNull().default(0),
+    // mode:"boolean" so the storage detail stops at the data layer. SQLite
+    // has no boolean and stores 0/1 either way, so the generated rebuild
+    // changes no stored bytes — but the TypeScript type does become a real
+    // boolean, which is the point. A future move to a provider with a
+    // native boolean is then a column-type change and nothing else;
+    // without it, every `!== 0` and `? 1 : 0` in the app has to move too.
+    indoor: integer("indoor", { mode: "boolean" }).notNull().default(false),
     effort: text("effort", { enum: ["easy", "steady", "workout", "race"] }),
     title: text("title").notNull(),
     weatherStatus: text("weather_status", {
@@ -233,7 +239,7 @@ export const notifications = sqliteTable(
     // transition. See refreshStravaToken.
     subjectId: text("subject_id"),
     body: text("body").notNull(),
-    read: integer("read").notNull().default(0),
+    read: integer("read", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [

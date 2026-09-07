@@ -206,11 +206,14 @@ describe("refreshStravaToken (resilience: never loop on a dead grant)", () => {
     await completeStravaConnect(db, fakeApi(), userId, "auth-code");
     await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
 
-    // Backdate the run of failures to an hour ago: same count, but now it
-    // has been going on long enough to mean something.
+    // Backdate the run of failures past the window: same count, but now it
+    // has been going on long enough to stop retrying.
     await db
       .update(stravaConnections)
-      .set({ refreshFailureCount: 2, refreshFirstFailedAt: nowS() - 3600 })
+      .set({
+        refreshFailureCount: 2,
+        refreshFirstFailedAt: nowS() - 4 * 24 * 60 * 60,
+      })
       .where(eq(stravaConnections.userId, userId));
 
     const result = await refreshStravaToken(
@@ -222,7 +225,12 @@ describe("refreshStravaToken (resilience: never loop on a dead grant)", () => {
     expect(result).toBe("broken");
     const broken = await getStravaConnection(db, userId);
     expect(broken?.status).toBe("broken");
-    expect(await unreadNotificationCount(db, userId)).toBe(1);
+
+    // Deliberately NOT notified. A transient failure that never resolved
+    // could be Strava being down for everyone, and telling a user to
+    // reconnect then makes them break a working grant. A human hears about
+    // it via Sentry instead.
+    expect(await unreadNotificationCount(db, userId)).toBe(0);
   });
 
   it("clears the failure run on a later success", async () => {

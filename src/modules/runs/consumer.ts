@@ -148,7 +148,7 @@ async function processImportJob(
     distanceM: draft.distanceM,
     lat: draft.indoor ? undefined : draft.lat,
     lng: draft.indoor ? undefined : draft.lng,
-    indoor: draft.indoor ? 1 : 0,
+    indoor: draft.indoor,
     title: draft.title,
     weatherStatus,
   });

@@ -59,7 +59,7 @@ export async function createNotification(
       kind: draft.kind,
       subjectId: draft.subjectId,
       body: draft.body,
-      read: 0,
+      read: false,
       createdAt: Math.floor(Date.now() / 1000),
     })
     .onConflictDoNothing();
@@ -81,7 +81,7 @@ export async function unreadNotificationCount(
   const rows = await db
     .select({ n: count() })
     .from(notifications)
-    .where(and(eq(notifications.userId, userId), eq(notifications.read, 0)));
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
   return rows[0]?.n ?? 0;
 }
 
@@ -91,6 +91,6 @@ export async function markAllNotificationsRead(
 ): Promise<void> {
   await db
     .update(notifications)
-    .set({ read: 1 })
-    .where(and(eq(notifications.userId, userId), eq(notifications.read, 0)));
+    .set({ read: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
 }

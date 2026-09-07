@@ -14,26 +14,6 @@ export const DUPLICATE_WINDOW_S = 120;
 
 export type RunRow = typeof runs.$inferSelect;
 
-/**
- * What a component gets. Identical to the stored row except that `indoor`
- * is a boolean.
- *
- * SQLite has no boolean type, so the column is an integer — but that is a
- * storage detail and it was reaching the UI, which had to write
- * `run.indoor !== 0` to ask a yes/no question. Drizzle's
- * `mode: "boolean"` would express this on the column itself; it is not
- * used here because drizzle-kit treats the codec change as a column-type
- * change and emits a full DROP/recreate of the table for what is, in SQL
- * terms, no change at all. A mapping function costs one call and no
- * migration.
- */
-export interface RunView extends Omit<RunRow, "indoor"> {
-  indoor: boolean;
-}
-
-function toRunView(row: RunRow): RunView {
-  return { ...row, indoor: row.indoor !== 0 };
-}
 
 /**
 Weather is never typed by a human on the default path (D-24): indoor runs
@@ -109,7 +89,7 @@ export async function createManualRun(
     distanceM: draft.distanceM,
     lat: withHome.indoor ? undefined : lat,
     lng: withHome.indoor ? undefined : lng,
-    indoor: draft.indoor ? 1 : 0,
+    indoor: draft.indoor,
     effort: draft.effort,
     title: draft.title,
     weatherStatus,
@@ -124,24 +104,23 @@ export async function getRun(
   db: CoreDb,
   userId: string,
   runId: string,
-): Promise<RunView | undefined> {
+): Promise<RunRow | undefined> {
   const rows = await db
     .select()
     .from(runs)
     .where(and(eq(runs.id, runId), eq(runs.userId, userId)))
     .limit(1);
-  const row = rows[0];
-  return row === undefined ? undefined : toRunView(row);
+  return rows[0];
 }
 
-export async function listRuns(db: CoreDb, userId: string): Promise<RunView[]> {
+export async function listRuns(db: CoreDb, userId: string): Promise<RunRow[]> {
   const rows = await db
     .select()
     .from(runs)
     .where(eq(runs.userId, userId))
     .orderBy(desc(runs.startedAt))
     .limit(50);
-  return rows.map((row) => toRunView(row));
+  return rows;
 }
 
 /**
@@ -168,7 +147,7 @@ export async function didRecordManualTemp(
       and(
         eq(runs.id, runId),
         eq(runs.userId, userId),
-        eq(runs.indoor, 0),
+        eq(runs.indoor, false),
         // Claim-style guard: only unresolved runs accept a manual temp.
         inArray(runs.weatherStatus, ["failed", "pending"]),
       ),

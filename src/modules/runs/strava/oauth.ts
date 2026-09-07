@@ -9,6 +9,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { stravaConnections } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
+import { captureException } from "../../ops";
 import { createNotification } from "../notifications";
 import { isTerminalStravaError } from "./api";
 import type { StravaApi } from "./api";
@@ -91,13 +92,20 @@ export async function completeStravaConnect(
  *
  * Both are required, and the window is the important half. How long three
  * failures take is entirely a function of how often something calls the
- * refresh — three retries during one 30-second Strava outage would trip a
- * bare counter instantly, while an inactive user might take weeks to
- * accumulate three. The window makes the decision about elapsed trouble
- * rather than about attempt count.
+ * refresh — three retries during one short Strava outage would trip a bare
+ * counter instantly, while an inactive user might take weeks to accumulate
+ * three. The window makes the decision about elapsed trouble rather than
+ * about attempt count.
+ *
+ * Three days, not thirty minutes. A bad day at Strava fails every user's
+ * refresh at once, and a short window would turn that into a fleet-wide
+ * "reconnect your account" — telling thousands of people to break a grant
+ * that was never broken. Three days is longer than any outage we should
+ * plan to survive silently, and the user-facing consequence of waiting is
+ * only a late reminder.
  */
 const MAX_CONSECUTIVE_REFRESH_FAILURES = 3;
-const MIN_FAILURE_WINDOW_S = 30 * 60;
+const MIN_FAILURE_WINDOW_S = 3 * 24 * 60 * 60;
 
 /**
 On-demand refresh. Success clears any failure run; a *terminal* failure
@@ -175,14 +183,32 @@ async function recordRefreshFailure(
       refreshFirstFailedAt: firstFailedAt,
     })
     .where(eq(stravaConnections.userId, userId));
-  // Only on the ok -> broken transition. `strava_broken` has no subject,
-  // and a UNIQUE index does not dedupe NULLs, so re-notifying a connection
-  // that is already broken would insert a second row every time.
-  if (connection.status !== "broken") {
-    await createNotification(db, {
+  // Who hears about this depends on whether we actually know it is the
+  // user's problem.
+  //
+  // A terminal failure is Strava saying this grant is dead, which is
+  // per-user and true, so the user is told — once, on the ok -> broken
+  // transition (`strava_broken` has no subject, and a UNIQUE index does not
+  // dedupe NULLs, so the transition is the guard).
+  //
+  // Exhausted transient failures are ambiguous: Strava down, our config
+  // wrong, a network partition. Telling a user to reconnect then is worse
+  // than saying nothing — they will disconnect a working account to fix a
+  // problem that was never theirs. So the connection is marked broken to
+  // stop hammering, and a human hears about it instead (law 6).
+  if (isTerminalStravaError(error)) {
+    if (connection.status !== "broken") {
+      await createNotification(db, {
+        userId,
+        kind: "strava_broken",
+        body: "Your Strava connection needs to be reconnected.",
+      });
+    }
+  } else if (connection.status !== "broken") {
+    captureException(new Error("strava refresh exhausted without a 4xx"), {
       userId,
-      kind: "strava_broken",
-      body: "Your Strava connection needs to be reconnected.",
+      failureCount: String(failureCount),
+      firstFailedAt: String(firstFailedAt),
     });
   }
   return "broken";
