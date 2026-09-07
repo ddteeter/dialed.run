@@ -55,13 +55,17 @@ export default defineConfig({
       testMatch: "**/*.demo.spec.ts",
       use: {
         viewport: { width: 1280, height: 720 },
-        reducedMotion: "reduce",
+        // "no-preference", explicitly: motion.css collapses moves under
+        // reduced motion, and a demo must record the full experience.
+        reducedMotion: "no-preference",
         // A demo that runs at machine speed is unwatchable — the first
         // recording of the auth journey was 1.7s end to end. slowMo paces
         // every action so a reviewer can follow what happened, without
-        // sleeps polluting the spec. 900 after review feedback: 450 still
-        // read as things changing before the eye caught the cause.
-        launchOptions: { slowMo: 900 },
+        // sleeps polluting the spec. Raised twice on review feedback (450 ->
+        // 900 -> 1800): reviewers kept losing the cause of a state change.
+        // At this pacing long journeys need a per-spec timeout bump — see
+        // e2e/run-logging.
+        launchOptions: { slowMo: 1800 },
         video: { mode: "on", size: { width: 1280, height: 720 } },
       },
     },

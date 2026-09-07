@@ -2,9 +2,8 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { cronCheckpoints } from "../../db/schema-core";
 import { env } from "../../env";
+import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
-
-const DIGEST_CRON = "0 12 * * *";
 
 /**
  * Cron entry (000 §10). Every cron writes its heartbeat row first (the
@@ -14,7 +13,7 @@ export async function handleScheduled(
   controller: ScheduledController,
 ): Promise<void> {
   const db = drizzle(env.DIALED_CORE);
-  const cronName = controller.cron === DIGEST_CRON ? "daily-digest" : "unknown";
+  const cronName = cronNameFor(controller.cron) ?? "unknown";
   await db
     .insert(cronCheckpoints)
     .values({ cronName, lastRunAt: Math.floor(Date.now() / 1000) })
@@ -26,6 +25,8 @@ export async function handleScheduled(
   if (cronName === "daily-digest") {
     await runDailyDigest();
   } else {
+    // Config/code skew that the bindings-conformance test should have
+    // caught in CI before it could reach a real schedule.
     captureException(new Error("unrecognized cron fired"), {
       cron: controller.cron,
     });

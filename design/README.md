@@ -1,44 +1,22 @@
-# dialed.run — design source
+# CODING AGENTS: READ THIS FIRST
 
-Imported from the Claude Design project **"Runner Wardrobe App Brief"**.
+This is a **handoff bundle** from Claude Design (claude.ai/design).
 
-Source: https://claude.ai/design/p/2da6f14b-dee4-4d4a-8f00-9ffd0f3ac3fd
-Project ID: `2da6f14b-dee4-4d4a-8f00-9ffd0f3ac3fd`
-Imported: 2026-08-30 · **Revision 3 imported 2026-08-30** (rev 2 added `V1 Screens.dc.html` with the K/L/M/N/P/Q surfaces and post-v1 markings; rev 3 lands the identity-first wardrobe round: F identity-first + F2 enrichment states, P2.5 naming step, [GENERIC] badges, public-entry ownership counts, Strava-notification compliance fix)
+A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
 
-## Files
+## What you should do — IMPORTANT
 
-| File | What it is |
-| --- | --- |
-| `Brand Brief.dc.html` | Name rationale, logo direction, color system, typography, voice, product principles, lexicon, UI application. The canonical brand spec. |
-| `Flow Map.dc.html` | Developer handoff. Navigation structure, per-flow failure modes, empty states, system states, and the four-milestone build order. |
-| `Logo Directions.dc.html` | Eleven logo exploration studies, rounds 1–2. Direction resolved to bracket notation (see Brand Brief §02). |
-| `Onboarding.dc.html` | O1–O6: calibrate, shoot the closet, fill the long tail, seed history, first call, the calibration ladder. Each screen carries a background-systems note. |
-| `Product Screens.dc.html` | A1–A3 + A2b (log a run), B1–B2 (the call), C (closet, desktop), D (post detail). |
-| `V1 Screens.dc.html` | K (call teaser), L (Strava connect), M (notifications), N (settings & privacy), P2/P2.5/P3 (onboarding v1 incl. the naming step), Q (manual entry + indoor). |
-| `Remaining Screens.dc.html` | E1–E2 (feed), F (add a garment), G (your profile), H (someone else), I (discovery), J (gear gaps). |
-| `support.js` | Generated dc-runtime that renders the `.dc.html` artboards. **Not product code** — do not edit; it is regenerated upstream. |
+**Read `runner-wardrobe-app-brief/project/Motion Doctrine.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
 
-## Viewing
+**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
 
-Each `.dc.html` is a standalone page that loads `./support.js` from this
-directory, so keep them together. Open one directly in a browser, or serve
-the folder:
+## About the design files
 
-```sh
-python3 -m http.server -d design 8000
-```
+The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
 
-## Notes for implementation
+**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
 
-- These are **artboards**, not app code. The markup is inline-styled canvas
-  output; treat it as a visual spec to read, not a codebase to port.
-- `{{ brandWord }}` and `{{ reactionUpper }}` are canvas template props, not
-  product strings. Some files also use `<sc-if>` blocks for togglable sections.
-- The Flow Map's milestone order is the recommended build sequence, starting
-  with "prove the loop": add garment (F), log a run (A1–A3), the call (B1–B2).
-- The Flow Map opens with a validation warning worth heeding: test the
-  recommendation by hand against held-out runs before building the engine.
-- Several decisions are explicitly still open — three- vs five-state verdicts,
-  how much social signal enters the call, whether verdicts are ever public,
-  and "useful" vs "like" as the primary reaction.
+## Bundle contents
+
+- `runner-wardrobe-app-brief/README.md` — this file
+- `runner-wardrobe-app-brief/project/` — the `Runner Wardrobe App Brief` project files (HTML prototypes, assets, components)

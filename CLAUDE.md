@@ -69,6 +69,31 @@ attributes valid for that category exist on the parsed type. All wardrobe
 reads/writes go through `garmentSchema` in `lib/contracts.ts`; never construct
 a garment object outside it.
 
+## Derive, don't mirror
+
+If a fact is already expressed in a schema, **read it from the schema** rather
+than restating it. A hand-written second copy is not a duplicate of the truth,
+it is a *rival* truth: nothing makes the two disagree loudly, so they drift and
+the compiler stays silent.
+
+The four-lane review found the same category→attributes fact written three
+times, and a verdict table written three times with the canonical copy imported
+by nobody. Both are now derived — see `lib/garment-fields.ts`, which reads
+`garmentSchema.options`, and `verdictScale` in `lib/contracts.ts`.
+
+- zod discriminated unions expose `.options`, and each option exposes `.shape`.
+  That is enough to answer "which fields does this variant have" in code.
+- A derived table needs a test that pins it against its source, so the
+  derivation itself can't rot silently.
+- If you genuinely cannot derive it — a client component that must not import
+  server code, say — move the shared constants to `lib/` where both sides can
+  import them. Do not copy them and annotate the copy.
+
+**One gate per concern.** Auth is the worked example: `requireUserId` (server
+functions) and `requireSession` (route loaders) in `modules/auth` are the only
+implementations. Four private copies had already become three incompatible
+error types before anyone noticed. An eslint rule now rejects new ones.
+
 ## Routing: typed, never string literals
 
 Navigation uses TanStack's typed `Link`/`navigate` with route paths checked
@@ -95,6 +120,22 @@ explicitly says the migration is yours.
 - Feed and list queries: fanout-on-read with covering indexes. Never
   fanout-on-write (no per-follower insert loops).
 - Batch related reads with `db.batch()` where possible.
+- **Filter in SQL, not in memory.** A `.filter()` over query results that a
+  `WHERE` could have expressed is billed for every row it scanned and thrown
+  away. Worse, it silently breaks `LIMIT`: `SELECT … LIMIT 200` followed by
+  an in-memory filter returns "the survivors of the first 200 rows", not
+  "the first 200 survivors", so a user with 200 non-matching rows gets an
+  empty result that looks like real data.
+  **The one legitimate exception** is a join D1 cannot express: `DIALED_CORE`
+  and `DIALED_WEATHER` are separate databases, so anything correlating runs
+  with observations must be assembled in code. Say so in a comment when you
+  do it, or the next reader will "fix" it.
+- **D1 has no interactive transactions.** There is no `BEGIN`/`COMMIT` you can
+  hold across `await`s. `db.batch()` is the atomicity primitive: statements in
+  one batch commit together or not at all. A sequence of related writes issued
+  as separate awaited statements is not a transaction, and a failure halfway
+  leaves the rows inconsistent. If two or more writes must land together,
+  they go in one `batch()`.
 
 ## Product rules that are also code rules
 
@@ -117,6 +158,37 @@ explicitly says the migration is yours.
 - **UI lexicon** (user-facing copy only; internal names unchanged): the Closet,
   a Kit, the Call, Verdict, Conditions, Mileage. "useful", never "like".
   Measured values render in mono with bracket notation per `docs/product.md`.
+
+## Undesigned surfaces (placeholder protocol)
+
+Some packets require UI that has no artboard or `docs/product.md` screen ID.
+Building it is fine — inventing design language is not:
+
+- Compose ONLY existing `ui/` primitives, the brand tokens, and
+  bracket-notation text. Never introduce a new glyph, emoji, icon, icon
+  library, color, or font on an undesigned surface — a text label in the
+  existing system is always the correct placeholder. (The 🔔-emoji bell is
+  the canonical violation.)
+- **Icons come from `ui/`'s `<Icon name="…">`** — the typed port of the
+  design Icon Pack (77 glyphs; manifest in `src/ui/icons.tsx`). A glyph
+  that is not in the manifest is itself an undesigned surface: request it
+  via `docs/design-deltas.md`, never draw or import one.
+- **Motion comes from the Motion Doctrine** (`design/motion.js`, ported to
+  `src/ui/motion.css` vars + `ui/` tokens). Every transition uses
+  `--dur-*`/`--ease-*` (or `DURATION`/`EASING` from `ui/`) — never a raw
+  ms value or cubic-bezier. Only surfaces in the doctrine's per-surface
+  map animate; anything else stays still until requested via
+  design-deltas. The NEVER list is binding: no bounce/spring/overshoot,
+  no spinners or skeleton shimmer (brackets breathe instead), no
+  scroll-driven motion, nothing over 400ms, no stagger except the
+  dressing-order reveal. Reduced motion collapses to a 90ms opacity
+  change — never to zero.
+- In the same PR: add (or extend) the surface's entry in
+  `docs/design-deltas.md`'s open queue, so it is tracked for the design
+  round-trip.
+- In the PR body: list every undesigned surface you shipped under a
+  **"Design deltas"** heading, so the reviewer can kick them to the design
+  agent instead of discovering them in a demo video.
 
 ## Guardrails (the enforcement loop)
 
@@ -151,6 +223,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
 3. Implement in small commits. Each commit passes the commit gate.
 4. Tests are part of done, not an afterthought. Match the test expectations
    in your packet.
+4b. **Before opening a PR, work through `docs/pr-self-review.md`.** It is the
+   residue of the PRs #2–#5 review: the findings no rule could catch, written
+   as questions. The guardrails cover what a machine can see; that list covers
+   what four agents actually got wrong.
 5. **Demo what a user would see change.** If a reviewer opening the app would
    see anything different than on `main`, your feature's demo spec must exist,
    pass, and be re-recorded onto the PR — invoke the `pr-demo-video` skill.
@@ -201,6 +277,23 @@ Dialed must run unattended. These are laws, not suggestions:
 8. **Migrations are expand→contract.** Additive change deploys first; code
    stops reading old shape; destructive change ships in a later migration.
    Never rename/drop in the same PR that changes code.
+9. **A queue message is a wire format between two deploys**, and gets the same
+   expand→contract discipline as a migration. A deploy replaces the consumer
+   while the queue still holds messages the *previous* version enqueued, so
+   the new consumer must still parse the old shape. In practice: add a new
+   variant to the discriminated union on `type`, never repurpose or tighten
+   an existing one; new fields are optional; a field stops being *written*
+   in one deploy and stops being *read* in a later one. Deleting a `type`
+   is a two-deploy operation, and the consumer keeps handling it until the
+   queue has drained.
+10. **Anything the platform binds, a test asserts.** `wrangler.jsonc` is
+    human-managed and the code depending on it is not, so the two drift
+    silently: an unregistered cron simply never fires, an unbound queue
+    consumer simply never runs, and the handler code looks correct the whole
+    time. Cron schedules and queue names live in `modules/ops/crons.ts` and
+    `modules/ops/queues.ts`, and `test/bindings-conformance.test.ts` fails
+    CI when the config disagrees. Add to those registries, not to a literal
+    at the use site.
 
 ## Forbidden zones (all lanes)
 

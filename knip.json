@@ -15,6 +15,8 @@
     "src/db/schema-auth.ts",
     "src/db/schema-weather.ts",
     "src/env/index.ts",
+    "src/ui/icons.tsx",
+    "src/ui/motion.ts",
     "playwright.config.ts",
     "e2e/**/*.spec.ts",
     "src/modules/*/index.ts",
