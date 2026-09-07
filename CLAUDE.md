@@ -190,6 +190,42 @@ Building it is fine — inventing design language is not:
   **"Design deltas"** heading, so the reviewer can kick them to the design
   agent instead of discovering them in a demo video.
 
+## Review comments are change requests
+
+**A comment on your PR is a request to change the code, not to discuss it.**
+The default response is a commit. This is the opposite of the instinct to
+answer thoughtfully and move on, and that instinct is wrong here: a reviewer
+who writes "should this be X?" is telling you to make it X, in the polite
+form the question mood provides.
+
+That applies to questions as much as to statements. "Is this dangerous?",
+"Should we treat A as distinct from B?", "Why is this in memory?" are all
+requests. Answering them well and leaving the code alone is a non-response.
+
+**You may push back, and sometimes you should**, but it is an exception you
+have to earn:
+
+- the change is genuinely outside this PR's scope and would balloon it;
+- it needs a decision only the owner can make (a product call, a threshold,
+  a name a user will see);
+- it is technically wrong for this codebase, and you can say why with
+  evidence — a query plan, a failing test, a spec, a line of code that
+  contradicts it.
+
+"I'd rather not" and "it's a big change" are not reasons. Neither is "I
+flagged it": deferring is a decision that needs the owner's agreement, not a
+way to close a thread. If you defer, the register entry
+(`docs/deferred.md`) is part of the same commit and the reply says which
+item it is.
+
+**When you do push back, do the part you agree with.** A comment that asks
+for three things and gets one paragraph of disagreement has been ignored,
+even if the disagreement is correct.
+
+And read the whole comment before deciding a fix is out of scope. Twice in
+the PR #2–#5 review, "this needs a schema change so it stops here" was
+wrong: the columns already existed. Check before you defer.
+
 ## Guardrails (the enforcement loop)
 
 This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
