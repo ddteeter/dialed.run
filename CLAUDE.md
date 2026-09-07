@@ -223,6 +223,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
 3. Implement in small commits. Each commit passes the commit gate.
 4. Tests are part of done, not an afterthought. Match the test expectations
    in your packet.
+4a. **Deferring something is a write.** If you answer a review comment with
+   "flagging it" / "next schema batch" / "worth doing later", add the row to
+   `docs/deferred.md` in the same commit. A thread scrolls away; the register
+   does not.
 4b. **Before opening a PR, work through `docs/pr-self-review.md`.** It is the
    residue of the PRs #2–#5 review: the findings no rule could catch, written
    as questions. The guardrails cover what a machine can see; that list covers
