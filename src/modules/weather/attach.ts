@@ -17,6 +17,7 @@ import {
   findObservationRow,
   upsertManualObservation,
   upsertRealObservation,
+  type CacheKey,
 } from "./store";
 
 type WeatherStatus = (typeof runs.$inferSelect)["weatherStatus"];
@@ -62,7 +63,9 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     return "skipped-no-location";
   }
 
-  const key = cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000));
+  const keys = runHourKeys(run.lat, run.lng, run.startedAt, run.durationS);
+  const [key] = keys;
+  if (key === undefined) return "skipped-no-location";
   const cached = await findObservationRow(key);
   if (cached) {
     // The distinction that matters is resolved-vs-typed-by-a-human, not
@@ -76,12 +79,22 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
 
   const provider = weatherProvider();
   try {
-    const observation = await provider.observation(
-      run.lat,
-      run.lng,
-      new Date(run.startedAt * 1000),
-    );
-    await upsertRealObservation(key, observation, runId);
+    // Sample every hour the run spans, not just its start.
+    //
+    // A 9-11am run resolved only at 09:00 is remembered as a 4 degree run
+    // even if it finished at 12. The verdict covers the whole run, so the
+    // model would learn that 4 degrees means overdressed — which poisons
+    // the signal the call epic is built on rather than merely displaying a
+    // stale number. People also judge an outfit by the extremes, not the
+    // mean, which is why entry_tags already has cold_first_mile and
+    // overheated_late.
+    //
+    // No schema change: observations are already cached per rounded
+    // hour, so "the conditions across a run" is derivable at read time
+    // from started_at + duration_s. What was missing was resolving the
+    // later hours at all. The run still links to its starting hour, so
+    // every existing reader is unaffected.
+    await sampleRunHours(provider, keys, run.lat, run.lng, run.startedAt, runId);
     await setStatus(runId, "attached");
     return "attached";
   } catch (error) {
@@ -92,6 +105,55 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     await setStatus(runId, "pending");
     return "pending";
   }
+}
+
+async function sampleRunHours(
+  provider: ReturnType<typeof weatherProvider>,
+  keys: readonly CacheKey[],
+  lat: number,
+  lng: number,
+  startedAt: number,
+  runId: Ulid,
+): Promise<void> {
+  for (const [index, hourKey] of keys.entries()) {
+    // A later hour already cached by someone else's run at the same place
+    // needs no upstream call.
+    if (index > 0) {
+      const existing = await findObservationRow(hourKey);
+      if (existing !== undefined) continue;
+    }
+    const at = new Date((startedAt + index * 3600) * 1000);
+    const observation = await provider.observation(lat, lng, at);
+    // Only the starting hour carries the run id: the row is a shared cache
+    // cell, and the run's own conditions are its start.
+    await upsertRealObservation(
+      hourKey,
+      observation,
+      index === 0 ? runId : undefined,
+    );
+  }
+}
+
+/**
+ * Every distinct hour-bucket cache key a run touches, starting with its
+ * start hour. Capped: a plausible long run is a handful of hours, and the
+ * cap stops a bad duration turning one attach into hundreds of upstream
+ * calls.
+ */
+const MAX_SAMPLED_HOURS = 6;
+
+function runHourKeys(
+  lat: number,
+  lng: number,
+  startedAt: number,
+  durationS: number,
+): CacheKey[] {
+  const spanned = Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
+    Math.floor(startedAt / 3600);
+  const hours = Math.min(spanned + 1, MAX_SAMPLED_HOURS);
+  return Array.from({ length: hours }, (_unused, index) =>
+    cacheKeyFor(lat, lng, new Date((startedAt + index * 3600) * 1000)),
+  );
 }
 
 /**

@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runs } from "../../src/db/schema-core";
+import { weatherObservations } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { attachObservation, recordManualObservation } from "../../src/modules/weather";
@@ -47,8 +48,16 @@ async function statusOf(runId: Ulid): Promise<string | undefined> {
   return row?.weatherStatus;
 }
 
+/**
+ * A fresh Response per call. `mockResolvedValue` hands back the same object
+ * every time, and a Response body can only be read once — which stayed
+ * invisible while every test called fetch exactly once, and then showed up
+ * as a parse failure the moment one sampled multiple hours.
+ */
 function mockFetchJson(body: unknown, status = 200) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(() => Promise.resolve(Response.json(body, { status })));
 }
 
 afterEach(() => {
@@ -117,6 +126,73 @@ describe("attachObservation (103)", () => {
     await attachObservation(runId);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(await statusOf(runId)).toBe("attached");
+  });
+});
+
+describe("attachObservation samples every hour a run spans", () => {
+  /**
+   * A long run resolved only at its start hour is remembered as the
+   * conditions it began in. The verdict covers the whole run, so that
+   * mislabels the training signal the call epic depends on — a 9-11am run
+   * that warmed up 8 degrees would teach the model that the *starting*
+   * temperature meant overdressed.
+   */
+  it("resolves one observation per hour bucket for a multi-hour run", async () => {
+    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    // Its own coordinates: observations are a shared cache keyed by
+    // rounded lat/lng/hour, and these tests share a database, so a
+    // location another test already resolved would be a cache hit here.
+    const lat = 40.11;
+    const lng = -70.11;
+    // Starts on the hour and runs for two hours: hours 0, 1 and 2.
+    const runId = await insertRun({ durationS: 2 * 3600, lat, lng });
+
+    await attachObservation(runId);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(await statusOf(runId)).toBe("attached");
+
+    const stored = await drizzle(env.DIALED_WEATHER)
+      .select()
+      .from(weatherObservations)
+      .where(eq(weatherObservations.latR, lat));
+    const buckets = stored.map((row) => row.hourBucket);
+    const startBucket = Math.floor(OBSERVATION_HOUR_EPOCH / 3600);
+    expect(new Set(buckets)).toEqual(
+      new Set([startBucket, startBucket + 1, startBucket + 2]),
+    );
+  });
+
+  it("still resolves exactly one observation for a short run", async () => {
+    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const runId = await insertRun({ durationS: 1500, lat: 41.22, lng: -71.22 });
+
+    await attachObservation(runId);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not re-fetch a later hour another run already cached", async () => {
+    const startBucket = Math.floor(OBSERVATION_HOUR_EPOCH / 3600);
+    await upsertRealObservation(
+      { latR: 42.33, lngR: -72.33, hourBucket: startBucket + 1 },
+      {
+        tempC: 5,
+        feelsLikeC: 3,
+        humidity: 70,
+        windKph: 10,
+        precipMm: 0,
+        condition: "clear",
+      },
+      undefined,
+    );
+    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const runId = await insertRun({ durationS: 3600, lat: 42.33, lng: -72.33 });
+
+    await attachObservation(runId);
+
+    // Hour 0 is fetched; hour 1 was already in the shared cache.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
 
