@@ -9,12 +9,14 @@ export const Route = createFileRoute("/closet/")({
   // `?retired=1` opens with retired items shown. Set when arriving from a
   // retire action, so the item is visibly present and marked rather than
   // absent from a grid that hides retired items by default.
-  // Optional: every other link to /closet omits it, and requiring the
-  // param would make each of those a type error.
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { retired?: true } =>
-    search.retired === "1" || search.retired === true ? { retired: true } : {},
+  // `?retired=true` opens with retired items shown. TanStack parses search
+  // values as JSON, so the boolean we navigate with round-trips as a
+  // boolean — there is no string form to accept.
+  //
+  // Optional, because every other link to /closet omits it and requiring
+  // the param would make each of those a type error.
+  validateSearch: (search: Record<string, unknown>): { retired?: true } =>
+    search.retired === true ? { retired: true } : {},
   loader: async () => {
     await requireSession();
     const listing = await listItemsFn({ data: { includeRetired: true } });
