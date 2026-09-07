@@ -27,6 +27,27 @@ design screens B1/B2, O2, O4, O5/O6 and the Onboarding artboard's
 - **Bulk import, re-evaluated** (D-13): value is conditions-distribution +
   optional extreme-run tagging — decide then whether it's worth the weather
   backfill budget (throttled queue against Visual Crossing free tier, or pay).
+- **Intensity from imported files** (raised in the PR #4 review): `.fit`,
+  `.tcx` and `.gpx` uploads carry heart rate, cadence and sometimes power,
+  and the parsers currently read distance and duration and drop the rest.
+  How hard someone ran plainly belongs in a dressing recommendation — the
+  same conditions and the same kit feel different at easy pace and at
+  threshold — and today the only intensity signal is the user-entered
+  `effort` enum, which most people will not set.
+  **The asymmetry is the interesting part, and it is worth deciding
+  deliberately rather than discovering.** CLAUDE.md's rule is that *Strava*
+  activity data is never stored; that is a compliance constraint from
+  Strava's API terms, not a privacy position. A user uploading their own
+  `.tcx` is a different situation in every respect: it is their file,
+  handed to us directly, with no third-party terms attached. So we *may*
+  store intensity for file-importers and *may not* for Strava-connected
+  users — which means recommendations would quietly be better for one group
+  than the other. That is a product decision (accept the split? ask Strava
+  users to self-report effort? ignore intensity entirely for parity?) and
+  it should be made before the engine depends on it.
+  Note also that imported files are retained for 30 days
+  (`docs/deployment.md`), so anything wanted long-term has to be extracted
+  at parse time, not recovered later.
 - **Cohort model**: aggregates by climate zone, offset, effort. Geographic
   density matters — city-by-city launch argument lives here.
 - **Forecast**: `WeatherProvider.forecast()` is already in the contract.
