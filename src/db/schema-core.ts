@@ -225,7 +225,13 @@ export const notifications = sqliteTable(
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
     kind: text("kind").notNull(),
-    subjectId: text("subject_id").notNull(),
+    // Nullable: some kinds have no subject. `strava_broken` used to pass
+    // the userId, which was "this kind has no subject" in disguise.
+    // NOTE: SQLite treats NULLs as distinct in a UNIQUE index, so the
+    // notifications_dedupe key does NOT dedupe subject-less kinds — those
+    // must be guarded at the call site by only firing on a state
+    // transition. See refreshStravaToken.
+    subjectId: text("subject_id"),
     body: text("body").notNull(),
     read: integer("read").notNull().default(0),
     createdAt: integer("created_at").notNull(),

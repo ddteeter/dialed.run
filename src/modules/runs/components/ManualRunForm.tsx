@@ -1,3 +1,4 @@
+import { RETRY_SAVE } from "../../../lib/copy";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
@@ -49,7 +50,7 @@ export function ManualRunForm() {
       });
       await navigate({ to: "/runs/$runId", params: { runId: created.id } });
     } catch {
-      setError("That didn't save. Try again.");
+      setError(RETRY_SAVE);
     } finally {
       setIsSubmitting(false);
     }

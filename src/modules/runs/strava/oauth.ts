@@ -142,7 +142,11 @@ export async function refreshStravaToken(
 
 async function recordRefreshFailure(
   db: CoreDb,
-  connection: { refreshFailureCount: number; refreshFirstFailedAt: number | null },
+  connection: {
+    status: "ok" | "broken";
+    refreshFailureCount: number;
+    refreshFirstFailedAt: number | null;
+  },
   userId: string,
   error: unknown,
 ): Promise<"broken" | "degraded"> {
@@ -171,12 +175,16 @@ async function recordRefreshFailure(
       refreshFirstFailedAt: firstFailedAt,
     })
     .where(eq(stravaConnections.userId, userId));
-  await createNotification(db, {
-    userId,
-    kind: "strava_broken",
-    subjectId: userId,
-    body: "Your Strava connection needs to be reconnected.",
-  });
+  // Only on the ok -> broken transition. `strava_broken` has no subject,
+  // and a UNIQUE index does not dedupe NULLs, so re-notifying a connection
+  // that is already broken would insert a second row every time.
+  if (connection.status !== "broken") {
+    await createNotification(db, {
+      userId,
+      kind: "strava_broken",
+      body: "Your Strava connection needs to be reconnected.",
+    });
+  }
   return "broken";
 }
 

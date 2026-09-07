@@ -32,6 +32,10 @@ function StravaPage() {
           We never store your Strava activity data — connecting only turns
           on a reminder to log your kit after a run.
         </p>
+        <p className="text-sm text-night/50">
+          If that seems like more work than it needs to be, we agree. Take it
+          up with Strava&rsquo;s terms of use.
+        </p>
         <StravaConnect configured={strava.configured} status={strava.status} />
       </div>
     </Layout>

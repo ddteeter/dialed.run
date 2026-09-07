@@ -1,3 +1,4 @@
+import { RETRY_GENERIC } from "../../../lib/copy";
 import { useState } from "react";
 
 import {
@@ -33,7 +34,7 @@ export function StravaConnect({ configured, status }: Readonly<StravaConnectProp
       setAuthorizeUrl(url);
       globalThis.location.assign(url);
     } catch {
-      setError("That didn't work. Try again.");
+      setError(RETRY_GENERIC);
     } finally {
       setIsBusy(false);
     }
@@ -46,7 +47,7 @@ export function StravaConnect({ configured, status }: Readonly<StravaConnectProp
       await disconnectStravaFn();
       globalThis.location.reload();
     } catch {
-      setError("That didn't work. Try again.");
+      setError(RETRY_GENERIC);
       setIsBusy(false);
     }
   }

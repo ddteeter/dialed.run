@@ -1,3 +1,4 @@
+import { RETRY_SAVE } from "../../../lib/copy";
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -21,7 +22,7 @@ function ManualTempFallback({ runId }: Readonly<{ runId: string }>) {
       });
       await router.invalidate();
     } catch {
-      setError("That didn't save. Try again.");
+      setError(RETRY_SAVE);
     } finally {
       setIsSubmitting(false);
     }

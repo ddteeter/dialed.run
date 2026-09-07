@@ -18,7 +18,7 @@ const sourcesByExtension: Record<ImportExtension, RunSource> = {
   tcx: tcxSource,
 };
 
-export function isImportExtension(value: string): value is ImportExtension {
+function isImportExtension(value: string): value is ImportExtension {
   return (IMPORT_EXTENSIONS as readonly string[]).includes(value);
 }
 
@@ -31,11 +31,28 @@ export function sourceFor(extension: ImportExtension): RunSource {
   return sourcesByExtension[extension];
 }
 
-export function extensionFromKey(r2Key: string): ImportExtension {
-  const match = /\.([a-z0-9]+)$/i.exec(r2Key);
+/**
+ * The extension of a path, if it is one we can import.
+ *
+ * The *rule* for what counts lives here, once. Callers decide what a miss
+ * means: an upload rejects with copy the user reads, while an unreadable
+ * R2 key is an internal parse failure. Those errors differ on purpose; the
+ * rule behind them was what got copied.
+ */
+export function importExtensionOf(path: string): ImportExtension | undefined {
+  const match = /\.([a-z0-9]+)$/i.exec(path);
   const extension = match?.[1]?.toLowerCase();
-  if (extension === undefined || !isImportExtension(extension)) {
-    throw new RunParseError(`import: unsupported file extension ${String(extension)}`);
+  return extension !== undefined && isImportExtension(extension)
+    ? extension
+    : undefined;
+}
+
+export function extensionFromKey(r2Key: string): ImportExtension {
+  const extension = importExtensionOf(r2Key);
+  if (extension === undefined) {
+    throw new RunParseError(
+      `import: unsupported file extension in ${r2Key}`,
+    );
   }
   return extension;
 }

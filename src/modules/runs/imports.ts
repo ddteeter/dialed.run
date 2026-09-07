@@ -10,7 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { imports } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
-import { IMPORT_EXTENSIONS, isImportExtension } from "./parsers";
+import { IMPORT_EXTENSIONS, importExtensionOf } from "./parsers";
 import type { ImportExtension } from "./parsers";
 import type { ImportJob } from "./queue-messages";
 
@@ -31,9 +31,8 @@ export interface StartImportInput {
 }
 
 function extensionFromFilename(filename: string): ImportExtension {
-  const match = /\.([a-z0-9]+)$/i.exec(filename);
-  const extension = match?.[1]?.toLowerCase();
-  if (extension === undefined || !isImportExtension(extension)) {
+  const extension = importExtensionOf(filename);
+  if (extension === undefined) {
     throw new ImportUploadError(
       `Unsupported file type. Upload a ${IMPORT_EXTENSIONS.join(", ")} file.`,
     );
