@@ -1,5 +1,6 @@
 export { Bracketed } from "./Bracketed";
 export { Icon, ICONS } from "./icons";
+export { DURATION, EASING, STAGGER, TRAVEL } from "./motion";
 export { Layout } from "./Layout";
 export { Mono } from "./Mono";
 export { Sheet } from "./Sheet";

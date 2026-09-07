@@ -127,6 +127,8 @@ export const ICONS = {
   location: { group: 'system', keywords: 'place pin climate where route', d: 'M12 3a6 6 0 016 6c0 5-6 12-6 12S6 14 6 9a6 6 0 016-6zM12 7a2.5 2.5 0 100 5 2.5 2.5 0 000-5z' },
   clock: { group: 'system', keywords: 'time duration when pace', d: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l4 2' },
   bracket: { group: 'system', keywords: 'logo brand mark wordmark app icon', d: 'M8 3H3v18h5M16 3h5v18h-5' },
+  bracketLeft: { group: 'system', keywords: 'bracket half left frame motion reveal', d: 'M8 3H3v18h5' },
+  bracketRight: { group: 'system', keywords: 'bracket half right frame motion reveal', d: 'M16 3h5v18h-5' },
 };
 
 export const ICON_NAMES = Object.keys(ICONS);
