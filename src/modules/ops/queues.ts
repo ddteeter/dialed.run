@@ -1,7 +1,11 @@
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { handleImportsBatch, handleImportsDlqBatch } from "../runs";
+import {
+  handleImportsBatch,
+  handleImportsDlqBatch,
+  stravaApiFromEnv,
+} from "../runs";
 import { captureException } from "./sentry";
 
 /**
@@ -36,6 +40,7 @@ export async function handleQueueBatch(
         db: drizzle(env.DIALED_CORE),
         importBucket: env.IMPORTS,
         captureException,
+        stravaApi: stravaApiFromEnv(),
       });
       break;
     }

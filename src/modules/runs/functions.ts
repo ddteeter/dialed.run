@@ -228,9 +228,11 @@ export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
   async () => {
     const userId = await requireUserId();
     const config = stravaConfig();
+    // The revoke goes on the queue, so this returns as soon as the local
+    // row is gone rather than waiting on Strava.
     await disconnectStrava(
       coreDb(),
-      config === undefined ? undefined : createStravaApi(config),
+      config === undefined ? undefined : env.IMPORTS_QUEUE,
       userId,
     );
   },

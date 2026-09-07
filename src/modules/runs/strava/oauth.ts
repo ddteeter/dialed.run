@@ -13,6 +13,11 @@ import { captureException } from "../../ops";
 import { createNotification } from "../notifications";
 import { isTerminalStravaError } from "./api";
 import type { StravaApi } from "./api";
+import type { RevokeJob } from "../queue-messages";
+
+export interface RevokeQueueProducer {
+  send(message: RevokeJob): Promise<unknown>;
+}
 
 export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
 
@@ -219,23 +224,26 @@ Best-effort revoke, then always delete the local row (law 5 — a failing
 upstream call must never block the user's own disconnect action). Refreshes
 first only when the stored access token has actually expired.
 */
+/**
+ * Disconnect locally, then hand the upstream revoke to the queue.
+ *
+ * The local delete is what the user asked for and it happens immediately —
+ * law 5, a failing upstream must never block the user's own action. What
+ * changed is that the revoke is no longer a best-effort call swallowed in
+ * a `catch`: if Strava is down at that moment we used to simply leave a
+ * live grant behind forever. The queue retries it, and a genuinely
+ * unrevokable grant ends up in the DLQ where a human sees it.
+ */
 export async function disconnectStrava(
   db: CoreDb,
-  api: StravaApi | undefined,
+  queue: RevokeQueueProducer | undefined,
   userId: string,
 ): Promise<void> {
   const connection = await getStravaConnection(db, userId);
-  if (connection !== undefined && api !== undefined) {
-    try {
-      let accessToken = connection.accessToken;
-      if (connection.expiresAt <= nowS()) {
-        const refreshed = await api.refreshToken(connection.refreshToken);
-        accessToken = refreshed.accessToken;
-      }
-      await api.deauthorize(accessToken);
-    } catch {
-      // Degrade, don't fail — the local disconnect below still proceeds.
-    }
-  }
   await db.delete(stravaConnections).where(eq(stravaConnections.userId, userId));
+  if (connection === undefined || queue === undefined) return;
+  await queue.send({
+    type: "strava_revoke",
+    accessToken: connection.accessToken,
+  });
 }

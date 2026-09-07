@@ -26,7 +26,9 @@ import {
   importsQueueMessageSchema,
   type ImportJob,
   type ReminderJob,
+  type RevokeJob,
 } from "./queue-messages";
+import type { StravaApi } from "./strava/api";
 import { findDuplicateRun, initialWeatherStatus } from "./service";
 
 export interface ConsumerDeps {
@@ -41,6 +43,11 @@ export interface ConsumerDeps {
   merges; degrades to a no-op (weather stays 'pending') until then.
   */
   attachObservation?: ((runId: string) => Promise<void>) | undefined;
+  /**
+  Present when Strava credentials are configured; the revoke job is a
+  no-op without them.
+  */
+  stravaApi?: Pick<StravaApi, "deauthorize"> | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -221,6 +228,47 @@ async function processReminderJob(
   });
 }
 
+/**
+ * Revoke a Strava grant the user has already been disconnected from.
+ *
+ * Idempotent by nature: revoking an already-revoked token is a no-op
+ * upstream, and there is no local state left to reconcile. A failure here
+ * throws so the queue retries; exhausting retries puts it in the DLQ,
+ * which is where a grant we could not revoke should end up.
+ */
+async function processRevokeJob(
+  deps: ConsumerDeps,
+  job: RevokeJob,
+): Promise<void> {
+  if (deps.stravaApi === undefined) {
+    deps.captureException(new Error("strava revoke job with no api configured"), {
+      surface: "strava-revoke",
+    });
+    return; // no credentials: retrying will not help
+  }
+  await deps.stravaApi.deauthorize(job.accessToken);
+}
+
+async function processJob(
+  deps: ConsumerDeps,
+  job: ImportJob | ReminderJob | RevokeJob,
+): Promise<void> {
+  switch (job.type) {
+    case "import": {
+      await processImportJob(deps, job);
+      return;
+    }
+    case "strava_reminder": {
+      await processReminderJob(deps, job);
+      return;
+    }
+    case "strava_revoke": {
+      await processRevokeJob(deps, job);
+      return;
+    }
+  }
+}
+
 export async function handleImportsBatch(
   batch: MessageBatch,
   deps: ConsumerDeps,
@@ -236,11 +284,7 @@ export async function handleImportsBatch(
       continue;
     }
     try {
-      if (parsed.data.type === "import") {
-        await processImportJob(deps, parsed.data);
-      } else {
-        await processReminderJob(deps, parsed.data);
-      }
+      await processJob(deps, parsed.data);
       message.ack();
     } catch (error) {
       deps.captureException(error, {

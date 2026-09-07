@@ -19,6 +19,20 @@ import {
   stravaAuthorizeUrl,
 } from "../../src/modules/runs/strava/oauth";
 
+function fakeRevokeQueue(): {
+  sent: unknown[];
+  send: (message: unknown) => Promise<unknown>;
+} {
+  const sent: unknown[] = [];
+  return {
+    sent,
+    send(message: unknown) {
+      sent.push(message);
+      return Promise.resolve();
+    },
+  };
+}
+
 function nowS(): number {
   return Math.floor(Date.now() / 1000);
 }
@@ -274,53 +288,50 @@ describe("refreshStravaToken (resilience: never loop on a dead grant)", () => {
 });
 
 describe("disconnectStrava", () => {
-  it("deletes the connection and revokes without refreshing when the token is live", async () => {
+  /**
+   * The revoke is queued, not called. The user's own action must not wait
+   * on Strava (law 5), and the previous version swallowed a failed revoke
+   * in a catch — leaving a live grant behind forever whenever Strava
+   * happened to be down at that moment.
+   */
+  it("deletes the connection and queues the revoke", async () => {
     const db = coreDb();
     const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-    const api = fakeApi();
-
-    await disconnectStrava(db, api, userId);
-
-    expect(await getStravaConnection(db, userId)).toBeUndefined();
-    expect(api.deauthorizeCalls).toEqual(["access-1"]);
-    expect(api.refreshCalls).toHaveLength(0);
-  });
-
-  it("refreshes first when the stored token has expired, then revokes", async () => {
-    const db = coreDb();
-    const userId = newUlid();
+    const athleteId = newUlid();
     await db.insert(stravaConnections).values({
       userId,
-      athleteId: "111",
-      accessToken: "access-expired",
+      athleteId,
+      accessToken: "access-live",
       refreshToken: "refresh-1",
-      expiresAt: nowS() - 10,
+      expiresAt: nowS() + 3600,
       status: "ok",
     });
-    const api = fakeApi();
+    const queue = fakeRevokeQueue();
 
-    await disconnectStrava(db, api, userId);
+    await disconnectStrava(db, queue, userId);
 
-    expect(api.refreshCalls).toEqual(["refresh-1"]);
-    expect(api.deauthorizeCalls).toEqual(["access-2"]);
     expect(await getStravaConnection(db, userId)).toBeUndefined();
+    expect(queue.sent).toEqual([
+      { type: "strava_revoke", accessToken: "access-live" },
+    ]);
   });
 
-  it("still deletes the local row when the upstream revoke fails (law 5)", async () => {
+  it("deletes the local row even with no queue to revoke through", async () => {
     const db = coreDb();
     const userId = newUlid();
     await completeStravaConnect(db, fakeApi(), userId, "auth-code");
 
-    await disconnectStrava(db, fakeApi({ deauthorizeFails: true }), userId);
+    await disconnectStrava(db, undefined, userId);
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
   });
 
   it("is a no-op (besides being idempotent) when there is no connection", async () => {
     const db = coreDb();
+    const queue = fakeRevokeQueue();
     await expect(
-      disconnectStrava(db, fakeApi(), newUlid()),
+      disconnectStrava(db, queue, newUlid()),
     ).resolves.toBeUndefined();
+    expect(queue.sent).toHaveLength(0);
   });
 });
