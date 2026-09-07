@@ -98,6 +98,14 @@ If yes, the demo spec must exist, pass, and be re-recorded onto the PR
 an unchanged UI — swapping stubbed data for a real backend touches no `.tsx`
 and is exactly the demo worth watching.
 
+## 9a. Is anything waiting on an answer you never asked for?
+
+A blocked item the owner has not actually been asked about is dropped, not
+deferred. If your diff contains a "flagged for review" note, a
+`docs/deferred.md` row marked `blocked`, or a review reply saying "this
+stops here" — the question goes to them in the turn, with what you
+recommend. See CLAUDE.md §Schema changes: stop means ask.
+
 ## 10. What did you leave undone?
 
 Name it in the PR description. Deliberate omissions with a reason are fine;
