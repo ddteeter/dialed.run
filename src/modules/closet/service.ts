@@ -16,6 +16,7 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 import type { drizzle } from "drizzle-orm/d1";
 import type { z } from "zod";
 
@@ -87,68 +88,23 @@ interface NormalizedAttributes {
 }
 
 /**
- * Exhaustive switch on `category` (never `in` narrowing, never a cast): each
- * branch only reads the fields that category's zod variant actually admits.
+ * Flattens the union to the row shape. `in` narrowing rather than an
+ * exhaustive switch over all eight categories: the switch was correct, and
+ * the compiler did catch a *new category*, but it silently ignored a new
+ * *attribute* — nothing forced a fresh field on an existing variant to be
+ * read here. This reads whatever the parsed variant actually carries, so
+ * both kinds of change are covered.
  */
 function normalizeAttributes(garment: Garment): NormalizedAttributes {
-  switch (garment.category) {
-    case "top":
-    case "bottom": {
-      return {
-        layer: garment.layer,
-        weight: garment.weight,
-        fabric: garment.fabric,
-        windResistant: garment.windResistant,
-        waterResistant: garment.waterResistant,
-      };
-    }
-    case "headwear": {
-      return {
-        layer: undefined,
-        weight: garment.weight,
-        fabric: garment.fabric,
-        windResistant: garment.windResistant,
-        waterResistant: undefined,
-      };
-    }
-    case "neckwear":
-    case "socks": {
-      return {
-        layer: undefined,
-        weight: garment.weight,
-        fabric: garment.fabric,
-        windResistant: undefined,
-        waterResistant: undefined,
-      };
-    }
-    case "gloves": {
-      return {
-        layer: undefined,
-        weight: garment.weight,
-        fabric: undefined,
-        windResistant: garment.windResistant,
-        waterResistant: garment.waterResistant,
-      };
-    }
-    case "shoes": {
-      return {
-        layer: undefined,
-        weight: undefined,
-        fabric: undefined,
-        windResistant: undefined,
-        waterResistant: garment.waterResistant,
-      };
-    }
-    case "accessory": {
-      return {
-        layer: undefined,
-        weight: undefined,
-        fabric: undefined,
-        windResistant: undefined,
-        waterResistant: undefined,
-      };
-    }
-  }
+  return {
+    layer: "layer" in garment ? garment.layer : undefined,
+    weight: "weight" in garment ? garment.weight : undefined,
+    fabric: "fabric" in garment ? garment.fabric : undefined,
+    windResistant:
+      "windResistant" in garment ? garment.windResistant : undefined,
+    waterResistant:
+      "waterResistant" in garment ? garment.waterResistant : undefined,
+  };
 }
 
 function estimateForGarment(
@@ -224,18 +180,41 @@ export async function createItem(
   return getOwnedItem(db, userId, id);
 }
 
+/**
+ * The ownership predicate, once. It was written out at six call sites; a
+ * single one of them forgetting the `userId` clause is a cross-account
+ * write, so it is not a phrase worth retyping.
+ */
+function ownedItemWhere(userId: string, itemId: string) {
+  return and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId));
+}
+
+/**
+ * Every owner-scoped mutation is the same three steps — prove ownership,
+ * apply, re-read — differing only in what gets set. updateItem, retireItem
+ * and unretireItem were three copies of it.
+ */
+async function updateOwnedItem(
+  db: Db,
+  userId: string,
+  itemId: string,
+  values: SQLiteUpdateSetSource<typeof wardrobeItems>,
+): Promise<WardrobeItemRow> {
+  await getOwnedItem(db, userId, itemId);
+  await db
+    .update(wardrobeItems)
+    .set(values)
+    .where(ownedItemWhere(userId, itemId));
+  return getOwnedItem(db, userId, itemId);
+}
+
 export async function updateItem(
   db: Db,
   userId: string,
   itemId: string,
   garment: Garment,
 ): Promise<WardrobeItemRow> {
-  await getOwnedItem(db, userId, itemId);
-  await db
-    .update(wardrobeItems)
-    .set(garmentRowValues(garment))
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
-  return getOwnedItem(db, userId, itemId);
+  return updateOwnedItem(db, userId, itemId, garmentRowValues(garment));
 }
 
 export async function retireItem(
@@ -243,12 +222,7 @@ export async function retireItem(
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  await getOwnedItem(db, userId, itemId);
-  await db
-    .update(wardrobeItems)
-    .set({ retired: 1 })
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
-  return getOwnedItem(db, userId, itemId);
+  return updateOwnedItem(db, userId, itemId, { retired: 1 });
 }
 
 export async function unretireItem(
@@ -256,12 +230,7 @@ export async function unretireItem(
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  await getOwnedItem(db, userId, itemId);
-  await db
-    .update(wardrobeItems)
-    .set({ retired: 0 })
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
-  return getOwnedItem(db, userId, itemId);
+  return updateOwnedItem(db, userId, itemId, { retired: 0 });
 }
 
 export interface DeleteOutcome {
@@ -287,14 +256,12 @@ export async function deleteOrRetireItem(
     await db
       .update(wardrobeItems)
       .set({ retired: 1 })
-      .where(
-        and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)),
-      );
+      .where(ownedItemWhere(userId, itemId));
     return { action: "retired" };
   }
   await db
     .delete(wardrobeItems)
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
+    .where(ownedItemWhere(userId, itemId));
   return { action: "deleted" };
 }
 
