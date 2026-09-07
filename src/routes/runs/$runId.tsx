@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { NotificationBell } from "../../modules/runs/components/NotificationBell";
+import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
 import { RunDetail } from "../../modules/runs/components/RunDetail";
 import {
   getRunFn,
-  unreadNotificationCountFn,
 } from "../../modules/runs/functions";
+import {
+  unreadNotificationCountFn,
+} from "../../modules/notifications/functions";
 import { Layout } from "../../ui";
 
 /**

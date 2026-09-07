@@ -26,11 +26,6 @@ import {
   listRuns,
 } from "./service";
 import { env } from "../../env";
-import {
-  listNotifications,
-  markAllNotificationsRead,
-  unreadNotificationCount,
-} from "./notifications";
 import { createStravaApi } from "./strava/api";
 import type { StravaConfig } from "./strava/api";
 import {
@@ -130,27 +125,6 @@ export const recordManualTempFn = createServerFn({ method: "POST" })
     const userId = await requireUserId();
     return didRecordManualTemp(coreDb(), userId, data.runId, data.tempC);
   });
-
-export const listNotificationsFn = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const userId = await requireUserId();
-    return listNotifications(coreDb(), userId);
-  },
-);
-
-export const unreadNotificationCountFn = createServerFn({
-  method: "GET",
-}).handler(async () => {
-  const userId = await requireUserId();
-  return unreadNotificationCount(coreDb(), userId);
-});
-
-export const markAllNotificationsReadFn = createServerFn({
-  method: "POST",
-}).handler(async () => {
-  const userId = await requireUserId();
-  await markAllNotificationsRead(coreDb(), userId);
-});
 
 // ---- Strava connect/disconnect (102 §6) ------------------------------
 //

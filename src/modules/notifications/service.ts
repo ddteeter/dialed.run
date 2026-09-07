@@ -7,7 +7,7 @@ import { and, count, desc, eq } from "drizzle-orm";
 
 import { notifications } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
-import type { CoreDb } from "./core-db";
+import type { NotificationsDb } from "./db";
 
 export type NotificationKind =
   | "kit_reminder"
@@ -48,7 +48,7 @@ export interface NotificationDraft {
 Idempotent: a duplicate (user, kind, subject) is a silent no-op.
 */
 export async function createNotification(
-  db: CoreDb,
+  db: NotificationsDb,
   draft: NotificationDraft,
 ): Promise<void> {
   await db
@@ -65,7 +65,7 @@ export async function createNotification(
     .onConflictDoNothing();
 }
 
-export async function listNotifications(db: CoreDb, userId: string) {
+export async function listNotifications(db: NotificationsDb, userId: string) {
   return db
     .select()
     .from(notifications)
@@ -75,7 +75,7 @@ export async function listNotifications(db: CoreDb, userId: string) {
 }
 
 export async function unreadNotificationCount(
-  db: CoreDb,
+  db: NotificationsDb,
   userId: string,
 ): Promise<number> {
   const rows = await db
@@ -86,7 +86,7 @@ export async function unreadNotificationCount(
 }
 
 export async function markAllNotificationsRead(
-  db: CoreDb,
+  db: NotificationsDb,
   userId: string,
 ): Promise<void> {
   await db

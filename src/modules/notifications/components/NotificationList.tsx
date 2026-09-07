@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Mono } from "../../../ui";
 import { markAllNotificationsReadFn } from "../functions";
-import type { listNotifications } from "../notifications";
+import type { listNotifications } from "../service";
 
 type NotificationRow = Awaited<
   ReturnType<typeof listNotifications>
@@ -19,7 +19,7 @@ export function NotificationList({
     setIsMarking(true);
     try {
       await markAllNotificationsReadFn();
-      await navigate({ to: "/runs/notifications" });
+      await navigate({ to: "/notifications" });
     } finally {
       setIsMarking(false);
     }

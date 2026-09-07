@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ImportStatus } from "../../modules/runs/components/ImportStatus";
-import { NotificationBell } from "../../modules/runs/components/NotificationBell";
-import { unreadNotificationCountFn } from "../../modules/runs/functions";
+import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
+import {
+  unreadNotificationCountFn,
+} from "../../modules/notifications/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/runs/import/$importId")({

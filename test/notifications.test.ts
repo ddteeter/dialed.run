@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { newUlid } from "../../src/lib/ids";
-import { coreDb } from "../../src/modules/runs/core-db";
+import { newUlid } from "../src/lib/ids";
+import { coreDb } from "../src/modules/runs/core-db";
 import {
   createNotification,
   listNotifications,
   markAllNotificationsRead,
   unreadNotificationCount,
-} from "../../src/modules/runs/notifications";
-import type { NotificationKind } from "../../src/modules/runs/notifications";
+} from "../src/modules/notifications";
+import type { NotificationKind } from "../src/modules/notifications";
 
 const KIT_REMINDER: NotificationKind = "kit_reminder";
 

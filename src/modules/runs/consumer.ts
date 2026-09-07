@@ -20,7 +20,7 @@ import {
 } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
-import { createNotification } from "./notifications";
+import { createNotification } from "../notifications";
 import { extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,

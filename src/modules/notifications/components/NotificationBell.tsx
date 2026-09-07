@@ -12,7 +12,7 @@ export function NotificationBell({
 }: Readonly<{ unreadCount: number }>) {
   return (
     <Link
-      to="/runs/notifications"
+      to="/notifications"
       aria-label="Notifications"
       className="flex items-center gap-1 no-underline"
     >

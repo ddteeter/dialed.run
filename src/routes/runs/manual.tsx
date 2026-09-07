@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ManualRunForm } from "../../modules/runs/components/ManualRunForm";
-import { NotificationBell } from "../../modules/runs/components/NotificationBell";
-import { unreadNotificationCountFn } from "../../modules/runs/functions";
+import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
+import {
+  unreadNotificationCountFn,
+} from "../../modules/notifications/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/runs/manual")({

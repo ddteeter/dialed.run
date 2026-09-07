@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { NotificationBell } from "../../modules/runs/components/NotificationBell";
-import { NotificationList } from "../../modules/runs/components/NotificationList";
+import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
+import { NotificationList } from "../../modules/notifications/components/NotificationList";
 import {
   listNotificationsFn,
   unreadNotificationCountFn,
-} from "../../modules/runs/functions";
+} from "../../modules/notifications/functions";
 import { Layout } from "../../ui";
 
-export const Route = createFileRoute("/runs/notifications")({
+export const Route = createFileRoute("/notifications/")({
   loader: async () => ({
     notifications: await listNotificationsFn(),
     unreadCount: await unreadNotificationCountFn(),

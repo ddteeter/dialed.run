@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { stravaConnections } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
-import { unreadNotificationCount } from "../../src/modules/runs/notifications";
+import { unreadNotificationCount } from "../../src/modules/notifications";
 import type {
   ExchangedTokens,
   RefreshedTokens,

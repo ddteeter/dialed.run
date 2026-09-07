@@ -14,11 +14,11 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as RunsManualRouteImport } from './routes/runs/manual'
 import { Route as RunsNewRouteImport } from './routes/runs/new'
-import { Route as RunsNotificationsRouteImport } from './routes/runs/notifications'
 import { Route as RunsStravaRouteImport } from './routes/runs/strava'
 import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -49,6 +49,11 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
+  id: '/notifications/',
+  path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RunsIndexRoute = RunsIndexRouteImport.update({
   id: '/runs/',
   path: '/runs/',
@@ -67,11 +72,6 @@ const RunsManualRoute = RunsManualRouteImport.update({
 const RunsNewRoute = RunsNewRouteImport.update({
   id: '/runs/new',
   path: '/runs/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RunsNotificationsRoute = RunsNotificationsRouteImport.update({
-  id: '/runs/notifications',
-  path: '/runs/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RunsStravaRoute = RunsStravaRouteImport.update({
@@ -104,9 +104,9 @@ export interface FileRoutesByFullPath {
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
-  '/runs/notifications': typeof RunsNotificationsRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
@@ -120,9 +120,9 @@ export interface FileRoutesByTo {
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
-  '/runs/notifications': typeof RunsNotificationsRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/notifications': typeof NotificationsIndexRoute
   '/runs': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
@@ -137,9 +137,9 @@ export interface FileRoutesById {
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
-  '/runs/notifications': typeof RunsNotificationsRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
@@ -155,9 +155,9 @@ export interface FileRouteTypes {
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
-    | '/runs/notifications'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/notifications/'
     | '/runs/'
     | '/api/auth/$'
     | '/runs/import/$importId'
@@ -171,9 +171,9 @@ export interface FileRouteTypes {
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
-    | '/runs/notifications'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/notifications'
     | '/runs'
     | '/api/auth/$'
     | '/runs/import/$importId'
@@ -187,9 +187,9 @@ export interface FileRouteTypes {
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
-    | '/runs/notifications'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/notifications/'
     | '/runs/'
     | '/api/auth/$'
     | '/runs/import/$importId'
@@ -204,9 +204,9 @@ export interface RootRouteChildren {
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsManualRoute: typeof RunsManualRoute
   RunsNewRoute: typeof RunsNewRoute
-  RunsNotificationsRoute: typeof RunsNotificationsRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  NotificationsIndexRoute: typeof NotificationsIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
@@ -249,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications/': {
+      id: '/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs/': {
       id: '/runs/'
       path: '/runs'
@@ -275,13 +282,6 @@ declare module '@tanstack/react-router' {
       path: '/runs/new'
       fullPath: '/runs/new'
       preLoaderRoute: typeof RunsNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/runs/notifications': {
-      id: '/runs/notifications'
-      path: '/runs/notifications'
-      fullPath: '/runs/notifications'
-      preLoaderRoute: typeof RunsNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/runs/strava': {
@@ -324,9 +324,9 @@ const rootRouteChildren: RootRouteChildren = {
   RunsRunIdRoute: RunsRunIdRoute,
   RunsManualRoute: RunsManualRoute,
   RunsNewRoute: RunsNewRoute,
-  RunsNotificationsRoute: RunsNotificationsRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  NotificationsIndexRoute: NotificationsIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
@@ -334,12 +334,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

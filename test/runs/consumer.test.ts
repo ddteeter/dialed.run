@@ -11,7 +11,7 @@ import {
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import { createManualRun } from "../../src/modules/runs/service";
-import { unreadNotificationCount } from "../../src/modules/runs/notifications";
+import { unreadNotificationCount } from "../../src/modules/notifications";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 

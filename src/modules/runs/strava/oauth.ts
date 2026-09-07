@@ -10,7 +10,7 @@ import { eq, sql } from "drizzle-orm";
 import { stravaConnections } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { captureException } from "../../ops";
-import { createNotification } from "../notifications";
+import { createNotification } from "../../notifications";
 import { isTerminalStravaError } from "./api";
 import type { StravaApi } from "./api";
 import type { RevokeJob } from "../queue-messages";
