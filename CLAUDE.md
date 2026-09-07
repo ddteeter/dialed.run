@@ -108,10 +108,27 @@ If your task requires a schema change not already in `docs/contracts.md`:
 
 1. STOP implementation of the affected part.
 2. Write the proposed change as a short note in your design doc.
-3. Flag it in your end-of-turn summary for human review.
+3. **Ask, in the turn.** Put the question to the owner directly — what the
+   change is, what it costs, and what you recommend — and wait for an
+   answer.
+
+**"Flag it" is not step 3, and reading it that way is a real failure mode.**
+Writing a note and moving on turns a question the owner never saw into a
+decision that silently defaulted to *no*. A blocked item the owner has not
+been asked about is not deferred; it is dropped. The register
+(`docs/deferred.md`) records what a decision *was*, it does not stand in for
+making one.
+
+The same applies anywhere a rule says stop: bindings, forbidden zones, a
+product call, user-facing wording. Stop means ask.
+
+And **check the premise before invoking any of this.** Twice in the
+PR #2–#5 review "this needs a schema change so it stops here" was simply
+wrong — the columns already existed and the work was wiring, not migration.
+Read the schema before declaring yourself blocked by it.
 
 Never run `drizzle-kit generate` inside a feature branch unless your packet
-explicitly says the migration is yours.
+explicitly says the migration is yours — or the owner has said yes.
 
 ## D1 query discipline
 
