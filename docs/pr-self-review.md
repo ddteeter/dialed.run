@@ -2,6 +2,10 @@
 
 Run this before opening a PR, after `npm run verify && npm test` are green.
 
+(For comments *received* on a PR, see CLAUDE.md §"Review comments are change
+requests" — the default response to a review comment is a commit, not a
+reply.)
+
 The guardrails catch what a machine can catch. This list is the residue: the
 findings from the four-lane review of PRs #2–#5 that no rule could have caught,
 written as questions with a known-wrong answer. Every item here is something an
