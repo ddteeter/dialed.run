@@ -23,7 +23,14 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
 
 test("add garments with product identity -> browse the closet -> retire, don't delete", async ({
   page,
-}) => {
+}, testInfo) => {
+  // The demo project paces every action with slowMo 1800 (raised 450 -> 900
+  // -> 1800 on review feedback). This journey is ~30 actions, so pacing
+  // alone is ~54s before any real work — well past Playwright's 30s
+  // default. The spec predates the 900 -> 1800 raise and never got the
+  // per-spec bump the config tells you to add; it started failing the
+  // moment this branch merged main. See e2e/run-logging for the same fix.
+  testInfo.setTimeout(150_000);
   const email = `demo-${String(Date.now())}@example.com`;
 
   await page.goto("/auth/signup");
