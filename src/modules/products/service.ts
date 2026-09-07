@@ -232,10 +232,9 @@ export async function getProductAttributeDefaultsBulk(
     map.set(row.id, {
       weight: row.weight,
       fabric: row.fabric,
-      windResistant:
-        row.windResistant === null ? undefined : row.windResistant === 1,
-      waterResistant:
-        row.waterResistant === null ? undefined : row.waterResistant === 1,
+      // Null means "not stated"; the columns read as booleans otherwise.
+      windResistant: row.windResistant ?? undefined,
+      waterResistant: row.waterResistant ?? undefined,
       categoryHint: row.categoryHint,
     });
   }

@@ -54,10 +54,10 @@ export function ClosetGrid({
   const [showRetired, setShowRetired] = useState(initialShowRetired);
 
   const visible = listing.items.filter(
-    (view) => showRetired || view.item.retired === 0,
+    (view) => showRetired || !view.item.retired,
   );
   const retiredCount = listing.items.filter(
-    (view) => view.item.retired === 1,
+    (view) => view.item.retired,
   ).length;
 
   if (listing.totalCount === 0) {
@@ -112,7 +112,7 @@ export function ClosetGrid({
                           <Bracketed className="text-[10px]">Generic</Bracketed>
                         </>
                       ) : undefined}
-                      {view.item.retired === 1 ? (
+                      {view.item.retired ? (
                         <>
                           {" "}
                           <Bracketed className="text-[10px]">Retired</Bracketed>

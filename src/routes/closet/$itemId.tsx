@@ -54,7 +54,7 @@ function GarmentDetailPage() {
   });
 
   async function handleRetireToggle() {
-    if (item.retired === 1) {
+    if (item.retired) {
       // Un-retiring: stay put. The badge disappearing is the confirmation,
       // and you are probably here because you wanted this item back.
       await unretireItemFn({ data: { itemId: item.id } });
@@ -115,7 +115,7 @@ function GarmentDetailPage() {
           {isGeneric ? (
             <Bracketed className="text-xs">Generic</Bracketed>
           ) : undefined}
-          {item.retired === 1 ? (
+          {item.retired ? (
             <Bracketed className="ml-2 text-xs">Retired</Bracketed>
           ) : undefined}
         </div>
@@ -199,7 +199,7 @@ function GarmentDetailPage() {
             }}
             className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
           >
-            {item.retired === 1 ? "Unretire" : "Retire"}
+            {item.retired ? "Unretire" : "Retire"}
           </button>
           <button
             type="button"

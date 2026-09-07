@@ -74,7 +74,7 @@ describe("closet CRUD roundtrip", () => {
     expect(item.estTempLowC).not.toBeNull();
     expect(item.estTempHighC).not.toBeNull();
     expect(item.origin).toBe("manual");
-    expect(item.retired).toBe(0);
+    expect(item.retired).toBe(false);
   });
 
   it("updates an item, clearing attributes that no longer apply to the new category", async () => {
@@ -95,7 +95,7 @@ describe("closet CRUD roundtrip", () => {
     expect(updated.layer).toBeNull();
     expect(updated.weight).toBeNull();
     expect(updated.windResistant).toBeNull();
-    expect(updated.waterResistant).toBe(1);
+    expect(updated.waterResistant).toBe(true);
   });
 
   it("stores an explicit user-typed temp range as-is", async () => {
@@ -135,7 +135,7 @@ describe("retire, don't delete", () => {
     const outcome = await deleteOrRetireItem(db(), userId, item.id);
     expect(outcome.action).toBe("retired");
     const stillThere = await getOwnedItem(db(), userId, item.id);
-    expect(stillThere.retired).toBe(1);
+    expect(stillThere.retired).toBe(true);
   });
 
   it("retireItem sets the flag directly", async () => {
@@ -145,7 +145,7 @@ describe("retire, don't delete", () => {
       name: "Gloves",
     });
     const retired = await retireItem(db(), userId, item.id);
-    expect(retired.retired).toBe(1);
+    expect(retired.retired).toBe(true);
   });
 });
 

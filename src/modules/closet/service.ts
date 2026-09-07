@@ -67,17 +67,23 @@ function orSqlNull<T>(value: T | undefined): T | SQL {
   return value ?? sql`NULL`;
 }
 
-function boolToSqlValue(value: boolean | undefined): number | SQL {
-  let intValue: number | undefined;
-  if (value !== undefined) {
-    intValue = value ? 1 : 0;
-  }
-  return intValue ?? sql`NULL`;
+/**
+ * Writes a real SQL NULL for "not stated", which is distinct from false —
+ * an unstated flag is what lets a product default fill the gap, so drizzle
+ * dropping an `undefined` set-value would silently mean "leave as-is".
+ *
+ * The 0/1 conversion this used to do is now the column's own codec
+ * (mode:"boolean"), so this only handles the null case.
+ */
+function boolToSqlValue(value: boolean | undefined): boolean | SQL {
+  return value ?? sql`NULL`;
 }
 
-function intToBool(value: number | null): boolean | undefined {
-  if (value === null) return undefined;
-  return value === 1;
+/**
+Null means "not stated"; the column already reads as a boolean otherwise.
+*/
+function statedFlag(value: boolean | null): boolean | undefined {
+  return value ?? undefined;
 }
 
 // ---- Attribute normalization (discriminated union -> flat nullable row) ---
@@ -176,7 +182,7 @@ export async function createItem(
     userId,
     ...garmentRowValues(garment),
     origin,
-    retired: 0,
+    retired: false,
     visibility: "ok",
     createdAt: Math.floor(Date.now() / 1000),
   });
@@ -225,7 +231,7 @@ export async function retireItem(
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  return updateOwnedItem(db, userId, itemId, { retired: 1 });
+  return updateOwnedItem(db, userId, itemId, { retired: true });
 }
 
 export async function unretireItem(
@@ -233,7 +239,7 @@ export async function unretireItem(
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  return updateOwnedItem(db, userId, itemId, { retired: 0 });
+  return updateOwnedItem(db, userId, itemId, { retired: false });
 }
 
 export interface DeleteOutcome {
@@ -258,7 +264,7 @@ export async function deleteOrRetireItem(
   if (isReferenced) {
     await db
       .update(wardrobeItems)
-      .set({ retired: 1 })
+      .set({ retired: true })
       .where(ownedItemWhere(userId, itemId));
     return { action: "retired" };
   }
@@ -289,8 +295,8 @@ function mergeWithProductDefaults(
   return {
     weight: item.weight ?? defaults?.weight ?? undefined,
     fabric: item.fabric ?? defaults?.fabric ?? undefined,
-    windResistant: intToBool(item.windResistant) ?? defaults?.windResistant,
-    waterResistant: intToBool(item.waterResistant) ?? defaults?.waterResistant,
+    windResistant: statedFlag(item.windResistant) ?? defaults?.windResistant,
+    waterResistant: statedFlag(item.waterResistant) ?? defaults?.waterResistant,
   };
 }
 
@@ -595,7 +601,7 @@ export async function listItems(
     .where(
       and(
         eq(wardrobeItems.userId, userId),
-        filters.includeRetired ? undefined : eq(wardrobeItems.retired, 0),
+        filters.includeRetired ? undefined : eq(wardrobeItems.retired, false),
         filters.category
           ? eq(wardrobeItems.category, filters.category)
           : undefined,
