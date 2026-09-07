@@ -111,6 +111,14 @@ npm run demo -- --grep "closet"    # just yours, while iterating
 Output lands at `test-results/<test-dir>/video.webm` (gitignored). `npm run
 e2e` runs the edge-case suite with no video.
 
+**Record through `npm run demo`, not `playwright test --project=demo`.**
+Pacing and video recording are opt-in, and that script is what turns them
+on (`DEMO_SLOWMO=1800`). Invoked bare, the demo project runs at full speed
+and writes no video — which is deliberate: CI runs these journeys as
+assertions on every push and has no use for a 52-second recording of a
+7.7-second test. If a run finishes suspiciously fast and leaves no
+`video.webm`, that is what happened.
+
 If a run fails because the port is in use, that is `reuseExistingServer:
 false` doing its job — another worktree's dev server is up, or the previous
 run has not released the port. Wait for it rather than working around it.

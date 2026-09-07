@@ -42,6 +42,13 @@ function resolvePort(): number {
 
 const port = resolvePort();
 
+/**
+ * Milliseconds of pacing between demo actions, and the switch that decides
+ * whether a video is recorded at all. 0 (the default, and what CI gets)
+ * means full speed and no video. `npm run demo` sets it.
+ */
+const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
+
 export default defineConfig({
   testDir: "e2e",
   use: { baseURL: `http://localhost:${String(port)}` },
@@ -58,15 +65,32 @@ export default defineConfig({
         // "no-preference", explicitly: motion.css collapses moves under
         // reduced motion, and a demo must record the full experience.
         reducedMotion: "no-preference",
+        // Pacing and recording are OPT-IN, via DEMO_SLOWMO.
+        //
         // A demo that runs at machine speed is unwatchable — the first
-        // recording of the auth journey was 1.7s end to end. slowMo paces
-        // every action so a reviewer can follow what happened, without
-        // sleeps polluting the spec. Raised twice on review feedback (450 ->
-        // 900 -> 1800): reviewers kept losing the cause of a state change.
-        // At this pacing long journeys need a per-spec timeout bump — see
-        // e2e/run-logging.
-        launchOptions: { slowMo: 1800 },
-        video: { mode: "on", size: { width: 1280, height: 720 } },
+        // recording of the auth journey was 1.7s end to end — so `npm run
+        // demo` sets DEMO_SLOWMO=1800 and every action is paced (raised
+        // 450 -> 900 -> 1800 on review feedback: reviewers kept losing the
+        // cause of a state change).
+        //
+        // But CI does not watch videos, and it was paying the pacing
+        // anyway: the closet journey measured 7.7s unpaced against 51.9s
+        // paced — 44s of pure waiting, per demo, per run. Worse, it made
+        // the 30s default timeout a moving target, which is exactly how
+        // that spec broke when this raise landed on a branch written
+        // before it.
+        //
+        // So: bare `playwright test` (what CI runs) exercises the demo
+        // journeys at full speed and asserts everything they assert.
+        // Recording is a separate, deliberate act.
+        //
+        // Slowing the video in post is not the alternative — Playwright
+        // captures ~25fps, so a 7.7s run is ~192 frames, and stretching
+        // those over 52s yields under 4fps. A slideshow, not a demo.
+        launchOptions: { slowMo: demoSlowMo },
+        video: demoSlowMo
+          ? { mode: "on", size: { width: 1280, height: 720 } }
+          : "off",
       },
     },
   ],
