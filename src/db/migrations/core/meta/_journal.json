@@ -20,35 +20,35 @@
       "idx": 2,
       "version": "6",
       "when": 1788805779349,
-      "tag": "0002_misty_corsair",
+      "tag": "0002_strava_refresh_failure_tracking",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "6",
       "when": 1788806994690,
-      "tag": "0003_wise_pepper_potts",
+      "tag": "0003_nullable_notification_subject",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "6",
       "when": 1788807686839,
-      "tag": "0004_keen_vermin",
+      "tag": "0004_boolean_indoor_and_read_flags",
       "breakpoints": true
     },
     {
       "idx": 5,
       "version": "6",
       "when": 1788810849005,
-      "tag": "0005_smooth_wendell_vaughn",
+      "tag": "0005_unique_strava_athlete",
       "breakpoints": true
     },
     {
       "idx": 6,
       "version": "6",
       "when": 1788813387787,
-      "tag": "0006_amusing_shape",
+      "tag": "0006_run_idempotency_key",
       "breakpoints": true
     }
   ]
