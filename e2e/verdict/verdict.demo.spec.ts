@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 
 import { outfitEntries, outfitEntryItems, runs, wardrobeItems } from "../../src/db/schema-core";
 import { user } from "../../src/db/schema-auth";
+import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { expect, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
@@ -50,6 +51,15 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   const itemId = newUlid();
   const runId = newUlid();
   const entryId = newUlid();
+  const observationId = newUlid();
+
+  // Coordinates distinct from feed.demo's. Observations are cached by
+  // rounded lat/lng/hour, so sharing them would mean one spec's seed
+  // silently satisfying another's lookup — which is exactly the coupling
+  // that made the first version of this spec pass alone and fail in a full
+  // run.
+  const latR = 40.71;
+  const lngR = -74.01;
 
   await page.goto("/auth/signup");
   await hydrated(page);
@@ -90,8 +100,8 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
       source: "manual",
       indoor: 0,
       weatherStatus: "attached",
-      lat: 45.52,
-      lng: -122.68,
+      lat: latR,
+      lng: lngR,
     });
     await core.insert(outfitEntries).values({
       id: entryId,
@@ -101,6 +111,39 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
       createdAt: startedAt,
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });
+  });
+
+  // Seed the conditions this entry was logged in. Without an observation
+  // the screen has no temperature band, and saving takes a different
+  // branch — so this is seeded deliberately rather than left to chance.
+  await withLocalDb(async ({ weather }) => {
+    await weather.insert(weatherObservations).values({
+      id: observationId,
+      runId,
+      latR,
+      lngR,
+      hourBucket: Math.floor(startedAt / 3600),
+      tempC: 6,
+      feelsLikeC: 4,
+      humidity: 70,
+      windKph: 12,
+      precipMm: 0,
+      condition: "clear",
+      source: "visualcrossing",
+      fetchedAt: startedAt,
+    })
+      // (lat_r, lng_r, hour_bucket) is the cache key and is UNIQUE, so a
+      // re-run inside the same hour hits the row the last run left. Upsert
+      // rather than insert: the spec has to be re-runnable, and the values
+      // below are the ones its assertions depend on.
+      .onConflictDoUpdate({
+        target: [
+          weatherObservations.latR,
+          weatherObservations.lngR,
+          weatherObservations.hourBucket,
+        ],
+        set: { runId, tempC: 6, feelsLikeC: 4, source: "visualcrossing" },
+      });
   });
 
   await page.goto(`/feed/verdict/${entryId}`);
@@ -129,6 +172,14 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
 
   await page.getByRole("button", { name: "Save verdict" }).click();
 
-  // Landing back on the entry with the verdict recorded.
+  // With conditions resolved, saving reports the item's wear rate in this
+  // temperature band rather than navigating away — the calibration signal
+  // that makes a verdict worth logging.
+  await expect(page.getByText(/Houdini Jacket is now \d+ of \d+/)).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // And the verdict is on the entry.
+  await page.goto(`/feed/entry/${entryId}`);
   await expect(page.getByText("[A bit cold]")).toBeVisible({ timeout: 15_000 });
 });
