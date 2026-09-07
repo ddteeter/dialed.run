@@ -123,6 +123,47 @@ Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
 
+## Authentication
+
+Asked during the PR #4 review and not written down anywhere, which is how a
+mechanism that is obvious to whoever wired it becomes invisible afterwards.
+
+**Cookie sessions, not stateless JWTs.** Better Auth with the
+`tanstackStartCookies()` plugin: a session row in `DIALED_CORE` keyed by an
+opaque token in an HttpOnly cookie. Sessions being rows means revocation is
+real — delete the row — rather than waiting out a token's expiry.
+
+**One mechanism for both surfaces.** A route loader and a server function are
+both just requests carrying that cookie, and server functions are RPC to the
+same origin, so the cookie rides along with no extra work. That is why a
+single session lookup serves the UI and the "API" — there is no second
+credential and no bearer-token path.
+
+Four entry points, all in `modules/auth`, differing only in what they do when
+there is no session:
+
+| call | for | on no session |
+|---|---|---|
+| `requireUserId()` | server functions | throws `AuthRequiredError` |
+| `requireSession()` | route loaders | redirects to `/auth/login` |
+| `sessionFromRequest(request)` | raw `server.handlers` routes | returns `null`, caller decides |
+| `getSession()` | anything rendering signed-out state | returns `null` |
+
+`sessionFromRequest` exists because a raw handler has a `Request` rather than
+TanStack's server context, so it cannot read headers the way the other two do.
+
+**Detect the unauthenticated case with `isAuthRequired(error)`, never
+`instanceof`.** A server function's rejection is structured-cloned across the
+RPC boundary and arrives without its prototype, so `instanceof` returns false
+in exactly the place the answer matters. The guard checks a `code` property,
+which survives the trip.
+
+An eslint rule rejects a module-local `requireUserId` or a direct
+`auth.api.getSession` outside `modules/auth`. Four hand-written copies had
+already become three incompatible error types before that rule existed, which
+left no caller able to tell "session expired, sign in again" from "something
+broke".
+
 ## Import pipeline (lane 102)
 
 ```mermaid
