@@ -1,21 +1,13 @@
 /**
- * Curated running-brand seed (~50 brands), applied idempotently at runtime.
+ * The curated running-brand list (~50), as data.
  *
- * Open question (docs/designs/101-closet.md): the packet describes this as
- * "migration-seeded"; migrations are a forbidden zone for this lane, so v1
- * seeds via `INSERT OR IGNORE` on first use instead. A follow-up data
- * migration with the same `INSERT OR IGNORE INTO brands …` statements can
- * replace this call site with zero behavior change if a human reviewer
- * would rather own it that way.
+ * The packet always described this as migration-seeded; it ran at runtime
+ * because migrations were a forbidden zone for this lane. With the owner's
+ * go-ahead it is now
+ * `src/db/migrations/core/0002_curated_brand_seed.sql`, generated from this
+ * list with ids derived from each brand name, so it is re-runnable and a
+ * fresh database gets identical rows.
  */
-import { sql } from "drizzle-orm";
-import type { drizzle } from "drizzle-orm/d1";
-
-import { brands } from "../../db/schema-core";
-import { newUlid } from "../../lib/ids";
-import { normalizeIdentity } from "../../lib/normalize";
-
-type Db = ReturnType<typeof drizzle>;
 
 export const CURATED_BRANDS: readonly string[] = [
   "Nike",
@@ -72,31 +64,14 @@ export const CURATED_BRANDS: readonly string[] = [
 ] as const;
 
 /**
- * Insert every curated brand that isn't already present, keyed by normalized
- * name. Safe to call on every cold start / autocomplete request: once seeded,
- * every insert is a no-op (`OR IGNORE` on the UNIQUE(normalized) index).
+ * The list itself stays in code as the source the migration was generated
+ * from, and as what a future seed addition edits. Seeding is no longer a
+ * runtime concern: src/db/migrations/core/0002_curated_brand_seed.sql
+ * inserts these with ids derived from the brand name, so it is
+ * re-runnable and produces identical rows on a fresh database.
+ *
+ * Adding a brand to this list therefore needs a new migration inserting
+ * it — deliberately, because "which brands exist" is data, and a runtime
+ * guard made it a deploy-shaped question that also cost a count query on
+ * every autocomplete cold path.
  */
-export async function ensureBrandsSeeded(db: Db): Promise<void> {
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(brands)
-    .where(sql`${brands.seeded} = 1`);
-  if ((row?.count ?? 0) > 0) return;
-
-  const statements = CURATED_BRANDS.map((name) =>
-    db
-      .insert(brands)
-      .values({
-        id: newUlid(),
-        name,
-        normalized: normalizeIdentity(name),
-        seeded: 1,
-      })
-      .onConflictDoNothing({ target: brands.normalized }),
-  );
-  const [first, ...rest] = statements;
-  if (!first) return;
-  // db.batch() over a hand-rolled loop (CLAUDE.md "D1 query discipline"):
-  // one round trip for the whole curated list instead of ~50.
-  await db.batch([first, ...rest]);
-}

@@ -16,6 +16,7 @@ import {
   uploadPhotoFn,
 } from "../../modules/closet/functions";
 import type { EffectiveAttributes } from "../../modules/closet/service";
+import { garmentLabel } from "../../modules/closet/label";
 import { Bracketed, Layout, Mono } from "../../ui";
 
 export const Route = createFileRoute("/closet/$itemId")({
@@ -45,6 +46,12 @@ function GarmentDetailPage() {
 
   const { item, tempRange, performance, pairedItems, effective, isGeneric } =
     detail;
+  // Same name for the heading and the photo's accessible name.
+  const label = garmentLabel({
+    name: item.name,
+    brand: item.brand,
+    isGeneric,
+  });
 
   async function handleRetireToggle() {
     if (item.retired === 1) {
@@ -83,16 +90,14 @@ function GarmentDetailPage() {
         {item.photoKey === null ? undefined : (
           <img
             src={`/closet/photo/${item.id}/card`}
-            alt={item.name}
+            alt={label}
             className="aspect-square w-full rounded-lg object-cover"
           />
         )}
 
         <div>
           <h1 className="font-display text-2xl uppercase tracking-[-0.01em]">
-            {!isGeneric && item.brand !== null
-              ? `${item.brand} ${item.name}`
-              : item.name}
+            {label}
           </h1>
           {isGeneric ? (
             <Bracketed className="text-xs">Generic</Bracketed>

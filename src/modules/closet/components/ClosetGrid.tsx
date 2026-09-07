@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Bracketed, Mono } from "../../../ui";
 import type { UiGroup } from "../../../lib/contracts";
+import { garmentLabel } from "../label";
 import type { ClosetItemView, ClosetListing } from "../service";
 
 /**
@@ -18,10 +19,11 @@ const GROUP_ORDER: { group: UiGroup; label: string }[] = [
 ];
 
 function itemLabel(view: ClosetItemView): string {
-  if (!view.isGeneric && view.item.brand !== null) {
-    return `${view.item.brand} ${view.item.name}`;
-  }
-  return view.item.name;
+  return garmentLabel({
+    name: view.item.name,
+    brand: view.item.brand,
+    isGeneric: view.isGeneric,
+  });
 }
 
 function tempLabel(view: ClosetItemView): string {

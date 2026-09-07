@@ -11,7 +11,6 @@ import { env } from "../../env";
 import { httpsUrlSchema } from "../../lib/contracts";
 import { requireUserId } from "../auth";
 import { resolveProduct, searchBrands } from "./service";
-import { ensureBrandsSeeded } from "./seed-brands";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -24,7 +23,6 @@ export const searchBrandsFn = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await requireUserId();
     const client = db();
-    await ensureBrandsSeeded(client);
     return searchBrands(client, data.prefix);
   });
 

@@ -14,4 +14,4 @@ export {
   searchBrands,
   searchProducts,
 } from "./service";
-export { CURATED_BRANDS, ensureBrandsSeeded } from "./seed-brands";
+export { CURATED_BRANDS } from "./seed-brands";

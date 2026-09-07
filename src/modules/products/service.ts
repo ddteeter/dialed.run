@@ -19,6 +19,18 @@ export type ProductRow = typeof products.$inferSelect;
 
 const AUTOCOMPLETE_LIMIT = 8;
 
+/**
+ * The autocomplete prefix pattern, or undefined when there is nothing to
+ * search for. Both brand and product search built this the same way —
+ * normalise, escape, append `%` — and the escaping is the part worth not
+ * retyping: a brand with an underscore or percent in it would otherwise
+ * turn into a wildcard and match the wrong rows.
+ */
+function prefixPattern(prefix: string): string | undefined {
+  const normalized = normalizeIdentity(prefix);
+  return normalized === "" ? undefined : `${escapeLike(normalized)}%`;
+}
+
 function escapeLike(value: string): string {
   // Prefix search only: escape SQL LIKE metacharacters in the user's input
   // before appending our own trailing '%'.
@@ -60,9 +72,8 @@ export async function searchBrands(
   prefix: string,
   limit = AUTOCOMPLETE_LIMIT,
 ): Promise<BrandRow[]> {
-  const normalizedPrefix = normalizeIdentity(prefix);
-  if (normalizedPrefix === "") return [];
-  const likePattern = `${escapeLike(normalizedPrefix)}%`;
+  const likePattern = prefixPattern(prefix);
+  if (likePattern === undefined) return [];
   return db
     .select()
     .from(brands)
@@ -131,9 +142,8 @@ export async function searchProducts(
   prefix: string,
   limit = AUTOCOMPLETE_LIMIT,
 ): Promise<ProductRow[]> {
-  const normalizedPrefix = normalizeIdentity(prefix);
-  if (normalizedPrefix === "") return [];
-  const likePattern = `${escapeLike(normalizedPrefix)}%`;
+  const likePattern = prefixPattern(prefix);
+  if (likePattern === undefined) return [];
   return db
     .select()
     .from(products)

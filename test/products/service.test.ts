@@ -12,7 +12,8 @@ import {
   searchBrands,
   searchProducts,
 } from "../../src/modules/products/service";
-import { CURATED_BRANDS, ensureBrandsSeeded } from "../../src/modules/products/seed-brands";
+import { brands } from "../../src/db/schema-core";
+import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -110,12 +111,29 @@ describe("products: attribute defaults", () => {
   });
 });
 
-describe("products: brand seed idempotency", () => {
-  it("seeds the curated list once and never duplicates on repeat calls", async () => {
+describe("products: the curated brand seed", () => {
+  /**
+   * Seeding moved from a runtime `ensureBrandsSeeded` guard to a data
+   * migration, so what needs proving moved with it: the migration ran, it
+   * produced one row per brand, and the ids it wrote are the derived ones
+   * (which is what makes re-applying it to a fresh database safe).
+   */
+  it("is present from the migration, with no duplicates", async () => {
     const client = db();
-    await ensureBrandsSeeded(client);
-    await ensureBrandsSeeded(client);
     const results = await searchBrands(client, "nike", CURATED_BRANDS.length);
     expect(results.filter((brand) => brand.name === "Nike")).toHaveLength(1);
+  });
+
+  it("seeded every brand in the curated list", async () => {
+    const client = db();
+    const rows = await client.select().from(brands);
+    const seeded = rows.filter((row) => row.seeded === 1);
+    expect(seeded).toHaveLength(CURATED_BRANDS.length);
+  });
+
+  it("normalises names so autocomplete matches regardless of case", async () => {
+    const client = db();
+    const upper = await searchBrands(client, "NEW BAL", 5);
+    expect(upper.map((brand) => brand.name)).toContain("New Balance");
   });
 });
