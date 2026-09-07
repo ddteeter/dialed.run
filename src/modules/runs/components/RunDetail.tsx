@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Bracketed, Mono } from "../../../ui";
 import { recordManualTempFn } from "../functions";
-import type { RunRow } from "../service";
+import type { RunView } from "../service";
 
 function ManualTempFallback({ runId }: Readonly<{ runId: string }>) {
   const router = useRouter();
@@ -64,8 +64,8 @@ function ManualTempFallback({ runId }: Readonly<{ runId: string }>) {
   );
 }
 
-export function RunDetail({ run }: Readonly<{ run: RunRow }>) {
-  const isIndoor = run.indoor !== 0;
+export function RunDetail({ run }: Readonly<{ run: RunView }>) {
+  const isIndoor = run.indoor;
   const requiresManualTemp =
     !isIndoor &&
     (run.weatherStatus === "failed" || run.weatherStatus === "pending");

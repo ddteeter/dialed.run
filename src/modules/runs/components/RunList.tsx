@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 
 import { Bracketed, Mono } from "../../../ui";
-import type { RunRow } from "../service";
+import type { RunView } from "../service";
 
 /**
  * Normal case in the source; <Bracketed> uppercases it in CSS, so a screen
  * reader announces "Conditions attached" rather than spelling it out.
  */
-function weatherBadge(run: RunRow): string {
+function weatherBadge(run: RunView): string {
   if (run.indoor) return "Indoor";
   switch (run.weatherStatus) {
     case "attached": {
@@ -28,7 +28,7 @@ function weatherBadge(run: RunRow): string {
   }
 }
 
-export function RunList({ runs }: Readonly<{ runs: readonly RunRow[] }>) {
+export function RunList({ runs }: Readonly<{ runs: readonly RunView[] }>) {
   if (runs.length === 0) {
     return (
       <p className="text-night/70">
