@@ -5,11 +5,12 @@
  * unit-testable without live credentials; functions.ts supplies the real
  * `createStravaApi` when secrets are configured.
  */
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { stravaConnections } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { createNotification } from "../notifications";
+import { isTerminalStravaError } from "./api";
 import type { StravaApi } from "./api";
 
 export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
@@ -85,16 +86,37 @@ export async function completeStravaConnect(
 }
 
 /**
-On-demand refresh (resilience law: never loop on a dead grant). Success
-persists the new tokens; failure marks the connection `broken` and
-notifies the user once (dedupe subject = userId) — no retry loop here or
-anywhere else; the user must reconnect to clear it.
+ * How many consecutive refresh failures, and how long they must have been
+ * going on, before a connection is called broken.
+ *
+ * Both are required, and the window is the important half. How long three
+ * failures take is entirely a function of how often something calls the
+ * refresh — three retries during one 30-second Strava outage would trip a
+ * bare counter instantly, while an inactive user might take weeks to
+ * accumulate three. The window makes the decision about elapsed trouble
+ * rather than about attempt count.
+ */
+const MAX_CONSECUTIVE_REFRESH_FAILURES = 3;
+const MIN_FAILURE_WINDOW_S = 30 * 60;
+
+/**
+On-demand refresh. Success clears any failure run; a *terminal* failure
+(Strava rejecting the grant, i.e. the user revoked access) marks the
+connection broken immediately; a transient one is counted and otherwise
+left alone. Still no retry loop here — the user must reconnect to clear a
+broken connection, and the queue owns retries everywhere else.
+
+The user is notified once, ever, per broken connection: notifications are
+deduped on (user, kind, subject) and this one's subject is the userId. So
+a flapping connection cannot produce a notification storm — but the same
+dedupe means a *second* genuine breakage after a repair is silent, which
+is recorded as its own item in docs/deferred.md.
 */
 export async function refreshStravaToken(
   db: CoreDb,
   api: StravaApi,
   userId: string,
-): Promise<"ok" | "broken" | "not_connected"> {
+): Promise<"ok" | "broken" | "degraded" | "not_connected"> {
   const connection = await getStravaConnection(db, userId);
   if (connection === undefined) return "not_connected";
   try {
@@ -106,22 +128,56 @@ export async function refreshStravaToken(
         refreshToken: refreshed.refreshToken,
         expiresAt: refreshed.expiresAt,
         status: "ok",
+        refreshFailureCount: 0,
+        // drizzle drops `undefined` set-values, so clearing a column
+        // needs a real SQL NULL.
+        refreshFirstFailedAt: sql`NULL`,
       })
       .where(eq(stravaConnections.userId, userId));
     return "ok";
-  } catch {
+  } catch (error) {
+    return recordRefreshFailure(db, connection, userId, error);
+  }
+}
+
+async function recordRefreshFailure(
+  db: CoreDb,
+  connection: { refreshFailureCount: number; refreshFirstFailedAt: number | null },
+  userId: string,
+  error: unknown,
+): Promise<"broken" | "degraded"> {
+  const now = nowS();
+  const firstFailedAt = connection.refreshFirstFailedAt ?? now;
+  const failureCount = connection.refreshFailureCount + 1;
+  const isExhausted =
+    failureCount >= MAX_CONSECUTIVE_REFRESH_FAILURES &&
+    now - firstFailedAt >= MIN_FAILURE_WINDOW_S;
+
+  if (!isExhausted && !isTerminalStravaError(error)) {
+    // Transient, and not yet persistent enough to be worth telling anyone
+    // about. Remember it and leave the connection alone.
     await db
       .update(stravaConnections)
-      .set({ status: "broken" })
+      .set({ refreshFailureCount: failureCount, refreshFirstFailedAt: firstFailedAt })
       .where(eq(stravaConnections.userId, userId));
-    await createNotification(db, {
-      userId,
-      kind: "strava_broken",
-      subjectId: userId,
-      body: "Your Strava connection needs to be reconnected.",
-    });
-    return "broken";
+    return "degraded";
   }
+
+  await db
+    .update(stravaConnections)
+    .set({
+      status: "broken",
+      refreshFailureCount: failureCount,
+      refreshFirstFailedAt: firstFailedAt,
+    })
+    .where(eq(stravaConnections.userId, userId));
+  await createNotification(db, {
+    userId,
+    kind: "strava_broken",
+    subjectId: userId,
+    body: "Your Strava connection needs to be reconnected.",
+  });
+  return "broken";
 }
 
 /**

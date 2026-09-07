@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { stravaConnections } from "../../src/db/schema-core";
@@ -9,6 +10,7 @@ import type {
   RefreshedTokens,
   StravaApi,
 } from "../../src/modules/runs/strava/api";
+import { StravaApiError } from "../../src/modules/runs/strava/api";
 import {
   completeStravaConnect,
   disconnectStrava,
@@ -32,6 +34,7 @@ function fakeApi(
     refreshToken: () => Promise<RefreshedTokens>;
     deauthorizeFails: boolean;
     refreshFails: boolean;
+    refreshFailsTerminally: boolean;
   }> = {},
 ): StravaApi & FakeApiCalls {
   const refreshCalls: string[] = [];
@@ -50,7 +53,13 @@ function fakeApi(
         })),
     async refreshToken(token: string) {
       refreshCalls.push(token);
+      if (overrides.refreshFailsTerminally === true) {
+        // What a revoked grant looks like: Strava rejects the token itself.
+        throw new StravaApiError("Strava responded 401", true);
+      }
       if (overrides.refreshFails === true) {
+        // What a blip looks like: fetch itself failed, so not even a
+        // StravaApiError.
         throw new Error("refresh failed");
       }
       if (overrides.refreshToken) return overrides.refreshToken();
@@ -135,7 +144,28 @@ describe("refreshStravaToken (resilience: never loop on a dead grant)", () => {
     expect(connection?.status).toBe("ok");
   });
 
-  it("marks the connection broken and notifies once on refresh failure", async () => {
+  it("marks the connection broken immediately when Strava revokes the grant", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
+
+    const result = await refreshStravaToken(
+      db,
+      fakeApi({ refreshFailsTerminally: true }),
+      userId,
+    );
+
+    expect(result).toBe("broken");
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.status).toBe("broken");
+    expect(await unreadNotificationCount(db, userId)).toBe(1);
+  });
+
+  /**
+   * The bug this policy exists for: one blip used to tell a user with a
+   * perfectly good connection to go and reconnect it.
+   */
+  it("leaves a working connection alone through a transient failure", async () => {
     const db = coreDb();
     const userId = newUlid();
     await completeStravaConnect(db, fakeApi(), userId, "auth-code");
@@ -146,14 +176,69 @@ describe("refreshStravaToken (resilience: never loop on a dead grant)", () => {
       userId,
     );
 
-    expect(result).toBe("broken");
+    expect(result).toBe("degraded");
     const connection = await getStravaConnection(db, userId);
-    expect(connection?.status).toBe("broken");
-    expect(await unreadNotificationCount(db, userId)).toBe(1);
+    expect(connection?.status).toBe("ok");
+    expect(connection?.refreshFailureCount).toBe(1);
+    expect(await unreadNotificationCount(db, userId)).toBe(0);
+  });
 
-    // A second failed refresh doesn't double-notify (dedupe subject = userId).
+  it("does not break on repeated transient failures inside the window", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
+
+    // Three failures in quick succession — a short outage, not a
+    // revocation. The count is reached but the window is not.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+    }
+
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.status).toBe("ok");
+    expect(connection?.refreshFailureCount).toBe(3);
+    expect(await unreadNotificationCount(db, userId)).toBe(0);
+  });
+
+  it("breaks once failures have persisted past the window", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
     await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+
+    // Backdate the run of failures to an hour ago: same count, but now it
+    // has been going on long enough to mean something.
+    await db
+      .update(stravaConnections)
+      .set({ refreshFailureCount: 2, refreshFirstFailedAt: nowS() - 3600 })
+      .where(eq(stravaConnections.userId, userId));
+
+    const result = await refreshStravaToken(
+      db,
+      fakeApi({ refreshFails: true }),
+      userId,
+    );
+
+    expect(result).toBe("broken");
+    const broken = await getStravaConnection(db, userId);
+    expect(broken?.status).toBe("broken");
     expect(await unreadNotificationCount(db, userId)).toBe(1);
+  });
+
+  it("clears the failure run on a later success", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
+    await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+    const afterFailure = await getStravaConnection(db, userId);
+    expect(afterFailure?.refreshFailureCount).toBe(1);
+
+    await refreshStravaToken(db, fakeApi(), userId);
+
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.refreshFailureCount).toBe(0);
+    expect(connection?.refreshFirstFailedAt).toBeNull();
+    expect(connection?.status).toBe("ok");
   });
 
   it("reports not_connected when there's nothing to refresh", async () => {

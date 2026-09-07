@@ -49,7 +49,30 @@ const exchangeResponseSchema = tokenResponseSchema.extend({
   athlete: z.object({ id: z.number().int() }),
 });
 
-class StravaApiError extends Error {}
+export class StravaApiError extends Error {
+  /**
+   * True only when Strava said the grant itself is no longer valid — 400
+   * or 401 on a token exchange, which is what a user revoking access looks
+   * like. Everything else (5xx, a timeout, DNS, a parse failure) is
+   * transient and must not be treated as "reconnect your account".
+   */
+  readonly isTerminal: boolean;
+
+  constructor(message: string, isTerminal: boolean) {
+    super(message);
+    this.name = "StravaApiError";
+    this.isTerminal = isTerminal;
+  }
+}
+
+/**
+ * Terminal for anything that came back as a revoked grant, false for
+ * everything else — including a non-StravaApiError, since a TypeError from
+ * fetch is the most transient failure there is.
+ */
+export function isTerminalStravaError(error: unknown): boolean {
+  return error instanceof StravaApiError && error.isTerminal;
+}
 
 async function postForm(
   url: string,
@@ -62,7 +85,10 @@ async function postForm(
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!response.ok) {
-    throw new StravaApiError(`Strava responded ${String(response.status)}`);
+    throw new StravaApiError(
+      `Strava responded ${String(response.status)}`,
+      response.status === 400 || response.status === 401,
+    );
   }
   return response.json();
 }
@@ -78,7 +104,9 @@ export function createStravaApi(config: StravaConfig): StravaApi {
       });
       const parsed = exchangeResponseSchema.safeParse(json);
       if (!parsed.success) {
-        throw new StravaApiError("Malformed token-exchange response.");
+        // A shape we cannot parse is a bug or a Strava change, not a
+        // revoked grant.
+        throw new StravaApiError("Malformed token-exchange response.", false);
       }
       return {
         athleteId: String(parsed.data.athlete.id),
@@ -96,7 +124,7 @@ export function createStravaApi(config: StravaConfig): StravaApi {
       });
       const parsed = tokenResponseSchema.safeParse(json);
       if (!parsed.success) {
-        throw new StravaApiError("Malformed token-refresh response.");
+        throw new StravaApiError("Malformed token-refresh response.", false);
       }
       return {
         accessToken: parsed.data.access_token,
@@ -110,7 +138,10 @@ export function createStravaApi(config: StravaConfig): StravaApi {
         { method: "POST", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
       );
       if (!response.ok) {
-        throw new StravaApiError(`Strava responded ${String(response.status)}`);
+        throw new StravaApiError(
+          `Strava responded ${String(response.status)}`,
+          false, // deauthorize is best-effort; the caller degrades either way
+        );
       }
     },
   };

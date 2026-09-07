@@ -245,6 +245,15 @@ export const stravaConnections = sqliteTable("strava_connections", {
   status: text("status", { enum: ["ok", "broken"] })
     .notNull()
     .default("ok"),
+  // Consecutive refresh failures, and when the current run of them began.
+  // A single unconditional catch used to mark a connection `broken` on any
+  // failure, so one network blip told the user to reconnect a working
+  // account. Both columns are needed, not just the counter: how long three
+  // failures take is entirely a function of how often something calls the
+  // refresh, so the count alone cannot tell a 30-second outage from a real
+  // revocation. Reset to 0/NULL on success.
+  refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
+  refreshFirstFailedAt: integer("refresh_first_failed_at"),
 });
 
 export const processedWebhookEvents = sqliteTable(
