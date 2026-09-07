@@ -100,5 +100,7 @@ and is exactly the demo worth watching.
 
 ## 10. What did you leave undone?
 
-Name it in the PR description. Deliberate omissions with a reason are fine;
-omissions a reviewer has to discover are not.
+Name it in the PR description **and add a row to `docs/deferred.md`**.
+Deliberate omissions with a reason are fine; omissions a reviewer has to
+discover are not, and neither is a deferral that exists only in a review
+thread nobody will re-read.
