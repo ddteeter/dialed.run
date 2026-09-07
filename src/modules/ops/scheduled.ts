@@ -4,10 +4,9 @@ import { drizzle } from "drizzle-orm/d1";
 import { cronCheckpoints, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import { retryPendingWeather } from "../weather";
+import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
 
-const DIGEST_CRON = "0 12 * * *";
-const WEATHER_RETRY_CRON = "0 * * * *";
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
 /**
@@ -18,7 +17,7 @@ export async function handleScheduled(
   controller: ScheduledController,
 ): Promise<void> {
   const db = drizzle(env.DIALED_CORE);
-  const cronName = cronNameFor(controller.cron);
+  const cronName = cronNameFor(controller.cron) ?? "unknown";
   await db
     .insert(cronCheckpoints)
     .values({ cronName, lastRunAt: Math.floor(Date.now() / 1000) })
@@ -33,12 +32,14 @@ export async function handleScheduled(
       break;
     }
     case "weather-retry": {
-      // Lane 103 (docs/tasks/103-weather.md requirement 4/5): the hourly
+      // docs/tasks/103-weather.md requirement 4/5: the hourly
       // pending-observation retry, claim-then-work at the module level.
       await retryPendingWeather();
       break;
     }
     default: {
+      // Config/code skew that the bindings-conformance test should have
+      // caught in CI before it could reach a real schedule.
       captureException(new Error("unrecognized cron fired"), {
         cron: controller.cron,
       });
@@ -46,11 +47,6 @@ export async function handleScheduled(
   }
 }
 
-function cronNameFor(cron: string): "daily-digest" | "weather-retry" | "unknown" {
-  if (cron === DIGEST_CRON) return "daily-digest";
-  if (cron === WEATHER_RETRY_CRON) return "weather-retry";
-  return "unknown";
-}
 
 /**
  * Exception-based alerting skeleton: checks run, thresholds compare, and

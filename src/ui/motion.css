@@ -1,0 +1,27 @@
+/**
+ * dialed.run motion tokens — ported from design/motion.js (the Motion
+ * Doctrine handoff; design/ is the source of truth). Use these variables
+ * for every transition/animation; never a raw ms value or cubic-bezier
+ * in a screen. The per-surface map and the NEVER list live in
+ * design/motion.js — a surface not in the map does not animate yet.
+ */
+:root {
+  --dur-instant: 90ms;
+  --dur-quick: 140ms;
+  --dur-move: 220ms;
+  --dur-reveal: 320ms;
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-align: cubic-bezier(0.6, 0, 0.2, 1);
+  --travel-element: 24px;
+}
+
+/* Reduced motion is a real mode, not an off switch: moves collapse to a
+ * 90ms opacity change; never to zero — input still needs its receipt. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-quick: var(--dur-instant);
+    --dur-move: var(--dur-instant);
+    --dur-reveal: var(--dur-instant);
+  }
+}

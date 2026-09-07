@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --port ${PORT:-3000}",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "npm run build && vite preview",
@@ -14,6 +14,8 @@
     "cf-typegen": "wrangler types",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test --project=e2e",
+    "demo": "playwright test --project=demo",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

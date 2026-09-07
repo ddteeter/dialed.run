@@ -11,7 +11,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { imports, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import type { Ulid } from "../../lib/ids";
-import { createVisualCrossingProvider } from "./provider/visual-crossing";
+import { weatherProvider } from "./provider";
 import {
   cacheKeyFor,
   findObservationRow,
@@ -65,12 +65,16 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
   const key = cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000));
   const cached = await findObservationRow(key);
   if (cached) {
-    const status = cached.source === "visualcrossing" ? "attached" : "manual";
+    // The distinction that matters is resolved-vs-typed-by-a-human, not
+    // which vendor resolved it. Comparing to the provider name meant a
+    // second provider's observations would silently be classed as manual
+    // and dropped from consensus aggregates.
+    const status = cached.source === "manual" ? "manual" : "attached";
     await setStatus(runId, status);
     return status;
   }
 
-  const provider = createVisualCrossingProvider(env.VISUAL_CROSSING_API_KEY);
+  const provider = weatherProvider();
   try {
     const observation = await provider.observation(
       run.lat,
@@ -125,7 +129,7 @@ export async function recordManualObservation(
   }
   const key = cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000));
   const row = await upsertManualObservation(key, tempC, runId);
-  await setStatus(runId, row.source === "visualcrossing" ? "attached" : "manual");
+  await setStatus(runId, row.source === "manual" ? "manual" : "attached");
 }
 
 interface RetryCronResult {

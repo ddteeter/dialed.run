@@ -39,5 +39,44 @@
       { "binding": "IMPORTS_QUEUE", "queue": "dialed-imports" },
       { "binding": "ENRICHMENT_QUEUE", "queue": "dialed-enrichment" },
     ],
+    // src/server.ts has exported a `queue()` handler since Phase 0, but with
+    // no consumers bound here nothing ever invoked it: both queues would
+    // have filled and drained to nothing in production. `max_retries` +
+    // the DLQ are the retry mechanism resilience law 3 defers to, so they
+    // are part of the binding, not something a handler re-implements.
+    // test/bindings-conformance.test.ts keeps this list and
+    // src/modules/ops/queues.ts in step.
+    "consumers": [
+      {
+        "queue": "dialed-imports",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "dialed-imports-dlq",
+      },
+      {
+        "queue": "dialed-enrichment",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+        "dead_letter_queue": "dialed-enrichment-dlq",
+      },
+      // The DLQs are consumed too — law 6: a dead-lettered job has to land
+      // somewhere a human eventually sees, which handleQueueBatch does by
+      // reporting each one to Sentry. Left unconsumed they are a silent
+      // permanent failure with extra steps.
+      { "queue": "dialed-imports-dlq", "max_batch_size": 10, "max_retries": 1 },
+      {
+        "queue": "dialed-enrichment-dlq",
+        "max_batch_size": 10,
+        "max_retries": 1,
+      },
+    ],
+  },
+  // Matched against src/modules/ops/crons.ts by the conformance test. A
+  // schedule changed here and not there sends every firing to the `unknown`
+  // branch, which is a cron that quietly stops working.
+  "triggers": {
+    "crons": ["0 12 * * *", "0 * * * *"],
   },
 }

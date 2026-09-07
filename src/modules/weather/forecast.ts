@@ -3,9 +3,8 @@
  * the packet). Same cache as `attach.ts` — a forecast fetched for an hour
  * that a later run lands in is reused rather than re-fetched.
  */
-import { env } from "../../env";
 import type { WeatherObservation } from "../../lib/contracts";
-import { createVisualCrossingProvider } from "./provider/visual-crossing";
+import { weatherProvider } from "./provider";
 import {
   cacheKeyFor,
   findObservationRow,
@@ -27,7 +26,7 @@ export async function forecast(
   if (cached) {
     return toWeatherObservation(cached);
   }
-  const provider = createVisualCrossingProvider(env.VISUAL_CROSSING_API_KEY);
+  const provider = weatherProvider();
   const observation = await provider.forecast(lat, lng, at);
   const row = await upsertRealObservation(key, observation, undefined);
   return toWeatherObservation(row);

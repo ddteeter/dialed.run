@@ -1,6 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 @import "./ui/tokens.css";
+@import "./ui/motion.css";
 @plugin "@tailwindcss/typography";
 
 /*

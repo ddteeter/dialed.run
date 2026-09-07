@@ -147,13 +147,33 @@ export interface ExtractionModel {
 // ---- Verdicts (D-05/D-12) -------------------------------------------------
 
 export const verdictSchema = z.number().int().min(-2).max(2);
-export const verdictLabels = {
-  "-2": "way_cold",
-  "-1": "bit_cold",
-  "0": "dialed",
-  "1": "bit_warm",
-  "2": "way_warm",
-} as const;
+
+/**
+ * The verdict scale, once. Coldest to warmest — the order the A3 choices
+ * render in, so no screen keeps its own array.
+ *
+ * `token` is the stored/analytics form and `label` is the only user-facing
+ * wording (UI lexicon, docs/product.md §Brand). Both live on the same row
+ * because they were previously three tables: a token map here that nothing
+ * ever imported, plus display labels open-coded twice over in
+ * feed/entry.$entryId.tsx and feed/verdict.$entryId.tsx — free to disagree
+ * about what "0" is called, and in practice already drifting.
+ */
+export const verdictScale = [
+  { value: -2, token: "way_cold", label: "Way cold" },
+  { value: -1, token: "bit_cold", label: "A bit cold" },
+  { value: 0, token: "dialed", label: "Dialed" },
+  { value: 1, token: "bit_warm", label: "A bit warm" },
+  { value: 2, token: "way_warm", label: "Way warm" },
+] as const;
+export type VerdictValue = (typeof verdictScale)[number]["value"];
+
+/**
+User-facing wording for a stored verdict; `undefined` if out of range.
+*/
+export function verdictLabel(value: number): string | undefined {
+  return verdictScale.find((entry) => entry.value === value)?.label;
+}
 export const itemFlagSchema = z.enum(["too_much", "not_enough"]);
 export const entryTags = [
   "cold_first_mile",

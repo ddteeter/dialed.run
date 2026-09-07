@@ -23,6 +23,33 @@ in sync.
 3. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
    Epic 200 opens, incl. multi-part fabric display on garment/product
    detail (D-34) if composition surfaces there.
+4. **Lane 102's placeholder surfaces** (shipped in PR #4 on
+   placeholder-faithful layouts; the packet referenced these as deltas
+   #2/#3/#6 but a renumbering dropped them from this queue): manual run
+   entry, the notifications bell + notification list (the bell currently
+   renders a raw 🔔 emoji — replace with `<Icon name="bell">` now that the
+   Icon Pack landed), Strava connect/disconnect, and import status. All
+   need real design before launch gate.
+5. **Settings/privacy screen** (You tab) — product.md marks it "needs
+   design"; lane 104 ships whatever placeholder its packet requires.
+6. **Motion Doctrine adoption** (imported 2026-09-06 — `design/motion.js`
+   + `Motion Doctrine.dc.html`; ported to `src/ui/motion.css` +
+   `ui/motion.ts`; icon manifest gained `bracketLeft`/`bracketRight` for
+   the reveal moves): shipped v1 surfaces predate it and animate either
+   not at all or ad hoc — lanes adopt the per-surface map opportunistically,
+   audited at the launch gate (workflow.md launch-gate checklist #5).
+   RESOLVED 2026-09-06: demos record full motion — the fixture's
+   motion-strip and the demo project's reduced-motion emulation were
+   removed, because demo videos are a primary review surface and must
+   show the doctrine's real behavior.
+7. **Icon Pack nav drift** (imported 2026-09-06, `design/icons.js` +
+   `Icon Pack.dc.html`; ported to `src/ui/icons.tsx`): the pack's nav
+   group is feed / closet / log / discover / **profile**, but product.md's
+   tab bar is Feed / Closet / +Add / **Call** (teaser) / You — the pack
+   has a `discover` glyph and no `call` glyph. Needs a call (ha): either
+   design draws a Call-teaser glyph, or the tab uses `verdictPending`/text
+   until Epic 200. Also: no glyph maps to sports-bra or arm-sleeves if
+   those categories ship.
 
 ## Resolved design↔contract nit (no upstream change needed)
 
