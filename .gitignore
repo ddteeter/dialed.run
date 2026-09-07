@@ -27,4 +27,8 @@ reports/stryker-incremental.json
 
 # playwright
 test-results/
+# Transcoded demo recordings: uploaded to the PR by `gh pr comment
+# --attach`, which reads them from disk — they are never part of the repo.
+demo.mp4
+*.demo.mp4
 playwright-report/
