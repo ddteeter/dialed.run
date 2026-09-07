@@ -118,6 +118,37 @@ explicitly says the migration is yours.
   a Kit, the Call, Verdict, Conditions, Mileage. "useful", never "like".
   Measured values render in mono with bracket notation per `docs/product.md`.
 
+## Undesigned surfaces (placeholder protocol)
+
+Some packets require UI that has no artboard or `docs/product.md` screen ID.
+Building it is fine — inventing design language is not:
+
+- Compose ONLY existing `ui/` primitives, the brand tokens, and
+  bracket-notation text. Never introduce a new glyph, emoji, icon, icon
+  library, color, or font on an undesigned surface — a text label in the
+  existing system is always the correct placeholder. (The 🔔-emoji bell is
+  the canonical violation.)
+- **Icons come from `ui/`'s `<Icon name="…">`** — the typed port of the
+  design Icon Pack (77 glyphs; manifest in `src/ui/icons.tsx`). A glyph
+  that is not in the manifest is itself an undesigned surface: request it
+  via `docs/design-deltas.md`, never draw or import one.
+- **Motion comes from the Motion Doctrine** (`design/motion.js`, ported to
+  `src/ui/motion.css` vars + `ui/` tokens). Every transition uses
+  `--dur-*`/`--ease-*` (or `DURATION`/`EASING` from `ui/`) — never a raw
+  ms value or cubic-bezier. Only surfaces in the doctrine's per-surface
+  map animate; anything else stays still until requested via
+  design-deltas. The NEVER list is binding: no bounce/spring/overshoot,
+  no spinners or skeleton shimmer (brackets breathe instead), no
+  scroll-driven motion, nothing over 400ms, no stagger except the
+  dressing-order reveal. Reduced motion collapses to a 90ms opacity
+  change — never to zero.
+- In the same PR: add (or extend) the surface's entry in
+  `docs/design-deltas.md`'s open queue, so it is tracked for the design
+  round-trip.
+- In the PR body: list every undesigned surface you shipped under a
+  **"Design deltas"** heading, so the reviewer can kick them to the design
+  agent instead of discovering them in a demo video.
+
 ## Guardrails (the enforcement loop)
 
 This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin

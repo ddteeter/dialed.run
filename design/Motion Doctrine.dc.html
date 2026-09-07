@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #0B0B0E; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+  @keyframes dr-bracket-left  { from { transform: translateX(-8px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes dr-bracket-right { from { transform: translateX(8px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes dr-close-left  { from { transform: translateX(-14px); } to { transform: translateX(0); } }
+  @keyframes dr-close-right { from { transform: translateX(14px); } to { transform: translateX(0); } }
+  @keyframes dr-arrive { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes dr-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes dr-roll { from { transform: translateY(1.15em); } to { transform: translateY(0); } }
+  @keyframes dr-bounce { 0% { transform: translateY(24px); opacity: 0; } 55% { transform: translateY(-9px); opacity: 1; } 75% { transform: translateY(4px); } 88% { transform: translateY(-2px); } 100% { transform: translateY(0); } }
+  @keyframes dr-collapse { from { max-height: 44px; opacity: 1; } to { max-height: 0; opacity: 0; } }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; color: #0B0B0E; background: #F4F3EF; overflow-x: hidden;">
+
+  <section style="background: #0B0B0E; color: #F4F3EF; padding: 52px 48px 60px;">
+    <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px;">
+
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 24px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Motion doctrine &nbsp;/&nbsp; v1.0 &nbsp;/&nbsp; Sep 2026</span>
+        <span style="color: #00E0C6;">Source: motion.js</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px; align-items: end;">
+        <h1 style="grid-column: span 2; font-family: 'Archivo Black', Helvetica, sans-serif; font-size: clamp(46px, 8vw, 104px); line-height: 0.86; letter-spacing: -0.035em; margin: 0; text-transform: uppercase;">
+          Things<br />
+          <span style="color: #FF2D8A;">arrive.</span> They<br />
+          don't <span style="color: #00E0C6;">settle.</span>
+        </h1>
+        <p style="margin: 0; font-size: 17px; line-height: 1.5; color: #DEDDD6; text-wrap: pretty;">
+          Motion in dialed.run is confirmation, not decoration. Every move answers one question — <em style="font-style: normal; color: #F4F3EF;">did that register?</em> — and then gets out of the way. Nothing bounces, because wobble is the opposite of dialed.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1px; background: #24242B; border: 1px solid #24242B;">
+        <div style="background: #0B0B0E; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">LAW 01</span>
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.01em; line-height: 1.15;">Things arrive, they don't settle.</span>
+          <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #A9A9B0;">No bounce, no spring, no overshoot. Curves decelerate to a dead stop. Nothing in the product is uncertain about where it lands.</p>
+        </div>
+        <div style="background: #0B0B0E; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">LAW 02</span>
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.01em; line-height: 1.15;">The bracket does the work.</span>
+          <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #A9A9B0;">Reveals, commits and waits are expressed by the brackets closing, opening or breathing — not by generic fades and slides.</p>
+        </div>
+        <div style="background: #0B0B0E; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">LAW 03</span>
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.01em; line-height: 1.15;">Nothing travels far.</span>
+          <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #A9A9B0;">24px for an element, one bracket width for a frame. Containers may travel their own height. Nothing crosses the screen.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="padding: 72px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">01 / The proof</span>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">Same distance, same duration. One of these belongs to dialed.run.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 24px; min-width: 0;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #FFFFFF; padding: 26px; display: flex; flex-direction: column; gap: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em;">
+              <span style="color: #009F8C;">OURS · EASE-SNAP</span>
+              <span style="color: #7A7A70;">220MS</span>
+            </div>
+            <div style="height: 78px; display: flex; align-items: flex-end;">{{ demoSnap }}</div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Fast off the line, dead stop. Reads as a decision.</p>
+          </div>
+          <div style="background: #FFFFFF; padding: 26px; display: flex; flex-direction: column; gap: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em;">
+              <span style="color: #C41E6A;">NOT OURS · SPRING</span>
+              <span style="color: #7A7A70;">220MS</span>
+            </div>
+            <div style="height: 78px; display: flex; align-items: flex-end;">{{ demoBounce }}</div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Overshoots, corrects, corrects again. Reads as a guess.</p>
+          </div>
+        </div>
+        <button onClick="{{ replay }}" style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border: 0; border-radius: 100px; padding: 13px 24px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;" style-hover="background: #FF2D8A; color: #0B0B0E;">Replay all demos</button>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 72px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">02 / Signature moves</span>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">Four devices carry the whole product. Everything else is a duration and a curve.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2; min-width: 0;">
+
+        <div style="background: #FFFFFF; padding: 26px; display: flex; flex-direction: column; gap: 18px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #7A7A70;">BRACKET CLOSE</span>
+          <div style="height: 72px; display: flex; align-items: center;">{{ demoClose }}</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">The verdict commit. Brackets converge onto what you chose and lock. This is the receipt for the most important input in the app.</p>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #009F8C;">320MS · EASE-ALIGN</span>
+        </div>
+
+        <div style="background: #FFFFFF; padding: 26px; display: flex; flex-direction: column; gap: 18px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #7A7A70;">DRESSING-ORDER STAGGER</span>
+          <div style="height: 72px; display: flex; align-items: center;">{{ demoStagger }}</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">The recommendation reveal. Layers arrive in the order you'd put them on. The only stagger in the product, because here the order <em style="font-style: normal; font-weight: 700;">is</em> the answer.</p>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #009F8C;">320MS · 30MS STEP · MAX 4</span>
+        </div>
+
+        <div style="background: #FFFFFF; padding: 26px; display: flex; flex-direction: column; gap: 18px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #7A7A70;">BREATHING BRACKETS</span>
+          <div style="height: 72px; display: flex; align-items: center;">{{ demoBreathe }}</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">The one waiting device for the entire product. No spinners, no shimmer. Honest about waiting instead of faking progress.</p>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #009F8C;">900MS LOOP · LINEAR</span>
+        </div>
+
+        <div style="background: #FFFFFF; padding: 26px; display: flex; flex-direction: column; gap: 18px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #7A7A70;">DIGIT ROLL</span>
+          <div style="height: 72px; display: flex; align-items: center;">{{ demoRoll }}</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Temperatures, counts, streaks. Plex Mono is tabular, so a vertical roll reads as a meter changing. A crossfade reads as a bug.</p>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #009F8C;">140MS · EASE-SNAP</span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 72px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">03 / The scale</span>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">Four durations, three curves. If a move needs a value that isn't here, it's the wrong move.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 32px; min-width: 0;">
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <sc-for list="{{ durations }}" as="d" hint-placeholder-count="4">
+            <div style="background: #FFFFFF; padding: 18px 22px; display: grid; grid-template-columns: 130px 74px 1fr; gap: 20px; align-items: center;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; color: #0B0B0E;">{{ d.token }}</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.01em;">{{ d.ms }}</span>
+              <span style="font-size: 14px; line-height: 1.45; color: #4E4E44;">{{ d.use }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <sc-for list="{{ curves }}" as="c" hint-placeholder-count="3">
+            <div style="background: #FFFFFF; padding: 18px 22px; display: grid; grid-template-columns: 130px 1fr; gap: 20px; align-items: start;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; color: #0B0B0E;">{{ c.token }}</span>
+              <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C41E6A; word-break: break-all;">{{ c.value }}</span>
+                <span style="font-size: 14px; line-height: 1.45; color: #4E4E44;">{{ c.use }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 72px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">04 / Surface by surface</span>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">If a surface isn't on this list, it doesn't animate yet. Ask before inventing one.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2; min-width: 0;">
+        <sc-for list="{{ surfaces }}" as="s" hint-placeholder-count="12">
+          <div style="background: #FFFFFF; padding: 20px 22px; display: grid; grid-template-columns: minmax(150px, 190px) minmax(0, 1fr); gap: 12px 24px; align-items: start;">
+            <div style="display: flex; flex-direction: column; gap: 7px; min-width: 0;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 14px; letter-spacing: -0.005em; line-height: 1.25;">{{ s.surface }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #009F8C; line-height: 1.5;">{{ s.spec }}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+              <span style="font-size: 14px; line-height: 1.45; color: #0B0B0E; text-wrap: pretty;">{{ s.move }}</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #6E6E64; text-wrap: pretty;">{{ s.why }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 72px 48px; background: #0B0B0E; color: #F4F3EF;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">05 / Settled, don't re-litigate</div>
+      <div style="display: flex; flex-direction: column; gap: 30px; min-width: 0;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 680px;">Ten things we don't do, and why.</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1px; background: #24242B; border: 1px solid #24242B;">
+          <sc-for list="{{ never }}" as="n" hint-placeholder-count="10">
+            <div style="background: #0B0B0E; padding: 20px 22px; display: flex; flex-direction: column; gap: 7px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #FF2D8A;">{{ n.label }}</span>
+              <span style="font-size: 14px; line-height: 1.5; color: #A9A9B0; text-wrap: pretty;">{{ n.why }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; padding-top: 12px; border-top: 1px solid #24242B;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">REDUCED MOTION</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">{{ reducedRule }}</p>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #F4F3EF; font-weight: 600;">{{ reducedNever }}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">VIEW TRANSITIONS API</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Use it, but name only two things: the bracket frame and the persistent tab bar. Everything else is a plain enter or exit. Naming more elements produces the hero-morph cinema we banned above.</p>
+          </div>
+        </div>
+
+        <pre style="margin: 0; background: #16161B; border: 1px solid #24242B; padding: 24px; overflow-x: auto; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #DEDDD6;">{{ cssVars }}</pre>
+        <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #7A7A70;">Import DURATION and EASING from motion.js. Never type a raw ms value into a screen.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1180 }
+}">
+class Component extends DCLogic {
+  state = { data: null, icons: null, run: 0, temp: 41 };
+
+  componentDidMount() {
+    import('./motion.js')
+      .then(m => this.setState({ data: m }))
+      .catch(err => console.error('motion.js failed to load', err));
+    import('./icons.js')
+      .then(m => this.setState({ icons: m.ICONS }))
+      .catch(err => console.error('icons.js failed to load', err));
+    this._tick = setInterval(() => this.setState(s => ({ temp: s.temp === 41 ? 52 : 41 })), 2400);
+    this._loop = setInterval(() => this.setState(s => ({ run: s.run + 1 })), 2400);
+  }
+
+  componentWillUnmount() { clearInterval(this._tick); clearInterval(this._loop); }
+
+  bracket(color, side, anim) {
+    const ic = this.state.icons;
+    if (!ic) return null;
+    const d = side === 'left' ? ic.bracketLeft.d : ic.bracketRight.d;
+    return React.createElement('svg', {
+      viewBox: '0 0 24 24', width: 34, height: 34, fill: 'none', stroke: color,
+      strokeWidth: 2, strokeLinecap: 'square', strokeLinejoin: 'miter',
+      style: { display: 'block', animation: anim }
+    }, React.createElement('path', { d }));
+  }
+
+  renderVals() {
+    const d = this.state.data;
+    const k = this.state.run;
+    const E = d ? d.EASING : { snap: 'cubic-bezier(0.2,0,0,1)', align: 'cubic-bezier(0.6,0,0.2,1)' };
+
+    const bar = (anim, color) => React.createElement('div', {
+      key: k, style: {
+        width: 46, height: 46, background: color, animation: anim, willChange: 'transform'
+      }
+    });
+
+    const demoSnap = bar(`dr-arrive 220ms ${E.snap} both`, '#0B0B0E');
+    const demoBounce = bar('dr-bounce 220ms cubic-bezier(0.4,0,0.2,1) both', '#C41E6A');
+
+    const demoClose = React.createElement('div', {
+      key: 'close' + k, style: { display: 'flex', alignItems: 'center', gap: 2 }
+    },
+      this.bracket('#FF2D8A', 'left', `dr-close-left 320ms ${E.align} both`),
+      React.createElement('span', {
+        style: {
+          fontFamily: "'Archivo Black', sans-serif", fontSize: 15, letterSpacing: '-0.01em',
+          textTransform: 'uppercase', padding: '0 2px'
+        }
+      }, 'Dialed'),
+      this.bracket('#FF2D8A', 'right', `dr-close-right 320ms ${E.align} both`)
+    );
+
+    const layers = [
+      { label: 'BASE', color: '#0B0B0E' },
+      { label: 'MID', color: '#3A3A42' },
+      { label: 'SHELL', color: '#FF2D8A' },
+      { label: 'HANDS', color: '#00E0C6' }
+    ];
+    const demoStagger = React.createElement('div', {
+      key: 'stag' + k, style: { display: 'flex', gap: 6, alignItems: 'flex-end' }
+    }, layers.map((l, i) => React.createElement('div', {
+      key: l.label,
+      style: {
+        display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center',
+        animation: `dr-arrive 320ms ${E.snap} ${i * 30}ms both`
+      }
+    },
+      React.createElement('div', { style: { width: 30, height: 30 + i * 6, background: l.color } }),
+      React.createElement('span', {
+        style: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 8.5, letterSpacing: '0.06em', color: '#7A7A70' }
+      }, l.label)
+    )));
+
+    const demoBreathe = React.createElement('div', {
+      style: { display: 'flex', alignItems: 'center', gap: 2, animation: 'dr-breathe 900ms linear infinite' }
+    },
+      this.bracket('#0B0B0E', 'left', 'none'),
+      React.createElement('span', {
+        style: {
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, letterSpacing: '0.1em', color: '#7A7A70', padding: '0 4px'
+        }
+      }, 'READING WEATHER'),
+      this.bracket('#0B0B0E', 'right', 'none')
+    );
+
+    const demoRoll = React.createElement('div', {
+      style: {
+        display: 'flex', alignItems: 'baseline', gap: 4,
+        fontFamily: "'IBM Plex Mono', monospace", fontVariantNumeric: 'tabular-nums'
+      }
+    },
+      React.createElement('span', {
+        style: {
+          display: 'block', overflow: 'hidden', fontSize: 34, fontWeight: 500,
+          lineHeight: 1.15, height: '1.15em'
+        }
+      }, React.createElement('span', {
+        key: this.state.temp,
+        style: { display: 'block', lineHeight: 1.15, animation: `dr-roll 140ms ${E.snap} both` }
+      }, this.state.temp)),
+      React.createElement('span', { style: { fontSize: 17, color: '#7A7A70' } }, '°F')
+    );
+
+    if (!d) {
+      return {
+        demoSnap, demoBounce, demoClose, demoStagger, demoBreathe, demoRoll,
+        durations: [], curves: [], surfaces: [], never: [],
+        reducedRule: '', reducedNever: '', cssVars: '',
+        replay: () => this.setState(s => ({ run: s.run + 1 }))
+      };
+    }
+
+    const use = {
+      instant: 'State flips — toggle, checkbox, tab active, row press.',
+      quick: 'Small element enter and exit, toast, digit roll.',
+      move: 'Sheets, drawers, flow steps, list reflow.',
+      reveal: 'The recommendation payoff and the verdict commit. Only these two.'
+    };
+    const curveUse = {
+      snap: 'Default. Everything entering or moving. Fast off the line, dead stop.',
+      exit: 'Only for things leaving the screen. Accelerates away.',
+      align: 'The bracket clicking into place. Slightly held at the end.'
+    };
+
+    return {
+      demoSnap, demoBounce, demoClose, demoStagger, demoBreathe, demoRoll,
+      durations: Object.keys(d.DURATION).map(key => ({
+        token: '--dur-' + key, ms: d.DURATION[key] + 'ms', use: use[key]
+      })),
+      curves: Object.keys(d.EASING).map(key => ({
+        token: '--ease-' + key, value: d.EASING[key], use: curveUse[key]
+      })),
+      surfaces: d.SURFACES.map(s => ({
+        surface: s.surface,
+        move: s.move,
+        why: s.why,
+        spec: s.duration === '—' ? 'NO MOTION' : (s.duration.startsWith('custom')
+          ? s.duration.replace('custom ', '') + 'MS · ' + s.easing.toUpperCase()
+          : d.DURATION[s.duration] + 'MS · EASE-' + s.easing.toUpperCase())
+      })),
+      never: d.NEVER.map(n => ({ label: n[0], why: n[1] })),
+      reducedRule: d.REDUCED_MOTION.rule,
+      reducedNever: d.REDUCED_MOTION.never,
+      cssVars: d.CSS_VARS,
+      replay: () => this.setState(s => ({ run: s.run + 1 }))
+    };
+  }
+}
+</script>
+</body>
+</html>
