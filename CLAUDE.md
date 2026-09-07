@@ -108,10 +108,44 @@ If your task requires a schema change not already in `docs/contracts.md`:
 
 1. STOP implementation of the affected part.
 2. Write the proposed change as a short note in your design doc.
-3. Flag it in your end-of-turn summary for human review.
+3. **Ask, in the turn.** Put the question to the owner directly — what the
+   change is, what it costs, and what you recommend — and wait for an
+   answer.
+
+**"Flag it" is not step 3, and reading it that way is a real failure mode.**
+Writing a note and moving on turns a question the owner never saw into a
+decision that silently defaulted to *no*. A blocked item the owner has not
+been asked about is not deferred; it is dropped. The register
+(`docs/deferred.md`) records what a decision *was*, it does not stand in for
+making one.
+
+The same applies anywhere a rule says stop: bindings, forbidden zones, a
+product call, user-facing wording. Stop means ask.
+
+And **check the premise before invoking any of this.** Twice in the
+PR #2–#5 review "this needs a schema change so it stops here" was simply
+wrong — the columns already existed and the work was wiring, not migration.
+Read the schema before declaring yourself blocked by it.
+
+**Migrations get logical names, always.** `drizzle-kit generate` invents one
+(`0002_misty_corsair`), which tells a reader nothing and makes a migration
+history unreadable at exactly the moment it matters — when something has gone
+wrong in production and you are scanning filenames. Pass `--name`:
+
+```sh
+npm run db:generate:core -- --name=strava_refresh_failure_tracking
+```
+
+Name it for what it does to the schema, not for the feature that wanted it:
+`add_run_idempotency_key`, not `manual_run_fixes`. If you cannot name it in a
+few words, it is probably two migrations.
+
+Renaming after the fact means editing the `tag` in
+`src/db/migrations/*/meta/_journal.json` to match the new filename, and is
+only safe before the migration has been applied anywhere real.
 
 Never run `drizzle-kit generate` inside a feature branch unless your packet
-explicitly says the migration is yours.
+explicitly says the migration is yours — or the owner has said yes.
 
 ## D1 query discipline
 
@@ -190,6 +224,42 @@ Building it is fine — inventing design language is not:
   **"Design deltas"** heading, so the reviewer can kick them to the design
   agent instead of discovering them in a demo video.
 
+## Review comments are change requests
+
+**A comment on your PR is a request to change the code, not to discuss it.**
+The default response is a commit. This is the opposite of the instinct to
+answer thoughtfully and move on, and that instinct is wrong here: a reviewer
+who writes "should this be X?" is telling you to make it X, in the polite
+form the question mood provides.
+
+That applies to questions as much as to statements. "Is this dangerous?",
+"Should we treat A as distinct from B?", "Why is this in memory?" are all
+requests. Answering them well and leaving the code alone is a non-response.
+
+**You may push back, and sometimes you should**, but it is an exception you
+have to earn:
+
+- the change is genuinely outside this PR's scope and would balloon it;
+- it needs a decision only the owner can make (a product call, a threshold,
+  a name a user will see);
+- it is technically wrong for this codebase, and you can say why with
+  evidence — a query plan, a failing test, a spec, a line of code that
+  contradicts it.
+
+"I'd rather not" and "it's a big change" are not reasons. Neither is "I
+flagged it": deferring is a decision that needs the owner's agreement, not a
+way to close a thread. If you defer, the register entry
+(`docs/deferred.md`) is part of the same commit and the reply says which
+item it is.
+
+**When you do push back, do the part you agree with.** A comment that asks
+for three things and gets one paragraph of disagreement has been ignored,
+even if the disagreement is correct.
+
+And read the whole comment before deciding a fix is out of scope. Twice in
+the PR #2–#5 review, "this needs a schema change so it stops here" was
+wrong: the columns already existed. Check before you defer.
+
 ## Guardrails (the enforcement loop)
 
 This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
@@ -223,6 +293,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
 3. Implement in small commits. Each commit passes the commit gate.
 4. Tests are part of done, not an afterthought. Match the test expectations
    in your packet.
+4a. **Deferring something is a write.** If you answer a review comment with
+   "flagging it" / "next schema batch" / "worth doing later", add the row to
+   `docs/deferred.md` in the same commit. A thread scrolls away; the register
+   does not.
 4b. **Before opening a PR, work through `docs/pr-self-review.md`.** It is the
    residue of the PRs #2–#5 review: the findings no rule could catch, written
    as questions. The guardrails cover what a machine can see; that list covers
