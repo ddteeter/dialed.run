@@ -90,6 +90,11 @@ export async function uploadItemPhoto(
   validatePhoto(contentType, bytes.byteLength);
   await getOwnedItem(db, userId, itemId);
 
+  // Lazily imported on purpose: this package ships a WASM module, and a
+  // static import instantiates it during worker startup — a cost paid by
+  // every request, including the ones that never touch a photo, and
+  // charged against the separate startup CPU limit. Deferring it means the
+  // module compiles once per isolate, on a request that was always slow.
   const { PhotonImage, SamplingFilter, resize } =
     await import("@cf-wasm/photon/workerd");
   const keyPrefix = photoKeyFor(userId, itemId);
