@@ -54,7 +54,11 @@ export async function findDuplicateRun(
 
 export interface CreatedRun {
   id: string;
-  weatherStatus: "none" | "pending" | "failed";
+  /**
+  Wider than the set a fresh insert can produce, because the idempotent
+  path returns an existing run whose weather may since have resolved.
+  */
+  weatherStatus: RunRow["weatherStatus"];
 }
 
 /**
@@ -66,7 +70,27 @@ export async function createManualRun(
   db: CoreDb,
   userId: string,
   draft: RunDraft,
+  idempotencyKey?: string,
 ): Promise<CreatedRun> {
+  // Resubmission of a key we already have returns the run it made. A
+  // double-click, a browser POST replay and a retry over a flaky
+  // connection are indistinguishable from a genuine second submission
+  // without one, and all three used to create a duplicate run.
+  if (idempotencyKey !== undefined) {
+    const [existing] = await db
+      .select({ id: runs.id, weatherStatus: runs.weatherStatus })
+      .from(runs)
+      .where(
+        and(
+          eq(runs.userId, userId),
+          eq(runs.idempotencyKey, idempotencyKey),
+        ),
+      )
+      .limit(1);
+    if (existing !== undefined) {
+      return { id: existing.id, weatherStatus: existing.weatherStatus };
+    }
+  }
   let { lat, lng } = draft;
   if (!draft.indoor && (lat === undefined || lng === undefined)) {
     const profile = await db
@@ -93,6 +117,7 @@ export async function createManualRun(
     effort: draft.effort,
     title: draft.title,
     weatherStatus,
+    idempotencyKey,
   });
   // Pending(102↔103): when modules/weather merges, call
   // weather.attachObservation(id) here for 'pending' runs (degrade on

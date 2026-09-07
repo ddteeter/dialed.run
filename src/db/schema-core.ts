@@ -148,13 +148,24 @@ export const runs = sqliteTable(
     indoor: integer("indoor", { mode: "boolean" }).notNull().default(false),
     effort: text("effort", { enum: ["easy", "steady", "workout", "race"] }),
     title: text("title").notNull(),
+    // Client-generated, one per composed submission. A double-click, a
+    // browser POST replay or a retry on a flaky connection all resend the
+    // same key, and the UNIQUE index below turns the second insert into a
+    // no-op instead of a second run. Nullable because imported runs have
+    // no form behind them.
+    idempotencyKey: text("idempotency_key"),
     weatherStatus: text("weather_status", {
       enum: ["none", "pending", "attached", "manual", "failed"],
     })
       .notNull()
       .default("none"),
   },
-  (t) => [index("runs_user_started").on(t.userId, t.startedAt)],
+  (t) => [
+    index("runs_user_started").on(t.userId, t.startedAt),
+    // Scoped to the user: keys are client-generated, so one user's key must
+    // never collide with another's.
+    uniqueIndex("runs_idempotency").on(t.userId, t.idempotencyKey),
+  ],
 );
 
 export const outfitEntries = sqliteTable(

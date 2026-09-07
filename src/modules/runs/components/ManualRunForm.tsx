@@ -1,4 +1,5 @@
 import { RETRY_SAVE } from "../../../lib/copy";
+import { newUlid } from "../../../lib/ids";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
@@ -28,6 +29,11 @@ export function ManualRunForm() {
   const [effort, setEffort] = useState<Effort | "">("");
   const [error, setError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // One key per composed submission, minted when the form mounts. Every
+  // retry of this submission carries the same key, so the server returns
+  // the run it already made instead of making a second one. Reset after a
+  // success so a genuine second run on the same mount gets its own.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => newUlid());
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,9 +51,11 @@ export function ManualRunForm() {
           durationS: Math.round(Number(minutes) * 60),
           distanceM: Number(distanceKm) * 1000,
           indoor,
+          idempotencyKey,
           ...(effort !== "" && { effort }),
         },
       });
+      setIdempotencyKey(newUlid());
       await navigate({ to: "/runs/$runId", params: { runId: created.id } });
     } catch {
       setError(RETRY_SAVE);

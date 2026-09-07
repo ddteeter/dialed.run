@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { userProfiles } from "../../src/db/schema-core";
+import { runs, userProfiles } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
@@ -189,4 +190,64 @@ describe("didRecordManualTemp (D-24 fallback)", () => {
     );
     expect(didRecordSecondTime).toBe(false);
   });
+
+describe("createManualRun idempotency", () => {
+  const draft = {
+    title: "Riverside loop",
+    startedAt: Math.floor(Date.now() / 1000) - 3600,
+    durationS: 2400,
+    distanceM: 7000,
+    indoor: true,
+  } as const;
+
+  it("returns the same run when the same key is submitted twice", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const key = newUlid();
+
+    const first = await createManualRun(db, userId, draft, key);
+    const second = await createManualRun(db, userId, draft, key);
+
+    expect(second.id).toBe(first.id);
+    const rows = await db
+      .select({ id: runs.id })
+      .from(runs)
+      .where(eq(runs.userId, userId));
+    expect(rows).toHaveLength(1);
+  });
+
+  it("creates a second run for a different key", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+
+    const first = await createManualRun(db, userId, draft, newUlid());
+    const second = await createManualRun(db, userId, draft, newUlid());
+
+    expect(second.id).not.toBe(first.id);
+  });
+
+  it("does not let one user's key collide with another's", async () => {
+    const db = coreDb();
+    const key = newUlid();
+    const userA = newUlid();
+    const userB = newUlid();
+
+    const a = await createManualRun(db, userA, draft, key);
+    const b = await createManualRun(db, userB, draft, key);
+
+    // Keys are client-generated, so the uniqueness that matters is per
+    // user — a shared key must not hand B the run A created.
+    expect(b.id).not.toBe(a.id);
+  });
+
+  it("still creates a run when no key is supplied", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+
+    const first = await createManualRun(db, userId, draft);
+    const second = await createManualRun(db, userId, draft);
+
+    expect(second.id).not.toBe(first.id);
+  });
+});
 });

@@ -16,7 +16,7 @@ import { z } from "zod";
 
 import { auth } from "../auth";
 import { runDraftSchema } from "../../lib/contracts";
-import { newUlid } from "../../lib/ids";
+import { newUlid, ulidSchema } from "../../lib/ids";
 import { coreDb } from "./core-db";
 import { MAX_IMPORT_BYTES, getImportStatus, startImport } from "./imports";
 import {
@@ -52,11 +52,18 @@ async function requireUserId(): Promise<string> {
   return session.user.id;
 }
 
+const manualRunInput = runDraftSchema.extend({
+  // Minted once when the form mounts, resent on every retry of that same
+  // composed submission.
+  idempotencyKey: ulidSchema.optional(),
+});
+
 export const submitManualRun = createServerFn({ method: "POST" })
-  .validator(runDraftSchema)
+  .validator((data: unknown) => manualRunInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return createManualRun(coreDb(), userId, data);
+    const { idempotencyKey, ...draft } = data;
+    return createManualRun(coreDb(), userId, draft, idempotencyKey);
   });
 
 function isFormData(value: unknown): value is FormData {

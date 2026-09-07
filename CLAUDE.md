@@ -277,6 +277,17 @@ Dialed must run unattended. These are laws, not suggestions:
 8. **Migrations are expand→contract.** Additive change deploys first; code
    stops reading old shape; destructive change ships in a later migration.
    Never rename/drop in the same PR that changes code.
+8b. **User-initiated writes are at-least-once too.** The resilience laws
+   covered queues and crons and said nothing about the far more common
+   case: a person double-clicking, a browser replaying a POST, or a retry
+   over a flaky connection. All three are indistinguishable from a genuine
+   second submission unless the request carries a key. Any server function
+   that **creates** a row from a form takes a client-generated
+   `idempotencyKey` (minted when the form mounts, resent on every retry of
+   that submission), backed by a UNIQUE index **scoped to the user** —
+   client-generated keys must never collide across accounts. On a repeat,
+   return the row the first call made; do not error. `createManualRun` is
+   the worked example.
 9. **A queue message is a wire format between two deploys**, and gets the same
    expand→contract discipline as a migration. A deploy replaces the consumer
    while the queue still holds messages the *previous* version enqueued, so
