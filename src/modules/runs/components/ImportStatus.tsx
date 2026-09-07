@@ -84,7 +84,7 @@ function ImportStatusInner({
     case "failed": {
       return (
         <div className="flex flex-col gap-3">
-          <Bracketed className="text-pink">IMPORT FAILED</Bracketed>
+          <Bracketed className="text-pink">Import failed</Bracketed>
           <p className="text-night/70">
             {importRow.failureReason ??
               "That file didn't parse. Try the original export from your watch."}

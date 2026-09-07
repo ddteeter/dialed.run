@@ -60,11 +60,11 @@ test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list"
   await expect(
     page.getByRole("heading", { name: "Demo tempo run" }),
   ).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("[UNAVAILABLE]")).toBeVisible();
+  await expect(page.getByText("[Unavailable]")).toBeVisible();
 
   await page.getByLabel("Temp (°C)").fill("12");
   await page.getByRole("button", { name: "Save temperature" }).click();
-  await expect(page.getByText("[UNAVAILABLE]")).toBeHidden({
+  await expect(page.getByText("[Unavailable]")).toBeHidden({
     timeout: 15_000,
   });
 
@@ -73,5 +73,5 @@ test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list"
   await expect(
     page.getByRole("link", { name: /Demo tempo run/u }),
   ).toBeVisible();
-  await expect(page.getByText("[MANUAL TEMP]")).toBeVisible();
+  await expect(page.getByText("[Manual temp]")).toBeVisible();
 });

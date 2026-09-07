@@ -91,29 +91,29 @@ export const gpxSource: RunSource = {
     let text: string;
     try {
       text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    } catch {
-      throw new RunParseError();
+    } catch (error) {
+      throw new RunParseError("gpx: bytes are not valid UTF-8", { cause: error });
     }
 
     let doc: unknown;
     try {
       doc = parser.parse(text);
-    } catch {
-      throw new RunParseError();
+    } catch (error) {
+      throw new RunParseError("gpx: XML parser threw", { cause: error });
     }
 
     const points = extractTrackPoints(doc);
-    if (points.length < 2) throw new RunParseError();
+    if (points.length < 2) throw new RunParseError("gpx: fewer than 2 track points with time");
 
     const first = points[0];
     const last = points.at(-1);
-    if (first === undefined || last === undefined) throw new RunParseError();
+    if (first === undefined || last === undefined) throw new RunParseError("gpx: track point list was unexpectedly empty");
 
     const durationS = Math.round(
       (last.time.getTime() - first.time.getTime()) / 1000,
     );
     const distanceM = totalDistanceMeters(points);
-    if (durationS <= 0 || distanceM <= 0) throw new RunParseError();
+    if (durationS <= 0 || distanceM <= 0) throw new RunParseError("gpx: non-positive duration or distance");
 
     const parsed = runDraftSchema.safeParse({
       startedAt: Math.floor(first.time.getTime() / 1000),
@@ -124,7 +124,7 @@ export const gpxSource: RunSource = {
       indoor: false,
       title: "Imported run",
     });
-    if (!parsed.success) throw new RunParseError();
+    if (!parsed.success) throw new RunParseError("gpx: assembled draft failed runDraftSchema", { cause: parsed.error });
     return parsed.data;
   },
 };

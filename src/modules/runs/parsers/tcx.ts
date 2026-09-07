@@ -80,19 +80,19 @@ export const tcxSource: RunSource = {
     let text: string;
     try {
       text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    } catch {
-      throw new RunParseError();
+    } catch (error) {
+      throw new RunParseError("tcx: bytes are not valid UTF-8", { cause: error });
     }
 
     let doc: unknown;
     try {
       doc = parser.parse(text);
-    } catch {
-      throw new RunParseError();
+    } catch (error) {
+      throw new RunParseError("tcx: XML parser threw", { cause: error });
     }
 
     const lap = findLap(doc);
-    if (lap === undefined) throw new RunParseError();
+    if (lap === undefined) throw new RunParseError("tcx: no Lap element found");
 
     const startedAtDate = readDate(lap["@_StartTime"]);
     const durationS = readNumber(lap.TotalTimeSeconds);
@@ -103,7 +103,7 @@ export const tcxSource: RunSource = {
       distanceM !== undefined &&
       durationS > 0 &&
       distanceM > 0;
-    if (!hasRequiredTotals) throw new RunParseError();
+    if (!hasRequiredTotals) throw new RunParseError("tcx: lap missing positive TotalTimeSeconds/DistanceMeters");
 
     const position = firstPosition(lap);
 
@@ -115,7 +115,7 @@ export const tcxSource: RunSource = {
       title: "Imported run",
       ...(position && { lat: position.lat, lng: position.lon }),
     });
-    if (!parsed.success) throw new RunParseError();
+    if (!parsed.success) throw new RunParseError("tcx: assembled draft failed runDraftSchema", { cause: parsed.error });
     return parsed.data;
   },
 };

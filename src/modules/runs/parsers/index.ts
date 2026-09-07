@@ -35,7 +35,7 @@ export function extensionFromKey(r2Key: string): ImportExtension {
   const match = /\.([a-z0-9]+)$/i.exec(r2Key);
   const extension = match?.[1]?.toLowerCase();
   if (extension === undefined || !isImportExtension(extension)) {
-    throw new RunParseError();
+    throw new RunParseError(`import: unsupported file extension ${String(extension)}`);
   }
   return extension;
 }

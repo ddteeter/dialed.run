@@ -22,7 +22,7 @@ const SEMICIRCLE_TO_DEGREES = 180 / 2 ** 31;
 function toDate(value: unknown): Date {
   if (value instanceof Date) return value;
   if (typeof value === "number") return Utils.convertDateTimeToDate(value);
-  throw new RunParseError();
+  throw new RunParseError("fit: timestamp field was neither Date nor number");
 }
 
 export const fitSource: RunSource = {
@@ -34,23 +34,23 @@ export const fitSource: RunSource = {
     let stream: Stream;
     try {
       stream = Stream.fromArrayBuffer(bytes);
-    } catch {
-      throw new RunParseError();
+    } catch (error) {
+      throw new RunParseError("fit: bytes are not a readable stream", { cause: error });
     }
     if (!Decoder.isFIT(stream)) {
-      throw new RunParseError();
+      throw new RunParseError("fit: stream failed the FIT magic-byte check");
     }
 
     const decoder = new Decoder(stream);
     let result: ReturnType<typeof decoder.read>;
     try {
       result = decoder.read();
-    } catch {
-      throw new RunParseError();
+    } catch (error) {
+      throw new RunParseError("fit: decoder threw while reading", { cause: error });
     }
     const { messages, errors } = result;
     if (errors.length > 0) {
-      throw new RunParseError();
+      throw new RunParseError(`fit: decoder reported ${String(errors.length)} error(s)`, { cause: errors[0] });
     }
 
     const session = messages.sessionMesgs?.[0];
@@ -60,7 +60,7 @@ export const fitSource: RunSource = {
       session.totalDistance === undefined ||
       session.totalDistance <= 0
     ) {
-      throw new RunParseError();
+      throw new RunParseError("fit: session message missing startTime/elapsed/distance");
     }
 
     const { startPositionLat, startPositionLong } = session;
@@ -82,7 +82,7 @@ export const fitSource: RunSource = {
       ...startPosition,
     });
     if (!parsed.success) {
-      throw new RunParseError();
+      throw new RunParseError("fit: assembled draft failed runDraftSchema", { cause: parsed.error });
     }
     return parsed.data;
   },

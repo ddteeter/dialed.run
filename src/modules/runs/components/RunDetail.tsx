@@ -34,7 +34,7 @@ function ManualTempFallback({ runId }: Readonly<{ runId: string }>) {
         void submit(event);
       }}
     >
-      <Bracketed className="text-pink">UNAVAILABLE</Bracketed>
+      <Bracketed className="text-pink">Unavailable</Bracketed>
       <p className="m-0 text-sm text-night/70">
         We couldn&rsquo;t resolve conditions automatically. You can type a
         temperature — it won&rsquo;t train the model.
@@ -79,7 +79,7 @@ export function RunDetail({ run }: Readonly<{ run: RunRow }>) {
         {(run.distanceM / 1000).toFixed(2)} KM ·{" "}
         {Math.round(run.durationS / 60)} MIN
       </Mono>
-      {isIndoor && <Bracketed className="text-night/60">INDOOR</Bracketed>}
+      {isIndoor && <Bracketed className="text-night/60">Indoor</Bracketed>}
       {requiresManualTemp && <ManualTempFallback runId={run.id} />}
       {/* CTA slot repointed by lane 104 to attach-the-kit (A2). */}
       <div data-slot="attach-kit-cta" />

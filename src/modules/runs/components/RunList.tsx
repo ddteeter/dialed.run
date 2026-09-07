@@ -3,23 +3,27 @@ import { Link } from "@tanstack/react-router";
 import { Bracketed, Mono } from "../../../ui";
 import type { RunRow } from "../service";
 
+/**
+ * Normal case in the source; <Bracketed> uppercases it in CSS, so a screen
+ * reader announces "Conditions attached" rather than spelling it out.
+ */
 function weatherBadge(run: RunRow): string {
-  if (run.indoor) return "INDOOR";
+  if (run.indoor) return "Indoor";
   switch (run.weatherStatus) {
     case "attached": {
-      return "CONDITIONS ATTACHED";
+      return "Conditions attached";
     }
     case "manual": {
-      return "MANUAL TEMP";
+      return "Manual temp";
     }
     case "failed": {
-      return "UNAVAILABLE";
+      return "Unavailable";
     }
     case "pending": {
-      return "PENDING";
+      return "Pending";
     }
     default: {
-      return "NONE";
+      return "None";
     }
   }
 }

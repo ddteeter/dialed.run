@@ -7,10 +7,24 @@
 export const PARSE_FAILURE_MESSAGE =
   "That file didn't parse. Try the original export from your watch.";
 
+/**
+ * `message` is the user-facing copy and never varies. `reason` is the
+ * diagnostic — which of the ~19 ways a file can fail to parse this was —
+ * and `cause` carries the underlying library error where there was one.
+ *
+ * Both exist because the maintainer-facing half used to be thrown away:
+ * every site threw the same argument-less error, so Sentry recorded "That
+ * file didn't parse" nineteen different times with nothing to tell them
+ * apart, and no way to see whether real users were hitting a decoder bug
+ * or just uploading the wrong file. Never surface `reason` to a user.
+ */
 export class RunParseError extends Error {
-  constructor() {
-    super(PARSE_FAILURE_MESSAGE);
+  readonly reason: string;
+
+  constructor(reason: string, options?: { cause?: unknown }) {
+    super(PARSE_FAILURE_MESSAGE, options);
     this.name = "RunParseError";
+    this.reason = reason;
   }
 }
 
