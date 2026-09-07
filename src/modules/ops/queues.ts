@@ -5,6 +5,24 @@ import { handleImportsBatch, handleImportsDlqBatch } from "../runs";
 import { captureException } from "./sentry";
 
 /**
+ * Work queues this worker consumes, and the dead-letter queue each one
+ * retires to. Same contract as the cron registry: test/crons.test.ts
+ * asserts these against wrangler.jsonc, because a consumer the config
+ * never binds is a queue that silently fills up and is never drained.
+ */
+export const queueRegistry = [
+  { queue: "dialed-imports", deadLetterQueue: "dialed-imports-dlq" },
+  { queue: "dialed-enrichment", deadLetterQueue: "dialed-enrichment-dlq" },
+] as const;
+
+/**
+Every queue name the handler below switches on, DLQs included.
+*/
+export const consumedQueueNames: readonly string[] = queueRegistry.flatMap(
+  (entry) => [entry.queue, entry.deadLetterQueue],
+);
+
+/**
  * Queue consumer entry. Phase 0 stubs (000 §10): lane 102 owns the
  * dialed-imports consumer + DLQ user-notification; lane 107 owns
  * dialed-enrichment. Redelivery-safe by construction: stubs only log.
