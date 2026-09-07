@@ -1,14 +1,13 @@
 import {
   createFileRoute,
   Link,
-  redirect,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 
-import { getSession } from "../../modules/auth/functions";
+import { requireSession } from "../../modules/auth/functions";
 import {
   deleteItemFn,
   getItemFn,
@@ -21,10 +20,7 @@ import { Bracketed, Layout, Mono } from "../../ui";
 
 export const Route = createFileRoute("/closet/$itemId")({
   loader: async ({ params }) => {
-    const session = await getSession();
-    if (!session) {
-      redirect({ to: "/auth/login", throw: true });
-    }
+    await requireSession();
     const detail = await getItemFn({ data: { itemId: params.itemId } });
     return { detail };
   },
@@ -99,10 +95,10 @@ function GarmentDetailPage() {
               : item.name}
           </h1>
           {isGeneric ? (
-            <Bracketed className="text-xs">GENERIC</Bracketed>
+            <Bracketed className="text-xs">Generic</Bracketed>
           ) : undefined}
           {item.retired === 1 ? (
-            <Bracketed className="ml-2 text-xs">RETIRED</Bracketed>
+            <Bracketed className="ml-2 text-xs">Retired</Bracketed>
           ) : undefined}
         </div>
 
@@ -115,7 +111,7 @@ function GarmentDetailPage() {
               </Bracketed>
             </>
           ) : (
-            <Bracketed>UNTESTED</Bracketed>
+            <Bracketed>Untested</Bracketed>
           )}
         </p>
 

@@ -1,16 +1,13 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { getSession } from "../../modules/auth/functions";
+import { requireSession } from "../../modules/auth/functions";
 import { ClosetGrid } from "../../modules/closet/components/ClosetGrid";
 import { listItemsFn } from "../../modules/closet/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/")({
   loader: async () => {
-    const session = await getSession();
-    if (!session) {
-      redirect({ to: "/auth/login", throw: true });
-    }
+    await requireSession();
     const listing = await listItemsFn({ data: { includeRetired: true } });
     return { listing };
   },

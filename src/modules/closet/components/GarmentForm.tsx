@@ -7,6 +7,11 @@ import type {
   layerSchema,
   weightSchema,
 } from "../../../lib/contracts";
+import {
+  garmentCategoriesInOrder,
+  hasGarmentAttribute,
+  type GarmentAttributeKey,
+} from "../../../lib/garment-fields";
 import { estimateTempRange } from "../../../lib/thermal";
 import { Bracketed, Mono } from "../../../ui";
 import type { z } from "zod";
@@ -27,89 +32,23 @@ const CATEGORY_LABELS: Record<Category, string> = {
   accessory: "Accessory",
 };
 
-const CATEGORY_ORDER: Category[] = [
-  "top",
-  "bottom",
-  "headwear",
-  "neckwear",
-  "gloves",
-  "socks",
-  "shoes",
-  "accessory",
-];
-
-interface CategoryFields {
-  layer: boolean;
-  weight: boolean;
-  fabric: boolean;
-  windResistant: boolean;
-  waterResistant: boolean;
-}
-
 /**
- * Which attribute inputs a category admits (mirrors the discriminated union
- * in lib/contracts.ts) — the form renders only these below the identity
- * fields, per screen F's "category one tap; attributes collapsed below".
+ * Which attribute inputs a category admits. Derived from `garmentSchema`
+ * via lib/garment-fields — this used to be a hand-written switch mirroring
+ * the union, which meant adding an attribute to a category required
+ * editing the schema, this file, and form-mapping.ts, with no type error
+ * if you missed one.
  */
-function fieldsForCategory(category: Category): CategoryFields {
-  switch (category) {
-    case "top":
-    case "bottom": {
-      return {
-        layer: true,
-        weight: true,
-        fabric: true,
-        windResistant: true,
-        waterResistant: true,
-      };
-    }
-    case "headwear": {
-      return {
-        layer: false,
-        weight: true,
-        fabric: true,
-        windResistant: true,
-        waterResistant: false,
-      };
-    }
-    case "neckwear":
-    case "socks": {
-      return {
-        layer: false,
-        weight: true,
-        fabric: true,
-        windResistant: false,
-        waterResistant: false,
-      };
-    }
-    case "gloves": {
-      return {
-        layer: false,
-        weight: true,
-        fabric: false,
-        windResistant: true,
-        waterResistant: true,
-      };
-    }
-    case "shoes": {
-      return {
-        layer: false,
-        weight: false,
-        fabric: false,
-        windResistant: false,
-        waterResistant: true,
-      };
-    }
-    case "accessory": {
-      return {
-        layer: false,
-        weight: false,
-        fabric: false,
-        windResistant: false,
-        waterResistant: false,
-      };
-    }
-  }
+function fieldsForCategory(
+  category: Category,
+): Record<GarmentAttributeKey, boolean> {
+  return {
+    layer: hasGarmentAttribute(category, "layer"),
+    weight: hasGarmentAttribute(category, "weight"),
+    fabric: hasGarmentAttribute(category, "fabric"),
+    windResistant: hasGarmentAttribute(category, "windResistant"),
+    waterResistant: hasGarmentAttribute(category, "waterResistant"),
+  };
 }
 
 export interface GarmentFormValues {
@@ -235,7 +174,7 @@ export function GarmentForm({
           }}
           className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
         >
-          {CATEGORY_ORDER.map((category) => (
+          {garmentCategoriesInOrder.map((category) => (
             <option key={category} value={category}>
               {CATEGORY_LABELS[category]}
             </option>

@@ -1,7 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import type { Garment } from "../../lib/contracts";
-import { getSession } from "../../modules/auth/functions";
+import { requireSession } from "../../modules/auth/functions";
 import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import {
@@ -17,10 +17,7 @@ import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/edit/$itemId")({
   loader: async ({ params }) => {
-    const session = await getSession();
-    if (!session) {
-      redirect({ to: "/auth/login", throw: true });
-    }
+    await requireSession();
     const detail = await getItemFn({ data: { itemId: params.itemId } });
     return { detail };
   },

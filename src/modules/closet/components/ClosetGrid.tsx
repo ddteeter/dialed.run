@@ -24,7 +24,7 @@ function itemLabel(view: ClosetItemView): string {
 }
 
 function tempLabel(view: ClosetItemView): string {
-  if (!view.tempRange) return "UNTESTED";
+  if (!view.tempRange) return "Untested"; // uppercased by <Bracketed> in CSS
   const low = Math.round(view.tempRange.lowC).toString();
   const high = Math.round(view.tempRange.highC).toString();
   return `${low}–${high}°`;
@@ -97,13 +97,13 @@ export function ClosetGrid({ listing }: Readonly<ClosetGridProps>) {
                       {view.isGeneric ? (
                         <>
                           {" "}
-                          <Bracketed className="text-[10px]">GENERIC</Bracketed>
+                          <Bracketed className="text-[10px]">Generic</Bracketed>
                         </>
                       ) : undefined}
                       {view.item.retired === 1 ? (
                         <>
                           {" "}
-                          <Bracketed className="text-[10px]">RETIRED</Bracketed>
+                          <Bracketed className="text-[10px]">Retired</Bracketed>
                         </>
                       ) : undefined}
                     </span>

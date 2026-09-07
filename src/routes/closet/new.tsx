@@ -1,7 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import type { Garment } from "../../lib/contracts";
-import { getSession } from "../../modules/auth/functions";
+import { requireSession } from "../../modules/auth/functions";
 import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import { createItemFn } from "../../modules/closet/functions";
@@ -14,10 +14,7 @@ import { garmentFromFormValues } from "../../modules/closet/form-mapping";
 
 export const Route = createFileRoute("/closet/new")({
   loader: async () => {
-    const session = await getSession();
-    if (!session) {
-      redirect({ to: "/auth/login", throw: true });
-    }
+    await requireSession();
     return {};
   },
   component: NewGarmentPage,

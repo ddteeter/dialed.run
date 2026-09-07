@@ -3,8 +3,16 @@
  * the discriminated-union Garment the server functions validate against.
  * Lives here (not in the component) so both new.tsx and edit.$itemId.tsx
  * share one mapping.
+ *
+ * This was a switch over all eight categories listing each one's fields by
+ * hand — the third copy of a fact `garmentSchema` already states. It is now
+ * driven by lib/garment-fields, and the result is `parse`d rather than
+ * asserted: CLAUDE.md requires every wardrobe write to go through
+ * `garmentSchema`, and the previous version returned a hand-built object
+ * typed as `Garment` that the schema never actually saw.
  */
-import type { Garment } from "../../lib/contracts";
+import { garmentSchema, type Garment } from "../../lib/contracts";
+import { hasGarmentAttribute } from "../../lib/garment-fields";
 import type { GarmentFormValues } from "./components/GarmentForm";
 import type { EffectiveAttributes, WardrobeItemRow } from "./service";
 
@@ -14,65 +22,36 @@ function optional(value: string): string | undefined {
 }
 
 export function garmentFromFormValues(values: GarmentFormValues): Garment {
-  const identity = {
+  const { category } = values;
+  // Only the attributes this category declares. The union is a
+  // strictObject, so carrying an extra one is a parse error rather than a
+  // field that gets quietly dropped.
+  const attributes: Record<string, unknown> = {};
+  if (hasGarmentAttribute(category, "layer") && values.layer !== "") {
+    attributes.layer = values.layer;
+  }
+  if (hasGarmentAttribute(category, "weight") && values.weight !== "") {
+    attributes.weight = values.weight;
+  }
+  if (hasGarmentAttribute(category, "fabric") && values.fabric !== "") {
+    attributes.fabric = values.fabric;
+  }
+  if (hasGarmentAttribute(category, "windResistant")) {
+    attributes.windResistant = values.windResistant;
+  }
+  if (hasGarmentAttribute(category, "waterResistant")) {
+    attributes.waterResistant = values.waterResistant;
+  }
+
+  return garmentSchema.parse({
     name: values.name.trim(),
     brand: optional(values.brand),
     size: optional(values.size),
     color: optional(values.color),
     productUrl: optional(values.productUrl),
-  };
-  const layer = values.layer === "" ? undefined : values.layer;
-  const weight = values.weight === "" ? undefined : values.weight;
-  const fabric = values.fabric === "" ? undefined : values.fabric;
-
-  switch (values.category) {
-    case "top":
-    case "bottom": {
-      return {
-        ...identity,
-        category: values.category,
-        layer,
-        weight,
-        fabric,
-        windResistant: values.windResistant,
-        waterResistant: values.waterResistant,
-      };
-    }
-    case "headwear": {
-      return {
-        ...identity,
-        category: "headwear",
-        weight,
-        fabric,
-        windResistant: values.windResistant,
-      };
-    }
-    case "neckwear": {
-      return { ...identity, category: "neckwear", weight, fabric };
-    }
-    case "gloves": {
-      return {
-        ...identity,
-        category: "gloves",
-        weight,
-        windResistant: values.windResistant,
-        waterResistant: values.waterResistant,
-      };
-    }
-    case "socks": {
-      return { ...identity, category: "socks", weight, fabric };
-    }
-    case "shoes": {
-      return {
-        ...identity,
-        category: "shoes",
-        waterResistant: values.waterResistant,
-      };
-    }
-    case "accessory": {
-      return { ...identity, category: "accessory" };
-    }
-  }
+    category,
+    ...attributes,
+  });
 }
 
 /**

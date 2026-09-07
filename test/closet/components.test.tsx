@@ -40,7 +40,7 @@ describe("ClosetGrid", () => {
     expect(html).toContain("Add a piece");
   });
 
-  it("renders a brand+model item and a generic item with the [GENERIC] tag", async () => {
+  it("renders a brand+model item and a generic item with the [Generic] tag", async () => {
     const userId = newUlid();
     const client = db();
     // Real rows (not hand-built literals): WardrobeItemRow's nullable
@@ -100,9 +100,14 @@ describe("ClosetGrid", () => {
     const text = html.replaceAll("<!-- -->", "");
     expect(html).toContain("Tracksmith Harrier");
     expect(html).toContain("Long sleeve top");
-    expect(html).toContain("GENERIC");
+    // Bracket tags read in normal case in the markup and are uppercased by
+    // CSS, so the accessible name stays "Generic" rather than being spelled
+    // out letter by letter by a screen reader.
+    expect(html).toContain("Generic");
+    expect(html).not.toContain("GENERIC");
+    expect(html).toContain("uppercase");
     expect(text).toContain("1 of 2");
-    expect(html).toContain("UNTESTED");
+    expect(html).toContain("Untested");
   });
 });
 

@@ -4,29 +4,17 @@
  * TanStack virtual entries.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { env } from "../../env";
 import { httpsUrlSchema } from "../../lib/contracts";
-import { auth } from "../auth";
+import { requireUserId } from "../auth";
 import { resolveProduct, searchBrands } from "./service";
 import { ensureBrandsSeeded } from "./seed-brands";
 
 function db() {
   return drizzle(env.DIALED_CORE);
-}
-
-/**
- * Every products.* function requires a signed-in user — autocomplete and
- * create-if-missing only ever run inside the authenticated add/edit-garment
- * flow.
- */
-async function requireUserId(): Promise<string> {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  if (!session) throw new Error("Sign in required.");
-  return session.user.id;
 }
 
 const brandSearchSchema = z.object({ prefix: z.string().max(60) });

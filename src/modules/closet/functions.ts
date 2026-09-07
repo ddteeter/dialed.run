@@ -4,14 +4,13 @@
  * TanStack virtual entries.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { garmentSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { env } from "../../env";
-import { auth } from "../auth";
+import { requireUserId } from "../auth";
 import {
   uploadItemPhoto,
   validatePhoto,
@@ -31,15 +30,6 @@ import { addFromTapList, tapListSelectionSchema } from "./tap-list";
 
 function db() {
   return drizzle(env.DIALED_CORE);
-}
-
-/**
-Every closet.* function is scoped to the signed-in user (packet §7).
-*/
-async function requireUserId(): Promise<string> {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  if (!session) throw new Error("Sign in required.");
-  return session.user.id;
 }
 
 const filtersSchema = z.object({
