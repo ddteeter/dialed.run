@@ -12,58 +12,76 @@ export interface TempRange {
 }
 
 /**
+Fahrenheit -> Celsius, for the tables below only.
+*/
+function f(lowF: number, highF: number): TempRange {
+  return {
+    lowC: Math.round(((lowF - 32) * 5) / 9),
+    highC: Math.round(((highF - 32) * 5) / 9),
+  };
+}
+
+/**
  * Hand-built thermal defaults (docs/tasks/101 §3): the attribute-derived
  * guess per category × weight, with outer-layer variants for top/bottom.
- * Values are feels-like °C for a steady run; the future call epic replaces
- * these with learned per-user bands. `fabric_composition` is deliberately
- * unused here (noted for the call epic in the packet).
+ * The future call epic replaces these with learned per-user bands;
+ * `fabric_composition` is deliberately unused here (noted in the packet).
+ *
+ * **Written in Fahrenheit, stored in Celsius.** Every value that leaves
+ * this file is °C — the contract fields, the DB columns and the 5°C band
+ * arithmetic are all Celsius, and mixing units in the data is how you get
+ * a class of bug that is very hard to see. But these ~30 numbers are a
+ * human judgement about how warm a mid-weight merino top feels, and they
+ * are reviewed by a US-based owner who can tell at a glance that 55-70°F
+ * is wrong and cannot do the same for 13-21°C. So the literals are the
+ * ones a reviewer can judge, and `f()` converts once at module load.
  */
 const BODY_RANGES: Record<"regular" | "outer", Record<Weight, TempRange>> = {
   regular: {
-    light: { lowC: 13, highC: 26 },
-    mid: { lowC: 4, highC: 15 },
-    heavy: { lowC: -7, highC: 8 },
+    light: f(55, 79),
+    mid: f(39, 59),
+    heavy: f(19, 46),
   },
   outer: {
-    light: { lowC: 6, highC: 16 },
-    mid: { lowC: -4, highC: 10 },
-    heavy: { lowC: -18, highC: 2 },
+    light: f(43, 61),
+    mid: f(25, 50),
+    heavy: f(0, 36),
   },
 };
 
 const BOTTOM_RANGES: Record<"regular" | "outer", Record<Weight, TempRange>> = {
   regular: {
-    light: { lowC: 10, highC: 30 },
-    mid: { lowC: -2, highC: 12 },
-    heavy: { lowC: -15, highC: 4 },
+    light: f(50, 86),
+    mid: f(28, 54),
+    heavy: f(5, 39),
   },
   outer: {
-    light: { lowC: 2, highC: 12 },
-    mid: { lowC: -8, highC: 6 },
-    heavy: { lowC: -20, highC: 0 },
+    light: f(36, 54),
+    mid: f(18, 43),
+    heavy: f(-4, 32),
   },
 };
 
 const ACCESSORY_RANGES: Partial<Record<Category, Record<Weight, TempRange>>> = {
   headwear: {
-    light: { lowC: 4, highC: 14 },
-    mid: { lowC: -6, highC: 6 },
-    heavy: { lowC: -20, highC: -2 },
+    light: f(39, 57),
+    mid: f(21, 43),
+    heavy: f(-4, 28),
   },
   neckwear: {
-    light: { lowC: 0, highC: 10 },
-    mid: { lowC: -10, highC: 4 },
-    heavy: { lowC: -22, highC: -4 },
+    light: f(32, 50),
+    mid: f(14, 39),
+    heavy: f(-8, 25),
   },
   gloves: {
-    light: { lowC: 2, highC: 12 },
-    mid: { lowC: -8, highC: 5 },
-    heavy: { lowC: -22, highC: -5 },
+    light: f(36, 54),
+    mid: f(18, 41),
+    heavy: f(-8, 23),
   },
   socks: {
-    light: { lowC: 8, highC: 30 },
-    mid: { lowC: -4, highC: 12 },
-    heavy: { lowC: -18, highC: 4 },
+    light: f(46, 86),
+    mid: f(25, 54),
+    heavy: f(0, 39),
   },
 };
 

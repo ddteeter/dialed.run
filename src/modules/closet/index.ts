@@ -11,13 +11,10 @@ export type {
   ItemDetail,
   ItemOrigin,
   ItemPerformance,
-  PerformanceBucket,
   PerformanceSummary,
-  UiGroup,
   WardrobeItemRow,
 } from "./service";
 export {
-  computeUiGroup,
   computeUserPerformance,
   createItem,
   deleteOrRetireItem,

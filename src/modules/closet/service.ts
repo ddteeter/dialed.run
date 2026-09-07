@@ -30,8 +30,11 @@ import type {
   fabricSchema,
   Garment,
   layerSchema,
+  PerformanceBucket,
+  UiGroup,
   weightSchema,
 } from "../../lib/contracts";
+import { uiGroupFor } from "../../lib/contracts";
 import { newUlid } from "../../lib/ids";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
@@ -265,37 +268,10 @@ export async function deleteOrRetireItem(
   return { action: "deleted" };
 }
 
-// ---- UI groups (docs/contracts.md derived-group table) --------------------
-
-export type UiGroup =
-  "tops" | "bottoms" | "outer" | "hands_head" | "shoes" | "socks_extras";
-
-export function computeUiGroup(item: {
-  category: WardrobeItemRow["category"];
-  layer: WardrobeItemRow["layer"];
-}): UiGroup {
-  if (item.layer === "outer") return "outer";
-  switch (item.category) {
-    case "top": {
-      return "tops";
-    }
-    case "bottom": {
-      return "bottoms";
-    }
-    case "headwear":
-    case "neckwear":
-    case "gloves": {
-      return "hands_head";
-    }
-    case "shoes": {
-      return "shoes";
-    }
-    case "socks":
-    case "accessory": {
-      return "socks_extras";
-    }
-  }
-}
+// ---- UI groups -----------------------------------------------------------
+//
+// The group table moved to lib/contracts.ts: the feed's kit picker groups by
+// the same table and had written its own copy.
 
 // ---- Product-default merge (docs/contracts.md: garment columns override) --
 
@@ -335,8 +311,7 @@ function effectiveTempRange(
 
 // ---- Performance (D-27 filters; per-item verdict summary) ------------------
 
-export type PerformanceBucket =
-  "most_dialed" | "never_worked" | "untested" | "retire_candidate";
+
 
 export interface PerformanceSummary {
   verdictCount: number;
@@ -593,7 +568,7 @@ function toItemView(
   return {
     item: row,
     isGeneric: row.productId === null,
-    uiGroup: computeUiGroup(row),
+    uiGroup: uiGroupFor(row.category, row.layer),
     effective,
     tempRange: effectiveTempRange(row, effective),
     performance,

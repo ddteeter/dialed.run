@@ -2,7 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Bracketed, Mono } from "../../../ui";
-import type { ClosetItemView, ClosetListing, UiGroup } from "../service";
+import type { UiGroup } from "../../../lib/contracts";
+import type { ClosetItemView, ClosetListing } from "../service";
 
 /**
  * Screen C group order (docs/contracts.md derived-UI-groups table).

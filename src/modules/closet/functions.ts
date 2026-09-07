@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
-import { garmentSchema } from "../../lib/contracts";
+import { garmentSchema, performanceBucketSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { env } from "../../env";
 import { requireUserId } from "../auth";
@@ -49,9 +49,9 @@ const filtersSchema = z.object({
   maxTempC: z.number().optional(),
   windResistant: z.boolean().optional(),
   waterResistant: z.boolean().optional(),
-  performance: z
-    .enum(["most_dialed", "never_worked", "untested", "retire_candidate"])
-    .optional(),
+  // The same four values were a TS union in service.ts and this enum, free
+  // to drift. One list in contracts now; the type derives from it.
+  performance: performanceBucketSchema.optional(),
   includeRetired: z.boolean().optional(),
 });
 
