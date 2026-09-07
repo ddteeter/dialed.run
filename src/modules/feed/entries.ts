@@ -10,7 +10,7 @@
  * the authz *logic* (who may attach to which run, using which items)
  * stays in this module regardless.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { z } from "zod";
 
@@ -157,51 +157,77 @@ async function assertOwnsEntry(
   return entry;
 }
 
+/**
+ * The verdict, its tags and its per-item flags are one user action, so they
+ * land as one D1 batch.
+ *
+ * They used to be a run of separately awaited statements, which is not a
+ * transaction: a failure after the verdict update but before the tag insert
+ * left an entry carrying a new verdict and the previous submission's tags,
+ * with nothing to reconcile it. D1 has no interactive transactions
+ * (CLAUDE.md §D1 query discipline), so `batch()` is the primitive — every
+ * statement commits or none does.
+ *
+ * The entry's item ids still have to be read first: which flags are
+ * legitimate depends on what the entry contains, and a batch cannot branch
+ * on its own results.
+ */
 export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
   const database = db();
   await assertOwnsEntry(input.entryId, input.userId);
-
-  await database
-    .update(outfitEntries)
-    .set({
-      verdict: input.verdict,
-      isPublic: input.isPublic ? 1 : 0,
-      // A clear-to-null update needs a real SQL NULL, not `undefined`
-      // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
-      caption: input.caption ?? sql`NULL`,
-    })
-    .where(eq(outfitEntries.id, input.entryId));
-
-  await database
-    .delete(entryTagsTable)
-    .where(eq(entryTagsTable.entryId, input.entryId));
-  if (input.tags.length > 0) {
-    await database.insert(entryTagsTable).values(
-      input.tags.map((tag) => ({ entryId: input.entryId, tag })),
-    );
-  }
 
   const entryItemRows = await database
     .select({ itemId: outfitEntryItems.itemId })
     .from(outfitEntryItems)
     .where(eq(outfitEntryItems.entryId, input.entryId));
   const entryItemIds = new Set(entryItemRows.map((row) => row.itemId));
+  const applicableFlags = input.itemFlags.filter((itemFlag) =>
+    entryItemIds.has(itemFlag.itemId),
+  );
 
-  for (const itemFlag of input.itemFlags) {
-    if (!entryItemIds.has(itemFlag.itemId)) continue; // not part of this entry — ignore
-    await database
-      .update(outfitEntryItems)
+  const statements = [
+    database
+      .update(outfitEntries)
       .set({
-        flag: itemFlag.flag ?? sql`NULL`,
-        note: itemFlag.note ?? sql`NULL`,
+        verdict: input.verdict,
+        isPublic: input.isPublic ? 1 : 0,
+        // A clear-to-null update needs a real SQL NULL, not `undefined`
+        // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
+        caption: input.caption ?? sql`NULL`,
       })
-      .where(
-        and(
-          eq(outfitEntryItems.entryId, input.entryId),
-          eq(outfitEntryItems.itemId, itemFlag.itemId),
+      .where(eq(outfitEntries.id, input.entryId)),
+    database
+      .delete(entryTagsTable)
+      .where(eq(entryTagsTable.entryId, input.entryId)),
+    ...(input.tags.length > 0
+      ? [
+          database
+            .insert(entryTagsTable)
+            .values(
+              input.tags.map((tag) => ({ entryId: input.entryId, tag })),
+            ),
+        ]
+      : []),
+    ...applicableFlags.map((itemFlag) =>
+      database
+        .update(outfitEntryItems)
+        .set({
+          flag: itemFlag.flag ?? sql`NULL`,
+          note: itemFlag.note ?? sql`NULL`,
+        })
+        .where(
+          and(
+            eq(outfitEntryItems.entryId, input.entryId),
+            eq(outfitEntryItems.itemId, itemFlag.itemId),
+          ),
         ),
-      );
-  }
+    ),
+  ];
+
+  // `batch` needs a non-empty tuple; the first two statements always exist.
+  const [first, ...rest] = statements;
+  if (first === undefined) return;
+  await database.batch([first, ...rest]);
 }
 
 interface OwnEntryRow {
@@ -225,6 +251,11 @@ export async function verdictBandCounts(
   excludeEntryId?: string,
 ): Promise<Record<number, number>> {
   const counts: Record<number, number> = { "-2": 0, "-1": 0, "0": 0, "1": 0, "2": 0 };
+  // Both filters belong in the WHERE clause, and not only to save a scan:
+  // filtering after LIMIT 200 returns "the verdicted rows among the first
+  // 200", not "the first 200 verdicted rows". A user whose 200 most recent
+  // entries are all unverdicted got an all-zero distribution that looked
+  // like real data.
   const own = await db()
     .select({
       id: outfitEntries.id,
@@ -232,11 +263,18 @@ export async function verdictBandCounts(
       verdict: outfitEntries.verdict,
     })
     .from(outfitEntries)
-    .where(eq(outfitEntries.userId, userId))
+    .where(
+      and(
+        eq(outfitEntries.userId, userId),
+        isNotNull(outfitEntries.verdict),
+        excludeEntryId === undefined
+          ? undefined
+          : ne(outfitEntries.id, excludeEntryId),
+      ),
+    )
+    .orderBy(desc(outfitEntries.createdAt))
     .limit(200);
-  const verdicted = own
-    .filter((entry) => entry.id !== excludeEntryId)
-    .filter(hasVerdict);
+  const verdicted = own.filter(hasVerdict);
   if (verdicted.length === 0) return counts;
   const runIds = verdicted.map((entry) => entry.runId);
   const theirRuns = await db()
@@ -263,10 +301,16 @@ export async function itemBandWearStat(
   itemId: string,
   targetBandFloorC: number,
 ): Promise<{ worn: number; total: number }> {
+  // The band filter below genuinely cannot move into SQL: the band comes
+  // from a weather observation in DIALED_WEATHER, and DIALED_CORE cannot
+  // join across databases (CLAUDE.md §D1 query discipline). The ORDER BY
+  // is not decorative — LIMIT without it makes "the 200 rows we looked at"
+  // depend on the query plan.
   const own = await db()
     .select({ id: outfitEntries.id, runId: outfitEntries.runId })
     .from(outfitEntries)
     .where(eq(outfitEntries.userId, userId))
+    .orderBy(desc(outfitEntries.createdAt))
     .limit(200);
   if (own.length === 0) return { worn: 0, total: 0 };
   const ownRunIds = own.map((entry) => entry.runId);

@@ -2,7 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 
-import { entryTags } from "../../lib/contracts";
+import { entryTags, verdictScale } from "../../lib/contracts";
+import {
+  isAllowedPhotoType,
+  maxPhotosPerEntry,
+} from "../../lib/photo-constraints";
 import { bandFloorC } from "../../lib/temperature";
 import { getSession } from "../../modules/auth/functions";
 import {
@@ -14,29 +18,6 @@ import {
 } from "../../modules/feed/functions";
 import { redirectTo } from "../../modules/feed/redirect";
 import { Bracketed, Layout } from "../../ui";
-
-const VERDICT_CHOICES = [
-  { value: -2, label: "Way cold" },
-  { value: -1, label: "A bit cold" },
-  { value: 0, label: "Dialed" },
-  { value: 1, label: "A bit warm" },
-  { value: 2, label: "Way warm" },
-] as const;
-
-// Mirrors modules/feed/photos.ts's ALLOWED_CONTENT_TYPES/MAX_PHOTOS_PER_ENTRY —
-// duplicated rather than imported so this client component never pulls in
-// that server module's D1/env-touching code (functions.ts is the sanctioned
-// server boundary; see its file header).
-const MAX_PHOTOS_PER_ENTRY = 4;
-type AllowedPhotoType = "image/jpeg" | "image/png" | "image/webp";
-const ALLOWED_PHOTO_TYPES: ReadonlySet<string> = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
-function isAllowedPhotoType(value: string): value is AllowedPhotoType {
-  return ALLOWED_PHOTO_TYPES.has(value);
-}
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -91,8 +72,8 @@ function VerdictPage() {
     setUploading(true);
     try {
       for (const file of files) {
-        if (photoKeys.length >= MAX_PHOTOS_PER_ENTRY) {
-          setPhotoError(`Up to ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry.`);
+        if (photoKeys.length >= maxPhotosPerEntry) {
+          setPhotoError(`Up to ${String(maxPhotosPerEntry)} photos per entry.`);
           break;
         }
         if (!isAllowedPhotoType(file.type)) {
@@ -170,7 +151,7 @@ function VerdictPage() {
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
         <h1 className="font-display text-2xl uppercase leading-none">Verdict</h1>
         <div className="flex flex-col gap-2">
-          {VERDICT_CHOICES.map((choice) => (
+          {verdictScale.map((choice) => (
             <button
               key={choice.value}
               type="button"
@@ -227,7 +208,7 @@ function VerdictPage() {
               ))}
             </div>
           ) : undefined}
-          {photoKeys.length < MAX_PHOTOS_PER_ENTRY ? (
+          {photoKeys.length < maxPhotosPerEntry ? (
             <label className="text-sm font-semibold text-pink">
               {uploading ? "Uploading…" : "Add a photo"}
               <input

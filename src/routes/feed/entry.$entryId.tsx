@@ -10,15 +10,8 @@ import {
 } from "../../modules/feed/functions";
 import { redirectTo } from "../../modules/feed/redirect";
 import { formatTemp } from "../../lib/temperature";
+import { verdictLabel } from "../../lib/contracts";
 import { Bracketed, Layout, Mono } from "../../ui";
-
-const VERDICT_LABELS: Record<number, string> = {
-  "-2": "Way cold",
-  "-1": "A bit cold",
-  "0": "Dialed",
-  "1": "A bit warm",
-  "2": "Way warm",
-};
 
 function formatDistance(distanceM: number): string {
   return `${(distanceM / 1609.34).toFixed(1)}mi`;
@@ -96,7 +89,7 @@ function EntryDetailPage() {
           </h1>
           {entry.verdict === undefined ? undefined : (
             <Bracketed className="text-teal">
-              {VERDICT_LABELS[entry.verdict] ?? "Dialed"}
+              {verdictLabel(entry.verdict) ?? "Dialed"}
             </Bracketed>
           )}
         </div>
