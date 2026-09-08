@@ -302,6 +302,15 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   yourself, and do not argue with the gate.
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
+- **Mutation testing is a tool, not a gate.** `npm run mutate` (stryker,
+  scoped to `src/lib`); `stryker` stays `off` in `guardrails.config.json`.
+  Two things to know before running it. It works only because
+  `vitest.config.ts` forwards `__STRYKER_ACTIVE_MUTANT__` into the workers
+  pool as a binding — the pool's `process.env` is the Worker's bindings,
+  not the parent environment, so without that every mutant survives and the
+  score is a meaningless 0.00. And it costs ~11s per mutant, so narrow
+  `mutate` to the file you are working on; narrowing the *command* instead
+  makes uncovered files report 0.00, which looks like a finding.
 - **Commit gate**: knip + dependency-cruiser + `dupes` run at commit. Dead
   code, boundary violations and clones block the commit. Delete dead code;
   don't ignore it.

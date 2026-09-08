@@ -8,6 +8,19 @@ describe("normalizeIdentity", () => {
     expect(normalizeIdentity("ciele  athletics")).toBe("ciele athletics");
   });
 
+  it("replaces a symbol with a space, not nothing", () => {
+    // The distinction only shows when the symbol sits *between* words —
+    // every other test puts it at the end, where trimming hides the
+    // difference. Two brands whose names differ only by a separator must
+    // not collapse onto one canonical row.
+    //
+    // Found by mutation testing: `.replaceAll(/\p{Symbol}/gu, " ")` -> `""`
+    // survived the whole suite.
+    expect(normalizeIdentity("Nike®Air")).toBe("nike air");
+    expect(normalizeIdentity("Nike Air")).toBe("nike air");
+    expect(normalizeIdentity("NikeAir")).toBe("nikeair");
+  });
+
   it("strips diacritics", () => {
     expect(normalizeIdentity("Björn Borg")).toBe("bjorn borg");
   });

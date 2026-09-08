@@ -14,6 +14,16 @@ export default defineConfig(async () => {
           bindings: {
             TEST_MIGRATIONS_CORE: coreMigrations,
             TEST_MIGRATIONS_WEATHER: weatherMigrations,
+            // Stryker activates a mutant by setting this on the child
+            // process, and stryker's instrumented code reads it from
+            // `globalThis.process.env`. Inside the workers pool that object
+            // is not the parent's environment — it is the Worker's
+            // bindings, which is why every mutant otherwise survives. This
+            // config file runs in Node, where the variable *is* visible, so
+            // forwarding it as a binding is what carries it across.
+            ...(process.env.__STRYKER_ACTIVE_MUTANT__ !== undefined && {
+              __STRYKER_ACTIVE_MUTANT__: process.env.__STRYKER_ACTIVE_MUTANT__,
+            }),
           },
         },
       }),

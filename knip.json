@@ -27,8 +27,9 @@
     "test/**/*.{ts,tsx}"
   ],
   "ignoreDependencies": [
-    "tailwindcss",
+    "@stryker-mutator/command-runner",
     "@tailwindcss/typography",
-    "cloudflare"
+    "cloudflare",
+    "tailwindcss"
   ]
 }
