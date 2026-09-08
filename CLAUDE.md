@@ -438,6 +438,20 @@ Dialed must run unattended. These are laws, not suggestions:
     `modules/ops/queues.ts`, and `test/bindings-conformance.test.ts` fails
     CI when the config disagrees. Add to those registries, not to a literal
     at the use site.
+11. **Number your migration for where it will land, not where you are.**
+    Four lanes each generated `0002_*` against a `main` that had none, so
+    the merge produced duplicate journal indexes and a snapshot chain that
+    forked three ways. Nothing failed: the SQL still applied, because
+    `migrations apply` reads filenames and the tables happened to be
+    disjoint. `drizzle-kit generate` is what broke, and it broke for the
+    *next* lane to touch the schema, not the ones that caused it.
+
+    Before generating, `git fetch` and look at what is already on `main`
+    and in the open PRs, then number past all of it. When two branches
+    collide anyway, the merge renumbers the later one — rename the `.sql`
+    and its `meta/*_snapshot.json`, rebuild `_journal.json`, and relink
+    `prevId` so the chain stays linear. `test/migration-chain.test.ts`
+    fails CI on a fork, a gap, a duplicate index, or a tag with no file.
 
 ## Forbidden zones (all lanes)
 

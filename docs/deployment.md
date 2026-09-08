@@ -34,10 +34,19 @@ wrangler d1 migrations apply dialed-core
 wrangler d1 migrations apply dialed-weather
 ```
 
-**Squash first.** The lane branches each added migrations independently and
-two of them rebuild the same table; the history replays correctly but reads
-as though someone changed their mind three times. Squash to a single
-baseline before the first real apply, while there is no data to preserve.
+**Squashing to one baseline is optional, and the reason to do it is
+readability, not correctness.** The eleven core migrations are what four
+lanes actually did: two of them rebuild a table to change an integer into a
+boolean, so the history reads as though someone changed their mind twice.
+They replay correctly in order on an empty database — verified — and the
+snapshot chain is linear, so `drizzle-kit generate` is happy.
+
+If you want the tidier history, the window is now, while there is no data to
+preserve: delete `src/db/migrations/core/`, run
+`npm run db:generate:core -- --name=baseline`, and then **re-add
+`0002_curated_brand_seed.sql` by hand**. That file is data, not schema —
+regenerating from `schema-core.ts` will not reproduce its 50 rows, and
+losing them silently breaks brand autocomplete rather than failing a test.
 
 ## 2. R2 buckets
 
