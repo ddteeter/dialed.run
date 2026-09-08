@@ -20,6 +20,7 @@
 
 const cronRegistry = [
   { schedule: "0 12 * * *", name: "daily-digest" },
+  { schedule: "0 * * * *", name: "weather-retry" },
 ] as const;
 
 export type CronName = (typeof cronRegistry)[number]["name"];

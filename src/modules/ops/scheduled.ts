@@ -1,14 +1,18 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, lt, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
   cronCheckpoints,
   imports,
+  runs,
   stravaRevocations,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
+
+const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
 /**
  * Cron entry (000 §10). Every cron writes its heartbeat row first (the
@@ -27,16 +31,27 @@ export async function handleScheduled(
       set: { lastRunAt: Math.floor(Date.now() / 1000) },
     });
 
-  if (cronName === "daily-digest") {
-    await runDailyDigest();
-  } else {
-    // Config/code skew that the bindings-conformance test should have
-    // caught in CI before it could reach a real schedule.
-    captureException(new Error("unrecognized cron fired"), {
-      cron: controller.cron,
-    });
+  switch (cronName) {
+    case "daily-digest": {
+      await runDailyDigest();
+      break;
+    }
+    case "weather-retry": {
+      // docs/tasks/103-weather.md requirement 4/5: the hourly
+      // pending-observation retry, claim-then-work at the module level.
+      await retryPendingWeather();
+      break;
+    }
+    default: {
+      // Config/code skew that the bindings-conformance test should have
+      // caught in CI before it could reach a real schedule.
+      captureException(new Error("unrecognized cron fired"), {
+        cron: controller.cron,
+      });
+    }
   }
 }
+
 
 /**
  * Reconciliation for the upload path.
@@ -135,15 +150,38 @@ async function redispatchStrandedRevocations(
  */
 async function runDailyDigest(): Promise<void> {
   const anomalies: string[] = [];
+  await checkWeatherBacklog(anomalies);
   await redispatchStrandedRevocations(anomalies);
   await redispatchStalledImports(anomalies);
   // Threshold checks fill in as their features land:
-  // - weather_pending > N for > 24h (lane 103)
   // - failed-import rate (lane 102)
   // - stale cron_checkpoints rows
   if (anomalies.length > 0) {
     captureException(new Error("daily digest anomalies"), {
       anomalies: anomalies.join("; "),
     });
+  }
+}
+
+/**
+ * Lane 103: `weather_failed` is always worth a look (it's a terminal,
+ * capped-retry state); `weather_pending` only past a day is worth a look
+ * (younger ones are still within the hourly retry cron's window). `runs`
+ * has no "entered system" timestamp separate from `started_at`, so that's
+ * the staleness proxy here — same approximation `retryPendingWeather` uses.
+ */
+async function checkWeatherBacklog(anomalies: string[]): Promise<void> {
+  const db = drizzle(env.DIALED_CORE);
+  const staleBefore = Math.floor(Date.now() / 1000) - WEATHER_PENDING_STALE_SECONDS;
+  const stuckPending = and(
+    eq(runs.weatherStatus, "pending"),
+    lt(runs.startedAt, staleBefore),
+  );
+  const stuck = await db
+    .select({ id: runs.id })
+    .from(runs)
+    .where(or(eq(runs.weatherStatus, "failed"), stuckPending));
+  if (stuck.length > 0) {
+    anomalies.push(`weather backlog: ${String(stuck.length)} run(s) failed/stuck pending`);
   }
 }

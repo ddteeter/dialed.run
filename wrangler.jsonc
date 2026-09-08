@@ -93,6 +93,6 @@
   // schedule changed here and not there sends every firing to the `unknown`
   // branch, which is a cron that quietly stops working.
   "triggers": {
-    "crons": ["0 12 * * *"],
+    "crons": ["0 12 * * *", "0 * * * *"],
   },
 }
