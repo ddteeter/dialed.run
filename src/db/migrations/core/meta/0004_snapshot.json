@@ -2,7 +2,7 @@
   "version": "6",
   "dialect": "sqlite",
   "id": "f3f1a7a9-cedc-48d4-adf9-3b5d25c7f552",
-  "prevId": "db70c51b-6851-49fa-83fe-5627615814ae",
+  "prevId": "9dbdd1be-9c25-4405-9a9a-7df0f6cea122",
   "tables": {
     "brands": {
       "name": "brands",
