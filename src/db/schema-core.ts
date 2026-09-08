@@ -24,8 +24,12 @@ export const userProfiles = sqliteTable("user_profiles", {
   thermalLevel: integer("thermal_level"),
   tempUnit: text("temp_unit", { enum: ["f", "c"] }),
   distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
-  shareDefault: integer("share_default").notNull().default(1),
-  onboardingComplete: integer("onboarding_complete").notNull().default(0),
+  shareDefault: integer("share_default", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  onboardingComplete: integer("onboarding_complete", { mode: "boolean" })
+    .notNull()
+    .default(false),
 },
   (t) => [
     // People search is a prefix LIKE on display_name, which SQLite can only
@@ -52,7 +56,7 @@ export const brands = sqliteTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     normalized: text("normalized").notNull(),
-    seeded: integer("seeded").notNull().default(0),
+    seeded: integer("seeded", { mode: "boolean" }).notNull().default(false),
   },
   (t) => [uniqueIndex("brands_normalized").on(t.normalized)],
 );
@@ -233,7 +237,7 @@ export const outfitEntries = sqliteTable(
     runId: text("run_id").notNull(),
     userId: text("user_id").notNull(),
     verdict: integer("verdict"),
-    isPublic: integer("is_public").notNull().default(1),
+    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
     caption: text("caption"),
     createdAt: integer("created_at").notNull(),
   },

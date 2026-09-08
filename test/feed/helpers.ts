@@ -18,7 +18,7 @@ import {
 } from "../../src/db/schema-core";
 import { weatherObservations } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
-import { cacheKeyFor } from "../../src/modules/feed/conditions";
+import { cacheKeyFor } from "../../src/modules/weather";
 import { newUlid } from "../../src/lib/ids";
 
 export const NOW = 1_757_000_000;
@@ -33,7 +33,7 @@ function weatherDb() {
 
 export async function makeUser(overrides?: {
   displayName?: string;
-  shareDefault?: 0 | 1;
+  shareDefault?: boolean;
 }): Promise<string> {
   const userId = newUlid();
   await coreDb()
@@ -41,7 +41,7 @@ export async function makeUser(overrides?: {
     .values({
       userId,
       displayName: overrides?.displayName ?? `runner-${userId.slice(-6)}`,
-      shareDefault: overrides?.shareDefault ?? 1,
+      shareDefault: overrides?.shareDefault ?? true,
     });
   return userId;
 }
@@ -99,7 +99,7 @@ export async function makeItem(params: {
 export async function makeEntry(params: {
   userId: string;
   runId: string;
-  isPublic?: 0 | 1;
+  isPublic?: boolean;
   verdict?: number;
   createdAt?: number;
   itemIds?: string[];
@@ -112,7 +112,7 @@ export async function makeEntry(params: {
       runId: params.runId,
       userId: params.userId,
       verdict: params.verdict,
-      isPublic: params.isPublic ?? 1,
+      isPublic: params.isPublic ?? true,
       createdAt: params.createdAt ?? NOW,
     });
   const itemIds = params.itemIds ?? [];
@@ -153,7 +153,11 @@ export async function makeObservation(params: {
   precipMm?: number;
   source?: "visualcrossing" | "manual";
 }): Promise<void> {
-  const key = cacheKeyFor(params.lat, params.lng, params.startedAt);
+  const key = cacheKeyFor(
+    params.lat,
+    params.lng,
+    new Date(params.startedAt * 1000),
+  );
   await weatherDb()
     .insert(weatherObservations)
     .values({

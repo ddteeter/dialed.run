@@ -85,6 +85,13 @@
       "when": 1788841370424,
       "tag": "0011_garment_type",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788842412690,
+      "tag": "0012_boolean_sharing_and_seed_flags",
+      "breakpoints": true
     }
   ]
 }

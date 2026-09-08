@@ -12,7 +12,7 @@ describe("useful reactions (D-11)", () => {
     const author = await makeUser();
     const reactor = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: 1 });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
 
     expect(await usefulCount(entryId)).toBe(0);
     expect(await toggleUsefulReaction(entryId, reactor)).toEqual({ useful: true });

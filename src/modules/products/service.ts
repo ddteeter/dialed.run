@@ -52,7 +52,7 @@ export async function createOrGetBrand(
   }
   await db
     .insert(brands)
-    .values({ id: newUlid(), name: name.trim(), normalized, seeded: 0 })
+    .values({ id: newUlid(), name: name.trim(), normalized, seeded: false })
     .onConflictDoNothing({ target: brands.normalized });
   const [row] = await db
     .select()

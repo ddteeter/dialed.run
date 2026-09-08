@@ -26,7 +26,7 @@ async function assertVisible(entryId: string, viewerId: string): Promise<void> {
     .where(eq(outfitEntries.id, entryId))
     .limit(1);
   if (!entry) throw new NotVisibleError();
-  if (entry.isPublic !== 1 && entry.userId !== viewerId) throw new NotVisibleError();
+  if (!entry.isPublic && entry.userId !== viewerId) throw new NotVisibleError();
 }
 
 /**

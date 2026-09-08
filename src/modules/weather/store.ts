@@ -46,7 +46,13 @@ function weatherDb() {
   return drizzle(env.DIALED_WEATHER);
 }
 
-function matchesKey(key: CacheKey) {
+/**
+ * The cache-key predicate. Exported because `modules/feed` reads the same
+ * table for its conditions strip and had grown its own copy of both this
+ * and `cacheKeyFor` — two independent definitions of a key that has to
+ * match exactly or every lookup silently returns nothing.
+ */
+export function matchesKey(key: CacheKey) {
   return and(
     eq(weatherObservations.latR, key.latR),
     eq(weatherObservations.lngR, key.lngR),
@@ -71,29 +77,22 @@ export async function findObservationRow(
  * fetch for the same cell already won). Returns the row now at that key —
  * always real once this resolves without throwing.
  */
-export async function upsertRealObservation(
+/**
+ * The upsert both writers share.
+ *
+ * `setWhere` is the load-bearing part: an existing row is only overwritten
+ * when it is `source='manual'`, so a real observation never loses to a
+ * later manual one and a manual one is always replaced by real data. It
+ * was written out twice, and so was the conflict target — which is the
+ * UNIQUE key restated a third time and the thing that silently stops
+ * upserting if the index ever changes.
+ */
+async function upsertObservation(
   key: CacheKey,
-  observation: WeatherObservation,
-  runId: Ulid | undefined,
+  values: typeof weatherObservations.$inferInsert,
+  label: string,
 ): Promise<ObservationRow> {
-  const db = weatherDb();
-  const fetchedAt = Math.floor(Date.now() / 1000);
-  const values = {
-    id: newUlid(),
-    runId,
-    latR: key.latR,
-    lngR: key.lngR,
-    hourBucket: key.hourBucket,
-    tempC: observation.tempC,
-    feelsLikeC: observation.feelsLikeC,
-    humidity: observation.humidity,
-    windKph: observation.windKph,
-    precipMm: observation.precipMm,
-    condition: observation.condition,
-    source: "visualcrossing" as const,
-    fetchedAt,
-  };
-  await db
+  await weatherDb()
     .insert(weatherObservations)
     .values(values)
     .onConflictDoUpdate({
@@ -117,9 +116,33 @@ export async function upsertRealObservation(
     });
   const row = await findObservationRow(key);
   if (!row) {
-    throw new Error("weather observation upsert did not produce a row");
+    throw new Error(`${label} observation upsert did not produce a row`);
   }
   return row;
+}
+
+export async function upsertRealObservation(
+  key: CacheKey,
+  observation: WeatherObservation,
+  runId: Ulid | undefined,
+): Promise<ObservationRow> {
+  const fetchedAt = Math.floor(Date.now() / 1000);
+  const values = {
+    id: newUlid(),
+    runId,
+    latR: key.latR,
+    lngR: key.lngR,
+    hourBucket: key.hourBucket,
+    tempC: observation.tempC,
+    feelsLikeC: observation.feelsLikeC,
+    humidity: observation.humidity,
+    windKph: observation.windKph,
+    precipMm: observation.precipMm,
+    condition: observation.condition,
+    source: "visualcrossing" as const,
+    fetchedAt,
+  };
+  return upsertObservation(key, values, "weather");
 }
 
 /**
@@ -132,7 +155,6 @@ export async function upsertManualObservation(
   tempC: number,
   runId: Ulid,
 ): Promise<ObservationRow> {
-  const db = weatherDb();
   const fetchedAt = Math.floor(Date.now() / 1000);
   const values = {
     id: newUlid(),
@@ -149,29 +171,7 @@ export async function upsertManualObservation(
     source: "manual" as const,
     fetchedAt,
   };
-  await db
-    .insert(weatherObservations)
-    .values(values)
-    .onConflictDoUpdate({
-      target: [
-        weatherObservations.latR,
-        weatherObservations.lngR,
-        weatherObservations.hourBucket,
-      ],
-      set: {
-        runId: values.runId,
-        tempC: values.tempC,
-        feelsLikeC: values.feelsLikeC,
-        source: values.source,
-        fetchedAt: values.fetchedAt,
-      },
-      setWhere: eq(weatherObservations.source, "manual"),
-    });
-  const row = await findObservationRow(key);
-  if (!row) {
-    throw new Error("manual observation upsert did not produce a row");
-  }
-  return row;
+  return upsertObservation(key, values, "manual");
 }
 
 export function toWeatherObservation(row: ObservationRow): WeatherObservation {

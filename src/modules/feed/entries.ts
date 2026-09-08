@@ -30,7 +30,7 @@ import type { entryTags, itemFlagSchema } from "../../lib/contracts";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { observationsForRuns } from "./conditions";
+import { observationsForEntries, observationsForRuns } from "./conditions";
 
 type EntryTag = (typeof entryTags)[number];
 type ItemFlag = z.infer<typeof itemFlagSchema>;
@@ -114,7 +114,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     id: entryId,
     runId: input.runId,
     userId: input.userId,
-    isPublic: profile?.shareDefault ?? 1,
+    isPublic: profile?.shareDefault ?? true,
     createdAt: Math.floor(Date.now() / 1000),
   });
   if (input.itemIds.length > 0) {
@@ -190,7 +190,7 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
       .update(outfitEntries)
       .set({
         verdict: input.verdict,
-        isPublic: input.isPublic ? 1 : 0,
+        isPublic: input.isPublic,
         // A clear-to-null update needs a real SQL NULL, not `undefined`
         // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
         caption: input.caption ?? sql`NULL`,
@@ -276,12 +276,7 @@ export async function verdictBandCounts(
     .limit(200);
   const verdicted = own.filter(hasVerdict);
   if (verdicted.length === 0) return counts;
-  const runIds = verdicted.map((entry) => entry.runId);
-  const ownRuns = await db()
-    .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
-    .from(runs)
-    .where(inArray(runs.id, runIds));
-  const observations = await observationsForRuns(ownRuns);
+  const observations = await observationsForEntries(db(), verdicted);
   for (const entry of verdicted) {
     const observation = observations.get(entry.runId);
     if (!observation) continue;
@@ -313,12 +308,7 @@ export async function itemBandWearStat(
     .orderBy(desc(outfitEntries.createdAt))
     .limit(200);
   if (own.length === 0) return { worn: 0, total: 0 };
-  const ownRunIds = own.map((entry) => entry.runId);
-  const ownRuns = await db()
-    .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
-    .from(runs)
-    .where(inArray(runs.id, ownRunIds));
-  const observations = await observationsForRuns(ownRuns);
+  const observations = await observationsForEntries(db(), own);
   const inBand = own.filter((entry) => {
     const observation = observations.get(entry.runId);
     return observation !== undefined && bandFloorC(observation.feelsLikeC) === targetBandFloorC;
@@ -424,7 +414,7 @@ export async function getEntryDetail(
     .where(eq(outfitEntries.id, entryId))
     .limit(1);
   if (!entry) return undefined;
-  if (entry.isPublic !== 1 && entry.userId !== viewerId) return undefined;
+  if (!entry.isPublic && entry.userId !== viewerId) return undefined;
 
   const [run] = await database
     .select()
@@ -486,7 +476,7 @@ export async function getEntryDetail(
     startedAt: run.startedAt,
     indoor: run.indoor,
     verdict: entry.verdict ?? undefined,
-    isPublic: entry.isPublic === 1,
+    isPublic: entry.isPublic,
     caption: entry.caption ?? undefined,
     createdAt: entry.createdAt,
     items: entryItemRows.map((row) => {

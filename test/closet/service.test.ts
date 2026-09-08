@@ -51,7 +51,7 @@ async function logEntry(
     runId,
     userId,
     verdict,
-    isPublic: 1,
+    isPublic: true,
     createdAt,
   });
   for (const itemId of itemIds) {

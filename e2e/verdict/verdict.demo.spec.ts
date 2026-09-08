@@ -107,7 +107,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
       id: entryId,
       userId: row.id,
       runId,
-      isPublic: 1,
+      isPublic: true,
       createdAt: startedAt,
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });

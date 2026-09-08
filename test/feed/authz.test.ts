@@ -45,7 +45,7 @@ describe("authorization", () => {
     const owner = await makeUser();
     const viewer = await makeUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: 0 });
+    const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
 
     await expect(getEntryDetail(entryId, viewer)).resolves.toBeUndefined();
     await expect(getEntryDetail(entryId, owner)).resolves.toMatchObject({ id: entryId });
@@ -62,10 +62,10 @@ describe("authorization", () => {
     const publicEntry = await makeEntry({
       userId: author,
       runId: publicRun,
-      isPublic: 1,
+      isPublic: true,
       createdAt: NOW,
     });
-    await makeEntry({ userId: author, runId: privateRun, isPublic: 0, createdAt: NOW + 1 });
+    await makeEntry({ userId: author, runId: privateRun, isPublic: false, createdAt: NOW + 1 });
 
     const page = await followingFeed(follower);
     const entryIds = page.items.map((item) => item.entryId);
@@ -77,8 +77,8 @@ describe("authorization", () => {
     const author = await makeUser();
     const publicRun = await makeRun({ userId: author });
     const privateRun = await makeRun({ userId: author });
-    const publicEntry = await makeEntry({ userId: author, runId: publicRun, isPublic: 1 });
-    await makeEntry({ userId: author, runId: privateRun, isPublic: 0 });
+    const publicEntry = await makeEntry({ userId: author, runId: publicRun, isPublic: true });
+    await makeEntry({ userId: author, runId: privateRun, isPublic: false });
 
     const profile = await otherProfile(author);
     const entryIds = profile?.recentPublicEntries.map((e) => e.entryId) ?? [];
@@ -96,7 +96,7 @@ describe("authorization", () => {
     await makeEntry({
       userId: author,
       runId: privateRun,
-      isPublic: 0,
+      isPublic: false,
       createdAt: NOW,
       itemIds: [item],
     });
@@ -114,7 +114,7 @@ describe("authorization", () => {
     const stranger = await makeUser();
     const runId = await makeRun({ userId: owner });
     const item = await makeItem({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: 1, itemIds: [item] });
+    const entryId = await makeEntry({ userId: owner, runId, isPublic: true, itemIds: [item] });
     await submitVerdict({
       userId: owner,
       entryId,

@@ -127,7 +127,7 @@ describe("products: the curated brand seed", () => {
   it("seeded every brand in the curated list", async () => {
     const client = db();
     const rows = await client.select().from(brands);
-    const seeded = rows.filter((row) => row.seeded === 1);
+    const seeded = rows.filter((row) => row.seeded);
     expect(seeded).toHaveLength(CURATED_BRANDS.length);
   });
 
