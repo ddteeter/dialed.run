@@ -104,7 +104,26 @@ never addressed by URL string.
 ## Schema changes (serialized — the one shared resource)
 
 `src/db/schema*.ts` and `src/db/migrations/` are **not owned by any lane**.
-If your task requires a schema change not already in `docs/contracts.md`:
+
+**The protocol exists for concurrent authorship, not for fear of schema
+changes.** Several agents working in parallel worktrees against one
+migrations directory produce histories that cannot be replayed and journal
+conflicts no gate catches. That is the risk being managed — not the change
+itself.
+
+So it applies by what a change *does*, not by the fact that it touches the
+schema:
+
+| change | while lanes run in parallel |
+| --- | --- |
+| **Additive** — a new nullable column, a new index, a new table, a data seed | **Proceed.** Name the migration, say so in the PR description, and carry on. Nothing to ask. |
+| **Destructive** — dropping or renaming a column or table, tightening a constraint, anything not expand-only | **Stop and ask.** These are about deploy ordering (law 8, expand→contract), and pre-launch does not make them safer. |
+| **Contract-shaped** — changing the meaning of an existing field, or anything in `docs/contracts.md` another lane reads | **Stop and ask.** The cost is coordination, not migration. |
+
+If a change is additive *and* another lane is likely to want the same column,
+still say so in the PR — one migration beats four.
+
+When a change does require stopping:
 
 1. STOP implementation of the affected part.
 2. Write the proposed change as a short note in your design doc.
