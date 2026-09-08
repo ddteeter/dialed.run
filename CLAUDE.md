@@ -187,8 +187,29 @@ explicitly says the migration is yours — or the owner has said yes.
   hold across `await`s. `db.batch()` is the atomicity primitive: statements in
   one batch commit together or not at all. A sequence of related writes issued
   as separate awaited statements is not a transaction, and a failure halfway
-  leaves the rows inconsistent. If two or more writes must land together,
-  they go in one `batch()`.
+  leaves the rows inconsistent.
+- **Default to one batch; justify splitting.** The earlier phrasing — "if two
+  or more writes must land together" — left the judgement implicit, and three
+  separate handlers were written against it that should have batched. Invert
+  it: **two writes in one handler go in one `batch()` unless you can say why
+  they are independent.** The tells that they are not:
+  - a write plus the notification, log row or event that records it;
+  - a claim (`INSERT OR IGNORE`, a status-claim `UPDATE`) plus the work it
+    authorises — the worst case, because the claim is what stops a retry, so
+    a gap after it loses the work permanently rather than repeating it;
+  - a delete plus whatever cleans up after it.
+
+  A batch cannot branch on its own results, so a read that decides what to
+  write goes *before* it. That is a reason to reorder, not a reason to split.
+- **A write plus an external call is never atomic — use an outbox.** No
+  transaction spans D1 and a queue, an HTTP API, or R2, and D1 has no CDC to
+  bridge them. Doing them in sequence means a failure between leaves the two
+  systems disagreeing with no record: the invisible kind of broken.
+  Write the *intent* to a table in the same batch as the state change, then
+  dispatch separately and delete the row once the far side confirms. Dispatch
+  becomes a fast path rather than a guarantee, and something scheduled has to
+  re-dispatch what it drops — an outbox nothing drains is a record of good
+  intentions. `strava_revocations` is the worked example.
 
 ## Product rules that are also code rules
 
