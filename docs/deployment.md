@@ -156,7 +156,9 @@ needs its own Strava app, not a second subscription.
   Cloudflare Workers, plus D1 and R2 read/write on this account.
 - **Variable `DEPLOY_ENABLED=true`** — `ci.yml`'s deploy job is gated on it
   and skips otherwise. It is deliberately opt-in so the first deploy is a
-  decision rather than a side effect of a merge.
+  decision rather than a side effect of a merge. The job is also gated on
+  `github.event_name == 'push'`, and `push` only fires for `main`, so no
+  pull request can reach it however it is targeted.
 - **Branch protection on `main`** — already configured (ruleset "main
   protection"): no deletion, no force-push, PR required, and
   `Lint, typecheck, test, build` + `e2e` + `guardrails` must pass. There are
