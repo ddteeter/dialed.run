@@ -302,6 +302,29 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   yourself, and do not argue with the gate.
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
+- **Mutation testing works; it is a tool you run, not a check that runs.**
+  Two switches, and the names collide:
+
+  | | what it is | state |
+  | --- | --- | --- |
+  | `npm run mutate` | stryker over `src/lib`, on demand | **available** |
+  | `"stryker"` in `guardrails.config.json` | whether the *commit gate* runs it on your diff | `off` |
+
+  "stryker is off" means "not in the commit gate", not "unavailable".
+
+  It works because of two lines someone else would spend a day rediscovering.
+  `vitest.config.ts` forwards `__STRYKER_ACTIVE_MUTANT__` into the workers
+  pool as a binding — the pool's `process.env` is the Worker's bindings, not
+  the parent environment, so without it no mutant activates and the score is
+  a meaningless `0.00`. And `assetsInclude: ["**/*.bin"]` lets stryker's own
+  vitest parse the photo fixture; without it the vitest runner dies on
+  startup and you are stuck on the `command` runner, which is 7x slower and
+  reports a false `0.00` for any file its command did not cover.
+
+  Baseline: `src/lib` is **62%** over 316 mutants in 8m42s. 87 survivors,
+  which is a worklist, not a crisis — `contracts.ts` and `temperature.ts`
+  are most of it.
+
 - **Commit gate**: knip + dependency-cruiser + `dupes` run at commit. Dead
   code, boundary violations and clones block the commit. Delete dead code;
   don't ignore it.

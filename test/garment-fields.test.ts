@@ -9,6 +9,10 @@ import {
   garmentFieldSpec,
   garmentTypesFor,
 } from "../src/lib/garment-fields";
+import {
+  climateBands,
+  TAP_LISTS,
+} from "../src/modules/closet/tap-list-data";
 import { ICONS } from "../src/ui/icons";
 
 /**
@@ -116,5 +120,22 @@ describe("garmentFieldSpec", () => {
     expect(
       garmentSchema.safeParse({ name: "T", category: "top" }).success,
     ).toBe(true);
+  });
+  it("gives tap-list garments no type — a row label is not a type", () => {
+    // Design's Z screen: type is a property of the product, written on
+    // match or by enrichment and never by a user. A tap-list save creates a
+    // generic garment with no product, so it has none.
+    //
+    // Pinned because the first version of this *did* set a type per row, on
+    // the reasoning that the row is one. That is the parser design rules
+    // out — "L/S" sitting in free text is not a type, and reading it as one
+    // files "Crew for cold L/S days" wrong, silently, forever.
+    const entries = climateBands.flatMap((band) => TAP_LISTS[band]);
+    for (const entry of entries) {
+      expect(
+        "type" in entry.garment ? entry.garment.type : undefined,
+        `${entry.key} carries a type`,
+      ).toBeUndefined();
+    }
   });
 });

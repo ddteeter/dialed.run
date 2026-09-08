@@ -59,6 +59,40 @@ round (D-26…D-33).
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
 
+## Answered in round 5 (imported 2026-09-08)
+
+**Where a manually-added garment's type comes from** — screens Z/Z1/Z2/Z3,
+and the answer is the first of the three shapes the question offered:
+
+> Type is a property of the product, not of the garment. F never asks for
+> it, nothing parses it out of a name, and a garment that has none is drawn
+> as a garment that has none.
+
+Five instructions came with it, now product rules:
+
+1. `wardrobe_items.type` is a **cache**, written on match and on
+   enrichment, never by a user.
+2. **No parser.** Free text is never mined for a type, on write or on read.
+3. Type filter chips are built from the types **actually present** in a
+   category, never a fixed taxonomy. An all-generic category shows no chips
+   — correct, not broken.
+4. Detail subtitle is `type ?? categoryLabel + " · GENERIC"`. One
+   expression, one slot, no empty space and no em-dash placeholder.
+5. **Type never affects a recommendation.** Category and the learned range
+   do that. Type is for finding things.
+
+The two roads not taken are the useful part, because both were tempting: a
+second one-tap row on F is "cheap to build and expensive every single
+time", and charging a tap for a filter facet inverts F's whole argument
+that identity is the only thing worth one. A parser "works until it
+doesn't, fails invisibly, and can't be corrected by the person looking at
+the wrong answer" — "L/S" in free text is not a type, and reading it as one
+files "Crew for cold L/S days" wrong, silently, forever.
+
+**Still open, by design's own note:** whether a runner can override an
+inherited type when the product record is wrong. Probably yes, from garment
+detail, post-v1 — an edit, not a question at add time.
+
 ## Answered in round 4 (imported 2026-09-07)
 
 Kept as a record of what moved, and where the answer now lives. Implementation

@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+
+  "//": "Run with `npm run mutate`. Scoped to src/lib — the pure modules. Everything else is D1, R2, queues and TanStack, where a surviving mutant usually means 'this line talks to a binding the test replaced', not 'this line is untested'.",
+
+  "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts — without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
+  "testRunner": "vitest",
+
+  "reporters": ["clear-text", "progress"],
+  "concurrency": 4,
+  "timeoutMS": 120000,
+  "incremental": true,
+  "mutate": ["src/lib/**/*.ts"]
+}
