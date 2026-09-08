@@ -190,6 +190,11 @@ export async function recordManualObservation(
     );
   }
   const key = cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000));
+  // Two databases: the observation goes to DIALED_WEATHER, the status to
+  // DIALED_CORE, and batch() does not span them (law 8c). No outbox needed
+  // — `runs.weather_status` is the reconciliation marker, so a failure
+  // between these leaves the run `pending` and the hourly retry cron
+  // re-drives it, finds this cached observation, and sets the status then.
   const row = await upsertManualObservation(key, tempC, runId);
   await setStatus(runId, row.source === "manual" ? "manual" : "attached");
 }
