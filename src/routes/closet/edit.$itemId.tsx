@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import type { Garment } from "../../lib/contracts";
 import { requireSession } from "../../modules/auth/functions";
 import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import {
   formValuesFromItem,
-  garmentFromFormValues,
+  garmentWithResolvedProduct,
 } from "../../modules/closet/form-mapping";
 import { getItemFn, updateItemFn } from "../../modules/closet/functions";
 import {
@@ -33,20 +32,7 @@ function EditGarmentPage() {
   const navigate = useNavigate();
 
   async function handleSubmit(values: GarmentFormValues) {
-    let garment: Garment = garmentFromFormValues(values);
-
-    // See new.tsx for the identical identity-resolution note (enrichment is
-    // deferred until lane 107 merges).
-    if (values.brand.trim() !== "" && values.name.trim() !== "") {
-      const { product } = await resolveProductFn({
-        data: {
-          brandName: values.brand,
-          productName: values.name,
-          sourceUrl: values.productUrl === "" ? undefined : values.productUrl,
-        },
-      });
-      garment = { ...garment, productId: product.id };
-    }
+    const garment = await garmentWithResolvedProduct(values, resolveProductFn);
 
     await updateItemFn({ data: { itemId: detail.item.id, garment } });
     await navigate({

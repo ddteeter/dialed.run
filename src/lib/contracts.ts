@@ -76,6 +76,15 @@ const layered = garmentBase.extend({
  * this column existed has none, and CLAUDE.md law 8 is expand-then-contract.
  * Treat `undefined` as "not known yet", never as a category default.
  */
+/**
+ * A WGS84 coordinate pair, bounded. Written out four times before this —
+ * twice here and twice in `modules/feed/functions.ts` — which is four
+ * places to get a sign or a bound wrong, and no way for them to disagree
+ * loudly.
+ */
+export const latitudeSchema = z.number().min(-90).max(90);
+export const longitudeSchema = z.number().min(-180).max(180);
+
 export const garmentTypesByCategory = {
   // `sportsBra` and `armSleeves` arrived with the Icon Pack marked
   // provisional. They are real tap-list rows on P2 (ARM WARMERS is on the
@@ -350,8 +359,8 @@ export const runDraftSchema = z.object({
   startedAt: z.number().int().positive(),
   durationS: z.number().int().positive(),
   distanceM: z.number().positive(),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
+  lat: latitudeSchema.optional(),
+  lng: longitudeSchema.optional(),
   indoor: z.boolean().default(false),
   effort: effortSchema.optional(),
   title: z.string().min(1).max(120),

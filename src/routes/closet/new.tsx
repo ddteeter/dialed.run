@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import type { Garment } from "../../lib/contracts";
 import { requireSession } from "../../modules/auth/functions";
 import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
@@ -9,8 +8,8 @@ import {
   resolveProductFn,
   searchBrandsFn,
 } from "../../modules/products/functions";
-import { Layout } from "../../ui";
-import { garmentFromFormValues } from "../../modules/closet/form-mapping";
+import { garmentWithResolvedProduct } from "../../modules/closet/form-mapping";
+import { Layout, useIdempotencyKey } from "../../ui";
 
 export const Route = createFileRoute("/closet/new")({
   loader: async () => {
@@ -26,27 +25,15 @@ async function handleBrandInput(prefix: string) {
 
 function NewGarmentPage() {
   const navigate = useNavigate();
+  const { idempotencyKey, rotate } = useIdempotencyKey();
 
   async function handleSubmit(values: GarmentFormValues) {
-    let garment: Garment = garmentFromFormValues(values);
+    const garment = await garmentWithResolvedProduct(values, resolveProductFn);
 
-    // Identity-first (D-27): resolving brand+model links product_id and
-    // pre-fills product attributes the garment's own columns don't set.
-    // Deferred until lane 107 merges: once enrichment lands, a pasted
-    // productUrl should also call enrichment.requestEnrichment(productId,
-    // url) here — saving never waits on it either way.
-    if (values.brand.trim() !== "" && values.name.trim() !== "") {
-      const { product } = await resolveProductFn({
-        data: {
-          brandName: values.brand,
-          productName: values.name,
-          sourceUrl: values.productUrl === "" ? undefined : values.productUrl,
-        },
-      });
-      garment = { ...garment, productId: product.id };
-    }
-
-    const created = await createItemFn({ data: garment });
+    const created = await createItemFn({
+      data: { garment, idempotencyKey },
+    });
+    rotate();
     await navigate({ to: "/closet/$itemId", params: { itemId: created.id } });
   }
 

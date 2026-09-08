@@ -33,7 +33,15 @@
     // The floor for what counts as a clone. Lower finds more and rhymes more;
     // 50 is fallow's default and a reasonable place to start tuning.
     "minTokens": 50,
-    "minLines": 5,
+    // 6, not fallow's default 5, and the difference is exactly one thing:
+    // the smallest possible authenticated server function is five lines --
+    // `createServerFn`, `.validator`, `.handler`, `requireUserId`, one call
+    // -- so `followAction` and `unfollowAction` differ by a single
+    // identifier and cannot be extracted (see CLAUDE.md on why a generic
+    // wrapper does not typecheck). Six is a plateau, not an edge: 6, 7 and
+    // 8 all report the same five groups, and every finding known to be real
+    // survives all of them.
+    "minLines": 6,
     // Raise to 3+ to report only widespread copy-paste and skip pair-only
     // clones.
     "minOccurrences": 2,

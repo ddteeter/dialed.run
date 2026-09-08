@@ -5,7 +5,7 @@
  * this branch yet). Originals only for now; derived sizes follow 101's
  * photon-wasm benchmark rather than duplicating a wasm pipeline here.
  */
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
@@ -33,6 +33,7 @@ export interface UploadPhotoInput {
   entryId: string;
   contentType: string;
   bytes: ArrayBuffer;
+  idempotencyKey?: string | undefined;
 }
 
 export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
@@ -52,6 +53,29 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
   if (!entry) throw new NotFoundError("entry not found");
   if (entry.userId !== input.userId) {
     throw new ForbiddenError("cannot add photos to another user's entry");
+  }
+
+  // A repeat of a submission we already stored returns the key it made
+  // (law 8b). Worth more here than on a plain row insert: without it a
+  // double-submit costs an R2 put as well as a duplicate row, and burns
+  // one of the four photo slots on the same image.
+  //
+  // Matched in SQL against the UNIQUE (entry_id, idempotency_key) index
+  // rather than by scanning the rows fetched below — the index makes it a
+  // seek, and an in-memory `.find` over a capped list is the habit that
+  // breaks the moment the cap moves.
+  if (input.idempotencyKey !== undefined) {
+    const [already] = await database
+      .select({ photoKey: entryPhotos.photoKey })
+      .from(entryPhotos)
+      .where(
+        and(
+          eq(entryPhotos.entryId, input.entryId),
+          eq(entryPhotos.idempotencyKey, input.idempotencyKey),
+        ),
+      )
+      .limit(1);
+    if (already !== undefined) return already.photoKey;
   }
 
   const existing = await database
@@ -78,6 +102,7 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
     entryId: input.entryId,
     photoKey: key,
     position: existing.length,
+    idempotencyKey: input.idempotencyKey,
   });
   return key;
 }

@@ -1,4 +1,4 @@
-# Task 108 — Idempotency audit (post-merge, serialized)
+# Task 108 — Idempotency audit (post-merge, serialized) — **DONE 2026-09-08**
 
 ## Goal
 
@@ -87,3 +87,43 @@ from the lane branches and a path may have moved.
 - Rate limiting. A key stops a *retry* becoming a duplicate; it does not stop
   someone deliberately submitting fifty different runs, which is a different
   problem with a different fix.
+
+---
+
+## Outcome (2026-09-08)
+
+Nine paths audited against the merged tree. The split was roughly even
+between "needs a key" and "already correct, needs a test", which is why
+requirement 1 mattered — three of these would have got a redundant column
+if the list had been worked through without reading the code first.
+
+| # | Path | Result |
+| --- | --- | --- |
+| 1 | `createManualRun` | Already done — the worked example |
+| 2 | Garment create | **Key added.** No natural key existed |
+| 3 | Brand / product create-if-missing | Already idempotent: UNIQUE on the normalised name + `onConflictDoNothing`. Test only |
+| 4 | `attachKit` | Already idempotent by a natural key — `entries_run` is UNIQUE, so the run id *is* the key. **But not atomic**: entry and items were two awaited inserts, and a failure between left a kit with no garments, which renders as an empty entry and cannot be told from a deliberate one. Now one `db.batch()` |
+| 5 | Entry photo upload | **Key added**, scoped to the entry rather than the user — narrower, and needs no denormalised owner column |
+| 6 | Follow | Already idempotent: UNIQUE pair + `onConflictDoNothing`. Test only |
+| 7 | "Useful" reaction | **Deliberately not idempotent** — it is a toggle, and two clicks mean on-then-off. Pinned by a test, because applying the rule blindly here would break the feature |
+| 8 | Profile / onboarding writes | Lane 105 has not built them. Its packet carries the requirement |
+| 9 | File import start | **Key added**, checked before the R2 put so a retry does not re-upload |
+
+One additive migration (`0013_idempotency_keys`), three nullable columns and
+three UNIQUE indexes. Nothing dropped or renamed.
+
+**The client half shipped with it**, per requirement 5 — a key column with no
+form minting a key is decoration. `ui/use-idempotency-key.ts` owns the
+lifetime (mint on mount, carry through retries, rotate after success), and
+the four forms use it rather than each writing their own three lines.
+
+Two things found while doing it, both fixed here:
+
+- `entry_photos` cannot take a `NOT NULL` owner column by `ALTER TABLE`
+  without a default, which is what pushed the photo key to entry scope.
+- The photo idempotency lookup was first written as a `.find()` over rows
+  already fetched. That is the filter-in-SQL law: it is now a seek on the
+  new UNIQUE index.
+
+Task 109 (write-atomicity) still owns the remaining sweep; `attachKit` was
+one of its findings and is closed by the batch above.

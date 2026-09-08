@@ -15,22 +15,24 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const userProfiles = sqliteTable("user_profiles", {
-  userId: text("user_id").primaryKey(),
-  displayName: text("display_name"),
-  cityLabel: text("city_label"),
-  lat: real("lat"),
-  lng: real("lng"),
-  thermalLevel: integer("thermal_level"),
-  tempUnit: text("temp_unit", { enum: ["f", "c"] }),
-  distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
-  shareDefault: integer("share_default", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  onboardingComplete: integer("onboarding_complete", { mode: "boolean" })
-    .notNull()
-    .default(false),
-},
+export const userProfiles = sqliteTable(
+  "user_profiles",
+  {
+    userId: text("user_id").primaryKey(),
+    displayName: text("display_name"),
+    cityLabel: text("city_label"),
+    lat: real("lat"),
+    lng: real("lng"),
+    thermalLevel: integer("thermal_level"),
+    tempUnit: text("temp_unit", { enum: ["f", "c"] }),
+    distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
+    shareDefault: integer("share_default", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    onboardingComplete: integer("onboarding_complete", { mode: "boolean" })
+      .notNull()
+      .default(false),
+  },
   (t) => [
     // People search is a prefix LIKE on display_name, which SQLite can only
     // serve from an index when the index collation matches the comparison.
@@ -178,15 +180,21 @@ export const wardrobeItems = sqliteTable(
     origin: text("origin", { enum: ["manual", "taplist"] })
       .notNull()
       .default("manual"),
-    retired: integer("retired", { mode: "boolean" })
-      .notNull()
-      .default(false),
+    // Client-generated, minted when the form mounts and resent on every
+    // retry of that same submission (law 8b). Nullable: rows created by
+    // anything other than a form have no key and must not be forced to
+    // invent one.
+    idempotencyKey: text("idempotency_key"),
+    retired: integer("retired", { mode: "boolean" }).notNull().default(false),
     visibility: text("visibility").notNull().default("ok"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
     index("wardrobe_user_category").on(t.userId, t.category),
     index("wardrobe_product").on(t.productId),
+    // Scoped to the user, like runs': keys come from the client, so one
+    // account's key must never return another's row.
+    uniqueIndex("wardrobe_idempotency").on(t.userId, t.idempotencyKey),
   ],
 );
 
@@ -268,12 +276,28 @@ export const entryTags = sqliteTable(
   (t) => [uniqueIndex("entry_tags_pk").on(t.entryId, t.tag)],
 );
 
-export const entryPhotos = sqliteTable("entry_photos", {
-  id: text("id").primaryKey(),
-  entryId: text("entry_id").notNull(),
-  photoKey: text("photo_key").notNull(),
-  position: integer("position").notNull(),
-});
+export const entryPhotos = sqliteTable(
+  "entry_photos",
+  {
+    id: text("id").primaryKey(),
+    entryId: text("entry_id").notNull(),
+    photoKey: text("photo_key").notNull(),
+    position: integer("position").notNull(),
+    // Client-generated, minted when the form mounts and resent on every
+    // retry of that same submission (law 8b). Nullable: rows created by
+    // anything other than a form have no key and must not be forced to
+    // invent one.
+    idempotencyKey: text("idempotency_key"),
+  },
+  (t) => [
+    // Scoped to the *entry*, not the user, which is narrower and needs no
+    // denormalised owner column: an entry has exactly one owner, and the
+    // upload path already refuses a caller who does not own it, so two
+    // users cannot reach the same key. Every other key in this schema is
+    // user-scoped because its table has no such parent.
+    uniqueIndex("entry_photos_idempotency").on(t.entryId, t.idempotencyKey),
+  ],
+);
 
 export const follows = sqliteTable(
   "follows",
@@ -321,25 +345,27 @@ export const notifications = sqliteTable(
   ],
 );
 
-export const stravaConnections = sqliteTable("strava_connections", {
-  userId: text("user_id").primaryKey(),
-  athleteId: text("athlete_id").notNull(),
-  accessToken: text("access_token").notNull(),
-  refreshToken: text("refresh_token").notNull(),
-  expiresAt: integer("expires_at").notNull(),
-  status: text("status", { enum: ["ok", "broken"] })
-    .notNull()
-    .default("ok"),
-  // Consecutive refresh failures, and when the current run of them began.
-  // A single unconditional catch used to mark a connection `broken` on any
-  // failure, so one network blip told the user to reconnect a working
-  // account. Both columns are needed, not just the counter: how long three
-  // failures take is entirely a function of how often something calls the
-  // refresh, so the count alone cannot tell a 30-second outage from a real
-  // revocation. Reset to 0/NULL on success.
-  refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
-  refreshFirstFailedAt: integer("refresh_first_failed_at"),
-},
+export const stravaConnections = sqliteTable(
+  "strava_connections",
+  {
+    userId: text("user_id").primaryKey(),
+    athleteId: text("athlete_id").notNull(),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    status: text("status", { enum: ["ok", "broken"] })
+      .notNull()
+      .default("ok"),
+    // Consecutive refresh failures, and when the current run of them began.
+    // A single unconditional catch used to mark a connection `broken` on any
+    // failure, so one network blip told the user to reconnect a working
+    // account. Both columns are needed, not just the counter: how long three
+    // failures take is entirely a function of how often something calls the
+    // refresh, so the count alone cannot tell a 30-second outage from a real
+    // revocation. Reset to 0/NULL on success.
+    refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
+    refreshFirstFailedAt: integer("refresh_first_failed_at"),
+  },
   (t) => [
     // One Strava athlete maps to at most one user. Without this, two
     // accounts could connect the same athlete and the webhook's
@@ -389,16 +415,25 @@ export const cronCheckpoints = sqliteTable("cron_checkpoints", {
   lastRunAt: integer("last_run_at").notNull(),
 });
 
-export const imports = sqliteTable("imports", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  r2Key: text("r2_key").notNull(),
-  status: text("status", {
-    enum: ["pending", "processing", "done", "failed", "duplicate"],
-  })
-    .notNull()
-    .default("pending"),
-  failureReason: text("failure_reason"),
-  runId: text("run_id"),
-  createdAt: integer("created_at").notNull(),
-});
+export const imports = sqliteTable(
+  "imports",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    r2Key: text("r2_key").notNull(),
+    status: text("status", {
+      enum: ["pending", "processing", "done", "failed", "duplicate"],
+    })
+      .notNull()
+      .default("pending"),
+    failureReason: text("failure_reason"),
+    runId: text("run_id"),
+    createdAt: integer("created_at").notNull(),
+    // Client-generated, minted when the form mounts and resent on every
+    // retry of that same submission (law 8b). Nullable: rows created by
+    // anything other than a form have no key and must not be forced to
+    // invent one.
+    idempotencyKey: text("idempotency_key"),
+  },
+  (t) => [uniqueIndex("imports_idempotency").on(t.userId, t.idempotencyKey)],
+);

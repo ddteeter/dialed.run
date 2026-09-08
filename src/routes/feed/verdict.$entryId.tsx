@@ -18,6 +18,7 @@ import {
 } from "../../modules/feed/functions";
 import { redirectTo } from "../../modules/feed/redirect";
 import { Bracketed, Layout } from "../../ui";
+import { newUlid } from "../../lib/ids";
 
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
@@ -82,6 +83,9 @@ function VerdictPage() {
         const upload = new FormData();
         upload.append("entryId", entryId);
         upload.append("photo", file);
+        // One key per file, not per submission: each photo is its own
+        // create, and they are uploaded in a loop.
+        upload.append("idempotencyKey", newUlid());
         const { key } = await uploadPhotoAction({ data: upload });
         setPhotoKeys((prev) => [...prev, key]);
       }
