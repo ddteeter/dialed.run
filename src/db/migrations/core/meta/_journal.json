@@ -99,6 +99,13 @@
       "when": 1788843639076,
       "tag": "0013_idempotency_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1788903475663,
+      "tag": "0014_product_type",
+      "breakpoints": true
     }
   ]
 }

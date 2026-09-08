@@ -59,37 +59,39 @@ round (D-26…D-33).
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
 
-5. **Where does a manually-added garment's type come from?** The one thing
-   the `type` decision left unreconciled, and it is a drawing question, so
-   it belongs here.
+## Answered in round 5 (imported 2026-09-08)
 
-   Design already *uses* the type in two places: A2b filters a category by
-   it (`MOST WORN · LONG SLEEVE · UNTESTED` inside Tops), and garment detail
-   displays it under the product name ("Tracksmith Harrier / LONG SLEEVE
-   HALF-ZIP"). The tap-list collects it, because each row *is* a type.
+**Where a manually-added garment's type comes from** — screens Z/Z1/Z2/Z3,
+and the answer is the first of the three shapes the question offered:
 
-   Nothing collects it anywhere else. Screen F is brand autocomplete + name
-   + a one-tap **category**, and round 4 did not redraw it. So a garment
-   added by hand can be filtered by and displayed with a property it was
-   never asked for.
+> Type is a property of the product, not of the garment. F never asks for
+> it, nothing parses it out of a name, and a garment that has none is drawn
+> as a garment that has none.
 
-   Three shapes the answer could take, and they are not equivalent:
+Five instructions came with it, now product rules:
 
-   - **It belongs to the product, not the garment.** The detail line reads
-     as product identity then product type, and "Tracksmith Harrier" is a
-     long-sleeve half-zip because the *product* is. Enrichment already
-     plans to infer `products.category_hint` from a product page. Under
-     this answer `wardrobe_items.type` is a cache of a product fact and
-     generic garments have none.
-   - **It is derived from the name.** The generic row in A2b reads
-     "[GENERIC] Green L/S Crew" — the type is in the free text. Under this
-     answer nothing is stored and the filter parses.
-   - **F should collect it.** A second one-tap row under category. Cheapest
-     to build, most expensive to the user, and it contradicts F's
-     "identity-first, two taps" framing.
+1. `wardrobe_items.type` is a **cache**, written on match and on
+   enrichment, never by a user.
+2. **No parser.** Free text is never mined for a type, on write or on read.
+3. Type filter chips are built from the types **actually present** in a
+   category, never a fixed taxonomy. An all-generic category shows no chips
+   — correct, not broken.
+4. Detail subtitle is `type ?? categoryLabel + " · GENERIC"`. One
+   expression, one slot, no empty space and no em-dash placeholder.
+5. **Type never affects a recommendation.** Category and the learned range
+   do that. Type is for finding things.
 
-   We have shipped the column as nullable, which survives all three. The
-   question is what fills it for a manual add.
+The two roads not taken are the useful part, because both were tempting: a
+second one-tap row on F is "cheap to build and expensive every single
+time", and charging a tap for a filter facet inverts F's whole argument
+that identity is the only thing worth one. A parser "works until it
+doesn't, fails invisibly, and can't be corrected by the person looking at
+the wrong answer" — "L/S" in free text is not a type, and reading it as one
+files "Crew for cold L/S days" wrong, silently, forever.
+
+**Still open, by design's own note:** whether a runner can override an
+inherited type when the product record is wrong. Probably yes, from garment
+detail, post-v1 — an edit, not a question at add time.
 
 ## Answered in round 4 (imported 2026-09-07)
 

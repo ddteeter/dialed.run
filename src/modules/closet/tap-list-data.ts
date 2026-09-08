@@ -31,26 +31,31 @@ function entry(key: string, garment: Garment): TapListEntry {
 }
 
 /**
- * Every entry carries a `type`, because the tap-list is the one place we
- * always know it — the row *is* the type. That is what lets onboarding draw
- * a glyph per row without a lookup table (`<Icon name={garment.type}>`).
+ * No entry carries a `type`, and the row label is not one.
  *
- * The key is not the type and must not be treated as one: `mild-long-sleeve`
- * is a quarter-zip, so it is `halfZip`. Deriving the glyph from the key
- * would have been wrong on the first row that tried it.
+ * The first version set one per row, on the reasoning that a tap-list row
+ * *is* a type. Design's Z screen says otherwise and is right: type is a
+ * property of the **product**, written on match or by enrichment, and a
+ * tap-list save creates a generic garment with no product. "Long sleeve
+ * base layer" is a label for a thing to tap, the same way "Green L/S Crew"
+ * is a name someone typed — reading either as a type is the parser design
+ * rules out, which "fails invisibly and can't be corrected by the person
+ * looking at the wrong answer".
+ *
+ * These pieces gain a type the moment the runner names one (P2.5), which
+ * is the second thing naming buys and the one they can see immediately —
+ * the piece appears in a filter it was invisible to a moment ago.
  */
 export const TAP_LISTS: Record<ClimateBand, readonly TapListEntry[]> = {
   cold: [
     entry("cold-base-top", {
       category: "top",
-      type: "longSleeve",
       name: "Long sleeve base layer",
       layer: "base",
       weight: "mid",
     }),
     entry("cold-outer-top", {
       category: "top",
-      type: "jacket",
       name: "Wind jacket",
       layer: "outer",
       weight: "light",
@@ -58,20 +63,17 @@ export const TAP_LISTS: Record<ClimateBand, readonly TapListEntry[]> = {
     }),
     entry("cold-tights", {
       category: "bottom",
-      type: "tights",
       name: "Running tights",
       layer: "base",
       weight: "mid",
     }),
     entry("cold-gloves", {
       category: "gloves",
-      type: "gloves",
       name: "Running gloves",
       weight: "mid",
     }),
     entry("cold-beanie", {
       category: "headwear",
-      type: "beanie",
       name: "Beanie",
       weight: "mid",
     }),
@@ -79,34 +81,29 @@ export const TAP_LISTS: Record<ClimateBand, readonly TapListEntry[]> = {
   mild: [
     entry("mild-tee", {
       category: "top",
-      type: "tee",
       name: "Short sleeve tee",
       layer: "base",
       weight: "light",
     }),
     entry("mild-long-sleeve", {
       category: "top",
-      type: "halfZip",
       name: "Long sleeve quarter-zip",
       layer: "mid",
       weight: "mid",
     }),
     entry("mild-shorts", {
       category: "bottom",
-      type: "shorts",
       name: "Running shorts",
       layer: "base",
       weight: "light",
     }),
     entry("mild-socks", {
       category: "socks",
-      type: "socks",
       name: "Running socks",
       weight: "mid",
     }),
     entry("mild-cap", {
       category: "headwear",
-      type: "cap",
       name: "Running cap",
       weight: "light",
     }),
@@ -114,33 +111,28 @@ export const TAP_LISTS: Record<ClimateBand, readonly TapListEntry[]> = {
   hot: [
     entry("hot-singlet", {
       category: "top",
-      type: "singlet",
       name: "Singlet",
       layer: "base",
       weight: "light",
     }),
     entry("hot-shorts", {
       category: "bottom",
-      type: "shorts",
       name: "Split shorts",
       layer: "base",
       weight: "light",
     }),
     entry("hot-socks", {
       category: "socks",
-      type: "socks",
       name: "No-show socks",
       weight: "light",
     }),
     entry("hot-cap", {
       category: "headwear",
-      type: "cap",
       name: "Running cap",
       weight: "light",
     }),
     entry("hot-sunglasses", {
       category: "accessory",
-      type: "sunglasses",
       name: "Running sunglasses",
     }),
   ],
