@@ -255,6 +255,28 @@ Building it is fine — inventing design language is not:
   **"Design deltas"** heading, so the reviewer can kick them to the design
   agent instead of discovering them in a demo video.
 
+## Forms use the primitives, always
+
+`docs/product.md` §Forms & failure is the contract and `ui/form.tsx` +
+`ui/use-form-submit.ts` are the implementation. A form that hand-rolls any
+of `useFormSubmit`, `FormField`, `TextField`, `FormStatus`,
+`FormErrorSummary`, `FormFailureBand` or `SubmitButton` is a review
+failure — that is the contract's own wording, and it exists because four
+lanes shipped four answers to "the save failed".
+
+The three that are easiest to get wrong, and were all wrong before this:
+
+- **Never the `disabled` attribute on a submit button.** It drops focus and
+  stops announcing. `aria-disabled` + `aria-busy`, and the double-submit
+  guard lives in the handler.
+- **Pink is action, never failure.** A field error is marked by border
+  weight and a hi-viz band, never by hue alone, and nothing in the failure
+  path animates.
+- **Error copy lives in the schema**, in zod's `message`. A component
+  authoring its own sentence is the same problem one layer down. A
+  hand-written client rule (`if (!email.includes("@"))`) is a bug: add it to
+  the schema, which both sides already share.
+
 ## Review comments are change requests
 
 **A comment on your PR is a request to change the code, not to discuss it.**

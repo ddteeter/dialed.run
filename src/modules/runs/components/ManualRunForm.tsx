@@ -1,11 +1,19 @@
-import { RETRY_SAVE } from "../../../lib/copy";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
 
 import type { effortSchema } from "../../../lib/contracts";
-import { useIdempotencyKey } from "../../../ui";
-import { submitManualRun } from "../functions";
+import {
+  FormErrorSummary,
+  FormFailureBand,
+  FormField,
+  FormStatus,
+  SubmitButton,
+  TextField,
+  useFormSubmit,
+  useIdempotencyKey,
+} from "../../../ui";
+import { manualRunInput, submitManualRun } from "../functions";
 
 type Effort = z.infer<typeof effortSchema>;
 
@@ -15,9 +23,22 @@ function isEffort(value: string): value is Effort {
   return (EFFORTS as readonly string[]).includes(value);
 }
 
+/**
+ * `datetime-local` gives a string with no zone; the schema wants epoch
+ * seconds. An empty or unparseable value becomes NaN, which the schema
+ * rejects with its own sentence — so there is no hand-written client rule
+ * here, which the contract forbids outright.
+ */
 function toEpochSeconds(localDateTime: string): number {
   return Math.floor(new Date(localDateTime).getTime() / 1000);
 }
+
+const LABELS = {
+  title: "Title",
+  startedAt: "Started",
+  durationS: "Minutes",
+  distanceM: "Distance (km)",
+};
 
 export function ManualRunForm() {
   const navigate = useNavigate();
@@ -27,21 +48,27 @@ export function ManualRunForm() {
   const [distanceKm, setDistanceKm] = useState("5");
   const [indoor, setIndoor] = useState(false);
   const [effort, setEffort] = useState<Effort | "">("");
-  const [error, setError] = useState<string | undefined>();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { idempotencyKey, rotate } = useIdempotencyKey();
 
-  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(undefined);
-    if (startedAt === "") {
-      setError("When did you run?");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const created = await submitManualRun({
-        data: {
+  const form = useFormSubmit({
+    schema: manualRunInput,
+    action: async (values) => submitManualRun({ data: values }),
+    successMessage: "Run logged.",
+    labels: LABELS,
+    onSuccess: async (created) => {
+      rotate();
+      await navigate({ to: "/runs/$runId", params: { runId: created.id } });
+    },
+  });
+
+  return (
+    <form
+      ref={form.formRef}
+      noValidate
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.submit({
           title,
           startedAt: toEpochSeconds(startedAt),
           durationS: Math.round(Number(minutes) * 60),
@@ -49,93 +76,105 @@ export function ManualRunForm() {
           indoor,
           idempotencyKey,
           ...(effort !== "" && { effort }),
-        },
-      });
-      rotate();
-      await navigate({ to: "/runs/$runId", params: { runId: created.id } });
-    } catch {
-      setError(RETRY_SAVE);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        void submit(event);
+        });
       }}
     >
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Title
+      <FormStatus>{form.status}</FormStatus>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
+      <TextField
+        name="title"
+        label={LABELS.title}
+        value={title}
+        onChange={setTitle}
+        field={form.field}
+        error={form.fieldErrors.title}
+      />
+      <FormField
+        name="startedAt"
+        label={LABELS.startedAt}
+        error={form.fieldErrors.startedAt}
+      >
         <input
-          value={title}
-          onChange={(event) => {
-            setTitle(event.target.value);
-          }}
-          required
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Started
-        <input
+          {...form.field("startedAt")}
+          id="startedAt"
           type="datetime-local"
           value={startedAt}
           onChange={(event) => {
             setStartedAt(event.target.value);
           }}
-          required
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
+          className="w-full border-none bg-transparent outline-none"
         />
-      </label>
+      </FormField>
       <div className="flex gap-4">
-        <label className="flex flex-1 flex-col gap-1 text-sm font-semibold">
-          Minutes
-          <input
-            type="number"
-            min="1"
-            value={minutes}
-            onChange={(event) => {
-              setMinutes(event.target.value);
-            }}
-            className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-          />
-        </label>
-        <label className="flex flex-1 flex-col gap-1 text-sm font-semibold">
-          Distance (km)
-          <input
-            type="number"
-            min="0.1"
-            step="0.01"
-            value={distanceKm}
-            onChange={(event) => {
-              setDistanceKm(event.target.value);
-            }}
-            className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-          />
-        </label>
+        <div className="flex-1">
+          <FormField
+            name="durationS"
+            label={LABELS.durationS}
+            error={form.fieldErrors.durationS}
+          >
+            <input
+              {...form.field("durationS")}
+              id="durationS"
+              type="number"
+              min="1"
+              value={minutes}
+              onChange={(event) => {
+                setMinutes(event.target.value);
+              }}
+              className="w-full border-none bg-transparent outline-none"
+            />
+          </FormField>
+        </div>
+        <div className="flex-1">
+          <FormField
+            name="distanceM"
+            label={LABELS.distanceM}
+            error={form.fieldErrors.distanceM}
+          >
+            <input
+              {...form.field("distanceM")}
+              id="distanceM"
+              type="number"
+              min="0.1"
+              step="0.01"
+              value={distanceKm}
+              onChange={(event) => {
+                setDistanceKm(event.target.value);
+              }}
+              className="w-full border-none bg-transparent outline-none"
+            />
+          </FormField>
+        </div>
       </div>
       <label className="flex items-center gap-2 text-sm font-semibold">
         <input
           type="checkbox"
           checked={indoor}
+          readOnly={form.pending}
           onChange={(event) => {
             setIndoor(event.target.checked);
           }}
         />
         Indoor / treadmill
       </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Effort (optional)
+      <FormField
+        name="effort"
+        label="Effort (optional)"
+        error={form.fieldErrors.effort}
+      >
         <select
+          {...form.field("effort")}
+          id="effort"
           value={effort}
           onChange={(event) => {
             const { value } = event.target;
             setEffort(value === "" || isEffort(value) ? value : "");
           }}
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
+          className="w-full border-none bg-transparent outline-none"
         >
           <option value="">Not set</option>
           {EFFORTS.map((value) => (
@@ -144,17 +183,17 @@ export function ManualRunForm() {
             </option>
           ))}
         </select>
-      </label>
-      {error === undefined ? undefined : (
-        <p className="text-sm font-semibold text-pink">{error}</p>
-      )}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-md bg-night px-4 py-2 font-semibold text-chalk disabled:opacity-50"
-      >
-        Log the run
-      </button>
+      </FormField>
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        label="Log run"
+        pendingLabel="Logging"
+        pending={form.pending}
+      />
     </form>
   );
 }

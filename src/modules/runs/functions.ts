@@ -34,7 +34,7 @@ import {
   stravaAuthorizeUrl,
 } from "./strava/oauth";
 
-const manualRunInput = runDraftSchema.extend({
+export const manualRunInput = runDraftSchema.extend({
   // Minted once when the form mounts, resent on every retry of that same
   // composed submission.
   idempotencyKey: ulidSchema.optional(),
