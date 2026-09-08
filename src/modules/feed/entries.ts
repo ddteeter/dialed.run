@@ -484,7 +484,7 @@ export async function getEntryDetail(
     distanceM: run.distanceM,
     durationS: run.durationS,
     startedAt: run.startedAt,
-    indoor: run.indoor === 1,
+    indoor: run.indoor,
     verdict: entry.verdict ?? undefined,
     isPublic: entry.isPublic === 1,
     caption: entry.caption ?? undefined,

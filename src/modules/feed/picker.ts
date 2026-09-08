@@ -40,7 +40,7 @@ export async function pickerGroups(
   const items = await database
     .select()
     .from(wardrobeItems)
-    .where(and(eq(wardrobeItems.userId, userId), eq(wardrobeItems.retired, 0)));
+    .where(and(eq(wardrobeItems.userId, userId), eq(wardrobeItems.retired, false)));
 
   const byGroup = new Map<UiGroup, PickerItem[]>();
   for (const item of items) {

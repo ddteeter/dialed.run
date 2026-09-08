@@ -98,7 +98,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
       durationS: 2700,
       distanceM: 8000,
       source: "manual",
-      indoor: 0,
+      indoor: false,
       weatherStatus: "attached",
       lat: latR,
       lng: lngR,

@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getRequestHeaders } from "@tanstack/react-start/server";
-
-import { auth } from "../../modules/auth";
+import { optionalUserId } from "../../modules/auth";
 import { getPhotoObject, isPhotoVisible } from "../../modules/feed/photos";
 
 /**
@@ -16,8 +14,7 @@ export const Route = createFileRoute("/feed/photo/$")({
       GET: async ({ params }) => {
         const key = params._splat;
         if (!key) return new Response("not found", { status: 404 });
-        const session = await auth.api.getSession({ headers: getRequestHeaders() });
-        const viewerId = session?.user.id;
+        const viewerId = await optionalUserId();
         const isVisible = await isPhotoVisible(key, viewerId);
         if (!isVisible) return new Response("not found", { status: 404 });
         const object = await getPhotoObject(key);

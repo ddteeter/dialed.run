@@ -59,10 +59,23 @@ databases and cannot be joined. Comment it when that's the reason.
 
 ## 4. Do these writes need to land together?
 
+Ask it the other way round: **can you say why they are independent?** If not,
+one `batch()`. And if one of the writes is a claim, or a call to something
+outside D1, re-read CLAUDE.md §D1 query discipline before deciding — those
+are the two shapes that fail invisibly.
+
 D1 has no interactive transactions. A run of awaited `insert`/`update`
 statements is not atomic, and a failure halfway through leaves a half-written
 entity. If two or more writes must be all-or-nothing, they belong in one
 `db.batch()`.
+
+## 5a. Can this form be submitted twice?
+
+If your change adds a server function that creates a row from a form, it
+needs an idempotency key (CLAUDE.md law 8b). Ask it of every *existing*
+create path you touch, too — the audit is not done, and a form without one
+produces duplicate rows on exactly the flaky connections where a user is
+most likely to retry.
 
 ## 5. What happens on the second delivery?
 

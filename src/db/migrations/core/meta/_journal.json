@@ -19,8 +19,64 @@
     {
       "idx": 2,
       "version": "6",
+      "when": 1788634133806,
+      "tag": "0002_curated_brand_seed",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788822867651,
+      "tag": "0003_boolean_garment_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788805779349,
+      "tag": "0004_strava_refresh_failure_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788806994690,
+      "tag": "0005_nullable_notification_subject",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788807686839,
+      "tag": "0006_boolean_indoor_and_read_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788810849005,
+      "tag": "0007_unique_strava_athlete",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788813387787,
+      "tag": "0008_run_idempotency_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788827875192,
+      "tag": "0009_strava_revocation_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
       "when": 1788803758599,
-      "tag": "0002_display_name_search_index",
+      "tag": "0010_display_name_search_index",
       "breakpoints": true
     }
   ]

@@ -70,7 +70,7 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
   // between two calls and the cost is storage, not correctness.
   const photoId = newUlid();
   const key = photoKeyFor(input.userId, input.entryId, photoId);
-  await env.PHOTOS.put(key, input.bytes, {
+  await env.MEDIA.put(key, input.bytes, {
     httpMetadata: { contentType: input.contentType },
   });
   await database.insert(entryPhotos).values({
@@ -109,5 +109,5 @@ export async function isPhotoVisible(
 }
 
 export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {
-  return env.PHOTOS.get(photoKey);
+  return env.MEDIA.get(photoKey);
 }

@@ -11,17 +11,31 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as ClosetIndexRouteImport } from './routes/closet/index'
+import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
+import { Route as ClosetNewRouteImport } from './routes/closet/new'
 import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
+import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
+import { Route as RunsIndexRouteImport } from './routes/runs/index'
+import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
+import { Route as RunsManualRouteImport } from './routes/runs/manual'
+import { Route as RunsNewRouteImport } from './routes/runs/new'
+import { Route as RunsStravaRouteImport } from './routes/runs/strava'
+import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
 import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entryId'
 import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
 import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
 import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
+import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
+import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,6 +47,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStravaRoute = ApiStravaRouteImport.update({
+  id: '/api/strava',
+  path: '/api/strava',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -41,6 +60,21 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/auth/signup',
   path: '/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetIndexRoute = ClosetIndexRouteImport.update({
+  id: '/closet/',
+  path: '/closet/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetItemIdRoute = ClosetItemIdRouteImport.update({
+  id: '/closet/$itemId',
+  path: '/closet/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetNewRoute = ClosetNewRouteImport.update({
+  id: '/closet/new',
+  path: '/closet/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedIndexRoute = FeedIndexRouteImport.update({
@@ -58,9 +92,49 @@ const FeedSearchRoute = FeedSearchRouteImport.update({
   path: '/feed/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
+  id: '/notifications/',
+  path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsIndexRoute = RunsIndexRouteImport.update({
+  id: '/runs/',
+  path: '/runs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsRunIdRoute = RunsRunIdRouteImport.update({
+  id: '/runs/$runId',
+  path: '/runs/$runId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsManualRoute = RunsManualRouteImport.update({
+  id: '/runs/manual',
+  path: '/runs/manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsNewRoute = RunsNewRouteImport.update({
+  id: '/runs/new',
+  path: '/runs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsStravaRoute = RunsStravaRouteImport.update({
+  id: '/runs/strava',
+  path: '/runs/strava',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsStravaCallbackRoute = RunsStravaCallbackRouteImport.update({
+  id: '/runs/strava-callback',
+  path: '/runs/strava-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetEditItemIdRoute = ClosetEditItemIdRouteImport.update({
+  id: '/closet/edit/$itemId',
+  path: '/closet/edit/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedAttachRunIdRoute = FeedAttachRunIdRouteImport.update({
@@ -88,115 +162,223 @@ const FeedVerdictEntryIdRoute = FeedVerdictEntryIdRouteImport.update({
   path: '/feed/verdict/$entryId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
+  id: '/runs/import/$importId',
+  path: '/runs/import/$importId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
+  id: '/closet/photo/$itemId/$size',
+  path: '/closet/photo/$itemId/$size',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/closet/$itemId': typeof ClosetItemIdRoute
+  '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/manual': typeof RunsManualRoute
+  '/runs/new': typeof RunsNewRoute
+  '/runs/strava': typeof RunsStravaRoute
+  '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
+  '/notifications/': typeof NotificationsIndexRoute
+  '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/closet/$itemId': typeof ClosetItemIdRoute
+  '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/manual': typeof RunsManualRoute
+  '/runs/new': typeof RunsNewRoute
+  '/runs/strava': typeof RunsStravaRoute
+  '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/closet': typeof ClosetIndexRoute
   '/feed': typeof FeedIndexRoute
+  '/notifications': typeof NotificationsIndexRoute
+  '/runs': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/closet/$itemId': typeof ClosetItemIdRoute
+  '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/manual': typeof RunsManualRoute
+  '/runs/new': typeof RunsNewRoute
+  '/runs/strava': typeof RunsStravaRoute
+  '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
+  '/notifications/': typeof NotificationsIndexRoute
+  '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/api/health'
+    | '/api/strava'
     | '/auth/login'
     | '/auth/signup'
+    | '/closet/$itemId'
+    | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/runs/$runId'
+    | '/runs/manual'
+    | '/runs/new'
+    | '/runs/strava'
+    | '/runs/strava-callback'
+    | '/closet/'
     | '/feed/'
+    | '/notifications/'
+    | '/runs/'
     | '/api/auth/$'
+    | '/closet/edit/$itemId'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/runs/import/$importId'
+    | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/health'
+    | '/api/strava'
     | '/auth/login'
     | '/auth/signup'
+    | '/closet/$itemId'
+    | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/runs/$runId'
+    | '/runs/manual'
+    | '/runs/new'
+    | '/runs/strava'
+    | '/runs/strava-callback'
+    | '/closet'
     | '/feed'
+    | '/notifications'
+    | '/runs'
     | '/api/auth/$'
+    | '/closet/edit/$itemId'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/runs/import/$importId'
+    | '/closet/photo/$itemId/$size'
   id:
     | '__root__'
     | '/'
     | '/api/health'
+    | '/api/strava'
     | '/auth/login'
     | '/auth/signup'
+    | '/closet/$itemId'
+    | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/runs/$runId'
+    | '/runs/manual'
+    | '/runs/new'
+    | '/runs/strava'
+    | '/runs/strava-callback'
+    | '/closet/'
     | '/feed/'
+    | '/notifications/'
+    | '/runs/'
     | '/api/auth/$'
+    | '/closet/edit/$itemId'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/runs/import/$importId'
+    | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiStravaRoute: typeof ApiStravaRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  ClosetItemIdRoute: typeof ClosetItemIdRoute
+  ClosetNewRoute: typeof ClosetNewRoute
   FeedMeRoute: typeof FeedMeRoute
   FeedSearchRoute: typeof FeedSearchRoute
+  RunsRunIdRoute: typeof RunsRunIdRoute
+  RunsManualRoute: typeof RunsManualRoute
+  RunsNewRoute: typeof RunsNewRoute
+  RunsStravaRoute: typeof RunsStravaRoute
+  RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  ClosetIndexRoute: typeof ClosetIndexRoute
   FeedIndexRoute: typeof FeedIndexRoute
+  NotificationsIndexRoute: typeof NotificationsIndexRoute
+  RunsIndexRoute: typeof RunsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ClosetEditItemIdRoute: typeof ClosetEditItemIdRoute
   FeedAttachRunIdRoute: typeof FeedAttachRunIdRoute
   FeedEntryEntryIdRoute: typeof FeedEntryEntryIdRoute
   FeedPhotoSplatRoute: typeof FeedPhotoSplatRoute
   FeedUUserIdRoute: typeof FeedUUserIdRoute
   FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
+  RunsImportImportIdRoute: typeof RunsImportImportIdRoute
+  ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -215,6 +397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/strava': {
+      id: '/api/strava'
+      path: '/api/strava'
+      fullPath: '/api/strava'
+      preLoaderRoute: typeof ApiStravaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -227,6 +416,27 @@ declare module '@tanstack/react-router' {
       path: '/auth/signup'
       fullPath: '/auth/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/': {
+      id: '/closet/'
+      path: '/closet'
+      fullPath: '/closet/'
+      preLoaderRoute: typeof ClosetIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/$itemId': {
+      id: '/closet/$itemId'
+      path: '/closet/$itemId'
+      fullPath: '/closet/$itemId'
+      preLoaderRoute: typeof ClosetItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/new': {
+      id: '/closet/new'
+      path: '/closet/new'
+      fullPath: '/closet/new'
+      preLoaderRoute: typeof ClosetNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feed/': {
@@ -250,11 +460,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications/': {
+      id: '/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/': {
+      id: '/runs/'
+      path: '/runs'
+      fullPath: '/runs/'
+      preLoaderRoute: typeof RunsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/$runId': {
+      id: '/runs/$runId'
+      path: '/runs/$runId'
+      fullPath: '/runs/$runId'
+      preLoaderRoute: typeof RunsRunIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/manual': {
+      id: '/runs/manual'
+      path: '/runs/manual'
+      fullPath: '/runs/manual'
+      preLoaderRoute: typeof RunsManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/new': {
+      id: '/runs/new'
+      path: '/runs/new'
+      fullPath: '/runs/new'
+      preLoaderRoute: typeof RunsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/strava': {
+      id: '/runs/strava'
+      path: '/runs/strava'
+      fullPath: '/runs/strava'
+      preLoaderRoute: typeof RunsStravaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/strava-callback': {
+      id: '/runs/strava-callback'
+      path: '/runs/strava-callback'
+      fullPath: '/runs/strava-callback'
+      preLoaderRoute: typeof RunsStravaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/edit/$itemId': {
+      id: '/closet/edit/$itemId'
+      path: '/closet/edit/$itemId'
+      fullPath: '/closet/edit/$itemId'
+      preLoaderRoute: typeof ClosetEditItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feed/attach/$runId': {
@@ -292,23 +558,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedVerdictEntryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runs/import/$importId': {
+      id: '/runs/import/$importId'
+      path: '/runs/import/$importId'
+      fullPath: '/runs/import/$importId'
+      preLoaderRoute: typeof RunsImportImportIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/closet/photo/$itemId/$size': {
+      id: '/closet/photo/$itemId/$size'
+      path: '/closet/photo/$itemId/$size'
+      fullPath: '/closet/photo/$itemId/$size'
+      preLoaderRoute: typeof ClosetPhotoItemIdSizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiStravaRoute: ApiStravaRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
+  ClosetItemIdRoute: ClosetItemIdRoute,
+  ClosetNewRoute: ClosetNewRoute,
   FeedMeRoute: FeedMeRoute,
   FeedSearchRoute: FeedSearchRoute,
+  RunsRunIdRoute: RunsRunIdRoute,
+  RunsManualRoute: RunsManualRoute,
+  RunsNewRoute: RunsNewRoute,
+  RunsStravaRoute: RunsStravaRoute,
+  RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  ClosetIndexRoute: ClosetIndexRoute,
   FeedIndexRoute: FeedIndexRoute,
+  NotificationsIndexRoute: NotificationsIndexRoute,
+  RunsIndexRoute: RunsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ClosetEditItemIdRoute: ClosetEditItemIdRoute,
   FeedAttachRunIdRoute: FeedAttachRunIdRoute,
   FeedEntryEntryIdRoute: FeedEntryEntryIdRoute,
   FeedPhotoSplatRoute: FeedPhotoSplatRoute,
   FeedUUserIdRoute: FeedUUserIdRoute,
   FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
+  RunsImportImportIdRoute: RunsImportImportIdRoute,
+  ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

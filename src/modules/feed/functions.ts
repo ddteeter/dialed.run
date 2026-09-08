@@ -4,12 +4,11 @@
  * (and only from here) — no business logic lives in `src/routes/feed/`.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import { entryTagSchema, itemFlagSchema, verdictSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
-import { auth } from "../auth";
+import { optionalUserId, requireUserId } from "../auth";
 import { currentConditions } from "./conditions";
 import { yourConditionsConsensus } from "./consensus";
 import { attachKit, getEntryDetail, itemBandWearStat, recordVerdictPrompted, shouldPromptForVerdict, submitVerdict, verdictBandCounts } from "./entries";
@@ -26,25 +25,6 @@ import { nearestPriorEntry } from "./prefill";
 import { otherProfile, ownProfile } from "./profiles";
 import { hasReacted, toggleUsefulReaction, usefulCount } from "./reactions";
 import { searchByDisplayName } from "./search";
-
-class AuthRequiredError extends Error {
-  constructor() {
-    super("sign-in required");
-  }
-}
-
-async function requireUserId(): Promise<string> {
-  const headers = getRequestHeaders();
-  const session = await auth.api.getSession({ headers });
-  if (!session) throw new AuthRequiredError();
-  return session.user.id;
-}
-
-async function currentUserId(): Promise<string | undefined> {
-  const headers = getRequestHeaders();
-  const session = await auth.api.getSession({ headers });
-  return session?.user.id;
-}
 
 // ---- Attach the kit (A2/A2b) ------------------------------------------------
 
@@ -156,7 +136,7 @@ export const recordVerdictPromptedAction = createServerFn({ method: "POST" })
 export const entryDetailQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
-    const viewerId = await currentUserId();
+    const viewerId = await optionalUserId();
     const entry = await getEntryDetail(data.entryId, viewerId);
     if (!entry) return;
     const useful = await usefulCount(data.entryId);

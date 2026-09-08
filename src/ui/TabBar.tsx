@@ -1,24 +1,15 @@
 import { Link } from "@tanstack/react-router";
 
-/**
- * The five-tab shell footer (docs/product.md §Navigation). Every tab
- * points at "/" until its lane lands a real route — the typed Link is
- * mandatory (string hrefs are a lint error). Lane 104 repoints Feed/You
- * here per its design doc; Closet/+Add/Call stay on "/" until their lanes
- * land.
- */
-const TABS = [
-  { label: "Feed", to: "/feed" },
-  // Placeholder target: lane 101 repoints this at /closet.
-  { label: "Closet", to: "/" },
-  // Placeholder target: lane 102 repoints this at /add.
-  { label: "+ Add", to: "/" },
-  // Placeholder target: lane 105 repoints this at /call.
-  { label: "Call", to: "/" },
-  // You tab points at lane 104's own profile route until a `you/` lane exists.
-  { label: "You", to: "/feed/me" },
-] as const;
+const TAB_CLASS =
+  "font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-night/50 no-underline";
 
+/**
+ * The five-tab shell footer (docs/product.md §Navigation). Each tab is a
+ * separate typed <Link> (rather than a generic map over a shared `to`)
+ * because TanStack's route paths are checked as literals against the
+ * generated route tree — widening them into a shared `string` field would
+ * defeat that check. Tabs whose lane hasn't landed yet still point at "/".
+ */
 export function TabBar() {
   return (
     <nav
@@ -26,16 +17,33 @@ export function TabBar() {
       className="fixed inset-x-0 bottom-0 border-t border-night/15 bg-chalk pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="m-0 flex list-none justify-between px-5 py-4">
-        {TABS.map((tab) => (
-          <li key={tab.label}>
-            <Link
-              to={tab.to}
-              className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-night/50 no-underline"
-            >
-              {tab.label}
-            </Link>
-          </li>
-        ))}
+        <li>
+          <Link to="/feed" className={TAB_CLASS}>
+            Feed
+          </Link>
+        </li>
+        <li>
+          <Link to="/closet" className={TAB_CLASS}>
+            Closet
+          </Link>
+        </li>
+        <li>
+          <Link to="/runs/new" className={TAB_CLASS}>
+            + Add
+          </Link>
+        </li>
+        <li>
+          {/* Placeholder target: lane 105 repoints this at /call. */}
+          <Link to="/" className={TAB_CLASS}>
+            Call
+          </Link>
+        </li>
+        <li>
+          {/* Points at lane 104's own profile route until a `you/` lane exists. */}
+          <Link to="/feed/me" className={TAB_CLASS}>
+            You
+          </Link>
+        </li>
       </ul>
     </nav>
   );

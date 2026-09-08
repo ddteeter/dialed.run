@@ -39,12 +39,32 @@ const baseRestrictions = [
  * Cross-lane rules added after the PR #2–#5 review. Each encodes a
  * duplication four parallel lanes actually produced, not one they might.
  *
- * The auth-gate rules (no local requireUserId, no direct auth.api.getSession,
- * no open-coded login redirect) travel with lane 101, which is the PR that
- * introduces the shared gate they point at. A rule naming an import that
- * does not exist yet is worse than no rule.
  */
 const crossLaneRestrictions = [
+  {
+    // Four copies across three lanes had already become three different
+    // error types (Error / UnauthenticatedError / AuthRequiredError), so
+    // no caller could reliably tell "signed out" from "broken".
+    selector:
+      "FunctionDeclaration[id.name=/^(requireUserId|requireUser|requireSession)$/], VariableDeclarator[id.name=/^(requireUserId|requireUser|requireSession)$/]",
+    message:
+      "Don't redefine the auth gate. Import { requireUserId } from modules/auth (server functions) or { requireSession } from modules/auth/functions (route loaders).",
+  },
+  {
+    // routes/feed/photo.$.tsx reached past the module for a session, which
+    // is how a fifth idiom starts.
+    selector:
+      "CallExpression[callee.property.name='getSession'][callee.object.property.name='api'][callee.object.object.name='auth']",
+    message:
+      "Don't call auth.api.getSession directly. Use requireUserId / requireSession / getSession from modules/auth.",
+  },
+  {
+    // The redirect-to-login dance is the guard's job, once.
+    selector:
+      "CallExpression[callee.name='redirect'] Property[key.name='to'][value.value='/auth/login']",
+    message:
+      "Use requireSession() from modules/auth/functions instead of hand-rolling getSession + redirect.",
+  },
   {
     // Casing is presentation. The brand's uppercase display type is real
     // (docs/product.md §Brand) but belongs in CSS: a shouted string
