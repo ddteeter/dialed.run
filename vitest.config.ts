@@ -28,6 +28,7 @@ export default defineConfig(async () => {
         },
       }),
     ],
+    assetsInclude: ["**/*.bin"],
     test: {
       include: ["test/**/*.test.{ts,tsx}"],
       setupFiles: ["test/apply-migrations.ts"],

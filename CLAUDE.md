@@ -303,30 +303,28 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
 - **Mutation testing works; it is a tool you run, not a check that runs.**
-  Those are two different switches and the names collide:
+  Two switches, and the names collide:
 
   | | what it is | state |
   | --- | --- | --- |
-  | `npm run mutate` | stryker, on demand, scoped to `src/lib` | **available** |
+  | `npm run mutate` | stryker over `src/lib`, on demand | **available** |
   | `"stryker"` in `guardrails.config.json` | whether the *commit gate* runs it on your diff | `off` |
 
-  So "stryker is off" means "not in the commit gate", not "mutation testing
-  is unavailable". It works — but only because `vitest.config.ts` forwards
-  `__STRYKER_ACTIVE_MUTANT__` into the workers pool as a binding. The pool's
-  `process.env` is the Worker's bindings, not the parent environment, so
-  without that forwarding no mutant activates, everything survives, and the
-  score is a meaningless `0.00` that reads as "these tests are worthless".
+  "stryker is off" means "not in the commit gate", not "unavailable".
 
-  It is off in the gate because of cost, not doubt. Guardrails does scope
-  stryker to the changed files (`--mutate <diff>`), but the command it runs
-  per mutant is the whole suite, and that is ~11s a time: a commit touching
-  `lib/normalize.ts` costs ~2 minutes, one touching `lib/thermal.ts` (112
-  mutants) about 20. Narrowing the *command* instead would be 18x faster and
-  wrong — a command that misses a mutated file reports `0.00`, which looks
-  like a finding and is a configuration error.
+  It works because of two lines someone else would spend a day rediscovering.
+  `vitest.config.ts` forwards `__STRYKER_ACTIVE_MUTANT__` into the workers
+  pool as a binding — the pool's `process.env` is the Worker's bindings, not
+  the parent environment, so without it no mutant activates and the score is
+  a meaningless `0.00`. And `assetsInclude: ["**/*.bin"]` lets stryker's own
+  vitest parse the photo fixture; without it the vitest runner dies on
+  startup and you are stuck on the `command` runner, which is 7x slower and
+  reports a false `0.00` for any file its command did not cover.
 
-  So narrow `mutate`, never the command, and run it against what you are
-  working on.
+  Baseline: `src/lib` is **62%** over 316 mutants in 8m42s. 87 survivors,
+  which is a worklist, not a crisis — `contracts.ts` and `temperature.ts`
+  are most of it.
+
 - **Commit gate**: knip + dependency-cruiser + `dupes` run at commit. Dead
   code, boundary violations and clones block the commit. Delete dead code;
   don't ignore it.

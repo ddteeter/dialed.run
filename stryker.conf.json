@@ -1,19 +1,14 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
 
-  "//": "Run with `npm run mutate`. Deliberately NOT wired into the guardrails commit gate — `stryker` stays `off` in guardrails.config.json. It is a tool you point at something, not a check that runs on every commit: the command runner below executes the whole test suite once per mutant, which is minutes, and mutation testing pays on pure logic rather than on the I/O that most of this codebase is.",
+  "//": "Run with `npm run mutate`. Scoped to src/lib — the pure modules. Everything else is D1, R2, queues and TanStack, where a surviving mutant usually means 'this line talks to a binding the test replaced', not 'this line is untested'.",
 
-  "//testRunner": "`command`, not `vitest`. @stryker-mutator/vitest-runner spawns its own vitest, which lacks the workers pool's module rules and dies on a binary fixture: `Failed to parse source for import analysis ... the .bin file format`.",
-  "testRunner": "command",
-
-  "//commandRunner": "The whole suite, on purpose. The command runner runs one fixed command, so pointing it at a subset means any mutant in a file that subset does not cover survives — and the file then reports 0.00, which reads as a finding and is a configuration error. Measured: ~11s per mutant this way (10 mutants, 109s, concurrency 4) against ~0.6s when the command is narrowed to the covering tests. The safe number is the slow one, so narrow `mutate` rather than `command` — scope it to the file you are working on. `incremental` below means the second run only re-tests what changed.",
-  "commandRunner": { "command": "npx vitest run" },
-
-  "//mutate": "`src/lib` only. These are the pure modules — codecs, contracts, normalisation, the thermal tables. Everything else is D1, R2, queues and TanStack, where a surviving mutant usually means `this line talks to a binding the test replaced`, not `this line is untested`.",
-  "mutate": ["src/lib/**/*.ts"],
+  "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts — without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
+  "testRunner": "vitest",
 
   "reporters": ["clear-text", "progress"],
   "concurrency": 4,
-  "timeoutMS": 180000,
-  "incremental": true
+  "timeoutMS": 120000,
+  "incremental": true,
+  "mutate": ["src/lib/**/*.ts"]
 }
