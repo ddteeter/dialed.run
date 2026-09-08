@@ -62,6 +62,12 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
     throw new InvalidPhotoError(`at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`);
   }
 
+  // R2 then the row, which cannot be atomic (law 8c). Deliberately left as
+  // two writes: a failure between them is visible — the upload errors and
+  // the user retries — and the only residue is an orphaned object under a
+  // random key. Recorded as D-27 rather than swept, because MEDIA has no
+  // expiry so orphans are permanent, but the failure needs D1 to fail
+  // between two calls and the cost is storage, not correctness.
   const photoId = newUlid();
   const key = photoKeyFor(input.userId, input.entryId, photoId);
   await env.PHOTOS.put(key, input.bytes, {
