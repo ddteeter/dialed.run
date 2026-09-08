@@ -20,7 +20,6 @@ export const ICONS = {
   feed: { group: "nav", d: "M3 5h18v5H3zM3 14h18v5H3z" },
   closet: { group: "nav", d: "M10 6a2 2 0 114 0c0 1.5-2 2-2 4M3 17l9-7 9 7v2H3z" },
   log: { group: "nav", d: "M6 3H3v18h3M18 3h3v18h-3M12 8v8M8 12h8" },
-  discover: { group: "nav", d: "M12 3a9 9 0 100 18 9 9 0 000-18zM15.5 8.5l-2 5-5 2 2-5z" },
   profile: { group: "nav", d: "M12 4a4 4 0 100 8 4 4 0 000-8zM4 21c0-4 3.6-6 8-6s8 2 8 6" },
   singlet: { group: "garment", d: "M8 4h2a2 2 0 004 0h2c-1 2-1 4 1 6v10H7V10c2-2 2-4 1-6z" },
   tee: { group: "garment", d: "M9 4a3 3 0 006 0l5 3-1.5 3.5-2.5-1V20H8v-10.5l-2.5 1L4 7z" },
@@ -32,13 +31,17 @@ export const ICONS = {
   halfTights: { group: "garment", d: "M6 5h12l.5 3-1 11h-4L12 11l-1.5 8h-4L5.5 8zM6 8h12" },
   tights: { group: "garment", d: "M7 4h10l.5 4-.5 13h-4L12 10l-1 11H7L6.5 8zM7 7h10" },
   socks: { group: "garment", d: "M9 3h6v9l3.5 3a3 3 0 01-4 4.5L9 15.5zM9 6h6" },
-  shoes: { group: "garment", d: "M2.5 17.5c2-1 4.5-2 6.5-4.5L12 9l2 1 3-1.5c1.5 0 2.5 1.5 3 2.5l1.5 6.5H2.5zM2.5 17.5v2h19v-2M10 12.5l1.5-1.5M11.5 14.5l1.5-1.5" },
+  shoes: { group: "garment", d: "M21.5 19H4a1.5 1.5 0 01-1.5-1.5V16c0-1.4 1-2.4 2.4-2.7C9 12.5 11.5 10.5 14 8.3c1.5 1.1 3.1 1.3 4.7.3.9-.5 2 .1 2.1 1.1L21.5 16zM2.5 16h19M8.5 11.4l.9 1.6M11.5 9.7l.9 1.6" },
   gloves: { group: "garment", d: "M9 21V13.5L6.5 12a2 2 0 011.5-3.5L9 9.5V7a4 4 0 018 0v14zM9 17h8" },
   cap: { group: "garment", d: "M3 14v-1a7 7 0 0114 0v1M3 14h14c2.5 0 4 .5 5 2-1.5 1-3 1.5-5.5 1.5H3z" },
   beanie: { group: "garment", d: "M12 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 16a7 7 0 0114 0M4 16h16v4H4z" },
   headband: { group: "garment", d: "M3 16a9 9 0 0118 0M6 16a6 6 0 0112 0M3 16h3M18 16h3" },
   sunglasses: { group: "garment", d: "M3 9h18l-1.5 6H14.5L12 12.5 9.5 15H4.5zM3 9L2 8M21 9l1-1" },
   neckGaiter: { group: "garment", d: "M9 8a3 3 0 016 0M8 9h8l1.5 3-1 8h-9l-1-8zM8.5 13.5h7M8.3 16.5h7.4" },
+  // Provisional — drawn ahead of the taxonomy. Delete if these
+  // categories do not ship.
+  sportsBra: { group: "garment", d: "M9 4c0 4 6 4 6 0h2c0 3 1 5 2 6v6H5v-6c1-1 2-3 2-6zM5 13h14" },
+  armSleeves: { group: "garment", d: "M6 4h5l.5 16h-4zM13 4h5l-.5 16h-4zM6.1 7h4.9M13.1 7h4.9" },
   clear: { group: "weather", d: "M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" },
   partlyCloudy: { group: "weather", d: "M12 7.25a3.5 3.5 0 10-3.4 3.75M8.5 2.5V4M3 7.5h1.5M4.6 3.6l1.1 1.1M12.4 3.6l-1.1 1.1M17 19a3.5 3.5 0 000-7A5 5 0 008.8 13.3A3 3 0 008 19z" },
   cloudy: { group: "weather", d: "M6.75 18a3.75 3.75 0 010-7.5A5.5 5.5 0 0117 11.6A3.25 3.25 0 0117.75 18z" },
@@ -72,6 +75,7 @@ export const ICONS = {
   check: { group: "action", d: "M4 13l5 5L20 6" },
   drag: { group: "action", d: "M8 8h8M8 12h8M8 16h8" },
   undo: { group: "action", d: "M4 9h11a5 5 0 010 10h-6M4 9l4-4M4 9l4 4" },
+  discover: { group: "social", d: "M12 3a9 9 0 100 18 9 9 0 000-18zM15.5 8.5l-2 5-5 2 2-5z" },
   follow: { group: "social", d: "M9 4a4 4 0 100 8 4 4 0 000-8zM2 20c0-3.6 3.2-5.5 7-5.5s7 1.9 7 5.5M19 6v6M16 9h6" },
   useful: { group: "social", d: "M6 3H3v18h3M18 3h3v18h-3M12 7.25l1.6 3.2 3.4.5-2.5 2.4.6 3.4-3.1-1.6-3.1 1.6.6-3.4L7 10.95l3.4-.5z" },
   comment: { group: "social", d: "M4 4h16v12H9l-5 4z" },
@@ -97,6 +101,29 @@ export const ICONS = {
 } as const;
 
 export type IconName = keyof typeof ICONS;
+
+/**
+ * The tab bar, resolved by the Icon Pack revision imported 2026-09-07
+ * (design/icons.js `TAB_BAR`). It existed because the pack's nav group is
+ * four glyphs and product.md's tab bar is five tabs — lanes were guessing.
+ *
+ * Call borrows `verdictPending` on purpose rather than getting a glyph of
+ * its own: brackets around three dots is already the pack's idiom for "no
+ * verdict yet", which is what an unopened surface is. It renders in mute
+ * ink with no active state and no badge. Drawing a glyph now would ship a
+ * meaning we have not decided; one gets drawn when Call ships in Epic 200.
+ *
+ * `discover` moved nav -> social in the same revision: it is a browse
+ * surface, not a v1 tab.
+ */
+export const TAB_BAR = [
+  { tab: "Feed", icon: "feed" },
+  { tab: "Closet", icon: "closet" },
+  { tab: "+ Add", icon: "log" },
+  { tab: "Call", icon: "verdictPending" },
+  // Label is You; the glyph name stays `profile` — code name, not copy.
+  { tab: "You", icon: "profile" },
+] as const satisfies readonly { tab: string; icon: IconName }[];
 
 function strokeWidthFor(size: number): number {
   if (size >= 28) return 2;
