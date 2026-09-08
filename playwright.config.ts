@@ -51,6 +51,16 @@ const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
 
 export default defineConfig({
   testDir: "e2e",
+  // One worker, because every spec shares one dev server and one local D1 —
+  // which is one SQLite file. Specs sign up users, so they all write, and
+  // parallel workers produce `SQLITE_BUSY: database is locked` on the
+  // session insert. That surfaces as a spec failing on an element that
+  // never appeared, which reads like a flaky assertion and is not one.
+  //
+  // Cheap: the whole suite is seconds, and the demos are deliberately few.
+  // If it ever stops being cheap, the fix is a database per worker, not
+  // more workers against one.
+  workers: 1,
   use: { baseURL: `http://localhost:${String(port)}` },
   // One demo per feature carries the happy-path journey and is recorded; the
   // edge-case specs around it are not. Recording everything would bury the
