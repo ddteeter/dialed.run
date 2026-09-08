@@ -27,7 +27,7 @@ describe("ops (000 §10)", () => {
     const report = await checkHealth();
     expect(report.checks.coreDb).toBe("ok");
     expect(report.checks.weatherDb).toBe("ok");
-    expect(report.checks.photos).toBe("ok");
+    expect(report.checks.media).toBe("ok");
     expect(report.ok).toBe(true);
   });
 

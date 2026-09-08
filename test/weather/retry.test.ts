@@ -26,7 +26,7 @@ async function insertPendingRun(overrides: Partial<typeof runs.$inferInsert>): P
       startedAt: 1_768_485_600,
       durationS: 1800,
       distanceM: 5000,
-      indoor: 0,
+      indoor: false,
       title: "Retry test run",
       weatherStatus: "pending",
       ...overrides,

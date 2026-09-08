@@ -29,7 +29,7 @@ async function insertRun(overrides: Partial<typeof runs.$inferInsert> = {}): Pro
       distanceM: 5000,
       lat: 70.1,
       lng: 30.1,
-      indoor: 0,
+      indoor: false,
       title: "Read test run",
       ...overrides,
     });

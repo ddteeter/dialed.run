@@ -1,3 +1,11 @@
+import { drizzle } from "drizzle-orm/d1";
+
+import { env } from "../../env";
+import {
+  handleImportsBatch,
+  handleImportsDlqBatch,
+  stravaApiFromEnv,
+} from "../runs";
 import { captureException } from "./sentry";
 
 /**
@@ -28,9 +36,11 @@ export async function handleQueueBatch(
 ): Promise<void> {
   switch (batch.queue) {
     case "dialed-imports": {
-      // Lane 102 replaces this stub with the import pipeline consumer.
-      console.warn("[queue-stub] dialed-imports not implemented; acking", {
-        size: batch.messages.length,
+      await handleImportsBatch(batch, {
+        db: drizzle(env.DIALED_CORE),
+        importBucket: env.IMPORTS,
+        captureException,
+        stravaApi: stravaApiFromEnv(),
       });
       break;
     }
@@ -41,10 +51,17 @@ export async function handleQueueBatch(
       });
       break;
     }
-    case "dialed-imports-dlq":
+    case "dialed-imports-dlq": {
+      await handleImportsDlqBatch(batch, {
+        db: drizzle(env.DIALED_CORE),
+        importBucket: env.IMPORTS,
+        captureException,
+      });
+      break;
+    }
     case "dialed-enrichment-dlq": {
       // Law 6: a dead-lettered job must land where a human sees it.
-      // Lane 102/107 add the user-facing failure; Sentry covers system-side.
+      // Lane 107 adds the user-facing failure; Sentry covers system-side.
       for (const message of batch.messages) {
         captureException(new Error(`dead-lettered job on ${batch.queue}`), {
           queue: batch.queue,
@@ -59,5 +76,4 @@ export async function handleQueueBatch(
       });
     }
   }
-  await Promise.resolve();
 }

@@ -86,6 +86,74 @@ export const garmentSchema = z.discriminatedUnion("category", [
 ]);
 export type Garment = z.infer<typeof garmentSchema>;
 
+/**
+ * Closet UI groups — the code form of docs/contracts.md's derived-group
+ * table (design screen C). Derived from category x layer, never stored.
+ *
+ * Here rather than in modules/closet because it is a shared contract with
+ * two consumers: the closet renders it and the feed's kit picker groups by
+ * it. Lane 104 wrote its own copy for exactly that reason, with a comment
+ * saying the predicate table was the shared thing and the code was not —
+ * which is how two implementations of one table start.
+ */
+export const uiGroups = [
+  "tops",
+  "bottoms",
+  "outer",
+  "hands_head",
+  "shoes",
+  "socks_extras",
+] as const;
+export type UiGroup = (typeof uiGroups)[number];
+
+/**
+ * Which group an item falls in. A product judgement keyed by category, not
+ * a restatement of the garment schema — headwear, neckwear and gloves
+ * share a group because that is how the screen is laid out, and nothing in
+ * the union says so. So this is a table, deliberately, and the
+ * derive-don't-mirror rule does not apply to it.
+ */
+export function uiGroupFor(
+  category: Garment["category"],
+  layer: z.infer<typeof layerSchema> | null,
+): UiGroup {
+  if (layer === "outer") return "outer";
+  switch (category) {
+    case "top": {
+      return "tops";
+    }
+    case "bottom": {
+      return "bottoms";
+    }
+    case "headwear":
+    case "neckwear":
+    case "gloves": {
+      return "hands_head";
+    }
+    case "shoes": {
+      return "shoes";
+    }
+    case "socks":
+    case "accessory": {
+      return "socks_extras";
+    }
+  }
+}
+
+/**
+ * Performance buckets (D-27): how an item is doing, derived from verdict
+ * history. Shared so the zod filter enum and the TypeScript type cannot
+ * drift — they were two independent lists before.
+ */
+export const performanceBuckets = [
+  "most_dialed",
+  "never_worked",
+  "untested",
+  "retire_candidate",
+] as const;
+export const performanceBucketSchema = z.enum(performanceBuckets);
+export type PerformanceBucket = (typeof performanceBuckets)[number];
+
 // ---- Products (D-26/D-31/D-34) --------------------------------------------
 
 export const productDraftSchema = z.object({

@@ -18,7 +18,9 @@
     "src/ui/icons.tsx",
     "src/ui/motion.ts",
     "playwright.config.ts",
-    "e2e/**/*.spec.ts"
+    "e2e/**/*.spec.ts",
+    "src/modules/*/index.ts",
+    "src/modules/*/functions.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}",

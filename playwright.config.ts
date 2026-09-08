@@ -51,6 +51,24 @@ const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
 
 export default defineConfig({
   testDir: "e2e",
+  // One worker, because every spec shares one dev server and one local D1 —
+  // which is one SQLite file. Specs sign up users, so they all write, and
+  // parallel workers produce `SQLITE_BUSY: database is locked` on the
+  // session insert. That surfaces as a spec failing on an element that
+  // never appeared, which reads like a flaky assertion and is not one.
+  //
+  // A database per worker is the right answer and is not expensive — an
+  // empty SQLite file is free and this dev server boots in ~210ms. What it
+  // costs is wiring, because the database belongs to the dev server, not to
+  // the test: `@cloudflare/vite-plugin` keeps local D1 under `persistState`
+  // (default `.wrangler/state`), so isolation means N dev servers on N ports
+  // with N state directories, and Playwright has no per-worker `webServer`.
+  // The recipe: make `persistState.path` and `PORT` read the same env var in
+  // vite.config.ts, start the servers from a globalSetup indexed by worker,
+  // and hand each worker its baseURL from a fixture. That is a real change to
+  // a human-managed config file for a suite that currently runs in ~11s, so
+  // it waits until the suite is slow enough to pay for it.
+  workers: 1,
   use: { baseURL: `http://localhost:${String(port)}` },
   // One demo per feature carries the happy-path journey and is recorded; the
   // edge-case specs around it are not. Recording everything would bury the

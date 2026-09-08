@@ -55,7 +55,7 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
   if (run.weatherStatus === "attached" || run.weatherStatus === "manual") {
     return "skipped-resolved";
   }
-  if (run.indoor === 1 || run.lat === null || run.lng === null) {
+  if (run.indoor || run.lat === null || run.lng === null) {
     console.warn("[weather] attach: no-op (indoor or no location)", {
       runId,
       indoor: run.indoor,

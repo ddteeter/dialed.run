@@ -28,10 +28,26 @@
       "migrations_dir": "src/db/migrations/weather",
     },
   ],
+  // Two buckets, split by retention rather than by cost. Photos are
+  // load-bearing for rendering and live as long as the row that references
+  // them. Import files exist to be parsed once; after that they are only
+  // useful for re-parsing after a parser bug, and they are GPS traces —
+  // the most sensitive thing we hold. A prefix-scoped lifecycle rule on a
+  // single bucket could express this, but it makes retention a rule
+  // someone can misconfigure instead of a property of where the object
+  // lives.
+  //
+  // MEDIA: no expiry.
+  // IMPORTS: 30-day object lifecycle rule — set in the Cloudflare
+  // dashboard, since wrangler does not manage R2 lifecycle policy.
   "r2_buckets": [
     {
-      "binding": "PHOTOS",
-      "bucket_name": "dialed-photos",
+      "binding": "MEDIA",
+      "bucket_name": "dialed-media",
+    },
+    {
+      "binding": "IMPORTS",
+      "bucket_name": "dialed-imports",
     },
   ],
   "queues": {

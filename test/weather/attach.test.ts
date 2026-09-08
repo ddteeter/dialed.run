@@ -36,7 +36,7 @@ async function insertRun(
       durationS: 1800,
       distanceM: 5000,
       ...(!noLocation && { lat: 44.98, lng: -93.27 }),
-      indoor: 0,
+      indoor: false,
       title: "Test run",
       ...rest,
     });
@@ -67,7 +67,7 @@ afterEach(() => {
 describe("attachObservation (103)", () => {
   it("no-ops on an indoor run and leaves status unchanged", async () => {
     const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
-    const runId = await insertRun({ indoor: 1, noLocation: true });
+    const runId = await insertRun({ indoor: true, noLocation: true });
     await attachObservation(runId);
     expect(await statusOf(runId)).toBe("none");
     expect(fetchSpy).not.toHaveBeenCalled();

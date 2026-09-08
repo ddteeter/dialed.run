@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `strava_connections_athlete` ON `strava_connections` (`athlete_id`);
