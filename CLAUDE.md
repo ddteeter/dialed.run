@@ -302,8 +302,40 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   yourself, and do not argue with the gate.
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
-- **Commit gate**: knip + dependency-cruiser run at commit. Dead code and
-  boundary violations block the commit. Delete dead code; don't ignore it.
+- **Commit gate**: knip + dependency-cruiser + `dupes` run at commit. Dead
+  code, boundary violations and clones block the commit. Delete dead code;
+  don't ignore it.
+- **`dupes` reports clones only in files your change touches**, which is why
+  turning it on did not require a 74-group cleanup first. If it names a
+  block you did not write, you inherited it by editing the file: fix it, or
+  say in the PR why the two are a rhyme rather than a copy. `.fallowrc.jsonc`
+  runs in `mild` mode. `semantic` — which ignores identifier names entirely
+  — was tried first and rejected: it matches any two stretches of code with
+  the same *skeleton*, and in a codebase whose modules are deliberately
+  shaped alike that swamps the real findings. The config carries the
+  measurement.
+  Its `ignore` list is for **generated files, data tables, and one file
+  class that is framework boilerplate by convention** — schema definitions,
+  the icon manifest, tap-lists, and `src/modules/*/functions.ts`, which
+  holds server-function glue and nothing else. Never add an ordinary module
+  to it.
+- **A `// fallow-ignore-next-line code-duplication` needs a written reason
+  on the line above it**, and it is for a *rhyme*: two stretches that look
+  alike and are not the same idea, so merging them would couple things that
+  should move apart. Semantic mode produces a few, because a module shaped
+  like another module matches. It is not for a clone you would rather not
+  fix. `fallow suppressions` lists every one, so the count is reviewable —
+  if it is growing, the config is wrong, not the code.
+  It does **not** see restated sets — the same list written once as a TS
+  union and once as a zod enum. Those stay a human finding; see
+  "Derive, don't mirror".
+- **Do not wrap `createServerFn` in a generic helper.** The five-line
+  `createServerFn().validator().handler(… requireUserId() …)` shape repeats
+  in every module and looks extractable. It is not: `ServerFnReturnType`
+  applies `ValidateSerializableInput` to the handler's result, so a wrapper
+  returning a generic `TResult` does not typecheck, while the same wrapper
+  with a concrete return type does. An hour was spent proving this; don't
+  spend it again.
 - Fix the code, not the rule. If a rule seems genuinely wrong, note it in your
   design doc for human review instead of suppressing it.
 - Adding/removing routes regenerates `src/routeTree.gen.ts`, which carries the

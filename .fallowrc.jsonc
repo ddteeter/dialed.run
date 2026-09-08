@@ -1,0 +1,82 @@
+{
+  // Starter fallow configuration, seeded once by `guardrails init`.
+  // guardrails never rewrites this file -- tune it freely.
+  //
+  // `guardrails verify` runs `fallow dupes --format json --quiet` from the
+  // repository root with no --config and no tuning flags, so everything below
+  // is what actually governs clone detection.
+  "duplicates": {
+    // "mild" for now, and "semantic" is the destination — the sequencing is
+    // deliberate and the measurement is below.
+    //
+    // Semantic ignores identifier names, so it finds the copy-then-rename an
+    // agent produces. Measured against six clone groups confirmed real by
+    // reading them:
+    //
+    //   mode                      | groups | real kept | false positives
+    //   mild / 5                  |     14 |       3/6 |               0
+    //   semantic / 5              |     76 |       6/6 |               2
+    //   semantic / 5 + glob below |     49 |       6/6 |               2
+    //
+    // Mild loses half, and the half it loses is the dangerous half: three
+    // routes each hand-rolling the same session redirect, two modules each
+    // hand-rolling the same run-ownership check, two files each building the
+    // same garment-name map. Semantic is the right mode.
+    //
+    // It is not switched on in the same change that switches the analyzer
+    // on, because the gate reports clones in files a change *touches*: with
+    // semantic at the bottom of a stack, five unrelated PRs each inherit a
+    // slice of a `modules/feed` refactor they have nothing to do with. The
+    // flip and the ~17 extractions it demands land together, in their own
+    // change, where they can be reviewed as one thing.
+    "mode": "mild",
+    // The floor for what counts as a clone. Lower finds more and rhymes more;
+    // 50 is fallow's default and a reasonable place to start tuning.
+    "minTokens": 50,
+    "minLines": 5,
+    // Raise to 3+ to report only widespread copy-paste and skip pair-only
+    // clones.
+    "minOccurrences": 2,
+    // THE FIELD TO EDIT. A clone detector's false positives are repo-specific:
+    // generated code, ORM/schema DSLs that legitimately repeat, and framework
+    // boilerplate. Add globs here as you meet them -- for example:
+    //   "**/*.gen.ts", "src/db/schema*.ts"
+    //
+    // Everything here is generated or a DSL that repeats by design. Nothing
+    // hand-written is excluded, and nothing is here to quiet a finding.
+    "ignore": [
+      // `wrangler types` output. 145 of the first run's 170 groups, all of
+      // them Cloudflare's model catalogue declaring the same interface shape
+      // for every AI model.
+      "worker-configuration.d.ts",
+      // Every module's `functions.ts` is server-function glue by convention
+      // and nothing else — CLAUDE.md puts business logic in service.ts and
+      // route files call these directly. So the file *class* is framework
+      // boilerplate: `createServerFn().validator().handler()` around a
+      // `requireUserId()` and one call, forty times over, and a generic
+      // wrapper for it does not typecheck (see CLAUDE.md). Ignoring the
+      // glob is what lets semantic mode run at its default threshold; the
+      // cost is that duplication *inside* glue files goes unreported, which
+      // is why the schema definitions in them are worth a human read.
+      "src/modules/*/functions.ts",
+      // `tsr generate` output.
+      "**/*.gen.ts",
+      // Drizzle table definitions. A column list is a schema, and two tables
+      // sharing `id`/`user_id`/`created_at` is the data model agreeing with
+      // itself, not a copy-paste. The rest of `src/db/` stays in scope.
+      "src/db/schema-*.ts",
+      // Read-only import archives (CLAUDE.md).
+      "design/**",
+      "plan/**",
+      // Two more data tables, for the same reason as the schema files: every
+      // row of a manifest necessarily has the shape of every other row, and
+      // "semantic" mode matches blocks differing only in identifiers, so a
+      // table of 79 glyphs or 16 tap-list entries reads as one big clone.
+      // `icons.tsx` is still a whole-file ignore covering ~40 lines of real
+      // behaviour (`Icon`); splitting its manifest out would narrow it, the
+      // way `tap-list-data.ts` already did — see D-34.
+      "src/ui/icons.tsx",
+      "src/modules/closet/tap-list-data.ts"
+    ]
+  }
+}
