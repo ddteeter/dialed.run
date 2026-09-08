@@ -82,6 +82,11 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     if (existing.userId !== input.userId) {
       throw new ForbiddenError("run already has another user's entry");
     }
+    // Already idempotent, and by a natural key: a run has exactly one entry
+    // (UNIQUE `entries_run`), so the run id *is* the key and no column is
+    // needed — task 108 requirement 1, prefer a natural key over inventing
+    // one. Pinned by test/idempotency.test.ts so a refactor cannot quietly
+    // drop it.
     return existing.id;
   }
 
@@ -108,20 +113,30 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     .limit(1);
 
   const entryId = newUlid();
+  // One batch, not two awaits: the entry and the items it contains are the
+  // same fact (CLAUDE.md "default to one batch"). Two statements left a
+  // kit with no garments in it if the second failed, which renders as an
+  // empty entry and cannot be told from a deliberate one.
+  //
   // verdict/caption are nullable-no-default columns: omitting them here
   // (rather than writing a literal null) inserts SQL NULL either way.
-  await database.insert(outfitEntries).values({
+  const insertEntry = database.insert(outfitEntries).values({
     id: entryId,
     runId: input.runId,
     userId: input.userId,
     isPublic: profile?.shareDefault ?? true,
     createdAt: Math.floor(Date.now() / 1000),
   });
-  if (input.itemIds.length > 0) {
-    await database.insert(outfitEntryItems).values(
-      input.itemIds.map((itemId) => ({ entryId, itemId })),
-    );
+  if (input.itemIds.length === 0) {
+    await insertEntry;
+    return entryId;
   }
+  await database.batch([
+    insertEntry,
+    database
+      .insert(outfitEntryItems)
+      .values(input.itemIds.map((itemId) => ({ entryId, itemId }))),
+  ]);
   return entryId;
 }
 

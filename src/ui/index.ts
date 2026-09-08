@@ -6,4 +6,5 @@ export { Mono } from "./Mono";
 export { Sheet } from "./Sheet";
 export { Skeleton } from "./Skeleton";
 export { TabBar } from "./TabBar";
+export { useIdempotencyKey } from "./use-idempotency-key";
 export { Wordmark } from "./Wordmark";

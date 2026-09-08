@@ -6,7 +6,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { entryTagSchema, itemFlagSchema, verdictSchema } from "../../lib/contracts";
+import {
+  entryTagSchema,
+  itemFlagSchema,
+  latitudeSchema,
+  longitudeSchema,
+  verdictSchema,
+} from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { optionalUserId, requireUserId } from "../auth";
 import { currentConditions } from "./conditions";
@@ -42,8 +48,8 @@ export const attachKitAction = createServerFn({ method: "POST" })
   });
 
 const pickerGroupsInput = z.object({
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
+  lat: latitudeSchema.optional(),
+  lng: longitudeSchema.optional(),
 });
 
 export const pickerGroupsQuery = createServerFn({ method: "GET" })
@@ -57,13 +63,15 @@ export const pickerGroupsQuery = createServerFn({ method: "GET" })
     return pickerGroups(userId, conditions);
   });
 
-const prefillInput = z.object({
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
+// One schema for both surfaces that take a coordinate: the prefill lookup
+// and the conditions consensus ask the same question of the same input.
+const coordinatesInput = z.object({
+  lat: latitudeSchema,
+  lng: longitudeSchema,
 });
 
 export const prefillQuery = createServerFn({ method: "GET" })
-  .validator((input: unknown) => prefillInput.parse(input))
+  .validator((input: unknown) => coordinatesInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const conditions = await currentConditions(
@@ -194,13 +202,8 @@ export const followingFeedQuery = createServerFn({ method: "GET" })
 
 // ---- Your conditions (E2-lite) -----------------------------------------------
 
-const yourConditionsInput = z.object({
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
-});
-
 export const yourConditionsQuery = createServerFn({ method: "GET" })
-  .validator((input: unknown) => yourConditionsInput.parse(input))
+  .validator((input: unknown) => coordinatesInput.parse(input))
   .handler(async ({ data }) => {
     await requireUserId();
     const now = Math.floor(Date.now() / 1000);
@@ -253,6 +256,8 @@ export const searchQuery = createServerFn({ method: "GET" })
 const uploadPhotoFields = z.object({
   entryId: ulidSchema,
   contentType: z.enum(ALLOWED_CONTENT_TYPES),
+  // A multipart field, so it arrives as a string like every other one.
+  idempotencyKey: ulidSchema.optional(),
 });
 
 export const uploadPhotoAction = createServerFn({ method: "POST" })
@@ -270,6 +275,7 @@ export const uploadPhotoAction = createServerFn({ method: "POST" })
     const fields = uploadPhotoFields.parse({
       entryId: input.get("entryId"),
       contentType: file.type,
+      idempotencyKey: input.get("idempotencyKey") ?? undefined,
     });
     return { ...fields, file };
   })
@@ -280,6 +286,7 @@ export const uploadPhotoAction = createServerFn({ method: "POST" })
       entryId: data.entryId,
       contentType: data.contentType,
       bytes: await data.file.arrayBuffer(),
+      idempotencyKey: data.idempotencyKey,
     });
     return { key };
   });

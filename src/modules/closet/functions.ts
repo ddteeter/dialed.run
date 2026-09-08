@@ -78,11 +78,26 @@ export const getItemFn = createServerFn({ method: "GET" })
     return { ...detail, pairedItems: paired };
   });
 
+// The garment plus the key that identifies *this* submission of it. A
+// separate wrapper rather than a field on `garmentSchema`, because the key
+// is a property of the request, not of the thing being saved — putting it
+// in the contract would mean every read of a garment carries it too.
+const newItemInput = z.object({
+  garment: garmentSchema,
+  idempotencyKey: ulidSchema.optional(),
+});
+
 export const createItemFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => garmentSchema.parse(data))
+  .validator((data: unknown) => newItemInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return createItem(db(), userId, data);
+    return createItem(
+      db(),
+      userId,
+      data.garment,
+      "manual",
+      data.idempotencyKey,
+    );
   });
 
 const updateItemSchema = z.object({

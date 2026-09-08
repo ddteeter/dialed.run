@@ -21,7 +21,7 @@ function optional(value: string): string | undefined {
   return trimmed === "" ? undefined : trimmed;
 }
 
-export function garmentFromFormValues(values: GarmentFormValues): Garment {
+function garmentFromFormValues(values: GarmentFormValues): Garment {
   const { category } = values;
   // Only the attributes this category declares. The union is a
   // strictObject, so carrying an extra one is a parse error rather than a
@@ -77,4 +77,58 @@ export function formValuesFromItem(
     windResistant: effective.windResistant ?? false,
     waterResistant: effective.waterResistant ?? false,
   };
+}
+
+/**
+ * The resolver, injected rather than imported.
+ *
+ * `modules/products`' server functions are not on its barrel (they pull
+ * TanStack's server entry, which would make the barrel unloadable in the
+ * vitest workers pool), and dependency-cruiser forbids a module deep-
+ * importing another's internals. So the route — which may import a
+ * functions.ts directly — passes it in. The *rule* still lives here, which
+ * is the part that was duplicated.
+ *
+ * Longer term this belongs on the server, inside `createItemFn`: resolving
+ * at the write site removes a client round-trip and stops a caller being
+ * able to skip it. That is a bigger change than deduplicating two routes.
+ */
+type ResolveProduct = (args: {
+  data: {
+    brandName: string;
+    productName: string;
+    sourceUrl?: string | undefined;
+  };
+}) => Promise<{ product: { id: string } }>;
+
+/**
+ * The identity-first step (D-27), once.
+ *
+ * A garment is ideally a *product* — "Janji Rover Half-Zip", not "a long
+ * sleeve" — so a brand and a name together resolve (create-if-missing) a
+ * canonical product row and link `product_id`. Both the add and the edit
+ * route did this, and their copies were identical down to the comment, one
+ * of which said "see new.tsx for the identical note". Two copies of the
+ * rule that decides whether a garment gets an identity is exactly the drift
+ * worth preventing: one route linking and the other not is invisible until
+ * someone wonders why half the closet has no social proof.
+ *
+ * Deferred until lane 107 merges: once enrichment lands, a pasted
+ * `productUrl` should also call `requestEnrichment(productId, url)` here.
+ * Saving never waits on it either way.
+ */
+export async function garmentWithResolvedProduct(
+  values: GarmentFormValues,
+  resolve: ResolveProduct,
+): Promise<Garment> {
+  const garment = garmentFromFormValues(values);
+  if (values.brand.trim() === "" || values.name.trim() === "") return garment;
+  const { product } = await resolve({
+    data: {
+      brandName: values.brand,
+      productName: values.name,
+      sourceUrl: values.productUrl === "" ? undefined : values.productUrl,
+    },
+  });
+  return { ...garment, productId: product.id };
 }

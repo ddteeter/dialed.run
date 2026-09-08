@@ -6,6 +6,8 @@
  * exactly the contract shape in docs/contracts.md.
  */
 
+import { and, eq } from "drizzle-orm";
+
 import { imports } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
@@ -28,6 +30,7 @@ export interface StartImportInput {
   userId: string;
   filename: string;
   bytes: ArrayBuffer;
+  idempotencyKey?: string | undefined;
 }
 
 function extensionFromFilename(filename: string): ImportExtension {
@@ -65,6 +68,24 @@ export async function startImport(
   // so a failed queue send costs a delay rather than the upload. An R2 put
   // that succeeds where the insert then fails leaves an orphan object,
   // which the bucket's 30-day lifecycle rule collects.
+  // A repeat of a submission we already have returns its import, so a
+  // retry does not upload the same file twice or start a second parse
+  // (law 8b). Checked before the R2 put, because the put is the expensive
+  // half.
+  if (input.idempotencyKey !== undefined) {
+    const [existing] = await db
+      .select({ id: imports.id })
+      .from(imports)
+      .where(
+        and(
+          eq(imports.userId, input.userId),
+          eq(imports.idempotencyKey, input.idempotencyKey),
+        ),
+      )
+      .limit(1);
+    if (existing !== undefined) return { importId: existing.id };
+  }
+
   const importId = newUlid();
   const r2Key = `imports/${input.userId}/${importId}.${extension}`;
   await importBucket.put(r2Key, input.bytes);
@@ -73,6 +94,7 @@ export async function startImport(
     id: importId,
     userId: input.userId,
     r2Key,
+    idempotencyKey: input.idempotencyKey,
     status: "pending",
     createdAt: Math.floor(Date.now() / 1000),
   });

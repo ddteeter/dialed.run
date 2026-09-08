@@ -179,13 +179,33 @@ export async function createItem(
   userId: string,
   garment: Garment,
   origin: ItemOrigin = "manual",
+  idempotencyKey?: string,
 ): Promise<WardrobeItemRow> {
+  // Add-a-piece is the highest-traffic form in the product, and a
+  // double-click, a browser POST replay and a retry over a flaky
+  // connection are indistinguishable from someone genuinely adding two of
+  // the same shirt (law 8b). Resubmitting a key we already have returns
+  // the row it made, so a retry looks like the success it is.
+  if (idempotencyKey !== undefined) {
+    const [existing] = await db
+      .select()
+      .from(wardrobeItems)
+      .where(
+        and(
+          eq(wardrobeItems.userId, userId),
+          eq(wardrobeItems.idempotencyKey, idempotencyKey),
+        ),
+      )
+      .limit(1);
+    if (existing !== undefined) return existing;
+  }
   const id = newUlid();
   await db.insert(wardrobeItems).values({
     id,
     userId,
     ...garmentRowValues(garment),
     origin,
+    idempotencyKey,
     retired: false,
     visibility: "ok",
     createdAt: Math.floor(Date.now() / 1000),
