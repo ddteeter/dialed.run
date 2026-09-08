@@ -59,6 +59,12 @@ export async function startImport(
   }
   const extension = extensionFromFilename(input.filename);
 
+  // Three systems in sequence — R2, the row, the queue — and nothing spans
+  // them (law 8c). The reconciliation is `imports.status`: a row stuck
+  // `pending` past the grace window is re-dispatched by the daily digest,
+  // so a failed queue send costs a delay rather than the upload. An R2 put
+  // that succeeds where the insert then fails leaves an orphan object,
+  // which the bucket's 30-day lifecycle rule collects.
   const importId = newUlid();
   const r2Key = `imports/${input.userId}/${importId}.${extension}`;
   await importBucket.put(r2Key, input.bytes);
