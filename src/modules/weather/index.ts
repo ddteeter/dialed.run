@@ -12,5 +12,8 @@
 export { attachObservation, recordManualObservation, retryPendingWeather } from "./attach";
 export { WeatherAttribution } from "./components/WeatherAttribution";
 export { forecast } from "./forecast";
+// The cache key itself, so no other module has to restate its rounding.
+export { cacheKeyFor, matchesKey } from "./store";
+export type { CacheKey } from "./store";
 export { observationForRun, observationsForRuns } from "./read";
 export type { WeatherReading } from "./read";

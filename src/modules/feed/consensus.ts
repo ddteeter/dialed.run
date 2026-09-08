@@ -11,13 +11,12 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import {
   outfitEntries,
   outfitEntryItems,
-  runs,
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
 import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { observationsForRuns } from "./conditions";
+import { observationsForEntries } from "./conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
 
@@ -34,7 +33,7 @@ export function recentPublicEntriesStatement(
     .select()
     .from(outfitEntries)
     .where(
-      and(eq(outfitEntries.isPublic, 1), gte(outfitEntries.createdAt, sinceEpochSeconds)),
+      and(eq(outfitEntries.isPublic, true), gte(outfitEntries.createdAt, sinceEpochSeconds)),
     )
     .orderBy(desc(outfitEntries.createdAt))
     .limit(limit);
@@ -66,12 +65,7 @@ async function qualifyingEntryIdsInWindow(
 ): Promise<string[]> {
   const entries = await recentPublicEntriesStatement(database, sinceEpochSeconds);
   if (entries.length === 0) return [];
-  const runIds = entries.map((entry) => entry.runId);
-  const candidateRuns = await database
-    .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
-    .from(runs)
-    .where(inArray(runs.id, runIds));
-  const observations = await observationsForRuns(candidateRuns);
+  const observations = await observationsForEntries(database, entries);
   return entries
     .filter((entry) => {
       const observation = observations.get(entry.runId);

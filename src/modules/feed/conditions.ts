@@ -14,11 +14,20 @@
  * env-touching file breaks the client build (Vite/Rolldown must resolve
  * `cloudflare:workers` even for bindings the component never uses).
  */
-import { and, desc, eq, ne, or } from "drizzle-orm";
+import { and, desc, inArray, ne, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 
+import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
+// The cache key and its predicate come from the module that owns the table
+// (docs/architecture.md: only modules/weather touches dialed-weather).
+import { cacheKeyFor, matchesKey } from "../weather";
+
+/** The core D1 handle. Callers hold their own — consensus takes one as
+ * an argument so the cron can pass a non-request binding. */
+type CoreDb = DrizzleD1Database;
 
 export interface Conditions {
   tempC: number;
@@ -29,27 +38,6 @@ export interface Conditions {
   source: "visualcrossing" | "manual";
 }
 
-interface CacheKey {
-  latR: number;
-  lngR: number;
-  hourBucket: number;
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-export function cacheKeyFor(
-  lat: number,
-  lng: number,
-  epochSeconds: number,
-): CacheKey {
-  return {
-    latR: round2(lat),
-    lngR: round2(lng),
-    hourBucket: Math.floor(epochSeconds / 3600),
-  };
-}
 
 const CHUNK = 20;
 
@@ -58,6 +46,38 @@ interface Locatable {
   lat: number | null;
   lng: number | null;
   startedAt: number;
+}
+
+/**
+ * Resolve observations for a set of entries, by way of their runs.
+ *
+ * The two steps exist because `DIALED_CORE` and `DIALED_WEATHER` are
+ * separate databases and D1 cannot join across them (CLAUDE.md law 8c), so
+ * the entry -> run -> observation walk is assembled in code. Three call
+ * sites had it copy-pasted — consensus, the verdict band counts, and the
+ * item wear stat — which is three chances to forget that `lat`/`lng` can be
+ * null or that the run select needs `startedAt` for the cache key.
+ */
+export async function observationsForEntries(
+  database: CoreDb,
+  entries: readonly { runId: string }[],
+): Promise<Map<string, Conditions>> {
+  if (entries.length === 0) return new Map();
+  const rows = await database
+    .select({
+      id: runs.id,
+      lat: runs.lat,
+      lng: runs.lng,
+      startedAt: runs.startedAt,
+    })
+    .from(runs)
+    .where(
+      inArray(
+        runs.id,
+        entries.map((entry) => entry.runId),
+      ),
+    );
+  return observationsForRuns(rows);
 }
 
 /**
@@ -71,7 +91,12 @@ export async function observationsForRuns(
   const keyed = batch.flatMap((run) =>
     run.lat === null || run.lng === null
       ? []
-      : [{ runId: run.id, key: cacheKeyFor(run.lat, run.lng, run.startedAt) }],
+      : [
+          {
+            runId: run.id,
+            key: cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000)),
+          },
+        ],
   );
   const db = drizzle(env.DIALED_WEATHER);
   const result = new Map<string, Conditions>();
@@ -80,17 +105,7 @@ export async function observationsForRuns(
     const rows = await db
       .select()
       .from(weatherObservations)
-      .where(
-        or(
-          ...chunk.map(({ key }) =>
-            and(
-              eq(weatherObservations.latR, key.latR),
-              eq(weatherObservations.lngR, key.lngR),
-              eq(weatherObservations.hourBucket, key.hourBucket),
-            ),
-          ),
-        ),
-      );
+      .where(or(...chunk.map(({ key }) => matchesKey(key))));
     for (const { runId, key } of chunk) {
       const row = rows.find(
         (r) =>
@@ -151,11 +166,7 @@ export async function currentConditions(
     (_unused, index) => nowBucket - index,
   );
   const atBucket = (bucket: number) =>
-    and(
-      eq(weatherObservations.latR, round2(lat)),
-      eq(weatherObservations.lngR, round2(lng)),
-      eq(weatherObservations.hourBucket, bucket),
-    );
+    matchesKey({ ...cacheKeyFor(lat, lng, new Date()), hourBucket: bucket });
   const scope = and(
     ne(weatherObservations.source, "manual"),
     or(...buckets.map((bucket) => atBucket(bucket))),

@@ -105,7 +105,7 @@ export async function isPhotoVisible(
     .where(eq(outfitEntries.id, photo.entryId))
     .limit(1);
   if (!entry) return false;
-  return entry.isPublic === 1 || entry.userId === viewerId;
+  return entry.isPublic || entry.userId === viewerId;
 }
 
 export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {

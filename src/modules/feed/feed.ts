@@ -46,7 +46,7 @@ export function followingFeedStatement(
 ) {
   const scope = and(
     inArray(outfitEntries.userId, [...userIds]),
-    eq(outfitEntries.isPublic, 1),
+    eq(outfitEntries.isPublic, true),
     cursor ? feedCursorPredicate(cursor) : undefined,
   );
   return database

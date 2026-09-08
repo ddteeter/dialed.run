@@ -71,7 +71,7 @@ describe("entry photos", () => {
     const owner = await makeUser();
     const stranger = await makeUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: 0 });
+    const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
     const key = await uploadPhoto({
       userId: owner,
       entryId,

@@ -427,6 +427,15 @@ Dialed must run unattended. These are laws, not suggestions:
 8. **Migrations are expand→contract.** Additive change deploys first; code
    stops reading old shape; destructive change ships in a later migration.
    Never rename/drop in the same PR that changes code.
+
+   **Read a generated table rebuild before trusting it.** SQLite cannot
+   alter a column, so drizzle-kit rebuilds the whole table and recreates
+   its indexes — and it re-emits an *expression* index by quoting the whole
+   expression as one identifier (`"display_name" COLLATE NOCASE` became a
+   column name), which SQLite rejects. A boolean conversion on an unrelated
+   column takes the search index down with it, and nothing in the diff
+   looks wrong. Applying every migration to a fresh D1 is what catches it,
+   which the unit suite does on every run.
 8b. **User-initiated writes are at-least-once too.** The resilience laws
    covered queues and crons and said nothing about the far more common
    case: a person double-clicking, a browser replaying a POST, or a retry

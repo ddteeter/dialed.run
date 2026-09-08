@@ -227,7 +227,7 @@ export async function otherProfile(userId: string): Promise<OtherProfile | undef
       caption: outfitEntries.caption,
     })
     .from(outfitEntries)
-    .where(and(eq(outfitEntries.userId, userId), eq(outfitEntries.isPublic, 1)))
+    .where(and(eq(outfitEntries.userId, userId), eq(outfitEntries.isPublic, true)))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(RECENT_LIMIT);
 
