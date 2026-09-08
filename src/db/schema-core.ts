@@ -54,8 +54,14 @@ export const products = sqliteTable(
     fabric: text("fabric", {
       enum: ["synthetic", "merino", "cotton", "blend", "down"],
     }),
-    windResistant: integer("wind_resistant"),
-    waterResistant: integer("water_resistant"),
+    // mode:"boolean" so the storage detail stops at the data layer. SQLite
+    // has no boolean and stores 0/1 either way, so the rebuild the codec
+    // triggers changes no stored bytes — what changes is that a component
+    // asking "is this retired?" gets a boolean instead of comparing to 1.
+    // Nullable here: null means "not stated", which is distinct from false
+    // and is what lets a product default fill the gap.
+    windResistant: integer("wind_resistant", { mode: "boolean" }),
+    waterResistant: integer("water_resistant", { mode: "boolean" }),
     extracted: text("extracted"),
     extractionStatus: text("extraction_status", {
       enum: ["none", "pending", "done", "failed"],
@@ -104,8 +110,14 @@ export const wardrobeItems = sqliteTable(
     fabric: text("fabric", {
       enum: ["synthetic", "merino", "cotton", "blend", "down"],
     }),
-    windResistant: integer("wind_resistant"),
-    waterResistant: integer("water_resistant"),
+    // mode:"boolean" so the storage detail stops at the data layer. SQLite
+    // has no boolean and stores 0/1 either way, so the rebuild the codec
+    // triggers changes no stored bytes — what changes is that a component
+    // asking "is this retired?" gets a boolean instead of comparing to 1.
+    // Nullable here: null means "not stated", which is distinct from false
+    // and is what lets a product default fill the gap.
+    windResistant: integer("wind_resistant", { mode: "boolean" }),
+    waterResistant: integer("water_resistant", { mode: "boolean" }),
     estTempLowC: real("est_temp_low_c"),
     estTempHighC: real("est_temp_high_c"),
     brand: text("brand"),
@@ -118,7 +130,9 @@ export const wardrobeItems = sqliteTable(
     origin: text("origin", { enum: ["manual", "taplist"] })
       .notNull()
       .default("manual"),
-    retired: integer("retired").notNull().default(0),
+    retired: integer("retired", { mode: "boolean" })
+      .notNull()
+      .default(false),
     visibility: text("visibility").notNull().default("ok"),
     createdAt: integer("created_at").notNull(),
   },
