@@ -41,17 +41,26 @@ round (D-26…D-33).
    may well be "design the action so the state change is visible instead" —
    that is the position round 4 took twice — but that has to be a decision,
    not a gap.
-4. **The garment glyphs do not map to the garment contract.** The pack draws
-   per-*type* glyphs (singlet, tee, longSleeve, halfZip, jacket, vest…)
-   while `garmentSchema` is a discriminated union on broad *categories*
-   (top, bottom, headwear, neckwear, gloves, socks, shoes, accessory).
-   Nothing in the app can pick a glyph today, which is why the pack is
-   imported but unused outside the notification bell. Either the pack gains
-   category-level glyphs, or the contract gains a type field, or lanes get a
-   documented type→glyph mapping. Blocked on a product call, not a drawing.
-   Related: `sportsBra` and `armSleeves` arrived marked "provisional — delete
-   if these categories do not ship", and under the current contract they are
-   not categories at all.
+4. **Does a garment carry a type?** Filed here first and moved — it is a
+   contract question, not a drawing, so it stops with the owner under the
+   schema protocol. Left as a pointer because it is the one place a reader
+   would look for it. Tracked as D-33 in `docs/deferred.md`.
+
+   Design has no question to answer here. It has answered twice: P2's
+   tap-list is a list of *types* (singlet · short-sleeve tee · merino base
+   L/S · half-zip · 5" shorts · tights · wind shell · beanie · buff …) and
+   the pack draws a glyph per type to render it. The two agree with each
+   other; `garmentSchema`'s eight broad categories are what disagree with
+   both.
+
+   Asking design to draw category-level glyphs instead would be the wrong
+   ask on design's own terms: eight glyphs across sixteen tap-list rows
+   means every row on P2 wears the same icon.
+
+   `sportsBra` and `armSleeves` arrived marked "provisional — delete if
+   these categories do not ship". They are not categories under the current
+   contract, but they *are* tap-list rows in P2 (ARM WARMERS is on the
+   screen), so they resolve with the same decision.
 
 ## Answered in round 4 (imported 2026-09-07)
 
