@@ -31,19 +31,17 @@ export type ReminderJob = z.infer<typeof reminderJobSchema>;
 
 /**
 Revoking a Strava grant after the user has already been disconnected
-locally. Carries the access token because that is all `deauthorize` needs
-and the row it came from is already gone.
+locally. Carries only the outbox row id: the token lives in
+`strava_revocations`, written in the same batch as the disconnect, so the
+message is a pointer to durable state rather than the secret itself.
 
-The token is a secret on a queue, which is a trade-off worth naming: it is
-single-purpose (the only thing anyone can do with it is the revocation we
-are asking for), it is about to be invalid by construction, and the DLQ
-path reports only the message id, never the body. The alternative — holding
-the row until the revoke succeeds — means a user who asked to disconnect is
-still connected while an upstream call retries, which is worse.
+That also means a lost or duplicated message costs nothing — the row is the
+source of truth, the consumer deletes it on success, and the digest
+re-dispatches anything still sitting there.
 */
 const revokeJobSchema = z.object({
   type: z.literal("strava_revoke"),
-  accessToken: z.string().min(1),
+  revocationId: z.string().min(1),
 });
 export type RevokeJob = z.infer<typeof revokeJobSchema>;
 

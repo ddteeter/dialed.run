@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { stravaConnections } from "../../src/db/schema-core";
+import {
+  stravaConnections,
+  stravaRevocations,
+} from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
 import { unreadNotificationCount } from "../../src/modules/notifications";
@@ -294,7 +297,7 @@ describe("disconnectStrava", () => {
    * in a catch — leaving a live grant behind forever whenever Strava
    * happened to be down at that moment.
    */
-  it("deletes the connection and queues the revoke", async () => {
+  it("deletes the connection and records the revoke in one batch", async () => {
     const db = coreDb();
     const userId = newUlid();
     const athleteId = newUlid();
@@ -311,9 +314,51 @@ describe("disconnectStrava", () => {
     await disconnectStrava(db, queue, userId);
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
+
+    // The durable half: the intent is a row, written with the delete.
+    const [pending] = await db
+      .select()
+      .from(stravaRevocations)
+      .where(eq(stravaRevocations.accessToken, "access-live"));
+    expect(pending?.accessToken).toBe("access-live");
+
+    // The queue message is only a pointer to it — no secret on the wire.
     expect(queue.sent).toEqual([
-      { type: "strava_revoke", accessToken: "access-live" },
+      { type: "strava_revoke", revocationId: pending?.id },
     ]);
+  });
+
+  /**
+   * The failure this design exists for: dispatch is a fast path, not the
+   * guarantee. A queue that is down must not lose the revocation.
+   */
+  it("still records the revocation when dispatch fails", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const token = `access-${newUlid()}`;
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId: newUlid(),
+      accessToken: token,
+      refreshToken: "refresh-1",
+      expiresAt: nowS() + 3600,
+      status: "ok",
+    });
+    const failing = {
+      sent: [] as unknown[],
+      send: () => Promise.reject(new Error("queue unavailable")),
+    };
+
+    await expect(disconnectStrava(db, failing, userId)).resolves.toBeUndefined();
+
+    expect(await getStravaConnection(db, userId)).toBeUndefined();
+    // Scoped to this test's token: these tests share a database, so a
+    // bare count would pick up rows other cases left behind.
+    const rows = await db
+      .select()
+      .from(stravaRevocations)
+      .where(eq(stravaRevocations.accessToken, token));
+    expect(rows).toHaveLength(1);
   });
 
   it("deletes the local row even with no queue to revoke through", async () => {

@@ -12,6 +12,7 @@
  */
 export {
   createNotification,
+  notificationInsert,
   listNotifications,
   markAllNotificationsRead,
   unreadNotificationCount,

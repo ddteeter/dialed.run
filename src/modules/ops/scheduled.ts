@@ -1,6 +1,9 @@
 import { drizzle } from "drizzle-orm/d1";
 
-import { cronCheckpoints } from "../../db/schema-core";
+import {
+  cronCheckpoints,
+  stravaRevocations,
+} from "../../db/schema-core";
 import { env } from "../../env";
 import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
@@ -34,13 +37,53 @@ export async function handleScheduled(
 }
 
 /**
+ * The durable half of the disconnect flow.
+ *
+ * Disconnecting writes a `strava_revocations` row in the same batch as the
+ * delete, then dispatches to the queue as a fast path. If that dispatch
+ * failed — or the message was lost — the row is still here, and nothing
+ * else would ever look at it. This is what makes the outbox an actual
+ * guarantee rather than a record of good intentions.
+ *
+ * Re-dispatch rather than revoke inline: the consumer already owns that
+ * path, including deleting the row on success.
+ */
+async function redispatchStrandedRevocations(
+  anomalies: string[],
+): Promise<void> {
+  const db = drizzle(env.DIALED_CORE);
+  const stranded = await db
+    .select({ id: stravaRevocations.id })
+    .from(stravaRevocations)
+    .limit(100);
+  if (stranded.length === 0) return;
+
+  for (const row of stranded) {
+    try {
+      await env.IMPORTS_QUEUE.send({
+        type: "strava_revoke",
+        revocationId: row.id,
+      });
+    } catch (error) {
+      captureException(error, {
+        surface: "revocation-redispatch",
+        revocationId: row.id,
+      });
+    }
+  }
+  anomalies.push(
+    `${String(stranded.length)} Strava revocation(s) awaited re-dispatch`,
+  );
+}
+
+/**
  * Exception-based alerting skeleton: checks run, thresholds compare, and
  * ONLY anomalies get surfaced. Notification transport (email) lands with
  * lane 102's notification plumbing; until then anomalies go to Sentry.
  */
 async function runDailyDigest(): Promise<void> {
-  await Promise.resolve(); // real checks (each an awaited query) land with their lanes
   const anomalies: string[] = [];
+  await redispatchStrandedRevocations(anomalies);
   // Threshold checks fill in as their features land:
   // - weather_pending > N for > 24h (lane 103)
   // - failed-import rate (lane 102)

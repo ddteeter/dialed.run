@@ -17,10 +17,11 @@ import {
   processedWebhookEvents,
   runs,
   stravaConnections,
+  stravaRevocations,
 } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
-import { createNotification } from "../notifications";
+import { createNotification, notificationInsert } from "../notifications";
 import { extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
@@ -197,11 +198,22 @@ async function processReminderJob(
   deps: ConsumerDeps,
   job: ReminderJob,
 ): Promise<void> {
-  // Claim the event first. INSERT OR IGNORE on the (object, aspect, time)
-  // key, and proceed only if this delivery is the one that inserted it —
-  // so a redelivered message, or the same event sent twice by Strava,
-  // notifies once.
-  const claim = await deps.db
+  // Resolve the athlete first, then write both rows together.
+  //
+  // Claim-then-notify was two separate writes with a gap: if the claim
+  // landed and the notification did not, the event was permanently marked
+  // processed and the reminder was lost — redelivery would hit the claim
+  // and return. Batching them closes that, and both writes are safe to
+  // repeat anyway (INSERT OR IGNORE on the event key; the notification is
+  // UNIQUE on user+kind+subject), which is what makes at-least-once
+  // delivery harmless here.
+  const [connected] = await deps.db
+    .select({ userId: stravaConnections.userId })
+    .from(stravaConnections)
+    .where(eq(stravaConnections.athleteId, job.athleteId))
+    .limit(1);
+
+  const claim = deps.db
     .insert(processedWebhookEvents)
     .values({
       objectId: job.objectId,
@@ -209,23 +221,25 @@ async function processReminderJob(
       eventTime: job.eventTime,
     })
     .onConflictDoNothing();
-  if (claim.meta.changes === 0) return;
 
-  const [connected] = await deps.db
-    .select({ userId: stravaConnections.userId })
-    .from(stravaConnections)
-    .where(eq(stravaConnections.athleteId, job.athleteId))
-    .limit(1);
-  if (connected === undefined) return; // unknown or disconnected athlete
+  // An athlete nobody has connected: record the event so it is not
+  // reconsidered, and stop.
+  if (connected === undefined) {
+    await claim;
+    return;
+  }
 
-  // D-33: zero activity data in the body — deep link is /runs/new, not a
-  // pre-created run.
-  await createNotification(deps.db, {
-    userId: connected.userId,
-    kind: "strava_reminder",
-    subjectId: job.objectId,
-    body: "New run on Strava — log your kit?",
-  });
+  await deps.db.batch([
+    claim,
+    // D-33: zero activity data in the body — deep link is /runs/new, not a
+    // pre-created run.
+    notificationInsert(deps.db, {
+      userId: connected.userId,
+      kind: "strava_reminder",
+      subjectId: job.objectId,
+      body: "New run on Strava — log your kit?",
+    }),
+  ]);
 }
 
 /**
@@ -246,7 +260,23 @@ async function processRevokeJob(
     });
     return; // no credentials: retrying will not help
   }
-  await deps.stravaApi.deauthorize(job.accessToken);
+
+  // The outbox row is the source of truth; the message is only a pointer to
+  // it. A duplicate delivery finds nothing and stops, and a lost one is
+  // picked up by the digest.
+  const [pending] = await deps.db
+    .select()
+    .from(stravaRevocations)
+    .where(eq(stravaRevocations.id, job.revocationId))
+    .limit(1);
+  if (pending === undefined) return; // already revoked
+
+  await deps.stravaApi.deauthorize(pending.accessToken);
+  // Only after Strava confirms. A failure above throws, the queue retries,
+  // and the row stays — which is the whole point of writing it down.
+  await deps.db
+    .delete(stravaRevocations)
+    .where(eq(stravaRevocations.id, job.revocationId));
 }
 
 async function processJob(

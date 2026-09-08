@@ -288,6 +288,28 @@ export const stravaConnections = sqliteTable("strava_connections", {
   ],
 );
 
+/**
+ * Transactional outbox for Strava grant revocations.
+ *
+ * Disconnecting is two writes to two systems — delete the local row, tell
+ * Strava — and no transaction spans both. Doing them in sequence means a
+ * queue failure after the delete leaves a live grant with no record that it
+ * exists: silent, unrecoverable, and invisible to us and the user alike.
+ *
+ * So the *intent* is written to the database in the same batch as the
+ * delete, which is atomic, and dispatch becomes a separate at-least-once
+ * concern. The row is deleted once Strava confirms. A row still here is a
+ * revocation that has not happened yet, which the digest can see and
+ * re-dispatch.
+ */
+export const stravaRevocations = sqliteTable("strava_revocations", {
+  id: text("id").primaryKey(),
+  // The only thing deauthorize needs. The connection row it came from is
+  // already gone by the time this exists.
+  accessToken: text("access_token").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const processedWebhookEvents = sqliteTable(
   "processed_webhook_events",
   {

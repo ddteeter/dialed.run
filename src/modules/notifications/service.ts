@@ -47,11 +47,20 @@ export interface NotificationDraft {
 /**
 Idempotent: a duplicate (user, kind, subject) is a silent no-op.
 */
-export async function createNotification(
+/**
+ * The insert as a *statement*, not an awaited call, so a caller can put it
+ * in the same `db.batch()` as the write it belongs with.
+ *
+ * D1 has no interactive transactions; `batch()` is the only atomicity
+ * primitive (CLAUDE.md §D1 query discipline). A notification that records
+ * something the database now says happened has to land with it, or a
+ * failure in between leaves a state change nobody was told about.
+ */
+export function notificationInsert(
   db: NotificationsDb,
   draft: NotificationDraft,
-): Promise<void> {
-  await db
+) {
+  return db
     .insert(notifications)
     .values({
       id: newUlid(),
@@ -63,6 +72,16 @@ export async function createNotification(
       createdAt: Math.floor(Date.now() / 1000),
     })
     .onConflictDoNothing();
+}
+
+/**
+Standalone form, for the callers with nothing to be atomic with.
+*/
+export async function createNotification(
+  db: NotificationsDb,
+  draft: NotificationDraft,
+): Promise<void> {
+  await notificationInsert(db, draft);
 }
 
 export async function listNotifications(db: NotificationsDb, userId: string) {

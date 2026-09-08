@@ -7,10 +7,14 @@
  */
 import { eq, sql } from "drizzle-orm";
 
-import { stravaConnections } from "../../../db/schema-core";
+import {
+  stravaConnections,
+  stravaRevocations,
+} from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
+import { newUlid } from "../../../lib/ids";
 import { captureException } from "../../ops";
-import { createNotification } from "../../notifications";
+import { notificationInsert } from "../../notifications";
 import { isTerminalStravaError } from "./api";
 import type { StravaApi } from "./api";
 import type { RevokeJob } from "../queue-messages";
@@ -180,7 +184,7 @@ async function recordRefreshFailure(
     return "degraded";
   }
 
-  await db
+  const markBroken = db
     .update(stravaConnections)
     .set({
       status: "broken",
@@ -188,6 +192,7 @@ async function recordRefreshFailure(
       refreshFirstFailedAt: firstFailedAt,
     })
     .where(eq(stravaConnections.userId, userId));
+
   // Who hears about this depends on whether we actually know it is the
   // user's problem.
   //
@@ -201,15 +206,25 @@ async function recordRefreshFailure(
   // than saying nothing — they will disconnect a working account to fix a
   // problem that was never theirs. So the connection is marked broken to
   // stop hammering, and a human hears about it instead (law 6).
-  if (isTerminalStravaError(error)) {
-    if (connection.status !== "broken") {
-      await createNotification(db, {
-        userId,
-        kind: "strava_broken",
-        body: "Your Strava connection needs to be reconnected.",
-      });
-    }
-  } else if (connection.status !== "broken") {
+  //
+  // The notification lands in the same batch as the status change, because
+  // it is the only record the user gets of it: separate awaits leave a
+  // window where the connection reads `broken` and nobody was told, and
+  // the transition guard means the next attempt will not tell them either.
+  const shouldNotify =
+    isTerminalStravaError(error) && connection.status !== "broken";
+  await (shouldNotify
+    ? db.batch([
+        markBroken,
+        notificationInsert(db, {
+          userId,
+          kind: "strava_broken",
+          body: "Your Strava connection needs to be reconnected.",
+        }),
+      ])
+    : markBroken);
+
+  if (!isTerminalStravaError(error) && connection.status !== "broken") {
     captureException(new Error("strava refresh exhausted without a 4xx"), {
       userId,
       failureCount: String(failureCount),
@@ -240,10 +255,33 @@ export async function disconnectStrava(
   userId: string,
 ): Promise<void> {
   const connection = await getStravaConnection(db, userId);
-  await db.delete(stravaConnections).where(eq(stravaConnections.userId, userId));
-  if (connection === undefined || queue === undefined) return;
-  await queue.send({
-    type: "strava_revoke",
-    accessToken: connection.accessToken,
-  });
+  if (connection === undefined) {
+    await db
+      .delete(stravaConnections)
+      .where(eq(stravaConnections.userId, userId));
+    return;
+  }
+
+  // Delete and "remember to revoke" land together, because they are two
+  // halves of one decision and no transaction spans the database and the
+  // queue. Writing the intent first makes dispatch a separate, retryable
+  // problem instead of a fire-and-forget call that can vanish.
+  const revocationId = newUlid();
+  await db.batch([
+    db.delete(stravaConnections).where(eq(stravaConnections.userId, userId)),
+    db.insert(stravaRevocations).values({
+      id: revocationId,
+      accessToken: connection.accessToken,
+      createdAt: nowS(),
+    }),
+  ]);
+
+  // Fast path. If it fails the row stays, and the daily digest re-dispatches
+  // it — so this is an optimisation, not the guarantee.
+  if (queue === undefined) return;
+  try {
+    await queue.send({ type: "strava_revoke", revocationId });
+  } catch (error) {
+    captureException(error, { surface: "strava-revoke-dispatch", revocationId });
+  }
 }
