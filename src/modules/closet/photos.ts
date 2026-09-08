@@ -114,7 +114,7 @@ export async function uploadItemPhoto(
 
   // Original first (requirement 8): even if decode/resize below throws, the
   // source bytes are already durable in R2.
-  await env.PHOTOS.put(`${keyPrefix}/original.${ext}`, bytes, {
+  await env.MEDIA.put(`${keyPrefix}/original.${ext}`, bytes, {
     httpMetadata: { contentType },
   });
 
@@ -133,7 +133,7 @@ export async function uploadItemPhoto(
       );
       try {
         const webpBytes = resized.get_bytes_webp();
-        await env.PHOTOS.put(`${keyPrefix}/${size}.webp`, webpBytes, {
+        await env.MEDIA.put(`${keyPrefix}/${size}.webp`, webpBytes, {
           httpMetadata: { contentType: "image/webp" },
         });
       } finally {
@@ -195,8 +195,8 @@ export async function getItemPhotoObject(
   const conditionalEtag = unquoteEtag(ifNoneMatch);
   const object =
     conditionalEtag === undefined
-      ? await env.PHOTOS.get(key)
-      : await env.PHOTOS.get(key, {
+      ? await env.MEDIA.get(key)
+      : await env.MEDIA.get(key, {
           onlyIf: { etagDoesNotMatch: conditionalEtag },
         });
   return object ?? undefined;

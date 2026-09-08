@@ -153,16 +153,33 @@ export const runs = sqliteTable(
     distanceM: real("distance_m").notNull(),
     lat: real("lat"),
     lng: real("lng"),
-    indoor: integer("indoor").notNull().default(0),
+    // mode:"boolean" so the storage detail stops at the data layer. SQLite
+    // has no boolean and stores 0/1 either way, so the generated rebuild
+    // changes no stored bytes — but the TypeScript type does become a real
+    // boolean, which is the point. A future move to a provider with a
+    // native boolean is then a column-type change and nothing else;
+    // without it, every `!== 0` and `? 1 : 0` in the app has to move too.
+    indoor: integer("indoor", { mode: "boolean" }).notNull().default(false),
     effort: text("effort", { enum: ["easy", "steady", "workout", "race"] }),
     title: text("title").notNull(),
+    // Client-generated, one per composed submission. A double-click, a
+    // browser POST replay or a retry on a flaky connection all resend the
+    // same key, and the UNIQUE index below turns the second insert into a
+    // no-op instead of a second run. Nullable because imported runs have
+    // no form behind them.
+    idempotencyKey: text("idempotency_key"),
     weatherStatus: text("weather_status", {
       enum: ["none", "pending", "attached", "manual", "failed"],
     })
       .notNull()
       .default("none"),
   },
-  (t) => [index("runs_user_started").on(t.userId, t.startedAt)],
+  (t) => [
+    index("runs_user_started").on(t.userId, t.startedAt),
+    // Scoped to the user: keys are client-generated, so one user's key must
+    // never collide with another's.
+    uniqueIndex("runs_idempotency").on(t.userId, t.idempotencyKey),
+  ],
 );
 
 export const outfitEntries = sqliteTable(
@@ -239,9 +256,15 @@ export const notifications = sqliteTable(
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
     kind: text("kind").notNull(),
-    subjectId: text("subject_id").notNull(),
+    // Nullable: some kinds have no subject. `strava_broken` used to pass
+    // the userId, which was "this kind has no subject" in disguise.
+    // NOTE: SQLite treats NULLs as distinct in a UNIQUE index, so the
+    // notifications_dedupe key does NOT dedupe subject-less kinds — those
+    // must be guarded at the call site by only firing on a state
+    // transition. See refreshStravaToken.
+    subjectId: text("subject_id"),
     body: text("body").notNull(),
-    read: integer("read").notNull().default(0),
+    read: integer("read", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
@@ -259,6 +282,46 @@ export const stravaConnections = sqliteTable("strava_connections", {
   status: text("status", { enum: ["ok", "broken"] })
     .notNull()
     .default("ok"),
+  // Consecutive refresh failures, and when the current run of them began.
+  // A single unconditional catch used to mark a connection `broken` on any
+  // failure, so one network blip told the user to reconnect a working
+  // account. Both columns are needed, not just the counter: how long three
+  // failures take is entirely a function of how often something calls the
+  // refresh, so the count alone cannot tell a 30-second outage from a real
+  // revocation. Reset to 0/NULL on success.
+  refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
+  refreshFirstFailedAt: integer("refresh_first_failed_at"),
+},
+  (t) => [
+    // One Strava athlete maps to at most one user. Without this, two
+    // accounts could connect the same athlete and the webhook's
+    // athlete -> user lookup would pick between them arbitrarily, sending
+    // someone else's run reminder to the wrong person. Found by a
+    // consumer test that reused an athlete id.
+    uniqueIndex("strava_connections_athlete").on(t.athleteId),
+  ],
+);
+
+/**
+ * Transactional outbox for Strava grant revocations.
+ *
+ * Disconnecting is two writes to two systems — delete the local row, tell
+ * Strava — and no transaction spans both. Doing them in sequence means a
+ * queue failure after the delete leaves a live grant with no record that it
+ * exists: silent, unrecoverable, and invisible to us and the user alike.
+ *
+ * So the *intent* is written to the database in the same batch as the
+ * delete, which is atomic, and dispatch becomes a separate at-least-once
+ * concern. The row is deleted once Strava confirms. A row still here is a
+ * revocation that has not happened yet, which the digest can see and
+ * re-dispatch.
+ */
+export const stravaRevocations = sqliteTable("strava_revocations", {
+  id: text("id").primaryKey(),
+  // The only thing deauthorize needs. The connection row it came from is
+  // already gone by the time this exists.
+  accessToken: text("access_token").notNull(),
+  createdAt: integer("created_at").notNull(),
 });
 
 export const processedWebhookEvents = sqliteTable(

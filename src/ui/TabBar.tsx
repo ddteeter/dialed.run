@@ -1,14 +1,15 @@
 import { Link } from "@tanstack/react-router";
 
-/**
- * The five-tab shell footer (docs/product.md §Navigation). Each tab points
- * at "/" until its lane lands a real route — the typed Link is mandatory
- * (string hrefs are a lint error). Lane 101 repoints Closet at /closet;
- * the rest stay placeholders until their lanes land.
- */
 const TAB_CLASS =
   "font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-night/50 no-underline";
 
+/**
+ * The five-tab shell footer (docs/product.md §Navigation). Each tab is a
+ * separate typed <Link> (rather than a generic map over a shared `to`)
+ * because TanStack's route paths are checked as literals against the
+ * generated route tree — widening them into a shared `string` field would
+ * defeat that check. Tabs whose lane hasn't landed yet still point at "/".
+ */
 export function TabBar() {
   return (
     <nav
@@ -28,8 +29,7 @@ export function TabBar() {
           </Link>
         </li>
         <li>
-          {/* Placeholder target: lane 102 repoints this at /add. */}
-          <Link to="/" className={TAB_CLASS}>
+          <Link to="/runs/new" className={TAB_CLASS}>
             + Add
           </Link>
         </li>

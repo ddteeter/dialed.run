@@ -382,6 +382,17 @@ Dialed must run unattended. These are laws, not suggestions:
 8. **Migrations are expand→contract.** Additive change deploys first; code
    stops reading old shape; destructive change ships in a later migration.
    Never rename/drop in the same PR that changes code.
+8b. **User-initiated writes are at-least-once too.** The resilience laws
+   covered queues and crons and said nothing about the far more common
+   case: a person double-clicking, a browser replaying a POST, or a retry
+   over a flaky connection. All three are indistinguishable from a genuine
+   second submission unless the request carries a key. Any server function
+   that **creates** a row from a form takes a client-generated
+   `idempotencyKey` (minted when the form mounts, resent on every retry of
+   that submission), backed by a UNIQUE index **scoped to the user** —
+   client-generated keys must never collide across accounts. On a repeat,
+   return the row the first call made; do not error. `createManualRun` is
+   the worked example.
 8c. **Nothing is transactional across two systems.** `db.batch()` is atomic
    *within one database*. It does not span D1 and a queue, D1 and R2, D1 and
    an HTTP API — **or `DIALED_CORE` and `DIALED_WEATHER`**, which is the

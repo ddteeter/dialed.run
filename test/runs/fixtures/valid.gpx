@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="dialed-test">
+  <trk>
+    <name>Morning Run</name>
+    <trkseg>
+      <trkpt lat="44.977800" lon="-93.265000">
+        <ele>253.0</ele>
+        <time>2026-08-15T12:00:00Z</time>
+      </trkpt>
+      <trkpt lat="44.978200" lon="-93.264500">
+        <ele>253.4</ele>
+        <time>2026-08-15T12:05:00Z</time>
+      </trkpt>
+      <trkpt lat="44.978900" lon="-93.263800">
+        <ele>254.1</ele>
+        <time>2026-08-15T12:10:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
