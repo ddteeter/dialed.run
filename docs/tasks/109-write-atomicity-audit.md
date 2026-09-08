@@ -42,16 +42,23 @@ Three shapes are almost never independent:
 | **claim + the work it authorises** | the claim is what stops a retry, so a gap after it loses the work *permanently* rather than repeating it |
 | delete + its cleanup | orphans nothing will ever look at again |
 
-**2. Does it write *and* call something outside D1?** A queue send, an HTTP
-call, an R2 put. Those are never atomic together. If the external call is the
-point of the write — a revocation, a webhook we owe someone, an email —
-it needs the outbox shape: intent written in the same batch as the state
-change, dispatch separate, row deleted on confirmation, and something
-scheduled re-dispatching what dispatch drops.
+**2. Does it write to two systems?** A queue send, an HTTP call, an R2 put —
+**and writes that span `DIALED_CORE` and `DIALED_WEATHER`**, which is the case
+to look hardest for, because both are D1 and `batch()` looks like it should
+cover them. It does not; it is per-database.
 
-Not every pairing needs it. An R2 put whose failure simply fails the user's
-upload is fine — the user sees it and retries. The test is whether a failure
-between the two leaves the systems disagreeing *with nobody able to tell*.
+Then pick the answer (CLAUDE.md law 8c), and expect **reconciliation** to be
+right more often than an outbox:
+
+- if one side already holds durable "not finished" state that something
+  re-drives, that is the answer and no new table is needed — `attach.ts` is
+  the example, where `runs.weather_status` plus the hourly cron heals a
+  half-completed write on its own;
+- if there is no such marker, outbox;
+- if a failure is visible and the user can retry, neither.
+
+Adding an outbox where a marker already exists makes the code worse. Say
+which of the three each site uses, in a comment.
 
 ## Known starting points
 

@@ -201,15 +201,6 @@ explicitly says the migration is yours — or the owner has said yes.
 
   A batch cannot branch on its own results, so a read that decides what to
   write goes *before* it. That is a reason to reorder, not a reason to split.
-- **A write plus an external call is never atomic — use an outbox.** No
-  transaction spans D1 and a queue, an HTTP API, or R2, and D1 has no CDC to
-  bridge them. Doing them in sequence means a failure between leaves the two
-  systems disagreeing with no record: the invisible kind of broken.
-  Write the *intent* to a table in the same batch as the state change, then
-  dispatch separately and delete the row once the far side confirms. Dispatch
-  becomes a fast path rather than a guarantee, and something scheduled has to
-  re-dispatch what it drops — an outbox nothing drains is a record of good
-  intentions. `strava_revocations` is the worked example.
 
 ## Product rules that are also code rules
 
@@ -391,6 +382,34 @@ Dialed must run unattended. These are laws, not suggestions:
 8. **Migrations are expand→contract.** Additive change deploys first; code
    stops reading old shape; destructive change ships in a later migration.
    Never rename/drop in the same PR that changes code.
+8c. **Nothing is transactional across two systems.** `db.batch()` is atomic
+   *within one database*. It does not span D1 and a queue, D1 and R2, D1 and
+   an HTTP API — **or `DIALED_CORE` and `DIALED_WEATHER`**, which is the
+   instance people miss, because both are D1 and it looks like it should
+   work. D1 has no CDC to bridge them either.
+
+   So a state change in one system plus an action in another cannot both
+   happen or neither. Pick how you make it eventually true:
+
+   - **Reconciliation** — when one side already carries durable state
+     meaning "not finished", and something already re-drives it. The weather
+     path works this way: `runs.weather_status` stays `pending` until an
+     observation is linked, and the hourly cron re-runs anything still
+     pending, so a half-completed attach heals itself. Cheapest, and always
+     preferred when the marker exists.
+   - **Transactional outbox** — when it does not. Revoking a Strava grant
+     has no marker: once the local row is deleted, nothing says we still owe
+     Strava a call. So the intent is a row (`strava_revocations`) written in
+     the same batch as the delete, dispatch is a fast path, and the row is
+     deleted only when the far side confirms. Something scheduled must
+     re-dispatch what dispatch drops — an outbox nothing drains is a record
+     of good intentions.
+   - **Neither**, when a failure is visible and the user can simply retry —
+     a photo upload that fails tells them so. The test is whether a failure
+     leaves the systems disagreeing *with nobody able to tell*.
+
+   Reaching for an outbox where a reconciliation marker already exists is
+   over-engineering; the weather path would be worse with one.
 9. **A queue message is a wire format between two deploys**, and gets the same
    expand→contract discipline as a migration. A deploy replaces the consumer
    while the queue still holds messages the *previous* version enqueued, so
