@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #0B0B0E; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+  @keyframes dr-breathe { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }
+  .breathe { animation: dr-breathe 900ms linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .breathe { animation: none; opacity: 1 } }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; color: #0B0B0E; background: #F4F3EF; overflow-x: hidden;">
+
+  <!-- HERO -->
+  <section style="background: #0B0B0E; color: #F4F3EF; padding: 56px 48px;">
+    <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Form &amp; failure contract &nbsp;/&nbsp; v1.0 &nbsp;/&nbsp; Sep 2026</span>
+        <span style="color: #F5FF3D;">Binding · docs/product.md §Forms &amp; Failure</span>
+      </div>
+
+      <h1 style="font-family: 'Archivo Black', Helvetica, sans-serif; font-size: clamp(44px, 8vw, 104px); line-height: 0.88; letter-spacing: -0.035em; margin: 0; text-transform: uppercase; max-width: 15ch;">
+        Nothing<br />
+        <span style="color: #F5FF3D;">saved</span> is a<br />
+        measurement.
+      </h1>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px; border-top: 1px solid #24242B; padding-top: 36px;">
+        <p style="grid-column: span 2; margin: 0; font-size: 20px; line-height: 1.45; max-width: 640px; text-wrap: pretty; color: #DEDDD6;">
+          A failed submission takes the same posture as &ldquo;you were too cold on this run&rdquo;: a number came back out of range. The form says what did not happen, marks where the fix is, and stays still while you fix it.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; color: #8B8B93; letter-spacing: 0.04em;">
+          <span style="color: #F4F3EF;">IN THIS SPEC</span>
+          <a href="#contract">00 &nbsp;Two failures</a>
+          <a href="#where">01 &nbsp;Where it renders</a>
+          <a href="#field">02 &nbsp;Field error anatomy</a>
+          <a href="#formfail">03 &nbsp;Whole-form failure</a>
+          <a href="#button">04 &nbsp;Submitting</a>
+          <a href="#schema">05 &nbsp;One schema, run twice</a>
+          <a href="#copy">06 &nbsp;Copy &amp; never</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 00 THE CONTRACT -->
+  <section id="contract" style="padding: 80px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">00 / Two failures</div>
+      <div style="display: flex; flex-direction: column; gap: 28px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 800px;">Four lanes shipped one look for two different events. That is the bug.</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F5FF3D; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">FIELD FAILURE</span>
+            <p style="margin: 0; font-size: 17px; line-height: 1.4; font-weight: 700;">The form is intact. The fix is inside it.</p>
+            <ul style="margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.65;">
+              <li>Cause: a zod issue on one or more fields</li>
+              <li>Marked at the fields, in yellow</li>
+              <li>Recovery: edit, submit again</li>
+            </ul>
+          </div>
+          <div style="background: #0B0B0E; color: #F4F3EF; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">FORM FAILURE</span>
+            <p style="margin: 0; font-size: 17px; line-height: 1.4; font-weight: 700;">Nothing was saved. The fix is not inside it.</p>
+            <ul style="margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.65; color: #DEDDD6;">
+              <li>Cause: network died, 500, expired session</li>
+              <li>Marked at the button, outlined. Never yellow</li>
+              <li>Recovery: Try again, same values</li>
+            </ul>
+          </div>
+        </div>
+
+        <p style="margin: 0; font-size: 15px; line-height: 1.55; max-width: 720px; color: #4A4A44;">No field is ever marked for a 500. Yellow means &ldquo;the fix is here&rdquo; &mdash; spending it on a server fault teaches runners to distrust it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 01 WHERE -->
+  <section id="where" style="padding: 80px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">01 / Where it renders</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 800px;">Per-field or summary is settled by count, so every lane lands in the same place.</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px;">
+          <div style="border: 1px solid #DCDBD2; border-top: 3px solid #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">1 FIELD ERROR</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Field message only. No summary. Focus moves to that field.</p>
+          </div>
+          <div style="border: 1px solid #DCDBD2; border-top: 3px solid #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">2+ FIELD ERRORS</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Summary at the top <em>and</em> every field message. Focus moves to the summary.</p>
+          </div>
+          <div style="border: 1px solid #DCDBD2; border-top: 3px solid #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">FORM FAILURE</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Band above the button. No summary, no field marks. Focus moves to Try&nbsp;again.</p>
+          </div>
+        </div>
+
+        <div style="background: #0B0B0E; color: #F4F3EF; padding: 32px; display: flex; flex-direction: column; gap: 20px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #00E0C6;">The screen-reader path &mdash; the part every lane missed</span>
+          <p style="margin: 0; font-size: 18px; line-height: 1.45; max-width: 760px;">Every form mounts exactly one <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px;">role=&quot;status&quot;</span> region, permanently. It is empty until a submit resolves, then it takes <strong>one sentence, on every outcome</strong>. Then focus moves. Announce, then move &mdash; never move without announcing.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: #24242B; border: 1px solid #24242B;">
+            <div style="background: #0B0B0E; padding: 18px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">ONE FIELD</span>
+              <span style="font-size: 15px; line-height: 1.4;">Nothing saved. One field needs a fix.</span>
+            </div>
+            <div style="background: #0B0B0E; padding: 18px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">N FIELDS</span>
+              <span style="font-size: 15px; line-height: 1.4;">Nothing saved. Three fields need a fix.</span>
+            </div>
+            <div style="background: #0B0B0E; padding: 18px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">FORM FAILURE</span>
+              <span style="font-size: 15px; line-height: 1.4;">Nothing saved. Your connection dropped.</span>
+            </div>
+            <div style="background: #0B0B0E; padding: 18px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">SUCCESS</span>
+              <span style="font-size: 15px; line-height: 1.4;">Run logged.</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #8B8B93; max-width: 720px;">Field messages are <em>not</em> live regions &mdash; they are wired with <span style="font-family: 'IBM Plex Mono', monospace;">aria-describedby</span> and the input carries <span style="font-family: 'IBM Plex Mono', monospace;">aria-invalid</span>. Two regions firing at once means one is lost.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 FIELD ANATOMY -->
+  <section id="field" style="padding: 80px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">02 / Field error anatomy</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 800px;">Marked, not reddened. The signal is border weight plus a yellow band &mdash; never hue alone.</h2>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 40px;">
+
+          <!-- PAPER SPECIMENS -->
+          <div style="flex: 1 1 320px; min-width: 300px; display: flex; flex-direction: column; gap: 20px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PAPER SURFACE</span>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Garment name</label>
+              <div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">Half-zip</div>
+              <span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">Idle. 1px rule, hint in mute.</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7A70;">Temperature</label>
+              <div style="border: 2px solid #0B0B0E; border-radius: 8px; padding: 11px 13px; min-height: 48px; display: flex; align-items: center; font-size: 16px;">168</div>
+              <span style="background: #F5FF3D; color: #0B0B0E; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">Pick a temperature between -40 and 140.</span>
+            </div>
+          </div>
+
+          <!-- INK SPECIMENS -->
+          <div style="flex: 1 1 320px; min-width: 300px; background: #0B0B0E; padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">INK SURFACE</span>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #8B8B93;">Garment name</label>
+              <div style="border: 1px solid #2A2A31; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #8B8B93;">Half-zip</div>
+              <span style="font-size: 12px; line-height: 1.4; color: #8B8B93;">Idle. Same geometry, darker rule.</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #8B8B93;">Temperature</label>
+              <div style="border: 2px solid #F4F3EF; border-radius: 8px; padding: 11px 13px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #F4F3EF;">168</div>
+              <span style="background: #F5FF3D; color: #0B0B0E; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">Pick a temperature between -40 and 140.</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">THE MARK</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Border goes 1px rule &rarr; 2px ink (2px paper on dark). Padding drops 1px so the box never resizes. Value is never cleared or reformatted.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">THE MOTION</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">None. The doctrine already ruled: <em>offline / error &mdash; nothing, deliberately static</em>. No fade, no height transition, and no shake. A shake is a spring in costume.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">THE CLEAR</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">On input, not on blur, with no re-validation. Nothing stays marked while you are fixing it. The next submit is the next verdict.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PINK IS NOT FAILURE</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">#FF2D8A is action. It never marks an error. Yellow #F5FF3D is the only failure fill in the product.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 FORM FAILURE + SUMMARY -->
+  <section id="formfail" style="padding: 80px 48px; border-bottom: 1px solid #DCDBD2; background: #0B0B0E; color: #F4F3EF;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">03 / Two blocks</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 820px;">Both open with the same two words. Everything after them differs.</h2>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 32px;">
+          <div style="flex: 1 1 340px; min-width: 300px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">SUMMARY &mdash; TOP OF FORM, 2+ ERRORS</span>
+            <div style="border: 1px solid #F4F3EF; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Nothing saved</span>
+              <span style="font-size: 15px; line-height: 1.4;">Three fields need a fix.</span>
+              <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45;">
+                <span style="text-decoration: underline; text-underline-offset: 3px;">Temperature &mdash; Pick a temperature between -40 and 140.</span>
+                <span style="text-decoration: underline; text-underline-offset: 3px;">Distance &mdash; Enter a distance in miles.</span>
+                <span style="text-decoration: underline; text-underline-offset: 3px;">Verdict &mdash; Say whether this outfit was useful.</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #8B8B93;">Rows are buttons that focus their field &mdash; not anchors. A form is not a document. The block itself takes focus on landing.</p>
+          </div>
+
+          <div style="flex: 1 1 340px; min-width: 300px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">FAILURE BAND &mdash; ABOVE THE BUTTON</span>
+            <div style="border: 1px solid #F4F3EF; padding: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Nothing saved</span>
+              <span style="font-size: 15px; line-height: 1.4;">Your connection dropped.</span>
+              <span style="border: 1px solid #F4F3EF; background: #F4F3EF; color: #0B0B0E; font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px;">Try again</span>
+            </div>
+            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #8B8B93;">Sits where the eyes already are. No fill, no yellow, values untouched. Never a toast &mdash; a toast takes the retry with it when it leaves.</p>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #24242B; padding-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">NETWORK</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Your connection dropped.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">500</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Our end failed. Nothing about your run changed.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">SESSION EXPIRED</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">The one case that leaves the screen: route to sign-in carrying the payload, return to the filled form.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 BUTTON -->
+  <section id="button" style="padding: 80px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">04 / Submitting</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 800px;">Not disabled. Not resized. Brackets breathe and the verb keeps going.</h2>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">IDLE</span>
+            <div style="background: #FF2D8A; color: #0B0B0E; font-family: 'Archivo Black', sans-serif; font-size: 16px; text-transform: uppercase; letter-spacing: -0.01em; padding: 16px 24px; min-height: 52px; border-radius: 10px; display: grid; place-items: center; min-width: 190px;">Log run</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PENDING</span>
+            <div style="background: #FF2D8A; color: #0B0B0E; font-family: 'Archivo Black', sans-serif; font-size: 16px; text-transform: uppercase; letter-spacing: -0.01em; padding: 16px 24px; min-height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.4em; min-width: 190px;">
+              <span class="breathe">[</span>Logging<span class="breathe">]</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; max-width: 420px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">RULES</span>
+            <ul style="margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.6;">
+              <li><strong>Never the disabled attribute.</strong> Disabled buttons drop focus and stop announcing. Use aria-disabled + aria-busy and a re-entry guard in the handler.</li>
+              <li>Both labels share one grid cell, so width never jumps.</li>
+              <li>Inputs go readOnly while in flight, never disabled.</li>
+              <li>No spinner. The breathing brackets are the product's one waiting device.</li>
+              <li>On success the button returns to idle and the <em>screen</em> moves on. No green check, no success toast.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 16px 22px; display: flex; flex-direction: column; gap: 6px; flex: 1 1 150px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">IDLE</span><span style="font-weight: 600; font-size: 15px;">Log run</span><span style="font-size: 13px; color: #7A7A70;">&rarr; Logging</span></div>
+          <div style="background: #F4F3EF; padding: 16px 22px; display: flex; flex-direction: column; gap: 6px; flex: 1 1 150px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">IDLE</span><span style="font-weight: 600; font-size: 15px;">Save</span><span style="font-size: 13px; color: #7A7A70;">&rarr; Saving</span></div>
+          <div style="background: #F4F3EF; padding: 16px 22px; display: flex; flex-direction: column; gap: 6px; flex: 1 1 150px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">IDLE</span><span style="font-weight: 600; font-size: 15px;">Add to closet</span><span style="font-size: 13px; color: #7A7A70;">&rarr; Adding</span></div>
+          <div style="background: #F4F3EF; padding: 16px 22px; display: flex; flex-direction: column; gap: 6px; flex: 1 1 150px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">IDLE</span><span style="font-weight: 600; font-size: 15px;">Retire</span><span style="font-size: 13px; color: #7A7A70;">&rarr; Retiring</span></div>
+          <div style="background: #F4F3EF; padding: 16px 22px; display: flex; flex-direction: column; gap: 6px; flex: 1 1 150px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">IDLE</span><span style="font-weight: 600; font-size: 15px;">Send</span><span style="font-size: 13px; color: #7A7A70;">&rarr; Sending</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 SCHEMA -->
+  <section id="schema" style="padding: 80px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">05 / One schema, run twice</div>
+      <div style="display: flex; flex-direction: column; gap: 28px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 820px;">Client pre-validation exists. It cannot drift, because there is only one schema.</h2>
+
+        <p style="margin: 0; font-size: 17px; line-height: 1.5; max-width: 760px; text-wrap: pretty;">Rules live in one module under <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px;">src/lib/schemas/</span> that imports nothing from the server. The server function uses it as its gate; the form imports the same object for a pre-check. Error copy lives in the schema's message, so the sentence and the rule are the same edit.</p>
+
+        <div style="background: #0B0B0E; color: #DEDDD6; padding: 26px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7; overflow-x: auto;">
+          <div style="color: #8B8B93;">// src/lib/schemas/log-run.ts &mdash; the only place these rules exist</div>
+          <div>export const <span>logRun</span> = z.object({</div>
+          <div>&nbsp;&nbsp;tempF: z.number().min(-40).max(140, {</div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;message: <span style="color: #F5FF3D;">'Pick a temperature between -40 and 140.'</span> }),</div>
+          <div>&nbsp;&nbsp;verdict: z.enum(['useful', 'too warm', 'too cold'], {</div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;message: <span style="color: #F5FF3D;">'Say whether this outfit was useful.'</span> }),</div>
+          <div>});</div>
+          <div style="height: 14px;"></div>
+          <div style="color: #8B8B93;">// the form &mdash; courtesy pre-check, on submit only</div>
+          <div>const { submit, pending, fieldErrors, failure } =</div>
+          <div>&nbsp;&nbsp;useFormSubmit({ schema: logRun, action: logRunAction });</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">WHEN IT RUNS</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">On submit only. Not on keystroke, not on blur. It saves a round trip; it is not a live critic.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">A HAND-WRITTEN RULE IS A BUG</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">No <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">if (!x.includes('@'))</span> in a component, ever. Components never author error strings.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">SERVER-ONLY RULES</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Name uniqueness, ownership, session, rate limits. They surface through the same field path &mdash; the user cannot tell which side answered.</p>
+          </div>
+          <div style="background: #0B0B0E; color: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">THE GATE IS THE SERVER</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">It always runs. The pre-check is a courtesy and is allowed to be wrong; the ZodError from the boundary is the authority.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 COPY -->
+  <section id="copy" style="padding: 80px 48px;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 56px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">06 / Copy &amp; never</div>
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 800px;">Name the fix, not the rule. Under ten words. No mono, no brackets.</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">WRITE THIS</span>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="background: #F5FF3D; color: #0B0B0E; font-size: 14px; padding: 8px 11px; align-self: flex-start;">Pick a temperature between -40 and 140.</span>
+              <span style="background: #F5FF3D; color: #0B0B0E; font-size: 14px; padding: 8px 11px; align-self: flex-start;">Enter a distance in miles.</span>
+              <span style="background: #F5FF3D; color: #0B0B0E; font-size: 14px; padding: 8px 11px; align-self: flex-start;">Say whether this outfit was useful.</span>
+              <span style="background: #F5FF3D; color: #0B0B0E; font-size: 14px; padding: 8px 11px; align-self: flex-start;">You already have a garment with this name.</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">NOT THIS</span>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #7A7A70;">
+              <span style="border: 1px solid #DCDBD2; padding: 8px 11px; text-decoration: line-through;">Value out of range.</span>
+              <span style="border: 1px solid #DCDBD2; padding: 8px 11px; text-decoration: line-through;">Distance is required</span>
+              <span style="border: 1px solid #DCDBD2; padding: 8px 11px; text-decoration: line-through;">Please select whether you liked this outfit!</span>
+              <span style="border: 1px solid #DCDBD2; padding: 8px 11px; text-decoration: line-through;">Invalid input: [-40&ndash;140]</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #DCDBD2; padding-top: 28px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">Banned outright, so nobody re-litigates it</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Shake on invalid</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Red as the only mark</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Toast for a failed save</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">disabled attribute</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Spinner in a button</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Validate on keystroke</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Clearing values on failure</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Client-only rules</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px;">Two live regions</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; border: 1px solid #0B0B0E; border-radius: 100px; background: #FF2D8A;">The word &ldquo;like&rdquo;</span>
+          </div>
+        </div>
+
+        <div style="background: #0B0B0E; color: #F4F3EF; padding: 28px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #00E0C6;">The primitive</span>
+          <p style="margin: 0; font-size: 18px; line-height: 1.45; max-width: 780px;">src/ui/FormField.tsx ships the whole contract: useFormSubmit, FormField, FormStatus, FormErrorSummary, FormFailureBand, SubmitButton. A form built on them cannot get this wrong. A form that hand-rolls any of them is a review failure.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</x-dc>
+</body>
+</html>

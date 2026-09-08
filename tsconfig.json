@@ -1,5 +1,9 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
+  // Read-only import archives (CLAUDE.md). The design handoff now ships a
+  // reference `.tsx` — a prototype to port, not code to compile, and it
+  // would fail the gates on sight. eslint already ignores both.
+  "exclude": ["design/", "plan/"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

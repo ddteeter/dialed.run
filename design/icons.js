@@ -29,7 +29,7 @@
  */
 
 export const GROUPS = [
-  { id: 'nav', label: 'Navigation', note: 'Tab bar and top-level surfaces. Five, and only five.' },
+  { id: 'nav', label: 'Navigation', note: 'Four glyphs for five tabs. The Call teaser borrows verdictPending until Epic 200 — see TAB_BAR.' },
   { id: 'garment', label: 'Garments', note: 'Closet categories. One glyph per category the taxonomy allows.' },
   { id: 'weather', label: 'Weather', note: 'Conditions shown on run cards and recommendations.' },
   { id: 'verdict', label: 'Verdicts', note: 'How the outfit actually felt. Bracketed — these are the brand moment.' },
@@ -43,7 +43,6 @@ export const ICONS = {
   feed: { group: 'nav', keywords: 'home timeline cards runs', d: 'M3 5h18v5H3zM3 14h18v5H3z' },
   closet: { group: 'nav', keywords: 'wardrobe gear collection hanger', d: 'M10 6a2 2 0 114 0c0 1.5-2 2-2 4M3 17l9-7 9 7v2H3z' },
   log: { group: 'nav', keywords: 'add run attach outfit center action', d: 'M6 3H3v18h3M18 3h3v18h-3M12 8v8M8 12h8' },
-  discover: { group: 'nav', keywords: 'explore browse compass find runners', d: 'M12 3a9 9 0 100 18 9 9 0 000-18zM15.5 8.5l-2 5-5 2 2-5z' },
   profile: { group: 'nav', keywords: 'me account you person', d: 'M12 4a4 4 0 100 8 4 4 0 000-8zM4 21c0-4 3.6-6 8-6s8 2 8 6' },
 
   // ── GARMENTS ──────────────────────────────────────────────────
@@ -57,13 +56,16 @@ export const ICONS = {
   halfTights: { group: 'garment', keywords: 'half tight compression shorts lycra spandex', d: 'M6 5h12l.5 3-1 11h-4L12 11l-1.5 8h-4L5.5 8zM6 8h12' },
   tights: { group: 'garment', keywords: 'leggings pants long bottoms', d: 'M7 4h10l.5 4-.5 13h-4L12 10l-1 11H7L6.5 8zM7 7h10' },
   socks: { group: 'garment', keywords: 'sock crew ankle', d: 'M9 3h6v9l3.5 3a3 3 0 01-4 4.5L9 15.5zM9 6h6' },
-  shoes: { group: 'garment', keywords: 'shoe sneakers footwear road trail', d: 'M2.5 17.5c2-1 4.5-2 6.5-4.5L12 9l2 1 3-1.5c1.5 0 2.5 1.5 3 2.5l1.5 6.5H2.5zM2.5 17.5v2h19v-2M10 12.5l1.5-1.5M11.5 14.5l1.5-1.5' },
+  shoes: { group: 'garment', keywords: 'shoe sneakers footwear road trail trainer', d: 'M21.5 19H4a1.5 1.5 0 01-1.5-1.5V16c0-1.4 1-2.4 2.4-2.7C9 12.5 11.5 10.5 14 8.3c1.5 1.1 3.1 1.3 4.7.3.9-.5 2 .1 2.1 1.1L21.5 16zM2.5 16h19M8.5 11.4l.9 1.6M11.5 9.7l.9 1.6' },
   gloves: { group: 'garment', keywords: 'mitten hands warm extremities', d: 'M9 21V13.5L6.5 12a2 2 0 011.5-3.5L9 9.5V7a4 4 0 018 0v14zM9 17h8' },
   cap: { group: 'garment', keywords: 'hat ball cap trucker brim visor sun', d: 'M3 14v-1a7 7 0 0114 0v1M3 14h14c2.5 0 4 .5 5 2-1.5 1-3 1.5-5.5 1.5H3z' },
   beanie: { group: 'garment', keywords: 'hat winter warm head', d: 'M12 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 16a7 7 0 0114 0M4 16h16v4H4z' },
   headband: { group: 'garment', keywords: 'ear warmer band head', d: 'M3 16a9 9 0 0118 0M6 16a6 6 0 0112 0M3 16h3M18 16h3' },
   sunglasses: { group: 'garment', keywords: 'shades eyewear glasses sun wraparound', d: 'M3 9h18l-1.5 6H14.5L12 12.5 9.5 15H4.5zM3 9L2 8M21 9l1-1' },
   neckGaiter: { group: 'garment', keywords: 'neck gaiter buff warmer tube', d: 'M9 8a3 3 0 016 0M8 9h8l1.5 3-1 8h-9l-1-8zM8.5 13.5h7M8.3 16.5h7.4' },
+  // Provisional — drawn ahead of the taxonomy. Delete if these categories do not ship.
+  sportsBra: { group: 'garment', keywords: 'sports bra top support band crop', d: 'M9 4c0 4 6 4 6 0h2c0 3 1 5 2 6v6H5v-6c1-1 2-3 2-6zM5 13h14' },
+  armSleeves: { group: 'garment', keywords: 'arm sleeves warmers pair extremities', d: 'M6 4h5l.5 16h-4zM13 4h5l-.5 16h-4zM6.1 7h4.9M13.1 7h4.9' },
 
   // ── WEATHER ───────────────────────────────────────────────────
   clear: { group: 'weather', keywords: 'sun sunny bright fine', d: 'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2' },
@@ -108,6 +110,7 @@ export const ICONS = {
   follow: { group: 'social', keywords: 'add runner friend subscribe', d: 'M9 4a4 4 0 100 8 4 4 0 000-8zM2 20c0-3.6 3.2-5.5 7-5.5s7 1.9 7 5.5M19 6v6M16 9h6' },
   useful: { group: 'social', keywords: 'found useful helpful upvote signal star', d: 'M6 3H3v18h3M18 3h3v18h-3M12 7.25l1.6 3.2 3.4.5-2.5 2.4.6 3.4-3.1-1.6-3.1 1.6.6-3.4L7 10.95l3.4-.5z' },
   comment: { group: 'social', keywords: 'reply discuss note thread', d: 'M4 4h16v12H9l-5 4z' },
+  discover: { group: 'social', keywords: 'explore browse compass find runners', d: 'M12 3a9 9 0 100 18 9 9 0 000-18zM15.5 8.5l-2 5-5 2 2-5z' },
   mention: { group: 'social', keywords: 'at tag handle username', d: 'M12 8a4 4 0 100 8 4 4 0 000-8zM16 12v1.5a2.5 2.5 0 005 0V12a9 9 0 10-3.5 7.2' },
   bell: { group: 'social', keywords: 'notification alert reminder nudge', d: 'M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4' },
   people: { group: 'social', keywords: 'community runners group followers', d: 'M7 4.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM17 4.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM2 19c0-3 2.2-4.5 5-4.5s5 1.5 5 4.5M12 19c0-3 2.2-4.5 5-4.5s5 1.5 5 4.5' },
@@ -131,6 +134,24 @@ export const ICONS = {
   bracketRight: { group: 'system', keywords: 'bracket half right frame motion reveal', d: 'M16 3h5v18h-5' },
 };
 
+/**
+ * The tab bar, resolved. product.md's labels on the left, the glyph on the right.
+ * Lanes read this instead of guessing from the nav group.
+ */
+export const TAB_BAR = [
+  { tab: 'Feed', icon: 'feed', note: 'Two stacked cards. Chronological, not dramatic.' },
+  { tab: 'Closet', icon: 'closet', note: 'Hanger over the rail.' },
+  { tab: '+Add', icon: 'log', note: 'Center action. Bracket pair around a plus — the same frame the verdicts wear.' },
+  {
+    tab: 'Call',
+    icon: 'verdictPending',
+    note:
+      'Teaser until Epic 200. Borrowed on purpose: brackets with three dots is already the pack\'s idiom for "no verdict yet", which is exactly what an unopened surface is. Renders in mute ink with no active state and no badge. A dedicated glyph gets drawn when Call ships and we know what it does — a glyph now would ship a meaning we have not decided.',
+  },
+  { tab: 'You', icon: 'profile', note: 'Label is You. Glyph name stays profile — code name, not copy.' },
+];
+
+/** discover moved nav → social: it is a browse surface, not a v1 tab. */
 export const ICON_NAMES = Object.keys(ICONS);
 export const COUNT = ICON_NAMES.length;
 

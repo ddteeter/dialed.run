@@ -293,7 +293,7 @@ wrong: the columns already existed. Check before you defer.
 
 ## Guardrails (the enforcement loop)
 
-This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
+This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 `agentic-guardrails` — invoked here via the npm scripts Phase 0 wires up):
 
 - **Stop gate**: when you try to end a turn, the configured stop-gate hook
@@ -306,10 +306,23 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.1.0; CLI bin
   boundary violations block the commit. Delete dead code; don't ignore it.
 - Fix the code, not the rule. If a rule seems genuinely wrong, note it in your
   design doc for human review instead of suppressing it.
-- Adding/removing routes regenerates `src/routeTree.gen.ts` and changes its
-  sanctioned `as any` count: update the `count` in `guardrails.config.json`'s
-  sanctionedSuppressions entry in the same commit (sanctions-check enforces
-  the exact number).
+- Adding/removing routes regenerates `src/routeTree.gen.ts`, which carries the
+  generator's `as any` casts. **Nothing to do** — v0.2.0's `sanctionedFiles`
+  grants that file's `cast-any` kind whole, with no count. The old keyed grant
+  pinned an exact number that every route change had to bump by hand, which
+  was a chore this guardrail created on a file no human writes.
+  `guardrails.config.json` is human-managed either way (forbidden zones
+  below): a grant is a decision the owner makes, and it is only ever for code
+  this repo does not write — generated files and the `design/` archive. Code
+  you wrote gets fixed, not granted.
+- **Two things generate `routeTree.gen.ts`, and they disagree.**
+  `npm run generate-routes` (`tsr generate`) omits the trailing
+  `declare module '@tanstack/react-start'` block that the vite plugin writes
+  during `npm run build` — the one registering `ssr: true` and the router
+  type. Neither tsc nor the gates complain, so running the script alone
+  leaves a diff that silently deletes the Start SSR registration. Run
+  `npm run build` after regenerating, and treat a routeTree diff whose only
+  content is that block disappearing as a mistake, never as a real change.
 
 ## Workflow expectations
 

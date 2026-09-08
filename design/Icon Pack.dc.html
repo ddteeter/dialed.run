@@ -89,9 +89,58 @@
     </section>
   </sc-for>
 
+  <section style="padding: 72px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">08 / Tab bar, resolved</div>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4A4A44; max-width: 240px;">The pack said feed / closet / log / discover / profile. product.md says Feed / Closet / +Add / Call / You. This is the mapping; lanes read it instead of guessing.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 28px; min-width: 0;">
+
+        <div style="border: 1px solid #DCDBD2; background: #FFFFFF; padding: 14px 8px; display: flex; justify-content: space-between; max-width: 420px;">
+          <sc-for list="{{ tabBar }}" as="t" hint-placeholder-count="5">
+            <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 7px; color: {{ t.color }};">
+              <div style="height: 26px; display: flex; align-items: center;">{{ t.node }}</div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;">{{ t.tab }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <sc-for list="{{ tabBar }}" as="t" hint-placeholder-count="5">
+            <div style="background: #F4F3EF; padding: 16px 20px; display: grid; grid-template-columns: 90px 130px minmax(0, 1fr); gap: 20px; align-items: baseline;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 14px; text-transform: uppercase; letter-spacing: -0.01em;">{{ t.tab }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7A7A70;">{{ t.icon }}</span>
+              <span style="font-size: 14px; line-height: 1.5;">{{ t.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <div style="background: #F5FF3D; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">THE CALL, CALLED</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">No new glyph until Epic 200. A dedicated mark would ship a meaning we have not decided; borrowing <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">verdictPending</span> says the true thing — no verdict yet.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">DISCOVER MOVED</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Nav &rarr; Social. It is a browse surface, not a v1 tab. The nav group is four glyphs now, and that is honest.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">BELL EXISTS</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">The notifications bell is already in Social. Swap the raw emoji for <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">Icon name=&quot;bell&quot;</span> &mdash; no new design needed.</p>
+          </div>
+          <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">TWO PROVISIONAL GARMENTS</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">sportsBra and armSleeves are drawn and in the Garments group. If the taxonomy drops those categories, delete the two lines &mdash; nothing else references them.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section style="padding: 72px 48px; background: #0B0B0E; color: #F4F3EF;">
     <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
-      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">08 / For agents</div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">09 / For agents</div>
       <div style="display: flex; flex-direction: column; gap: 28px; min-width: 0;">
         <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 700px;">Import the manifest. Don't redraw the glyph.</h2>
         <pre style="margin: 0; background: #16161B; border: 1px solid #24242B; padding: 24px; overflow-x: auto; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7; color: #DEDDD6;">import { ICONS, iconMarkup } from './icons.js';
@@ -108,7 +157,7 @@
           </div>
           <div style="background: #0B0B0E; padding: 22px; display: flex; flex-direction: column; gap: 8px;">
             <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">TAB BAR</span>
-            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #DEDDD6;">feed · closet · log · discover · profile. Active is ink or pink; inactive is #8B8B93. The centre <em style="font-style: normal; font-weight: 700;">log</em> glyph is the only one that gets a filled pill behind it.</p>
+            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #DEDDD6;">Read TAB_BAR from icons.js, not the nav group &mdash; section 08 has the mapping. Active is ink or pink; inactive is #8B8B93. The centre <em style="font-style: normal; font-weight: 700;">log</em> glyph is the only one that gets a filled pill behind it, and Call stays mute until Epic 200.</p>
           </div>
           <div style="background: #0B0B0E; padding: 22px; display: flex; flex-direction: column; gap: 8px;">
             <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">ADDING ONE</span>
@@ -136,8 +185,8 @@ class Component extends DCLogic {
       .catch(err => console.error('icons.js failed to load', err));
   }
 
-  glyph(name, icon) {
-    const size = this.props.glyphSize ?? 26;
+  glyph(name, icon, sizeOverride) {
+    const size = sizeOverride ?? this.props.glyphSize ?? 26;
     const stroke = this.props.strokeWidth ?? 1.75;
     const color = this.props.glyphColor ?? 'currentColor';
     const kids = [
@@ -161,8 +210,17 @@ class Component extends DCLogic {
     const q = this.state.query.trim().toLowerCase();
 
     if (!d) {
-      return { groups: [], query: '', resultLabel: 'LOADING MANIFEST', onQuery: () => {} };
+      return { groups: [], tabBar: [], query: '', resultLabel: 'LOADING MANIFEST', onQuery: () => {} };
     }
+
+    const tabBar = (d.TAB_BAR || []).map(t => ({
+      tab: t.tab,
+      icon: t.icon,
+      note: t.note,
+      borrowed: t.icon === 'verdictPending',
+      color: t.icon === 'verdictPending' ? '#8B8B93' : (t.tab === 'Feed' ? '#FF2D8A' : '#0B0B0E'),
+      node: this.glyph('bar-' + t.icon, d.ICONS[t.icon], 24)
+    }));
 
     let shown = 0;
     const groups = d.GROUPS.map((grp, gi) => {
@@ -193,6 +251,7 @@ class Component extends DCLogic {
 
     return {
       groups,
+      tabBar,
       query: this.state.query,
       resultLabel: q ? shown + ' of ' + d.COUNT + ' shown' : d.COUNT + ' glyphs',
       onQuery: e => this.setState({ query: e.target.value })
