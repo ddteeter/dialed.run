@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { garmentSchema } from "../src/lib/contracts";
 import {
+  allGarmentTypes,
   hasGarmentAttribute,
   garmentAttributeKeys,
   garmentCategoriesInOrder,
   garmentFieldSpec,
+  garmentTypesFor,
 } from "../src/lib/garment-fields";
+import { ICONS } from "../src/ui/icons";
 
 /**
 A value each attribute will accept, so only the shape decides the result.
@@ -62,5 +65,56 @@ describe("garmentFieldSpec", () => {
     expect([...(garmentFieldSpec.get("shoes") ?? [])]).toEqual([
       "waterResistant",
     ]);
+  });
+
+  it("names every garment type after the glyph that draws it", () => {
+    // A garment's icon *is* its type — `<Icon name={item.type}>` with no
+    // lookup between. That only holds while the two vocabularies agree, and
+    // nothing else would notice if a pack revision renamed a glyph: the
+    // union would still compile and the closet would render nothing.
+    //
+    // This is the derive-don't-mirror rule at a boundary where deriving is
+    // impossible (the pack is untyped JS in a read-only archive), so the
+    // agreement is pinned instead. Same reasoning as the manifest pin in
+    // test/ui/icons.test.tsx, one level up.
+    for (const type of allGarmentTypes) {
+      const glyph = ICONS[type as keyof typeof ICONS] as
+        | { group: string }
+        | undefined;
+      expect(glyph, `no glyph named "${type}"`).toBeDefined();
+      expect(glyph?.group, `"${type}" is not a garment glyph`).toBe("garment");
+    }
+  });
+
+  it("gives every category at least one type, and never shares one", () => {
+    // Overlap would make `type` ambiguous about its category, which is the
+    // whole reason the table is keyed by category rather than being one flat
+    // enum. `gloves`/`socks`/`shoes` name a category *and* its only type;
+    // that is one-to-one, not overlap.
+    const owner = new Map<string, string>();
+    for (const category of garmentCategoriesInOrder) {
+      const types = garmentTypesFor(category);
+      expect(types.length, `${category} has no types`).toBeGreaterThan(0);
+      for (const type of types) {
+        expect(owner.get(type), `"${type}" is in two categories`).toBeUndefined();
+        owner.set(type, category);
+      }
+    }
+  });
+
+  it("accepts a type only from its own category", () => {
+    expect(
+      garmentSchema.safeParse({ name: "T", category: "top", type: "halfZip" })
+        .success,
+    ).toBe(true);
+    expect(
+      garmentSchema.safeParse({ name: "T", category: "top", type: "tights" })
+        .success,
+    ).toBe(false);
+    // Optional on purpose: rows predating the column have none, and a
+    // generic tap-list save legitimately does not know.
+    expect(
+      garmentSchema.safeParse({ name: "T", category: "top" }).success,
+    ).toBe(true);
   });
 });

@@ -124,6 +124,31 @@ export const wardrobeItems = sqliteTable(
         "accessory",
       ],
     }).notNull(),
+    // The specific thing within the category — singlet vs tee vs half-zip.
+    //
+    // Nullable for a reason that outlives launch: **a garment often does
+    // not know its own type, and should not have to.** The tap-list knows
+    // (the row *is* the type). A manual add does not — screen F collects
+    // brand, model and a one-tap category, and no type field, deliberately:
+    // the design shows the type on the garment *detail* ("Tracksmith
+    // Harrier / LONG SLEEVE HALF-ZIP") rather than asking for it. It is
+    // there to be inferred, most obviously from the product name, which is
+    // what enrichment already does for `products.category_hint`.
+    //
+    // NOT NULL would force screen F to grow a required picker between the
+    // user and saving a shirt, to make the system's inference the user's
+    // chore. If that turns out to be wanted it is a product decision and a
+    // later tightening, which expand->contract supports.
+    //
+    // (The usual "existing rows have none" argument does not apply — there
+    // is no production data yet. This column would be nullable anyway.)
+    //
+    // Deliberately NOT enum-constrained here, unlike `category`. The legal
+    // values depend on the category, which a column check cannot express;
+    // `garmentSchema` in lib/contracts.ts is the gate, and every write goes
+    // through it. A widened column with a narrow parser beats a column that
+    // has to list all 19 values and cannot say which go with which.
+    type: text("type"),
     layer: text("layer", { enum: ["base", "mid", "outer"] }),
     weight: text("weight", { enum: ["light", "mid", "heavy"] }),
     fabric: text("fabric", {

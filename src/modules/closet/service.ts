@@ -43,6 +43,7 @@ import {
   getProductAttributeDefaultsBulk,
 } from "../products";
 import type { ProductAttributeDefaults } from "../products";
+import { ownedBy } from "../../lib/owned";
 
 type Db = ReturnType<typeof drizzle>;
 type Layer = z.infer<typeof layerSchema>;
@@ -138,6 +139,9 @@ function garmentRowValues(garment: Garment) {
   const estRange = estimateForGarment(garment, normalized);
   return {
     category: garment.category,
+    // Not in normalizeAttributes: that flattens attributes that only *some*
+    // variants declare, and every variant declares `type`.
+    type: orSqlNull(garment.type),
     layer: orSqlNull(normalized.layer),
     weight: orSqlNull(normalized.weight),
     fabric: orSqlNull(normalized.fabric),
@@ -164,7 +168,7 @@ export async function getOwnedItem(
   const [row] = await db
     .select()
     .from(wardrobeItems)
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)))
+    .where(ownedBy(wardrobeItems, { id: itemId, userId }))
     .limit(1);
   if (!row) throw new NotFoundError();
   return row;
@@ -195,7 +199,7 @@ export async function createItem(
  * write, so it is not a phrase worth retyping.
  */
 function ownedItemWhere(userId: string, itemId: string) {
-  return and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId));
+  return ownedBy(wardrobeItems, { id: itemId, userId });
 }
 
 /**

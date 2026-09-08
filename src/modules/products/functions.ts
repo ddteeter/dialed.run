@@ -8,7 +8,11 @@ import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { env } from "../../env";
-import { httpsUrlSchema } from "../../lib/contracts";
+import {
+  brandNameSchema,
+  httpsUrlSchema,
+  productNameSchema,
+} from "../../lib/contracts";
 import { requireUserId } from "../auth";
 import { resolveProduct, searchBrands } from "./service";
 
@@ -33,8 +37,8 @@ export const searchBrandsFn = createServerFn({ method: "GET" })
 // resolved brand id first — resolveProductFn below resolves both at once.
 
 const resolveProductSchema = z.object({
-  brandName: z.string().min(1).max(60),
-  productName: z.string().min(1).max(120),
+  brandName: brandNameSchema,
+  productName: productNameSchema,
   sourceUrl: httpsUrlSchema.optional(),
 });
 

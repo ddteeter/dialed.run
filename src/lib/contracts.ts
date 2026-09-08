@@ -53,36 +53,95 @@ const layered = garmentBase.extend({
   windResistant: z.boolean().optional(),
   waterResistant: z.boolean().optional(),
 });
+/**
+ * The specific thing a garment *is*, within its category. A `top` is a
+ * singlet or a tee or a half-zip; the category alone cannot tell you, and
+ * anything that has to show a garment — an icon, a recommendation, a
+ * consensus bucket — needs to know which.
+ *
+ * The vocabulary is not invented here. It is the design's own: the P2
+ * tap-list is a list of these ("SINGLET · SHORT-SLEEVE TEE · MERINO BASE
+ * L/S · HALF-ZIP · 5\u2033 SHORTS · TIGHTS · WIND SHELL · BEANIE · BUFF"),
+ * and the Icon Pack draws one glyph per entry to render it. So the values
+ * are named for the glyphs and a garment's icon *is* its type — an identity
+ * function rather than a mapping table anyone could get wrong. A test in
+ * `test/garment-fields.test.ts` fails if the two ever drift apart.
+ *
+ * Display labels stay free text on `name`. "Wind shell" and "Rain jacket"
+ * are both `jacket`, told apart by `windResistant`/`waterResistant`;
+ * "Mittens" is `gloves`; "Trail shoes" is `shoes`; "Buff" is `neckGaiter`.
+ * The type says what shape a thing is, not what it is for.
+ *
+ * Optional everywhere, because it has to be: every garment written before
+ * this column existed has none, and CLAUDE.md law 8 is expand-then-contract.
+ * Treat `undefined` as "not known yet", never as a category default.
+ */
+export const garmentTypesByCategory = {
+  // `sportsBra` and `armSleeves` arrived with the Icon Pack marked
+  // provisional. They are real tap-list rows on P2 (ARM WARMERS is on the
+  // screen), so they ship.
+  top: [
+    "singlet",
+    "tee",
+    "longSleeve",
+    "halfZip",
+    "jacket",
+    "vest",
+    "sportsBra",
+  ],
+  bottom: ["shorts", "halfTights", "tights"],
+  headwear: ["cap", "beanie", "headband"],
+  neckwear: ["neckGaiter"],
+  gloves: ["gloves"],
+  socks: ["socks"],
+  shoes: ["shoes"],
+  accessory: ["sunglasses", "armSleeves"],
+} as const;
+
 export const garmentSchema = z.discriminatedUnion("category", [
-  layered.extend({ category: z.literal("top") }),
-  layered.extend({ category: z.literal("bottom") }),
+  layered.extend({
+    category: z.literal("top"),
+    type: z.enum(garmentTypesByCategory.top).optional(),
+  }),
+  layered.extend({
+    category: z.literal("bottom"),
+    type: z.enum(garmentTypesByCategory.bottom).optional(),
+  }),
   garmentBase.extend({
     category: z.literal("headwear"),
+    type: z.enum(garmentTypesByCategory.headwear).optional(),
     weight: weightSchema.optional(),
     fabric: fabricSchema.optional(),
     windResistant: z.boolean().optional(),
   }),
   garmentBase.extend({
     category: z.literal("neckwear"),
+    type: z.enum(garmentTypesByCategory.neckwear).optional(),
     weight: weightSchema.optional(),
     fabric: fabricSchema.optional(),
   }),
   garmentBase.extend({
     category: z.literal("gloves"),
+    type: z.enum(garmentTypesByCategory.gloves).optional(),
     weight: weightSchema.optional(),
     windResistant: z.boolean().optional(),
     waterResistant: z.boolean().optional(),
   }),
   garmentBase.extend({
     category: z.literal("socks"),
+    type: z.enum(garmentTypesByCategory.socks).optional(),
     weight: weightSchema.optional(),
     fabric: fabricSchema.optional(),
   }),
   garmentBase.extend({
     category: z.literal("shoes"),
+    type: z.enum(garmentTypesByCategory.shoes).optional(),
     waterResistant: z.boolean().optional(),
   }),
-  garmentBase.extend({ category: z.literal("accessory") }),
+  garmentBase.extend({
+    category: z.literal("accessory"),
+    type: z.enum(garmentTypesByCategory.accessory).optional(),
+  }),
 ]);
 export type Garment = z.infer<typeof garmentSchema>;
 
@@ -105,6 +164,21 @@ export const uiGroups = [
   "socks_extras",
 ] as const;
 export type UiGroup = (typeof uiGroups)[number];
+
+/**
+ * Group headings, as they appear on screen C. Here rather than in a lane
+ * because the closet renders them and the feed's kit picker renders the
+ * same headings over the same rows — a second copy would let one screen
+ * rename a group and the other not.
+ */
+export const uiGroupLabels: Record<UiGroup, string> = {
+  tops: "Tops",
+  bottoms: "Bottoms",
+  outer: "Outer",
+  hands_head: "Hands / head",
+  shoes: "Shoes",
+  socks_extras: "Socks / extras",
+};
 
 /**
  * Which group an item falls in. A product judgement keyed by category, not
@@ -156,9 +230,21 @@ export type PerformanceBucket = (typeof performanceBuckets)[number];
 
 // ---- Products (D-26/D-31/D-34) --------------------------------------------
 
+/**
+ * Field-level, because two schemas need the same rule under different keys:
+ * `productDraftSchema` below takes `brand`/`name`, and the server function
+ * that resolves brand and product together takes `brandName`/`productName`
+ * to match its service signature. Written out twice, a change to the brand
+ * length would land in one and not the other, and the product name cap is
+ * not the garment name cap (80) — so the numbers cannot be shared any
+ * further up either.
+ */
+export const brandNameSchema = z.string().min(1).max(60);
+export const productNameSchema = z.string().min(1).max(120);
+
 export const productDraftSchema = z.object({
-  brand: z.string().min(1).max(60),
-  name: z.string().min(1).max(120),
+  brand: brandNameSchema,
+  name: productNameSchema,
   sourceUrl: httpsUrlSchema.optional(),
 });
 export type ProductDraft = z.infer<typeof productDraftSchema>;

@@ -52,6 +52,18 @@ id               text PK  -- ULID
 user_id          text FK
 category         text     -- enum: top | bottom | headwear | neckwear | gloves
                           --       | socks | shoes | accessory
+type             text     -- the specific thing within the category, NULLABLE
+                          -- top: singlet|tee|longSleeve|halfZip|jacket|vest
+                          --      |sportsBra
+                          -- bottom: shorts|halfTights|tights
+                          -- headwear: cap|beanie|headband
+                          -- neckwear: neckGaiter    gloves: gloves
+                          -- socks: socks            shoes: shoes
+                          -- accessory: sunglasses|armSleeves
+                          -- Not a column enum: the legal values depend on
+                          -- the category, which a CHECK cannot express.
+                          -- garmentSchema is the gate. Named for the Icon
+                          -- Pack's glyphs, so a garment's icon IS its type.
 layer            text     -- enum: base | mid | outer, NULLABLE
                           -- (meaningful for top/bottom; a jacket = top+outer)
 weight           text     -- enum: light | mid | heavy, NULLABLE
