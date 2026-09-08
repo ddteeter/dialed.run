@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { garmentSchema } from "../src/lib/contracts";
+import type { GarmentCategory } from "../src/lib/garment-fields";
 import {
   allGarmentTypes,
   hasGarmentAttribute,
@@ -137,5 +138,34 @@ describe("garmentFieldSpec", () => {
         `${entry.key} carries a type`,
       ).toBeUndefined();
     }
+  });
+  it("says no for a category that is not in the spec at all", () => {
+    // `hasGarmentAttribute` falls back to `false` for an unknown category.
+    // Every existing test passes a real one, so nothing exercised the
+    // fallback and it could have been `true` — which would make the form
+    // render every attribute for anything it did not recognise.
+    const unknown = "hat" as GarmentCategory;
+    expect(garmentFieldSpec.get(unknown)).toBeUndefined();
+    for (const key of garmentAttributeKeys) {
+      expect(hasGarmentAttribute(unknown, key)).toBe(false);
+    }
+  });
+
+  it("derives one spec entry per schema variant, in schema order", () => {
+    // The map is built from `garmentSchema.options`. Nothing asserted the
+    // mapping itself, so the builder could return a constant and the spec
+    // would still answer for the categories that happened to be tested.
+    expect(garmentFieldSpec.size).toBe(garmentSchema.options.length);
+    expect(garmentCategoriesInOrder).toEqual(
+      garmentSchema.options.map((option) => option.shape.category.value),
+    );
+  });
+
+  it("lists every type exactly once, in category order", () => {
+    const flat = garmentCategoriesInOrder.flatMap((c) => garmentTypesFor(c));
+    expect(allGarmentTypes).toEqual(flat);
+    // Uniqueness is a property of the table, not of this list — which is
+    // why the list does not deduplicate. The invariant is pinned above.
+    expect(new Set(allGarmentTypes).size).toBe(allGarmentTypes.length);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { estimateTempRange, formatTempRange } from "../../src/lib/thermal";
+import type { TempRange, ThermalInput } from "../../src/lib/thermal";
 
 describe("estimateTempRange", () => {
   it("returns undefined when no weight is given", () => {
@@ -121,6 +122,54 @@ describe("open-ended bands", () => {
       windResistant: true,
     });
     expect(windy?.lowC).toBeLessThan(plain?.lowC ?? 0);
+  });
+});
+
+describe("the tables themselves", () => {
+  /**
+   * The rest of this file asserts *relative* behaviour — outer is colder
+   * than regular, wind widens the floor — which is the interesting part and
+   * also why every literal in the tables survived mutation. Nothing pinned
+   * a number, so `f(-4, 32)` could become `f(+4, 32)` and every test still
+   * passed.
+   *
+   * These pin one entry per group at its exact Celsius value. That covers
+   * three mutant families at once: the sign on every sub-zero Fahrenheit
+   * literal, the whole weight-group objects (which could be emptied), and
+   * the `f()` conversion itself — a wrong multiplier or a dropped `- 32`
+   * moves every one of these numbers.
+   *
+   * Expected values are the conversion of the Fahrenheit literals a
+   * reviewer reads: 39–59°F is 4–15°C, -8–25°F is -22–-4°C.
+   */
+  const cases: readonly [string, ThermalInput, TempRange][] = [
+    ["top regular mid", { category: "top", weight: "mid" }, { lowC: 4, highC: 15 }],
+    ["top regular heavy", { category: "top", weight: "heavy" }, { lowC: -7, highC: 8 }],
+    ["top outer light", { category: "top", weight: "light", layer: "outer" }, { lowC: 6, highC: 16 }],
+    ["bottom regular mid", { category: "bottom", weight: "mid" }, { lowC: -2, highC: 12 }],
+    ["bottom regular heavy", { category: "bottom", weight: "heavy" }, { lowC: -15, highC: 4 }],
+    ["bottom outer mid", { category: "bottom", weight: "mid", layer: "outer" }, { lowC: -8, highC: 6 }],
+    ["headwear mid", { category: "headwear", weight: "mid" }, { lowC: -6, highC: 6 }],
+    ["headwear heavy", { category: "headwear", weight: "heavy" }, { lowC: -20, highC: -2 }],
+    ["neckwear mid", { category: "neckwear", weight: "mid" }, { lowC: -10, highC: 4 }],
+    ["neckwear heavy", { category: "neckwear", weight: "heavy" }, { lowC: -22, highC: -4 }],
+    ["gloves mid", { category: "gloves", weight: "mid" }, { lowC: -8, highC: 5 }],
+    ["gloves heavy", { category: "gloves", weight: "heavy" }, { lowC: -22, highC: -5 }],
+    ["socks mid", { category: "socks", weight: "mid" }, { lowC: -4, highC: 12 }],
+    ["socks heavy", { category: "socks", weight: "heavy" }, { lowC: -18, highC: 4 }],
+  ];
+
+  it.each(cases)("converts %s to its exact celsius band", (_label, input, expected) => {
+    expect(estimateTempRange(input)).toEqual(expected);
+  });
+
+  it("keeps the two body tables distinct", () => {
+    // `estimateTempRange` picks BODY_RANGES or BOTTOM_RANGES on the
+    // category. Swapping that choice is only observable where the two
+    // tables disagree, which they do at every weight.
+    expect(estimateTempRange({ category: "top", weight: "mid" })).not.toEqual(
+      estimateTempRange({ category: "bottom", weight: "mid" }),
+    );
   });
 });
 

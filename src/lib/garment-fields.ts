@@ -88,8 +88,15 @@ export function garmentTypesFor(
   return garmentTypesByCategory[category];
 }
 
-/** Every garment type, deduplicated — `gloves` and `socks` name both a
- * category and the single type inside it. */
-export const allGarmentTypes: readonly GarmentType[] = [
-  ...new Set(garmentCategoriesInOrder.flatMap((c) => garmentTypesFor(c))),
-];
+/**
+ * Every garment type, in category order.
+ *
+ * Not deduplicated, because it cannot need to be: no type belongs to two
+ * categories, and `test/garment-fields.test.ts` pins that. The first
+ * version wrapped this in a `new Set` on the belief that `gloves` and
+ * `socks` appear twice — they name a category *and* its only type, but
+ * only ever appear in one list. Mutation testing caught the dead
+ * deduplication: replacing the array changed nothing.
+ */
+export const allGarmentTypes: readonly GarmentType[] =
+  garmentCategoriesInOrder.flatMap((category) => garmentTypesFor(category));
