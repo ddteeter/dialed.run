@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Bracketed, Mono } from "../../../ui";
 import type { UiGroup } from "../../../lib/contracts";
+import { formatTempRange } from "../../../lib/thermal";
 import { garmentLabel } from "../label";
 import type { ClosetItemView, ClosetListing } from "../service";
 
@@ -28,9 +29,7 @@ function itemLabel(view: ClosetItemView): string {
 
 function tempLabel(view: ClosetItemView): string {
   if (!view.tempRange) return "Untested"; // uppercased by <Bracketed> in CSS
-  const low = Math.round(view.tempRange.lowC).toString();
-  const high = Math.round(view.tempRange.highC).toString();
-  return `${low}–${high}°`;
+  return formatTempRange(view.tempRange) ?? "Untested";
 }
 
 export interface ClosetGridProps {

@@ -16,6 +16,7 @@ import {
   uploadPhotoFn,
 } from "../../modules/closet/functions";
 import type { EffectiveAttributes } from "../../modules/closet/service";
+import { formatTempRange } from "../../lib/thermal";
 import { garmentLabel } from "../../modules/closet/label";
 import { Bracketed, Layout, Mono } from "../../ui";
 
@@ -125,7 +126,7 @@ function GarmentDetailPage() {
             <>
               Works at{" "}
               <Bracketed className="text-teal">
-                {Math.round(tempRange.lowC)}–{Math.round(tempRange.highC)}°
+                {formatTempRange(tempRange)}
               </Bracketed>
             </>
           ) : (

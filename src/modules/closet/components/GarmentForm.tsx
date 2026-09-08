@@ -12,7 +12,7 @@ import {
   hasGarmentAttribute,
   type GarmentAttributeKey,
 } from "../../../lib/garment-fields";
-import { estimateTempRange } from "../../../lib/thermal";
+import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
 import { Bracketed, Mono } from "../../../ui";
 import type { z } from "zod";
 
@@ -267,7 +267,7 @@ export function GarmentForm({
         <p className="text-sm text-night/70">
           Estimated{" "}
           <Bracketed className="text-teal">
-            {Math.round(estimate.lowC)}–{Math.round(estimate.highC)}°
+            {formatTempRange(estimate)}
           </Bracketed>
         </p>
       ) : undefined}

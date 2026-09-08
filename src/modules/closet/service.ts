@@ -559,10 +559,23 @@ function shouldIncludeByTempFilter(
     return true;
   }
   if (!tempRange) return false;
-  if (filters.minTempC !== undefined && tempRange.highC < filters.minTempC) {
+  // An open end always satisfies its side of the overlap: a garment with no
+  // upper bound is appropriate however warm the filter asks for.
+  if (
+    filters.minTempC !== undefined &&
+    tempRange.highC !== undefined &&
+    tempRange.highC < filters.minTempC
+  ) {
     return false;
   }
-  return filters.maxTempC === undefined || tempRange.lowC <= filters.maxTempC;
+  if (
+    filters.maxTempC !== undefined &&
+    tempRange.lowC !== undefined &&
+    tempRange.lowC > filters.maxTempC
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function toItemView(

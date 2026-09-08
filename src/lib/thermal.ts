@@ -7,8 +7,14 @@ type Layer = z.infer<typeof layerSchema>;
 type Weight = z.infer<typeof weightSchema>;
 
 export interface TempRange {
-  lowC: number;
-  highC: number;
+  /**
+  Absent when nothing warmer exists to switch into.
+  */
+  lowC?: number;
+  /**
+  Absent when nothing lighter exists to switch into.
+  */
+  highC?: number;
 }
 
 /**
@@ -101,18 +107,73 @@ export interface ThermalInput {
  * The attribute-derived temp band, or undefined when the attributes cannot
  * support a guess (no weight; shoes/accessories carry no thermal signal).
  */
+/**
+ * Categories you always wear one of. There is no lighter option than a
+ * light top — you are still wearing a top at 95°F — so the lightest weight
+ * in these has no upper bound. An optional layer is different: above its
+ * range you take the jacket off, and "no jacket" is a real choice.
+ */
+const ALWAYS_WORN: ReadonlySet<Category> = new Set<Category>([
+  "top",
+  "bottom",
+  "socks",
+  "shoes",
+]);
+
+/**
+ * The attribute-derived temp band, or undefined when the attributes cannot
+ * support a guess (no weight; shoes/accessories carry no thermal signal).
+ *
+ * **Open-ended at the ends of the scale**, because a bound means "past
+ * here, switch to something else" and at the extremes there is nothing to
+ * switch to:
+ *
+ * - the lightest weight of a category you always wear one of has no upper
+ *   bound — above a light top's old 79°F ceiling, the answer was still a
+ *   light top;
+ * - the heaviest *outer* layer has no lower bound, since nothing goes over
+ *   it. A heavy base layer keeps its lower bound, because the answer below
+ *   it is to add an outer layer rather than a warmer base.
+ *
+ * Only the middle of the scale is genuinely bounded both ways.
+ */
 export function estimateTempRange(input: ThermalInput): TempRange | undefined {
   if (input.weight === undefined) return undefined;
+  const isOuter = input.layer === "outer";
   let range: TempRange | undefined;
   if (input.category === "top" || input.category === "bottom") {
     const table = input.category === "top" ? BODY_RANGES : BOTTOM_RANGES;
-    range = table[input.layer === "outer" ? "outer" : "regular"][input.weight];
+    range = table[isOuter ? "outer" : "regular"][input.weight];
   } else {
     range = ACCESSORY_RANGES[input.category]?.[input.weight];
   }
   if (range === undefined) return undefined;
-  const lowC = input.windResistant
-    ? range.lowC - WIND_LOW_EXTENSION_C
-    : range.lowC;
-  return { lowC, highC: range.highC };
+
+  const hasOpenHigh =
+    input.weight === "light" && !isOuter && ALWAYS_WORN.has(input.category);
+  const hasOpenLow = isOuter && input.weight === "heavy";
+
+  const baseLow = range.lowC;
+  const lowC =
+    baseLow !== undefined && input.windResistant
+      ? baseLow - WIND_LOW_EXTENSION_C
+      : baseLow;
+  return {
+    ...(!hasOpenLow && { lowC }),
+    ...(!hasOpenHigh && { highC: range.highC }),
+  };
+}
+
+/**
+ * The band as a user reads it. Open ends render as a direction rather than
+ * a number, because "55–79°" claims a light top stops working at 80° and
+ * it does not — there is nothing lighter to change into.
+ */
+export function formatTempRange(range: TempRange): string | undefined {
+  const low = range.lowC === undefined ? undefined : Math.round(range.lowC);
+  const high = range.highC === undefined ? undefined : Math.round(range.highC);
+  if (low !== undefined && high !== undefined) return `${String(low)}–${String(high)}°`;
+  if (low !== undefined) return `${String(low)}°+`;
+  if (high !== undefined) return `under ${String(high)}°`;
+  return undefined;
 }
