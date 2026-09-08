@@ -41,26 +41,23 @@ round (D-26…D-33).
    may well be "design the action so the state change is visible instead" —
    that is the position round 4 took twice — but that has to be a decision,
    not a gap.
-4. **Does a garment carry a type?** Filed here first and moved — it is a
-   contract question, not a drawing, so it stops with the owner under the
-   schema protocol. Left as a pointer because it is the one place a reader
-   would look for it. Tracked as D-33 in `docs/deferred.md`.
+4. **Does a garment carry a type?** **Answered: yes**, by the owner on
+   2026-09-07. `garmentSchema` now carries an optional per-category `type`,
+   named for the pack's glyphs so a garment's icon *is* its type. The
+   tap-list sets one on every row.
 
-   Design has no question to answer here. It has answered twice: P2's
-   tap-list is a list of *types* (singlet · short-sleeve tee · merino base
-   L/S · half-zip · 5" shorts · tights · wind shell · beanie · buff …) and
-   the pack draws a glyph per type to render it. The two agree with each
-   other; `garmentSchema`'s eight broad categories are what disagree with
-   both.
+   Kept here because it is the one place a reader would look for it, and
+   because it is worth recording what design's role in it was: **none, and
+   that was the point.** It arrived filed as a question for design with
+   three options, two of which were impossible. P2's tap-list is already a
+   list of types and the pack already draws one glyph each, so design had
+   answered twice before being asked; the disagreement was between our
+   contract and both of them. Asking for category-level glyphs would have
+   put the same icon on all sixteen rows of P2.
 
-   Asking design to draw category-level glyphs instead would be the wrong
-   ask on design's own terms: eight glyphs across sixteen tap-list rows
-   means every row on P2 wears the same icon.
-
-   `sportsBra` and `armSleeves` arrived marked "provisional — delete if
-   these categories do not ship". They are not categories under the current
-   contract, but they *are* tap-list rows in P2 (ARM WARMERS is on the
-   screen), so they resolve with the same decision.
+   The rule: if the answer is a drawing, it comes here. If the answer is a
+   schema or a product call, it goes to the owner and lives in
+   `docs/deferred.md`.
 
 ## Answered in round 4 (imported 2026-09-07)
 

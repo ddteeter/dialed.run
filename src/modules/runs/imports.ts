@@ -5,7 +5,6 @@
  * can pick a parser without a schema column — the `imports` table stays
  * exactly the contract shape in docs/contracts.md.
  */
-import { and, eq } from "drizzle-orm";
 
 import { imports } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
@@ -13,6 +12,7 @@ import type { CoreDb } from "./core-db";
 import { IMPORT_EXTENSIONS, importExtensionOf } from "./parsers";
 import type { ImportExtension } from "./parsers";
 import type { ImportJob } from "./queue-messages";
+import { selectOwnedRow } from "../../lib/owned";
 
 export const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
 
@@ -87,10 +87,5 @@ export async function getImportStatus(
   userId: string,
   importId: string,
 ): Promise<ImportRow | undefined> {
-  const rows = await db
-    .select()
-    .from(imports)
-    .where(and(eq(imports.id, importId), eq(imports.userId, userId)))
-    .limit(1);
-  return rows[0];
+  return selectOwnedRow(db, imports, { id: importId, userId });
 }

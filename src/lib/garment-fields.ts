@@ -13,7 +13,7 @@
  * zod 4 keeps the per-option shape on a discriminated union, so the union
  * can answer the question itself. There is exactly one place to edit now.
  */
-import { garmentSchema } from "./contracts";
+import { garmentSchema, garmentTypesByCategory } from "./contracts";
 
 export type GarmentCategory = ReturnType<
   (typeof garmentSchema)["parse"]
@@ -71,3 +71,25 @@ export function hasGarmentAttribute(
 ): boolean {
   return garmentFieldSpec.get(category)?.has(key) ?? false;
 }
+
+/**
+ * The types a category admits, in declaration order. A thin re-export of
+ * `garmentTypesByCategory`, here so a caller that already has the field spec
+ * does not have to know two module names — and typed as
+ * `readonly GarmentType[]` so the per-category literal tuples widen to one
+ * comparable type at the call site.
+ */
+export type GarmentType =
+  (typeof garmentTypesByCategory)[GarmentCategory][number];
+
+export function garmentTypesFor(
+  category: GarmentCategory,
+): readonly GarmentType[] {
+  return garmentTypesByCategory[category];
+}
+
+/** Every garment type, deduplicated — `gloves` and `socks` name both a
+ * category and the single type inside it. */
+export const allGarmentTypes: readonly GarmentType[] = [
+  ...new Set(garmentCategoriesInOrder.flatMap((c) => garmentTypesFor(c))),
+];

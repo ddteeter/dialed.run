@@ -9,6 +9,7 @@ import { runs, userProfiles } from "../../db/schema-core";
 import type { RunDraft } from "../../lib/contracts";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
+import { selectOwnedRow } from "../../lib/owned";
 
 export const DUPLICATE_WINDOW_S = 120;
 
@@ -130,12 +131,7 @@ export async function getRun(
   userId: string,
   runId: string,
 ): Promise<RunRow | undefined> {
-  const rows = await db
-    .select()
-    .from(runs)
-    .where(and(eq(runs.id, runId), eq(runs.userId, userId)))
-    .limit(1);
-  return rows[0];
+  return selectOwnedRow(db, runs, { id: runId, userId });
 }
 
 export async function listRuns(db: CoreDb, userId: string): Promise<RunRow[]> {
