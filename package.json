@@ -29,6 +29,7 @@
     "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify"
   },
   "dependencies": {
+    "@cf-wasm/photon": "^0.4.0",
     "@garmin/fitsdk": "^21.214.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "^0.10.12",

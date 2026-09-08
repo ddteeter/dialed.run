@@ -8,13 +8,12 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   deleteCookie,
   getCookie,
-  getRequestHeaders,
   getRequestUrl,
   setCookie,
 } from "@tanstack/react-start/server";
 import { z } from "zod";
 
-import { auth } from "../auth";
+import { requireUserId } from "../auth";
 import { runDraftSchema } from "../../lib/contracts";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import { coreDb } from "./core-db";
@@ -34,18 +33,6 @@ import {
   getStravaConnection,
   stravaAuthorizeUrl,
 } from "./strava/oauth";
-
-class UnauthenticatedError extends Error {
-  constructor() {
-    super("Sign in to continue.");
-  }
-}
-
-async function requireUserId(): Promise<string> {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  if (session === null) throw new UnauthenticatedError();
-  return session.user.id;
-}
 
 const manualRunInput = runDraftSchema.extend({
   // Minted once when the form mounts, resent on every retry of that same

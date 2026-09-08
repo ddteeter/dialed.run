@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d76e33f0-9ca8-4ca5-8a87-d052aac19a19",
-  "prevId": "f3f1a7a9-cedc-48d4-adf9-3b5d25c7f552",
+  "id": "9dbdd1be-9c25-4405-9a9a-7df0f6cea122",
+  "prevId": "db70c51b-6851-49fa-83fe-5627615814ae",
   "tables": {
     "brands": {
       "name": "brands",
@@ -274,7 +274,7 @@
           "name": "subject_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "body": {
@@ -893,21 +893,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'ok'"
-        },
-        "refresh_failure_count": {
-          "name": "refresh_failure_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "refresh_first_failed_at": {
-          "name": "refresh_first_failed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {},
@@ -1134,7 +1119,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": false
         },
         "visibility": {
           "name": "visibility",

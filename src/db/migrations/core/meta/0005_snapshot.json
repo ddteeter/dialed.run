@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "13c49dea-5d74-4d99-ba79-1be61dbe388f",
-  "prevId": "5c1888b1-87eb-4742-8ac8-7207b2a10cd3",
+  "id": "d76e33f0-9ca8-4ca5-8a87-d052aac19a19",
+  "prevId": "f3f1a7a9-cedc-48d4-adf9-3b5d25c7f552",
   "tables": {
     "brands": {
       "name": "brands",
@@ -290,7 +290,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -808,7 +808,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": 0
         },
         "effort": {
           "name": "effort",
@@ -910,15 +910,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "strava_connections_athlete": {
-          "name": "strava_connections_athlete",
-          "columns": [
-            "athlete_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

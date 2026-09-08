@@ -59,6 +59,11 @@ databases and cannot be joined. Comment it when that's the reason.
 
 ## 4. Do these writes need to land together?
 
+Ask it the other way round: **can you say why they are independent?** If not,
+one `batch()`. And if one of the writes is a claim, or a call to something
+outside D1, re-read CLAUDE.md §D1 query discipline before deciding — those
+are the two shapes that fail invisibly.
+
 D1 has no interactive transactions. A run of awaited `insert`/`update`
 statements is not atomic, and a failure halfway through leaves a half-written
 entity. If two or more writes must be all-or-nothing, they belong in one

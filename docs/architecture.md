@@ -97,6 +97,8 @@ flowchart TD
     ONB -->|index.ts only| CLOSET
     CLOSET -->|index.ts only| PROD
     FEED -->|index.ts only| PROD
+    CLOSET -->|index.ts only| AUTH
+    PROD -->|index.ts only| AUTH
 
     CLOSET --> UI[ui]
     RUNS --> UI
@@ -115,6 +117,13 @@ flowchart TD
 Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
+
+Lane 101 added `CLOSET/PROD -->|index.ts only| AUTH`: every `closet.*` /
+`products.*` server function scopes its query to the signed-in user, which
+means checking the session itself (server functions are directly callable —
+a route-level check alone isn't a security boundary). Both modules import
+only `auth`'s `index.ts` (the Better Auth instance), the same surface
+`modules/auth/functions.ts` itself uses.
 
 ## Authentication
 

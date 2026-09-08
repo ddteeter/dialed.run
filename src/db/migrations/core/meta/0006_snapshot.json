@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2ba8d956-c01a-4655-8b19-39e8580c9d72",
-  "prevId": "13c49dea-5d74-4d99-ba79-1be61dbe388f",
+  "id": "5c1888b1-87eb-4742-8ac8-7207b2a10cd3",
+  "prevId": "d76e33f0-9ca8-4ca5-8a87-d052aac19a19",
   "tables": {
     "brands": {
       "name": "brands",
@@ -824,13 +824,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "idempotency_key": {
-          "name": "idempotency_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "weather_status": {
           "name": "weather_status",
           "type": "text",
@@ -848,14 +841,6 @@
             "started_at"
           ],
           "isUnique": false
-        },
-        "runs_idempotency": {
-          "name": "runs_idempotency",
-          "columns": [
-            "user_id",
-            "idempotency_key"
-          ],
-          "isUnique": true
         }
       },
       "foreignKeys": {},
@@ -925,15 +910,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "strava_connections_athlete": {
-          "name": "strava_connections_athlete",
-          "columns": [
-            "athlete_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

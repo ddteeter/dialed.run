@@ -17,15 +17,14 @@ export function TabBar() {
       className="fixed inset-x-0 bottom-0 border-t border-night/15 bg-chalk pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="m-0 flex list-none justify-between px-5 py-4">
-        {/* Placeholder target: lane 104 repoints this at /feed. */}
         <li>
+          {/* Placeholder target: lane 104 repoints this at /feed. */}
           <Link to="/" className={TAB_CLASS}>
             Feed
           </Link>
         </li>
-        {/* Placeholder target: lane 101 repoints this at /closet. */}
         <li>
-          <Link to="/" className={TAB_CLASS}>
+          <Link to="/closet" className={TAB_CLASS}>
             Closet
           </Link>
         </li>
@@ -34,14 +33,14 @@ export function TabBar() {
             + Add
           </Link>
         </li>
-        {/* Placeholder target: lane 105 repoints this at /call. */}
         <li>
+          {/* Placeholder target: lane 105 repoints this at /call. */}
           <Link to="/" className={TAB_CLASS}>
             Call
           </Link>
         </li>
-        {/* Placeholder target: lane 104 repoints this at /you. */}
         <li>
+          {/* Placeholder target: lane 104 repoints this at /you. */}
           <Link to="/" className={TAB_CLASS}>
             You
           </Link>

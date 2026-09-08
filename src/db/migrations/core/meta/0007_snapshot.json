@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bbe59be4-44fe-4bfe-8936-06b6265cd704",
-  "prevId": "2ba8d956-c01a-4655-8b19-39e8580c9d72",
+  "id": "13c49dea-5d74-4d99-ba79-1be61dbe388f",
+  "prevId": "5c1888b1-87eb-4742-8ac8-7207b2a10cd3",
   "tables": {
     "brands": {
       "name": "brands",
@@ -824,13 +824,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "idempotency_key": {
-          "name": "idempotency_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "weather_status": {
           "name": "weather_status",
           "type": "text",
@@ -848,14 +841,6 @@
             "started_at"
           ],
           "isUnique": false
-        },
-        "runs_idempotency": {
-          "name": "runs_idempotency",
-          "columns": [
-            "user_id",
-            "idempotency_key"
-          ],
-          "isUnique": true
         }
       },
       "foreignKeys": {},
@@ -934,37 +919,6 @@
           "isUnique": true
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "strava_revocations": {
-      "name": "strava_revocations",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "access_token": {
-          "name": "access_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f3f1a7a9-cedc-48d4-adf9-3b5d25c7f552",
-  "prevId": "db70c51b-6851-49fa-83fe-5627615814ae",
+  "id": "2ba8d956-c01a-4655-8b19-39e8580c9d72",
+  "prevId": "13c49dea-5d74-4d99-ba79-1be61dbe388f",
   "tables": {
     "brands": {
       "name": "brands",
@@ -274,7 +274,7 @@
           "name": "subject_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "body": {
@@ -290,7 +290,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -808,7 +808,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": false
         },
         "effort": {
           "name": "effort",
@@ -822,6 +822,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "weather_status": {
@@ -841,6 +848,14 @@
             "started_at"
           ],
           "isUnique": false
+        },
+        "runs_idempotency": {
+          "name": "runs_idempotency",
+          "columns": [
+            "user_id",
+            "idempotency_key"
+          ],
+          "isUnique": true
         }
       },
       "foreignKeys": {},
@@ -910,7 +925,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "strava_connections_athlete": {
+          "name": "strava_connections_athlete",
+          "columns": [
+            "athlete_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
