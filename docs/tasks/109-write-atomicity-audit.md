@@ -60,21 +60,27 @@ right more often than an outbox:
 Adding an outbox where a marker already exists makes the code worse. Say
 which of the three each site uses, in a comment.
 
-## Known starting points
+## What has already been swept
 
-Fixed already, as reference shapes rather than places to revisit:
-`recordRefreshFailure` and `processReminderJob` (batched),
-`disconnectStrava` (outbox).
+A first pass ran over the four lanes' write paths before merge. Each site
+below now carries a comment naming which of the three answers it uses, so
+this task is the *remaining* surface, not a re-run.
 
-Worth reading first, from a rough scan — confirm rather than assume:
+| site | outcome |
+| --- | --- |
+| `recordRefreshFailure`, `processReminderJob` | batched |
+| `disconnectStrava` | outbox (`strava_revocations`) |
+| `startImport` | reconciliation — the digest re-dispatches imports stalled `pending` |
+| `attach.ts` cross-database writes | reconciliation — `runs.weather_status` + the hourly cron, verified by reading it |
+| `modules/closet/photos.ts` | safe as-is: the photo key is deterministic per item, so a retry overwrites rather than orphaning |
+| `modules/feed/photos.ts` | accepted, recorded as D-27 — visible failure, orphan is storage not correctness |
 
-- `modules/feed/entries.ts` — `submitVerdict` batches, but the surrounding
-  entry-creation and photo paths were not checked
-- `modules/closet/photos.ts` — R2 put plus a row insert
-- `modules/runs/imports.ts` — R2 put plus a row insert plus a queue send, the
-  three-system case
-- `modules/feed/photos.ts` — the same shape on the feed side
-- onboarding and profile writes (105), when they exist
+## Still to read
+
+- `modules/feed/entries.ts` beyond `submitVerdict` — entry creation, tags,
+  reactions, follows
+- `modules/closet/service.ts` write paths other than the ones above
+- everything 105-107 adds, which is the real reason this task exists
 
 ## Done when
 
