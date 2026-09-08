@@ -73,13 +73,22 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
-    // The trailing alternative excludes nested git worktrees. A worktree
-    // checked out inside the repository is a whole second checkout of it, and
-    // dependency-cruiser does not read .gitignore, so without this it cruises
-    // every one of them. `.claude/worktrees/` is where Claude Code puts them
-    // by default; add your own vendored or generated trees here too.
+    // The trailing alternatives exclude whole second copies of the repo.
+    // dependency-cruiser does not read .gitignore, so without them it cruises
+    // every one.
+    //
+    // `.claude/worktrees/` is where Claude Code puts nested git worktrees.
+    //
+    // `.stryker-tmp/` is stryker's sandbox — a full copy of the tree, made
+    // per concurrent runner and left behind by an interrupted run. Without
+    // this, `npm run mutate` fails the commit gate with
+    // `only-env-touches-cloudflare` against a *copied* `src/env/index.ts`:
+    // a real architecture rule, naming a file nobody wrote. Verified by
+    // planting a sandbox copy and watching the gate flip. Reported upstream
+    // as agentic-guardrails-scaffolding#55, since `guardrails init` seeds
+    // both this config and stryker's.
     exclude: {
-      path: "(^|/)(dist|build|coverage|node_modules)/|^\\.claude/worktrees/",
+      path: "(^|/)(dist|build|coverage|node_modules)/|^\\.claude/worktrees/|^\\.stryker-tmp/",
     },
   },
 };

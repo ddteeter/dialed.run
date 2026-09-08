@@ -302,15 +302,31 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   yourself, and do not argue with the gate.
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
-- **Mutation testing is a tool, not a gate.** `npm run mutate` (stryker,
-  scoped to `src/lib`); `stryker` stays `off` in `guardrails.config.json`.
-  Two things to know before running it. It works only because
-  `vitest.config.ts` forwards `__STRYKER_ACTIVE_MUTANT__` into the workers
-  pool as a binding — the pool's `process.env` is the Worker's bindings,
-  not the parent environment, so without that every mutant survives and the
-  score is a meaningless 0.00. And it costs ~11s per mutant, so narrow
-  `mutate` to the file you are working on; narrowing the *command* instead
-  makes uncovered files report 0.00, which looks like a finding.
+- **Mutation testing works; it is a tool you run, not a check that runs.**
+  Those are two different switches and the names collide:
+
+  | | what it is | state |
+  | --- | --- | --- |
+  | `npm run mutate` | stryker, on demand, scoped to `src/lib` | **available** |
+  | `"stryker"` in `guardrails.config.json` | whether the *commit gate* runs it on your diff | `off` |
+
+  So "stryker is off" means "not in the commit gate", not "mutation testing
+  is unavailable". It works — but only because `vitest.config.ts` forwards
+  `__STRYKER_ACTIVE_MUTANT__` into the workers pool as a binding. The pool's
+  `process.env` is the Worker's bindings, not the parent environment, so
+  without that forwarding no mutant activates, everything survives, and the
+  score is a meaningless `0.00` that reads as "these tests are worthless".
+
+  It is off in the gate because of cost, not doubt. Guardrails does scope
+  stryker to the changed files (`--mutate <diff>`), but the command it runs
+  per mutant is the whole suite, and that is ~11s a time: a commit touching
+  `lib/normalize.ts` costs ~2 minutes, one touching `lib/thermal.ts` (112
+  mutants) about 20. Narrowing the *command* instead would be 18x faster and
+  wrong — a command that misses a mutated file reports `0.00`, which looks
+  like a finding and is a configuration error.
+
+  So narrow `mutate`, never the command, and run it against what you are
+  working on.
 - **Commit gate**: knip + dependency-cruiser + `dupes` run at commit. Dead
   code, boundary violations and clones block the commit. Delete dead code;
   don't ignore it.
