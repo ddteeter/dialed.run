@@ -1,0 +1,1 @@
+CREATE INDEX `user_profiles_display_name_nocase` ON `user_profiles` ("display_name" COLLATE NOCASE);

@@ -17,6 +17,9 @@ import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as ClosetIndexRouteImport } from './routes/closet/index'
 import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
+import { Route as FeedIndexRouteImport } from './routes/feed/index'
+import { Route as FeedMeRouteImport } from './routes/feed/me'
+import { Route as FeedSearchRouteImport } from './routes/feed/search'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
@@ -26,6 +29,11 @@ import { Route as RunsStravaRouteImport } from './routes/runs/strava'
 import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
+import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
+import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entryId'
+import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
+import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
+import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
 import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
 
@@ -67,6 +75,21 @@ const ClosetItemIdRoute = ClosetItemIdRouteImport.update({
 const ClosetNewRoute = ClosetNewRouteImport.update({
   id: '/closet/new',
   path: '/closet/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedIndexRoute = FeedIndexRouteImport.update({
+  id: '/feed/',
+  path: '/feed/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedMeRoute = FeedMeRouteImport.update({
+  id: '/feed/me',
+  path: '/feed/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedSearchRoute = FeedSearchRouteImport.update({
+  id: '/feed/search',
+  path: '/feed/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
@@ -114,6 +137,31 @@ const ClosetEditItemIdRoute = ClosetEditItemIdRouteImport.update({
   path: '/closet/edit/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedAttachRunIdRoute = FeedAttachRunIdRouteImport.update({
+  id: '/feed/attach/$runId',
+  path: '/feed/attach/$runId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedEntryEntryIdRoute = FeedEntryEntryIdRouteImport.update({
+  id: '/feed/entry/$entryId',
+  path: '/feed/entry/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedPhotoSplatRoute = FeedPhotoSplatRouteImport.update({
+  id: '/feed/photo/$',
+  path: '/feed/photo/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedUUserIdRoute = FeedUUserIdRouteImport.update({
+  id: '/feed/u/$userId',
+  path: '/feed/u/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedVerdictEntryIdRoute = FeedVerdictEntryIdRouteImport.update({
+  id: '/feed/verdict/$entryId',
+  path: '/feed/verdict/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
   id: '/runs/import/$importId',
   path: '/runs/import/$importId',
@@ -133,16 +181,24 @@ export interface FileRoutesByFullPath {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/feed/me': typeof FeedMeRoute
+  '/feed/search': typeof FeedSearchRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/closet/': typeof ClosetIndexRoute
+  '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/feed/attach/$runId': typeof FeedAttachRunIdRoute
+  '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
+  '/feed/photo/$': typeof FeedPhotoSplatRoute
+  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
@@ -154,16 +210,24 @@ export interface FileRoutesByTo {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/feed/me': typeof FeedMeRoute
+  '/feed/search': typeof FeedSearchRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/closet': typeof ClosetIndexRoute
+  '/feed': typeof FeedIndexRoute
   '/notifications': typeof NotificationsIndexRoute
   '/runs': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/feed/attach/$runId': typeof FeedAttachRunIdRoute
+  '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
+  '/feed/photo/$': typeof FeedPhotoSplatRoute
+  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
@@ -176,16 +240,24 @@ export interface FileRoutesById {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/feed/me': typeof FeedMeRoute
+  '/feed/search': typeof FeedSearchRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/closet/': typeof ClosetIndexRoute
+  '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/feed/attach/$runId': typeof FeedAttachRunIdRoute
+  '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
+  '/feed/photo/$': typeof FeedPhotoSplatRoute
+  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
@@ -199,16 +271,24 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/feed/me'
+    | '/feed/search'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
     | '/closet/'
+    | '/feed/'
     | '/notifications/'
     | '/runs/'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/feed/attach/$runId'
+    | '/feed/entry/$entryId'
+    | '/feed/photo/$'
+    | '/feed/u/$userId'
+    | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
     | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
@@ -220,16 +300,24 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/feed/me'
+    | '/feed/search'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
     | '/closet'
+    | '/feed'
     | '/notifications'
     | '/runs'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/feed/attach/$runId'
+    | '/feed/entry/$entryId'
+    | '/feed/photo/$'
+    | '/feed/u/$userId'
+    | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
     | '/closet/photo/$itemId/$size'
   id:
@@ -241,16 +329,24 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/feed/me'
+    | '/feed/search'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
     | '/closet/'
+    | '/feed/'
     | '/notifications/'
     | '/runs/'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/feed/attach/$runId'
+    | '/feed/entry/$entryId'
+    | '/feed/photo/$'
+    | '/feed/u/$userId'
+    | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
     | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
@@ -263,16 +359,24 @@ export interface RootRouteChildren {
   AuthSignupRoute: typeof AuthSignupRoute
   ClosetItemIdRoute: typeof ClosetItemIdRoute
   ClosetNewRoute: typeof ClosetNewRoute
+  FeedMeRoute: typeof FeedMeRoute
+  FeedSearchRoute: typeof FeedSearchRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsManualRoute: typeof RunsManualRoute
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
+  FeedIndexRoute: typeof FeedIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ClosetEditItemIdRoute: typeof ClosetEditItemIdRoute
+  FeedAttachRunIdRoute: typeof FeedAttachRunIdRoute
+  FeedEntryEntryIdRoute: typeof FeedEntryEntryIdRoute
+  FeedPhotoSplatRoute: typeof FeedPhotoSplatRoute
+  FeedUUserIdRoute: typeof FeedUUserIdRoute
+  FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
   ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
@@ -333,6 +437,27 @@ declare module '@tanstack/react-router' {
       path: '/closet/new'
       fullPath: '/closet/new'
       preLoaderRoute: typeof ClosetNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/': {
+      id: '/feed/'
+      path: '/feed'
+      fullPath: '/feed/'
+      preLoaderRoute: typeof FeedIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/me': {
+      id: '/feed/me'
+      path: '/feed/me'
+      fullPath: '/feed/me'
+      preLoaderRoute: typeof FeedMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/search': {
+      id: '/feed/search'
+      path: '/feed/search'
+      fullPath: '/feed/search'
+      preLoaderRoute: typeof FeedSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications/': {
@@ -398,6 +523,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClosetEditItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feed/attach/$runId': {
+      id: '/feed/attach/$runId'
+      path: '/feed/attach/$runId'
+      fullPath: '/feed/attach/$runId'
+      preLoaderRoute: typeof FeedAttachRunIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/entry/$entryId': {
+      id: '/feed/entry/$entryId'
+      path: '/feed/entry/$entryId'
+      fullPath: '/feed/entry/$entryId'
+      preLoaderRoute: typeof FeedEntryEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/photo/$': {
+      id: '/feed/photo/$'
+      path: '/feed/photo/$'
+      fullPath: '/feed/photo/$'
+      preLoaderRoute: typeof FeedPhotoSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/u/$userId': {
+      id: '/feed/u/$userId'
+      path: '/feed/u/$userId'
+      fullPath: '/feed/u/$userId'
+      preLoaderRoute: typeof FeedUUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/verdict/$entryId': {
+      id: '/feed/verdict/$entryId'
+      path: '/feed/verdict/$entryId'
+      fullPath: '/feed/verdict/$entryId'
+      preLoaderRoute: typeof FeedVerdictEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs/import/$importId': {
       id: '/runs/import/$importId'
       path: '/runs/import/$importId'
@@ -423,16 +583,24 @@ const rootRouteChildren: RootRouteChildren = {
   AuthSignupRoute: AuthSignupRoute,
   ClosetItemIdRoute: ClosetItemIdRoute,
   ClosetNewRoute: ClosetNewRoute,
+  FeedMeRoute: FeedMeRoute,
+  FeedSearchRoute: FeedSearchRoute,
   RunsRunIdRoute: RunsRunIdRoute,
   RunsManualRoute: RunsManualRoute,
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
   ClosetIndexRoute: ClosetIndexRoute,
+  FeedIndexRoute: FeedIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ClosetEditItemIdRoute: ClosetEditItemIdRoute,
+  FeedAttachRunIdRoute: FeedAttachRunIdRoute,
+  FeedEntryEntryIdRoute: FeedEntryEntryIdRoute,
+  FeedPhotoSplatRoute: FeedPhotoSplatRoute,
+  FeedUUserIdRoute: FeedUUserIdRoute,
+  FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
   ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }

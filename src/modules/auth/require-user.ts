@@ -26,3 +26,22 @@ export async function requireUserId(): Promise<string> {
   if (session === null) throw new AuthRequiredError();
   return session.user.id;
 }
+
+/**
+ * The signed-in user's id, or `undefined` when nobody is signed in.
+ *
+ * The optional counterpart to `requireUserId`, for surfaces that are
+ * legitimately readable while signed out but show more when you are: the
+ * public feed, an entry detail page, the cached photo GET. Those need the
+ * viewer's identity to decide visibility, not to gate entry.
+ *
+ * It exists because the alternative is calling `auth.api.getSession`
+ * inline, which is the fifth session idiom this module was consolidated to
+ * prevent — and the eslint rule rejects it for exactly that reason. Same
+ * reasoning as `sessionFromRequest`, which covers raw handlers holding a
+ * `Request` rather than TanStack's server context.
+ */
+export async function optionalUserId(): Promise<string | undefined> {
+  const session = await auth.api.getSession({ headers: getRequestHeaders() });
+  return session?.user.id;
+}

@@ -5,6 +5,7 @@
  * adapter in 000 §5 and live in schema-auth.ts; app tables reference user
  * ids as plain text columns (FK constraints arrive with that migration).
  */
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -25,7 +26,25 @@ export const userProfiles = sqliteTable("user_profiles", {
   distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
   shareDefault: integer("share_default").notNull().default(1),
   onboardingComplete: integer("onboarding_complete").notNull().default(0),
-});
+},
+  (t) => [
+    // People search is a prefix LIKE on display_name, which SQLite can only
+    // serve from an index when the index collation matches the comparison.
+    // SQLite's LIKE is case-insensitive for ASCII by default, so a plain
+    // BINARY index is unusable for it and every keystroke scanned the whole
+    // table — rows scanned are what D1 bills.
+    //
+    // Verified with EXPLAIN QUERY PLAN: without this, "SCAN user_profiles";
+    // with it, "SEARCH user_profiles USING INDEX
+    // user_profiles_display_name_nocase (display_name>? AND display_name<?)".
+    //
+    // NOCASE folds ASCII only, so accented names still miss. Fixing that
+    // needs stored normalisation, not a collation.
+    index("user_profiles_display_name_nocase").on(
+      sql`${t.displayName} COLLATE NOCASE`,
+    ),
+  ],
+);
 
 export const brands = sqliteTable(
   "brands",
