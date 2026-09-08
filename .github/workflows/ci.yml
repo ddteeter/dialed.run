@@ -1,8 +1,16 @@
 name: CI
 
 on:
+  # Every pull request, not only those targeting main. A stacked PR — one
+  # opened against another branch that is itself under review — otherwise
+  # got the guardrails workflow and nothing else, so lint, typecheck, tests,
+  # the client-bundle build and the browser e2e all went unrun until it was
+  # retargeted at merge time. That is exactly backwards: the checks matter
+  # most while the change is still being reviewed.
+  #
+  # `push` stays pinned to main, which is what keeps the deploy job below
+  # (`if: github.event_name == 'push'`) unreachable from a branch.
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
