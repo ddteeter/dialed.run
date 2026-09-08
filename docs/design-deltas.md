@@ -59,6 +59,38 @@ round (D-26…D-33).
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
 
+5. **Where does a manually-added garment's type come from?** The one thing
+   the `type` decision left unreconciled, and it is a drawing question, so
+   it belongs here.
+
+   Design already *uses* the type in two places: A2b filters a category by
+   it (`MOST WORN · LONG SLEEVE · UNTESTED` inside Tops), and garment detail
+   displays it under the product name ("Tracksmith Harrier / LONG SLEEVE
+   HALF-ZIP"). The tap-list collects it, because each row *is* a type.
+
+   Nothing collects it anywhere else. Screen F is brand autocomplete + name
+   + a one-tap **category**, and round 4 did not redraw it. So a garment
+   added by hand can be filtered by and displayed with a property it was
+   never asked for.
+
+   Three shapes the answer could take, and they are not equivalent:
+
+   - **It belongs to the product, not the garment.** The detail line reads
+     as product identity then product type, and "Tracksmith Harrier" is a
+     long-sleeve half-zip because the *product* is. Enrichment already
+     plans to infer `products.category_hint` from a product page. Under
+     this answer `wardrobe_items.type` is a cache of a product fact and
+     generic garments have none.
+   - **It is derived from the name.** The generic row in A2b reads
+     "[GENERIC] Green L/S Crew" — the type is in the free text. Under this
+     answer nothing is stored and the filter parses.
+   - **F should collect it.** A second one-tap row under category. Cheapest
+     to build, most expensive to the user, and it contradicts F's
+     "identity-first, two taps" framing.
+
+   We have shipped the column as nullable, which survives all three. The
+   question is what fills it for a manual add.
+
 ## Answered in round 4 (imported 2026-09-07)
 
 Kept as a record of what moved, and where the answer now lives. Implementation
