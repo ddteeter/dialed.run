@@ -29,7 +29,7 @@
         <span style="color: #FF2D8A;">{{ brandWord }}.run</span>
       </div>
       <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 980px; text-transform: uppercase;">The rest of the app.</h1>
-      <p style="margin: 0; font-size: 15px; line-height: 1.5; max-width: 760px; color: #8B8B93;">Sections R through Y were added for the launch gate: the surfaces the lanes had been shipping as placeholders, plus the two unscheduled objects. Failure states in them follow the form contract — field errors marked in yellow at the field, whole-form failures outlined above the button.</p>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; max-width: 760px; color: #8B8B93;">Sections R through Z were added for the launch gate: the surfaces the lanes had been shipping as placeholders, plus the three unscheduled objects. Failure states in them follow the form contract — field errors marked in yellow at the field, whole-form failures outlined above the button.</p>
       <p style="margin: 0; font-size: 18px; line-height: 1.5; max-width: 760px; color: #DEDDD6; text-wrap: pretty;">Feed, add-a-garment, profiles, discovery, and the gear-gap surface. Screens marked <strong style="color: #F4F3EF;">V1</strong> are the first release; <strong style="color: #F4F3EF;">post-V1 target</strong> screens are the shape to build toward once the call and cohort math exist. Garments show "Brand Model" as plain text wherever they're named, and a <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px;">[GENERIC]</span> badge where they aren't — never logos, never links.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;">
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">E Feed</span>
@@ -45,6 +45,7 @@
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F5FF3D;">W Report · block · blur</span>
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">X Desktop feed</span>
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">Y Shoes</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">Z Where type comes from</span>
       </div>
     </div>
 
@@ -1319,6 +1320,117 @@
       </div>
     </div>
 
+    <!-- Z -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Z · Where type comes from</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 700px; line-height: 1.45;">Type is a property of the product, not of the garment. F never asks for it, nothing parses it out of a name, and a garment that has none is drawn as a garment that has none.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Z1 · F IS UNCHANGED</span>
+
+          <div data-screen-label="Z1a F collects two things" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">ADD A GARMENT · WHAT IT ASKS</span>
+            <div style="display: flex; flex-direction: column; gap: 9px;">
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; font-weight: 600;">Tracksmith Harrier</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #009F8C;">MATCHED</span></div>
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px;">Tops</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70;">CATEGORY</span></div>
+              <div style="border: 1px dashed #B9B8AE; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 14px; color: #9A9A90;">Long sleeve half-zip</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;">NOT ASKED</span></div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">The third row is drawn dashed to show what F <em>doesn't</em> do. The type came with the match, from the product record — it was never a question. Two taps stays two taps.</p>
+          </div>
+
+          <div data-screen-label="Z1b No match, no type" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">GENERIC ADD · SAME SCREEN</span>
+            <div style="display: flex; flex-direction: column; gap: 9px;">
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px;">Green L/S Crew</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E64;">[GENERIC]</span></div>
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px;">Tops</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70;">CATEGORY</span></div>
+              <div style="border: 1px dashed #B9B8AE; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #9A9A90;">TYPE · NULL</span></div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">"L/S" sitting in the free text is not a type. Reading it as one means a garment named "Crew for cold L/S days" gets filed wrong, silently, forever. The field stays empty and the UI says so.</p>
+          </div>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Z2 · HOW NULL READS</span>
+
+          <div data-screen-label="Z2a Detail line, typed" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">GARMENT DETAIL · TWO LINES</span>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div style="border: 1px solid #DCDBD2; border-radius: 12px; background: #FFFFFF; padding: 14px; display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em; line-height: 1.1;">Tracksmith Harrier</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #7A7A70;">LONG SLEEVE HALF-ZIP · BOUGHT MAR 2025</span>
+              </div>
+              <div style="border: 1px solid #DCDBD2; border-radius: 12px; background: #FFFFFF; padding: 14px; display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em; line-height: 1.1;">Green L/S Crew</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #7A7A70;">TOP · GENERIC · ADDED MAR 2025</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">The subtitle is <em>product identity</em>, and a generic garment's identity is its category. Same slot, same type scale, no empty space and no em-dash placeholder. Nothing on this screen has to know the field was nullable.</p>
+          </div>
+
+          <div data-screen-label="Z2b Type filters in Tops" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TOPS · FILTER RAIL</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;">
+              <span style="border: 1px solid #DCDBD2; padding: 7px 11px; border-radius: 100px; color: #4E4E44;">MOST WORN</span>
+              <span style="background: #00E0C6; padding: 7px 11px; border-radius: 100px;">LONG SLEEVE ✕</span>
+              <span style="border: 1px solid #DCDBD2; padding: 7px 11px; border-radius: 100px; color: #4E4E44;">SHORT SLEEVE</span>
+              <span style="border: 1px solid #DCDBD2; padding: 7px 11px; border-radius: 100px; color: #4E4E44;">UNTESTED</span>
+            </div>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; flex-direction: column; gap: 9px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;">6 OF 14 · 5 HAVE NO TYPE YET</span>
+              <div style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; align-items: flex-start;">
+                <p style="margin: 0; font-size: 13px; line-height: 1.5;">Five generic pieces can't answer a sleeve-length filter. <span style="font-weight: 600;">Name one and it will.</span></p>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600;">SHOW ALL 14</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Type chips are built from the types actually present in the category — never a fixed taxonomy. Untyped garments drop out of a type filter, and the count line explains the gap instead of leaving the runner to notice pieces missing.</p>
+          </div>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Z3 · WHAT FILLS IT</span>
+
+          <div data-screen-label="Z3a Naming fills type" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">NAMING A GENERIC PIECE</span>
+            <div style="border: 1px solid #DCDBD2; border-radius: 12px; background: #FFFFFF; padding: 14px; display: flex; flex-direction: column; gap: 11px;">
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <div style="flex: 0 0 44px; height: 44px; border-radius: 8px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                  <span style="font-size: 15px; font-weight: 600;">Patagonia Airshed Pro</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #009F8C;">MATCHED · WAS "GREEN L/S CREW"</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.4; color: #4E4E44;">
+                <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #009F8C; flex: 0 0 auto;">GAINED</span><span>Type — <span style="font-weight: 600;">long sleeve half-zip</span>, from the product</span></div>
+                <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #009F8C; flex: 0 0 auto;">KEPT</span><span>Every verdict and the range it already earned</span></div>
+                <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70; flex: 0 0 auto;">UNCHANGED</span><span>Category — the runner's answer always wins</span></div>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">F already promises "naming it is what makes it learn." This is the second thing naming buys, and it's the one the runner can see immediately — the piece appears in a filter it was invisible to a moment ago.</p>
+          </div>
+
+          <div data-screen-label="Z3b The contract" style="background: #24242B; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 11px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">FOR THE LANES</span>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; line-height: 1.5; color: #DEDDD6;">
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #F5FF3D; flex: 0 0 auto;">01</span><span><code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">wardrobe_items.type</code> is a cache of <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">products.category_hint</code>. It is written on match and on enrichment, never by a user.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #F5FF3D; flex: 0 0 auto;">02</span><span>No parser. Free text is never mined for type — not on write, not on read.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #F5FF3D; flex: 0 0 auto;">03</span><span>Type chips come from a distinct query over the category's populated types. A category where every piece is generic shows no type chips at all — correct, not broken.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #F5FF3D; flex: 0 0 auto;">04</span><span>Detail subtitle: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">type ?? categoryLabel + " · GENERIC"</code>. One expression, one slot.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #F5FF3D; flex: 0 0 auto;">05</span><span>Type never affects a recommendation. Category and the learned range do that. Type is for finding things.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">WHY NOT ASK</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A second one-tap row is cheap to build and expensive every single time. F's whole argument is that identity is the only thing worth a tap, because identity is what pays the runner back. Charging a tap for a filter facet inverts that.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">WHY NOT PARSE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A parser is a feature that works until it doesn't, fails invisibly, and can't be corrected by the person looking at the wrong answer. Nullable and honest beats populated and wrong.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">STILL OPEN</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Whether a runner can override an inherited type when the product record is wrong. Probably yes, from garment detail, post-v1 — an edit, not a question at add time.</p></div>
+        </div>
+      </div>
+    </div>
+
     <!-- I + J -->
     <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
       <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
@@ -1461,7 +1573,7 @@
 
         <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">THE HONESTY TEST</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Gear gaps recommend <em>categories</em>, show the evidence that produced them, and include retirement suggestions. If affiliate revenue ever arrives, the "NOT PAID" chip flips to a disclosure rather than disappearing.</p></div>
-          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">NOW DESIGNED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Manual entry (R), notifications (S), Strava (T), settings and privacy (U), report · block · blur (W), the desktop feed (X), and shoes as their own object (Y) are all below. Naming and the Call teaser live in <a href="V1%20Screens.dc.html">V1 Screens</a>; the letter V is skipped on purpose so no screen id reads as a release number.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">NOW DESIGNED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Manual entry (R), notifications (S), Strava (T), settings and privacy (U), report · block · blur (W), the desktop feed (X), shoes as their own object (Y), and where a garment's type comes from (Z) are all below. Naming and the Call teaser live in <a href="V1%20Screens.dc.html">V1 Screens</a>; the letter V is skipped on purpose so no screen id reads as a release number.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">DECIDED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Laundry state lands with the call epic, not v1 — it matters most when a recommendation has to say "that's in the wash." Nothing in the market handles it, so it stays a differentiator worth building properly.</p></div>
         </div>
       </div>

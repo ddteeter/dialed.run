@@ -73,6 +73,19 @@ export const products = sqliteTable(
     sourceUrl: text("source_url"),
     imageKey: text("image_key"),
     categoryHint: text("category_hint"),
+    // The specific thing this product *is* — singlet, tee, half-zip.
+    //
+    // Design's Z screen: "type is a property of the product, not of the
+    // garment". It is written by enrichment reading a product page, never
+    // by a user, and never parsed out of free text — a garment named
+    // "Crew for cold L/S days" would be filed wrong, silently, forever.
+    //
+    // Distinct from `category_hint`, which holds a *category* enum value
+    // used to pre-fill F's one-tap category. Design's note calls the
+    // garment column "a cache of products.category_hint"; that is the
+    // right relationship against the wrong column name, since the two
+    // hold different vocabularies.
+    type: text("type"),
     fabricComposition: text("fabric_composition"),
     fabricParts: text("fabric_parts"),
     weight: text("weight", { enum: ["light", "mid", "heavy"] }),
@@ -130,7 +143,19 @@ export const wardrobeItems = sqliteTable(
         "accessory",
       ],
     }).notNull(),
-    // The specific thing within the category — singlet vs tee vs half-zip.
+    // A **cache of the product's type**, not a fact about this garment.
+    //
+    // Design's Z screen settles where it comes from: written on match and
+    // on enrichment, never by a user, never parsed from a name. F does not
+    // ask for it — "a second one-tap row is cheap to build and expensive
+    // every single time", and charging a tap for a filter facet inverts
+    // F's argument that identity is the only thing worth one.
+    //
+    // So a garment with no product has no type, and that is a state the UI
+    // renders rather than hides: the detail subtitle is
+    // `type ?? categoryLabel + " · GENERIC"`, and type filter chips are
+    // built from the types actually present in a category, so an all-generic
+    // category shows no chips at all — correct, not broken.
     //
     // Nullable for a reason that outlives launch: **a garment often does
     // not know its own type, and should not have to.** The tap-list knows

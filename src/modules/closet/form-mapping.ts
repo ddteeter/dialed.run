@@ -12,7 +12,10 @@
  * typed as `Garment` that the schema never actually saw.
  */
 import { garmentSchema, type Garment } from "../../lib/contracts";
-import { hasGarmentAttribute } from "../../lib/garment-fields";
+import {
+  garmentTypesFor,
+  hasGarmentAttribute,
+} from "../../lib/garment-fields";
 import type { GarmentFormValues } from "./components/GarmentForm";
 import type { EffectiveAttributes, WardrobeItemRow } from "./service";
 
@@ -99,7 +102,7 @@ type ResolveProduct = (args: {
     productName: string;
     sourceUrl?: string | undefined;
   };
-}) => Promise<{ product: { id: string } }>;
+}) => Promise<{ product: { id: string; type: string | null } }>;
 
 /**
  * The identity-first step (D-27), once.
@@ -130,5 +133,27 @@ export async function garmentWithResolvedProduct(
       sourceUrl: values.productUrl === "" ? undefined : values.productUrl,
     },
   });
-  return { ...garment, productId: product.id };
+  // The type comes with the match, from the product record — it was never
+  // a question F asked (design's Z1). Validated against the category rather
+  // than trusted: a product row could carry a type that belongs to another
+  // category, and `garmentSchema` would reject the whole save rather than
+  // just ignoring a bad hint.
+  const inherited = typeFor(garment.category, product.type);
+  // Re-parsed rather than assembled: CLAUDE.md requires every wardrobe write
+  // to go through `garmentSchema`, and it is what narrows the product's
+  // free-text type back to this category's enum.
+  return garmentSchema.parse({
+    ...garment,
+    productId: product.id,
+    ...(inherited !== undefined && { type: inherited }),
+  });
+}
+
+function typeFor(
+  category: Garment["category"],
+  candidate: string | null,
+): string | undefined {
+  if (candidate === null) return undefined;
+  const allowed: readonly string[] = garmentTypesFor(category);
+  return allowed.includes(candidate) ? candidate : undefined;
 }

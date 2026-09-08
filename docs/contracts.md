@@ -52,7 +52,10 @@ id               text PK  -- ULID
 user_id          text FK
 category         text     -- enum: top | bottom | headwear | neckwear | gloves
                           --       | socks | shoes | accessory
-type             text     -- the specific thing within the category, NULLABLE
+type             text     -- CACHE of products.type, NULLABLE. Written on
+                          -- match and by enrichment, never by a user and
+                          -- never parsed from a name (design screen Z).
+                          -- A garment with no product has none.
                           -- top: singlet|tee|longSleeve|halfZip|jacket|vest
                           --      |sportsBra
                           -- bottom: shorts|halfTights|tights
@@ -122,6 +125,8 @@ normalized_name    text          -- UNIQUE(brand_id, normalized_name);
 source_url         text          -- NULLABLE; first pasted product URL
 image_key          text          -- NULLABLE; primary image copied to R2
 category_hint      text          -- NULLABLE garment category enum value
+type               text          -- NULLABLE garment type; the source of
+                                 -- wardrobe_items.type, filled by enrichment
 fabric_composition text          -- NULLABLE; verbatim as published
                                  -- ("Body: 100% recycled polyester;
                                  --   Liner: 88% polyester, 12% spandex")
