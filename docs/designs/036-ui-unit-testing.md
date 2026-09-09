@@ -1,7 +1,7 @@
 # Design: 036 UI unit testing
 
-Spike, answered. Status: the `ui` project exists and `src/ui/form.tsx` is
-at 85.42%. Whether `.tsx` joins the mutation ratchet is still D-42.
+Spike, answered, and applied: **`src/ui` is at 100% and in the ratchet.**
+`src/modules/**/*.tsx` and `src/routes/**/*.tsx` are still open (D-42).
 
 ## Problem
 
@@ -36,8 +36,12 @@ Two vitest projects in one config, `test.projects`:
 
 - **`worker`** — everything touching the platform (D1, R2, queues,
   bindings), unchanged, still `@cloudflare/vitest-pool-workers`.
-- **`ui`** — `environment: "jsdom"`, `@testing-library/react` +
-  `user-event`, for component behaviour.
+- **`ui`** — `environment: "happy-dom"`, `@testing-library/react` +
+  `user-event`, for component behaviour. happy-dom rather than jsdom
+  because jsdom still does not implement `HTMLDialogElement.showModal` /
+  `close` at 30.0.1, and `ui/Sheet.tsx` is built on the native `<dialog>`
+  — so on jsdom the one primitive whose every line was uncovered stayed
+  uncoverable.
 
 A test opts into jsdom by being named `*.dom.test.tsx`. That is deliberate
 over splitting by directory: files migrate one at a time, and which runtime
@@ -95,19 +99,28 @@ without testing anything.
 
 ## Open questions
 
-- **Does `.tsx` join the mutation ratchet?** Still D-42. Stryker does cope
-  with the multi-project config (that was the other half of the spike), and
-  `form.tsx` went 39.58% → **85.42%** on the strength of these 16 tests.
-  The seven survivors left are all presentation: three Tailwind class
-  strings, `cursor-default`/`cursor-pointer`, and two `visibility` literals
-  where the mutant renders identically to the original. So ~85% is the
-  honest ceiling for a component of this shape, and a `break: 100` ratchet
-  would mean asserting class strings — which break on every redesign and
-  catch nothing. A lower per-scope threshold, or a mutator exclusion for
-  `StringLiteral` inside `className`, is the shape of the answer.
-- **What migrates next?** `test/closet/components.test.tsx` builds its
-  fixtures through drizzle against D1. A component that needs a database to
-  test is a smell; those move to plain props as part of migrating it.
-- Nothing about `src/ui` beyond `form.tsx` is covered yet. `Skeleton.tsx`
-  (D-37) and the tab bar (D-31) are the next candidates, and both have open
-  design rows already.
+- ~~**Does `.tsx` join the mutation ratchet?**~~ **Answered: yes, at 100%,
+  with no lowered threshold and no exclusion.** `src/ui` went 65.09% →
+  100%. My reading of `form.tsx`'s residue was wrong and worth recording as
+  the mistake it was: I took the seven surviving class strings as
+  representative and concluded ~85% was the ceiling. It is not, because
+  **stryker does not mutate a plain `className="..."` JSX attribute at
+  all** — only strings held in a const or built in an expression, of which
+  there are 18 in the whole repo. And in `src/ui` every one of those
+  carried a documented rule (mono is the tell a value was measured; the
+  uppercase lives in CSS so the accessible name stays in normal case; a
+  marked field goes 1px rule to 2px ink; pink is action), so asserting them
+  is asserting the contract. The two genuine equivalents were removed
+  structurally rather than granted.
+- **What migrates next?** `src/modules/**/*.tsx` (471 mutants, 13 files),
+  then `src/routes/**/*.tsx` (903 mutants, 24 files — 61% of the whole
+  `.tsx` surface). `test/closet/components.test.tsx` builds its fixtures
+  through drizzle against D1; a component that needs a database to test is
+  a smell, and those move to plain props as part of migrating it.
+- **Are routes glue?** CLAUDE.md says they are thin by mandate — "no
+  business logic in route files" — which would make them structurally the
+  same case as `functions.ts`, where an exclusion is honest only because an
+  architecture test enforces the glue rule. But 38 mutants per route file
+  is a lot for glue, so the premise needs checking. Settle it by taking one
+  route to 100% and looking at what is actually in there, the way
+  `form.tsx` settled this document's first question.

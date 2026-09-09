@@ -264,13 +264,17 @@ export function SubmitButton({
       <span className="grid place-items-center">
         <span
           className="[grid-area:1/1]"
-          style={{ visibility: pending ? "hidden" : "visible" }}
+          // `undefined`, not `"visible"`: an explicit "visible" and an
+          // omitted property render identically, so the literal would be a
+          // mutant no test could ever distinguish. Only the hiding half is
+          // a real decision, and it is the half that is asserted.
+          style={{ visibility: pending ? "hidden" : undefined }}
         >
           {label}
         </span>
         <span
           className="flex gap-[0.4em] [grid-area:1/1]"
-          style={{ visibility: pending ? "visible" : "hidden" }}
+          style={{ visibility: pending ? undefined : "hidden" }}
         >
           <span className="breathe" aria-hidden="true">
             [

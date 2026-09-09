@@ -117,6 +117,11 @@ describe("the submit button is never disabled", () => {
     expect(button).not.toBeDisabled();
     // Still reachable, still named — the two things `disabled` takes away.
     expect(button).toHaveFocus();
+    // Pink is action, and the submit button is the action. The cursor is
+    // the visual half of aria-disabled: it must stop inviting a click.
+    expect(button).toHaveClass("bg-pink");
+    expect(button).toHaveClass("cursor-default");
+    expect(button).not.toHaveClass("cursor-pointer");
 
     pending.resolve(undefined);
     await waitFor(() => {
@@ -249,6 +254,12 @@ describe("the mark, the message and the hint", () => {
     const box = () => screen.getByLabelText("Name").parentElement;
     expect(box).not.toBeNull();
     expect(box()).not.toHaveAttribute("data-invalid");
+    // Weight is the signal: a 1px rule at rest, 2px ink when marked, and
+    // the padding drops by 1px so the box does not grow. Asserted because
+    // "marked, not reddened" is the rule most easily lost in a port, and
+    // because pink is action in this palette and never failure.
+    expect(box()).toHaveClass("border");
+    expect(box()).not.toHaveClass("border-2");
 
     await user.type(screen.getByLabelText("Brand"), "Patagonia");
     await user.click(screen.getByRole("button", { name: /save/i }));
@@ -256,6 +267,7 @@ describe("the mark, the message and the hint", () => {
     await waitFor(() => {
       expect(box()).toHaveAttribute("data-invalid", "true");
     });
+    expect(box()).toHaveClass("border-2");
     expect(screen.getByText("Give it a name.")).toBeVisible();
   });
 
@@ -327,15 +339,38 @@ describe("the pending state swaps the label, and keeps the box the same size", (
 
 describe("the details that go missing silently", () => {
   it("gives a field with no hint nothing to say, rather than an empty line", () => {
-    render(
+    const { container } = render(
       <FormField name="solo" label="Solo">
         <input id="solo" name="solo" />
       </FormField>,
     );
-    // Label and control, and nothing else — no empty hint node waiting to
-    // collapse the layout when a message appears next to it.
-    expect(screen.getByLabelText("Solo").parentElement?.parentElement)
-      .toHaveTextContent(/^Solo$/);
+    // Not just "no text" — no *element*. An empty <span> renders nothing
+    // and still takes a line's worth of gap in a flex column, which is how
+    // a field with no hint ends up taller than its neighbours.
+    expect(container.querySelectorAll("span")).toHaveLength(0);
+    expect(container.firstElementChild).toHaveTextContent(/^Solo$/);
+  });
+
+  it("renders the hint as one element, and the message replaces it", async () => {
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve()} />);
+
+    // The field's own children, not the form's: the submit button stacks
+    // two spans of its own and would swamp the count.
+    const messages = () =>
+      screen.getByLabelText("Name").closest("div")?.parentElement
+        ?.querySelectorAll(":scope > span") ?? [];
+
+    expect(messages()).toHaveLength(1);
+
+    await user.type(screen.getByLabelText("Brand"), "Patagonia");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Give it a name.")).toBeVisible();
+    });
+    // Still one: the message took the hint's place rather than joining it.
+    expect(messages()).toHaveLength(1);
   });
 
   it("defaults a text field to type=text", () => {
@@ -393,6 +428,7 @@ describe("the details that go missing silently", () => {
     const button = screen.getByRole("button", { name: /save/i });
     expect(button).not.toHaveAttribute("aria-disabled");
     expect(button).not.toHaveAttribute("aria-busy");
+    expect(button).toHaveClass("cursor-pointer");
 
     await fillValid(user);
     await user.click(button);

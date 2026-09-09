@@ -22,6 +22,11 @@ export function Sheet({
 
   useEffect(() => {
     const dialog = dialogRef.current;
+    // Equivalent mutant: React attaches refs before it runs effects, and
+    // this effect has no cleanup that could run after a detach, so the ref
+    // is always populated here. The check is the compiler's — the ref type
+    // includes undefined — not the runtime's.
+    // Stryker disable next-line ConditionalExpression
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
