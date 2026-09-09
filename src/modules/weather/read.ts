@@ -97,7 +97,7 @@ export async function observationsForRuns(
   // at the bottom is keyed off `keyed`, so an empty one yields an empty
   // map either way. What it saves is a query that would otherwise scan
   // every non-manual observation.
-  // Stryker disable next-line all
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement
   if (keyed.length === 0) {
     return result;
   }

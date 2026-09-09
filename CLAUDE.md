@@ -336,12 +336,17 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   yourself, and do not argue with the gate.
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
-- **`src/lib` is at 100% mutation score, and it stays there.**
-  `npm run mutate` runs stryker over the pure modules; `stryker.conf.json`
-  sets `break: 100`, so it exits non-zero the moment a change stops a
-  mutant being killed. A CI job runs it on any PR touching `src/lib/` or
-  `test/lib/`. Adding a function there means adding tests that observe its
+- **`stryker.conf.json`'s `mutate` array is the ratchet.** Every glob in
+  it has been paid down to 100% and `break: 100` keeps it there: `npm run
+  mutate` exits non-zero the moment a change stops a mutant being killed.
+  Today it is `src/lib/**/*.ts` and `src/modules/weather/**/*.ts`. Adding
+  code under one of those globs means adding tests that *observe* its
   behaviour, not tests that merely execute it.
+
+  `.github/workflows/mutation.yml` **reads that array** and runs one CI
+  shard per entry — never restate the list there, or local and CI drift and
+  the drift shows up as CI passing on a scope nobody is mutating. A module
+  joins the array in the PR that finishes it, never before.
 
   It works because of two lines in `vitest.config.ts` that are easy to
   delete by accident: forwarding `__STRYKER_ACTIVE_MUTANT__` into the
@@ -351,11 +356,18 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **`src/modules` is not covered and is around 50%.** That is why
-  `"stryker"` stays `off` in `guardrails.config.json`: the commit-gate
-  analyzer scopes to *every* changed TypeScript file, so turning it on
-  would block the next commit touching a module with a hundred findings it
-  did not cause. Paying that down is D-40.
+  **The rest of `src/modules` is not covered: 43.98%, 1,793 mutants
+  surviving or uncovered.** That is why `"stryker"` stays `off` in
+  `guardrails.config.json`: the commit-gate analyzer scopes to *every*
+  changed TypeScript file, so turning it on would block the next commit
+  touching a module with a hundred findings it did not cause. Paying that
+  down module by module is D-40, and the per-file worklist is in the row.
+
+  Two parts of it are structural rather than missing tests, and both have
+  their own register rows: `src/modules/*/functions.ts` cannot be imported
+  in the workers pool at all (D-41 — `createServerFn` drags TanStack
+  Start's virtual entries in with it), and the globs end `**/*.ts`, so no
+  component is under the gate (D-42).
 
   When a survivor is genuinely equivalent — no possible input distinguishes
   it — write the proof at the site, use a **mutator-scoped**

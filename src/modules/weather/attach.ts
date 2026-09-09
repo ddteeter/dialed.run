@@ -85,7 +85,7 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
   // Unreachable: `runHourKeys` always yields at least the starting hour.
   // The guard is here for the compiler — destructuring a `CacheKey[]`
   // gives `CacheKey | undefined` whatever the runtime does.
-  // Stryker disable next-line all
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral
   if (key === undefined) return "skipped-no-location";
   const cached = await findObservationRow(key);
   if (cached) {
@@ -273,7 +273,7 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
   // can see — an empty `inArray` matches nothing, so the two queries below
   // return the same zeros. What it saves is the two queries, on a cron
   // that fires every hour.
-  // Stryker disable next-line all
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement
   if (candidates.length === 0) {
     return { claimed: 0, attached, failed: 0 };
   }

@@ -34,9 +34,14 @@
       "count": 1
     },
     {
-      "key": "src/modules/weather/attach.ts|mutation-suppress|// Stryker disable next-line all",
-      "reason": "Two unreachable-or-free-of-effect lines, proof at each site: (1) destructuring `runHourKeys()` gives `CacheKey | undefined` for a function that always yields at least the starting hour, so the guard is for the compiler; (2) the empty-candidates early return saves two queries whose results are identical either way, since an empty `inArray` matches nothing.",
-      "count": 2
+      "key": "src/modules/weather/attach.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral",
+      "reason": "Unreachable, proof at the site: `runHourKeys` always yields at least the starting hour, so destructuring it can never give undefined. The guard exists because the compiler types `keys[0]` as `CacheKey | undefined` whatever the runtime does, which is also why its return value is unobservable.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/attach.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement",
+      "reason": "Equivalent mutant, proof at the site: an empty `inArray` matches nothing, so the two queries below the early return produce the same zeros either way. What the return saves is those two queries, on a cron that fires every hour.",
+      "count": 1
     },
     {
       "key": "src/modules/weather/attach.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
@@ -44,7 +49,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/weather/read.ts|mutation-suppress|// Stryker disable next-line all",
+      "key": "src/modules/weather/read.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement",
       "reason": "Equivalent mutant, proof at the site: the result map is filled by a loop over `keyed`, so returning early on an empty one changes no answer. It saves a query that would otherwise scan every non-manual observation.",
       "count": 1
     },
@@ -54,7 +59,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable next-line all",
+      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
       "reason": "Unreachable, proof at the site: the insert either wrote the row or conflicted with one already present, so the read that follows always finds something. The guard exists to narrow `ObservationRow | undefined` for the caller.",
       "count": 1
     }

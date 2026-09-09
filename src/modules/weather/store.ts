@@ -119,7 +119,7 @@ async function upsertObservation(
   // finds something. The guard exists to narrow `ObservationRow |
   // undefined` for the caller, and no test can enter it — which is why the
   // mutants on this line are suppressed rather than chased.
-  // Stryker disable next-line all
+  // Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
   if (!row) throw new Error(`observation upsert produced no row at ${JSON.stringify(key)}`);
   return row;
 }
