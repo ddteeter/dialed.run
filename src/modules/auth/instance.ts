@@ -2,7 +2,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { createAuth } from "./create-auth";
+import { createAuth, googleCredentials } from "./create-auth";
 
 /**
 The app auth instance. Server-side only — never import from client code.
@@ -10,9 +10,6 @@ The app auth instance. Server-side only — never import from client code.
 export const auth = createAuth({
   db: drizzle(env.DIALED_CORE),
   secret: env.BETTER_AUTH_SECRET,
-  google:
-    env.GOOGLE_CLIENT_ID !== undefined && env.GOOGLE_CLIENT_SECRET !== undefined
-      ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
-      : undefined,
+  google: googleCredentials(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
   plugins: [tanstackStartCookies()],
 });

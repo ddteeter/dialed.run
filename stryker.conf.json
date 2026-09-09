@@ -16,6 +16,7 @@
   "//functions.ts": "Each `!.../functions.ts` negation is the same fact: a server-function module imports `createServerFn`, which drags TanStack Start's virtual entries in with it, so it cannot be imported in the workers pool and cannot be mutation tested at all (D-41). The exclusion is only honest while those files hold nothing worth an assertion, which `test/architecture/server-functions-are-glue.test.ts` enforces.",
   "mutate": [
     "src/lib/**/*.ts",
+    "src/modules/auth/**/*.ts,!src/modules/auth/functions.ts,!src/modules/auth/index.ts,!src/modules/auth/require-user.ts",
     "src/modules/notifications/**/*.ts,!src/modules/notifications/functions.ts",
     "src/modules/ops/**/*.ts",
     "src/modules/products/**/*.ts,!src/modules/products/functions.ts",

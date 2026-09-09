@@ -1,43 +1,57 @@
 import { describe, expect, it } from "vitest";
 
+import strykerConfig from "../../stryker.conf.json?raw";
+
 /**
- * A server-function module cannot be mutation tested, so it must not
- * be worth testing.
+ * A module file that imports `@tanstack/react-start` cannot be mutation
+ * tested, so it must not be worth testing.
  *
- * A test that imports one fails outright — `createServerFn` pulls in
- * TanStack Start's virtual entries, which only the dev/build pipeline
- * provides — so those files sit outside `stryker.conf.json`'s `mutate`
- * globs (D-41). An exclusion like that is only honest while the excluded
- * file holds nothing worth an assertion: the moment a decision moves into
- * one, it is a decision no gate can see.
+ * A test that imports one fails outright — `createServerFn` and
+ * `getRequestHeaders` pull in TanStack Start's virtual entries, which only
+ * the dev/build pipeline provides — so those files sit outside
+ * `stryker.conf.json`'s `mutate` globs, named by a `!` negation (D-41). An
+ * exclusion like that is only honest while the excluded file holds nothing
+ * worth an assertion: the moment a decision moves into one, it is a
+ * decision no gate can see.
  *
- * So this is the other half of the exclusion. A server-function module may
- * import, wire and delegate. It may not branch, loop, throw, or declare a
- * schema — a zod schema is a trust boundary, and trust boundaries belong in
- * `inputs.ts` next door, where a test can reach them.
+ * So this is the other half of the exclusion, and it checks it from both
+ * ends. Such a file may import, wire and delegate; it may not branch, loop,
+ * throw, or declare a schema — a zod schema is a trust boundary, and trust
+ * boundaries belong in `inputs.ts` next door where a test can reach them.
+ * And the set of files excluded in the config has to be exactly the set
+ * that cannot be tested, so neither list can drift from the other.
  *
  * Inlined by Vite at build time via `?raw`: the workers pool sandboxes the
  * real filesystem, so `readFileSync` cannot reach these files.
  */
 
 const sources: Record<string, string> = import.meta.glob(
-  "../../src/modules/*/functions.ts",
+  "../../src/modules/**/*.ts",
   { query: "?raw", import: "default", eager: true },
 );
 
 /**
- * Modules whose `functions.ts` still holds more than glue. Every entry is
- * open D-41 work, and the list only ever shrinks — a stale entry fails
- * below, so it cannot be left behind once the file is cleaned.
+ * The same files, lazily. Whether one can be imported is the real question
+ * — a regex over import specifiers gets the direct cases and misses the
+ * transitive ones, and `auth/index.ts` is exactly that: it holds no
+ * TanStack import of its own and re-exports `require-user`, which does.
+ */
+const loaders: Record<string, () => Promise<unknown>> = import.meta.glob(
+  "../../src/modules/**/*.ts",
+);
+
+/**
+ * Files that import TanStack Start and still hold more than glue. Every
+ * entry is open D-41 work, and the list only ever shrinks — a stale entry
+ * fails below, so it cannot be left behind once the file is cleaned.
  */
 const NOT_YET_GLUE = new Set([
   // Route-file input schemas still declared inline, and (in runs) the
   // Strava OAuth CSRF state check, which is the one branch here that most
   // deserves a test.
-  "auth",
-  "closet",
-  "feed",
-  "runs",
+  "src/modules/closet/functions.ts",
+  "src/modules/feed/functions.ts",
+  "src/modules/runs/functions.ts",
 ]);
 
 const QUOTES = new Set(['"', "'", "`"]);
@@ -59,7 +73,7 @@ function skipBlockComment(source: string, start: number): number {
   return index;
 }
 
-function skipStringLiteral(source: string, start: number): number {
+function endOfStringLiteral(source: string, start: number): number {
   const quote = source.charAt(start);
   let index = start + 1;
   while (index < source.length) {
@@ -75,15 +89,15 @@ function skipStringLiteral(source: string, start: number): number {
 }
 
 /**
- * Strips comments and string bodies so the scan below reads code only. A
- * regex over raw source either eats the `//` inside a URL literal or trips
- * on the word "if" in a sentence; the same reasoning as the JSONC scanner
- * in `bindings-conformance`.
+ * Source with comments removed and strings kept. A regex over raw source
+ * finds "@tanstack/react-start" in the paragraph explaining why a file
+ * avoids it — which is how three files that import nothing of the sort
+ * ended up looking like they did.
  *
  * `charAt` rather than indexing: it returns "" past the end, so no step
  * needs undefined handling.
  */
-function codeOnly(source: string): string {
+function withoutComments(source: string): string {
   let out = "";
   let index = 0;
   while (index < source.length) {
@@ -93,15 +107,25 @@ function codeOnly(source: string): string {
     } else if (pair === "/*") {
       index = skipBlockComment(source, index);
     } else if (QUOTES.has(source.charAt(index))) {
-      index = skipStringLiteral(source, index);
-      // A placeholder, so `case "x":` still reads as code.
-      out += '""';
+      const end = endOfStringLiteral(source, index);
+      out += source.slice(index, end);
+      index = end;
     } else {
       out += source.charAt(index);
       index += 1;
     }
   }
   return out;
+}
+
+/**
+Code with the string bodies blanked too, so `case "x":` still reads as code.
+*/
+function codeOnly(source: string): string {
+  return withoutComments(source).replaceAll(
+    /(["'`])(?:\\.|(?!\1).)*\1/gs,
+    '""',
+  );
 }
 
 const FORBIDDEN = [
@@ -113,22 +137,50 @@ const FORBIDDEN = [
   { name: "a zod schema", pattern: /\bz\./ },
 ];
 
-function moduleNameOf(path: string): string {
-  return path.split("/").at(-2) ?? path;
+function repoPath(globPath: string): string {
+  return globPath.replace("../../", "");
 }
 
-describe("server-function modules are glue", () => {
-  it("finds a functions.ts to check", () => {
-    // A glob that matches nothing passes every assertion below it.
-    expect(Object.keys(sources).length).toBeGreaterThan(0);
+/**
+Every module file a test cannot import, asked by importing it.
+*/
+async function findUntestable(): Promise<string[]> {
+  const failures: string[] = [];
+  for (const [globPath, load] of Object.entries(loaders)) {
+    try {
+      await load();
+    } catch {
+      failures.push(repoPath(globPath));
+    }
+  }
+  return failures;
+}
+
+const untestable = await findUntestable();
+
+function isGlue(path: string): boolean {
+  const entry = Object.entries(sources).find(
+    ([globPath]) => repoPath(globPath) === path,
+  );
+  if (entry === undefined) return true;
+  const code = codeOnly(entry[1]);
+  return FORBIDDEN.every(({ pattern }) => !pattern.test(code));
+}
+
+describe("files that cannot be mutation tested are glue", () => {
+  it("finds some", () => {
+    // A detector that matches nothing passes every assertion below it.
+    expect(untestable.length).toBeGreaterThan(0);
   });
 
-  for (const [path, source] of Object.entries(sources)) {
-    const moduleName = moduleNameOf(path);
-    if (NOT_YET_GLUE.has(moduleName)) continue;
+  for (const path of untestable) {
+    if (NOT_YET_GLUE.has(path)) continue;
 
-    it(`${moduleName}: imports, wires and delegates, nothing else`, () => {
-      const code = codeOnly(source);
+    it(`${path}: imports, wires and delegates, nothing else`, () => {
+      const entry = Object.entries(sources).find(
+        ([globPath]) => repoPath(globPath) === path,
+      );
+      const code = codeOnly(entry?.[1] ?? "");
       for (const { name, pattern } of FORBIDDEN) {
         expect(pattern.test(code), `${path} contains ${name}`).toBe(false);
       }
@@ -136,17 +188,50 @@ describe("server-function modules are glue", () => {
   }
 
   it("has no stale exceptions", () => {
-    // The exception list is a record of work still to do. A module that is
+    // The exception list is a record of work still to do. A file that is
     // already glue and still listed makes the list a lie, and the next
     // reader trusts it.
-    const stillDirty = [...NOT_YET_GLUE].filter((moduleName) => {
-      const entry = Object.entries(sources).find(
-        ([path]) => moduleNameOf(path) === moduleName,
+    const stillDirty = new Set(untestable.filter((path) => !isGlue(path)));
+    expect(stillDirty).toStrictEqual(NOT_YET_GLUE);
+  });
+});
+
+/**
+ * The `!path` entries in `stryker.conf.json`'s `mutate` array, which is
+ * where a file is actually excluded.
+ */
+const negations = Array.from(
+  strykerConfig.matchAll(/!(src\/[\w./-]+\.ts)/g),
+  (match) => match[1] ?? "",
+);
+
+describe("the mutate exclusions and the untestable files are the same set", () => {
+  it("excludes nothing that could have been tested", () => {
+    // The direction that matters most: an exclusion without a cause is a
+    // file quietly opted out of the gate.
+    for (const path of negations) {
+      expect(untestable, `${path} is excluded but is testable`).toContain(path);
+    }
+  });
+
+  it("excludes every untestable file inside a ratcheted scope", () => {
+    // A scope entry names its module; anything untestable under a module
+    // that has been paid down has to be named in that entry, or the shard
+    // fails on mutants nothing can kill.
+    const ratchetedModules = Array.from(
+      strykerConfig.matchAll(/"(src\/modules\/([\w-]+))\/\*\*/g),
+      (match) => match[1] ?? "",
+    );
+
+    for (const modulePath of ratchetedModules) {
+      const inScope = untestable.filter((path) =>
+        path.startsWith(`${modulePath}/`),
       );
-      if (entry === undefined) return false;
-      const code = codeOnly(entry[1]);
-      return FORBIDDEN.some(({ pattern }) => pattern.test(code));
-    });
-    expect(new Set(stillDirty)).toStrictEqual(NOT_YET_GLUE);
+      for (const path of inScope) {
+        expect(negations, `${path} is untestable and not excluded`).toContain(
+          path,
+        );
+      }
+    }
   });
 });

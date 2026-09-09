@@ -87,6 +87,16 @@
       "key": "src/modules/notifications/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
       "reason": "Unreachable fallback, proof at the site: `count()` always answers with exactly one row. The optional chain is there because `noUncheckedIndexedAccess` types `rows[0]` as possibly undefined, which is the compiler being right about arrays in general rather than about this query.",
       "count": 1
+    },
+    {
+      "key": "src/modules/auth/require-session.ts|mutation-suppress|// Stryker disable next-line StringLiteral,CallExpression",
+      "reason": "Unreachable, proof at the site: `redirect({ throw: true })` on the line above throws. The statement exists only so the compiler can narrow `session`, because `redirect` is typed as returning a Redirect rather than `never` \u2014 which is also why nothing can read the message.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/auth/create-auth.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Equivalent mutant, with the evidence recorded at the site: a wrong *recognised* drizzle provider fails loudly (built with \"mysql\", signing up gives \"Failed to create user\"), but an unrecognised one falls back to no dialect-specific handling, which is what D1 through drizzle wants anyway. So \"\" and \"sqlite\" cannot be told apart from outside, while the mistake that matters can.",
+      "count": 1
     }
   ]
 }
