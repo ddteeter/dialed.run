@@ -19,7 +19,7 @@
     {
       "path": "design/src/ui/FormField.tsx",
       "kind": "cast-any",
-      "reason": "Read-only design handoff prototype (CLAUDE.md: design/ is an import archive, never edited here). Nothing compiles it — eslint ignores design/ and tsconfig excludes it — so the casts are the design tool's, not this repo's. Ported code goes to src/ui/ and gets no grant."
+      "reason": "Read-only design handoff prototype (CLAUDE.md: design/ is an import archive, never edited here). Nothing compiles it \u2014 eslint ignores design/ and tsconfig excludes it \u2014 so the casts are the design tool's, not this repo's. Ported code goes to src/ui/ and gets no grant."
     }
   ],
   "sanctionedSuppressions": [
@@ -30,7 +30,32 @@
     },
     {
       "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutant, proof at the site: removing the undefined-weight guard changes no behaviour, because an undefined weight indexes every table to undefined and the next guard returns the same thing. It is load-bearing for the compiler, not the runtime — without it `Weight | undefined` cannot index `Record<Weight, Band>`.",
+      "reason": "Equivalent mutant, proof at the site: removing the undefined-weight guard changes no behaviour, because an undefined weight indexes every table to undefined and the next guard returns the same thing. It is load-bearing for the compiler, not the runtime \u2014 without it `Weight | undefined` cannot index `Record<Weight, Band>`.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/attach.ts|mutation-suppress|// Stryker disable next-line all",
+      "reason": "Two unreachable-or-free-of-effect lines, proof at each site: (1) destructuring `runHourKeys()` gives `CacheKey | undefined` for a function that always yields at least the starting hour, so the guard is for the compiler; (2) the empty-candidates early return saves two queries whose results are identical either way, since an empty `inArray` matches nothing.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/weather/attach.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
+      "reason": "Equivalent mutant, proof at the site: hour 0 is known to be a cache miss, because resolveAndAttach looked it up and returned early if it hit. Widening the guard only adds a lookup that always misses \u2014 a billed query, which is why the guard stays and why no test can distinguish it.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/read.ts|mutation-suppress|// Stryker disable next-line all",
+      "reason": "Equivalent mutant, proof at the site: the result map is filled by a loop over `keyed`, so returning early on an empty one changes no answer. It saves a query that would otherwise scan every non-manual observation.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/read.ts|mutation-suppress|// Stryker disable next-line ArrowFunction",
+      "reason": "Equivalent mutant, proof at the site: emptying the cell-condition callback widens the WHERE to every non-manual row, and the rows are looked up by cell key afterwards \u2014 so the answer is identical and only the scan grows.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable next-line all",
+      "reason": "Unreachable, proof at the site: the insert either wrote the row or conflicted with one already present, so the read that follows always finds something. The guard exists to narrow `ObservationRow | undefined` for the caller.",
       "count": 1
     }
   ]

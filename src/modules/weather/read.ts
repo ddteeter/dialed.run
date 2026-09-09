@@ -79,19 +79,34 @@ export async function observationsForRuns(
     .from(runs)
     .where(or(...runIds.map((id) => eq(runs.id, id))));
 
-  const keyedRuns = runRows.filter(
-    (r): r is typeof r & { lat: number; lng: number } =>
-      r.lat !== null && r.lng !== null,
+  // Dropped rather than keyed, and the distinction matters: `cacheKeyFor`
+  // rounds, so a null coordinate keys to 0 — a run with no location would
+  // be handed the weather at Null Island, which is a real place in the
+  // cache the moment anyone runs near the Gulf of Guinea.
+  const keyed = runRows.flatMap((r) =>
+    r.lat === null || r.lng === null
+      ? []
+      : [
+          {
+            runId: r.id as Ulid,
+            key: cacheKeyFor(r.lat, r.lng, new Date(r.startedAt * 1000)),
+          },
+        ],
   );
-  if (keyedRuns.length === 0) {
+  // Equivalent mutant: skipping this return changes no answer — the loop
+  // at the bottom is keyed off `keyed`, so an empty one yields an empty
+  // map either way. What it saves is a query that would otherwise scan
+  // every non-manual observation.
+  // Stryker disable next-line all
+  if (keyed.length === 0) {
     return result;
   }
 
-  const keyed = keyedRuns.map((r) => ({
-    runId: r.id as Ulid,
-    key: cacheKeyFor(r.lat, r.lng, new Date(r.startedAt * 1000)),
-  }));
-
+  // Equivalent mutant: emptying this callback widens the scan to every
+  // non-manual row and cannot change the result, which is looked up by
+  // cell key afterwards. It is a query-cost guard, and cost is the one
+  // thing no assertion here can see.
+  // Stryker disable next-line ArrowFunction
   const cellConditions = keyed.map(({ key }) =>
     and(
       eq(weatherObservations.latR, key.latR),

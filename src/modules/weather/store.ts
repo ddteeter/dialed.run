@@ -90,7 +90,6 @@ export async function findObservationRow(
 async function upsertObservation(
   key: CacheKey,
   values: typeof weatherObservations.$inferInsert,
-  label: string,
 ): Promise<ObservationRow> {
   await weatherDb()
     .insert(weatherObservations)
@@ -115,9 +114,13 @@ async function upsertObservation(
       setWhere: eq(weatherObservations.source, "manual"),
     });
   const row = await findObservationRow(key);
-  if (!row) {
-    throw new Error(`${label} observation upsert did not produce a row`);
-  }
+  // Unreachable, and deliberately kept: the insert either wrote the row or
+  // conflicted with one already there, so the read that follows always
+  // finds something. The guard exists to narrow `ObservationRow |
+  // undefined` for the caller, and no test can enter it — which is why the
+  // mutants on this line are suppressed rather than chased.
+  // Stryker disable next-line all
+  if (!row) throw new Error(`observation upsert produced no row at ${JSON.stringify(key)}`);
   return row;
 }
 
@@ -142,7 +145,7 @@ export async function upsertRealObservation(
     source: "visualcrossing" as const,
     fetchedAt,
   };
-  return upsertObservation(key, values, "weather");
+  return upsertObservation(key, values);
 }
 
 /**
@@ -171,7 +174,7 @@ export async function upsertManualObservation(
     source: "manual" as const,
     fetchedAt,
   };
-  return upsertObservation(key, values, "manual");
+  return upsertObservation(key, values);
 }
 
 export function toWeatherObservation(row: ObservationRow): WeatherObservation {
