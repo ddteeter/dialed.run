@@ -6,6 +6,9 @@
   "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts — without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
   "testRunner": "vitest",
 
+  "//thresholds": "break at 100 because src/lib is at 100. This is the ratchet: `npm run mutate` exits non-zero the moment a change drops it, so the debt cannot grow back quietly. If a genuinely equivalent mutant appears, prove it at the site with a Stryker directive and a sanctioned grant — do not lower this number.",
+  "thresholds": { "high": 100, "low": 100, "break": 100 },
+
   "reporters": ["clear-text", "progress"],
   "concurrency": 4,
   "timeoutMS": 120000,
