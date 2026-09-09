@@ -339,10 +339,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 - **`stryker.conf.json`'s `mutate` array is the ratchet.** Every glob in
   it has been paid down to 100% and `break: 100` keeps it there: `npm run
   mutate` exits non-zero the moment a change stops a mutant being killed.
-  Today it holds `src/lib` and the `weather`, `ops`, `products`,
-  `notifications`, `auth`, `closet` and `feed` modules. Adding code under one of those globs means
-  adding tests that *observe* its behaviour, not tests that merely execute
-  it.
+  Today it holds `src/lib` and every module under `src/modules`:
+  `weather`, `ops`, `products`, `notifications`, `auth`, `closet`, `feed`
+  and `runs`. Adding code anywhere under those globs means adding tests
+  that *observe* its behaviour, not tests that merely execute it.
 
   A `!<path>` negation inside a scope entry is not an exemption you may
   copy. It is for one thing: a file that **cannot be imported in the
@@ -370,20 +370,20 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **`runs` is not covered.** The whole of `src/modules` measured 43.98% —
-  1,793 mutants surviving or uncovered — and `runs` is what remains of
-  it. That is why `"stryker"` stays
-  `off` in
-  `guardrails.config.json`: the commit-gate analyzer scopes to *every*
-  changed TypeScript file, so turning it on would block the next commit
-  touching a module with a hundred findings it did not cause. Paying that
-  down module by module is D-40, and the per-file worklist is in the row.
+  **The `src/modules` debt is paid (D-40 closed).** It measured 43.98%
+  when the work started — 1,793 mutants surviving or uncovered. What is
+  still outside the gate is deliberate and narrow: the globs end
+  `**/*.ts`, so no component is in it (D-42), and
+  `src/modules/*/functions.ts` cannot be imported in the workers pool at
+  all (D-41 — `createServerFn` drags TanStack Start's virtual entries in
+  with it), which the negation rule above covers.
 
-  Two parts of it are structural rather than missing tests, and both have
-  their own register rows: `src/modules/*/functions.ts` cannot be imported
-  in the workers pool at all (D-41 — `createServerFn` drags TanStack
-  Start's virtual entries in with it), and the globs end `**/*.ts`, so no
-  component is under the gate (D-42).
+  `"stryker"` is still `off` in `guardrails.config.json`, and that is now
+  a decision to revisit rather than a necessity: the commit-gate analyzer
+  scopes to *every* changed TypeScript file, which used to mean a commit
+  touching a module inherited a hundred findings it did not cause. It no
+  longer would. Turning it on is the open half of D-40 and is the owner's
+  call — `guardrails.config.json` is human-managed.
 
   When a survivor is genuinely equivalent — no possible input distinguishes
   it — write the proof at the site, use a **mutator-scoped**

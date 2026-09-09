@@ -4,6 +4,8 @@
  * the packet — so the queue consumer can surface it verbatim on the import
  * row and the "That file didn't parse" copy stays consistent everywhere.
  */
+import { XMLParser } from "fast-xml-parser";
+
 export const PARSE_FAILURE_MESSAGE =
   "That file didn't parse. Try the original export from your watch.";
 
@@ -28,6 +30,39 @@ export class RunParseError extends Error {
   }
 }
 
+/**
+ * The one XXE-safe XML parser, shared by GPX and TCX.
+ *
+ * `processEntities: false` disables DOCTYPE and entity expansion entirely,
+ * so a hostile upload cannot smuggle an external-entity or billion-laughs
+ * payload through. It was configured identically in both parsers — which
+ * is one place for that decision to be changed and another to be forgotten.
+ */
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+  processEntities: false,
+});
+
+/**
+ * Decodes and parses an uploaded XML document, or fails with the reason it
+ * could not. `kind` names the format in the maintainer-facing reason; the
+ * user reads the same sentence either way.
+ */
+export function parseXmlDocument(bytes: ArrayBuffer, kind: string): unknown {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch (error) {
+    throw new RunParseError(`${kind}: bytes are not valid UTF-8`, { cause: error });
+  }
+  try {
+    return xmlParser.parse(text);
+  } catch (error) {
+    throw new RunParseError(`${kind}: XML parser threw`, { cause: error });
+  }
+}
+
 export function toArray<T>(value: T | T[] | undefined): T[] {
   if (value === undefined) return [];
   return Array.isArray(value) ? value : [value];
@@ -39,6 +74,12 @@ CLAUDE.md), and every field access below narrows through this rather than
 an `as` assertion.
 */
 export function isRecord(value: unknown): value is Record<string, unknown> {
+  // Equivalent mutant on the null check alone: `typeof null` is "object",
+  // so dropping it lets null through — but every caller then reads a
+  // property off it and throws, and no XML document this parser accepts
+  // produces a bare null where an element is expected. The check is what
+  // makes the guard a guard rather than a typeof.
+  // Stryker disable next-line ConditionalExpression
   return typeof value === "object" && value !== null;
 }
 

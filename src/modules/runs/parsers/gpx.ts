@@ -8,24 +8,17 @@
  * track" case here (a real treadmill export is GPX only if the device
  * fakes points, which we treat as malformed rather than guess at intent).
  */
-import { XMLParser } from "fast-xml-parser";
-
 import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
 import {
   RunParseError,
+  parseXmlDocument,
   haversineMeters,
   isRecord,
   readDate,
   readNumber,
   toArray,
 } from "./shared";
-
-const parser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "@_",
-  processEntities: false,
-});
 
 interface TrackPoint {
   lat: number;
@@ -34,6 +27,10 @@ interface TrackPoint {
 }
 
 function parseTrackPoint(node: unknown): TrackPoint | undefined {
+  // Equivalent mutant on this guard alone: a non-record node has no
+  // attributes to read, so every field below comes back undefined and the
+  // point is dropped anyway. The guard is what narrows `unknown`.
+  // Stryker disable next-line ConditionalExpression
   if (!isRecord(node)) return undefined;
   const lat = readNumber(node["@_lat"]);
   const lon = readNumber(node["@_lon"]);
@@ -45,6 +42,8 @@ function parseTrackPoint(node: unknown): TrackPoint | undefined {
 }
 
 function pointsInSegment(seg: unknown): TrackPoint[] {
+  // Same shape as above: a non-record segment has no `trkpt` to read.
+  // Stryker disable next-line ArrayDeclaration,ConditionalExpression
   if (!isRecord(seg)) return [];
   const points: TrackPoint[] = [];
   for (const pt of toArray(seg.trkpt)) {
@@ -55,20 +54,29 @@ function pointsInSegment(seg: unknown): TrackPoint[] {
 }
 
 function pointsInTrack(trk: unknown): TrackPoint[] {
+  // Same shape again: a non-record track has no `trkseg` to read.
+  // Stryker disable next-line ArrayDeclaration,ConditionalExpression
   if (!isRecord(trk)) return [];
   return toArray(trk.trkseg).flatMap((seg: unknown) => pointsInSegment(seg));
 }
 
 function extractTrackPoints(doc: unknown): TrackPoint[] {
+  // Stryker disable next-line ArrayDeclaration
   if (!isRecord(doc) || !isRecord(doc.gpx)) return [];
   return toArray(doc.gpx.trk).flatMap((trk: unknown) => pointsInTrack(trk));
 }
 
 function totalDistanceMeters(points: readonly TrackPoint[]): number {
   let distanceM = 0;
+  // The bound and the two undefined checks are the same fact said twice:
+  // the loop only visits indexes that exist, so neither element can be
+  // missing. They are here because `noUncheckedIndexedAccess` types every
+  // array access as possibly absent.
+  // Stryker disable next-line EqualityOperator
   for (let i = 1; i < points.length; i += 1) {
     const previous = points[i - 1];
     const current = points[i];
+    // Stryker disable next-line ConditionalExpression,LogicalOperator
     if (previous !== undefined && current !== undefined) {
       distanceM += haversineMeters(
         previous.lat,
@@ -88,25 +96,17 @@ export const gpxSource: RunSource = {
     // async fn matching the RunSource contract shared with FIT (which does
     // await internally) rather than a sync function wearing a Promise.
     await Promise.resolve();
-    let text: string;
-    try {
-      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    } catch (error) {
-      throw new RunParseError("gpx: bytes are not valid UTF-8", { cause: error });
-    }
-
-    let doc: unknown;
-    try {
-      doc = parser.parse(text);
-    } catch (error) {
-      throw new RunParseError("gpx: XML parser threw", { cause: error });
-    }
+    const doc = parseXmlDocument(bytes, "gpx");
 
     const points = extractTrackPoints(doc);
     if (points.length < 2) throw new RunParseError("gpx: fewer than 2 track points with time");
 
     const first = points[0];
     const last = points.at(-1);
+    // Unreachable: the length check above already refused anything under
+    // two points. It is here because indexing an array is typed as
+    // possibly absent, and the message names that impossibility.
+    // Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
     if (first === undefined || last === undefined) throw new RunParseError("gpx: track point list was unexpectedly empty");
 
     const durationS = Math.round(

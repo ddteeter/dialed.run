@@ -93,6 +93,24 @@ async function postForm(
   return response.json();
 }
 
+/**
+ * The configured Strava credentials, or `undefined` when the deployment
+ * has none.
+ *
+ * Here rather than inline in ./api-from-env because that file reads
+ * bindings, and a test inside the isolate cannot change a binding: the
+ * decision would only ever run with both values unset. Half a credential
+ * is a misconfiguration that fails at the OAuth redirect rather than at
+ * boot, so both directions are worth pinning.
+ */
+export function stravaConfigFrom(
+  clientId: string | undefined,
+  clientSecret: string | undefined,
+): StravaConfig | undefined {
+  if (clientId === undefined || clientSecret === undefined) return undefined;
+  return { clientId, clientSecret };
+}
+
 export function createStravaApi(config: StravaConfig): StravaApi {
   return {
     async exchangeCode(code) {

@@ -13,7 +13,8 @@ import {
   useFormSubmit,
   useIdempotencyKey,
 } from "../../../ui";
-import { manualRunInput, submitManualRun } from "../functions";
+import { submitManualRun } from "../functions";
+import { manualRunInput } from "../inputs";
 
 type Effort = z.infer<typeof effortSchema>;
 

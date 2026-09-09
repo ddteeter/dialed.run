@@ -142,24 +142,35 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
 
     expect(queue.sent).toHaveLength(0);
     expect(capture.errors).toHaveLength(1);
+    const [reported] = capture.errors;
+    expect(reported?.error).toBeInstanceOf(Error);
+    expect((reported?.error as Error).message).toBe(
+      "invalid strava webhook payload",
+    );
+    // The surface tag is what makes this findable in Sentry among every
+    // other parse failure in the app.
+    expect(reported?.context).toStrictEqual({ surface: "strava-webhook" });
   });
 
-  it("ignores non-activity and non-create events", async () => {
+  it.each([
+    ["a non-create activity event", { aspect_type: "update" }],
+    ["a deleted activity", { aspect_type: "delete" }],
+    ["an athlete event", { object_type: "athlete" }],
+  ])("ignores %s in silence", async (_label, overrides) => {
+    // Silence, not just an empty queue: every one of these is a shape
+    // Strava really sends, so recognising it and declining to act is the
+    // behaviour. Reporting it to Sentry would be noise.
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
     await handleStravaWebhookEvent(
       queue,
       capture.captureException,
-      activityCreateEvent({ aspect_type: "update" }),
-    );
-    await handleStravaWebhookEvent(
-      queue,
-      capture.captureException,
-      activityCreateEvent({ object_type: "athlete" }),
+      activityCreateEvent(overrides),
     );
 
     expect(queue.sent).toHaveLength(0);
+    expect(capture.errors).toHaveLength(0);
   });
 
   it("carries no distance, pace or time — only ids and the event time (D-33)", async () => {
@@ -175,5 +186,77 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     expect(new Set(Object.keys(queue.sent[0] ?? {}))).toEqual(
       new Set(["type", "athleteId", "objectId", "aspectType", "eventTime"]),
     );
+  });
+});
+
+function params(entries: Record<string, string>): URLSearchParams {
+  return new URLSearchParams(entries);
+}
+
+describe("verifyStravaChallenge: every reason it refuses", () => {
+  const GOOD = {
+    "hub.mode": "subscribe",
+    "hub.verify_token": "the-token",
+    "hub.challenge": "echo-me",
+  };
+
+  it("echoes the challenge exactly", () => {
+    expect(verifyStravaChallenge(params(GOOD), "the-token")).toStrictEqual({
+      challenge: "echo-me",
+    });
+  });
+
+  it("refuses an empty verify token as firmly as a missing one", () => {
+    // An unset secret reads back as "" as often as undefined, and an empty
+    // token would otherwise match an empty `hub.verify_token`.
+    expect(verifyStravaChallenge(params(GOOD), undefined)).toBeUndefined();
+    expect(verifyStravaChallenge(params(GOOD), "")).toBeUndefined();
+    expect(
+      verifyStravaChallenge(
+        params({ ...GOOD, "hub.verify_token": "" }),
+        "",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("refuses any mode but subscribe", () => {
+    expect(
+      verifyStravaChallenge(
+        params({ ...GOOD, "hub.mode": "unsubscribe" }),
+        "the-token",
+      ),
+    ).toBeUndefined();
+    expect(
+      verifyStravaChallenge(
+        params({ "hub.verify_token": "the-token", "hub.challenge": "x" }),
+        "the-token",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("refuses a token that does not match, exactly", () => {
+    expect(
+      verifyStravaChallenge(
+        params({ ...GOOD, "hub.verify_token": "the-token " }),
+        "the-token",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("refuses a missing or empty challenge", () => {
+    // Echoing "" back is not a handshake; Strava reads it as a failure
+    // either way, and answering 403 is the honest response.
+    expect(
+      verifyStravaChallenge(
+        params({ "hub.mode": "subscribe", "hub.verify_token": "the-token" }),
+        "the-token",
+      ),
+    ).toBeUndefined();
+    expect(
+      verifyStravaChallenge(
+        params({ ...GOOD, "hub.challenge": "" }),
+        "the-token",
+      ),
+    ).toBeUndefined();
   });
 });

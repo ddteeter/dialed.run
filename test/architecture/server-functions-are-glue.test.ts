@@ -45,11 +45,7 @@ const loaders: Record<string, () => Promise<unknown>> = import.meta.glob(
  * entry is open D-41 work, and the list only ever shrinks — a stale entry
  * fails below, so it cannot be left behind once the file is cleaned.
  */
-const NOT_YET_GLUE = new Set([
-  // Input schemas still declared inline, and the Strava OAuth CSRF state
-  // check — the one branch left in this class that most deserves a test.
-  "src/modules/runs/functions.ts",
-]);
+const NOT_YET_GLUE = new Set<string>();
 
 const QUOTES = new Set(['"', "'", "`"]);
 

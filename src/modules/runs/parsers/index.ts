@@ -41,7 +41,11 @@ export function sourceFor(extension: ImportExtension): RunSource {
  */
 export function importExtensionOf(path: string): ImportExtension | undefined {
   const match = /\.([a-z0-9]+)$/i.exec(path);
+  // The inner `?.` and the `!== undefined` are the compiler's, not the
+  // runtime's: a match of this pattern always has group 1.
+  // Stryker disable next-line OptionalChaining
   const extension = match?.[1]?.toLowerCase();
+  // Stryker disable next-line ConditionalExpression
   return extension !== undefined && isImportExtension(extension)
     ? extension
     : undefined;
