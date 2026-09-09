@@ -20,21 +20,62 @@ export type ProductRow = typeof products.$inferSelect;
 const AUTOCOMPLETE_LIMIT = 8;
 
 /**
+ * The UNIQUE indexes two callers racing on the same identity collide on.
+ *
+ * Hoisted out of the insert chains, and named, for two reasons: a Stryker
+ * directive cannot attach to an object literal buried mid-chain, and the
+ * mutant it suppresses is genuinely equivalent — emptying the target leaves
+ * a bare `ON CONFLICT DO NOTHING`, which swallows this collision and every
+ * other one too. Naming the index is what says which collision is expected;
+ * no query can tell the two apart.
+ */
+// Stryker disable next-line ObjectLiteral
+const BRAND_IDENTITY_CONFLICT = { target: brands.normalized };
+// Stryker disable next-line ObjectLiteral
+const PRODUCT_IDENTITY_CONFLICT = {
+  target: [products.brandId, products.normalizedName],
+};
+
+/**
  * The autocomplete prefix pattern, or undefined when there is nothing to
- * search for. Both brand and product search built this the same way —
- * normalise, escape, append `%` — and the escaping is the part worth not
- * retyping: a brand with an underscore or percent in it would otherwise
- * turn into a wildcard and match the wrong rows.
+ * search for.
+ *
+ * No `LIKE` escaping, and that is not an oversight: `normalizeIdentity`
+ * folds everything outside `[a-z0-9 ]` to a space, so a `%` or `_` a user
+ * typed is gone before it reaches here and the only wildcard in the pattern
+ * is the one appended below. There *was* an `escapeLike` here; mutation
+ * testing showed both of its replacements could be deleted with every test
+ * still green, which is what dead code looks like from the outside.
+ *
+ * The dependency runs the other way to the obvious reading: this is safe
+ * *because* the value is normalised. Loosening `normalizeIdentity` to keep
+ * punctuation would need the escaping back.
  */
 function prefixPattern(prefix: string): string | undefined {
   const normalized = normalizeIdentity(prefix);
-  return normalized === "" ? undefined : `${escapeLike(normalized)}%`;
+  return normalized === "" ? undefined : `${normalized}%`;
 }
 
-function escapeLike(value: string): string {
-  // Prefix search only: escape SQL LIKE metacharacters in the user's input
-  // before appending our own trailing '%'.
-  return value.replaceAll("%", String.raw`\%`).replaceAll("_", String.raw`\_`);
+/**
+ * Create-if-missing, then read back whichever row is now there.
+ *
+ * Both identity resolvers do exactly this and both wrote out the same
+ * unreachable guard afterwards. The read is the part that makes it
+ * converge: two callers inserting the same identity concurrently both see
+ * whichever insert won, and neither has to know which.
+ */
+async function insertThenRead<Row>(
+  insert: () => Promise<unknown>,
+  read: () => Promise<Row[]>,
+): Promise<Row> {
+  await insert();
+  const [row] = await read();
+  // Unreachable: the insert either wrote the row or conflicted with one
+  // already there, so the read that follows always finds something. It
+  // narrows `Row | undefined` for the caller and nothing else.
+  // Stryker disable next-line ConditionalExpression,BooleanLiteral,StringLiteral,CallExpression
+  if (!row) throw new Error("create-if-missing failed to resolve");
+  return row;
 }
 
 /**
@@ -50,17 +91,17 @@ export async function createOrGetBrand(
   if (normalized === "") {
     throw new Error("Brand name must contain at least one letter or digit.");
   }
-  await db
-    .insert(brands)
-    .values({ id: newUlid(), name: name.trim(), normalized, seeded: false })
-    .onConflictDoNothing({ target: brands.normalized });
-  const [row] = await db
-    .select()
-    .from(brands)
-    .where(eq(brands.normalized, normalized))
-    .limit(1);
-  if (!row) throw new Error("Brand create-if-missing failed to resolve.");
-  return row;
+  return insertThenRead(
+    () =>
+      db
+        .insert(brands)
+        // `seeded` marks the curated list the data migration wrote; a brand
+        // a user typed is not part of it.
+        .values({ id: newUlid(), name: name.trim(), normalized, seeded: false })
+        .onConflictDoNothing(BRAND_IDENTITY_CONFLICT),
+    () =>
+      db.select().from(brands).where(eq(brands.normalized, normalized)).limit(1),
+  );
 }
 
 /**
@@ -102,34 +143,34 @@ export async function createOrGetProduct(
   if (normalizedName === "") {
     throw new Error("Product name must contain at least one letter or digit.");
   }
-  await db
-    .insert(products)
-    .values({
-      id: newUlid(),
-      brandId: input.brandId,
-      name: input.name.trim(),
-      normalizedName,
-      sourceUrl: input.sourceUrl,
-      extractionStatus: "none",
-      status: "active",
-      createdBy: input.createdBy,
-      createdAt: Math.floor(Date.now() / 1000),
-    })
-    .onConflictDoNothing({
-      target: [products.brandId, products.normalizedName],
-    });
-  const [row] = await db
-    .select()
-    .from(products)
-    .where(
-      and(
-        eq(products.brandId, input.brandId),
-        eq(products.normalizedName, normalizedName),
-      ),
-    )
-    .limit(1);
-  if (!row) throw new Error("Product create-if-missing failed to resolve.");
-  return row;
+  return insertThenRead(
+    () =>
+      db
+        .insert(products)
+        .values({
+          id: newUlid(),
+          brandId: input.brandId,
+          name: input.name.trim(),
+          normalizedName,
+          sourceUrl: input.sourceUrl,
+          extractionStatus: "none",
+          status: "active",
+          createdBy: input.createdBy,
+          createdAt: Math.floor(Date.now() / 1000),
+        })
+        .onConflictDoNothing(PRODUCT_IDENTITY_CONFLICT),
+    () =>
+      db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.brandId, input.brandId),
+            eq(products.normalizedName, normalizedName),
+          ),
+        )
+        .limit(1),
+  );
 }
 
 /**
@@ -216,6 +257,9 @@ export async function getProductAttributeDefaultsBulk(
   productIds: string[],
 ): Promise<Map<string, ProductAttributeDefaults>> {
   const map = new Map<string, ProductAttributeDefaults>();
+  // Equivalent mutant: an empty `inArray` matches nothing, so the map is
+  // empty either way. The return saves the query.
+  // Stryker disable next-line ConditionalExpression,EqualityOperator
   if (productIds.length === 0) return map;
   const rows = await db
     .select({

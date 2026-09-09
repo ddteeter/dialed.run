@@ -67,6 +67,26 @@
       "key": "src/modules/ops/health.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: the probe key is arbitrary. The check asks R2 whether an object exists, and a miss is a successful round trip \u2014 which is the whole point. Any string, empty included, proves the same reachability, so no assertion can tell them apart.",
       "count": 1
+    },
+    {
+      "key": "src/modules/products/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,BooleanLiteral,StringLiteral,CallExpression",
+      "reason": "Unreachable, proof at the site: `insertThenRead` inserts and then reads back the same identity, and the insert either wrote the row or conflicted with one already there \u2014 so the read always finds something. The guard narrows `Row | undefined` for the caller and nothing else.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/products/service.ts|mutation-suppress|// Stryker disable next-line ObjectLiteral",
+      "reason": "Equivalent mutant, proof at the site: emptying an onConflict target leaves a bare ON CONFLICT DO NOTHING, which swallows the same collision and every other one too. Naming the index says which collision is expected; no query can tell the two apart. Hoisted to named constants because a directive cannot attach to an object literal mid-chain.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/products/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
+      "reason": "Equivalent mutant, proof at the site: an empty `inArray` matches nothing, so the defaults map comes back empty either way. The early return saves the query.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/notifications/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Unreachable fallback, proof at the site: `count()` always answers with exactly one row. The optional chain is there because `noUncheckedIndexedAccess` types `rows[0]` as possibly undefined, which is the compiler being right about arrays in general rather than about this query.",
+      "count": 1
     }
   ]
 }
