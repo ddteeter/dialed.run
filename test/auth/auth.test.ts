@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../src/env";
-import { createAuth } from "../src/modules/auth/create-auth";
+import { env } from "../../src/env";
+import { createAuth } from "../../src/modules/auth/create-auth";
 
 const auth = createAuth({
   db: drizzle(env.DIALED_CORE),

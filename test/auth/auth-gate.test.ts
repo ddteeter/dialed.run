@@ -4,7 +4,7 @@ import {
   AuthRequiredError,
   AUTH_REQUIRED_CODE,
   isAuthRequired,
-} from "../src/modules/auth/auth-error";
+} from "../../src/modules/auth/auth-error";
 
 /**
  * The point of a single error type is that a caller can act on it. These

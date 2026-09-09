@@ -8,13 +8,17 @@
  * `UnauthenticatedError`, `AuthRequiredError` — which left the client with
  * no reliable way to tell "sign in again" from "something broke".
  *
- * The error itself lives in ./auth-error, which imports nothing from
- * TanStack and so stays loadable (and testable) in the workers pool.
+ * This file imports `@tanstack/react-start/server`, so nothing in it can
+ * be imported by a test or reached by mutation testing. It therefore holds
+ * no decisions: both reads below fetch the session and hand it to
+ * ./session-user, where the decision is, and the error type lives in
+ * ./auth-error. Both of those import nothing from TanStack and so stay
+ * loadable in the workers pool.
  */
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
-import { AuthRequiredError } from "./auth-error";
 import { auth } from "./instance";
+import { optionalUserIdFrom, userIdOrThrow } from "./session-user";
 
 /**
  * The signed-in user's id, or `AuthRequiredError`. Server-function side
@@ -22,9 +26,9 @@ import { auth } from "./instance";
  * redirects instead of throwing.
  */
 export async function requireUserId(): Promise<string> {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  if (session === null) throw new AuthRequiredError();
-  return session.user.id;
+  return userIdOrThrow(
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
 }
 
 /**
@@ -42,6 +46,7 @@ export async function requireUserId(): Promise<string> {
  * `Request` rather than TanStack's server context.
  */
 export async function optionalUserId(): Promise<string | undefined> {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  return session?.user.id;
+  return optionalUserIdFrom(
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
 }
