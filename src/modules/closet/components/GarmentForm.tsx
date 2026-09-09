@@ -110,7 +110,16 @@ export function GarmentForm({
     () =>
       estimateTempRange({
         category: values.category,
+        // Equivalent mutants on both conversions, and the same class as
+        // `estimateTempRange`'s own weight guard: the estimator reads
+        // `layer === "outer"` and indexes its tables by weight, so an
+        // empty string and an absent value already behave identically
+        // there. These exist because `GarmentFormValues` types an
+        // unanswered select as `""` and `ThermalInput` types it as
+        // absent — the conversion is for the compiler, not the runtime.
+        // Stryker disable next-line ConditionalExpression,StringLiteral
         layer: values.layer === "" ? undefined : values.layer,
+        // Stryker disable next-line ConditionalExpression,StringLiteral
         weight: values.weight === "" ? undefined : values.weight,
         windResistant: values.windResistant,
       }),
