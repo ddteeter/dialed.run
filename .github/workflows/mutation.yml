@@ -1,0 +1,48 @@
+name: Mutation
+
+# Only when the pure modules or their tests change. `src/lib` is at 100%
+# and this is the ratchet that keeps it there — `stryker.conf.json` breaks
+# the build below 100, so a change that stops a mutant being killed fails
+# here rather than being noticed months later.
+#
+# Deliberately NOT the guardrails commit-gate analyzer (`"stryker": "off"`
+# in guardrails.config.json). That one scopes to *every* changed TypeScript
+# file, and `src/modules` is at ~50% — turning it on would block the next
+# commit touching a module with a hundred findings it did not cause. This
+# job holds the line where the line is already clean.
+#
+# Not in the branch-protection required set, for the same reason it is path
+# filtered: a PR that touches no lib file should not wait on it.
+on:
+  pull_request:
+    paths:
+      - "src/lib/**"
+      - "test/lib/**"
+      - "stryker.conf.json"
+      - "vitest.config.ts"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutate:
+    name: Mutation score (src/lib)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ~6 minutes. Slower than the rest of CI, which is why it is scoped
+      # to the files whose score it protects.
+      - run: npm run mutate

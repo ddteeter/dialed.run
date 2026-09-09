@@ -302,28 +302,33 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   yourself, and do not argue with the gate.
 - **Never** add `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `as any`,
   `.skip`, or `.only`. The diff-auditor rejects them and the turn will not end.
-- **Mutation testing works; it is a tool you run, not a check that runs.**
-  Two switches, and the names collide:
+- **`src/lib` is at 100% mutation score, and it stays there.**
+  `npm run mutate` runs stryker over the pure modules; `stryker.conf.json`
+  sets `break: 100`, so it exits non-zero the moment a change stops a
+  mutant being killed. A CI job runs it on any PR touching `src/lib/` or
+  `test/lib/`. Adding a function there means adding tests that observe its
+  behaviour, not tests that merely execute it.
 
-  | | what it is | state |
-  | --- | --- | --- |
-  | `npm run mutate` | stryker over `src/lib`, on demand | **available** |
-  | `"stryker"` in `guardrails.config.json` | whether the *commit gate* runs it on your diff | `off` |
+  It works because of two lines in `vitest.config.ts` that are easy to
+  delete by accident: forwarding `__STRYKER_ACTIVE_MUTANT__` into the
+  workers pool as a binding (the pool's `process.env` is the Worker's
+  bindings, not the parent environment — without it *every* mutant survives
+  and the score is a meaningless `0.00`), and `assetsInclude: ["**/*.bin"]`
+  (without it stryker's own vitest cannot parse the photo fixture and the
+  fast runner will not start at all).
 
-  "stryker is off" means "not in the commit gate", not "unavailable".
+  **`src/modules` is not covered and is around 50%.** That is why
+  `"stryker"` stays `off` in `guardrails.config.json`: the commit-gate
+  analyzer scopes to *every* changed TypeScript file, so turning it on
+  would block the next commit touching a module with a hundred findings it
+  did not cause. Paying that down is D-40.
 
-  It works because of two lines someone else would spend a day rediscovering.
-  `vitest.config.ts` forwards `__STRYKER_ACTIVE_MUTANT__` into the workers
-  pool as a binding — the pool's `process.env` is the Worker's bindings, not
-  the parent environment, so without it no mutant activates and the score is
-  a meaningless `0.00`. And `assetsInclude: ["**/*.bin"]` lets stryker's own
-  vitest parse the photo fixture; without it the vitest runner dies on
-  startup and you are stuck on the `command` runner, which is 7x slower and
-  reports a false `0.00` for any file its command did not cover.
-
-  Baseline: `src/lib` is **62%** over 316 mutants in 8m42s. 87 survivors,
-  which is a worklist, not a crisis — `contracts.ts` and `temperature.ts`
-  are most of it.
+  When a survivor is genuinely equivalent — no possible input distinguishes
+  it — write the proof at the site, use a **mutator-scoped**
+  `// Stryker disable next-line <Mutator>`, and add a keyed grant to
+  `guardrails.config.json`. Prefer restructuring so the mutant cannot exist:
+  two of the first four were removed that way, and both left better code.
+  See `docs/guardrails/crushing-mutants.md`.
 
 - **Commit gate**: knip + dependency-cruiser + `dupes` run at commit. Dead
   code, boundary violations and clones block the commit. Delete dead code;
