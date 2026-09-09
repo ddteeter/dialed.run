@@ -34,13 +34,15 @@ import type {
   UiGroup,
   weightSchema,
 } from "../../lib/contracts";
-import { uiGroupFor } from "../../lib/contracts";
+import { garmentSchema, uiGroupFor } from "../../lib/contracts";
+import { garmentTypesFor } from "../../lib/garment-fields";
 import { newUlid } from "../../lib/ids";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
 import {
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
+  resolveProduct,
 } from "../products";
 import type { ProductAttributeDefaults } from "../products";
 import { ownedBy } from "../../lib/owned";
@@ -719,4 +721,47 @@ export async function getItemsByIds(
     .where(
       and(eq(wardrobeItems.userId, userId), inArray(wardrobeItems.id, itemIds)),
     );
+}
+
+/**
+ * Attaches a canonical product to a garment, at the write site.
+ *
+ * A garment is ideally a *product* — "Janji Rover Half-Zip", not "a long
+ * sleeve" (D-27) — so a brand and a name together resolve (create-if-
+ * missing) a product row, link `product_id`, and bring the product's type
+ * with them. Design's Z screen: the type "came with the match, from the
+ * product record — it was never a question".
+ *
+ * This ran in the browser first, once per route, which meant two round
+ * trips and a rule a caller could simply not call. Here it runs wherever a
+ * garment is written, so it cannot be skipped and the client is one
+ * request lighter.
+ *
+ * The type is validated against the garment's category rather than
+ * trusted: a product row could carry a type belonging to another category,
+ * and the whole save would fail rather than a bad hint being ignored.
+ */
+export async function withResolvedProduct(
+  db: Db,
+  garment: Garment,
+  createdBy: string,
+): Promise<Garment> {
+  const brand = garment.brand?.trim() ?? "";
+  if (brand === "" || garment.name.trim() === "") return garment;
+  const { product } = await resolveProduct(db, {
+    brandName: brand,
+    productName: garment.name,
+    sourceUrl: garment.productUrl,
+    createdBy,
+  });
+  const allowed: readonly string[] = garmentTypesFor(garment.category);
+  const inherited =
+    product.type !== null && allowed.includes(product.type)
+      ? product.type
+      : undefined;
+  return garmentSchema.parse({
+    ...garment,
+    productId: product.id,
+    ...(inherited !== undefined && { type: inherited }),
+  });
 }

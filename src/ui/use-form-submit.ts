@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { z } from "zod";
 
+import { isAuthRequired } from "../lib/auth-signal";
 import { DURATION } from "./motion";
 
 /**
@@ -100,15 +101,20 @@ function zodIssuesOf(error: unknown): readonly FieldIssue[] | undefined {
  * "please", no "error", no exclamation.
  */
 function classifyFailure(error: unknown): FormFailure {
-  const message =
-    typeof error === "object" && error !== null && "message" in error
-      ? String(error.message)
-      : "";
-  if (/fetch|network|load failed/i.test(message) || !navigator.onLine) {
-    return { kind: "network", message: "Your connection dropped." };
-  }
-  if (/401|403|session|unauthenticated/i.test(message)) {
+  // Session is decided by a code, not by the message text. The reference
+  // matched /401|403|session|unauthenticated/ against a string, which
+  // stops working the day an upstream reworded something and does so
+  // silently — and this is the one branch with real consequences, since
+  // the contract routes an expired session to sign-in carrying the pending
+  // payload rather than leaving the user on a dead form.
+  if (isAuthRequired(error)) {
     return { kind: "session", message: "You were signed out." };
+  }
+  // `fetch` rejects with a TypeError, and it rejects *here* — client-side,
+  // never having crossed a structured clone — so the prototype is intact
+  // and `instanceof` is safe in a way it is not for a server rejection.
+  if (error instanceof TypeError || !navigator.onLine) {
+    return { kind: "network", message: "Your connection dropped." };
   }
   return { kind: "server", message: "Our end failed. Nothing changed." };
 }

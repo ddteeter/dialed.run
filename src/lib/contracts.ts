@@ -66,35 +66,6 @@ const layered = garmentBase.extend({
   waterResistant: z.boolean().optional(),
 });
 /**
- * The specific thing a garment *is*, within its category. A `top` is a
- * singlet or a tee or a half-zip; the category alone cannot tell you, and
- * anything that has to show a garment — an icon, a recommendation, a
- * consensus bucket — needs to know which.
- *
- * The vocabulary is not invented here. It is the design's own: the P2
- * tap-list is a list of these ("SINGLET · SHORT-SLEEVE TEE · MERINO BASE
- * L/S · HALF-ZIP · 5\u2033 SHORTS · TIGHTS · WIND SHELL · BEANIE · BUFF"),
- * and the Icon Pack draws one glyph per entry to render it. So the values
- * are named for the glyphs and a garment's icon *is* its type — an identity
- * function rather than a mapping table anyone could get wrong. A test in
- * `test/garment-fields.test.ts` fails if the two ever drift apart.
- *
- * Display labels stay free text on `name`. "Wind shell" and "Rain jacket"
- * are both `jacket`, told apart by `windResistant`/`waterResistant`;
- * "Mittens" is `gloves`; "Trail shoes" is `shoes`; "Buff" is `neckGaiter`.
- * The type says what shape a thing is, not what it is for.
- *
- * Optional everywhere, because it has to be: every garment written before
- * this column existed has none, and CLAUDE.md law 8 is expand-then-contract.
- * Treat `undefined` as "not known yet", never as a category default.
- */
-/**
- * A WGS84 coordinate pair, bounded. Written out four times before this —
- * twice here and twice in `modules/feed/functions.ts` — which is four
- * places to get a sign or a bound wrong, and no way for them to disagree
- * loudly.
- */
-/**
  * Sign-in and sign-up, the two forms with no server function of their own —
  * Better Auth owns the endpoints, so this schema is the *only* validation
  * before the request goes out.
@@ -128,9 +99,38 @@ export const signUpSchema = z.object({
   password: z.string().min(8, "Use at least 8 characters."),
 });
 
+/**
+ * A WGS84 coordinate pair, bounded. Written out four times before this —
+ * twice here and twice in `modules/feed/functions.ts` — which is four
+ * places to get a sign or a bound wrong, and no way for them to disagree
+ * loudly.
+ */
 export const latitudeSchema = z.number().min(-90).max(90);
 export const longitudeSchema = z.number().min(-180).max(180);
 
+/**
+ * The specific thing a garment *is*, within its category. A `top` is a
+ * singlet or a tee or a half-zip; the category alone cannot tell you, and
+ * anything that has to show a garment — an icon, a recommendation, a
+ * consensus bucket — needs to know which.
+ *
+ * The vocabulary is not invented here. It is the design's own: the P2
+ * tap-list is a list of these ("SINGLET · SHORT-SLEEVE TEE · MERINO BASE
+ * L/S · HALF-ZIP · 5\u2033 SHORTS · TIGHTS · WIND SHELL · BEANIE · BUFF"),
+ * and the Icon Pack draws one glyph per entry to render it. So the values
+ * are named for the glyphs and a garment's icon *is* its type — an identity
+ * function rather than a mapping table anyone could get wrong. A test in
+ * `test/garment-fields.test.ts` fails if the two ever drift apart.
+ *
+ * Display labels stay free text on `name`. "Wind shell" and "Rain jacket"
+ * are both `jacket`, told apart by `windResistant`/`waterResistant`;
+ * "Mittens" is `gloves`; "Trail shoes" is `shoes`; "Buff" is `neckGaiter`.
+ * The type says what shape a thing is, not what it is for.
+ *
+ * Optional everywhere, because it has to be: every garment written before
+ * this column existed has none, and CLAUDE.md law 8 is expand-then-contract.
+ * Treat `undefined` as "not known yet", never as a category default.
+ */
 export const garmentTypesByCategory = {
   // `sportsBra` and `armSleeves` arrived with the Icon Pack marked
   // provisional. They are real tap-list rows on P2 (ARM WARMERS is on the

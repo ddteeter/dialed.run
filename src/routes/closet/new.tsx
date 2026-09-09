@@ -4,11 +4,8 @@ import { requireSession } from "../../modules/auth/functions";
 import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import { createItemFn } from "../../modules/closet/functions";
-import {
-  resolveProductFn,
-  searchBrandsFn,
-} from "../../modules/products/functions";
-import { garmentWithResolvedProduct } from "../../modules/closet/form-mapping";
+import { searchBrandsFn } from "../../modules/products/functions";
+import { garmentFromFormValues } from "../../modules/closet/form-mapping";
 import { Layout, useIdempotencyKey } from "../../ui";
 
 export const Route = createFileRoute("/closet/new")({
@@ -28,7 +25,7 @@ function NewGarmentPage() {
   const { idempotencyKey, rotate } = useIdempotencyKey();
 
   async function handleSubmit(values: GarmentFormValues) {
-    const garment = await garmentWithResolvedProduct(values, resolveProductFn);
+    const garment = garmentFromFormValues(values);
 
     const created = await createItemFn({
       data: { garment, idempotencyKey },

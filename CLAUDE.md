@@ -202,6 +202,18 @@ explicitly says the migration is yours — or the owner has said yes.
   A batch cannot branch on its own results, so a read that decides what to
   write goes *before* it. That is a reason to reorder, not a reason to split.
 
+  **A drizzle builder is lazy, and that is the footgun.**
+  `db.insert(t).values(v)` returns a query builder, not a Promise — it has
+  assembled the SQL and sent nothing. It is *thenable*, so `await` is what
+  triggers execution: `await x` means "call `x.then()`", and `.then()` is
+  what talks to D1. `db.batch([a, b])` takes un-awaited builders, pulls the
+  statements out, and sends them as one transaction.
+
+  So a builder you neither `await` nor pass to `batch()` **silently does
+  nothing** — no error, no SQL, no row. When you move a statement into a
+  batch, the `await` in front of it is what you delete; forget to add it to
+  the array and the write is simply gone.
+
 ## Product rules that are also code rules
 
 - **Verdicts are per-run**, stored as an integer −2..+2 (0 = dialed). Per-item

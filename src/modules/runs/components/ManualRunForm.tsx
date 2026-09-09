@@ -33,12 +33,38 @@ function toEpochSeconds(localDateTime: string): number {
   return Math.floor(new Date(localDateTime).getTime() / 1000);
 }
 
+/**
+ * Keyed by *schema field*, labelled in *input units*, and the two differ on
+ * purpose.
+ *
+ * The contract stores SI — `durationS` is seconds, `distanceM` is metres —
+ * because that is what makes pace arithmetic and the future unit
+ * preference (D-6) a display concern rather than a storage one. Nobody
+ * types seconds into a form, so the inputs take minutes and kilometres and
+ * `toSeconds`/`toMetres` convert on submit.
+ *
+ * The keys cannot be renamed to match the labels: `useFormSubmit` looks a
+ * field up by `name` to focus it and reads `fieldErrors[name]`, so the DOM
+ * name has to be the schema key or a server-side error lands on nothing.
+ *
+ * The consequence to watch is that **the schema's error messages are
+ * phrased in the input's units** — `durationS` says "How many minutes did
+ * it take?" — because the schema's message is what the user reads.
+ */
 const LABELS = {
   title: "Title",
   startedAt: "Started",
   durationS: "Minutes",
   distanceM: "Distance (km)",
 };
+
+function toSeconds(minutes: string): number {
+  return Math.round(Number(minutes) * 60);
+}
+
+function toMetres(kilometres: string): number {
+  return Number(kilometres) * 1000;
+}
 
 export function ManualRunForm() {
   const navigate = useNavigate();
@@ -71,8 +97,8 @@ export function ManualRunForm() {
         void form.submit({
           title,
           startedAt: toEpochSeconds(startedAt),
-          durationS: Math.round(Number(minutes) * 60),
-          distanceM: Number(distanceKm) * 1000,
+          durationS: toSeconds(minutes),
+          distanceM: toMetres(distanceKm),
           indoor,
           idempotencyKey,
           ...(effort !== "" && { effort }),

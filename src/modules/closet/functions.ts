@@ -18,6 +18,7 @@ import {
 } from "./photos";
 import {
   createItem,
+  withResolvedProduct,
   deleteOrRetireItem,
   getItemDetail,
   getItemsByIds,
@@ -91,13 +92,12 @@ export const createItemFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => newItemInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return createItem(
-      db(),
-      userId,
-      data.garment,
-      "manual",
-      data.idempotencyKey,
-    );
+    // Resolved here rather than in the browser: it is a rule about what a
+    // garment *is*, so it belongs where the garment is written and not
+    // somewhere a caller can forget to go.
+    const client = db();
+    const garment = await withResolvedProduct(client, data.garment, userId);
+    return createItem(client, userId, garment, "manual", data.idempotencyKey);
   });
 
 const updateItemSchema = z.object({
@@ -109,7 +109,12 @@ export const updateItemFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => updateItemSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return updateItem(db(), userId, data.itemId, data.garment);
+    // Same rule as create: editing a garment into a brand + model is how a
+    // generic piece becomes a specific one (P2.5), and that is exactly when
+    // it should gain a product and a type.
+    const client = db();
+    const garment = await withResolvedProduct(client, data.garment, userId);
+    return updateItem(client, userId, data.itemId, garment);
   });
 
 export const retireItemFn = createServerFn({ method: "POST" })
