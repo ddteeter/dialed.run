@@ -79,3 +79,54 @@ describe("weather cache (103)", () => {
     expect(row?.tempC).toBe(5);
   });
 });
+
+describe("what a stored observation records about itself", () => {
+  /**
+   * `fetched_at` is seconds, and `Date.now()` is milliseconds. The
+   * conversion had no assertion, so the mutant that multiplies where the
+   * code divides — writing a value a thousand times too large — was
+   * invisible. Staleness is judged against this column, and a row stamped
+   * in the year 57000 is never stale.
+   */
+  it("stamps fetched_at in epoch seconds, not milliseconds", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const key = cacheKeyFor(38.5, -85.5, new Date("2026-05-01T09:00:00Z"));
+
+    await upsertRealObservation(key, OBSERVATION, newUlid());
+
+    const row = await findObservationRow(key);
+    expect(row?.fetchedAt).toBeGreaterThanOrEqual(nowSeconds - 5);
+    expect(row?.fetchedAt).toBeLessThanOrEqual(nowSeconds + 5);
+  });
+
+  it("stamps a manual row the same way", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const key = cacheKeyFor(38.6, -85.6, new Date("2026-05-01T09:00:00Z"));
+
+    await upsertManualObservation(key, 12, newUlid());
+
+    const row = await findObservationRow(key);
+    expect(row?.fetchedAt).toBeGreaterThanOrEqual(nowSeconds - 5);
+    expect(row?.fetchedAt).toBeLessThanOrEqual(nowSeconds + 5);
+  });
+
+  it("fills a manual row's unmeasured fields with neutral sentinels", async () => {
+    // Manual rows carry a temperature a human typed and nothing else.
+    // They are excluded from every aggregate, so the remaining columns are
+    // placeholders — but `condition` is read straight onto the screen, and
+    // an empty string there renders as a blank chip.
+    const key = cacheKeyFor(38.7, -85.7, new Date("2026-05-01T09:00:00Z"));
+    await upsertManualObservation(key, -8, newUlid());
+
+    const row = await findObservationRow(key);
+    expect(row).toMatchObject({
+      tempC: -8,
+      feelsLikeC: -8,
+      humidity: 0,
+      windKph: 0,
+      precipMm: 0,
+      condition: "manual",
+      source: "manual",
+    });
+  });
+});

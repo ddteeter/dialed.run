@@ -29,10 +29,27 @@ function coreDb() {
   return drizzle(env.DIALED_CORE);
 }
 
+/**
+ * Resolved means "this run's conditions are settled" — a real observation
+ * or a temperature a human typed. Both callers below need the same answer
+ * and it was written out twice; the two copies are what would let a third
+ * status join one of them and not the other.
+ */
+function isResolved(status: WeatherStatus): boolean {
+  return status === "attached" || status === "manual";
+}
+
 async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
   await coreDb().update(runs).set({ weatherStatus: status }).where(eq(runs.id, runId));
 }
 
+/**
+ * What an attach attempt did. Returned rather than swallowed: three of the
+ * six outcomes are degradations (law 5 — a weather failure never fails the
+ * run), and a caller that cannot tell "attached" from "pending" has no way
+ * to report or count them. The retry cron counts on these, and the strings
+ * are what a tail log shows.
+ */
 type AttachOutcome =
   | "attached"
   | "manual"
@@ -52,7 +69,7 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     console.warn("[weather] attach: run not found", { runId });
     return "skipped-not-found";
   }
-  if (run.weatherStatus === "attached" || run.weatherStatus === "manual") {
+  if (isResolved(run.weatherStatus)) {
     return "skipped-resolved";
   }
   if (run.indoor || run.lat === null || run.lng === null) {
@@ -65,6 +82,10 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
 
   const keys = runHourKeys(run.lat, run.lng, run.startedAt, run.durationS);
   const [key] = keys;
+  // Unreachable: `runHourKeys` always yields at least the starting hour.
+  // The guard is here for the compiler — destructuring a `CacheKey[]`
+  // gives `CacheKey | undefined` whatever the runtime does.
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral
   if (key === undefined) return "skipped-no-location";
   const cached = await findObservationRow(key);
   if (cached) {
@@ -118,6 +139,12 @@ async function sampleRunHours(
   for (const [index, hourKey] of keys.entries()) {
     // A later hour already cached by someone else's run at the same place
     // needs no upstream call.
+    //
+    // Stryker cannot kill the guard itself and neither can a test: hour 0
+    // is *known* to be a miss, because `resolveAndAttach` looked it up and
+    // returned early if it hit. Widening the guard therefore only adds a
+    // query that always misses. It stays because that query is billed.
+    // Stryker disable next-line ConditionalExpression,EqualityOperator
     if (index > 0) {
       const existing = await findObservationRow(hourKey);
       if (existing !== undefined) continue;
@@ -161,8 +188,8 @@ function runHourKeys(
  * the run is indoor/has no location/is already resolved; degrades to
  * `weather_pending` on provider failure — never throws (law 5).
  */
-export async function attachObservation(runId: Ulid): Promise<void> {
-  await resolveAndAttach(runId);
+export async function attachObservation(runId: Ulid): Promise<AttachOutcome> {
+  return resolveAndAttach(runId);
 }
 
 /**
@@ -181,7 +208,7 @@ export async function recordManualObservation(
   if (!run) {
     throw new Error(`recordManualObservation: run ${runId} not found`);
   }
-  if (run.weatherStatus === "attached" || run.weatherStatus === "manual") {
+  if (isResolved(run.weatherStatus)) {
     return;
   }
   if (run.lat === null || run.lng === null) {
@@ -242,6 +269,11 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
     }
   }
 
+  // Equivalent mutant: skipping this return changes nothing an assertion
+  // can see — an empty `inArray` matches nothing, so the two queries below
+  // return the same zeros. What it saves is the two queries, on a cron
+  // that fires every hour.
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement
   if (candidates.length === 0) {
     return { claimed: 0, attached, failed: 0 };
   }

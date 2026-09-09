@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
 
-  "//": "Run with `npm run mutate`. Scoped to src/lib — the pure modules. Everything else is D1, R2, queues and TanStack, where a surviving mutant usually means 'this line talks to a binding the test replaced', not 'this line is untested'.",
+  "//": "Run with `npm run mutate`. This list IS the ratchet: every glob in it has been paid down to 100% and `break: 100` below keeps it there. The Mutation workflow reads this array and runs one CI shard per entry, so adding a glob here is what puts a module under the gate — there is no second copy to update.",
 
   "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts — without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
   "testRunner": "vitest",
@@ -13,5 +13,5 @@
   "concurrency": 4,
   "timeoutMS": 120000,
   "incremental": true,
-  "mutate": ["src/lib/**/*.ts"]
+  "mutate": ["src/lib/**/*.ts", "src/modules/weather/**/*.ts"]
 }

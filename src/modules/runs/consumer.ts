@@ -43,7 +43,7 @@ export interface ConsumerDeps {
   Pending(102↔103): wire to weather.attachObservation once that module
   merges; degrades to a no-op (weather stays 'pending') until then.
   */
-  attachObservation?: ((runId: string) => Promise<void>) | undefined;
+  attachObservation?: ((runId: string) => Promise<unknown>) | undefined;
   /**
   Present when Strava credentials are configured; the revoke job is a
   no-op without them.
