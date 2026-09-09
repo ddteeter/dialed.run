@@ -7,7 +7,7 @@
     "tsc": "required",
     "knip": "required",
     "dependency-cruiser": "required",
-    "stryker": "off",
+    "stryker": "required",
     "dupes": "required"
   },
   "sanctionedFiles": [
