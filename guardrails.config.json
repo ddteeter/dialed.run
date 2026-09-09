@@ -62,6 +62,11 @@
       "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
       "reason": "Unreachable, proof at the site: the insert either wrote the row or conflicted with one already present, so the read that follows always finds something. The guard exists to narrow `ObservationRow | undefined` for the caller.",
       "count": 1
+    },
+    {
+      "key": "src/modules/ops/health.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Equivalent mutant, proof at the site: the probe key is arbitrary. The check asks R2 whether an object exists, and a miss is a successful round trip \u2014 which is the whole point. Any string, empty included, proves the same reachability, so no assertion can tell them apart.",
+      "count": 1
     }
   ]
 }

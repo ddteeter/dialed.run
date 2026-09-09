@@ -15,12 +15,23 @@ import { captureException } from "./sentry";
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
 /**
+ * What a cron run found. `anomalies` is the digest's product — the things
+ * a human should look at — and it is returned rather than only shipped to
+ * Sentry so that "the digest found nothing" is a fact a caller and a test
+ * can read. Every other cron returns an empty list.
+ */
+export interface ScheduledOutcome {
+  readonly cronName: string;
+  readonly anomalies: readonly string[];
+}
+
+/**
  * Cron entry (000 §10). Every cron writes its heartbeat row first (the
  * digest flags stale ones — law: crons must be safely re-runnable).
  */
 export async function handleScheduled(
   controller: ScheduledController,
-): Promise<void> {
+): Promise<ScheduledOutcome> {
   const db = drizzle(env.DIALED_CORE);
   const cronName = cronNameFor(controller.cron) ?? "unknown";
   await db
@@ -33,14 +44,13 @@ export async function handleScheduled(
 
   switch (cronName) {
     case "daily-digest": {
-      await runDailyDigest();
-      break;
+      return { cronName, anomalies: await runDailyDigest() };
     }
     case "weather-retry": {
       // docs/tasks/103-weather.md requirement 4/5: the hourly
       // pending-observation retry, claim-then-work at the module level.
       await retryPendingWeather();
-      break;
+      return { cronName, anomalies: [] };
     }
     default: {
       // Config/code skew that the bindings-conformance test should have
@@ -48,6 +58,7 @@ export async function handleScheduled(
       captureException(new Error("unrecognized cron fired"), {
         cron: controller.cron,
       });
+      return { cronName, anomalies: [] };
     }
   }
 }
@@ -148,7 +159,7 @@ async function redispatchStrandedRevocations(
  * ONLY anomalies get surfaced. Notification transport (email) lands with
  * lane 102's notification plumbing; until then anomalies go to Sentry.
  */
-async function runDailyDigest(): Promise<void> {
+async function runDailyDigest(): Promise<string[]> {
   const anomalies: string[] = [];
   await checkWeatherBacklog(anomalies);
   await redispatchStrandedRevocations(anomalies);
@@ -161,6 +172,7 @@ async function runDailyDigest(): Promise<void> {
       anomalies: anomalies.join("; "),
     });
   }
+  return anomalies;
 }
 
 /**

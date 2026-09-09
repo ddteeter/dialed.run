@@ -32,6 +32,11 @@ export async function checkHealth(): Promise<HealthReport> {
     */
   }
   try {
+    // Equivalent mutant: the key is arbitrary. This asks R2 whether an
+    // object exists, and a miss is a successful round trip — which is the
+    // whole check. Any string, including an empty one, proves the same
+    // thing, so no assertion can tell them apart.
+    // Stryker disable next-line StringLiteral
     await env.MEDIA.head("health-probe");
     checks.media = "ok";
   } catch {
