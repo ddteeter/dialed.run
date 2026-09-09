@@ -13,5 +13,9 @@
   "concurrency": 4,
   "timeoutMS": 120000,
   "incremental": true,
-  "mutate": ["src/lib/**/*.ts", "src/modules/weather/**/*.ts"]
+  "mutate": [
+    "src/lib/**/*.ts",
+    "src/modules/ops/**/*.ts",
+    "src/modules/weather/**/*.ts"
+  ]
 }
