@@ -30,6 +30,46 @@ function nowS(): number {
 }
 
 /**
+ * Whether a Strava callback may be exchanged for tokens (D-41).
+ *
+ * The CSRF guard, as a decision rather than a branch inside the server
+ * function: `state` is a nonce this app minted and put in an httpOnly
+ * cookie, so a callback whose `state` does not match the cookie was not
+ * started here. Everything it needs is passed in — the server function
+ * reads the cookie and the query, and does nothing else.
+ *
+ * The refusals are deliberately indistinguishable to the caller: a
+ * mismatched state and a missing one are the same answer, because telling
+ * them apart tells an attacker which half they got right.
+ */
+export function stravaCallbackOutcome(callback: {
+  expectedState: string | undefined;
+  code?: string | undefined;
+  state?: string | undefined;
+  error?: string | undefined;
+}): { ok: true; code: string } | { ok: false; reason: string } {
+  // The user pressed "cancel" on Strava's own screen. Not a failure, and
+  // saying "expired" for it would be a lie.
+  if (callback.error !== undefined) {
+    return { ok: false, reason: "Strava connection was cancelled." };
+  }
+  // The nonce check is `state !== expectedState`, and `expectedState ===
+  // undefined` is the case it cannot make on its own: with no cookie and
+  // no `state` on the callback, undefined equals undefined and a forged
+  // link would pass. A separate `state === undefined` arm would be
+  // redundant — an absent state can never equal a present cookie.
+  const expected = callback.expectedState;
+  if (
+    expected === undefined ||
+    callback.code === undefined ||
+    callback.state !== expected
+  ) {
+    return { ok: false, reason: "That connection link expired. Try again." };
+  }
+  return { ok: true, code: callback.code };
+}
+
+/**
 Pure builder — the redirect_uri is derived by the caller from the live
 request (functions.ts), never hardcoded, so this works in any environment.
 */

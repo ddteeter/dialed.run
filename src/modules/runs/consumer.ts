@@ -22,7 +22,7 @@ import {
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
-import { extensionFromKey, sourceFor } from "./parsers";
+import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
   type ImportJob,
@@ -34,7 +34,12 @@ import { findDuplicateRun, initialWeatherStatus } from "./service";
 
 export interface ConsumerDeps {
   db: CoreDb;
-  importBucket: R2Bucket;
+  /**
+  Narrowed to what the consumer uses, like `stravaApi` below: reading one
+  stored file is the whole dependency, and a test can then hand it a stub
+  without restating an R2 bucket.
+  */
+  importBucket: Pick<R2Bucket, "get">;
   captureException: (
     error: unknown,
     context: Record<string, string>,
@@ -86,6 +91,19 @@ async function failImport(
   });
 }
 
+/**
+ * The sentence the runner is shown when an import fails.
+ *
+ * Every parser throws `RunParseError`, whose message is already that
+ * sentence, so the branch below is for the one case a parser cannot
+ * promise: a library throwing something that is not an Error. Exported so
+ * both halves are observable — the same shape as `reasonFrom` in
+ * `modules/closet`.
+ */
+export function importFailureReason(error: unknown): string {
+  return error instanceof Error ? error.message : PARSE_FAILURE_MESSAGE;
+}
+
 async function processImportJob(
   deps: ConsumerDeps,
   job: ImportJob,
@@ -103,23 +121,18 @@ async function processImportJob(
     });
     return;
   }
-  if (
-    (IMPORT_TERMINAL_STATUSES as readonly string[]).includes(
-      importRow.status,
-    )
-  ) {
-    return; // redelivery of already-completed work — idempotent no-op
-  }
+  // One gate, not two. There used to be a terminal-status check here as
+  // well, reading `importRow.status` that the select above had already
+  // fetched — but the claim's own `WHERE status IN ('pending',
+  // 'processing')` refuses exactly the same rows, and it refuses them at
+  // write time rather than from a value that may already be stale. A
+  // redelivery of completed work claims nothing and stops here.
   const didClaim = await didClaimImport(deps.db, job.importId);
-  if (!didClaim) return; // lost the race to another invocation, or terminal
+  if (!didClaim) return; // already concluded, or lost the race
 
   const object = await deps.importBucket.get(importRow.r2Key);
   if (object === null) {
-    await failImport(
-      deps.db,
-      importRow,
-      "That file didn't parse. Try the original export from your watch.",
-    );
+    await failImport(deps.db, importRow, PARSE_FAILURE_MESSAGE);
     return;
   }
 
@@ -129,11 +142,7 @@ async function processImportJob(
     const bytes = await object.arrayBuffer();
     draft = await sourceFor(extension).parse(bytes);
   } catch (error) {
-    const reason =
-      error instanceof Error
-        ? error.message
-        : "That file didn't parse. Try the original export from your watch.";
-    await failImport(deps.db, importRow, reason);
+    await failImport(deps.db, importRow, importFailureReason(error));
     return;
   }
 

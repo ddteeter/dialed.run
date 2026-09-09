@@ -35,7 +35,11 @@ export function verifyStravaChallenge(
   searchParams: URLSearchParams,
   verifyToken: string | undefined,
 ): { challenge: string } | undefined {
-  if (verifyToken === undefined || verifyToken === "") return undefined;
+  // Unconfigured or blank, in one check: `searchParams.get` returns a
+  // string or null and can never equal undefined, so an explicit
+  // `=== undefined` arm would be unreachable — but it can equal "", which
+  // would make a blank deployment secret match every caller.
+  if (!verifyToken) return undefined;
   if (searchParams.get("hub.mode") !== "subscribe") return undefined;
   if (searchParams.get("hub.verify_token") !== verifyToken) return undefined;
   const challenge = searchParams.get("hub.challenge");

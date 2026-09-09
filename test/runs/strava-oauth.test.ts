@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  notifications,
   stravaConnections,
   stravaRevocations,
 } from "../../src/db/schema-core";
@@ -20,7 +21,40 @@ import {
   getStravaConnection,
   refreshStravaToken,
   stravaAuthorizeUrl,
+  stravaCallbackOutcome,
 } from "../../src/modules/runs/strava/oauth";
+
+/**
+ * What a maintainer would see in Sentry.
+ *
+ * `captureException` is imported by the module rather than injected, and
+ * with no DSN bound it writes `["[sentry-disabled]", context, error]` to
+ * the console. That line is the only observable side of a report, so this
+ * captures it. `stubGlobal`, not `spyOn(console, …)`: inside the workers
+ * pool the console a test file holds is not the one a src module writes to.
+ */
+async function reportsDuring(
+  work: () => Promise<void>,
+): Promise<{ context: Record<string, string>; error: unknown }[]> {
+  const lines: unknown[][] = [];
+  vi.stubGlobal("console", {
+    ...globalThis.console,
+    error: (...args: unknown[]) => {
+      lines.push(args);
+    },
+  });
+  try {
+    await work();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  return lines
+    .filter((line) => line[0] === "[sentry-disabled]")
+    .map((line) => ({
+      context: line[1] as Record<string, string>,
+      error: line[2],
+    }));
+}
 
 function fakeRevokeQueue(): {
   sent: unknown[];
@@ -349,7 +383,11 @@ describe("disconnectStrava", () => {
       send: () => Promise.reject(new Error("queue unavailable")),
     };
 
-    await expect(disconnectStrava(db, failing, userId)).resolves.toBeUndefined();
+    const reports = await reportsDuring(async () => {
+      await expect(
+        disconnectStrava(db, failing, userId),
+      ).resolves.toBeUndefined();
+    });
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
     // Scoped to this test's token: these tests share a database, so a
@@ -359,6 +397,15 @@ describe("disconnectStrava", () => {
       .from(stravaRevocations)
       .where(eq(stravaRevocations.accessToken, token));
     expect(rows).toHaveLength(1);
+
+    // A dropped dispatch is not silent: the digest re-dispatches the row,
+    // and the report says which row and which surface dropped it.
+    expect(reports).toHaveLength(1);
+    expect((reports[0]?.error as Error).message).toBe("queue unavailable");
+    expect(reports[0]?.context).toStrictEqual({
+      surface: "strava-revoke-dispatch",
+      revocationId: rows[0]?.id,
+    });
   });
 
   it("deletes the local row even with no queue to revoke through", async () => {
@@ -366,9 +413,13 @@ describe("disconnectStrava", () => {
     const userId = newUlid();
     await completeStravaConnect(db, fakeApi(), userId, "auth-code");
 
-    await disconnectStrava(db, undefined, userId);
+    const reports = await reportsDuring(async () => {
+      await disconnectStrava(db, undefined, userId);
+    });
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
+    // No queue is a configuration, not a failure — nothing to report.
+    expect(reports).toHaveLength(0);
   });
 
   it("is a no-op (besides being idempotent) when there is no connection", async () => {
@@ -378,5 +429,421 @@ describe("disconnectStrava", () => {
       disconnectStrava(db, queue, newUlid()),
     ).resolves.toBeUndefined();
     expect(queue.sent).toHaveLength(0);
+  });
+});
+
+describe("stravaAuthorizeUrl carries every parameter Strava needs", () => {
+  it("asks for the scope this app uses and nothing more", () => {
+    // `activity:read` is the whole ask. A wider scope is a permission
+    // prompt that scares people off and data this app is forbidden to
+    // store anyway (D-33).
+    const url = new URL(
+      stravaAuthorizeUrl("client-1", "https://dialed.run/cb", "state-1"),
+    );
+
+    expect(url.origin + url.pathname).toBe(
+      "https://www.strava.com/oauth/authorize",
+    );
+    expect(url.searchParams.get("client_id")).toBe("client-1");
+    expect(url.searchParams.get("redirect_uri")).toBe("https://dialed.run/cb");
+    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("approval_prompt")).toBe("auto");
+    expect(url.searchParams.get("scope")).toBe("activity:read");
+    expect(url.searchParams.get("state")).toBe("state-1");
+  });
+
+  it("escapes a redirect and a state that need it", () => {
+    // The state is a CSRF nonce and the redirect is built from the live
+    // request; either can contain characters a query string cares about.
+    const url = new URL(
+      stravaAuthorizeUrl("id", "https://dialed.run/cb?a=b&c=d", "st ate/+"),
+    );
+
+    expect(url.searchParams.get("redirect_uri")).toBe(
+      "https://dialed.run/cb?a=b&c=d",
+    );
+    expect(url.searchParams.get("state")).toBe("st ate/+");
+  });
+});
+
+describe("completeStravaConnect writes every token it was given", () => {
+  it("stores the athlete, both tokens and the expiry", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+
+    await completeStravaConnect(
+      db,
+      fakeApi({
+        exchangeCode: () =>
+          Promise.resolve({
+            athleteId: `athlete-${newUlid()}`,
+            accessToken: "access-9",
+            refreshToken: "refresh-9",
+            expiresAt: 1_768_485_600,
+          }),
+      }),
+      userId,
+      "the-code",
+    );
+
+    expect(await getStravaConnection(db, userId)).toMatchObject({
+      accessToken: "access-9",
+      refreshToken: "refresh-9",
+      expiresAt: 1_768_485_600,
+      status: "ok",
+    });
+  });
+
+  it("stamps the connection's expiry in epoch seconds", async () => {
+    // `expires_at` from Strava is already epoch seconds; storing anything
+    // else makes every refresh look overdue or never due.
+    const db = coreDb();
+    const userId = newUlid();
+    const expiresAt = nowS() + 3600;
+
+    await completeStravaConnect(
+      db,
+      fakeApi({
+        exchangeCode: () =>
+          Promise.resolve({
+            athleteId: `athlete-${newUlid()}`,
+            accessToken: "access",
+            refreshToken: "refresh",
+            expiresAt,
+          }),
+      }),
+      userId,
+      "code",
+    );
+
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.expiresAt).toBe(expiresAt);
+  });
+
+  it("clears a broken status when the user reconnects", async () => {
+    // Reconnecting is the only way out of `broken`, so the upsert has to
+    // set the status rather than leaving whatever was there.
+    const db = coreDb();
+    const userId = newUlid();
+    const freshAthlete = `athlete-${newUlid()}`;
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId: `athlete-old-${newUlid()}`,
+      accessToken: "access-old",
+      refreshToken: "refresh-old",
+      expiresAt: nowS() - 10,
+      status: "broken",
+      refreshFailureCount: 3,
+    });
+
+    await completeStravaConnect(
+      db,
+      fakeApi({
+        exchangeCode: () =>
+          Promise.resolve({
+            athleteId: freshAthlete,
+            accessToken: "access-new",
+            refreshToken: "refresh-new",
+            expiresAt: nowS() + 3600,
+          }),
+      }),
+      userId,
+      "code",
+    );
+
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.status).toBe("ok");
+    expect(connection?.athleteId).toBe(freshAthlete);
+    expect(connection?.accessToken).toBe("access-new");
+  });
+});
+
+describe("disconnectStrava when there is nothing connected", () => {
+  it("does nothing to revoke, and does not fail", async () => {
+    // Pressing disconnect twice, or on an account that never connected.
+    const db = coreDb();
+    const queue = fakeRevokeQueue();
+
+    await disconnectStrava(db, queue, newUlid());
+
+    expect(queue.sent).toStrictEqual([]);
+  });
+
+  it("still disconnects with no queue configured at all", async () => {
+    // No Strava credentials means no queue producer is passed. The local
+    // delete is the user's own action and must not depend on it.
+    const db = coreDb();
+    const userId = newUlid();
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId: newUlid(),
+      accessToken: "access-noqueue",
+      refreshToken: "refresh",
+      expiresAt: nowS() + 3600,
+      status: "ok",
+    });
+
+    await disconnectStrava(db, undefined, userId);
+
+    expect(await getStravaConnection(db, userId)).toBeUndefined();
+    const [pending] = await db
+      .select()
+      .from(stravaRevocations)
+      .where(eq(stravaRevocations.accessToken, "access-noqueue"));
+    expect(pending).toBeDefined();
+  });
+});
+
+async function connectionThatHasBeenFailing(overrides: {
+  status?: "ok" | "broken";
+  refreshFailureCount?: number;
+  refreshFirstFailedAt?: number;
+}): Promise<string> {
+  const db = coreDb();
+  const userId = newUlid();
+  await db.insert(stravaConnections).values({
+    userId,
+    athleteId: newUlid(),
+    accessToken: "access",
+    refreshToken: "refresh",
+    expiresAt: nowS() - 10,
+    status: overrides.status ?? "ok",
+    refreshFailureCount: overrides.refreshFailureCount ?? 0,
+    refreshFirstFailedAt: overrides.refreshFirstFailedAt,
+  });
+  return userId;
+}
+
+describe("refreshStravaToken: who hears about a broken connection", () => {
+
+  it("tells the user when Strava says the grant is dead", async () => {
+    // A terminal failure is per-user and true, so the user is told — once,
+    // on the ok -> broken transition.
+    const db = coreDb();
+    const userId = await connectionThatHasBeenFailing({ status: "ok" });
+
+    let result;
+    const reports = await reportsDuring(async () => {
+      result = await refreshStravaToken(
+        db,
+        fakeApi({ refreshFailsTerminally: true }),
+        userId,
+      );
+    });
+
+    expect(result).toBe("broken");
+    expect(await unreadNotificationCount(db, userId)).toBe(1);
+
+    // The runner reads this sentence, so it is pinned: it has to name the
+    // action they can take, and it is the only record they get.
+    const [told] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId));
+    expect(told?.kind).toBe("strava_broken");
+    expect(told?.body).toBe("Your Strava connection needs to be reconnected.");
+
+    // And nobody is paged: a dead grant is the user's to fix, not ours.
+    expect(reports).toHaveLength(0);
+  });
+
+  it("does not tell them twice for a connection already broken", async () => {
+    const db = coreDb();
+    const userId = await connectionThatHasBeenFailing({ status: "broken" });
+
+    await refreshStravaToken(
+      db,
+      fakeApi({ refreshFailsTerminally: true }),
+      userId,
+    );
+
+    expect(await unreadNotificationCount(db, userId)).toBe(0);
+  });
+
+  it("tells nobody but a maintainer when the failures are only exhausted", async () => {
+    // Strava down, our config wrong, a network partition — all ambiguous.
+    // Telling a runner to reconnect then is worse than saying nothing:
+    // they would disconnect a working account to fix a problem that was
+    // never theirs.
+    const db = coreDb();
+    const userId = await connectionThatHasBeenFailing({
+      status: "ok",
+      refreshFailureCount: 2,
+      refreshFirstFailedAt: nowS() - 4 * 24 * 60 * 60,
+    });
+
+    let result;
+    const reports = await reportsDuring(async () => {
+      result = await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+    });
+
+    expect(result).toBe("broken");
+    expect(await unreadNotificationCount(db, userId)).toBe(0);
+    expect(await getStravaConnection(db, userId)).toMatchObject({
+      status: "broken",
+    });
+
+    // Law 6: the failure lands where a human eventually sees it, with
+    // enough context to tell an outage from a config mistake.
+    expect(reports).toHaveLength(1);
+    expect((reports[0]?.error as Error).message).toBe(
+      "strava refresh exhausted without a 4xx",
+    );
+    expect(reports[0]?.context).toStrictEqual({
+      userId,
+      failureCount: "3",
+      firstFailedAt: String(nowS() - 4 * 24 * 60 * 60),
+    });
+  });
+
+  it("does not page a maintainer twice for the same broken connection", async () => {
+    // The transition is the guard here too. A connection already marked
+    // broken keeps failing on every cron pass, and one ambiguous outage
+    // must not become a report per pass.
+    const db = coreDb();
+    const userId = await connectionThatHasBeenFailing({
+      status: "broken",
+      refreshFailureCount: 2,
+      refreshFirstFailedAt: nowS() - 4 * 24 * 60 * 60,
+    });
+
+    const reports = await reportsDuring(async () => {
+      await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+    });
+
+    expect(reports).toHaveLength(0);
+  });
+
+  it("needs both the count and the window, not either", async () => {
+    // Three failures inside one short outage must not break a connection,
+    // and neither must one failure that happens to be old.
+    const db = coreDb();
+    const manyButRecent = await connectionThatHasBeenFailing({
+      refreshFailureCount: 5,
+      refreshFirstFailedAt: nowS() - 60,
+    });
+    const oldButFew = await connectionThatHasBeenFailing({
+      refreshFailureCount: 1,
+      refreshFirstFailedAt: nowS() - 30 * 24 * 60 * 60,
+    });
+
+    expect(
+      await refreshStravaToken(db, fakeApi({ refreshFails: true }), manyButRecent),
+    ).toBe("degraded");
+    expect(
+      await refreshStravaToken(db, fakeApi({ refreshFails: true }), oldButFew),
+    ).toBe("degraded");
+  });
+
+  it("gives up at exactly three days, not a moment before", async () => {
+    const db = coreDb();
+    const threeDays = 3 * 24 * 60 * 60;
+    const atTheLimit = await connectionThatHasBeenFailing({
+      refreshFailureCount: 2,
+      refreshFirstFailedAt: nowS() - threeDays,
+    });
+    const justInside = await connectionThatHasBeenFailing({
+      refreshFailureCount: 2,
+      refreshFirstFailedAt: nowS() - threeDays + 60,
+    });
+
+    expect(
+      await refreshStravaToken(db, fakeApi({ refreshFails: true }), atTheLimit),
+    ).toBe("broken");
+    expect(
+      await refreshStravaToken(db, fakeApi({ refreshFails: true }), justInside),
+    ).toBe("degraded");
+  });
+
+  it("remembers when the failures started, not when the last one was", async () => {
+    // The window is measured from the first failure of the run. Resetting
+    // it on every failure means a connection that fails daily is never
+    // called broken.
+    const db = coreDb();
+    const firstFailedAt = nowS() - 2 * 24 * 60 * 60;
+    const userId = await connectionThatHasBeenFailing({
+      refreshFailureCount: 1,
+      refreshFirstFailedAt: firstFailedAt,
+    });
+
+    await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.refreshFirstFailedAt).toBe(firstFailedAt);
+    expect(connection?.refreshFailureCount).toBe(2);
+  });
+});
+
+describe("stravaCallbackOutcome (the CSRF guard, D-41)", () => {
+  /**
+   * This used to be a branch inside `functions.ts`, which imports TanStack
+   * Start and so cannot be imported by a test at all — the one security
+   * check in the module was the one thing nothing could assert on.
+   */
+  const state = "01STATE";
+
+  it("exchanges a callback whose state matches the cookie", () => {
+    expect(
+      stravaCallbackOutcome({
+        expectedState: state,
+        state,
+        code: "auth-code",
+        error: undefined,
+      }),
+    ).toStrictEqual({ ok: true, code: "auth-code" });
+  });
+
+  it("refuses a state that does not match the cookie", () => {
+    // The attack: a third party sends the user to /runs/strava-callback
+    // with their own `code`, connecting the victim's account to the
+    // attacker's Strava. The nonce is what makes that fail.
+    expect(
+      stravaCallbackOutcome({
+        expectedState: state,
+        state: "01SOMEONEELSE",
+        code: "auth-code",
+        error: undefined,
+      }),
+    ).toStrictEqual({
+      ok: false,
+      reason: "That connection link expired. Try again.",
+    });
+  });
+
+  it.each([
+    ["no cookie to compare against", { expectedState: undefined, state, code: "c" }],
+    ["no state on the callback", { expectedState: state, code: "c" }],
+    ["no code to exchange", { expectedState: state, state }],
+    // The one a naive `state !== expectedState` would let through:
+    // undefined equals undefined, so a link with no state at all would
+    // match a browser that never got a cookie.
+    ["neither a cookie nor a state", { expectedState: undefined, code: "c" }],
+  ])("refuses a callback with %s", (_label, callback) => {
+    expect(stravaCallbackOutcome(callback)).toStrictEqual({
+      ok: false,
+      reason: "That connection link expired. Try again.",
+    });
+  });
+
+  it("says a cancelled connection was cancelled, not that it expired", () => {
+    // Strava sends `error=access_denied` when the user declines on its own
+    // screen. Telling them the link expired would send them round again.
+    expect(
+      stravaCallbackOutcome({
+        expectedState: state,
+        error: "access_denied",
+      }),
+    ).toStrictEqual({
+      ok: false,
+      reason: "Strava connection was cancelled.",
+    });
+  });
+
+  it("reports a cancellation ahead of a missing state", () => {
+    // A declined connection arrives with no code and no state, so the
+    // order of these two checks is what the user reads.
+    expect(
+      stravaCallbackOutcome({ expectedState: undefined, error: "access_denied" }),
+    ).toMatchObject({ reason: "Strava connection was cancelled." });
   });
 });

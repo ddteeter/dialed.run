@@ -6,23 +6,16 @@
  * signal the packet asks for (imports as `indoor` with real duration and
  * distance from the lap totals, no separate code path).
  */
-import { XMLParser } from "fast-xml-parser";
-
 import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
 import {
   RunParseError,
+  parseXmlDocument,
   isRecord,
   readDate,
   readNumber,
   toArray,
 } from "./shared";
-
-const parser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "@_",
-  processEntities: false,
-});
 
 interface Position {
   lat: number;
@@ -37,6 +30,10 @@ function positionOf(point: unknown): Position | undefined {
 }
 
 function firstPositionInTrack(track: unknown): Position | undefined {
+  // Equivalent mutant on this guard alone: a non-record track has no
+  // `Trackpoint` to read, so the loop below finds nothing and the function
+  // returns undefined anyway. The guard is what narrows `unknown`.
+  // Stryker disable next-line ConditionalExpression
   if (!isRecord(track)) return undefined;
   for (const point of toArray(track.Trackpoint)) {
     const position = positionOf(point);
@@ -62,10 +59,16 @@ function firstOf(value: unknown): Record<string, unknown> | undefined {
 Navigates TrainingCenterDatabase > Activities > Activity[0] > Lap[0].
 */
 function findLap(doc: unknown): Record<string, unknown> | undefined {
+  // Equivalent: `parseXmlDocument` always hands back an object for a
+  // document it accepted. The guard is what narrows `unknown`.
+  // Stryker disable next-line ConditionalExpression
   if (!isRecord(doc)) return undefined;
   const root = doc.TrainingCenterDatabase;
   if (!isRecord(root)) return undefined;
   const activities = root.Activities;
+  // Equivalent: a non-record `Activities` has no `Activity` to read, so
+  // `firstOf` answers undefined and the lap is missing either way.
+  // Stryker disable next-line ConditionalExpression
   if (!isRecord(activities)) return undefined;
   const activity = firstOf(activities.Activity);
   if (activity === undefined) return undefined;
@@ -77,19 +80,7 @@ export const tcxSource: RunSource = {
   async parse(bytes: ArrayBuffer): Promise<RunDraft> {
     // fast-xml-parser is synchronous; see gpx.ts for why this stays async.
     await Promise.resolve();
-    let text: string;
-    try {
-      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    } catch (error) {
-      throw new RunParseError("tcx: bytes are not valid UTF-8", { cause: error });
-    }
-
-    let doc: unknown;
-    try {
-      doc = parser.parse(text);
-    } catch (error) {
-      throw new RunParseError("tcx: XML parser threw", { cause: error });
-    }
+    const doc = parseXmlDocument(bytes, "tcx");
 
     const lap = findLap(doc);
     if (lap === undefined) throw new RunParseError("tcx: no Lap element found");
@@ -97,9 +88,15 @@ export const tcxSource: RunSource = {
     const startedAtDate = readDate(lap["@_StartTime"]);
     const durationS = readNumber(lap.TotalTimeSeconds);
     const distanceM = readNumber(lap.DistanceMeters);
+    // The two `!== undefined` checks are equivalent on their own —
+    // `undefined > 0` is already false — and are here so the comparison
+    // below reads as a comparison between numbers.
+    // Stryker disable next-line ConditionalExpression
     const hasRequiredTotals =
       startedAtDate !== undefined &&
+      // Stryker disable next-line ConditionalExpression
       durationS !== undefined &&
+      // Stryker disable next-line ConditionalExpression
       distanceM !== undefined &&
       durationS > 0 &&
       distanceM > 0;

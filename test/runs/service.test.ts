@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runs, userProfiles } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
@@ -32,6 +32,13 @@ describe("initialWeatherStatus (D-24)", () => {
 
   it("outdoor with no location is immediately eligible for the manual fallback", () => {
     expect(initialWeatherStatus({ indoor: false })).toBe("failed");
+  });
+
+  it("treats half a coordinate as no location at all", () => {
+    // Both halves are required: a latitude with no longitude is not a
+    // place, and storing it as one would put the run on the prime meridian.
+    expect(initialWeatherStatus({ indoor: false, lat: 44 })).toBe("failed");
+    expect(initialWeatherStatus({ indoor: false, lng: -93 })).toBe("failed");
   });
 });
 
@@ -156,6 +163,62 @@ describe("didRecordManualTemp (D-24 fallback)", () => {
     expect(run?.weatherStatus).toBe("manual");
   });
 
+  it("accepts a manual temp for a run still waiting on the weather module", async () => {
+    // Both unresolved statuses are eligible, not just 'failed': a run whose
+    // location is known but whose observation has not landed yet is exactly
+    // the case a user types a temperature into.
+    const db = coreDb();
+    const userId = newUlid();
+    const created = await createManualRun(db, userId, {
+      startedAt: START + 55_000,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      lat: 44.98,
+      lng: -93.27,
+      title: "Waiting on weather",
+    });
+    expect(created.weatherStatus).toBe("pending");
+
+    expect(await didRecordManualTemp(db, userId, created.id, 10.5)).toBe(true);
+    const run = await getRun(db, userId, created.id);
+    expect(run?.weatherStatus).toBe("manual");
+  });
+
+  it("logs the temperature it cannot yet store", async () => {
+    // Pending(102↔103): until the weather module lands, the temperature is
+    // only flipped to 'manual' and the value itself goes nowhere. The log
+    // line is what stops it being silently dropped, so it is pinned.
+    const db = coreDb();
+    const userId = newUlid();
+    const created = await createManualRun(db, userId, {
+      startedAt: START + 65_000,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      title: "Logged",
+    });
+    // `stubGlobal`, not `spyOn(console, …)`: inside the workers pool the
+    // console the test file holds is not the one a src module writes to,
+    // so a spy on it records nothing.
+    const lines: unknown[][] = [];
+    vi.stubGlobal("console", {
+      ...globalThis.console,
+      info: (...args: unknown[]) => {
+        lines.push(args);
+      },
+    });
+    try {
+      await didRecordManualTemp(db, userId, created.id, 10.5);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(lines).toStrictEqual([
+      ["[manual-temp-pending-weather-module]", { runId: created.id, tempC: 10.5 }],
+    ]);
+  });
+
   it("is a no-op for indoor runs (never eligible)", async () => {
     const db = coreDb();
     const userId = newUlid();
@@ -250,4 +313,143 @@ describe("createManualRun idempotency", () => {
     expect(second.id).not.toBe(first.id);
   });
 });
+});
+
+describe("what a manual run records", () => {
+  it("keeps the effort and the title the runner typed", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const { id } = await createManualRun(db, userId, {
+      startedAt: START,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      lat: 44.98,
+      lng: -93.27,
+      effort: "workout",
+      title: "Tempo intervals",
+    });
+
+    const run = await getRun(db, userId, id);
+    expect(run).toMatchObject({
+      source: "manual",
+      startedAt: START,
+      durationS: 1800,
+      distanceM: 5000,
+      effort: "workout",
+      title: "Tempo intervals",
+    });
+  });
+
+  it("drops coordinates on an indoor run, even when they are given", async () => {
+    // A treadmill run has no conditions to resolve, and storing the
+    // coordinates would make it look like it did.
+    const db = coreDb();
+    const userId = newUlid();
+    const { id, weatherStatus } = await createManualRun(db, userId, {
+      startedAt: START + 1,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: true,
+      lat: 44.98,
+      lng: -93.27,
+      title: "Treadmill",
+    });
+
+    const run = await getRun(db, userId, id);
+    expect(weatherStatus).toBe("none");
+    expect(run?.lat).toBeNull();
+    expect(run?.lng).toBeNull();
+  });
+
+  it("falls back on the home location only when a coordinate is missing", async () => {
+    // Both halves: a run with its own coordinates keeps them, and a run
+    // with half of them takes the profile's rather than storing half.
+    const db = coreDb();
+    const userId = newUlid();
+    await db.insert(userProfiles).values({ userId, lat: 10, lng: 20 });
+
+    const own = await createManualRun(db, userId, {
+      startedAt: START + 2,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      lat: 44.98,
+      lng: -93.27,
+      title: "Own location",
+    });
+    const latOnly = await createManualRun(db, userId, {
+      startedAt: START + 400,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      lat: 44.98,
+      title: "Half a location",
+    });
+    const lngOnly = await createManualRun(db, userId, {
+      startedAt: START + 800,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      lng: -93.27,
+      title: "The other half",
+    });
+
+    const ownRun = await getRun(db, userId, own.id);
+    expect(ownRun?.lat).toBeCloseTo(44.98, 6);
+
+    // Either half missing sends the whole pair to the profile — the run
+    // never ends up with one given coordinate and one inferred.
+    for (const created of [latOnly, lngOnly]) {
+      const fallbackRun = await getRun(db, userId, created.id);
+      expect(fallbackRun?.lat).toBe(10);
+      expect(fallbackRun?.lng).toBe(20);
+    }
+  });
+});
+
+describe("findDuplicateRun looks only at the caller's own runs", () => {
+  it("never matches another runner's run at the same instant", async () => {
+    // Two people starting a run in the same minute is ordinary. Treating
+    // it as a duplicate would drop one of their imports.
+    const db = coreDb();
+    const mine = newUlid();
+    const theirs = newUlid();
+    await createManualRun(db, theirs, {
+      startedAt: START + 900,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: true,
+      title: "Theirs",
+    });
+
+    expect(await findDuplicateRun(db, mine, START + 900)).toBeUndefined();
+  });
+});
+
+describe("listRuns", () => {
+  it("answers with nothing for a runner who has logged nothing", async () => {
+    expect(await listRuns(coreDb(), newUlid())).toStrictEqual([]);
+  });
+});
+
+describe("getRun", () => {
+  it("refuses to hand over another runner's run", async () => {
+    const db = coreDb();
+    const owner = newUlid();
+    const { id } = await createManualRun(db, owner, {
+      startedAt: START + 1200,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: true,
+      title: "Private",
+    });
+
+    expect(await getRun(db, newUlid(), id)).toBeUndefined();
+    expect(await getRun(db, owner, id)).toBeDefined();
+  });
+
+  it("answers with nothing for a run that does not exist", async () => {
+    expect(await getRun(coreDb(), newUlid(), newUlid())).toBeUndefined();
+  });
 });

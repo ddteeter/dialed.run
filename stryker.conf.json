@@ -22,6 +22,7 @@
     "src/modules/notifications/**/*.ts,!src/modules/notifications/functions.ts",
     "src/modules/ops/**/*.ts",
     "src/modules/products/**/*.ts,!src/modules/products/functions.ts",
+    "src/modules/runs/**/*.ts,!src/modules/runs/functions.ts",
     "src/modules/weather/**/*.ts"
   ]
 }

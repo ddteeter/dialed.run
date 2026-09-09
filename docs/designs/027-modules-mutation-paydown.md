@@ -84,3 +84,43 @@ Unit/integration, all in `test/weather/`:
   input schemas and their few branches into testable siblings and leave
   the TanStack shell outside the ratchet. That decision lands with the
   first module that has one — weather has none.
+
+## How it ended
+
+Eight PRs, one module each: weather, ops, products + notifications, auth,
+closet (twice — its data/mapping files and then its service), feed, runs.
+`src/lib` and every module under `src/modules` are at 100%, and
+`stryker.conf.json`'s `mutate` array is the record of it.
+
+Both open questions above have answers now.
+
+**The `functions.ts` question resolved into a rule, not a workaround.** The
+class is not "files named `functions.ts`" — it is "files that cannot be
+imported in the workers pool", which is a thing a test can *determine*
+rather than a list a human maintains.
+`test/architecture/server-functions-are-glue.test.ts` imports every module
+file, records which throw, and requires each of those to be glue: it may
+import, wire and delegate, and may not branch, loop, throw or declare a
+schema. It then checks that set against the config's `!` negations in both
+directions, so neither list can drift from the other. That caught
+`auth/index.ts`, a barrel with no TanStack import of its own that
+re-exports one — which no hand-written list would have contained.
+
+What came out of those files was worth having out: `sessionUser` and
+`requireSession` in auth, `photoUploadFrom` in feed, and
+`stravaCallbackOutcome` in runs — the Strava OAuth CSRF check, which was
+the single most security-relevant branch in the codebase and had no test
+because nothing could import the file it lived in.
+
+**The `.tsx` question is still open** and is D-42. Nothing here changed it:
+the globs still end `**/*.ts`.
+
+**What the mutants actually found**, beyond missing assertions: `escapeLike`
+was dead code; prefill had an unreachable tie-break; consensus had a
+redundant `isLastPass`; the XXE-safe XML parser was configured identically
+in two files, so one place could be changed and the other forgotten;
+`topByCount`, `forIds` and the allowed-content-type list were each written
+twice; `cacheKeyFor` rounded a null coordinate to `0`, putting a run at
+Null Island; `processImportJob` gated the same rows twice, once from a
+value that could go stale; and the FIT parser guarded against an SDK
+`read()` that the SDK's own `finally` makes incapable of throwing.

@@ -19,7 +19,7 @@ const SEMICIRCLE_TO_DEGREES = 180 / 2 ** 31;
 // `unknown` and handles every shape decoder.read() can actually produce
 // (Date by default; a raw FIT-epoch number with convertDateTimesToDates
 // off) rather than fighting the declared union.
-function toDate(value: unknown): Date {
+export function toDate(value: unknown): Date {
   if (value instanceof Date) return value;
   if (typeof value === "number") return Utils.convertDateTimeToDate(value);
   throw new RunParseError("fit: timestamp field was neither Date nor number");
@@ -31,6 +31,9 @@ export const fitSource: RunSource = {
     // The FIT SDK decodes synchronously; the await keeps this a genuine
     // async fn matching the RunSource contract shared with GPX/TCX.
     await Promise.resolve();
+    // A detached buffer — one already transferred elsewhere — makes the
+    // SDK's DataView constructor throw before any FIT parsing happens, so
+    // this is a real refusal and not a defensive shell.
     let stream: Stream;
     try {
       stream = Stream.fromArrayBuffer(bytes);
@@ -41,14 +44,13 @@ export const fitSource: RunSource = {
       throw new RunParseError("fit: stream failed the FIT magic-byte check");
     }
 
-    const decoder = new Decoder(stream);
-    let result: ReturnType<typeof decoder.read>;
-    try {
-      result = decoder.read();
-    } catch (error) {
-      throw new RunParseError("fit: decoder threw while reading", { cause: error });
-    }
-    const { messages, errors } = result;
+    // `read()` cannot throw: the SDK wraps its whole body in a try/catch
+    // that pushes to `errors` and returns from a `finally`, which swallows
+    // even a rethrow (decoder.js ~L167-201). Every decode problem arrives
+    // as an entry in `errors`, so that is the only branch to handle — a
+    // try/catch here would be a guard against something structurally
+    // impossible, and a mutant in it could never be killed.
+    const { messages, errors } = new Decoder(stream).read();
     if (errors.length > 0) {
       throw new RunParseError(`fit: decoder reported ${String(errors.length)} error(s)`, { cause: errors[0] });
     }

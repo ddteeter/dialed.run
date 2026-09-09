@@ -222,6 +222,66 @@
       "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
       "reason": "Equivalent mutant, with the reason worth writing down: `roundCoord(undefined)` is NaN rather than 0, so a half-located lookup keys to a cell nothing can match and answers undefined anyway. The guard states the intent \u2014 we do not know where you are \u2014 and saves the query.",
       "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant on this guard alone: a non-record node has no attributes to read, so every field below comes back undefined and the point is dropped anyway. The guard is what narrows `unknown`.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration,ConditionalExpression",
+      "reason": "Equivalent mutant: a non-record segment/track has no child elements to read, so the results below come back empty and the array is dropped anyway. The guard is what narrows `unknown`.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
+      "reason": "Equivalent mutant: a non-record document has no gpx element to read, so the result is empty and the array is dropped anyway. The guard is what narrows `unknown`.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
+      "reason": "Equivalent mutant: the bound and the undefined checks are the same fact said twice \u2014 the loop only visits indexes that exist, so neither element can be missing. They are here because `noUncheckedIndexedAccess` types every array access as possibly absent.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
+      "reason": "Equivalent mutant: the undefined checks are the same fact said twice \u2014 the loop only visits indexes that exist, so neither element can be missing. They are here because `noUncheckedIndexedAccess` types every array access as possibly absent.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
+      "reason": "Unreachable: the length check above already refused anything under two points. It is here because indexing an array is typed as possibly absent, and the message names that impossibility.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/index.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Unreachable fallback: a match of this pattern always has group 1. The optional chain is here because the compiler types `match?.[1]` as possibly undefined.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/index.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: the guard and the subsequent isImportExtension check are the same fact said twice \u2014 if extension is defined, isImportExtension either returns it or undefined, and the ternary branch decides based on that.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/shared.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant on the null check alone: `typeof null` is \"object\", so dropping it lets null through \u2014 but every caller then reads a property off it and throws, and no XML document this parser accepts produces a bare null where an element is expected. The check is what makes the guard a guard rather than a typeof.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/tcx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutants: non-record inputs have no child elements to read, so loops/reads below find nothing and functions return undefined either way. The guards narrow `unknown` and state intent. Every one also appears across multiple locations with the same reasoning.",
+      "count": 6
+    },
+    {
+      "key": "src/modules/runs/strava/api-from-env.ts|mutation-suppress|// Stryker disable next-line BlockStatement",
+      "reason": "Unreachable code: the only path a test can reach is the unconfigured one, because a binding cannot be changed from inside the isolate \u2014 which is exactly why the decision lives in `stravaConfigFrom` and these are two-line shells that read the bindings.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/runs/strava/api-from-env.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Unreachable code: with no configured binding in the isolate, `config` is always undefined here and the other arm cannot be reached. `test/runs/strava-api.test.ts` covers both arms of the decision where it actually lives.",
+      "count": 1
     }
   ]
 }
