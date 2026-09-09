@@ -62,6 +62,9 @@ export async function observationsForEntries(
   database: CoreDb,
   entries: readonly { runId: string }[],
 ): Promise<Map<string, Conditions>> {
+  // Equivalent mutant: an empty `inArray` matches nothing, so the walk
+  // would answer with an empty map either way. The return saves the query.
+  // Stryker disable next-line ConditionalExpression
   if (entries.length === 0) return new Map();
   const rows = await database
     .select({
@@ -100,12 +103,22 @@ export async function observationsForRuns(
   );
   const db = drizzle(env.DIALED_WEATHER);
   const result = new Map<string, Conditions>();
+  // Three equivalent mutants live in the next three lines, and they are
+  // equivalent for the same reason: the answer is assembled by matching
+  // each run's key against the rows afterwards, so widening the query —
+  // an off-by-one chunk, an unsliced chunk, an emptied `or` — changes what
+  // is *scanned* and not what is *returned*. Rows scanned are what D1
+  // bills, which is why the chunking stays.
+  // Stryker disable next-line EqualityOperator
   for (let index = 0; index < keyed.length; index += CHUNK) {
+    // Stryker disable next-line MethodExpression
     const chunk = keyed.slice(index, index + CHUNK);
+    // Stryker disable next-line ArrowFunction
+    const chunkScope = or(...chunk.map(({ key }) => matchesKey(key)));
     const rows = await db
       .select()
       .from(weatherObservations)
-      .where(or(...chunk.map(({ key }) => matchesKey(key))));
+      .where(chunkScope);
     for (const { runId, key } of chunk) {
       const row = rows.find(
         (r) =>
@@ -187,4 +200,27 @@ export async function currentConditions(
     windKph: best.windKph,
     source: best.source,
   };
+}
+
+/**
+ * The viewer's current conditions when both coordinates are known, and
+ * nothing when either is not.
+ *
+ * The picker asks for a location it may not have — a browser can refuse
+ * geolocation — and shows the whole closet when it gets nothing back.
+ * That decision lives here rather than in `functions.ts`, which no test
+ * can import (D-41).
+ */
+export async function conditionsAt(
+  lat: number | undefined,
+  lng: number | undefined,
+  nowEpochSeconds: number,
+): Promise<Conditions | undefined> {
+  // Equivalent mutant, and worth writing down why: `roundCoord(undefined)`
+  // is `NaN`, not 0, so a half-located lookup keys to a cell nothing can
+  // match and answers undefined anyway. The guard says the intent — "we do
+  // not know where you are" — and saves the query.
+  // Stryker disable next-line ConditionalExpression,LogicalOperator
+  if (lat === undefined || lng === undefined) return undefined;
+  return currentConditions(lat, lng, nowEpochSeconds);
 }

@@ -2,7 +2,11 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
-import { recentPublicEntriesStatement, yourConditionsConsensus } from "../../src/modules/feed/consensus";
+import {
+  consensusAt,
+  recentPublicEntriesStatement,
+  yourConditionsConsensus,
+} from "../../src/modules/feed/consensus";
 import {
   makeEntry,
   makeItem,
@@ -167,5 +171,173 @@ describe("your conditions consensus (E2-lite)", () => {
       .all<{ detail: string }>();
     const details = plan.results.map((row) => row.detail).join("\n");
     expect(details).not.toMatch(/SCAN\s+outfit_entries/i);
+  });
+});
+
+describe("consensus: the edges of the window", () => {
+  beforeEach(resetTables);
+
+  it("counts an entry exactly at the delta", async () => {
+    // `<=`, not `<`: three degrees away is inside a ±3 window, and the
+    // widened pass's ±5 is what a runner is told the number covers.
+    const lat = 60;
+    const lng = 60;
+    const author = await makeUser();
+    const item = await makeItem({ userId: author, category: "top" });
+    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
+    await makeEntry({
+      userId: author,
+      runId,
+      isPublic: true,
+      createdAt: NOW,
+      itemIds: [item],
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 4,
+      precipMm: 0,
+    });
+
+    const result = await yourConditionsConsensus(
+      {
+        tempC: 8,
+        feelsLikeC: 7,
+        precipMm: 0,
+        condition: "clear",
+        windKph: 5,
+        source: "visualcrossing",
+      },
+      NOW,
+    );
+
+    expect(result.total).toBe(1);
+    // And found it in the *first* window: three degrees is inside ±3, not
+    // something the widened pass had to reach for.
+    expect(result.widened).toBe(false);
+  });
+
+  it("counts nothing from an entry whose conditions were never resolved", async () => {
+    // No observation for that run at all. Comparing it to the viewer's
+    // conditions is a crash, not a miscount.
+    const author = await makeUser();
+    const item = await makeItem({ userId: author, category: "top" });
+    const runId = await makeRun({ userId: author, lat: 62, lng: 62, startedAt: NOW });
+    await makeEntry({
+      userId: author,
+      runId,
+      isPublic: true,
+      createdAt: NOW,
+      itemIds: [item],
+    });
+
+    const result = await yourConditionsConsensus(
+      {
+        tempC: 8,
+        feelsLikeC: 7,
+        precipMm: 0,
+        condition: "clear",
+        windKph: 5,
+        source: "visualcrossing",
+      },
+      NOW,
+    );
+
+    expect(result.total).toBe(0);
+  });
+
+  it("says it widened when it had to, and admits an empty answer as widened", async () => {
+    // `widened` is what the screen uses to say "from a wider window". An
+    // empty consensus has been through every pass by definition, so it is
+    // widened too — claiming otherwise reads as "nobody nearby ran in
+    // these exact conditions", which is a different statement.
+    const empty = await yourConditionsConsensus(
+      {
+        tempC: 8,
+        feelsLikeC: 7,
+        precipMm: 0,
+        condition: "clear",
+        windKph: 5,
+        source: "visualcrossing",
+      },
+      NOW,
+    );
+
+    expect(empty).toStrictEqual({ total: 0, groups: {}, widened: true });
+  });
+
+  it("takes the last pass's answer even when it is empty", async () => {
+    // The loop must stop at the final pass rather than falling through to
+    // the empty return with a different `widened` — and it must not stop
+    // early on the first pass when a wider one would have found something.
+    const lat = 61;
+    const lng = 61;
+    const author = await makeUser();
+    const item = await makeItem({ userId: author, category: "top" });
+    const runId = await makeRun({
+      userId: author,
+      lat,
+      lng,
+      startedAt: NOW - 100 * HOUR,
+    });
+    await makeEntry({
+      userId: author,
+      runId,
+      isPublic: true,
+      createdAt: NOW - 100 * HOUR,
+      itemIds: [item],
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW - 100 * HOUR,
+      tempC: 8,
+      feelsLikeC: 7,
+      precipMm: 0,
+    });
+
+    const result = await yourConditionsConsensus(
+      {
+        tempC: 8,
+        feelsLikeC: 7,
+        precipMm: 0,
+        condition: "clear",
+        windKph: 5,
+        source: "visualcrossing",
+      },
+      NOW,
+    );
+
+    expect(result.total).toBe(1);
+    expect(result.widened).toBe(true);
+  });
+});
+
+describe("consensusAt", () => {
+  beforeEach(resetTables);
+
+  it("shows no block at all when the viewer's conditions are unknown", async () => {
+    // Law 5: an empty consensus claims nobody nearby ran in these
+    // conditions. "We do not know what they are" is a different statement,
+    // and the screen says nothing rather than the wrong thing.
+    expect(await consensusAt(80, 80, NOW)).toBeUndefined();
+  });
+
+  it("answers once the viewer's conditions resolve", async () => {
+    await makeObservation({
+      lat: 81,
+      lng: 81,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 7,
+      precipMm: 0,
+    });
+
+    const result = await consensusAt(81, 81, NOW);
+
+    expect(result).toBeDefined();
+    expect(result?.total).toBe(0);
   });
 });

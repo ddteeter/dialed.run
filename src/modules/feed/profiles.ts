@@ -15,7 +15,9 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { forIds } from "../../lib/for-ids";
 import { bandFloorC, bandLabel } from "../../lib/temperature";
+import { topByCount } from "../../lib/top-by-count";
 import { observationsForRuns } from "./conditions";
 import { followerCount, followingCount } from "./follows";
 
@@ -67,27 +69,7 @@ function bandsAscending(
   return ordered;
 }
 
-/**
-Top `n` entries by count, without an in-memory `.sort()` (house lint rule).
-*/
-function topEntriesByCount(
-  counts: ReadonlyMap<string, number>,
-  n: number,
-): [string, number][] {
-  const remaining = [...counts];
-  const top: [string, number][] = [];
-  for (let picked = 0; picked < n && remaining.length > 0; picked += 1) {
-    let bestIndex = 0;
-    for (let index = 1; index < remaining.length; index += 1) {
-      const current = remaining[index];
-      const best = remaining[bestIndex];
-      if (current && best && current[1] > best[1]) bestIndex = index;
-    }
-    const [winner] = remaining.splice(bestIndex, 1);
-    if (winner) top.push(winner);
-  }
-  return top;
-}
+
 
 export async function ownProfile(userId: string): Promise<OwnProfile> {
   const database = db();
@@ -109,18 +91,13 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     .orderBy(desc(outfitEntries.createdAt))
     .limit(HISTORY_LIMIT);
 
-  const profileRuns =
-    profileEntries.length === 0
-      ? []
-      : await database
-          .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
-          .from(runs)
-          .where(
-            inArray(
-              runs.id,
-              profileEntries.map((e) => e.runId),
-            ),
-          );
+  const runIds = profileEntries.map((e) => e.runId);
+  const profileRuns = await forIds(runIds, () =>
+    database
+      .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
+      .from(runs)
+      .where(inArray(runs.id, runIds)),
+  );
   const observations = await observationsForRuns(profileRuns);
 
   const bands = new Map<number, CoverageBand>();
@@ -132,6 +109,9 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     const floor = bandFloorC(observation.feelsLikeC);
     const band = bands.get(floor) ?? {
       bandFloorC: floor,
+        // Equivalent mutant on the unit: `bandLabel` reads "c" and treats
+      // everything else as Fahrenheit, so `""` produces the same label.
+      // Stryker disable next-line StringLiteral
       label: bandLabel(floor, "f"),
       cold: 0,
       dialed: 0,
@@ -147,25 +127,23 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
   }
 
   const entryIds = profileEntries.map((e) => e.id);
-  const itemRows =
-    entryIds.length === 0
-      ? []
-      : await database
-          .select({ itemId: outfitEntryItems.itemId })
-          .from(outfitEntryItems)
-          .where(inArray(outfitEntryItems.entryId, entryIds));
+  const itemRows = await forIds(entryIds, () =>
+    database
+      .select({ itemId: outfitEntryItems.itemId })
+      .from(outfitEntryItems)
+      .where(inArray(outfitEntryItems.entryId, entryIds)),
+  );
   const wearCounts = new Map<string, number>();
   for (const row of itemRows) {
     wearCounts.set(row.itemId, (wearCounts.get(row.itemId) ?? 0) + 1);
   }
-  const topItemIds = topEntriesByCount(wearCounts, 5).map(([itemId]) => itemId);
-  const topGarments =
-    topItemIds.length === 0
-      ? []
-      : await database
-          .select({ id: wardrobeItems.id, name: wardrobeItems.name })
-          .from(wardrobeItems)
-          .where(inArray(wardrobeItems.id, topItemIds));
+  const topItemIds = topByCount(wearCounts, 5).map(([itemId]) => itemId);
+  const topGarments = await forIds(topItemIds, () =>
+    database
+      .select({ id: wardrobeItems.id, name: wardrobeItems.name })
+      .from(wardrobeItems)
+      .where(inArray(wardrobeItems.id, topItemIds)),
+  );
   const nameById = new Map(topGarments.map((g) => [g.id, g.name]));
 
   const [followers, following] = await Promise.all([

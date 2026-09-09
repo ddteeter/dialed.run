@@ -27,7 +27,19 @@ export async function searchByDisplayName(prefix: string): Promise<SearchResult[
     .from(userProfiles)
     .where(like(userProfiles.displayName, `${trimmed}%`))
     .limit(RESULT_LIMIT);
-  return rows
-    .filter((r): r is { userId: string; displayName: string } => r.displayName !== null)
-    .map((r) => ({ userId: r.userId, displayName: r.displayName }));
+  // Equivalent mutants, both on the same idea: a `LIKE` never matches
+  // NULL, so the filter cannot drop a row and the raw rows already have
+  // the shape below. It is here because the column is nullable and the
+  // result type promises a name — a compiler-driven guard, not a runtime
+  // one.
+  // Stryker disable next-line ConditionalExpression,MethodExpression
+  return rows.filter(isNamed).map((r) => ({ userId: r.userId, displayName: r.displayName }));
+}
+
+function isNamed(row: {
+  userId: string;
+  displayName: string | null;
+}): row is SearchResult {
+  // Stryker disable next-line ConditionalExpression
+  return row.displayName !== null;
 }

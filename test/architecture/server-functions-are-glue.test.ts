@@ -46,10 +46,8 @@ const loaders: Record<string, () => Promise<unknown>> = import.meta.glob(
  * fails below, so it cannot be left behind once the file is cleaned.
  */
 const NOT_YET_GLUE = new Set([
-  // Route-file input schemas still declared inline, and (in runs) the
-  // Strava OAuth CSRF state check, which is the one branch here that most
-  // deserves a test.
-  "src/modules/feed/functions.ts",
+  // Input schemas still declared inline, and the Strava OAuth CSRF state
+  // check — the one branch left in this class that most deserves a test.
   "src/modules/runs/functions.ts",
 ]);
 

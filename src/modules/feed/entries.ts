@@ -27,10 +27,12 @@ import {
 } from "../../db/schema-core";
 import { env } from "../../env";
 import type { entryTags, itemFlagSchema } from "../../lib/contracts";
+import { forIds } from "../../lib/for-ids";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
+import { hasReacted, usefulCount } from "./reactions";
 
 type EntryTag = (typeof entryTags)[number];
 type ItemFlag = z.infer<typeof itemFlagSchema>;
@@ -40,11 +42,13 @@ function db() {
 }
 
 export class ForbiddenError extends Error {
+  // Stryker disable next-line StringLiteral
   constructor(message = "not allowed") {
     super(message);
   }
 }
 export class NotFoundError extends Error {
+  // Stryker disable next-line StringLiteral
   constructor(message = "not found") {
     super(message);
   }
@@ -90,6 +94,10 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     return existing.id;
   }
 
+  // Equivalent mutant: with no items, the ownership read matches nothing
+  // and the loop below has nothing to check, so removing the guard changes
+  // no answer — it saves the query on a bare kit.
+  // Stryker disable next-line ConditionalExpression,EqualityOperator
   if (input.itemIds.length > 0) {
     const itemIds = [...input.itemIds];
     const owned = await database
@@ -124,6 +132,12 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     id: entryId,
     runId: input.runId,
     userId: input.userId,
+    // Equivalent mutant on the `??`: the column itself defaults to true,
+    // so a runner with no profile row gets a public entry either way. The
+    // default is written here as well because this is where the rule lives
+    // — "public by default, with a per-user preference" — and a schema
+    // default is not a place to read a product decision from.
+    // Stryker disable next-line LogicalOperator
     isPublic: profile?.shareDefault ?? true,
     createdAt: Math.floor(Date.now() / 1000),
   });
@@ -196,6 +210,11 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
     .from(outfitEntryItems)
     .where(eq(outfitEntryItems.entryId, input.entryId));
   const entryItemIds = new Set(entryItemRows.map((row) => row.itemId));
+  // Equivalent mutant on the filter: each flag's update is also scoped by
+  // `entryId` in SQL, so a flag for an item the entry does not contain
+  // matches no row either way. Filtering first keeps the batch the size of
+  // the real work.
+  // Stryker disable next-line MethodExpression
   const applicableFlags = input.itemFlags.filter((itemFlag) =>
     entryItemIds.has(itemFlag.itemId),
   );
@@ -241,6 +260,10 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
 
   // `batch` needs a non-empty tuple; the first two statements always exist.
   const [first, ...rest] = statements;
+  // Unreachable: the verdict update and the tag delete are always in the
+  // list. It is here because `batch` needs a non-empty tuple and an array
+  // cannot promise one.
+  // Stryker disable next-line ConditionalExpression
   if (first === undefined) return;
   await database.batch([first, ...rest]);
 }
@@ -252,6 +275,10 @@ interface OwnEntryRow {
 }
 
 function hasVerdict(entry: OwnEntryRow): entry is OwnEntryRow & { verdict: number } {
+  // Equivalent mutant: the query above filters `isNotNull(verdict)`, so
+  // nothing reaching here has a null one. The guard is what narrows the
+  // type for the counter below.
+  // Stryker disable next-line ConditionalExpression
   return entry.verdict !== null;
 }
 
@@ -289,7 +316,12 @@ export async function verdictBandCounts(
     )
     .orderBy(desc(outfitEntries.createdAt))
     .limit(200);
+  // Two equivalent mutants: the filter cannot drop a row the SQL already
+  // excluded, and an empty list yields the zeroed counts either way. The
+  // second saves a cross-database walk.
+  // Stryker disable next-line MethodExpression
   const verdicted = own.filter(hasVerdict);
+  // Stryker disable next-line ConditionalExpression
   if (verdicted.length === 0) return counts;
   const observations = await observationsForEntries(db(), verdicted);
   for (const entry of verdicted) {
@@ -322,12 +354,18 @@ export async function itemBandWearStat(
     .where(eq(outfitEntries.userId, userId))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(200);
+  // Equivalent mutant: no entries means no observations and an empty
+  // band, so the zeroes come out either way. The return saves the walk.
+  // Stryker disable next-line ConditionalExpression
   if (own.length === 0) return { worn: 0, total: 0 };
   const observations = await observationsForEntries(db(), own);
   const inBand = own.filter((entry) => {
     const observation = observations.get(entry.runId);
     return observation !== undefined && bandFloorC(observation.feelsLikeC) === targetBandFloorC;
   });
+  // Equivalent mutant: an empty `inArray` matches nothing, so `worn`
+  // would be 0 and `total` already is. The return saves the query.
+  // Stryker disable next-line ConditionalExpression
   if (inBand.length === 0) return { worn: 0, total: 0 };
   const inBandEntryIds = inBand.map((entry) => entry.id);
   const wearingItem = await db()
@@ -449,13 +487,9 @@ export async function getEntryDetail(
     .from(outfitEntryItems)
     .where(eq(outfitEntryItems.entryId, entryId));
   const itemIds = entryItemRows.map((row) => row.itemId);
-  const garments =
-    itemIds.length === 0
-      ? []
-      : await database
-          .select()
-          .from(wardrobeItems)
-          .where(inArray(wardrobeItems.id, itemIds));
+  const garments = await forIds(itemIds, () =>
+    database.select().from(wardrobeItems).where(inArray(wardrobeItems.id, itemIds)),
+  );
   const garmentsById = new Map(garments.map((g) => [g.id, g]));
 
   const photos = await database
@@ -478,6 +512,11 @@ export async function getEntryDetail(
 
   // Per-item flags/notes are never public (docs/contracts.md): only the
   // entry's own owner sees them, regardless of the entry's share state.
+  // Equivalent mutant on the first operand: `undefined === entry.userId`
+  // is already false, so the explicit check changes no answer. It is here
+  // because "no viewer" and "a viewer who is not the owner" are different
+  // things to a reader.
+  // Stryker disable next-line ConditionalExpression
   const isOwner = viewerId !== undefined && viewerId === entry.userId;
 
   return {
@@ -511,4 +550,29 @@ export async function getEntryDetail(
     usefulCount: usefulRows.length,
     conditions: observations.get(run.id),
   };
+}
+
+/**
+ * The entry detail a viewer sees, with the social counts folded in.
+ *
+ * The reaction lookup is skipped for a signed-out viewer rather than asked
+ * with an undefined id, and a missing entry answers with nothing rather
+ * than a half-built card. Both are decisions, which is why they are here
+ * and not in `functions.ts` (D-41).
+ */
+export async function entryDetailForViewer(
+  entryId: string,
+  viewerId: string | undefined,
+): Promise<
+  (EntryDetail & { usefulCount: number; viewerHasReacted: boolean }) | undefined
+> {
+  const entry = await getEntryDetail(entryId, viewerId);
+  if (entry === undefined) return undefined;
+  const [useful, viewerHasReacted] = await Promise.all([
+    usefulCount(entryId),
+    viewerId === undefined
+      ? Promise.resolve(false)
+      : hasReacted(entryId, viewerId),
+  ]);
+  return { ...entry, usefulCount: useful, viewerHasReacted };
 }

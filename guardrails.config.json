@@ -111,7 +111,7 @@
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Seven equivalent guards, each with its proof at the site: a never-worn item gives NaN seconds and `NaN > threshold` is already false; deleting `undefined` from a Map removes nothing; an empty `inArray` matches nothing (twice \u2014 the id list and the product-defaults lookup); `allowed.includes(null)` is already false; `Map#get` of a null key answers undefined; and filtering nulls out of an `IN` list changes no match. Every one exists because the operation below it takes a value the type system will not let be null, and every one saves a query or says an intent that the runtime would otherwise leave implicit.",
-      "count": 7
+      "count": 6
     },
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
@@ -126,6 +126,101 @@
     {
       "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line CallExpression",
       "reason": "Equivalent mutant with a reason to keep the code: `uploadItemPhoto` re-checks the same rules and raises the same sentences, so removing this call changes no answer. What it changes is when \u2014 it runs against the declared size, before `arrayBuffer()` buffers the whole file into the isolate, so an oversized upload is refused without being read.",
+      "count": 1
+    },
+    {
+      "key": "src/lib/for-ids.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator,ArrayDeclaration",
+      "reason": "Equivalent mutant: an empty `inArray` matches nothing, so every caller would get the same empty list either way. What the guard buys is the query itself, on the pages that have nothing to look anything up for \u2014 an empty feed, a new profile, an entry with a bare kit.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ArrowFunction",
+      "reason": "Equivalent mutant, same reasoning again: emptying the `or` scans every observation instead of the chunk's cells, and the answer is still looked up by key. Only the scan grows.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the entry\u2192run\u2192observation walk answers with an empty map either way. The return saves the query.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
+      "reason": "Equivalent mutant, proof at the site: the answer is assembled by matching each run's key against the rows afterwards, so an off-by-one chunk changes what is scanned and not what is returned. Rows scanned are what D1 bills, which is why the chunking stays.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
+      "reason": "Equivalent mutant, same reasoning as the chunk bound: an unsliced chunk widens the query and not the answer, which is keyed off each run afterwards.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Two equivalent guards: no entries means no observations and nothing to filter, so the empty list comes out either way (the return saves the cross-database walk); and every item row's garment is in the batch that fetched it, so the group lookup only misses if a garment was deleted between the two reads \u2014 which is the race the guard exists for.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line LogicalOperator,UnaryOperator",
+      "reason": "Unreachable fallbacks: `pass` indexes `WINDOW_H`, and `WINDOW_H` and `FEELS_LIKE_DELTA_C` are the same length by construction. They are here because an index signature cannot promise that.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Six equivalent guards, each with its proof at the site: with no items the ownership read matches nothing; the batch's first two statements always exist; the SQL already filters `isNotNull(verdict)`, so the type guard and the empty-list return cannot change an answer; no entries means no observations; and an empty `inArray` matches nothing. Every one saves a query or narrows a type the runtime has already settled.",
+      "count": 6
+    },
+    {
+      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
+      "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the garment map comes out empty either way. The guard saves the query for an entry with a bare kit.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line LogicalOperator",
+      "reason": "Equivalent mutant on the `??`: the `is_public` column itself defaults to true, so a runner with no profile row gets a public entry either way. The default is written here as well because this is where the product rule lives \u2014 public by default, with a per-user preference \u2014 and a schema default is not a place to read a decision from.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
+      "reason": "Two equivalent filters: each per-item update is also scoped by `entryId` in SQL, so a flag for an item the entry does not contain matches no row; and the verdict filter cannot drop a row the query already excluded. Both keep the batch and the loop the size of the real work.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "The two error classes' default messages. Every construction in this module passes its own sentence, so the defaults are unreachable \u2014 they exist so a future caller that forgets one still says something.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: an empty page produces empty reads and an empty map either way. What the return saves is six queries and a batch on every empty feed \u2014 which is what a new account sees.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Equivalent mutant: every entry's author is in the batch that fetched them, so the lookup always hits. The optional chain is here because `Map#get` is typed as possibly missing.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/prefill.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the loop below would find no best and answer undefined anyway. The return saves two queries on every attach by a runner with no history.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/profiles.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Equivalent mutant on the unit argument: `bandLabel` reads \"c\" and treats everything else as Fahrenheit, so an empty string produces exactly the same label. The literal says which unit was meant.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: a `LIKE` never matches NULL, so the predicate cannot drop a row. It is here because the column is nullable and the result type promises a name.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,MethodExpression",
+      "reason": "Equivalent mutants, both on the same idea: a `LIKE` never matches NULL, so the filter cannot drop a row and the raw rows already have the shape returned. A compiler-driven guard, not a runtime one.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
+      "reason": "Equivalent mutant, with the reason worth writing down: `roundCoord(undefined)` is NaN rather than 0, so a half-located lookup keys to a cell nothing can match and answers undefined anyway. The guard states the intent \u2014 we do not know where you are \u2014 and saves the query.",
       "count": 1
     }
   ]
