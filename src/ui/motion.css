@@ -25,3 +25,43 @@
     --dur-reveal: var(--dur-instant);
   }
 }
+
+/**
+ * The breathing brackets — the product's one waiting device
+ * (docs/product.md §Forms & failure, "Submitting: the button"). No
+ * spinners, ever; the doctrine's NEVER list bans them, and this is what it
+ * offers instead.
+ *
+ * 900ms is not one of the duration tokens above and should not be: those
+ * are transition budgets for a move that happens once, and nothing there
+ * exceeds 320ms because a move that slow reads as lag. This is a loop
+ * whose whole job is to be slower than a transition — a 320ms pulse would
+ * read as a flicker. It gets a token of its own rather than a raw value in
+ * a component.
+ */
+:root {
+  --dur-breathe: 900ms;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.breathe {
+  animation: breathe var(--dur-breathe) linear infinite;
+}
+
+/* Reduced motion collapses to static, not to a faster loop: a pulse is a
+ * pulse at any speed. The label still says what is happening. */
+@media (prefers-reduced-motion: reduce) {
+  .breathe {
+    animation: none;
+    opacity: 1;
+  }
+}

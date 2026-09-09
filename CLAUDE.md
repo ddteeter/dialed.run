@@ -202,6 +202,18 @@ explicitly says the migration is yours — or the owner has said yes.
   A batch cannot branch on its own results, so a read that decides what to
   write goes *before* it. That is a reason to reorder, not a reason to split.
 
+  **A drizzle builder is lazy, and that is the footgun.**
+  `db.insert(t).values(v)` returns a query builder, not a Promise — it has
+  assembled the SQL and sent nothing. It is *thenable*, so `await` is what
+  triggers execution: `await x` means "call `x.then()`", and `.then()` is
+  what talks to D1. `db.batch([a, b])` takes un-awaited builders, pulls the
+  statements out, and sends them as one transaction.
+
+  So a builder you neither `await` nor pass to `batch()` **silently does
+  nothing** — no error, no SQL, no row. When you move a statement into a
+  batch, the `await` in front of it is what you delete; forget to add it to
+  the array and the write is simply gone.
+
 ## Product rules that are also code rules
 
 - **Verdicts are per-run**, stored as an integer −2..+2 (0 = dialed). Per-item
@@ -254,6 +266,28 @@ Building it is fine — inventing design language is not:
 - In the PR body: list every undesigned surface you shipped under a
   **"Design deltas"** heading, so the reviewer can kick them to the design
   agent instead of discovering them in a demo video.
+
+## Forms use the primitives, always
+
+`docs/product.md` §Forms & failure is the contract and `ui/form.tsx` +
+`ui/use-form-submit.ts` are the implementation. A form that hand-rolls any
+of `useFormSubmit`, `FormField`, `TextField`, `FormStatus`,
+`FormErrorSummary`, `FormFailureBand` or `SubmitButton` is a review
+failure — that is the contract's own wording, and it exists because four
+lanes shipped four answers to "the save failed".
+
+The three that are easiest to get wrong, and were all wrong before this:
+
+- **Never the `disabled` attribute on a submit button.** It drops focus and
+  stops announcing. `aria-disabled` + `aria-busy`, and the double-submit
+  guard lives in the handler.
+- **Pink is action, never failure.** A field error is marked by border
+  weight and a hi-viz band, never by hue alone, and nothing in the failure
+  path animates.
+- **Error copy lives in the schema**, in zod's `message`. A component
+  authoring its own sentence is the same problem one layer down. A
+  hand-written client rule (`if (!email.includes("@"))`) is a bug: add it to
+  the schema, which both sides already share.
 
 ## Review comments are change requests
 

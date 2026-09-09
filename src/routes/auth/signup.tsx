@@ -1,103 +1,98 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 
+import { signUpSchema } from "../../lib/contracts";
+import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
 // Client entry imported directly by design — see modules/auth/client.ts.
 import { authClient } from "../../modules/auth/client";
-import { GoogleButton } from "../../modules/auth/google-button";
-import { Layout, Wordmark } from "../../ui";
+import { TextField, useFormSubmit } from "../../ui";
 
 export const Route = createFileRoute("/auth/signup")({ component: SignupPage });
+
+const LABELS = { name: "Name", email: "Email", password: "Password" };
 
 function SignupPage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | undefined>();
 
-  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(undefined);
-    const result = await authClient.signUp.email({ name, email, password });
-    if (result.error) {
-      setError(result.error.message ?? "That didn't work. Try again.");
-      return;
-    }
-    await navigate({ to: "/" });
-  }
+  // See login.tsx: Better Auth returns `{ error }` instead of rejecting.
+  const action = useCallback(
+    async (values: { name: string; email: string; password: string }) => {
+      const result = await authClient.signUp.email(values);
+      if (result.error) {
+        throw new Error(result.error.message ?? "sign-up rejected");
+      }
+    },
+    [],
+  );
+
+  const form = useFormSubmit({
+    schema: signUpSchema,
+    action,
+    successMessage: "Account created.",
+    labels: LABELS,
+    onSuccess: async () => {
+      await navigate({ to: "/" });
+    },
+  });
 
   return (
-    <Layout>
-      <div className="mx-auto flex max-w-sm flex-col gap-6 px-6 py-12">
-        <Wordmark className="text-2xl" />
-        <h1 className="font-display text-3xl uppercase leading-none">
-          Sign up
-        </h1>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            void submit(event);
-          }}
-        >
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Name
-            <input
-              type="text"
-              required
-              autoComplete="name"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Email
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Password
-            <input
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            />
-          </label>
-          {error === undefined ? undefined : (
-            <p className="text-sm font-semibold text-pink">{error}</p>
-          )}
-          <button
-            type="submit"
-            className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
-          >
-            Sign up
-          </button>
-        </form>
-        <p className="text-center text-xs uppercase text-night/40">or</p>
-        <GoogleButton />
-        <p className="text-sm">
-          Already dialed?{" "}
-          <Link to="/auth/login" className="font-semibold text-pink">
-            Log in
-          </Link>
-        </p>
-      </div>
-    </Layout>
+    <AuthPage
+      heading="Sign up"
+      submitLabel="Sign up"
+      pendingLabel="Signing up"
+      status={form.status}
+      summaryRows={form.summaryRows}
+      summaryRef={form.summaryRef}
+      onFocusField={form.focusField}
+      failure={form.failure}
+      onRetry={form.retry}
+      retryRef={form.retryRef}
+      pending={form.pending}
+      formRef={form.formRef}
+      onSubmit={() => {
+        void form.submit({ name, email, password });
+      }}
+      footer={
+        <AuthCrossLink
+          prompt="Already have an account?"
+          to="/auth/login"
+          label="Log in"
+        />
+      }
+    >
+      <TextField
+        name="name"
+        label={LABELS.name}
+        autoComplete="name"
+        value={name}
+        onChange={setName}
+        field={form.field}
+        error={form.fieldErrors.name}
+      />
+      <TextField
+        name="email"
+        label={LABELS.email}
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={setEmail}
+        field={form.field}
+        error={form.fieldErrors.email}
+      />
+      <TextField
+        name="password"
+        label={LABELS.password}
+        type="password"
+        autoComplete="new-password"
+        value={password}
+        onChange={setPassword}
+        field={form.field}
+        error={form.fieldErrors.password}
+        hint="At least 8 characters."
+      />
+    </AuthPage>
   );
 }

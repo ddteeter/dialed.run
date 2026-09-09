@@ -5,13 +5,10 @@ import type { GarmentFormValues } from "../../modules/closet/components/GarmentF
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import {
   formValuesFromItem,
-  garmentWithResolvedProduct,
+  garmentFromFormValues,
 } from "../../modules/closet/form-mapping";
 import { getItemFn, updateItemFn } from "../../modules/closet/functions";
-import {
-  resolveProductFn,
-  searchBrandsFn,
-} from "../../modules/products/functions";
+import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/edit/$itemId")({
@@ -32,7 +29,7 @@ function EditGarmentPage() {
   const navigate = useNavigate();
 
   async function handleSubmit(values: GarmentFormValues) {
-    const garment = await garmentWithResolvedProduct(values, resolveProductFn);
+    const garment = garmentFromFormValues(values);
 
     await updateItemFn({ data: { itemId: detail.item.id, garment } });
     await navigate({

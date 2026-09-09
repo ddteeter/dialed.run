@@ -8,7 +8,7 @@
  * matters more for them than for the session lookup they accompany.
  */
 
-const AUTH_REQUIRED_CODE = "AUTH_REQUIRED";
+import { AUTH_REQUIRED_CODE } from "../../lib/auth-signal";
 
 /**
  * The single unauthenticated signal.
@@ -29,12 +29,6 @@ export class AuthRequiredError extends Error {
   }
 }
 
-/**
- * True for an `AuthRequiredError` raised in this isolate *and* for the
- * structurally-cloned shape a server-function call rejects with.
- */
-export function isAuthRequired(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  if (!("code" in error)) return false;
-  return error.code === AUTH_REQUIRED_CODE;
-}
+// The guard lives in lib/ so `ui/` can use it too — it may not import
+// modules, and the alternative was matching the message text with a regex.
+export { AUTH_REQUIRED_CODE, isAuthRequired } from "../../lib/auth-signal";

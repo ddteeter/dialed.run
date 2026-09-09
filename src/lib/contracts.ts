@@ -66,6 +66,49 @@ const layered = garmentBase.extend({
   waterResistant: z.boolean().optional(),
 });
 /**
+ * Sign-in and sign-up, the two forms with no server function of their own —
+ * Better Auth owns the endpoints, so this schema is the *only* validation
+ * before the request goes out.
+ *
+ * Error copy lives here, in zod's `message`, and nowhere else (§Forms &
+ * failure, "Error copy lives in the schema"). A component authoring its own
+ * sentence is the four-lanes problem in miniature: same rule, four
+ * wordings. The copy rules are binding — one sentence, under ten words,
+ * sentence case, ends in a period, and it names the fix rather than the
+ * rule ("Use at least 8 characters", not "Value too short").
+ *
+ * Lives in contracts rather than the design's suggested `lib/schemas/`
+ * because this file already *is* that module: importable by both sides,
+ * importing nothing from a server.
+ */
+const emailField = z
+  .string()
+  .min(1, "Enter your email address.")
+  .check(z.email("That does not look like an email address."));
+
+export const signInSchema = z.object({
+  email: emailField,
+  password: z.string().min(1, "Enter your password."),
+});
+
+export const signUpSchema = z.object({
+  name: z.string().min(1, "Tell us what to call you.").max(60),
+  email: emailField,
+  // Better Auth's own floor is 8; stating it here is what lets the form say
+  // so before the round trip rather than after it.
+  password: z.string().min(8, "Use at least 8 characters."),
+});
+
+/**
+ * A WGS84 coordinate pair, bounded. Written out four times before this —
+ * twice here and twice in `modules/feed/functions.ts` — which is four
+ * places to get a sign or a bound wrong, and no way for them to disagree
+ * loudly.
+ */
+export const latitudeSchema = z.number().min(-90).max(90);
+export const longitudeSchema = z.number().min(-180).max(180);
+
+/**
  * The specific thing a garment *is*, within its category. A `top` is a
  * singlet or a tee or a half-zip; the category alone cannot tell you, and
  * anything that has to show a garment — an icon, a recommendation, a
@@ -88,15 +131,6 @@ const layered = garmentBase.extend({
  * this column existed has none, and CLAUDE.md law 8 is expand-then-contract.
  * Treat `undefined` as "not known yet", never as a category default.
  */
-/**
- * A WGS84 coordinate pair, bounded. Written out four times before this —
- * twice here and twice in `modules/feed/functions.ts` — which is four
- * places to get a sign or a bound wrong, and no way for them to disagree
- * loudly.
- */
-export const latitudeSchema = z.number().min(-90).max(90);
-export const longitudeSchema = z.number().min(-180).max(180);
-
 export const garmentTypesByCategory = {
   // `sportsBra` and `armSleeves` arrived with the Icon Pack marked
   // provisional. They are real tap-list rows on P2 (ARM WARMERS is on the
@@ -371,14 +405,19 @@ export const entryTagSchema = z.enum(entryTags);
 export const runSources = ["manual", "file"] as const;
 export const effortSchema = z.enum(["easy", "steady", "workout", "race"]);
 export const runDraftSchema = z.object({
-  startedAt: z.number().int().positive(),
-  durationS: z.number().int().positive(),
-  distanceM: z.number().positive(),
+  // Messages are here, not in the form (§Forms & failure, "Error copy lives
+  // in the schema"). They name the fix, not the rule: the manual-entry form
+  // is the only place a human types these, and "Value out of range" tells
+  // them nothing about what to do next. A parser filling this in gets the
+  // same sentences, which is fine — nothing shows them to anyone.
+  startedAt: z.number().int().positive("Pick when the run started."),
+  durationS: z.number().int().positive("How many minutes did it take?"),
+  distanceM: z.number().positive("How far did you go?"),
   lat: latitudeSchema.optional(),
   lng: longitudeSchema.optional(),
   indoor: z.boolean().default(false),
   effort: effortSchema.optional(),
-  title: z.string().min(1).max(120),
+  title: z.string().min(1, "Give the run a name.").max(120),
 });
 export type RunDraft = z.infer<typeof runDraftSchema>;
 

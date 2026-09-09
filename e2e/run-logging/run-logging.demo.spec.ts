@@ -55,7 +55,7 @@ test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list"
   await page.getByLabel("Minutes").fill("32");
   await page.getByLabel("Distance (km)").fill("6.5");
   await page.getByLabel("Effort (optional)").selectOption("steady");
-  await page.getByRole("button", { name: "Log the run" }).click();
+  await page.getByRole("button", { name: "Log run" }).click();
 
   await expect(
     page.getByRole("heading", { name: "Demo tempo run" }),

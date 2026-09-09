@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AuthRequiredError,
+  AUTH_REQUIRED_CODE,
   isAuthRequired,
 } from "../src/modules/auth/auth-error";
 
@@ -48,5 +49,14 @@ describe("the auth-required signal", () => {
     // does hand you one, so the guard has to survive it.
     expect(isAuthRequired(JSON.parse("null"))).toBe(false);
     expect(isAuthRequired(undefined)).toBe(false);
+  });
+
+  it("uses a stable, non-empty code as its wire value", () => {
+    // The server throws it and the client recognises it, so the constant is
+    // a wire contract between two deploys — not an implementation detail.
+    // An empty code would still round-trip (both sides share the constant)
+    // while quietly matching any error whose `code` is "".
+    expect(AUTH_REQUIRED_CODE).toBe("AUTH_REQUIRED");
+    expect(isAuthRequired({ code: "" })).toBe(false);
   });
 });

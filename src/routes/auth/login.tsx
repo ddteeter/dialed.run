@@ -1,88 +1,91 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 
+import { signInSchema } from "../../lib/contracts";
+import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
 // Client entry imported directly by design — see modules/auth/client.ts.
 import { authClient } from "../../modules/auth/client";
-import { GoogleButton } from "../../modules/auth/google-button";
-import { Layout, Wordmark } from "../../ui";
+import { TextField, useFormSubmit } from "../../ui";
 
 export const Route = createFileRoute("/auth/login")({ component: LoginPage });
+
+const LABELS = { email: "Email", password: "Password" };
 
 function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | undefined>();
 
-  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(undefined);
-    const result = await authClient.signIn.email({ email, password });
-    if (result.error) {
-      setError(result.error.message ?? "That didn't work. Try again.");
-      return;
-    }
-    await navigate({ to: "/" });
-  }
+  /**
+   * Better Auth returns `{ error }` rather than rejecting, so it is
+   * translated into a throw — `useFormSubmit` classifies a throw into the
+   * failure band, and a returned error object would read as a success.
+   *
+   * A form failure, not a field failure, and deliberately: the server will
+   * not say *which* of email or password was wrong, because that tells an
+   * attacker which addresses have accounts.
+   */
+  const action = useCallback(
+    async (values: { email: string; password: string }) => {
+      const result = await authClient.signIn.email(values);
+      if (result.error) {
+        throw new Error(result.error.message ?? "sign-in rejected");
+      }
+    },
+    [],
+  );
+
+  const form = useFormSubmit({
+    schema: signInSchema,
+    action,
+    successMessage: "Signed in.",
+    labels: LABELS,
+    onSuccess: async () => {
+      await navigate({ to: "/" });
+    },
+  });
 
   return (
-    <Layout>
-      <div className="mx-auto flex max-w-sm flex-col gap-6 px-6 py-12">
-        <Wordmark className="text-2xl" />
-        <h1 className="font-display text-3xl uppercase leading-none">
-          Log in
-        </h1>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            void submit(event);
-          }}
-        >
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Email
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Password
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            />
-          </label>
-          {error === undefined ? undefined : (
-            <p className="text-sm font-semibold text-pink">{error}</p>
-          )}
-          <button
-            type="submit"
-            className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
-          >
-            Log in
-          </button>
-        </form>
-        <p className="text-center text-xs uppercase text-night/40">or</p>
-        <GoogleButton />
-        <p className="text-sm">
-          New here?{" "}
-          <Link to="/auth/signup" className="font-semibold text-pink">
-            Sign up
-          </Link>
-        </p>
-      </div>
-    </Layout>
+    <AuthPage
+      heading="Log in"
+      submitLabel="Log in"
+      pendingLabel="Signing in"
+      status={form.status}
+      summaryRows={form.summaryRows}
+      summaryRef={form.summaryRef}
+      onFocusField={form.focusField}
+      failure={form.failure}
+      onRetry={form.retry}
+      retryRef={form.retryRef}
+      pending={form.pending}
+      formRef={form.formRef}
+      onSubmit={() => {
+        void form.submit({ email, password });
+      }}
+      footer={
+        <AuthCrossLink prompt="New here?" to="/auth/signup" label="Sign up" />
+      }
+    >
+      <TextField
+        name="email"
+        label={LABELS.email}
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={setEmail}
+        field={form.field}
+        error={form.fieldErrors.email}
+      />
+      <TextField
+        name="password"
+        label={LABELS.password}
+        type="password"
+        autoComplete="current-password"
+        value={password}
+        onChange={setPassword}
+        field={form.field}
+        error={form.fieldErrors.password}
+      />
+    </AuthPage>
   );
 }
