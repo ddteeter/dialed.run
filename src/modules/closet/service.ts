@@ -37,6 +37,7 @@ import type {
 import { garmentSchema, uiGroupFor } from "../../lib/contracts";
 import { garmentTypesFor } from "../../lib/garment-fields";
 import { newUlid } from "../../lib/ids";
+import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
 import {
@@ -490,38 +491,12 @@ function addPairCounts(
 }
 
 /**
- * The highest-count entry remaining, removed from the map as it's taken.
- */
-function popMax(remaining: Map<string, number>): string | undefined {
-  let bestId: string | undefined;
-  let bestCount = -1;
-  for (const [id, count] of remaining) {
-    if (count <= bestCount) continue;
-    bestCount = count;
-    bestId = id;
-  }
-  // Equivalent mutant: deleting `undefined` from the map removes nothing,
-  // so the guard changes no behaviour. It is here because `delete` takes a
-  // key, and `undefined` is not one.
-  // Stryker disable next-line ConditionalExpression
-  if (bestId !== undefined) remaining.delete(bestId);
-  return bestId;
-}
-
-/**
- * Top `limit` co-occurring item ids by count, without Array#sort (project
- * lint prefers Array#toSorted, which needs an ES2023 lib not enabled here;
- * a bounded selection avoids the question entirely — limit is always 2).
+ * Top `limit` co-occurring item ids by count. The selection itself is
+ * `lib/top-by-count` — the profile's "most worn" is the same one, and both
+ * had their own loop.
  */
 export function topPairIds(counts: Map<string, number>, limit: number): string[] {
-  const remaining = new Map(counts);
-  const result: string[] = [];
-  for (let index = 0; index < limit; index += 1) {
-    const bestId = popMax(remaining);
-    if (bestId === undefined) break;
-    result.push(bestId);
-  }
-  return result;
+  return topByCount(counts, limit).map(([itemId]) => itemId);
 }
 
 const PAIRS_WITH_LIMIT = 2;

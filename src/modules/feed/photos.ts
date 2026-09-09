@@ -11,12 +11,15 @@ import { drizzle } from "drizzle-orm/d1";
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
 import { env } from "../../env";
 import { newUlid } from "../../lib/ids";
+import { isAllowedPhotoType } from "../../lib/photo-constraints";
+import type { z } from "zod";
+
+import { uploadPhotoFields } from "./inputs";
 import { ForbiddenError, NotFoundError } from "./entries";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
-export const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-const allowedContentTypeSet: ReadonlySet<string> = new Set(ALLOWED_CONTENT_TYPES);
+
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -37,7 +40,7 @@ export interface UploadPhotoInput {
 }
 
 export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
-  if (!allowedContentTypeSet.has(input.contentType)) {
+  if (!isAllowedPhotoType(input.contentType)) {
     throw new InvalidPhotoError("unsupported photo type");
   }
   if (input.bytes.byteLength > MAX_PHOTO_BYTES) {
@@ -135,4 +138,34 @@ export async function isPhotoVisible(
 
 export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {
   return env.MEDIA.get(photoKey);
+}
+
+/**
+ * Pulls a photo upload out of a multipart body, refusing anything the
+ * pipeline cannot store.
+ *
+ * The size is checked against the *declared* size, before the bytes are
+ * read, so an oversized upload is refused without being allocated. All
+ * three refusals are decisions, which is why they are here rather than in
+ * the server function's validator (D-41).
+ */
+export function photoUploadFrom(
+  input: unknown,
+): z.infer<typeof uploadPhotoFields> & { file: File } {
+  if (!(input instanceof FormData)) {
+    throw new InvalidPhotoError("expected multipart form data");
+  }
+  const file = input.get("photo");
+  if (!(file instanceof File)) {
+    throw new InvalidPhotoError("no photo in upload");
+  }
+  if (file.size > MAX_PHOTO_BYTES) {
+    throw new InvalidPhotoError("photo too large");
+  }
+  const fields = uploadPhotoFields.parse({
+    entryId: input.get("entryId"),
+    contentType: file.type,
+    idempotencyKey: input.get("idempotencyKey") ?? undefined,
+  });
+  return { ...fields, file };
 }

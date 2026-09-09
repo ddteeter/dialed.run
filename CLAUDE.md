@@ -340,7 +340,7 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   it has been paid down to 100% and `break: 100` keeps it there: `npm run
   mutate` exits non-zero the moment a change stops a mutant being killed.
   Today it holds `src/lib` and the `weather`, `ops`, `products`,
-  `notifications`, `auth` and `closet` modules. Adding code under one of those globs means
+  `notifications`, `auth`, `closet` and `feed` modules. Adding code under one of those globs means
   adding tests that *observe* its behaviour, not tests that merely execute
   it.
 
@@ -370,9 +370,9 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **`feed` and `runs` are not covered.** The whole of `src/modules`
-  measured 43.98% — 1,793 mutants surviving or uncovered — and those two
-  are what remains of it. That is why `"stryker"` stays
+  **`runs` is not covered.** The whole of `src/modules` measured 43.98% —
+  1,793 mutants surviving or uncovered — and `runs` is what remains of
+  it. That is why `"stryker"` stays
   `off` in
   `guardrails.config.json`: the commit-gate analyzer scopes to *every*
   changed TypeScript file, so turning it on would block the next commit

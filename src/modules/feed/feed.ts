@@ -19,6 +19,7 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { forIds } from "../../lib/for-ids";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import { followeeIdsOf } from "./follows";
@@ -29,6 +30,7 @@ export interface FeedCursor {
 }
 
 const PAGE_SIZE = 20;
+
 
 function feedCursorPredicate(cursor: FeedCursor) {
   const sameInstantEarlierId = and(
@@ -88,6 +90,10 @@ async function hydrateEntries(
   database: DrizzleD1Database,
   entryRows: (typeof outfitEntries.$inferSelect)[],
 ): Promise<FeedItem[]> {
+  // Equivalent mutant: an empty page produces empty reads and an empty
+  // map either way. What the return saves is six queries and a batch on
+  // every empty feed — which is what a new account sees.
+  // Stryker disable next-line ConditionalExpression
   if (entryRows.length === 0) return [];
   const entryIds = entryRows.map((e) => e.id);
   const runIds = entryRows.map((e) => e.runId);
@@ -129,13 +135,12 @@ async function hydrateEntries(
   const runsById = new Map(runRows.map((r) => [r.id, r]));
   const authorsById = new Map(authorRows.map((a) => [a.userId, a]));
   const itemIds = [...new Set(itemRows.map((i) => i.itemId))];
-  const garments =
-    itemIds.length === 0
-      ? []
-      : await database
-          .select({ id: wardrobeItems.id, name: wardrobeItems.name })
-          .from(wardrobeItems)
-          .where(inArray(wardrobeItems.id, itemIds));
+  const garments = await forIds(itemIds, () =>
+    database
+      .select({ id: wardrobeItems.id, name: wardrobeItems.name })
+      .from(wardrobeItems)
+      .where(inArray(wardrobeItems.id, itemIds)),
+  );
   const garmentNameById = new Map(garments.map((g) => [g.id, g.name]));
 
   const observations = await observationsForRuns(runRows);
@@ -153,6 +158,10 @@ async function hydrateEntries(
     return {
       entryId: entry.id,
       userId: entry.userId,
+      // Equivalent mutant on the optional chain: every entry's author is
+      // in the batch that fetched them, so the lookup always hits. It is
+      // here because `Map#get` is typed as possibly missing.
+      // Stryker disable next-line OptionalChaining
       authorDisplayName: authorsById.get(entry.userId)?.displayName ?? undefined,
       runId: entry.runId,
       runTitle: run?.title ?? "Run",

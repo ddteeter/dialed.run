@@ -12,7 +12,7 @@ import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { observationsForRuns } from "./conditions";
+import { conditionsAt, observationsForRuns } from "./conditions";
 
 const HISTORY_LIMIT = 200;
 
@@ -47,6 +47,11 @@ export async function nearestPriorEntry(
     .where(eq(outfitEntries.userId, userId))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(HISTORY_LIMIT);
+  // Equivalent mutant: an empty `inArray` matches nothing, so the loop
+  // below would find no best and answer undefined anyway. The return saves
+  // two queries on every attach by a runner with no history — which is
+  // every runner's first one.
+  // Stryker disable next-line ConditionalExpression
   if (own.length === 0) return undefined;
 
   const ownRuns = await database
@@ -67,11 +72,13 @@ export async function nearestPriorEntry(
     if (!observation) continue;
     if (precipClassOf(observation.precipMm) !== targetPrecip) continue;
     const delta = Math.abs(observation.feelsLikeC - currentConditions.feelsLikeC);
-    if (
-      !best ||
-      delta < best.feelsLikeDeltaC ||
-      (delta === best.feelsLikeDeltaC && entry.createdAt > best.createdAt)
-    ) {
+    // `<`, and no tie-break: `own` is already ordered newest first, so the
+    // first entry at a given delta is the most recent one at that delta and
+    // a strictly-smaller delta is the only reason to replace it. There was
+    // a `delta === best && createdAt > best.createdAt` clause here; mutation
+    // testing showed it could never be true, which is what dead code looks
+    // like from the outside.
+    if (!best || delta < best.feelsLikeDeltaC) {
       best = {
         entryId: entry.id,
         runId: entry.runId,
@@ -95,4 +102,22 @@ export async function nearestPriorEntry(
     createdAt: best.createdAt,
     feelsLikeDeltaC: best.feelsLikeDeltaC,
   };
+}
+
+/**
+ * The nearest prior entry for a place, or nothing when the conditions
+ * there cannot be resolved.
+ *
+ * A prefill without conditions has nothing to be near, so this returns
+ * nothing rather than guessing — the form falls back to the picker.
+ */
+export async function prefillAt(
+  userId: string,
+  lat: number,
+  lng: number,
+  nowEpochSeconds: number,
+): Promise<PrefillCandidate | undefined> {
+  const conditions = await conditionsAt(lat, lng, nowEpochSeconds);
+  if (conditions === undefined) return undefined;
+  return nearestPriorEntry(userId, conditions);
 }

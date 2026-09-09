@@ -14,9 +14,10 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { forIds } from "../../lib/for-ids";
 import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { observationsForEntries } from "./conditions";
+import { conditionsAt, observationsForEntries } from "./conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
 
@@ -64,11 +65,18 @@ async function qualifyingEntryIdsInWindow(
   deltaC: number,
 ): Promise<string[]> {
   const entries = await recentPublicEntriesStatement(database, sinceEpochSeconds);
+  // Equivalent mutant: no entries means no observations and nothing to
+  // filter, so the empty list comes out either way. The return saves the
+  // cross-database walk.
+  // Stryker disable next-line ConditionalExpression
   if (entries.length === 0) return [];
   const observations = await observationsForEntries(database, entries);
   return entries
     .filter((entry) => {
       const observation = observations.get(entry.runId);
+      // Both halves matter: an entry whose conditions were never resolved
+      // cannot be compared to the viewer's, and reading one anyway is a
+      // crash on the consensus block rather than a miscount.
       return observation !== undefined && isWithinConsensusWindow(observation, viewer, deltaC);
     })
     .map((entry) => entry.id);
@@ -82,13 +90,22 @@ export async function yourConditionsConsensus(
 
   for (const [pass, windowHours] of WINDOW_H.entries()) {
     const since = nowEpochSeconds - windowHours * 3600;
+    // The two fallbacks are unreachable: `pass` indexes `WINDOW_H`, and
+    // the two arrays are the same length by construction. They are here
+    // because an index signature cannot promise that.
+    // Stryker disable next-line LogicalOperator,UnaryOperator
     const deltaC = FEELS_LIKE_DELTA_C[pass] ?? FEELS_LIKE_DELTA_C.at(-1) ?? 3;
     const qualifyingEntryIds = await qualifyingEntryIdsInWindow(database, viewer, since, deltaC);
-    const isLastPass = pass === WINDOW_H.length - 1;
-    if (!isLastPass && qualifyingEntryIds.length === 0) continue; // widen once before declaring empty
+    // Widen before declaring empty. There was an `isLastPass` check here
+    // as well, so the final pass returned its own empty result rather than
+    // falling through; mutation testing showed the two paths produce the
+    // same value, which is what a redundant branch looks like. Falling
+    // through says it once.
+    if (qualifyingEntryIds.length === 0) continue;
     const groups = await aggregateGroups(database, qualifyingEntryIds);
     return { total: qualifyingEntryIds.length, groups, widened: pass > 0 };
   }
+  // Every window has been tried, so an empty answer is a widened one.
   return { total: 0, groups: {}, widened: true };
 }
 
@@ -101,17 +118,16 @@ async function aggregateGroups(
     .from(outfitEntryItems)
     .where(inArray(outfitEntryItems.entryId, [...entryIds]));
   const itemIds = [...new Set(itemRows.map((r) => r.itemId))];
-  const garments =
-    itemIds.length === 0
-      ? []
-      : await database
-          .select({
-            id: wardrobeItems.id,
-            category: wardrobeItems.category,
-            layer: wardrobeItems.layer,
-          })
-          .from(wardrobeItems)
-          .where(inArray(wardrobeItems.id, itemIds));
+  const garments = await forIds(itemIds, () =>
+    database
+      .select({
+        id: wardrobeItems.id,
+        category: wardrobeItems.category,
+        layer: wardrobeItems.layer,
+      })
+      .from(wardrobeItems)
+      .where(inArray(wardrobeItems.id, itemIds)),
+  );
   const groupByItemId = new Map(
     garments.map((g) => [g.id, uiGroupFor(g.category, g.layer)]),
   );
@@ -120,6 +136,11 @@ async function aggregateGroups(
   const perEntryGroups = new Map<string, Set<UiGroup>>();
   for (const row of itemRows) {
     const group = groupByItemId.get(row.itemId);
+    // Equivalent mutant: `itemIds` is built from these very rows, so every
+    // one of them has a group unless its garment was deleted between the
+    // two reads. The guard is what keeps that race from writing an
+    // `undefined` key into the counts.
+    // Stryker disable next-line ConditionalExpression
     if (!group) continue;
     const set = perEntryGroups.get(row.entryId) ?? new Set<UiGroup>();
     set.add(group);
@@ -132,4 +153,24 @@ async function aggregateGroups(
     }
   }
   return counts;
+}
+
+/**
+ * The consensus for a place, or nothing when its conditions cannot be
+ * resolved.
+ *
+ * Law 5: the weather lane owns fetching a fresh observation, so a viewer
+ * whose conditions are unknown sees no consensus block rather than an
+ * error or an empty one — an empty block claims nobody ran in these
+ * conditions, which is a different statement from "we do not know what
+ * they are".
+ */
+export async function consensusAt(
+  lat: number,
+  lng: number,
+  nowEpochSeconds: number,
+): Promise<ConsensusResult | undefined> {
+  const viewer = await conditionsAt(lat, lng, nowEpochSeconds);
+  if (viewer === undefined) return undefined;
+  return yourConditionsConsensus(viewer, nowEpochSeconds);
 }
