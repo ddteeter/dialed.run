@@ -368,10 +368,20 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   nine entries are that shape, and a bare `stryker run` was quietly
   measuring 25 of the 86 files it reports as in scope. Only CI caught the
   rest, because it passes each entry as its own `--mutate` argument and the
-  *CLI* does split on commas. `npm run mutate` now goes through
-  `scripts/mutate.mjs`, which does locally exactly what CI does per shard.
-  While iterating, run one scope: `npm run mutate -- feed`, or
-  `npx stryker run --mutate "<the entry>"`.
+  *CLI* does split on commas. `npm run mutate` is now a loop over the array
+  that invokes stryker once per entry, exactly as CI does per shard. It
+  lives inline in `package.json`, as a `node -e` loop, and both halves of
+  that are load-bearing: a `scripts/*.mjs` file fails `npm run lint` on
+  `process` and `console`, because `eslint.config.js` defines Node globals
+  for nothing and is a forbidden zone; and a shell `while read` loop fails
+  knip, which reads `read` as an unlisted binary. While iterating on one
+  module, skip the loop: `npx stryker run --mutate "<the entry>"`.
+
+  **`eslint .` will OOM if `.stryker-tmp/` is lying around.** Each stryker
+  run leaves a full copy of the project in a sandbox directory there, and
+  nothing in the eslint ignore list excludes it — `npm run mutate` cleans
+  it up via `premutate`/`postmutate`, but a bare `npx stryker run` does
+  not. `rm -rf .stryker-tmp` before you trust a lint failure.
 
   It works because of two lines in `vitest.config.ts` that are easy to
   delete by accident: forwarding `__STRYKER_ACTIVE_MUTANT__` into the
