@@ -49,7 +49,6 @@ const NOT_YET_GLUE = new Set([
   // Route-file input schemas still declared inline, and (in runs) the
   // Strava OAuth CSRF state check, which is the one branch here that most
   // deserves a test.
-  "src/modules/closet/functions.ts",
   "src/modules/feed/functions.ts",
   "src/modules/runs/functions.ts",
 ]);

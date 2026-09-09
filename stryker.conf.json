@@ -17,6 +17,7 @@
   "mutate": [
     "src/lib/**/*.ts",
     "src/modules/auth/**/*.ts,!src/modules/auth/functions.ts,!src/modules/auth/index.ts,!src/modules/auth/require-user.ts",
+    "src/modules/closet/**/*.ts,!src/modules/closet/functions.ts",
     "src/modules/notifications/**/*.ts,!src/modules/notifications/functions.ts",
     "src/modules/ops/**/*.ts",
     "src/modules/products/**/*.ts,!src/modules/products/functions.ts",

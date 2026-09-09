@@ -56,6 +56,7 @@ export type ItemOrigin = WardrobeItemRow["origin"];
 
 const RETIRE_CANDIDATE_DAYS = 180;
 const SECONDS_PER_DAY = 86_400;
+const RETIRE_CANDIDATE_S = RETIRE_CANDIDATE_DAYS * SECONDS_PER_DAY;
 
 export class NotFoundError extends Error {
   constructor() {
@@ -85,7 +86,7 @@ function boolToSqlValue(value: boolean | undefined): boolean | SQL {
 /**
 Null means "not stated"; the column already reads as a boolean otherwise.
 */
-function statedFlag(value: boolean | null): boolean | undefined {
+export function statedFlag(value: boolean | null): boolean | undefined {
   return value ?? undefined;
 }
 
@@ -220,6 +221,16 @@ export async function createItem(
  * single one of them forgetting the `userId` clause is a cross-account
  * write, so it is not a phrase worth retyping.
  */
+/**
+ * Equivalent mutant either way: `inArray` would not match a null, so the
+ * defaults come back the same with or without this. Dropping the nulls is
+ * what keeps the `IN` list the size of the real work.
+ */
+function isLinked(productId: string | null): productId is string {
+  // Stryker disable next-line ConditionalExpression
+  return productId !== null;
+}
+
 function ownedItemWhere(userId: string, itemId: string) {
   return ownedBy(wardrobeItems, { id: itemId, userId });
 }
@@ -286,6 +297,11 @@ export async function deleteOrRetireItem(
     .select({ count: sql<number>`count(*)` })
     .from(outfitEntryItems)
     .where(eq(outfitEntryItems.itemId, itemId));
+  // Equivalent mutant on the optional chain: `count(*)` always answers with
+  // exactly one row. It is here because `noUncheckedIndexedAccess` types
+  // `rows[0]` as possibly absent, which is the compiler being right about
+  // arrays rather than about this query.
+  // Stryker disable next-line OptionalChaining
   const isReferenced = (row?.count ?? 0) > 0;
   if (isReferenced) {
     await db
@@ -314,7 +330,7 @@ export interface EffectiveAttributes {
   waterResistant: boolean | undefined;
 }
 
-function mergeWithProductDefaults(
+export function mergeWithProductDefaults(
   item: WardrobeItemRow,
   defaults: ProductAttributeDefaults | undefined,
 ): EffectiveAttributes {
@@ -326,7 +342,7 @@ function mergeWithProductDefaults(
   };
 }
 
-function effectiveTempRange(
+export function effectiveTempRange(
   item: WardrobeItemRow,
   effective: EffectiveAttributes,
 ): TempRange | undefined {
@@ -358,7 +374,7 @@ export interface ItemPerformance {
   pairsWith: string[];
 }
 
-function classifyPerformance(
+export function classifyPerformance(
   summary: PerformanceSummary,
   nowSeconds: number,
 ): PerformanceBucket[] {
@@ -373,17 +389,19 @@ function classifyPerformance(
   if (summary.verdictCount >= 2 && summary.dialedCount === 0) {
     buckets.push("never_worked");
   }
-  const daysSinceWorn =
-    summary.lastWornAt === undefined
-      ? undefined
-      : (nowSeconds - summary.lastWornAt) / SECONDS_PER_DAY;
-  if (daysSinceWorn !== undefined && daysSinceWorn > RETIRE_CANDIDATE_DAYS) {
+  const { lastWornAt } = summary;
+  // Equivalent mutant on the `undefined` check: an item that was never worn
+  // gives `NaN` seconds, and `NaN > anything` is already false. It is here
+  // so the line reads as arithmetic rather than as a comparison against a
+  // missing value.
+  // Stryker disable next-line ConditionalExpression
+  if (lastWornAt !== undefined && nowSeconds - lastWornAt > RETIRE_CANDIDATE_S) {
     buckets.push("retire_candidate");
   }
   return buckets;
 }
 
-interface EntryItemRow {
+export interface EntryItemRow {
   entryId: string;
   itemId: string;
   createdAt: number;
@@ -411,7 +429,7 @@ async function fetchUserEntryItemRows(
 
 /** Groups the flat entry/item rows into per-item summaries and, alongside,
  * the per-entry item lists co-occurrence needs. */
-function summarizeByItem(rows: EntryItemRow[]): {
+export function summarizeByItem(rows: EntryItemRow[]): {
   summaries: Map<string, PerformanceSummary>;
   entryItems: Map<string, string[]>;
 } {
@@ -447,7 +465,7 @@ function summarizeByItem(rows: EntryItemRow[]): {
 /** Co-occurrence counts per item, from the per-entry item lists. Isolated in
  * its own function so the inner pairwise loop's `continue` never nests
  * inside a caller's loop (unicorn/no-break-in-nested-loop). */
-function buildCoOccurrence(
+export function buildCoOccurrence(
   entryItems: Map<string, string[]>,
 ): Map<string, Map<string, number>> {
   const coOccurrence = new Map<string, Map<string, number>>();
@@ -482,6 +500,10 @@ function popMax(remaining: Map<string, number>): string | undefined {
     bestCount = count;
     bestId = id;
   }
+  // Equivalent mutant: deleting `undefined` from the map removes nothing,
+  // so the guard changes no behaviour. It is here because `delete` takes a
+  // key, and `undefined` is not one.
+  // Stryker disable next-line ConditionalExpression
   if (bestId !== undefined) remaining.delete(bestId);
   return bestId;
 }
@@ -491,7 +513,7 @@ function popMax(remaining: Map<string, number>): string | undefined {
  * lint prefers Array#toSorted, which needs an ES2023 lib not enabled here;
  * a bounded selection avoids the question entirely — limit is always 2).
  */
-function topPairIds(counts: Map<string, number>, limit: number): string[] {
+export function topPairIds(counts: Map<string, number>, limit: number): string[] {
   const remaining = new Map(counts);
   const result: string[] = [];
   for (let index = 0; index < limit; index += 1) {
@@ -561,7 +583,7 @@ export interface ClosetListing {
   genericCount: number;
 }
 
-function shouldIncludeByConditionFilters(
+export function shouldIncludeByConditionFilters(
   effective: EffectiveAttributes,
   filters: ClosetFilters,
 ): boolean {
@@ -577,7 +599,7 @@ function shouldIncludeByConditionFilters(
   );
 }
 
-function shouldIncludeByTempFilter(
+export function shouldIncludeByTempFilter(
   tempRange: TempRange | undefined,
   filters: ClosetFilters,
 ): boolean {
@@ -585,23 +607,20 @@ function shouldIncludeByTempFilter(
     return true;
   }
   if (!tempRange) return false;
-  // An open end always satisfies its side of the overlap: a garment with no
-  // upper bound is appropriate however warm the filter asks for.
-  if (
-    filters.minTempC !== undefined &&
-    tempRange.highC !== undefined &&
-    tempRange.highC < filters.minTempC
-  ) {
-    return false;
-  }
-  if (
-    filters.maxTempC !== undefined &&
-    tempRange.lowC !== undefined &&
-    tempRange.lowC > filters.maxTempC
-  ) {
-    return false;
-  }
-  return true;
+  // Open ends as infinities rather than as `!== undefined` guards.
+  //
+  // "An open end always satisfies its side of the overlap" was written as a
+  // comment above three `!== undefined` checks, and mutation testing showed
+  // why that is not the same as saying it: `x < undefined` is already
+  // false, so every one of those guards could be deleted without changing
+  // an answer. They were load-bearing for the compiler and decorative at
+  // runtime. Said this way it is one overlap test, and every part of it is
+  // reachable.
+  const askedFrom = filters.minTempC ?? -Infinity;
+  const askedTo = filters.maxTempC ?? Infinity;
+  const goodFrom = tempRange.lowC ?? -Infinity;
+  const goodTo = tempRange.highC ?? Infinity;
+  return goodTo >= askedFrom && goodFrom <= askedTo;
 }
 
 function toItemView(
@@ -620,7 +639,7 @@ function toItemView(
   };
 }
 
-function shouldIncludeByPerformanceFilter(
+export function shouldIncludeByPerformanceFilter(
   view: ClosetItemView,
   filters: ClosetFilters,
 ): boolean {
@@ -647,13 +666,9 @@ export async function listItems(
       ),
     );
 
-  const productIds = [
-    ...new Set(
-      rows
-        .map((row) => row.productId)
-        .filter((id): id is string => id !== null),
-    ),
-  ];
+  // Stryker disable next-line MethodExpression
+  const linkedProductIds = rows.map((row) => row.productId).filter(isLinked);
+  const productIds = [...new Set(linkedProductIds)];
   const [defaultsByProduct, performanceByItem] = await Promise.all([
     getProductAttributeDefaultsBulk(db, productIds),
     computeUserPerformance(db, userId),
@@ -664,6 +679,10 @@ export async function listItems(
     .map((row) =>
       toItemView(
         row,
+        // Equivalent mutant: `Map#get` of a null key answers undefined, so
+        // both arms agree. The check says the intent — an unlinked item has
+        // no defaults to look up — rather than relying on that.
+        // Stryker disable next-line ConditionalExpression
         row.productId === null
           ? undefined
           : defaultsByProduct.get(row.productId),
@@ -691,6 +710,10 @@ export async function getItemDetail(
 ): Promise<ItemDetail> {
   const item = await getOwnedItem(db, userId, itemId);
   const [productDefaults, performanceByItem] = await Promise.all([
+    // Equivalent mutant: looking a null product up answers undefined
+    // anyway. The check says the intent — an unlinked item has no defaults
+    // — and saves the query.
+    // Stryker disable next-line ConditionalExpression
     item.productId === null
       ? Promise.resolve(undefined)
       : getProductAttributeDefaults(db, item.productId),
@@ -714,6 +737,9 @@ export async function getItemsByIds(
   userId: string,
   itemIds: string[],
 ): Promise<WardrobeItemRow[]> {
+  // Equivalent mutant: an empty `inArray` matches nothing, so the query
+  // would answer with the same empty list. The return saves the query.
+  // Stryker disable next-line ConditionalExpression
   if (itemIds.length === 0) return [];
   return db
     .select()
@@ -755,7 +781,11 @@ export async function withResolvedProduct(
     createdBy,
   });
   const allowed: readonly string[] = garmentTypesFor(garment.category);
+  // Equivalent mutant on the null check: `allowed.includes(null)` is already
+  // false, so dropping it changes no answer. It is here because `includes`
+  // takes a string.
   const inherited =
+    // Stryker disable next-line ConditionalExpression
     product.type !== null && allowed.includes(product.type)
       ? product.type
       : undefined;
