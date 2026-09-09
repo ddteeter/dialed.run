@@ -101,6 +101,11 @@ export async function unreadNotificationCount(
     .select({ n: count() })
     .from(notifications)
     .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+  // Unreachable fallback: `count()` always answers with exactly one row.
+  // It is here because `noUncheckedIndexedAccess` types `rows[0]` as
+  // possibly undefined, which is the compiler being right about arrays in
+  // general rather than about this query.
+  // Stryker disable next-line OptionalChaining
   return rows[0]?.n ?? 0;
 }
 

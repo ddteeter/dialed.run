@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
@@ -12,7 +13,7 @@ import {
   searchBrands,
   searchProducts,
 } from "../../src/modules/products/service";
-import { brands } from "../../src/db/schema-core";
+import { brands, products } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
 
 function db() {
@@ -135,5 +136,157 @@ describe("products: the curated brand seed", () => {
     const client = db();
     const upper = await searchBrands(client, "NEW BAL", 5);
     expect(upper.map((brand) => brand.name)).toContain("New Balance");
+  });
+});
+
+/**
+ * The identity rules, at the edges.
+ *
+ * Twenty-one mutants survived here, and they are the kind that produce
+ * wrong rows rather than crashes: the `LIKE` escaping could be deleted
+ * (making a brand with an underscore in it match everything), the trim
+ * could be dropped, `seeded` could flip, and the created-at stamp could be
+ * milliseconds. Every existing test asked a question that all of those
+ * still answered correctly.
+ */
+
+describe("prefix autocomplete refuses to guess", () => {
+  it("returns nothing for a prefix that normalises away", async () => {
+    // "!!!" has no letters or digits, so there is no prefix to search for.
+    // Without the guard this becomes `LIKE '%'` — every brand in the table,
+    // presented as if the user had typed something that matched.
+    const client = db();
+    expect(await searchBrands(client, "!!!")).toStrictEqual([]);
+    expect(await searchBrands(client, "")).toStrictEqual([]);
+    expect(await searchBrands(client, " ".repeat(3))).toStrictEqual([]);
+  });
+
+  it("returns nothing for a product prefix that normalises away", async () => {
+    const client = db();
+    const brand = await createOrGetBrand(client, "Empty Prefix Brand");
+    await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Something",
+      createdBy: newUlid(),
+    });
+    expect(await searchProducts(client, brand.id, "###")).toStrictEqual([]);
+  });
+
+  it("never lets a LIKE metacharacter the user typed reach the query", async () => {
+    // `%` and `_` are LIKE wildcards, and this is the assertion that says
+    // why no escaping is needed: normalisation folds them to a space long
+    // before the pattern is built. A user typing "100%" gets the brands
+    // whose names begin "100", not every brand in the table.
+    const client = db();
+    await createOrGetBrand(client, "Wildcard 100% Wool");
+    await createOrGetBrand(client, "Wildcard Zulu");
+
+    // A live `%` here would end the pattern at "wildcard 100" with a
+    // wildcard the user supplied, and the Zulu row would come back too.
+    const results = await searchBrands(client, "wildcard 100%");
+    expect(results.map((brand) => brand.name)).toStrictEqual([
+      "Wildcard 100% Wool",
+    ]);
+  });
+});
+
+describe("what a created row records", () => {
+  it("stores the brand name trimmed, and not as part of the seed", async () => {
+    // `seeded` is what the curated-list assertions count. A user-typed
+    // brand joining that set would inflate it silently.
+    const client = db();
+    const brand = await createOrGetBrand(client, "  Padded Brand  ");
+
+    expect(brand.name).toBe("Padded Brand");
+    expect(brand.seeded).toBe(false);
+  });
+
+  it("stores the product name trimmed, unenriched, and stamped in seconds", async () => {
+    const client = db();
+    const brand = await createOrGetBrand(client, "Stamp Brand");
+    const before = Math.floor(Date.now() / 1000);
+
+    const product = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "  Padded Product  ",
+      createdBy: newUlid(),
+    });
+
+    expect(product.name).toBe("Padded Product");
+    // Lane 107's enrichment ladder reads this to decide what to fetch; a
+    // product that claims to be enriched is one it will never look at.
+    expect(product.extractionStatus).toBe("none");
+    expect(product.createdAt).toBeGreaterThanOrEqual(before - 5);
+    expect(product.createdAt).toBeLessThanOrEqual(before + 5);
+  });
+
+  it("says which name it could not resolve", async () => {
+    await expect(createOrGetBrand(db(), "!!!")).rejects.toThrow(/Brand name/);
+    const client = db();
+    const brand = await createOrGetBrand(client, "Named Failure Brand");
+    await expect(
+      createOrGetProduct(client, {
+        brandId: brand.id,
+        name: "***",
+        createdBy: newUlid(),
+      }),
+    ).rejects.toThrow(/Product name/);
+  });
+});
+
+describe("attribute defaults distinguish false from not-stated", () => {
+  it("keeps `false` as false and null as undefined", async () => {
+    // `null` means the product page never said. `false` means it said no.
+    // A garment inherits defaults where its own column is NULL, so
+    // collapsing the two turns "unknown" into "definitely not".
+    const client = db();
+    const brand = await createOrGetBrand(client, "Attribute Brand");
+    const { id } = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Attribute Product",
+      createdBy: newUlid(),
+    });
+    await client
+      .update(products)
+      .set({ windResistant: true, waterResistant: false })
+      .where(eq(products.id, id));
+
+    const defaults = await getProductAttributeDefaults(client, id);
+
+    expect(defaults?.windResistant).toBe(true);
+    expect(defaults?.waterResistant).toBe(false);
+  });
+
+  it("reports an unstated attribute as undefined, not null", async () => {
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: "Unstated Brand",
+      productName: "Unstated Product",
+      createdBy: newUlid(),
+    });
+
+    const defaults = await getProductAttributeDefaults(client, product.id);
+
+    expect(defaults?.windResistant).toBeUndefined();
+    expect(defaults?.waterResistant).toBeUndefined();
+  });
+
+  it("answers about several products in one call", async () => {
+    const client = db();
+    const brand = await createOrGetBrand(client, "Bulk Brand");
+    const userId = newUlid();
+    const ids: string[] = [];
+    for (const name of ["Bulk One", "Bulk Two"]) {
+      const row = await createOrGetProduct(client, {
+        brandId: brand.id,
+        name,
+        createdBy: userId,
+      });
+      ids.push(row.id);
+    }
+
+    const defaults = await getProductAttributeDefaultsBulk(client, ids);
+
+    expect(new Set(defaults.keys())).toStrictEqual(new Set(ids));
   });
 });

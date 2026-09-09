@@ -339,9 +339,18 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 - **`stryker.conf.json`'s `mutate` array is the ratchet.** Every glob in
   it has been paid down to 100% and `break: 100` keeps it there: `npm run
   mutate` exits non-zero the moment a change stops a mutant being killed.
-  Today it is `src/lib/**/*.ts` and `src/modules/weather/**/*.ts`. Adding
-  code under one of those globs means adding tests that *observe* its
-  behaviour, not tests that merely execute it.
+  Today it holds `src/lib` and the `weather`, `ops`, `products` and
+  `notifications` modules. Adding code under one of those globs means
+  adding tests that *observe* its behaviour, not tests that merely execute
+  it.
+
+  A `!src/modules/<m>/functions.ts` negation inside a scope entry is not an
+  exemption you may copy: a server-function module cannot be imported in
+  the workers pool at all, so it cannot be mutated, and
+  `test/architecture/server-functions-are-glue.test.ts` is what keeps that
+  exclusion honest — such a file may import, wire and delegate, and may not
+  branch, loop, throw or declare a schema. Input schemas go in `inputs.ts`
+  next door, where a test can reach them.
 
   `.github/workflows/mutation.yml` **reads that array** and runs one CI
   shard per entry — never restate the list there, or local and CI drift and
@@ -356,8 +365,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **The rest of `src/modules` is not covered: 43.98%, 1,793 mutants
-  surviving or uncovered.** That is why `"stryker"` stays `off` in
+  **`closet`, `feed`, `runs` and `auth` are not covered.** The whole of
+  `src/modules` measured 43.98% — 1,793 mutants surviving or uncovered —
+  and those four are what remains of it. That is why `"stryker"` stays
+  `off` in
   `guardrails.config.json`: the commit-gate analyzer scopes to *every*
   changed TypeScript file, so turning it on would block the next commit
   touching a module with a hundred findings it did not cause. Paying that
