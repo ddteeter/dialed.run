@@ -12,6 +12,7 @@ import { and, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
+import { ulidSchema } from "../../lib/ids";
 import {
   isAllowedPhotoType,
   maxPhotoBytes,
@@ -31,7 +32,7 @@ const SIZE_TARGETS: Record<PhotoSize, number> = {
   full: 1600,
 };
 
-function isPhotoSize(value: string): value is PhotoSize {
+export function isPhotoSize(value: string): value is PhotoSize {
   const sizes: readonly string[] = photoSizes;
   return sizes.includes(value);
 }
@@ -42,7 +43,7 @@ export class PhotoValidationError extends Error {}
  * Exhaustive over AllowedPhotoType, so adding a type to lib is a compile
  * error here rather than a runtime throw on the first upload of it.
  */
-function extensionFor(contentType: string): string {
+export function extensionFor(contentType: string): string {
   if (!isAllowedPhotoType(contentType)) {
     throw new PhotoValidationError("Photo must be JPEG, PNG, or WEBP.");
   }
@@ -71,17 +72,43 @@ export function validatePhoto(contentType: string, byteLength: number): void {
   }
 }
 
-function fitWithin(
+export function fitWithin(
   width: number,
   height: number,
   max: number,
 ): { width: number; height: number } {
+  // Equivalent mutants on both `<=`: they differ from `<` only when a side
+  // equals `max`, and that side is then the longest, so `scale` is exactly
+  // 1 and the arithmetic below is the identity. What the guard really
+  // prevents is scaling *up* — an image smaller than the box on both sides.
+  // Stryker disable next-line EqualityOperator
   if (width <= max && height <= max) return { width, height };
   const scale = max / Math.max(width, height);
   return {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
   };
+}
+
+/**
+ * Runs `use`, then hands the WASM image's memory back — whether `use`
+ * returned or threw.
+ *
+ * One helper rather than two `try/finally` blocks, because a release is
+ * the kind of thing that is invisible when it stops happening: nothing in
+ * a test can see a leak, and nothing in production sees it either until an
+ * isolate runs out of memory mid-upload. Written down once, it can at
+ * least be asserted once.
+ */
+export async function withReleased<Image extends { free: () => void }, Result>(
+  image: Image,
+  use: (image: Image) => Promise<Result>,
+): Promise<Result> {
+  try {
+    return await use(image);
+  } finally {
+    image.free();
+  }
 }
 
 export function photoKeyFor(userId: string, itemId: string): string {
@@ -118,31 +145,21 @@ export async function uploadItemPhoto(
     httpMetadata: { contentType },
   });
 
-  const input = PhotonImage.new_from_byteslice(bytes);
-  try {
+  await withReleased(PhotonImage.new_from_byteslice(bytes), async (input) => {
     const width = input.get_width();
     const height = input.get_height();
     for (const size of photoSizes) {
-      const target = SIZE_TARGETS[size];
-      const dims = fitWithin(width, height, target);
-      const resized = resize(
-        input,
-        dims.width,
-        dims.height,
-        SamplingFilter.Lanczos3,
+      const dims = fitWithin(width, height, SIZE_TARGETS[size]);
+      await withReleased(
+        resize(input, dims.width, dims.height, SamplingFilter.Lanczos3),
+        async (resized) => {
+          await env.MEDIA.put(`${keyPrefix}/${size}.webp`, resized.get_bytes_webp(), {
+            httpMetadata: { contentType: "image/webp" },
+          });
+        },
       );
-      try {
-        const webpBytes = resized.get_bytes_webp();
-        await env.MEDIA.put(`${keyPrefix}/${size}.webp`, webpBytes, {
-          httpMetadata: { contentType: "image/webp" },
-        });
-      } finally {
-        resized.free();
-      }
     }
-  } finally {
-    input.free();
-  }
+  });
 
   await db
     .update(wardrobeItems)
@@ -150,6 +167,65 @@ export async function uploadItemPhoto(
     .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
 
   return { photoKey: keyPrefix };
+}
+
+/**
+ * A photo upload's outcome, kept apart from the item save.
+ *
+ * Requirement 8 (degrade, don't fail): the item row is already written by
+ * the time a photo is attached, so a decode/resize/R2 failure is reported
+ * as its own result rather than as a form-wide error — the form offers a
+ * photo-specific retry and the item stays intact.
+ */
+export type UploadPhotoResult =
+  | { ok: true; result: PhotoUploadResult }
+  | { ok: false; error: string };
+
+/**
+ * The multipart upload path: pull the item and the file out of the form,
+ * and turn any failure into a reportable result.
+ *
+ * In this file rather than in `functions.ts` because every line of it is a
+ * decision — is there a file, did validation pass, what does the runner
+ * get told when it did not — and `functions.ts` cannot be imported by a
+ * test (D-41).
+ */
+export async function uploadPhotoFromForm(
+  db: Db,
+  userId: string,
+  form: FormData,
+): Promise<UploadPhotoResult> {
+  const itemId = ulidSchema.parse(form.get("itemId"));
+  const photo = form.get("photo");
+  if (!(photo instanceof File)) {
+    return { ok: false, error: "No photo file provided." };
+  }
+  try {
+    // Equivalent mutant, and the guard stays: `uploadItemPhoto` validates
+    // the same rules and raises the same sentences, so removing this
+    // changes no answer. What it changes is when — this runs against the
+    // *declared* size, before `arrayBuffer()` buffers the whole file into
+    // the isolate. An oversized upload is refused without being read.
+    // Stryker disable next-line CallExpression
+    validatePhoto(photo.type, photo.size);
+    const bytes = new Uint8Array(await photo.arrayBuffer());
+    const result = await uploadItemPhoto(db, userId, itemId, bytes, photo.type);
+    return { ok: true, result };
+  } catch (error) {
+    return { ok: false, error: reasonFrom(error) };
+  }
+}
+
+/**
+ * A sentence to show the runner, from whatever reached the `catch`.
+ *
+ * Its own function so both halves can be asserted: everything this file
+ * throws is a `PhotoValidationError` and says what to do about it, but a
+ * `catch` catches anything, and an upload that failed with no reason at
+ * all is the one message nobody can act on.
+ */
+export function reasonFrom(error: unknown): string {
+  return error instanceof Error ? error.message : "Photo upload failed.";
 }
 
 /**
@@ -163,10 +239,15 @@ export async function uploadItemPhoto(
  * quotes and the weak-comparison prefix, and gives up on the multi-etag
  * form (`a, b`) rather than guessing, since R2 takes a single value.
  */
-function unquoteEtag(value: string | null | undefined): string | undefined {
+export function unquoteEtag(
+  value: string | null | undefined,
+): string | undefined {
   if (value === null || value === undefined) return undefined;
   const trimmed = value.trim().replace(/^W\//, "");
-  if (trimmed === "" || trimmed === "*" || trimmed.includes(",")) return undefined;
+  // No empty check here: an empty value falls through to the one at the
+  // bottom, which has to exist anyway for `""`. Mutation testing found the
+  // first one unkillable, which is what a redundant condition looks like.
+  if (trimmed === "*" || trimmed.includes(",")) return undefined;
   const unquoted = trimmed.replaceAll(/^"|"$/g, "");
   return unquoted === "" ? undefined : unquoted;
 }
@@ -194,6 +275,10 @@ export async function getItemPhotoObject(
   const key = `${item.photoKey}/${size}.webp`;
   const conditionalEtag = unquoteEtag(ifNoneMatch);
   const object =
+    // Equivalent mutant: R2 treats `etagDoesNotMatch: undefined` as no
+    // condition at all, so both arms answer the same for a caller that
+    // sent no usable header. The branch is here to say so out loud.
+    // Stryker disable next-line ConditionalExpression
     conditionalEtag === undefined
       ? await env.MEDIA.get(key)
       : await env.MEDIA.get(key, {

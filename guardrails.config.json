@@ -97,6 +97,36 @@
       "key": "src/modules/auth/create-auth.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, with the evidence recorded at the site: a wrong *recognised* drizzle provider fails loudly (built with \"mysql\", signing up gives \"Failed to create user\"), but an unrecognised one falls back to no dialect-specific handling, which is what D1 through drizzle wants anyway. So \"\" and \"sqlite\" cannot be told apart from outside, while the mistake that matters can.",
       "count": 1
+    },
+    {
+      "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
+      "reason": "Equivalent mutants on both `<=` in `fitWithin`: they differ from `<` only when a side equals `max`, and that side is then the longest, so the scale factor is exactly 1 and the arithmetic below is the identity. What the guard really prevents is scaling *up* an image smaller than the box on both sides, which a test does assert.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: R2 treats `etagDoesNotMatch: undefined` as no condition at all, so both arms of the conditional-request branch answer the same for a caller that sent no usable If-None-Match. The branch is there to say so out loud.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Seven equivalent guards, each with its proof at the site: a never-worn item gives NaN seconds and `NaN > threshold` is already false; deleting `undefined` from a Map removes nothing; an empty `inArray` matches nothing (twice \u2014 the id list and the product-defaults lookup); `allowed.includes(null)` is already false; `Map#get` of a null key answers undefined; and filtering nulls out of an `IN` list changes no match. Every one exists because the operation below it takes a value the type system will not let be null, and every one saves a query or says an intent that the runtime would otherwise leave implicit.",
+      "count": 7
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Unreachable, proof at the site: `count(*)` always answers with exactly one row. The optional chain is there because `noUncheckedIndexedAccess` types `rows[0]` as possibly absent, which is the compiler being right about arrays rather than about this query.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
+      "reason": "Equivalent mutant: dropping the null filter leaves nulls in the `IN` list, which matches nothing, so the defaults come back the same. Filtering is what keeps the list the size of the real work.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line CallExpression",
+      "reason": "Equivalent mutant with a reason to keep the code: `uploadItemPhoto` re-checks the same rules and raises the same sentences, so removing this call changes no answer. What it changes is when \u2014 it runs against the declared size, before `arrayBuffer()` buffers the whole file into the isolate, so an oversized upload is refused without being read.",
+      "count": 1
     }
   ]
 }
