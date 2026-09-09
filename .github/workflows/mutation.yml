@@ -1,25 +1,29 @@
 name: Mutation
 
-# Only when the pure modules or their tests change. `src/lib` is at 100%
-# and this is the ratchet that keeps it there — `stryker.conf.json` breaks
-# the build below 100, so a change that stops a mutant being killed fails
-# here rather than being noticed months later.
+# The ratchet on what is already clean.
+#
+# `stryker.conf.json`'s `mutate` list is the scope that has been paid down
+# to 100%, and its `break: 100` fails this job the moment a change stops a
+# mutant being killed. Files outside that list are not mutated here at all
+# — `src/modules` still carries about 1,700 surviving and uncovered
+# mutants, and a job that reported them every run would be noise nobody
+# reads. They join the list a module at a time, as each is finished.
 #
 # Deliberately NOT the guardrails commit-gate analyzer (`"stryker": "off"`
 # in guardrails.config.json). That one scopes to *every* changed TypeScript
-# file, and `src/modules` is at ~50% — turning it on would block the next
-# commit touching a module with a hundred findings it did not cause. This
-# job holds the line where the line is already clean.
+# file, so turning it on today would block the next commit touching a
+# module with findings it did not cause.
 #
-# Not in the branch-protection required set, for the same reason it is path
-# filtered: a PR that touches no lib file should not wait on it.
+# Not in the branch-protection required set: it is the slowest thing in CI
+# and a PR that touches nothing it covers should not wait on it.
 on:
   pull_request:
     paths:
-      - "src/lib/**"
-      - "test/lib/**"
+      - "src/**"
+      - "test/**"
       - "stryker.conf.json"
       - "vitest.config.ts"
+      - ".github/workflows/mutation.yml"
 
 permissions:
   contents: read
@@ -29,9 +33,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mutate:
-    name: Mutation score (src/lib)
+  # The scopes are read from stryker.conf.json rather than restated here.
+  # A hand-kept copy of the list is a rival truth: the local `npm run
+  # mutate` and CI would drift, and the drift would show up as CI passing
+  # on a module nobody was actually mutating.
+  scopes:
+    name: Read the ratcheted scopes
     runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.read.outputs.list }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: read
+        run: |
+          echo "list=$(node -p 'JSON.stringify(require("./stryker.conf.json").mutate)')" >> "$GITHUB_OUTPUT"
+
+  mutate:
+    name: "Mutation score: ${{ matrix.scope }}"
+    needs: scopes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: ${{ fromJSON(needs.scopes.outputs.list) }}
     steps:
       - uses: actions/checkout@v5
 
@@ -43,6 +67,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ~6 minutes. Slower than the rest of CI, which is why it is scoped
-      # to the files whose score it protects.
-      - run: npm run mutate
+      # Sharded by scope because this is minutes, not seconds, and the
+      # whole ratcheted set only gets bigger. `--mutate` narrows what is
+      # mutated; with no incremental file present the reported score — and
+      # so the `break: 100` threshold — covers exactly this scope.
+      - run: npx stryker run --mutate "${{ matrix.scope }}"
