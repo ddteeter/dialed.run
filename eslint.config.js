@@ -89,6 +89,11 @@ export default tseslint.config(
       "dist/",
       "coverage/",
       ".guardrails/",
+      // Every stryker run leaves a full copy of the project in a sandbox
+      // under here, so linting it means linting the repo N+1 times — which
+      // OOMs the eslint process rather than failing cleanly. Gitignored,
+      // but flat config does not read .gitignore.
+      ".stryker-tmp/",
       "src/routeTree.gen.ts",
       "worker-configuration.d.ts",
       "design/",

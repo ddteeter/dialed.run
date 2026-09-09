@@ -377,11 +377,11 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   knip, which reads `read` as an unlisted binary. While iterating on one
   module, skip the loop: `npx stryker run --mutate "<the entry>"`.
 
-  **`eslint .` will OOM if `.stryker-tmp/` is lying around.** Each stryker
-  run leaves a full copy of the project in a sandbox directory there, and
-  nothing in the eslint ignore list excludes it — `npm run mutate` cleans
-  it up via `premutate`/`postmutate`, but a bare `npx stryker run` does
-  not. `rm -rf .stryker-tmp` before you trust a lint failure.
+  `.stryker-tmp/` is in the eslint ignore list, and needs to be: each
+  stryker run leaves a full copy of the project in a sandbox there, and
+  linting the repo N+1 times OOMs the eslint process rather than failing
+  cleanly. It is gitignored too, but flat config does not read
+  `.gitignore`.
 
   It works because of two lines in `vitest.config.ts` that are easy to
   delete by accident: forwarding `__STRYKER_ACTIVE_MUTANT__` into the
