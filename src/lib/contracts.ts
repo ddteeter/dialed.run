@@ -6,13 +6,25 @@ import { z } from "zod";
 
 // ---- Common ---------------------------------------------------------------
 
-export const httpsUrlSchema = z.string().refine((value) => {
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
-}, "must be an https:// URL");
+/**
+ * An https URL, checked by parsing rather than by pattern.
+ *
+ * `URL.parse` returns null instead of throwing, which is why there is no
+ * try/catch here any more. The old version wrapped `new URL` and returned
+ * false from a `catch` — behaviourally identical, but the catch body was a
+ * mutant nothing could kill (an empty catch returns undefined, which zod
+ * rejects exactly as false does) and a Stryker directive cannot attach
+ * above a `} catch {`. Removing the construct beat exempting it.
+ *
+ * A scheme allowlist rather than a prefix check because the value reaches
+ * an `href`: `javascript:` parses as a URL perfectly well.
+ */
+export const httpsUrlSchema = z
+  .string()
+  .refine(
+    (value) => URL.parse(value)?.protocol === "https:",
+    "must be an https:// URL",
+  );
 
 // ---- Garments: discriminated union on category ----------------------------
 
@@ -198,7 +210,10 @@ export const uiGroupLabels: Record<UiGroup, string> = {
  */
 export function uiGroupFor(
   category: Garment["category"],
-  layer: z.infer<typeof layerSchema> | null,
+  // `null` because a drizzle row gives null for an unset column, and
+  // `undefined` because a parsed `Garment` gives that for the same fact.
+  // Both mean "no layer" and the function does not care which.
+  layer: z.infer<typeof layerSchema> | null | undefined,
 ): UiGroup {
   if (layer === "outer") return "outer";
   switch (category) {

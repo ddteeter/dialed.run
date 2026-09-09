@@ -21,5 +21,17 @@
       "kind": "cast-any",
       "reason": "Read-only design handoff prototype (CLAUDE.md: design/ is an import archive, never edited here). Nothing compiles it — eslint ignores design/ and tsconfig excludes it — so the casts are the design tool's, not this repo's. Ported code goes to src/ui/ and gets no grant."
     }
+  ],
+  "sanctionedSuppressions": [
+    {
+      "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
+      "reason": "Equivalent mutant, proof at the site: a heavy OUTER layer has no lower bound (nothing goes over it), so estimateTempRange drops this floor before returning and no input can distinguish -4 from +4. Hoisted to a named constant because a Stryker directive cannot attach inside an object literal.",
+      "count": 1
+    },
+    {
+      "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant, proof at the site: removing the undefined-weight guard changes no behaviour, because an undefined weight indexes every table to undefined and the next guard returns the same thing. It is load-bearing for the compiler, not the runtime — without it `Weight | undefined` cannot index `Record<Weight, Band>`.",
+      "count": 1
+    }
   ]
 }

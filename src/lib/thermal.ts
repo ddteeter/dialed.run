@@ -20,7 +20,18 @@ export interface TempRange {
 /**
 Fahrenheit -> Celsius, for the tables below only.
 */
-function f(lowF: number, highF: number): TempRange {
+/**
+ * A table entry, which always has both ends — the open-ended cases are a
+ * property of the *answer*, decided in `estimateTempRange`, not of the
+ * underlying band. Typing it separately from `TempRange` is what lets the
+ * code below read `range.lowC` without a null check that can never fail.
+ */
+interface Band {
+  lowC: number;
+  highC: number;
+}
+
+function f(lowF: number, highF: number): Band {
   return {
     lowC: Math.round(((lowF - 32) * 5) / 9),
     highC: Math.round(((highF - 32) * 5) / 9),
@@ -42,7 +53,7 @@ function f(lowF: number, highF: number): TempRange {
  * is wrong and cannot do the same for 13-21°C. So the literals are the
  * ones a reviewer can judge, and `f()` converts once at module load.
  */
-const BODY_RANGES: Record<"regular" | "outer", Record<Weight, TempRange>> = {
+const BODY_RANGES: Record<"regular" | "outer", Record<Weight, Band>> = {
   regular: {
     light: f(55, 79),
     mid: f(39, 59),
@@ -55,7 +66,21 @@ const BODY_RANGES: Record<"regular" | "outer", Record<Weight, TempRange>> = {
   },
 };
 
-const BOTTOM_RANGES: Record<"regular" | "outer", Record<Weight, TempRange>> = {
+/**
+ * Written out rather than inlined, so its equivalence directive has a
+ * statement to attach to — inside an object literal a `disable next-line`
+ * binds to nothing.
+ *
+ * Equivalent under mutation, and unobservable on purpose: a heavy *outer*
+ * layer has no lower bound (nothing goes over it), so `estimateTempRange`
+ * drops this floor before returning and no input can distinguish -4 from
+ * +4. The number stays because a reviewer reads these tables in Fahrenheit
+ * and a blank would read as an omission rather than a decision.
+ */
+// Stryker disable next-line UnaryOperator
+const HEAVY_OUTER_BOTTOM_FLOOR_F = -4;
+
+const BOTTOM_RANGES: Record<"regular" | "outer", Record<Weight, Band>> = {
   regular: {
     light: f(50, 86),
     mid: f(28, 54),
@@ -64,11 +89,11 @@ const BOTTOM_RANGES: Record<"regular" | "outer", Record<Weight, TempRange>> = {
   outer: {
     light: f(36, 54),
     mid: f(18, 43),
-    heavy: f(-4, 32),
+    heavy: f(HEAVY_OUTER_BOTTOM_FLOOR_F, 32),
   },
 };
 
-const ACCESSORY_RANGES: Partial<Record<Category, Record<Weight, TempRange>>> = {
+const ACCESSORY_RANGES: Partial<Record<Category, Record<Weight, Band>>> = {
   headwear: {
     light: f(39, 57),
     mid: f(21, 43),
@@ -117,8 +142,11 @@ const ALWAYS_WORN: ReadonlySet<Category> = new Set<Category>([
   "top",
   "bottom",
   "socks",
-  "shoes",
 ]);
+// "shoes" was in this set and could never be read: shoes have no
+// ACCESSORY_RANGES entry, so `estimateTempRange` returns undefined at the
+// `range === undefined` guard before it ever asks. Mutation testing found
+// it — replacing the string with "" changed nothing.
 
 /**
  * The attribute-derived temp band, or undefined when the attributes cannot
@@ -138,9 +166,15 @@ const ALWAYS_WORN: ReadonlySet<Category> = new Set<Category>([
  * Only the middle of the scale is genuinely bounded both ways.
  */
 export function estimateTempRange(input: ThermalInput): TempRange | undefined {
+  // Equivalent under mutation, and kept anyway. Removing it changes no
+  // behaviour: an undefined weight indexes every table to `undefined` and
+  // the `range === undefined` guard below returns the same thing. It is
+  // load-bearing for the *compiler* — without it `input.weight` is
+  // `Weight | undefined` and cannot index `Record<Weight, Band>`.
+  // Stryker disable next-line ConditionalExpression
   if (input.weight === undefined) return undefined;
   const isOuter = input.layer === "outer";
-  let range: TempRange | undefined;
+  let range: Band | undefined;
   if (input.category === "top" || input.category === "bottom") {
     const table = input.category === "top" ? BODY_RANGES : BOTTOM_RANGES;
     range = table[isOuter ? "outer" : "regular"][input.weight];
@@ -153,11 +187,12 @@ export function estimateTempRange(input: ThermalInput): TempRange | undefined {
     input.weight === "light" && !isOuter && ALWAYS_WORN.has(input.category);
   const hasOpenLow = isOuter && input.weight === "heavy";
 
-  const baseLow = range.lowC;
-  const lowC =
-    baseLow !== undefined && input.windResistant
-      ? baseLow - WIND_LOW_EXTENSION_C
-      : baseLow;
+  // No null check on `range.lowC`: a Band always has both ends, which is
+  // why Band exists separately from TempRange. The check that used to be
+  // here could never be false, and mutation testing said so.
+  const lowC = input.windResistant
+    ? range.lowC - WIND_LOW_EXTENSION_C
+    : range.lowC;
   return {
     ...(!hasOpenLow && { lowC }),
     ...(!hasOpenHigh && { highC: range.highC }),
