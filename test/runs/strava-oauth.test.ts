@@ -666,10 +666,14 @@ describe("refreshStravaToken: who hears about a broken connection", () => {
     // they would disconnect a working account to fix a problem that was
     // never theirs.
     const db = coreDb();
+    // Read the clock once. Calling `nowS()` again in the assertion below
+    // made this fail whenever the two calls landed either side of a second
+    // — rare locally, and it took down a CI mutation shard.
+    const firstFailedAt = nowS() - 4 * 24 * 60 * 60;
     const userId = await connectionThatHasBeenFailing({
       status: "ok",
       refreshFailureCount: 2,
-      refreshFirstFailedAt: nowS() - 4 * 24 * 60 * 60,
+      refreshFirstFailedAt: firstFailedAt,
     });
 
     let result;
@@ -692,7 +696,7 @@ describe("refreshStravaToken: who hears about a broken connection", () => {
     expect(reports[0]?.context).toStrictEqual({
       userId,
       failureCount: "3",
-      firstFailedAt: String(nowS() - 4 * 24 * 60 * 60),
+      firstFailedAt: String(firstFailedAt),
     });
   });
 

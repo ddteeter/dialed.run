@@ -362,6 +362,27 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   the drift shows up as CI passing on a scope nobody is mutating. A module
   joins the array in the PR that finishes it, never before.
 
+  **`stryker run` with no arguments does not check that array.** An entry is
+  one glob, so `"src/modules/feed/**/*.ts,!src/modules/feed/functions.ts"`
+  is read as a path with a comma in it and matches nothing — six of the
+  nine entries are that shape, and a bare `stryker run` was quietly
+  measuring 25 of the 86 files it reports as in scope. Only CI caught the
+  rest, because it passes each entry as its own `--mutate` argument and the
+  *CLI* does split on commas. `npm run mutate` is now a loop over the array
+  that invokes stryker once per entry, exactly as CI does per shard. It
+  lives inline in `package.json`, as a `node -e` loop, and both halves of
+  that are load-bearing: a `scripts/*.mjs` file fails `npm run lint` on
+  `process` and `console`, because `eslint.config.js` defines Node globals
+  for nothing and is a forbidden zone; and a shell `while read` loop fails
+  knip, which reads `read` as an unlisted binary. While iterating on one
+  module, skip the loop: `npx stryker run --mutate "<the entry>"`.
+
+  `.stryker-tmp/` is in the eslint ignore list, and needs to be: each
+  stryker run leaves a full copy of the project in a sandbox there, and
+  linting the repo N+1 times OOMs the eslint process rather than failing
+  cleanly. It is gitignored too, but flat config does not read
+  `.gitignore`.
+
   It works because of two lines in `vitest.config.ts` that are easy to
   delete by accident: forwarding `__STRYKER_ACTIVE_MUTANT__` into the
   workers pool as a binding (the pool's `process.env` is the Worker's
@@ -378,12 +399,28 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   all (D-41 — `createServerFn` drags TanStack Start's virtual entries in
   with it), which the negation rule above covers.
 
-  `"stryker"` is still `off` in `guardrails.config.json`, and that is now
-  a decision to revisit rather than a necessity: the commit-gate analyzer
-  scopes to *every* changed TypeScript file, which used to mean a commit
-  touching a module inherited a hundred findings it did not cause. It no
-  longer would. Turning it on is the open half of D-40 and is the owner's
-  call — `guardrails.config.json` is human-managed.
+  **`"stryker"` is `required` in `guardrails.config.json`** (owner's call,
+  2026-09-09). Know what that analyzer actually does, because it is not the
+  ratchet: it **ignores `stryker.conf.json`'s `mutate` array entirely** and
+  runs `--mutate <the changed production .ts/.tsx files>`. Its rung is
+  `commit`, not `stop`, so a turn is never blocked — a commit is.
+
+  Two consequences follow, both measured:
+
+  - **A changed `.tsx` is mutated**, whatever D-42 says, because the
+    analyzer's file filter is `/\.tsx?$/`. Appending one comment line to
+    `src/ui/form.tsx` produced **29 blocking violations**. Read D-42 before
+    starting UI work; that row carries the numbers.
+  - **A changed `src/modules/*/functions.ts` is mutated**, and those cannot
+    be tested at all — every mutant comes back alive. Touching
+    `runs/functions.ts` produces **65**. There is no grant for this:
+    `sanctionedFiles` kinds are diff-auditor source signatures, not
+    analyzer rule ids.
+
+  Neither is a reason to weaken a test. If a commit is blocked on a file
+  the ratchet deliberately excludes, that is the gate being coarser than
+  the ratchet — say so in the PR and let the owner decide, rather than
+  writing an assertion you do not believe in.
 
   When a survivor is genuinely equivalent — no possible input distinguishes
   it — write the proof at the site, use a **mutator-scoped**

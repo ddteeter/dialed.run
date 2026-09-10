@@ -134,6 +134,36 @@ function repoPath(globPath: string): string {
   return globPath.replace("../../", "");
 }
 
+function rawSource(path: string): string {
+  const entry = Object.entries(sources).find(
+    ([globPath]) => repoPath(globPath) === path,
+  );
+  return entry?.[1] ?? "";
+}
+
+/**
+ * Is this the source a human wrote, or stryker's rewrite of it?
+ *
+ * Stryker instruments in a sandbox copy, and its instrumentation turns
+ * every block statement into `if (stryMutAct_…) {} else {…}`. Vite's `?raw`
+ * then inlines *that*, so a scan below would find stryker's `if` rather
+ * than ours and fail on a file that is perfectly good glue — which is
+ * exactly what the mutation analyzer running over a changed `functions.ts`
+ * produced, as a dry-run crash with no hint of the cause.
+ *
+ * The rule is a statement about what a human wrote, so it is checked
+ * against human-written source only: a mutation run skips whichever files
+ * it is currently instrumenting, and every ordinary `npm test` and CI run
+ * — which never instrument — scans all of them.
+ *
+ * `stryMutAct_` is a generated identifier no human writes, so this cannot
+ * quietly disable the check on real source. `grep -r stryMutAct_ src` is
+ * the one-line way to confirm that.
+ */
+function isInstrumented(source: string): boolean {
+  return source.includes("stryMutAct_");
+}
+
 /**
 Every module file a test cannot import, asked by importing it.
 */
@@ -151,12 +181,10 @@ async function findUntestable(): Promise<string[]> {
 
 const untestable = await findUntestable();
 
+const scannable = untestable.filter((path) => !isInstrumented(rawSource(path)));
+
 function isGlue(path: string): boolean {
-  const entry = Object.entries(sources).find(
-    ([globPath]) => repoPath(globPath) === path,
-  );
-  if (entry === undefined) return true;
-  const code = codeOnly(entry[1]);
+  const code = codeOnly(rawSource(path));
   return FORBIDDEN.every(({ pattern }) => !pattern.test(code));
 }
 
@@ -166,14 +194,11 @@ describe("files that cannot be mutation tested are glue", () => {
     expect(untestable.length).toBeGreaterThan(0);
   });
 
-  for (const path of untestable) {
+  for (const path of scannable) {
     if (NOT_YET_GLUE.has(path)) continue;
 
     it(`${path}: imports, wires and delegates, nothing else`, () => {
-      const entry = Object.entries(sources).find(
-        ([globPath]) => repoPath(globPath) === path,
-      );
-      const code = codeOnly(entry?.[1] ?? "");
+      const code = codeOnly(rawSource(path));
       for (const { name, pattern } of FORBIDDEN) {
         expect(pattern.test(code), `${path} contains ${name}`).toBe(false);
       }
@@ -184,8 +209,10 @@ describe("files that cannot be mutation tested are glue", () => {
     // The exception list is a record of work still to do. A file that is
     // already glue and still listed makes the list a lie, and the next
     // reader trusts it.
-    const stillDirty = new Set(untestable.filter((path) => !isGlue(path)));
-    expect(stillDirty).toStrictEqual(NOT_YET_GLUE);
+    const stillDirty = new Set(scannable.filter((path) => !isGlue(path)));
+    expect(stillDirty).toStrictEqual(
+      new Set([...NOT_YET_GLUE].filter((path) => scannable.includes(path))),
+    );
   });
 });
 
