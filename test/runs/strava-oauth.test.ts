@@ -718,6 +718,49 @@ describe("refreshStravaToken: who hears about a broken connection", () => {
     expect(reports).toHaveLength(0);
   });
 
+  it("gives up exactly at the window, not a second before", async () => {
+    // `>=` rather than `>` on the window, and nothing distinguished the
+    // two: the nearest cases were 60 seconds and four days from a
+    // three-day boundary, so both operators agreed on every input this
+    // suite offered. A mutation shard found it.
+    //
+    // The clock is pinned for the whole test, and that is what makes the
+    // assertion mean anything. `refreshStravaToken` reads `Date.now()`
+    // itself, some milliseconds after this test reads one — on a fast
+    // machine the two land in the same second and the boundary is exact;
+    // on a loaded runner the drift makes the age strictly greater, both
+    // operators agree again, and the mutant comes back alive. Same trap as
+    // `test/weather/retry.test.ts`.
+    const db = coreDb();
+    const now = nowS();
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const MIN_WINDOW_S = 3 * 24 * 60 * 60;
+
+    // The count is already met (2 stored, +1 for this attempt), so the
+    // window is the only thing left deciding.
+    const atTheLimit = await connectionThatHasBeenFailing({
+      refreshFailureCount: 2,
+      refreshFirstFailedAt: now - MIN_WINDOW_S,
+    });
+    const justInside = await connectionThatHasBeenFailing({
+      refreshFailureCount: 2,
+      refreshFirstFailedAt: now - MIN_WINDOW_S + 1,
+    });
+
+    await reportsDuring(async () => {
+      // Three days of failures to the second has had its window.
+      expect(
+        await refreshStravaToken(db, fakeApi({ refreshFails: true }), atTheLimit),
+      ).toBe("broken");
+      // A second short of it has not, however many times it has failed.
+      expect(
+        await refreshStravaToken(db, fakeApi({ refreshFails: true }), justInside),
+      ).toBe("degraded");
+    });
+
+    vi.restoreAllMocks();
+  });
+
   it("needs both the count and the window, not either", async () => {
     // Three failures inside one short outage must not break a connection,
     // and neither must one failure that happens to be old.
