@@ -3,6 +3,8 @@
   "//": "Run with `npm run mutate`. This list IS the ratchet: every glob in it has been paid down to 100% and `break: 100` below keeps it there. The Mutation workflow reads this array and runs one CI shard per entry, so adding a glob here is what puts a module under the gate \u2014 there is no second copy to update.",
   "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts \u2014 without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
   "testRunner": "vitest",
+  "//coverageAnalysis": "Set explicitly, not left to the default, because CI passes --incremental and incremental reuse is only sound with per-test coverage. Stryker's IncrementalDiffer reuses a stored verdict unconditionally when the runner reports no coverage — so under 'off' a Survived mutant stays survived for ever, even as tests are added to kill it, and the shard would go green on a lie. The default happens to be perTest today; this is the version that cannot change underneath us. test/architecture/mutation-config.test.ts pins it.",
+  "coverageAnalysis": "perTest",
   "//thresholds": "break at 100 because src/lib is at 100. This is the ratchet: `npm run mutate` exits non-zero the moment a change drops it, so the debt cannot grow back quietly. If a genuinely equivalent mutant appears, prove it at the site with a Stryker directive and a sanctioned grant \u2014 do not lower this number.",
   "thresholds": {
     "high": 100,
