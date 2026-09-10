@@ -417,7 +417,19 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   `.github/workflows/mutation.yml` **reads that array** and runs one CI
   shard per entry — never restate the list there, or local and CI drift and
   the drift shows up as CI passing on a scope nobody is mutating. A module
-  joins the array in the PR that finishes it, never before.
+  joins the array in the PR that finishes it, never before. The shard's
+  *name* is derived from the glob too (`modules/auth (ts)`), because the
+  glob is not a name: the components scope carries 24 route negations and
+  runs to ~900 characters.
+
+  **The commit gate and this workflow cover different holes, and you need
+  both.** The guardrails analyzer scopes to the *changed production* files,
+  so it never sees a weakened test — delete an assertion and no production
+  file changed, so nothing is mutated and the push passes. Only the
+  whole-scope run catches that, which is why the aggregate `Mutation` job
+  is a required check. It reports success when the matrix was skipped, so a
+  docs-only PR is not blocked on a check that never runs; that trap is why
+  the relevance filtering is a job rather than a `paths:` trigger.
 
   **`stryker run` with no arguments does not check that array.** An entry is
   one glob, so `"src/modules/feed/**/*.ts,!src/modules/feed/functions.ts"`
@@ -448,13 +460,16 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **The `src/modules` debt is paid (D-40 closed).** It measured 43.98%
-  when the work started — 1,793 mutants surviving or uncovered. What is
-  still outside the gate is deliberate and narrow: the globs end
-  `**/*.ts`, so no component is in it (D-42), and
-  `src/modules/*/functions.ts` cannot be imported in the workers pool at
-  all (D-41 — `createServerFn` drags TanStack Start's virtual entries in
-  with it), which the negation rule above covers.
+  **The debt is paid (D-40 and D-42 closed).** `src/modules` measured
+  43.98% when the work started — 1,793 mutants surviving or uncovered —
+  and the components were not in the ratchet at all. Both are now at 100%,
+  so **every file the app ships is under the gate.** What is outside it is
+  two narrow classes, and both are held honest by
+  `server-functions-are-glue` rather than by trust: `src/routes/**`, which
+  cannot be imported by any test and must therefore be glue, and
+  `src/modules/*/functions.ts`, which cannot be imported in the workers
+  pool at all (D-41 — `createServerFn` drags TanStack Start's virtual
+  entries in with it). The negation rule above covers the second.
 
   **`"stryker"` is `required` in `guardrails.config.json`** (owner's call,
   2026-09-09). Know what that analyzer actually does, because it is not the
@@ -464,10 +479,11 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 
   Two consequences follow, both measured:
 
-  - **A changed `.tsx` is mutated**, whatever D-42 says, because the
-    analyzer's file filter is `/\.tsx?$/`. Appending one comment line to
-    `src/ui/form.tsx` produced **29 blocking violations**. Read D-42 before
-    starting UI work; that row carries the numbers.
+  - **A changed `.tsx` is mutated**, because the analyzer's file filter is
+    `/\.tsx?$/`. That used to mean inheriting a component's whole backlog
+    on any edit — appending one comment line to `src/ui/form.tsx` produced
+    **29 blocking violations**. Now that every component is at 100% it just
+    means a component you touch has to stay there.
   - **A changed `src/modules/*/functions.ts` is mutated**, and those cannot
     be tested at all — every mutant comes back alive. Touching
     `runs/functions.ts` produces **65**. There is no grant for this:
