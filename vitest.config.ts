@@ -9,7 +9,7 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
  * bindings — and runs in workerd via `@cloudflare/vitest-pool-workers`.
  * That is the whole suite's history and still most of it.
  *
- * **`ui`** is component behaviour, and runs in jsdom. It exists because
+ * **`ui`** is component behaviour, and runs in happy-dom. It exists because
  * workerd has no DOM: the worker project can only `renderToString`, which
  * gives first paint and nothing after it — no click, no state transition,
  * no effect. So the interaction rules in CLAUDE.md's "Forms use the
@@ -20,7 +20,12 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
  * journeys; it is single-worker by design (D-28) and is the wrong
  * instrument for a state space.
  *
- * A test opts into jsdom by being named `*.dom.test.tsx`, so files migrate
+ * happy-dom rather than jsdom because jsdom (still, at 30.0.1) does not
+ * implement `HTMLDialogElement.showModal`/`close`, and `ui/Sheet.tsx` is
+ * built on the native `<dialog>` — so on jsdom the one primitive whose
+ * every line was uncovered stayed uncoverable.
+ *
+ * A test opts into the DOM project by being named `*.dom.test.tsx`, so files migrate
  * one at a time rather than in a big bang, and the split is visible in the
  * filename rather than in this config.
  */
@@ -87,7 +92,7 @@ export default defineConfig(async () => {
         {
           test: {
             name: "ui",
-            environment: "jsdom",
+            environment: "happy-dom",
             include: [DOM_TESTS],
             setupFiles: ["test/dom-setup.ts"],
           },

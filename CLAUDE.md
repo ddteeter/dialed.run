@@ -345,10 +345,23 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 - **`stryker.conf.json`'s `mutate` array is the ratchet.** Every glob in
   it has been paid down to 100% and `break: 100` keeps it there: `npm run
   mutate` exits non-zero the moment a change stops a mutant being killed.
-  Today it holds `src/lib` and every module under `src/modules`:
-  `weather`, `ops`, `products`, `notifications`, `auth`, `closet`, `feed`
-  and `runs`. Adding code anywhere under those globs means adding tests
-  that *observe* its behaviour, not tests that merely execute it.
+  Today it holds `src/lib`, `src/ui/**/*.tsx`, and every module under
+  `src/modules`: `weather`, `ops`, `products`, `notifications`, `auth`,
+  `closet`, `feed` and `runs`. Adding code anywhere under those globs means
+  adding tests that *observe* its behaviour, not tests that merely execute
+  it.
+
+  **A component is mutation tested like anything else.** Two things make
+  that workable, and both are easy to get wrong from memory. Stryker does
+  **not** mutate a plain `className="..."` JSX attribute — only class
+  strings held in a const or built in an expression, of which there are 18
+  in the whole repo — so paying down a component is not a matter of
+  asserting Tailwind. And where such a string does survive, ask whether it
+  carries a documented rule before granting it: in `src/ui` every one did
+  (mono is the tell that a value was measured, uppercase lives in CSS so
+  the accessible name stays in normal case, 1px rule -> 2px ink marks a
+  field), so `toHaveClass` was asserting the contract rather than pinning a
+  look.
 
   A `!<path>` negation inside a scope entry is not an exemption you may
   copy. It is for one thing: a file that **cannot be imported in the
