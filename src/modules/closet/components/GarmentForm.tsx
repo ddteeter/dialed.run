@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import type { SyntheticEvent } from "react";
 
-import type {
-  garmentCategories,
+import type { Garment } from "../../../lib/contracts";
+import {
   fabricSchema,
+  garmentCategories,
   layerSchema,
   weightSchema,
 } from "../../../lib/contracts";
@@ -13,13 +13,20 @@ import {
   type GarmentAttributeKey,
 } from "../../../lib/garment-fields";
 import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
-import { Bracketed, Mono } from "../../../ui";
-import type { z } from "zod";
+import {
+  Bracketed,
+  FormErrorSummary,
+  FormFailureBand,
+  FormField,
+  FormStatus,
+  Mono,
+  SubmitButton,
+  TextField,
+  useFormSubmit,
+} from "../../../ui";
+import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
 
 type Category = (typeof garmentCategories)[number];
-type Layer = z.infer<typeof layerSchema>;
-type Weight = z.infer<typeof weightSchema>;
-type Fabric = z.infer<typeof fabricSchema>;
 
 const CATEGORY_LABELS: Record<Category, string> = {
   top: "Top",
@@ -30,6 +37,46 @@ const CATEGORY_LABELS: Record<Category, string> = {
   socks: "Socks",
   shoes: "Shoes",
   accessory: "Accessory",
+};
+
+/**
+ * Display names only. The *values* come from the schema's own enums below,
+ * so an option can never exist that the contract would reject — a
+ * hand-written `<option value="…">` list is a second statement of a set
+ * zod already holds (CLAUDE.md, "Derive, don't mirror").
+ */
+const LAYER_LABELS: Record<(typeof layerSchema.options)[number], string> = {
+  base: "Base",
+  mid: "Mid",
+  outer: "Outer",
+};
+const WEIGHT_LABELS: Record<(typeof weightSchema.options)[number], string> = {
+  light: "Light",
+  mid: "Mid",
+  heavy: "Heavy",
+};
+const FABRIC_LABELS: Record<(typeof fabricSchema.options)[number], string> = {
+  synthetic: "Synthetic",
+  merino: "Merino",
+  cotton: "Cotton",
+  blend: "Blend",
+  down: "Down",
+};
+
+/**
+Field name -> human label, for the summary rows the contract requires once
+two or more fields fail at once.
+*/
+const LABELS = {
+  brand: "Brand",
+  name: "Model / name",
+  category: "Category",
+  layer: "Layer",
+  weight: "Weight",
+  fabric: "Fabric",
+  size: "Size",
+  color: "Color",
+  productUrl: "Product link",
 };
 
 /**
@@ -51,20 +98,6 @@ function fieldsForCategory(
   };
 }
 
-export interface GarmentFormValues {
-  brand: string;
-  name: string;
-  category: Category;
-  size: string;
-  color: string;
-  productUrl: string;
-  layer: Layer | "";
-  weight: Weight | "";
-  fabric: Fabric | "";
-  windResistant: boolean;
-  waterResistant: boolean;
-}
-
 const EMPTY_VALUES: GarmentFormValues = {
   brand: "",
   name: "",
@@ -83,8 +116,20 @@ export interface GarmentFormProps {
   initial?: Partial<GarmentFormValues> | undefined;
   brandOptions?: readonly string[] | undefined;
   onBrandInput?: ((value: string) => void) | undefined;
-  onSubmit: (values: GarmentFormValues) => void;
-  submitLabel?: string | undefined;
+  /**
+   * The save, handed in rather than imported.
+   *
+   * `../functions` pulls TanStack Start's virtual server entry, so a file
+   * that reaches it cannot be imported by any test. The route wires it and
+   * closes over whatever differs between adding and editing — the
+   * idempotency key, the item id — so this component does not branch on
+   * which one it is.
+   */
+  save: (garment: Garment) => Promise<{ id: string }>;
+  onSaved: (result: { id: string }) => Promise<void>;
+  submitLabel: string;
+  pendingLabel: string;
+  successMessage: string;
 }
 
 /**
@@ -92,19 +137,43 @@ export interface GarmentFormProps {
  * attribute fields collapsed below, shown only where the category admits
  * them. A generic entry (category + name only) is still one submit away —
  * never blocked on brand/model.
+ *
+ * **This form had no failure path before D-17.** It was presentational,
+ * and the route called `garmentFromFormValues` — which ended in
+ * `garmentSchema.parse` — inside a `void`-ed async handler. An invalid
+ * garment threw into an unhandled rejection: no message, no mark, the
+ * button simply did nothing. An `http://` product link and any over-long
+ * value both reached it, since `type="url"` accepts the scheme and no
+ * input carried a `maxLength`.
+ *
+ * The form is `noValidate` on purpose now. The browser's own checks are
+ * not the contract's — they cannot produce the summary, the live-region
+ * sentence or the failure band — so the schema is the single gate and
+ * `useFormSubmit` renders what it says.
  */
 export function GarmentForm({
   initial,
   brandOptions,
   onBrandInput,
-  onSubmit,
+  save,
+  onSaved,
   submitLabel,
+  pendingLabel,
+  successMessage,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
     ...initial,
   });
   const fields = fieldsForCategory(values.category);
+
+  const form = useFormSubmit({
+    schema: garmentFormSchema,
+    action: save,
+    successMessage,
+    labels: LABELS,
+    onSuccess: onSaved,
+  });
 
   const estimate = useMemo(
     () =>
@@ -133,18 +202,29 @@ export function GarmentForm({
     setValues((current) => ({ ...current, [key]: value }));
   }
 
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+    <form
+      ref={form.formRef}
+      noValidate
+      className="flex flex-col gap-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.submit(values);
+      }}
+    >
+      <FormStatus>{form.status}</FormStatus>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
+
       <fieldset className="flex flex-col gap-3">
         <legend className="font-display text-lg uppercase">What is it?</legend>
-        <label className="flex flex-col gap-1 text-sm font-semibold">
-          Brand
+        <FormField name="brand" label={LABELS.brand} error={form.fieldErrors.brand}>
           <input
+            {...form.field("brand")}
+            id="brand"
             type="text"
             list="garment-brand-options"
             value={values.brand}
@@ -154,29 +234,41 @@ export function GarmentForm({
             }}
             className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
           />
-          <datalist id="garment-brand-options">
-            {(brandOptions ?? []).map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold">
-          Model / name
-          <input
-            type="text"
-            required
-            value={values.name}
-            onChange={(event) => {
-              update("name", event.target.value);
-            }}
-            className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-          />
-        </label>
+        </FormField>
+        <datalist id="garment-brand-options">
+          {(brandOptions ?? []).map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+        <TextField
+          name="name"
+          label={LABELS.name}
+          value={values.name}
+          onChange={(value) => {
+            update("name", value);
+          }}
+          field={form.field}
+          error={form.fieldErrors.name}
+        />
       </fieldset>
 
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Category
+      <FormField
+        name="category"
+        label={LABELS.category}
+        error={form.fieldErrors.category}
+      >
+        {/*
+          `field()` carries `readOnly` for §5's "inputs stay focusable while
+          in flight, never disabled". A `<select>` has no such attribute and
+          React drops it while `pending` is false, so it is inert here
+          rather than wrong — which is why this spreads the same helper as
+          every text input instead of a filtered copy of it. The filtered
+          copy existed briefly and its only effect was four mutants nothing
+          could kill.
+        */}
         <select
+          {...form.field("category")}
+          id="category"
           value={values.category}
           onChange={(event) => {
             update("category", event.target.value as Category);
@@ -189,66 +281,74 @@ export function GarmentForm({
             </option>
           ))}
         </select>
-      </label>
+      </FormField>
 
       <fieldset className="flex flex-col gap-3 border-t border-night/10 pt-4">
         <legend className="sr-only">Attributes</legend>
         {fields.layer ? (
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Layer
+          <FormField name="layer" label={LABELS.layer} error={form.fieldErrors.layer}>
             <select
+              {...form.field("layer")}
+              id="layer"
               value={values.layer}
               onChange={(event) => {
-                update("layer", event.target.value as Layer | "");
+                update("layer", event.target.value as GarmentFormValues["layer"]);
               }}
               className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
             >
               <option value="">—</option>
-              <option value="base">Base</option>
-              <option value="mid">Mid</option>
-              <option value="outer">Outer</option>
+              {layerSchema.options.map((option) => (
+                <option key={option} value={option}>
+                  {LAYER_LABELS[option]}
+                </option>
+              ))}
             </select>
-          </label>
+          </FormField>
         ) : undefined}
         {fields.weight ? (
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Weight
+          <FormField name="weight" label={LABELS.weight} error={form.fieldErrors.weight}>
             <select
+              {...form.field("weight")}
+              id="weight"
               value={values.weight}
               onChange={(event) => {
-                update("weight", event.target.value as Weight | "");
+                update("weight", event.target.value as GarmentFormValues["weight"]);
               }}
               className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
             >
               <option value="">—</option>
-              <option value="light">Light</option>
-              <option value="mid">Mid</option>
-              <option value="heavy">Heavy</option>
+              {weightSchema.options.map((option) => (
+                <option key={option} value={option}>
+                  {WEIGHT_LABELS[option]}
+                </option>
+              ))}
             </select>
-          </label>
+          </FormField>
         ) : undefined}
         {fields.fabric ? (
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Fabric
+          <FormField name="fabric" label={LABELS.fabric} error={form.fieldErrors.fabric}>
             <select
+              {...form.field("fabric")}
+              id="fabric"
               value={values.fabric}
               onChange={(event) => {
-                update("fabric", event.target.value as Fabric | "");
+                update("fabric", event.target.value as GarmentFormValues["fabric"]);
               }}
               className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
             >
               <option value="">—</option>
-              <option value="synthetic">Synthetic</option>
-              <option value="merino">Merino</option>
-              <option value="cotton">Cotton</option>
-              <option value="blend">Blend</option>
-              <option value="down">Down</option>
+              {fabricSchema.options.map((option) => (
+                <option key={option} value={option}>
+                  {FABRIC_LABELS[option]}
+                </option>
+              ))}
             </select>
-          </label>
+          </FormField>
         ) : undefined}
         {fields.windResistant ? (
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input
+              {...form.field("windResistant")}
               type="checkbox"
               checked={values.windResistant}
               onChange={(event) => {
@@ -261,6 +361,7 @@ export function GarmentForm({
         {fields.waterResistant ? (
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input
+              {...form.field("waterResistant")}
               type="checkbox"
               checked={values.waterResistant}
               onChange={(event) => {
@@ -281,52 +382,53 @@ export function GarmentForm({
         </p>
       ) : undefined}
 
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Size
-        <input
-          type="text"
-          value={values.size}
-          onChange={(event) => {
-            update("size", event.target.value);
-          }}
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Color
-        <input
-          type="text"
-          value={values.color}
-          onChange={(event) => {
-            update("color", event.target.value);
-          }}
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        Product link
-        <input
-          type="url"
-          value={values.productUrl}
-          onChange={(event) => {
-            update("productUrl", event.target.value);
-          }}
-          placeholder="https://…"
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-        />
-      </label>
+      <TextField
+        name="size"
+        label={LABELS.size}
+        value={values.size}
+        onChange={(value) => {
+          update("size", value);
+        }}
+        field={form.field}
+        error={form.fieldErrors.size}
+      />
+      <TextField
+        name="color"
+        label={LABELS.color}
+        value={values.color}
+        onChange={(value) => {
+          update("color", value);
+        }}
+        field={form.field}
+        error={form.fieldErrors.color}
+      />
+      <TextField
+        name="productUrl"
+        label={LABELS.productUrl}
+        value={values.productUrl}
+        onChange={(value) => {
+          update("productUrl", value);
+        }}
+        field={form.field}
+        error={form.fieldErrors.productUrl}
+        type="url"
+      />
       {values.productUrl === "" ? undefined : (
         <p className="text-xs text-night/40">
           <Mono>Enrichment pending — lane 107</Mono>
         </p>
       )}
 
-      <button
-        type="submit"
-        className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
-      >
-        {submitLabel ?? "Save"}
-      </button>
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        label={submitLabel}
+        pendingLabel={pendingLabel}
+        pending={form.pending}
+      />
     </form>
   );
 }

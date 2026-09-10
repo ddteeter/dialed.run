@@ -10,11 +10,11 @@ import {
   garmentCategoriesInOrder,
   garmentFieldSpec,
 } from "../../src/lib/garment-fields";
-import type { GarmentFormValues } from "../../src/modules/closet/components/GarmentForm";
+import { formValuesFromItem } from "../../src/modules/closet/form-mapping";
 import {
-  formValuesFromItem,
-  garmentFromFormValues,
-} from "../../src/modules/closet/form-mapping";
+  garmentFormSchema,
+  type GarmentFormValues,
+} from "../../src/modules/closet/form-schema";
 import { createItem } from "../../src/modules/closet/service";
 import type {
   EffectiveAttributes,
@@ -32,6 +32,18 @@ import type {
  * the schema here too, and a test that listed the fields per category would
  * be the fourth copy of the fact this mapping exists to stop.
  */
+
+/**
+ * The mapping used to be a function called `garmentFromFormValues`, which
+ * ended in `garmentSchema.parse`. D-17 moved it into `garmentFormSchema` as
+ * the transform ahead of a `.pipe()`, so the form's own submit path runs it
+ * and a rejection is a field message rather than an unhandled rejection.
+ * These assertions are about the behaviour, which did not change — so they
+ * call the schema by the old name rather than being rewritten.
+ */
+function garmentFromFormValues(values: GarmentFormValues) {
+  return garmentFormSchema.parse(values);
+}
 
 const BLANK: GarmentFormValues = {
   brand: "",

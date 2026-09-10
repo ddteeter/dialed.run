@@ -23,7 +23,7 @@ export const httpsUrlSchema = z
   .string()
   .refine(
     (value) => URL.parse(value)?.protocol === "https:",
-    "must be an https:// URL",
+    "Product links need to start with https://",
   );
 
 // ---- Garments: discriminated union on category ----------------------------
@@ -48,11 +48,24 @@ export const fabricSchema = z.enum([
   "down",
 ]);
 
+/**
+ * The sentences are part of the schema, not of whatever renders it.
+ *
+ * `docs/product.md` §Forms & failure: "Error copy lives in the schema, in
+ * zod's `message`. A component authoring its own sentence is the same
+ * problem one layer down." Without them a user meets zod's default — the
+ * closet form's real output was *"Too small: expected string to have >=1
+ * characters"* — and every form that renders this schema would have had to
+ * translate it, which is four translations of one rule.
+ *
+ * Second person, says what to do, no apology. `signUpSchema` below sets
+ * the register.
+ */
 const garmentBase = z.strictObject({
-  name: z.string().min(1).max(80),
-  brand: z.string().max(60).optional(),
-  size: z.string().max(20).optional(),
-  color: z.string().max(30).optional(),
+  name: z.string().min(1, "Give it a name.").max(80, "Keep the name under 80 characters."),
+  brand: z.string().max(60, "Keep the brand under 60 characters.").optional(),
+  size: z.string().max(20, "Keep the size under 20 characters.").optional(),
+  color: z.string().max(30, "Keep the color under 30 characters.").optional(),
   productUrl: httpsUrlSchema.optional(),
   productId: z.string().optional(),
   estTempLowC: z.number().optional(),

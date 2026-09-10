@@ -199,7 +199,9 @@ describe("httpsUrlSchema", () => {
 
   it("says what was wrong", () => {
     const result = httpsUrlSchema.safeParse(urlWithScheme("http"));
-    expect(result.error?.issues[0]?.message).toBe("must be an https:// URL");
+    expect(result.error?.issues[0]?.message).toBe(
+      "Product links need to start with https://",
+    );
   });
 });
 

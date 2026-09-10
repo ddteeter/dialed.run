@@ -1,12 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { requireSession } from "../../modules/auth/functions";
-import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
-import {
-  formValuesFromItem,
-  garmentFromFormValues,
-} from "../../modules/closet/form-mapping";
+import { formValuesFromItem } from "../../modules/closet/form-mapping";
 import { getItemFn, updateItemFn } from "../../modules/closet/functions";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout } from "../../ui";
@@ -28,16 +24,6 @@ function EditGarmentPage() {
   const { detail } = Route.useLoaderData();
   const navigate = useNavigate();
 
-  async function handleSubmit(values: GarmentFormValues) {
-    const garment = garmentFromFormValues(values);
-
-    await updateItemFn({ data: { itemId: detail.item.id, garment } });
-    await navigate({
-      to: "/closet/$itemId",
-      params: { itemId: detail.item.id },
-    });
-  }
-
   return (
     <Layout>
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-8 sm:px-6">
@@ -46,13 +32,21 @@ function EditGarmentPage() {
         </h1>
         <GarmentForm
           initial={formValuesFromItem(detail.item, detail.effective)}
-          onSubmit={(values) => {
-            void handleSubmit(values);
+          save={async (garment) =>
+            updateItemFn({ data: { itemId: detail.item.id, garment } })
+          }
+          onSaved={async () => {
+            await navigate({
+              to: "/closet/$itemId",
+              params: { itemId: detail.item.id },
+            });
           }}
           onBrandInput={(value) => {
             void handleBrandInput(value);
           }}
           submitLabel="Save changes"
+          pendingLabel="Saving"
+          successMessage="Changes saved."
         />
       </div>
     </Layout>
