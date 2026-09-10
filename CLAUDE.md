@@ -352,7 +352,7 @@ wrong: the columns already existed. Check before you defer.
 
 ## Guardrails (the enforcement loop)
 
-This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
+This repo runs agentic-guardrails-scaffolding (pinned v0.3.0; CLI bin
 `agentic-guardrails` — invoked here via the npm scripts Phase 0 wires up):
 
 - **Stop gate**: when you try to end a turn, the configured stop-gate hook
@@ -474,8 +474,20 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   **`"stryker"` is `required` in `guardrails.config.json`** (owner's call,
   2026-09-09). Know what that analyzer actually does, because it is not the
   ratchet: it **ignores `stryker.conf.json`'s `mutate` array entirely** and
-  runs `--mutate <the changed production .ts/.tsx files>`. Its rung is
-  `commit`, not `stop`, so a turn is never blocked — a commit is.
+  runs `--mutate <the changed production .ts/.tsx files>`. **Its rung is
+  `push`** — `{ "mode": "required", "rung": "push" }` in the config, which
+  0.3.0 made expressible (upstream #61). So a turn is never blocked and
+  neither is a commit; a *push* is.
+
+  That is a cost decision, and the config comment carries the numbers. The
+  analyzer's cost here is almost entirely a fixed per-invocation overhead —
+  a full dry run of the suite in workerd, booting an isolate and applying
+  migrations, before a single mutant is tested — so a one-file commit cost
+  ~5 minutes and a 25-file one ~15. At `commit` that was paid on every
+  checkpoint, re-mutating the same file each time. What it costs you: a
+  mutation regression now surfaces later, against the whole branch diff
+  rather than one commit's, so localizing it takes longer. Commit freely;
+  expect the wait at `git push`.
 
   Two consequences follow, both measured:
 

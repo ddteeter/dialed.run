@@ -7,7 +7,8 @@
     "tsc": "required",
     "knip": "required",
     "dependency-cruiser": "required",
-    "stryker": "required",
+    "//stryker": "At the push rung, not commit (guardrails 0.3.0, upstream #61). Stryker's cost here is dominated by a fixed per-invocation overhead — a full dry run of the whole suite in workerd, booting an isolate and applying migrations, before a single mutant is tested — so a one-file commit costs ~5 minutes and a 25-file one ~15. At commit an agent pays that on every checkpoint and mutates the same file again on each; at push the union of the branch's changed files is mutated once. What does NOT change is what leaves the machine, since nothing is pushed between commits. The trade is real: a mutation regression is now caught later, on a wider diff, so localizing it takes longer.",
+    "stryker": { "mode": "required", "rung": "push" },
     "dupes": "required"
   },
   "sanctionedFiles": [
