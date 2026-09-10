@@ -1,9 +1,8 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { Devtools } from "../ui/Devtools";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -46,19 +45,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </head>
       <body className="bg-chalk font-sans text-night antialiased">
         {children}
-        {import.meta.env.VITE_DEVTOOLS === "off" ? undefined : (
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-            ]}
-          />
-        )}
+        <Devtools />
         <Scripts />
       </body>
     </html>

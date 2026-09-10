@@ -56,7 +56,26 @@ src/
 
 - A module may import: `db`, `env`, `lib`, `ui`, and **other modules only via
   their `index.ts`**. Never deep-import another module's internals.
+- **A component never imports a server function.** `modules/*/functions.ts`
+  pulls TanStack Start's virtual server entry, so any file that reaches it
+  cannot be imported by a test — in either vitest project, because the
+  constraint is the import graph and not the runtime. Routes wire server
+  functions and pass them down; components take them as props, typed with
+  the server function's own shape so the route needs no wrapper. That is
+  what keeps `src/modules/**/*.tsx` in the mutation ratchet.
 - Nothing imports from `routes/`; route files import modules, never each other.
+- **A route is in the client bundle, so what it imports at module scope must
+  be reachable without `env`.** Server functions and `server.handlers` are
+  stripped by the Start plugin, so reaching bindings *through* those is fine —
+  what is not fine is a plain top-level import of a module file that reaches
+  `src/env` or `src/db/schema*`. Pulling one decision out of `feed/entries.ts`
+  into a route loader dragged `cloudflare:workers` into the browser bundle and
+  broke `npm run build`; a second did the same with the whole drizzle schema,
+  23kB of it, and that one did not even fail. **Neither is visible to tsc, to
+  eslint, to dependency-cruiser or to the test suite** — only to the production
+  client build. So a decision a route needs goes in a sibling that imports
+  nothing server-side (`feed/route-decisions.ts`, `runs/not-found.ts` are the
+  worked examples), and the queries stay behind callbacks the caller owns.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
 - Each lane owns its `src/routes/<lane>/` directory exclusively — route merges
@@ -345,9 +364,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 - **`stryker.conf.json`'s `mutate` array is the ratchet.** Every glob in
   it has been paid down to 100% and `break: 100` keeps it there: `npm run
   mutate` exits non-zero the moment a change stops a mutant being killed.
-  Today it holds `src/lib`, `src/ui/**/*.tsx`, and every module under
-  `src/modules`: `weather`, `ops`, `products`, `notifications`, `auth`,
-  `closet`, `feed` and `runs`. Adding code anywhere under those globs means
+  Today it holds `src/lib`, `src/ui/**/*.tsx`, `src/modules/**/*.tsx`, and
+  every module under `src/modules`: `weather`, `ops`, `products`,
+  `notifications`, `auth`, `closet`, `feed` and `runs`. **Everything the
+  app ships is in it except `src/routes/`.** Adding code anywhere under those globs means
   adding tests that *observe* its behaviour, not tests that merely execute
   it.
 
@@ -364,22 +384,52 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   look.
 
   A `!<path>` negation inside a scope entry is not an exemption you may
-  copy. It is for one thing: a file that **cannot be imported in the
-  workers pool**, because it pulls `@tanstack/react-start` directly or
-  through a barrel, and so cannot be mutated either.
+  copy. It is for two things, and nothing else. A file that **cannot be
+  imported by a test**, because it pulls `@tanstack/react-start` directly
+  or through a barrel — and **every file under `src/routes/`**, which
+  cannot be mutated meaningfully even when it does import: what is left in
+  one is route registration, `<head>` metadata and wiring, and its mutants
+  need the real generated router to reach. The route negations ride on the
+  `src/modules/**/*.tsx` entry because they have no positive glob of their
+  own, and a negation-only entry makes stryker exit non-zero, so it could
+  not be a CI shard. The commit-gate analyzer reads negations from the
+  whole array (guardrails ≥ 0.2.1), which is what stops a route edit being
+  blocked by mutants no test can kill.
   `test/architecture/server-functions-are-glue.test.ts` finds that set by
-  importing every module file and seeing which throw, then checks it
-  against the config's negations in both directions — and requires each
-  such file to be glue: it may import, wire and delegate, and may not
-  branch, loop, throw or declare a schema. Input schemas go in `inputs.ts`
-  next door and decisions in a plain sibling, where a test can reach them.
-  `auth/session-user.ts` and `auth/require-session.ts` are the worked
-  examples.
+  importing every module file and seeing which throw, adds every route,
+  then checks it against the config's negations in both directions — and
+  requires each such file to be glue: it may import, wire and delegate, and
+  may not branch, loop, throw, declare a schema, `.map(`, or choose markup
+  with a ternary or an `&&`. Input schemas go in `inputs.ts` next door,
+  decisions in a plain sibling, and anything a route used to render in a
+  component under `modules/*/components/` — where a test can reach them.
+  `auth/session-user.ts` and `feed/photos.ts`'s `photoResponse` are the
+  worked examples.
+
+  **The last three forbidden patterns are about JSX, and they are the ones
+  people push back on.** A route is unimportable, so nothing can execute
+  the markup it chooses: `{items.map(…)}` is a list nobody can assert on,
+  `{x ? <A/> : <B/>}` an empty state nobody can reach. Moving one into a
+  component is not a chore the rule invented — it is what "route files are
+  thin" already meant, and the routes lane found three real bugs hiding in
+  exactly those spots.
 
   `.github/workflows/mutation.yml` **reads that array** and runs one CI
   shard per entry — never restate the list there, or local and CI drift and
   the drift shows up as CI passing on a scope nobody is mutating. A module
-  joins the array in the PR that finishes it, never before.
+  joins the array in the PR that finishes it, never before. The shard's
+  *name* is derived from the glob too (`modules/auth (ts)`), because the
+  glob is not a name: the components scope carries 24 route negations and
+  runs to ~900 characters.
+
+  **The commit gate and this workflow cover different holes, and you need
+  both.** The guardrails analyzer scopes to the *changed production* files,
+  so it never sees a weakened test — delete an assertion and no production
+  file changed, so nothing is mutated and the push passes. Only the
+  whole-scope run catches that, which is why the aggregate `Mutation` job
+  is a required check. It reports success when the matrix was skipped, so a
+  docs-only PR is not blocked on a check that never runs; that trap is why
+  the relevance filtering is a job rather than a `paths:` trigger.
 
   **`stryker run` with no arguments does not check that array.** An entry is
   one glob, so `"src/modules/feed/**/*.ts,!src/modules/feed/functions.ts"`
@@ -410,13 +460,16 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **The `src/modules` debt is paid (D-40 closed).** It measured 43.98%
-  when the work started — 1,793 mutants surviving or uncovered. What is
-  still outside the gate is deliberate and narrow: the globs end
-  `**/*.ts`, so no component is in it (D-42), and
-  `src/modules/*/functions.ts` cannot be imported in the workers pool at
-  all (D-41 — `createServerFn` drags TanStack Start's virtual entries in
-  with it), which the negation rule above covers.
+  **The debt is paid (D-40 and D-42 closed).** `src/modules` measured
+  43.98% when the work started — 1,793 mutants surviving or uncovered —
+  and the components were not in the ratchet at all. Both are now at 100%,
+  so **every file the app ships is under the gate.** What is outside it is
+  two narrow classes, and both are held honest by
+  `server-functions-are-glue` rather than by trust: `src/routes/**`, which
+  cannot be imported by any test and must therefore be glue, and
+  `src/modules/*/functions.ts`, which cannot be imported in the workers
+  pool at all (D-41 — `createServerFn` drags TanStack Start's virtual
+  entries in with it). The negation rule above covers the second.
 
   **`"stryker"` is `required` in `guardrails.config.json`** (owner's call,
   2026-09-09). Know what that analyzer actually does, because it is not the
@@ -426,10 +479,11 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 
   Two consequences follow, both measured:
 
-  - **A changed `.tsx` is mutated**, whatever D-42 says, because the
-    analyzer's file filter is `/\.tsx?$/`. Appending one comment line to
-    `src/ui/form.tsx` produced **29 blocking violations**. Read D-42 before
-    starting UI work; that row carries the numbers.
+  - **A changed `.tsx` is mutated**, because the analyzer's file filter is
+    `/\.tsx?$/`. That used to mean inheriting a component's whole backlog
+    on any edit — appending one comment line to `src/ui/form.tsx` produced
+    **29 blocking violations**. Now that every component is at 100% it just
+    means a component you touch has to stay there.
   - **A changed `src/modules/*/functions.ts` is mutated**, and those cannot
     be tested at all — every mutant comes back alive. Touching
     `runs/functions.ts` produces **65**. There is no grant for this:
@@ -444,7 +498,12 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   When a survivor is genuinely equivalent — no possible input distinguishes
   it — write the proof at the site, use a **mutator-scoped**
   `// Stryker disable next-line <Mutator>`, and add a keyed grant to
-  `guardrails.config.json`. Prefer restructuring so the mutant cannot exist:
+  `guardrails.config.json`. Two placement traps, both of which cost an
+  hour: a directive does **not** attach inside a JSX comment
+  (`{/* … */}`), so hoist the expression to a named constant above the
+  markup; and `next-line` does not attach when the mutant's line begins
+  with a closing brace (`} catch`, `}, [deps]`) — use the block
+  `disable`/`restore` pair there. Prefer restructuring so the mutant cannot exist:
   two of the first four were removed that way, and both left better code.
   See `docs/guardrails/crushing-mutants.md`.
 
@@ -539,7 +598,8 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
    PR branch, watch the checks (`gh pr checks <n> --watch`) and fix failures
    before ending your turn. CI covers ground the local gates don't (the
    client-bundle build, browser e2e) — local green is not proof.
-8. Before ending your final turn: run `npm run verify && npm test`, then
+8. Before ending your final turn: run `npm run verify && npm test && npm run
+   build`, then
    summarize what you built, what you did not do, and any open questions —
    in five sentences or fewer.
 

@@ -1,9 +1,9 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 
-import { getSession } from "../modules/auth/functions";
-// Client entry imported directly by design — see modules/auth/client.ts.
 import { authClient } from "../modules/auth/client";
-import { Bracketed, Layout, Mono, Wordmark } from "../ui";
+import { SessionActions } from "../modules/auth/components/SessionActions";
+import { getSession } from "../modules/auth/functions";
+import { Bracketed, Layout, Wordmark } from "../ui";
 
 export const Route = createFileRoute("/")({
   loader: async () => ({ session: await getSession() }),
@@ -13,11 +13,6 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { session } = Route.useLoaderData();
   const router = useRouter();
-
-  async function signOut() {
-    await authClient.signOut();
-    await router.invalidate();
-  }
 
   return (
     <Layout>
@@ -30,32 +25,13 @@ function Home() {
           A virtual wardrobe for runners: what you wore, on which run, in which
           weather.
         </p>
-        {session === null ? (
-          <div className="flex items-center gap-4">
-            <Link
-              to="/auth/signup"
-              className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
-            >
-              Sign up
-            </Link>
-            <Link to="/auth/login" className="font-semibold text-pink">
-              Log in
-            </Link>
-          </div>
-        ) : (
-          <div className="flex items-center gap-4">
-            <Mono className="text-xs">{session.user.email}</Mono>
-            <button
-              type="button"
-              onClick={() => {
-                void signOut();
-              }}
-              className="font-semibold text-pink"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
+        <SessionActions
+          email={session?.user.email}
+          signOut={async () => {
+            await authClient.signOut();
+            await router.invalidate();
+          }}
+        />
         <Bracketed className="text-sm">Phase 0</Bracketed>
       </main>
     </Layout>

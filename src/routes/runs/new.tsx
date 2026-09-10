@@ -5,6 +5,7 @@ import { UploadForm } from "../../modules/runs/components/UploadForm";
 import {
   unreadNotificationCountFn,
 } from "../../modules/notifications/functions";
+import { startFileImport } from "../../modules/runs/functions";
 import { Layout } from "../../ui";
 
 /**
@@ -26,7 +27,7 @@ function NewRunPage() {
         <h1 className="m-0 font-display text-3xl uppercase leading-none">
           Log a run
         </h1>
-        <UploadForm />
+        <UploadForm upload={startFileImport} />
         <p className="text-center text-sm text-night/50">
           or{" "}
           <Link to="/runs/manual" className="font-semibold text-pink">

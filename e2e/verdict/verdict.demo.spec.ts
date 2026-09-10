@@ -1,7 +1,7 @@
 /**
  * Covers: A3 (log the verdict) — choosing a verdict, flagging a kit item,
- * and attaching a photo, then seeing it on the entry. One journey, one
- * video.
+ * and attaching a photo, seeing it on the entry, and re-opening the
+ * verdict to find all three still there. One journey, one video.
  *
  * Why this exists separately from feed.demo.spec.ts: that one is the
  * *reader's* journey (follow, browse, open, mark useful) and its Covers
@@ -182,4 +182,18 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // And the verdict is on the entry.
   await page.goto(`/feed/entry/${entryId}`);
   await expect(page.getByText("[A bit cold]")).toBeVisible({ timeout: 15_000 });
+
+  // Re-opening it shows what was saved, which is not what it used to do.
+  //
+  // The flag pickers were seeded empty rather than from
+  // `entry.items[].flag`, so coming back here showed every piece as
+  // unflagged — and saving again wrote that emptiness over the flag the
+  // runner had set. Nothing said so; the screen just quietly disagreed
+  // with the database. The verdict and the photo come back too.
+  await page.goto(`/feed/verdict/${entryId}`);
+  await hydrated(page);
+  await expect(page.getByRole("combobox").first()).toHaveValue("not_enough");
+  await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({
+    timeout: 15_000,
+  });
 });

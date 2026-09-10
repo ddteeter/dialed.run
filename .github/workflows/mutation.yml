@@ -4,26 +4,28 @@ name: Mutation
 #
 # `stryker.conf.json`'s `mutate` list is the scope that has been paid down
 # to 100%, and its `break: 100` fails this job the moment a change stops a
-# mutant being killed. Files outside that list are not mutated here at all
-# — `src/modules` still carries about 1,700 surviving and uncovered
-# mutants, and a job that reported them every run would be noise nobody
-# reads. They join the list a module at a time, as each is finished.
+# mutant being killed. Today that is everything the app ships: `src/lib`,
+# every module under `src/modules`, `src/ui/**/*.tsx` and
+# `src/modules/**/*.tsx`. What is outside it is `src/routes/` and the
+# `functions.ts` files, and `test/architecture/server-functions-are-glue`
+# is what keeps those exclusions honest.
 #
-# Deliberately NOT the guardrails commit-gate analyzer (`"stryker": "off"`
-# in guardrails.config.json). That one scopes to *every* changed TypeScript
-# file, so turning it on today would block the next commit touching a
-# module with findings it did not cause.
+# This is NOT the same enforcement as the guardrails commit-gate analyzer
+# (`"stryker": "required"` in guardrails.config.json). That one scopes to
+# the *changed production* files, which leaves one hole this workflow is
+# the only cover for: **weakening a test changes no production file**, so
+# the local gate mutates nothing and the push sails through. Only a
+# whole-scope run catches an assertion someone deleted.
 #
-# Not in the branch-protection required set: it is the slowest thing in CI
-# and a PR that touches nothing it covers should not wait on it.
+# Which is why the `Mutation` job at the bottom exists and belongs in the
+# branch-protection required set. It aggregates the shards into one
+# context, so the required list does not have to be edited every time a
+# scope joins the ratchet — and it reports success when the matrix was
+# skipped, so a docs-only PR is not blocked forever waiting on a check
+# that never runs. That is the trap a `paths:` filter sets on a required
+# workflow, and it is why the filtering happens in a job here instead.
 on:
   pull_request:
-    paths:
-      - "src/**"
-      - "test/**"
-      - "stryker.conf.json"
-      - "vitest.config.ts"
-      - ".github/workflows/mutation.yml"
 
 permissions:
   contents: read
@@ -42,20 +44,60 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       list: ${{ steps.read.outputs.list }}
+      relevant: ${{ steps.changed.outputs.relevant }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Each scope gets a short, stable name, and the job name uses that
+      # rather than the glob. The glob is not a name: the components scope
+      # carries 24 route negations and runs to ~900 characters, which is
+      # unreadable in the checks list and — since a required context is
+      # matched by exact string — would change every time a route is added
+      # or removed. The name is derived, not restated, so it cannot drift
+      # from the scope it labels.
       - id: read
         run: |
-          echo "list=$(node -p 'JSON.stringify(require("./stryker.conf.json").mutate)')" >> "$GITHUB_OUTPUT"
+          echo "list=$(node -p '
+            const scopes = require("./stryker.conf.json").mutate;
+            const nameOf = (scope) => {
+              const positive = scope.split(",")[0];
+              const [directory] = positive.split("/**");
+              const extension = positive.slice(positive.lastIndexOf(".") + 1);
+              return `${directory.replace(/^src\//, "")} (${extension})`;
+            };
+            JSON.stringify(scopes.map((mutate) => ({ mutate, name: nameOf(mutate) })));
+          ')" >> "$GITHUB_OUTPUT"
+
+      # Mutation is the slowest thing in CI, so a PR that touches nothing
+      # it covers should not wait on it. This used to be a `paths:` filter
+      # on the trigger, which cannot work once the job is required: a
+      # workflow that does not run reports no context, and a required
+      # context that never arrives blocks the merge indefinitely.
+      - id: changed
+        run: |
+          git fetch --no-tags origin \
+            "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+          # `package*.json` is in the list because a stryker or vitest bump
+          # changes what the ratchet measures while touching no source at
+          # all — which is exactly the change you would want re-measured.
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+            | grep -qE '^(src/|test/|stryker\.conf\.json|vitest\.config\.ts|package(-lock)?\.json$|\.github/workflows/mutation\.yml$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
 
   mutate:
-    name: "Mutation score: ${{ matrix.scope }}"
+    name: "Mutation score: ${{ matrix.name }}"
     needs: scopes
+    if: needs.scopes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        scope: ${{ fromJSON(needs.scopes.outputs.list) }}
+        include: ${{ fromJSON(needs.scopes.outputs.list) }}
     steps:
       - uses: actions/checkout@v5
 
@@ -71,4 +113,29 @@ jobs:
       # whole ratcheted set only gets bigger. `--mutate` narrows what is
       # mutated; with no incremental file present the reported score — and
       # so the `break: 100` threshold — covers exactly this scope.
-      - run: npx stryker run --mutate "${{ matrix.scope }}"
+      - run: npx stryker run --mutate "${{ matrix.mutate }}"
+
+  # The one context branch protection requires. Scopes come and go from
+  # the ratchet; this does not.
+  gate:
+    name: Mutation
+    needs: [scopes, mutate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the shards
+        run: |
+          scopes='${{ needs.scopes.result }}'
+          shards='${{ needs.mutate.result }}'
+          echo "scopes: $scopes · shards: $shards"
+          # `skipped` is the honest pass: this PR changed nothing the
+          # ratchet covers. Anything other than success or skipped —
+          # including a cancelled shard — is not a pass.
+          if [ "$scopes" != "success" ]; then
+            echo "::error::Could not read the ratcheted scopes."
+            exit 1
+          fi
+          if [ "$shards" != "success" ] && [ "$shards" != "skipped" ]; then
+            echo "::error::A mutation scope did not reach 100. See the shard that failed."
+            exit 1
+          fi

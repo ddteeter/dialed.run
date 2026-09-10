@@ -169,3 +169,40 @@ export function photoUploadFrom(
   });
   return { ...fields, file };
 }
+
+/**
+ * The cached GET for an entry photo, as one function.
+ *
+ * It was the body of `routes/feed/photo.$.tsx` — three refusals and a set
+ * of headers, in the one kind of file no test can import. The visibility
+ * rule it enforces is the same one entry detail uses: a private entry's
+ * photos are never fetchable by anyone but its owner, and a photo that is
+ * not visible is *not found* rather than forbidden, because "403" tells a
+ * stranger the photo exists.
+ */
+export async function photoResponse(
+  key: string | undefined,
+  viewerId: string | undefined,
+): Promise<Response> {
+  // Absent and blank in one check: the splat is `""` for `/feed/photo/`
+  // itself, and neither is a photo. Written as one because an explicit
+  // `=== ""` arm would be indistinguishable from letting it fall through
+  // to the visibility check, which refuses it too — at the cost of a
+  // query.
+  if (!key) return notFound();
+  if (!(await isPhotoVisible(key, viewerId))) return notFound();
+  const object = await getPhotoObject(key);
+  if (object === null) return notFound();
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  // Private: a photo is only ever visible to people the entry is shared
+  // with, so a shared cache must not hold it.
+  headers.set("cache-control", "private, max-age=3600");
+  return new Response(object.body, { headers });
+}
+
+function notFound(): Response {
+  return new Response("not found", { status: 404 });
+}

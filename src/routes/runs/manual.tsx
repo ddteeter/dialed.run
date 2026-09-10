@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ManualRunForm } from "../../modules/runs/components/ManualRunForm";
+import { submitManualRun } from "../../modules/runs/functions";
 import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
 import {
   unreadNotificationCountFn,
@@ -21,7 +22,7 @@ function ManualRunPage() {
         <h1 className="m-0 font-display text-3xl uppercase leading-none">
           Log a run
         </h1>
-        <ManualRunForm />
+        <ManualRunForm submitRun={submitManualRun} />
       </div>
     </Layout>
   );

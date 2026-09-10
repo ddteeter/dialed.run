@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { signInSchema } from "../../lib/contracts";
 import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
-// Client entry imported directly by design — see modules/auth/client.ts.
-import { authClient } from "../../modules/auth/client";
+import { signIn } from "../../modules/auth/credentials";
 import { TextField, useFormSubmit } from "../../ui";
 
 export const Route = createFileRoute("/auth/login")({ component: LoginPage });
@@ -16,28 +15,9 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  /**
-   * Better Auth returns `{ error }` rather than rejecting, so it is
-   * translated into a throw — `useFormSubmit` classifies a throw into the
-   * failure band, and a returned error object would read as a success.
-   *
-   * A form failure, not a field failure, and deliberately: the server will
-   * not say *which* of email or password was wrong, because that tells an
-   * attacker which addresses have accounts.
-   */
-  const action = useCallback(
-    async (values: { email: string; password: string }) => {
-      const result = await authClient.signIn.email(values);
-      if (result.error) {
-        throw new Error(result.error.message ?? "sign-in rejected");
-      }
-    },
-    [],
-  );
-
   const form = useFormSubmit({
     schema: signInSchema,
-    action,
+    action: signIn,
     successMessage: "Signed in.",
     labels: LABELS,
     onSuccess: async () => {

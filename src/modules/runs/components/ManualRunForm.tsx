@@ -13,7 +13,6 @@ import {
   useFormSubmit,
   useIdempotencyKey,
 } from "../../../ui";
-import { submitManualRun } from "../functions";
 import { manualRunInput } from "../inputs";
 
 type Effort = z.infer<typeof effortSchema>;
@@ -67,9 +66,29 @@ function toMetres(kilometres: string): number {
   return Number(kilometres) * 1000;
 }
 
-export function ManualRunForm() {
+/**
+ * The server functions, handed in rather than imported.
+ *
+ * `../functions` pulls TanStack Start's virtual server entry, and a file
+ * that reaches it cannot be imported by any test — in either vitest
+ * project, because the constraint is the import graph and not the runtime.
+ * So the route wires them and this renders. Each prop's shape is the
+ * server function's own, so the route passes them with no wrapper.
+ */
+export interface ManualRunFormProps {
+  submitRun: (input: {
+    data: z.infer<typeof manualRunInput>;
+  }) => Promise<{ id: string }>;
+}
+
+export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("Morning run");
+  // Equivalent mutant on the initial value: anything stryker substitutes
+  // is not a parseable datetime either, so `toEpochSeconds` answers NaN
+  // for both and the schema refuses both. The empty string is what a
+  // `datetime-local` renders as blank.
+  // Stryker disable next-line StringLiteral
   const [startedAt, setStartedAt] = useState("");
   const [minutes, setMinutes] = useState("30");
   const [distanceKm, setDistanceKm] = useState("5");
@@ -79,10 +98,21 @@ export function ManualRunForm() {
 
   const form = useFormSubmit({
     schema: manualRunInput,
-    action: async (values) => submitManualRun({ data: values }),
+    action: async (values) => submitRun({ data: values }),
+    // Equivalent mutant on the sentence, and a finding rather than a gap:
+    // `onSuccess` navigates to the new run, which unmounts the live region
+    // in the same commit that fills it. Nothing can observe the
+    // announcement, and a screen reader very likely cannot either.
+    // Recorded as D-44.
+    // Stryker disable next-line StringLiteral
     successMessage: "Run logged.",
     labels: LABELS,
     onSuccess: async (created) => {
+      // Equivalent mutant: rotating the key matters for a *second* run
+      // typed into the same mounted form, and the navigation below means
+      // there is never one. It stays because the navigation is the
+      // caller's to change.
+      // Stryker disable next-line CallExpression
       rotate();
       await navigate({ to: "/runs/$runId", params: { runId: created.id } });
     },
@@ -198,8 +228,12 @@ export function ManualRunForm() {
           id="effort"
           value={effort}
           onChange={(event) => {
+            // `isEffort` alone: "" is not an effort, so it falls to the
+            // same "" the explicit check used to produce — and the
+            // fallback becomes the reachable path for "Not set" rather
+            // than a branch nothing can take.
             const { value } = event.target;
-            setEffort(value === "" || isEffort(value) ? value : "");
+            setEffort(isEffort(value) ? value : "");
           }}
           className="w-full border-none bg-transparent outline-none"
         >

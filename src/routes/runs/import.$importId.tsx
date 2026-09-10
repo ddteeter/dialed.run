@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ImportStatus } from "../../modules/runs/components/ImportStatus";
+import { getImportStatusFn } from "../../modules/runs/functions";
 import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
 import {
   unreadNotificationCountFn,
@@ -22,7 +23,7 @@ function ImportStatusPage() {
         <h1 className="m-0 font-display text-3xl uppercase leading-none">
           Reading your run
         </h1>
-        <ImportStatus importId={importId} />
+        <ImportStatus importId={importId} getStatus={getImportStatusFn} />
       </div>
     </Layout>
   );

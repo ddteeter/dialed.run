@@ -21,3 +21,27 @@ export function redirectTo<
 >(options: RedirectOptions<TRouter, TFrom, TTo, TMaskFrom, TMaskTo>): never {
   throw redirect(options) as unknown;
 }
+
+/**
+ * The two gates every signed-in feed screen repeats.
+ *
+ * They were an `if` in each route's `beforeLoad`, which is the one place
+ * in this codebase a decision cannot be tested — a route file imports a
+ * module's `functions.ts` and so cannot be imported by any test. Here they
+ * are ordinary functions with ordinary tests, and the route reads as the
+ * wiring it is.
+ */
+export function requireSignedIn<T>(session: T | null): T {
+  if (session === null) redirectTo({ to: "/auth/login" });
+  return session;
+}
+
+/**
+Back to the feed for anything the viewer may not see, or that is not there.
+The two are deliberately the same answer: telling someone a private entry
+exists is most of what they wanted to know.
+*/
+export function orBackToFeed<T>(value: T | undefined): T {
+  if (value === undefined) redirectTo({ to: "/feed" });
+  return value;
+}
