@@ -336,8 +336,8 @@
     },
     {
       "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Two equivalent mutants, each proved at its site: an empty file list does nothing observable — the loop has no iterations and React batches the `uploading` flag on and off inside one commit, so no render ever shows it; and the Save button is disabled until a verdict is chosen, so the `verdict === undefined` return cannot be reached from the screen and is what narrows `verdict` to a number for the payload.",
-      "count": 2
+      "reason": "Equivalent mutant, proof at the site: an empty file list does nothing observable \u2014 the loop has no iterations, and React batches the `uploading` flag on and off inside one commit, so no render ever shows it. The guard says what it means rather than changing anything. (Was count 2; the second was the `verdict === undefined` early return, which went away when the schema took over refusing a verdict-less submission \u2014 the button used to be `disabled`, which \u00a75 bans.)",
+      "count": 1
     },
     {
       "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable BlockStatement,ArrayDeclaration,CallExpression",
