@@ -24,8 +24,26 @@ name: Mutation
 # skipped, so a docs-only PR is not blocked forever waiting on a check
 # that never runs. That is the trap a `paths:` filter sets on a required
 # workflow, and it is why the filtering happens in a job here instead.
+#
+# ── Why this runs on `main` as well as on PRs ──────────────────────────
+#
+# Two different runs, deliberately:
+#
+#   pull_request  incremental, warm from cache. Fast, and what you wait on.
+#   push to main  incremental report written from cold. Slow, nobody waits.
+#
+# The PR run reuses stryker's incremental report, which re-tests mutants in
+# changed files and mutants whose covering tests changed, and trusts the
+# stored result for everything else. That trust has one real gap: a change
+# in file A can alter whether a mutant in *unchanged* file B is killed, and
+# nothing invalidates B. So the run on `main` is the honest measurement —
+# cold, no restore, every mutant actually executed — and it is what the
+# PR runs are calibrated against. If it goes red, fix forward; `main` is
+# protected and the PR gate has already caught everything cheaper.
 on:
   pull_request:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -55,19 +73,25 @@ jobs:
       # carries 24 route negations and runs to ~900 characters, which is
       # unreadable in the checks list and — since a required context is
       # matched by exact string — would change every time a route is added
-      # or removed. The name is derived, not restated, so it cannot drift
-      # from the scope it labels.
+      # or removed. `slug` is the same name made safe for a cache key.
+      # Both are derived, not restated, so they cannot drift from the
+      # scope they label.
       - id: read
         run: |
           echo "list=$(node -p '
             const scopes = require("./stryker.conf.json").mutate;
             const nameOf = (scope) => {
               const positive = scope.split(",")[0];
-              const [directory] = positive.split("/**");
               const extension = positive.slice(positive.lastIndexOf(".") + 1);
-              return `${directory.replace(/^src\//, "")} (${extension})`;
+              const [head] = positive.split("/**");
+              const base = head === positive ? head.replace(/\.[^./]+$/, "") : head;
+              return `${base.replace(/^src\//, "")} (${extension})`;
             };
-            JSON.stringify(scopes.map((mutate) => ({ mutate, name: nameOf(mutate) })));
+            const slugOf = (name) => name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+            JSON.stringify(scopes.map((mutate) => {
+              const name = nameOf(mutate);
+              return { mutate, name, slug: slugOf(name) };
+            }));
           ')" >> "$GITHUB_OUTPUT"
 
       # Mutation is the slowest thing in CI, so a PR that touches nothing
@@ -75,8 +99,15 @@ jobs:
       # on the trigger, which cannot work once the job is required: a
       # workflow that does not run reports no context, and a required
       # context that never arrives blocks the merge indefinitely.
+      #
+      # A push to `main` is always relevant — that run exists to refresh
+      # the cold measurement, not to react to a diff.
       - id: changed
         run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git fetch --no-tags origin \
             "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           # `package*.json` is in the list because a stryker or vitest bump
@@ -109,11 +140,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Restore on PRs only. The run on `main` is deliberately cold: it is
+      # the measurement everything else is calibrated against, and a warm
+      # one would inherit whatever the last warm one assumed.
+      #
+      # Restore order is this branch first, then `main` — so pushing again
+      # to a PR reuses that PR's own report, and a fresh PR starts from the
+      # last honest full run rather than from nothing. Keyed on the
+      # lockfile because a stryker or vitest bump invalidates every stored
+      # result.
+      - name: Restore the incremental report
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-${{ github.ref }}-
+            stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-refs/heads/main-
+
       # Sharded by scope because this is minutes, not seconds, and the
       # whole ratcheted set only gets bigger. `--mutate` narrows what is
-      # mutated; with no incremental file present the reported score — and
-      # so the `break: 100` threshold — covers exactly this scope.
-      - run: npx stryker run --mutate "${{ matrix.mutate }}"
+      # mutated; the reported score — and so the `break: 100` threshold —
+      # covers exactly this scope.
+      #
+      # `--incremental` is safe here in a way it is not on the commit gate,
+      # and the difference is worth knowing: the gate's `--mutate` is a
+      # *different set of changed files every run*, so a report left from
+      # another run would fold in results for files outside this scope.
+      # A shard's `--mutate` is one fixed glob from the ratchet, so the
+      # stored report and the run always describe the same set.
+      - run: npx stryker run --incremental --mutate "${{ matrix.mutate }}"
+
+      # Only on success: a shard that failed recorded a survived mutant,
+      # and storing that would keep the survivor "known" instead of
+      # re-running it.
+      - name: Store the incremental report
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-${{ github.ref }}-${{ github.sha }}
 
   # The one context branch protection requires. Scopes come and go from
   # the ratchet; this does not.
