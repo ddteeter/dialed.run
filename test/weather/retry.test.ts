@@ -206,7 +206,18 @@ describe("retryPendingWeather counts what it actually did", () => {
     // `>=` rather than `>`: a run that entered the window exactly
     // FAIL_AFTER_SECONDS ago has had its five hours. One second younger
     // has not.
+    //
+    // The clock is pinned for the whole test, and that is what makes the
+    // assertion mean anything. The boundary is only `>=` rather than `>`
+    // at *exactly* FAIL_AFTER_SECONDS, so the age the cron computes has to
+    // be exactly that — and it reads its own `Date.now()` some
+    // milliseconds after this test reads one. On a fast machine the two
+    // land in the same second and the mutant dies; on a loaded CI runner
+    // the drift makes the age strictly greater, both operators agree, and
+    // the mutant survives. It did, on CI, on a run where nothing about
+    // this code had changed.
     const now = Math.floor(Date.now() / 1000);
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const FAIL_AFTER = 5 * HOUR;
 
     await clearPendingRuns();

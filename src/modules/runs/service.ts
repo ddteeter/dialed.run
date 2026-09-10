@@ -176,22 +176,3 @@ export async function didRecordManualTemp(
   return result.meta.changes > 0;
 }
 
-/**
- * TanStack's own `notFound()` returns a plain options object rather than
- * an Error (thrown or returned, per its docs), and the house
- * `only-throw-error` rule rejects throwing that directly. So this is a
- * real Error carrying the `isNotFound` marker the router's `isNotFound()`
- * duck-types on.
- *
- * It lives here rather than in the route because a route file cannot be
- * imported by any test, and "a missing run is a 404 rather than a crash"
- * is worth one.
- */
-export class RunNotFoundError extends Error {
-  readonly isNotFound = true;
-}
-
-export function runOrNotFound<T>(run: T | undefined): T {
-  if (run === undefined) throw new RunNotFoundError("Run not found.");
-  return run;
-}

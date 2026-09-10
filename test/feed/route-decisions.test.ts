@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bandContextFor,
   shouldAskForVerdict,
-} from "../../src/modules/feed/entries";
+} from "../../src/modules/feed/route-decisions";
 
 /**
  * The two decisions that used to live in route loaders.

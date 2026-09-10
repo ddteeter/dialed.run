@@ -4,7 +4,7 @@ import { NotificationBell } from "../../modules/notifications/components/Notific
 import { unreadNotificationCountFn } from "../../modules/notifications/functions";
 import { RunDetail } from "../../modules/runs/components/RunDetail";
 import { getRunFn, recordManualTempFn } from "../../modules/runs/functions";
-import { runOrNotFound } from "../../modules/runs/service";
+import { runOrNotFound } from "../../modules/runs/not-found";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/runs/$runId")({

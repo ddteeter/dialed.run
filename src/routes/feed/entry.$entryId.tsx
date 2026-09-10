@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
-import { shouldAskForVerdict } from "../../modules/feed/entries";
+import { shouldAskForVerdict } from "../../modules/feed/route-decisions";
 import {
   entryDetailQuery,
   recordVerdictPromptedAction,

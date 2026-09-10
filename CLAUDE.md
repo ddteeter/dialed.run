@@ -64,6 +64,18 @@ src/
   the server function's own shape so the route needs no wrapper. That is
   what keeps `src/modules/**/*.tsx` in the mutation ratchet.
 - Nothing imports from `routes/`; route files import modules, never each other.
+- **A route is in the client bundle, so what it imports at module scope must
+  be reachable without `env`.** Server functions and `server.handlers` are
+  stripped by the Start plugin, so reaching bindings *through* those is fine —
+  what is not fine is a plain top-level import of a module file that reaches
+  `src/env` or `src/db/schema*`. Pulling one decision out of `feed/entries.ts`
+  into a route loader dragged `cloudflare:workers` into the browser bundle and
+  broke `npm run build`; a second did the same with the whole drizzle schema,
+  23kB of it, and that one did not even fail. **Neither is visible to tsc, to
+  eslint, to dependency-cruiser or to the test suite** — only to the production
+  client build. So a decision a route needs goes in a sibling that imports
+  nothing server-side (`feed/route-decisions.ts`, `runs/not-found.ts` are the
+  worked examples), and the queries stay behind callbacks the caller owns.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
 - Each lane owns its `src/routes/<lane>/` directory exclusively — route merges
@@ -570,7 +582,8 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
    PR branch, watch the checks (`gh pr checks <n> --watch`) and fix failures
    before ending your turn. CI covers ground the local gates don't (the
    client-bundle build, browser e2e) — local green is not proof.
-8. Before ending your final turn: run `npm run verify && npm test`, then
+8. Before ending your final turn: run `npm run verify && npm test && npm run
+   build`, then
    summarize what you built, what you did not do, and any open questions —
    in five sentences or fewer.
 

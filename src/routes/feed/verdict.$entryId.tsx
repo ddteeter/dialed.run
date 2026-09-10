@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { bandFloorC } from "../../lib/temperature";
 import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/components/VerdictForm";
-import { bandContextFor } from "../../modules/feed/entries";
+import { bandContextFor } from "../../modules/feed/route-decisions";
 import {
   entryDetailQuery,
   itemBandWearStatQuery,
