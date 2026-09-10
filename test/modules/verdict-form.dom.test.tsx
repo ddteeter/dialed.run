@@ -5,7 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -46,10 +46,10 @@ async function renderWithRouter(element: ReactElement) {
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
-    id: "01ENTRY",
-    userId: "01USER",
+    id: "01JENTRY000000000000000000",
+    userId: "01JSER00000000000000000000",
     authorDisplayName: undefined,
-    runId: "01RUN",
+    runId: "01JRAN00000000000000000000",
     runTitle: "Evening run",
     distanceM: 8047,
     durationS: 1830,
@@ -100,6 +100,27 @@ const nothing = () => Promise.resolve();
 const noStat = () => Promise.resolve({ worn: 1, total: 1 });
 const noUpload = () => Promise.resolve({ key: "k" });
 
+/**
+ * Rejects with `reason` exactly as given, never wrapped in an Error.
+ *
+ * That is the point, not a detail. A rejection from a server function has
+ * crossed a structured clone, so it reaches the browser as a plain object
+ * with no prototype — `instanceof Error` is false for a real one, which is
+ * why `useFormSubmit` *parses* what came back instead of casting it. An
+ * `Object.assign(new Error(), { issues })` would test a shape production
+ * never produces.
+ *
+ * `throw reason` rather than `Promise.reject(reason)`: `reason` stays typed
+ * `unknown` at the throw site, which `only-throw-error` allows by default,
+ * where `prefer-promise-reject-errors` extends no such allowance. Same
+ * helper as `test/ui/form.dom.test.tsx`; the rule's fitness for these tests
+ * is written up in docs/designs/042.
+ */
+function rejectWith(reason: unknown): never {
+  throw reason;
+}
+
+
 function form(
   overrides: {
     entry?: Partial<Entry>;
@@ -114,7 +135,7 @@ function form(
   return (
     <VerdictForm
       entry={entry(overrides.entry)}
-      entryId="01ENTRY"
+      entryId="01JENTRY000000000000000000"
       bandFloor={overrides.bandFloor}
       submitVerdict={overrides.submitVerdict ?? nothing}
       uploadPhoto={overrides.uploadPhoto ?? noUpload}
@@ -135,9 +156,66 @@ describe("VerdictForm: the scale", () => {
     }
   });
 
-  it("will not save until one is chosen", async () => {
-    await renderWithRouter(form());
-    expect(screen.getByRole("button", { name: "Save verdict" })).toBeDisabled();
+  it("names each field the server rejects, in the words a person reads", async () => {
+    // The client pre-check can only ever fail on `verdict` — every other
+    // value comes from a controlled input and is well-formed by
+    // construction — so one error, and one error renders no summary. The
+    // *server* validates the same schema and can reject several at once,
+    // which is the only path that reaches the summary and the labels.
+    //
+    // Without this the label map is four strings nothing reads, and a
+    // mutant emptying any of them leaves a summary row with no name.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        submitVerdict: () =>
+          rejectWith({
+            issues: [
+              { path: ["verdict"], message: "Out of range." },
+              { path: ["tags"], message: "That tag is retired." },
+              { path: ["itemFlags"], message: "That piece is not on this run." },
+              { path: ["isPublic"], message: "Not allowed for this account." },
+            ],
+          }),
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+
+    expect(
+      await screen.findByRole("button", { name: /How it felt/ }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Tags/ })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /Per-item notes/ }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Sharing/ })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Nothing saved. 4 fields need a fix.",
+    );
+  });
+
+  it("refuses to save without one, and says why", async () => {
+    // This used to be `disabled` on the submit button, which §5 bans: a
+    // disabled button drops focus, stops announcing, and tells a user
+    // nothing about why their tap did nothing. The schema refuses the
+    // submission instead, and the sentence lives in `verdictSchema` where
+    // every renderer of it can find it.
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn(() => Promise.resolve(undefined));
+    await renderWithRouter(form({ submitVerdict }));
+
+    const save = screen.getByRole("button", { name: "Save verdict" });
+    expect(save).toBeEnabled();
+
+    await user.click(save);
+
+    expect(await screen.findByText("Say how the kit felt.")).toBeVisible();
+    expect(submitVerdict).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Nothing saved. One field needs a fix.",
+    );
   });
 
   it("marks the chosen one, and only that one", async () => {
@@ -187,7 +265,7 @@ describe("VerdictForm: the scale", () => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
     expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
-      entryId: "01ENTRY",
+      entryId: "01JENTRY000000000000000000",
       verdict: 2,
     });
   });
@@ -196,7 +274,7 @@ describe("VerdictForm: the scale", () => {
 describe("VerdictForm: per-item flags", () => {
   it("offers a flag per item, defaulting to none", async () => {
     await renderWithRouter(
-      form({ entry: { items: [item("01A", "Houdini"), item("01B", "Tights")] } }),
+      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini"), item("01JTEMB0000000000000000000", "Tights")] } }),
     );
 
     expect(screen.getByRole("heading", { name: "Per-item notes" })).toBeVisible();
@@ -214,7 +292,7 @@ describe("VerdictForm: per-item flags", () => {
     // `?? ""` — a select with a value matching no option shows its first
     // one anyway, so the fallback is what keeps the control honest.
     await renderWithRouter(
-      form({ entry: { items: [item("01A", "Houdini")] } }),
+      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] } }),
     );
     // The *selected option*, not the value: a select whose value matches
     // no option shows its first one regardless, so `toHaveValue("")` would
@@ -231,8 +309,8 @@ describe("VerdictForm: per-item flags", () => {
       form({
         entry: {
           items: [
-            { ...item("01A", "Houdini"), flag: "not_enough" as const },
-            item("01B", "Tights"),
+            { ...item("01JTEMA0000000000000000000", "Houdini"), flag: "not_enough" as const },
+            item("01JTEMB0000000000000000000", "Tights"),
           ],
         },
       }),
@@ -254,7 +332,7 @@ describe("VerdictForm: per-item flags", () => {
     await renderWithRouter(
       form({
         entry: {
-          items: [{ ...item("01A", "Houdini"), flag: "not_enough" as const }],
+          items: [{ ...item("01JTEMA0000000000000000000", "Houdini"), flag: "not_enough" as const }],
         },
         submitVerdict,
       }),
@@ -267,14 +345,14 @@ describe("VerdictForm: per-item flags", () => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
     expect(submitVerdict.mock.calls[0]?.[0]?.data.itemFlags).toStrictEqual([
-      { itemId: "01A", flag: "not_enough" },
+      { itemId: "01JTEMA0000000000000000000", flag: "not_enough" },
     ]);
   });
 
   it("keeps each item's flag to itself", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      form({ entry: { items: [item("01A", "Houdini"), item("01B", "Tights")] } }),
+      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini"), item("01JTEMB0000000000000000000", "Tights")] } }),
     );
 
     await user.selectOptions(flagSelect(0), "too_much");
@@ -297,7 +375,7 @@ describe("VerdictForm: per-item flags", () => {
     >(() => Promise.resolve());
     await renderWithRouter(
       form({
-        entry: { items: [item("01A", "Houdini"), item("01B", "Tights")] },
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini"), item("01JTEMB0000000000000000000", "Tights")] },
         submitVerdict,
       }),
     );
@@ -310,8 +388,8 @@ describe("VerdictForm: per-item flags", () => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
     expect(submitVerdict.mock.calls[0]?.[0]?.data.itemFlags).toStrictEqual([
-      { itemId: "01A", flag: "too_much" },
-      { itemId: "01B", flag: undefined },
+      { itemId: "01JTEMA0000000000000000000", flag: "too_much" },
+      { itemId: "01JTEMB0000000000000000000", flag: undefined },
     ]);
   });
 
@@ -321,7 +399,7 @@ describe("VerdictForm: per-item flags", () => {
       (input: { data: Record<string, unknown> }) => Promise<unknown>
     >(() => Promise.resolve());
     await renderWithRouter(
-      form({ entry: { items: [item("01A", "Houdini")] }, submitVerdict }),
+      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] }, submitVerdict }),
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
@@ -334,7 +412,7 @@ describe("VerdictForm: per-item flags", () => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
     expect(submitVerdict.mock.calls[0]?.[0]?.data.itemFlags).toStrictEqual([
-      { itemId: "01A", flag: undefined },
+      { itemId: "01JTEMA0000000000000000000", flag: undefined },
     ]);
   });
 });
@@ -455,14 +533,14 @@ describe("VerdictForm: photos", () => {
     // above the Add a photo link.
     const { container } = await renderWithRouter(form());
     expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(container.querySelectorAll(".grid")).toHaveLength(0);
+    expect(container.querySelectorAll(".grid-cols-4")).toHaveLength(0);
   });
 
   it("shows the grid as soon as there is one photo", async () => {
     const { container } = await renderWithRouter(
       form({ entry: { photoKeys: ["a"] } }),
     );
-    expect(container.querySelectorAll(".grid")).toHaveLength(1);
+    expect(container.querySelectorAll(".grid-cols-4")).toHaveLength(1);
   });
 
   it("uploads a photo as multipart, with its own idempotency key", async () => {
@@ -479,7 +557,7 @@ describe("VerdictForm: photos", () => {
       expect(uploadPhoto).toHaveBeenCalledTimes(1);
     });
     const sent = uploadPhoto.mock.calls[0]?.[0]?.data;
-    expect(sent?.get("entryId")).toBe("01ENTRY");
+    expect(sent?.get("entryId")).toBe("01JENTRY000000000000000000");
     expect(sent?.get("photo")).toBeInstanceOf(File);
     expect(typeof sent?.get("idempotencyKey")).toBe("string");
   });
@@ -570,6 +648,12 @@ describe("VerdictForm: photos", () => {
 
     await user.upload(fileInput(), [jpeg("a.jpg"), jpeg("b.jpg")]);
 
+    // At the cap the Add-a-photo control is gone — and the sentence
+    // explaining why has to outlive it, which is the whole point of the
+    // field rendering when there is an error but no control.
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Add a photo")).toBeNull();
+    });
     expect(
       await screen.findByText(
         `Up to ${String(maxPhotosPerEntry)} photos per entry.`,
@@ -670,7 +754,7 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await renderWithRouter(
       form({
-        entry: { items: [item("01A", "Houdini")] },
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
         bandFloor: 5,
         itemBandWearStat,
       }),
@@ -682,7 +766,7 @@ describe("VerdictForm: what happens after saving", () => {
     expect(await screen.findByText("Houdini is now 3 of 5")).toBeVisible();
     expect(screen.getByText("[Noted]")).toBeVisible();
     expect(itemBandWearStat).toHaveBeenCalledWith({
-      data: { itemId: "01A", bandFloorC: 5 },
+      data: { itemId: "01JTEMA0000000000000000000", bandFloorC: 5 },
     });
   });
 
@@ -690,14 +774,14 @@ describe("VerdictForm: what happens after saving", () => {
     const user = userEvent.setup();
     const itemBandWearStat = vi.fn(() => Promise.resolve({ worn: 1, total: 1 }));
     const { router } = await renderWithRouter(
-      form({ entry: { items: [item("01A", "Houdini")] }, itemBandWearStat }),
+      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] }, itemBandWearStat }),
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/feed/entry/01ENTRY");
+      expect(router.state.location.pathname).toBe("/feed/entry/01JENTRY000000000000000000");
     });
     expect(itemBandWearStat).not.toHaveBeenCalled();
   });
@@ -710,7 +794,7 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/feed/entry/01ENTRY");
+      expect(router.state.location.pathname).toBe("/feed/entry/01JENTRY000000000000000000");
     });
   });
 
@@ -718,7 +802,7 @@ describe("VerdictForm: what happens after saving", () => {
     const user = userEvent.setup();
     const { router } = await renderWithRouter(
       form({
-        entry: { items: [item("01A", "Houdini")] },
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
         bandFloor: 5,
         itemBandWearStat: () => Promise.resolve({ worn: 3, total: 5 }),
       }),
@@ -730,7 +814,7 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Done" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/feed/entry/01ENTRY");
+      expect(router.state.location.pathname).toBe("/feed/entry/01JENTRY000000000000000000");
     });
   });
 
@@ -743,7 +827,13 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
-    expect(await screen.findByText("Couldn't save that. Try again.")).toBeVisible();
+    // The band the contract defines, with the classifier's own sentence —
+    // not a pink line of the form's own wording. Pink is action, never
+    // failure.
+    expect(
+      await screen.findByText("Our end failed. Nothing changed."),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Save verdict" })).toBeVisible();
   });
 
@@ -758,13 +848,142 @@ describe("VerdictForm: what happens after saving", () => {
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
-    expect(await screen.findByText("Couldn't save that. Try again.")).toBeVisible();
+    expect(
+      await screen.findByText("Our end failed. Nothing changed."),
+    ).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {
-      expect(screen.queryByText("Couldn't save that. Try again.")).toBeNull();
+      expect(screen.queryByText("Our end failed. Nothing changed.")).toBeNull();
     });
     pending.resolve(undefined);
+  });
+});
+
+describe("VerdictForm: the details that go missing silently", () => {
+  it("offers the control at rest and withdraws it at the cap", async () => {
+    // Three things at once, because they are one decision: the field
+    // renders when there is a control *or* a message, the control itself
+    // renders only below the cap, and the resting label is the words a
+    // person taps. At the cap with nothing wrong there is no control and
+    // nothing to say, so the whole field goes — anything else leaves an
+    // "Add a photo" heading over empty space.
+    await renderWithRouter(form());
+    expect(screen.getByText("Add a photo")).toBeVisible();
+
+    cleanup();
+
+    await renderWithRouter(
+      form({
+        entry: {
+          photoKeys: Array.from({ length: maxPhotosPerEntry }, (_, i) =>
+            String(i),
+          ),
+        },
+      }),
+    );
+    expect(screen.queryByText("Add a photo")).toBeNull();
+  });
+
+  it("says it is busy on the control, and starts one upload at a time", async () => {
+    // Both halves of what the `disabled` attribute used to do, done the
+    // way §5 requires: the input stays focusable and announces that work
+    // is under way, and the re-entry guard lives in the handler. A second
+    // selection mid-upload would race the cap count, which is counted
+    // locally precisely because state does not settle between iterations.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ key: string }>();
+    const uploadPhoto = vi.fn(() => pending.promise);
+    await renderWithRouter(form({ uploadPhoto }));
+
+    const input = fileInput();
+    expect(input).not.toHaveAttribute("aria-busy");
+
+    await user.upload(input, [jpeg("a.jpg")]);
+
+    await waitFor(() => {
+      expect(fileInput()).toHaveAttribute("aria-busy", "true");
+    });
+    // Still focusable, which a `disabled` input would not be.
+    expect(fileInput()).toBeEnabled();
+
+    await user.upload(fileInput(), [jpeg("b.jpg")]);
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+
+    pending.resolve({ key: "k" });
+    await waitFor(() => {
+      expect(fileInput()).not.toHaveAttribute("aria-busy");
+    });
+  });
+
+  it("says it is uploading while it uploads", async () => {
+    // The label swaps for the duration, and nothing else on the screen
+    // says work is under way — a photo that takes a moment would otherwise
+    // look like a tap that did not register.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ key: string }>();
+    await renderWithRouter(form({ uploadPhoto: () => pending.promise }));
+
+    await user.upload(fileInput(), [jpeg("a.jpg")]);
+
+    expect(await screen.findByText("Uploading…")).toBeVisible();
+    pending.resolve({ key: "k" });
+    await waitFor(() => {
+      expect(screen.queryByText("Uploading…")).toBeNull();
+    });
+  });
+
+  it("submits through its own handler, never the browser's", async () => {
+    // `event.preventDefault()`. Without it the browser navigates on submit
+    // and the whole hook — validation, announcement, band — is skipped,
+    // while the screen appears to do something.
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+
+    let prevented: boolean | undefined;
+    const watch = (event: Event) => {
+      prevented = event.defaultPrevented;
+    };
+    document.addEventListener("submit", watch);
+    try {
+      await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    } finally {
+      document.removeEventListener("submit", watch);
+    }
+
+    expect(prevented).toBe(true);
+  });
+
+  it("announces the save before either exit destroys the region", async () => {
+    // Both success paths take the live region with them — one navigates,
+    // the other replaces the form with the noted screen — so the sentence
+    // cannot be read after the fact. It is observable in exactly one
+    // window: `onSuccess` has set the status and is awaiting the band
+    // stat, so the form is still mounted with the region filled. Holding
+    // that promise open is what makes the window big enough to assert in.
+    //
+    // That the window exists at all is D-44's fix: before it, the status
+    // and the unmount landed in the same commit.
+    const user = userEvent.setup();
+    const stat = Promise.withResolvers<{ worn: number; total: number }>();
+    await renderWithRouter(
+      form({
+        bandFloor: -5,
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        itemBandWearStat: () => stat.promise,
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Verdict saved.");
+    });
+
+    stat.resolve({ worn: 3, total: 7 });
+    expect(await screen.findByText(/Houdini is now 3 of 7/)).toBeVisible();
   });
 });

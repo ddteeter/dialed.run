@@ -371,7 +371,18 @@ export interface ExtractionModel {
 
 // ---- Verdicts (D-05/D-12) -------------------------------------------------
 
-export const verdictSchema = z.number().int().min(-2).max(2);
+/**
+ * The sentence is here because the screen used to enforce this with a
+ * `disabled` submit button, which §5 bans: it drops focus, stops
+ * announcing, and tells a user nothing about why nothing happened. The
+ * schema refusing the submission with a reason is the contract's answer,
+ * and the reason has to live where every renderer of it can find it.
+ */
+export const verdictSchema = z
+  .number({ error: "Say how the kit felt." })
+  .int()
+  .min(-2)
+  .max(2);
 
 /**
  * The verdict scale, once. Coldest to warmest — the order the A3 choices

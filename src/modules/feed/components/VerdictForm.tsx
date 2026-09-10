@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
 import { newUlid } from "../../../lib/ids";
@@ -8,10 +8,30 @@ import {
   isAllowedPhotoType,
   maxPhotosPerEntry,
 } from "../../../lib/photo-constraints";
-import { Bracketed } from "../../../ui";
+import {
+  Bracketed,
+  FormErrorSummary,
+  FormFailureBand,
+  FormField,
+  FormStatus,
+  SubmitButton,
+  useFormSubmit,
+} from "../../../ui";
+import { submitVerdictInput } from "../inputs";
 import type { entryDetailForViewer } from "../entries";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
+
+/**
+Field name -> human label, for the summary rows the contract requires once
+two or more fields fail at once.
+*/
+const LABELS = {
+  verdict: "How it felt",
+  tags: "Tags",
+  itemFlags: "Per-item notes",
+  isPublic: "Sharing",
+};
 
 /**
  * The verdict (screen A3) — the one screen the whole product turns on.
@@ -55,10 +75,10 @@ export function VerdictForm({
     Object.fromEntries(entry.items.map((item) => [item.itemId, item.flag ?? ""])),
   );
   const [noted, setNoted] = useState<string | undefined>();
-  const [error, setError] = useState<string | undefined>();
   const [photoKeys, setPhotoKeys] = useState<string[]>(entry.photoKeys);
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [uploading, setUploading] = useState(false);
+  const uploadInFlight = useRef(false);
 
   // Equivalent mutant on the fallback: every item is seeded above, so the
   // lookup always finds one. The `??` is `noUncheckedIndexedAccess`'s, not
@@ -68,6 +88,11 @@ export function VerdictForm({
   const flagFor = (itemId: string) => flags[itemId] ?? "";
 
   async function handlePhotoSelect(event: ChangeEvent<HTMLInputElement>) {
+    // The guard the `disabled` attribute used to be. A second selection
+    // mid-upload would race the cap count below, which is counted locally
+    // precisely because state does not settle between iterations.
+    if (uploadInFlight.current) return;
+    uploadInFlight.current = true;
     // Copy out of the live FileList BEFORE clearing the input. `files` is
     // a live view onto the input, so resetting `value` first empties it —
     // the loop below then saw zero files and the upload silently did
@@ -123,46 +148,60 @@ export function VerdictForm({
       setPhotoError("Couldn't upload that photo. Try again.");
     } finally {
       setUploading(false);
+      uploadInFlight.current = false;
     }
   }
 
-  async function submit() {
-    // Equivalent mutant: the Save button is disabled until a verdict is
-    // chosen, so this cannot be reached from the screen. It stays because
-    // it is what narrows `verdict` to a number for the payload below.
-    // Stryker disable next-line ConditionalExpression
-    if (verdict === undefined) return;
-    setError(undefined);
-    try {
-      await submitVerdict({
-        data: {
-          entryId,
-          verdict,
-          isPublic,
-          tags: [...tags] as (typeof entryTags)[number][],
-          itemFlags: entry.items.map((item) => {
-            // `=== ""` alone: an item with no entry reads as undefined,
-            // which is already the answer this returns for it.
-            const flagValue = flags[item.itemId];
-            return {
-              itemId: item.itemId,
-              flag: flagValue === "" ? undefined : flagValue,
-            };
-          }),
-        },
-      });
+  /**
+   * The whole A3 submission, validated by the same schema the server
+   * function validates with — `submitVerdictInput`, not a copy of its
+   * rules. The form's state is already the payload's shape, so unlike the
+   * closet's there is no transform in between.
+   *
+   * **No `disabled` on the submit button any more.** The screen used to
+   * enforce "pick a verdict" by disabling it, which §5 bans: a disabled
+   * button drops focus, stops announcing, and tells nobody why nothing
+   * happened. The schema refuses the submission with a reason instead.
+   */
+  const form = useFormSubmit({
+    schema: submitVerdictInput,
+    action: async (values) => submitVerdict({ data: values }),
+    successMessage: "Verdict saved.",
+    labels: LABELS,
+    onSuccess: async () => {
+      // The calibration note is the reason to log a verdict at all, so
+      // when there is one the screen stays and shows it rather than
+      // navigating away from it.
       const firstItem = entry.items[0];
       if (firstItem && bandFloor !== undefined) {
         const stat = await itemBandWearStat({
           data: { itemId: firstItem.itemId, bandFloorC: bandFloor },
         });
-        setNoted(`${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)}`);
-      } else {
-        await navigate({ to: "/feed/entry/$entryId", params: { entryId } });
+        setNoted(
+          `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)}`,
+        );
+        return;
       }
-    } catch {
-      setError("Couldn't save that. Try again.");
-    }
+      await navigate({ to: "/feed/entry/$entryId", params: { entryId } });
+    },
+  });
+
+  function payload() {
+    return {
+      entryId,
+      verdict,
+      isPublic,
+      tags: [...tags] as (typeof entryTags)[number][],
+      itemFlags: entry.items.map((item) => {
+        // `=== ""` alone: an item with no entry reads as undefined, which
+        // is already the answer this returns for it.
+        const flagValue = flags[item.itemId];
+        return {
+          itemId: item.itemId,
+          flag: flagValue === "" ? undefined : flagValue,
+        };
+      }),
+    };
   }
 
   if (noted !== undefined) {
@@ -184,8 +223,27 @@ export function VerdictForm({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
+    <form
+      ref={form.formRef}
+      noValidate
+      className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.submit(payload());
+      }}
+    >
         <h1 className="font-display text-2xl uppercase leading-none">Verdict</h1>
+        <FormStatus>{form.status}</FormStatus>
+        <FormErrorSummary
+          rows={form.summaryRows}
+          onFocusField={form.focusField}
+          summaryRef={form.summaryRef}
+        />
+        <FormField
+          name="verdict"
+          label={LABELS.verdict}
+          error={form.fieldErrors.verdict}
+        >
         <div className="flex flex-col gap-2">
           {verdictScale.map((choice) => (
             <button
@@ -204,6 +262,7 @@ export function VerdictForm({
             </button>
           ))}
         </div>
+        </FormField>
 
         {entry.items.length > 0 ? (
           <div className="flex flex-col gap-2">
@@ -244,22 +303,37 @@ export function VerdictForm({
               ))}
             </div>
           ) : undefined}
-          {photoKeys.length < maxPhotosPerEntry ? (
-            <label className="text-sm font-semibold text-pink">
-              {uploading ? "Uploading…" : "Add a photo"}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                disabled={uploading}
-                onChange={(event) => {
-                  void handlePhotoSelect(event);
-                }}
-                className="hidden"
-              />
-            </label>
+          {/*
+            The field outlives the control. "Up to 4 photos per entry." is
+            set exactly when the cap is reached — which is exactly when the
+            Add-a-photo link stops rendering — so putting the message
+            inside that conditional hid it in the one case it exists for.
+          */}
+          {photoError !== undefined || photoKeys.length < maxPhotosPerEntry ? (
+            <FormField
+              name="photo"
+              label={uploading ? "Uploading…" : "Add a photo"}
+              error={photoError}
+            >
+              {photoKeys.length < maxPhotosPerEntry ? (
+                <input
+                  id="photo"
+                  name="photo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  // Not `disabled` while uploading (§5): it drops focus and
+                  // stops announcing. The re-entry guard is in the handler,
+                  // where it can also survive a re-render.
+                  aria-busy={uploading || undefined}
+                  onChange={(event) => {
+                    void handlePhotoSelect(event);
+                  }}
+                  className="text-sm"
+                />
+              ) : undefined}
+            </FormField>
           ) : undefined}
-          {photoError ? <p className="text-sm font-semibold text-pink">{photoError}</p> : undefined}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -300,18 +374,16 @@ export function VerdictForm({
           Share this — the verdict label shows on the post
         </label>
 
-        {error ? <p className="text-sm font-semibold text-pink">{error}</p> : undefined}
-
-        <button
-          type="button"
-          disabled={verdict === undefined}
-          onClick={() => {
-            void submit();
-          }}
-          className="rounded-md bg-night px-4 py-3 font-semibold text-chalk disabled:opacity-40"
-        >
-          Save verdict
-        </button>
-    </div>
+        <FormFailureBand
+          failure={form.failure}
+          onRetry={form.retry}
+          retryRef={form.retryRef}
+        />
+        <SubmitButton
+          label="Save verdict"
+          pendingLabel="Saving"
+          pending={form.pending}
+        />
+    </form>
   );
 }
