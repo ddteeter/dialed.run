@@ -162,3 +162,30 @@ screens C and F. Re-record per workflow rule 5.
 3. **D-35 is not in this PR.** The feed's triplicated session redirect is
    its own change with its own analyzer flip, and mixing it in would make
    both unreviewable. Next in the stack.
+
+## Note for review: a lint rule that is wrong for these tests
+
+`@typescript-eslint/prefer-promise-reject-errors` requires `Promise.reject`
+to be given an `Error`. For `test/ui/form.dom.test.tsx` that is the wrong
+requirement, and not marginally:
+
+The hook's whole reason for *parsing* a rejection rather than casting it is
+that a server function's rejection has crossed a structured clone — it
+arrives as a plain object with no prototype, so `instanceof ZodError` is
+false for a real one. The tests therefore have to reject with plain
+objects, strings and malformed payloads, because those are the shapes
+production actually produces. Wrapping them in `Error` would turn every one
+of those tests into a test of something that never happens.
+
+It is currently satisfied by `async function rejectWith(reason: unknown) {
+throw reason; }` — `only-throw-error` allows an `unknown` throw by default,
+where `prefer-promise-reject-errors` extends no such allowance to
+`Promise.reject`. That is documented at the site, and nothing is suppressed
+or cast. But it is a construct chosen to sit outside a rule rather than to
+satisfy it, which is the kind of thing that should be a decision rather
+than a trick discovered later.
+
+**The question for the owner:** configure the rule to allow it in `test/**`
+(it already allows the equivalent throw), or leave the helper as the
+repo's one sanctioned way to reject with a non-Error and point at this
+note. I have not changed the eslint config, which is a forbidden zone.

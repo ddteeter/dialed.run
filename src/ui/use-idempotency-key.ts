@@ -27,8 +27,13 @@ export function useIdempotencyKey(): {
   rotate: () => void;
 } {
   const [idempotencyKey, setKey] = useState(() => newUlid());
+  // Equivalent: stryker's replacement for an empty dependency array is a
+  // constant array, which is exactly as stable as `[]`, so `rotate` keeps
+  // its identity either way and no caller can tell.
+  // Stryker disable ArrayDeclaration
   const rotate = useCallback(() => {
     setKey(newUlid());
   }, []);
+  // Stryker restore ArrayDeclaration
   return { idempotencyKey, rotate };
 }

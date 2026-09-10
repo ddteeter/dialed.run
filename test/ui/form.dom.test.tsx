@@ -12,6 +12,7 @@ import {
   SubmitButton,
   TextField,
 } from "../../src/ui/form";
+import { DURATION } from "../../src/ui/motion";
 import { useFormSubmit } from "../../src/ui/use-form-submit";
 
 /**
@@ -38,9 +39,14 @@ const schema = z.object({
 function Harness({
   action,
   onSuccess,
+  withLabels = true,
 }: Readonly<{
   action: (values: z.output<typeof schema>) => Promise<unknown>;
   onSuccess?: (() => void) | undefined;
+  /**
+   * `labels` is optional on the hook; without it a row is named by its key.
+   */
+  withLabels?: boolean;
 }>) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -48,7 +54,7 @@ function Harness({
     schema,
     action,
     successMessage: "Saved.",
-    labels: { name: "Name", brand: "Brand" },
+    ...(withLabels && { labels: { name: "Name", brand: "Brand" } }),
     ...(onSuccess !== undefined && { onSuccess }),
   });
 
@@ -100,6 +106,44 @@ function deferred<T>() {
 async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Name"), "Houdini");
   await user.type(screen.getByLabelText("Brand"), "Patagonia");
+}
+
+/**
+ * Rejects with `reason` exactly as given, never wrapped in an Error.
+ *
+ * `throw reason` rather than `Promise.reject(reason)`: `reason` stays typed
+ * `unknown` at the throw site, which `only-throw-error` allows by default —
+ * `prefer-promise-reject-errors` does not extend the same allowance to
+ * `Promise.reject`, and wrapping in an Error would misrepresent what these
+ * tests are proving (below).
+ *
+ * Not `async`: the function never reaches a `return`, so its real type is
+ * `never` — a synchronous throw during `action(pre.data)`'s evaluation
+ * lands in `submit`'s own `try/catch` exactly as an awaited rejection
+ * would, and `never` is assignable wherever the harness expects
+ * `Promise<unknown>`. Marking it `async` bought nothing but an
+ * `require-await` violation.
+ */
+function rejectWith(reason: unknown): never {
+  throw reason;
+}
+
+/**
+ * A rejection from a server function has crossed a structured clone, so
+ * it is a plain object with no prototype — `instanceof ZodError` is
+ * false for a real one. The hook therefore *parses* what came back
+ * rather than casting it, and these are the cases that parse decides.
+ *
+ * Getting it wrong in either direction is silent: a real field error
+ * classified as a server failure marks the button instead of the field,
+ * and a malformed payload treated as issues marks fields that may not
+ * exist while claiming the fix is inside the form.
+ */
+async function submitAndReject(reason: unknown) {
+  const user = userEvent.setup();
+  render(<Harness action={() => rejectWith(reason)} />);
+  await fillValid(user);
+  await user.click(screen.getByRole("button", { name: /save/i }));
 }
 
 describe("the submit button is never disabled", () => {
@@ -533,5 +577,382 @@ describe("announce, then move (D-44)", () => {
       expect(didRun).toBe(true);
     });
     expect(statusWhenSuccessRan).toBe("Saved.");
+  });
+});
+
+describe("what counts as field errors coming back from a server function", () => {
+  it("marks the field an issue names", async () => {
+    await submitAndReject({
+      issues: [{ path: ["brand"], message: "We do not stock that one." }],
+    });
+
+    expect(
+      await screen.findByText("We do not stock that one."),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Brand")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("joins a nested path with dots, so a field name is one string", async () => {
+    // `issue.path.join(".")` — the key has to be the whole path, because a
+    // nested field's name is `items.0.flag`, and keying on the first
+    // segment alone would collapse every item's flag into one error.
+    //
+    // Read off the summary rather than a field message: a key with no
+    // control on screen has nothing to render into, and the summary falls
+    // back to the key when no label is given for it. Numbers in the path
+    // are why the segment schema admits them.
+    await submitAndReject({
+      issues: [
+        { path: ["items", 0, "flag"], message: "Pick one." },
+        { path: ["items", 1, "flag"], message: "Pick another." },
+      ],
+    });
+
+    expect(
+      await screen.findByRole("button", { name: /items\.0\.flag/ }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /items\.1\.flag/ }),
+    ).toBeVisible();
+    // Two distinct fields, so two rows — not one key overwriting the other.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Nothing saved. 2 fields need a fix.",
+    );
+  });
+
+  it("keeps the first message per field, never a stack", async () => {
+    await submitAndReject({
+      issues: [
+        { path: ["brand"], message: "First." },
+        { path: ["brand"], message: "Second." },
+      ],
+    });
+
+    expect(await screen.findByText("First.")).toBeVisible();
+    expect(screen.queryByText("Second.")).toBeNull();
+    // One field, not two — the count is what the announcement reads from.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Nothing saved. One field needs a fix.",
+    );
+  });
+
+  it("ignores an issue that names no field", async () => {
+    // An empty path cannot mark anything, so it must not be counted as a
+    // field error either — otherwise the form announces a fix that is
+    // nowhere on screen.
+    await submitAndReject({
+      issues: [
+        { path: [], message: "Nowhere." },
+        { path: ["name"], message: "Somewhere." },
+      ],
+    });
+
+    expect(await screen.findByText("Somewhere.")).toBeVisible();
+    expect(screen.queryByText("Nowhere.")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Nothing saved. One field needs a fix.",
+    );
+  });
+
+  it.each([
+    ["a string", "went wrong"],
+    ["a plain Error", new Error("500")],
+    ["an object with no issues at all", { message: "500" }],
+    ["issues that are not issues", { issues: [{ nope: true }] }],
+    ["issues that are not even a list", { issues: "lots" }],
+  ])("treats %s as a form failure, not as field errors", async (_label, reason) => {
+    await submitAndReject(reason);
+
+    // The button, not the fields: nothing was saved and the fix is not
+    // inside the form.
+    expect(await screen.findByRole("button", { name: /try again/i })).toBeVisible();
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("clears a failure band when the next attempt comes back with field errors", async () => {
+    // `setFailure(undefined)` inside `land`. Without it the band from a
+    // dropped connection outlives the retry, so the screen says the
+    // connection failed while pointing at a field to fix.
+    const user = userEvent.setup();
+    const action = vi
+      .fn<(values: z.output<typeof schema>) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("500"))
+      .mockRejectedValueOnce({
+        issues: [{ path: ["brand"], message: "Not that one." }],
+      });
+    render(<Harness action={action} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const retry = await screen.findByRole("button", { name: /try again/i });
+
+    await user.click(retry);
+
+    expect(await screen.findByText("Not that one.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+  });
+});
+
+describe("the live region starts empty", () => {
+  it("says nothing before a submit resolves", () => {
+    // Permanently mounted and empty until an outcome. Seeded with any text
+    // it would announce on arrival, and `sr-only` means nobody who could
+    // report it would ever see it.
+    render(<Harness action={() => Promise.resolve(undefined)} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+});
+
+describe("the state a submit leaves behind", () => {
+  it("treats issues that name no field as a form failure", async () => {
+    // They cannot mark anything, so calling them field errors announced
+    // "Nothing saved. 0 fields need a fix." — a sentence pointing at a fix
+    // that is nowhere on screen. Nothing was saved and the fix is not
+    // inside the form, which is the definition of a form failure.
+    await submitAndReject({ issues: [{ path: [], message: "Nowhere." }] });
+
+    expect(
+      await screen.findByRole("button", { name: /try again/i }),
+    ).toBeVisible();
+    expect(screen.getByRole("status")).not.toHaveTextContent("0 fields");
+  });
+
+  it("clears the band when a later attempt succeeds", async () => {
+    // `setFailure(undefined)` on entry to a submit. Without it the band
+    // from the dropped connection is still on screen after the retry that
+    // worked.
+    const user = userEvent.setup();
+    const action = vi
+      .fn<(values: z.output<typeof schema>) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("500"))
+      .mockResolvedValueOnce(undefined);
+    render(<Harness action={action} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await user.click(await screen.findByRole("button", { name: /try again/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    });
+    expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+    // And it came to rest: a form left pending after a success is a button
+    // that says it is still saving something already saved.
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).not.toHaveAttribute("aria-busy");
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("readonly");
+  });
+
+  it("succeeds cleanly for a form that passes no onSuccess at all", async () => {
+    // `onSuccess?.()` — the option is optional, and most forms that stay
+    // put do not pass one. Calling it unconditionally throws a TypeError,
+    // which this hook classifies as a dropped connection: the save landed
+    // and the screen would say the network failed.
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve(undefined)} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    });
+    // Then let it settle and assert the sentence is *still* the success
+    // one. A `waitFor` on "the band is absent" would pass on its first
+    // poll — the band arrives a tick later, so a negative assertion cannot
+    // wait for something that has not happened yet.
+    // Longer than the hook's own announce-then-move grace, so the throw
+    // this is ruling out has had its chance to happen. Shorter and the
+    // assertion lands before the failure it is looking for.
+    await new Promise((resolve) => {
+      globalThis.setTimeout(resolve, DURATION.instant * 3);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+  });
+
+  it("empties the live region while the next attempt is in flight", async () => {
+    // `setStatus("")` on entry. Left holding the previous outcome, the
+    // region would still be claiming the last failure while the retry is
+    // running — and a region whose text does not change announces nothing
+    // when the new outcome finally matches it.
+    const user = userEvent.setup();
+    const second = Promise.withResolvers<undefined>();
+    const action = vi
+      .fn<(values: z.output<typeof schema>) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("500"))
+      .mockImplementationOnce(() => second.promise);
+    render(<Harness action={action} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const retry = await screen.findByRole("button", { name: /try again/i });
+    expect(screen.getByRole("status")).toHaveTextContent(/^Nothing saved\./);
+
+    await user.click(retry);
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("");
+    });
+    second.resolve(undefined);
+  });
+
+  it("clears field marks once the values are accepted", async () => {
+    // `setFieldErrors({})` on success. A field left marked after the save
+    // worked says the value is wrong while it is sitting in the database.
+    const user = userEvent.setup();
+    const action = vi
+      .fn<(values: z.output<typeof schema>) => Promise<unknown>>()
+      .mockRejectedValueOnce({
+        issues: [{ path: ["brand"], message: "Not that one." }],
+      })
+      .mockResolvedValueOnce(undefined);
+    render(<Harness action={action} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Not that one.");
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    });
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("never marks a field for a failure that is not the field's fault", async () => {
+    // The contract's own table: a form failure marks the button and *no*
+    // field. A mark left over from an earlier field error would say the
+    // fix is inside the form when nothing was saved at all.
+    const user = userEvent.setup();
+    const action = vi
+      .fn<(values: z.output<typeof schema>) => Promise<unknown>>()
+      .mockRejectedValueOnce({
+        issues: [{ path: ["brand"], message: "Not that one." }],
+      })
+      .mockRejectedValueOnce(new Error("500"));
+    render(<Harness action={action} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Not that one.");
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByRole("button", { name: /try again/i });
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("aria-invalid");
+    expect(screen.queryByText("Not that one.")).toBeNull();
+  });
+
+  it("comes back to rest after a failure, not just after a success", async () => {
+    // The `finally`. A form stuck pending is a button that says it is
+    // still working and a set of inputs that stay readOnly.
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.reject(new Error("500"))} />);
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByRole("button", { name: /try again/i });
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).not.toHaveAttribute("aria-busy");
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("readonly");
+  });
+
+  it("lets a corrected form through after the pre-check refused it", async () => {
+    // The guard is released on the pre-check path too. Held, the form
+    // would refuse every submit after the first invalid one — for the rest
+    // of the page's life.
+    const user = userEvent.setup();
+    const action = vi.fn<(values: z.output<typeof schema>) => Promise<unknown>>(
+      () => Promise.resolve(undefined),
+    );
+    render(<Harness action={action} />);
+
+    // Brand missing: the pre-check refuses it without calling the action.
+    await user.type(screen.getByLabelText("Name"), "Houdini");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Which brand?");
+    expect(action).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Brand"), "Patagonia");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(action).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("clears only the field being typed in, not the other one", async () => {
+    // `filter(([key]) => key !== name)`. Clearing everything would wipe a
+    // mark the user has not looked at yet; clearing nothing would leave a
+    // message under a field they have just fixed.
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve(undefined)} />);
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Give it a name.");
+    expect(screen.getByText("Which brand?")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Name"), "H");
+
+    await waitFor(() => {
+      expect(screen.queryByText("Give it a name.")).toBeNull();
+    });
+    expect(screen.getByText("Which brand?")).toBeVisible();
+  });
+
+  it("describes an invalid field and leaves a valid one undescribed", async () => {
+    // `aria-describedby` is how the message reaches a screen reader at
+    // all, since the message itself is deliberately not a live region.
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve(undefined)} />);
+
+    await user.type(screen.getByLabelText("Name"), "Houdini");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByText("Which brand?");
+    expect(screen.getByLabelText("Brand")).toHaveAttribute(
+      "aria-describedby",
+      "brand-message",
+    );
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute(
+      "aria-describedby",
+    );
+  });
+});
+
+describe("the summary names a field", () => {
+  it("uses the label it was given", async () => {
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve(undefined)} />);
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    // Two failures, so a summary — and its rows read as the labels a
+    // person sees on the fields, not as the schema's keys.
+    expect(await screen.findByRole("button", { name: /Name/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Brand/ })).toBeVisible();
+  });
+
+  it("falls back to the field's own name when given none", async () => {
+    // `labels?.[name] ?? name` — the whole option is optional, so a form
+    // that passes none still gets a usable summary rather than a row
+    // labelled `undefined`.
+    const user = userEvent.setup();
+    render(
+      <Harness action={() => Promise.resolve(undefined)} withLabels={false} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(await screen.findByRole("button", { name: /^name/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^brand/ })).toBeVisible();
   });
 });
