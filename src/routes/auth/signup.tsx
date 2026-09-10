@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { signUpSchema } from "../../lib/contracts";
 import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
-// Client entry imported directly by design — see modules/auth/client.ts.
-import { authClient } from "../../modules/auth/client";
+import { signUp } from "../../modules/auth/credentials";
 import { TextField, useFormSubmit } from "../../ui";
 
 export const Route = createFileRoute("/auth/signup")({ component: SignupPage });
@@ -17,20 +16,9 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // See login.tsx: Better Auth returns `{ error }` instead of rejecting.
-  const action = useCallback(
-    async (values: { name: string; email: string; password: string }) => {
-      const result = await authClient.signUp.email(values);
-      if (result.error) {
-        throw new Error(result.error.message ?? "sign-up rejected");
-      }
-    },
-    [],
-  );
-
   const form = useFormSubmit({
     schema: signUpSchema,
-    action,
+    action: signUp,
     successMessage: "Account created.",
     labels: LABELS,
     onSuccess: async () => {

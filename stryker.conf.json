@@ -1,15 +1,18 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-
-  "//": "Run with `npm run mutate`. This list IS the ratchet: every glob in it has been paid down to 100% and `break: 100` below keeps it there. The Mutation workflow reads this array and runs one CI shard per entry, so adding a glob here is what puts a module under the gate — there is no second copy to update.",
-
-  "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts — without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
+  "//": "Run with `npm run mutate`. This list IS the ratchet: every glob in it has been paid down to 100% and `break: 100` below keeps it there. The Mutation workflow reads this array and runs one CI shard per entry, so adding a glob here is what puts a module under the gate \u2014 there is no second copy to update.",
+  "//testRunner": "The vitest runner, which needs `assetsInclude: [\"**/*.bin\"]` in vitest.config.ts \u2014 without it stryker's own vitest instance cannot parse the binary photo fixture. It keeps the process warm between mutants and reports per-test coverage, so it is ~7x faster than the `command` runner (8m42s vs an hour for src/lib) and cannot produce the command runner's false 0.00 on a file its command failed to cover.",
   "testRunner": "vitest",
-
-  "//thresholds": "break at 100 because src/lib is at 100. This is the ratchet: `npm run mutate` exits non-zero the moment a change drops it, so the debt cannot grow back quietly. If a genuinely equivalent mutant appears, prove it at the site with a Stryker directive and a sanctioned grant — do not lower this number.",
-  "thresholds": { "high": 100, "low": 100, "break": 100 },
-
-  "reporters": ["clear-text", "progress"],
+  "//thresholds": "break at 100 because src/lib is at 100. This is the ratchet: `npm run mutate` exits non-zero the moment a change drops it, so the debt cannot grow back quietly. If a genuinely equivalent mutant appears, prove it at the site with a Stryker directive and a sanctioned grant \u2014 do not lower this number.",
+  "thresholds": {
+    "high": 100,
+    "low": 100,
+    "break": 100
+  },
+  "reporters": [
+    "clear-text",
+    "progress"
+  ],
   "concurrency": 4,
   "timeoutMS": 120000,
   "incremental": true,
@@ -17,6 +20,7 @@
   "mutate": [
     "src/lib/**/*.ts",
     "src/ui/**/*.tsx",
+    "src/modules/**/*.tsx,!src/routes/__root.tsx,!src/routes/auth/login.tsx,!src/routes/auth/signup.tsx,!src/routes/closet/$itemId.tsx,!src/routes/closet/edit.$itemId.tsx,!src/routes/closet/index.tsx,!src/routes/closet/new.tsx,!src/routes/feed/attach.$runId.tsx,!src/routes/feed/entry.$entryId.tsx,!src/routes/feed/index.tsx,!src/routes/feed/me.tsx,!src/routes/feed/photo.$.tsx,!src/routes/feed/search.tsx,!src/routes/feed/u.$userId.tsx,!src/routes/feed/verdict.$entryId.tsx,!src/routes/index.tsx,!src/routes/notifications/index.tsx,!src/routes/runs/$runId.tsx,!src/routes/runs/import.$importId.tsx,!src/routes/runs/index.tsx,!src/routes/runs/manual.tsx,!src/routes/runs/new.tsx,!src/routes/runs/strava-callback.tsx,!src/routes/runs/strava.tsx",
     "src/modules/auth/**/*.ts,!src/modules/auth/functions.ts,!src/modules/auth/index.ts,!src/modules/auth/require-user.ts",
     "src/modules/closet/**/*.ts,!src/modules/closet/functions.ts",
     "src/modules/feed/**/*.ts,!src/modules/feed/functions.ts",
@@ -25,5 +29,6 @@
     "src/modules/products/**/*.ts,!src/modules/products/functions.ts",
     "src/modules/runs/**/*.ts,!src/modules/runs/functions.ts",
     "src/modules/weather/**/*.ts"
-  ]
+  ],
+  "//routes": "Every file under src/routes is negated, and the negations ride on the modules-components entry because they have no positive glob of their own \u2014 a negation-only entry makes stryker exit non-zero, so it could not be a CI shard. The commit-gate analyzer reads negations from the whole array, which is what keeps a route edit from being blocked by mutants no test can reach. What keeps the exclusion honest is test/architecture/server-functions-are-glue, which requires every route to hold nothing but imports, wiring and delegation."
 }

@@ -26,7 +26,7 @@ import strykerConfig from "../../stryker.conf.json?raw";
  */
 
 const sources: Record<string, string> = import.meta.glob(
-  "../../src/modules/**/*.ts",
+  ["../../src/modules/**/*.{ts,tsx}", "../../src/routes/**/*.tsx"],
   { query: "?raw", import: "default", eager: true },
 );
 
@@ -36,9 +36,10 @@ const sources: Record<string, string> = import.meta.glob(
  * transitive ones, and `auth/index.ts` is exactly that: it holds no
  * TanStack import of its own and re-exports `require-user`, which does.
  */
-const loaders: Record<string, () => Promise<unknown>> = import.meta.glob(
-  "../../src/modules/**/*.ts",
-);
+const loaders: Record<string, () => Promise<unknown>> = import.meta.glob([
+  "../../src/modules/**/*.{ts,tsx}",
+  "../../src/routes/**/*.tsx",
+]);
 
 /**
  * Files that import TanStack Start and still hold more than glue. Every
@@ -121,6 +122,19 @@ function codeOnly(source: string): string {
   );
 }
 
+/**
+ * The last three are about JSX, and they are why this rule is stricter for
+ * a route than a reader might expect.
+ *
+ * A route file is unimportable, so nothing can execute the markup it
+ * chooses. `{items.map(…)}` is a list nobody can assert on; `{x ? <A/> :
+ * <B/>}` is an empty state nobody can reach. Those are precisely the
+ * decisions worth a test, and CLAUDE.md already says where they belong —
+ * "loaders/actions call module server functions and render module
+ * components — no business logic in route files". Moving one into a
+ * component is not a chore this rule invented; it is the architecture the
+ * repo already claims, and the component it lands in is testable.
+ */
 const FORBIDDEN = [
   { name: "an `if`", pattern: /\bif\s*\(/ },
   { name: "a `switch`", pattern: /\bswitch\s*\(/ },
@@ -128,6 +142,9 @@ const FORBIDDEN = [
   { name: "a `try`", pattern: /\btry\s*\{/ },
   { name: "a `throw`", pattern: /\bthrow\b/ },
   { name: "a zod schema", pattern: /\bz\./ },
+  { name: "a `.map(`", pattern: /\.map\(/ },
+  { name: "a JSX ternary", pattern: /\?\s*(?:\(\s*)?</ },
+  { name: "a JSX `&&`", pattern: /&&\s*(?:\(\s*)?</ },
 ];
 
 function repoPath(globPath: string): string {
@@ -165,6 +182,23 @@ function isInstrumented(source: string): boolean {
 }
 
 /**
+ * Every route file, and every module file a test cannot import.
+ *
+ * The two are in the same set for the same reason — nothing can mutate
+ * them, so nothing may hide in them — but they get there differently. A
+ * module file earns its place by failing to import. **A route is in by
+ * definition**: `createFileRoute` and the generated tree mean even the
+ * three that happen to import cleanly hold nothing but route
+ * registration, `<head>` metadata and wiring, and their mutants are
+ * unreachable without instantiating the real router. Excluding only the
+ * unimportable ones would have left those three inside the gate with 54
+ * mutants no test could ever kill.
+ */
+function isRoute(path: string): boolean {
+  return path.startsWith("src/routes/");
+}
+
+/**
 Every module file a test cannot import, asked by importing it.
 */
 async function findUntestable(): Promise<string[]> {
@@ -179,7 +213,17 @@ async function findUntestable(): Promise<string[]> {
   return failures;
 }
 
-const untestable = await findUntestable();
+/**
+Every route, in the order Vite's glob hands them over — deterministic, and
+nothing here depends on it being alphabetical.
+*/
+const routeFiles: string[] = Object.keys(sources)
+  .map((globPath) => repoPath(globPath))
+  .filter((path) => isRoute(path));
+
+const untestable: string[] = [
+  ...new Set([...(await findUntestable()), ...routeFiles]),
+];
 
 const scannable = untestable.filter((path) => !isInstrumented(rawSource(path)));
 
@@ -221,16 +265,28 @@ describe("files that cannot be mutation tested are glue", () => {
  * where a file is actually excluded.
  */
 const negations = Array.from(
-  strykerConfig.matchAll(/!(src\/[\w./-]+\.ts)/g),
+  // `.tsx?` and `$`: a route file is `.tsx`, and a dynamic segment puts a
+  // `$` in its name. The first version of this matched neither, so it read
+  // `!src/routes/closet/index.tsx` as `…/index.ts` and skipped
+  // `$itemId.tsx` entirely — an exclusion the check could not see.
+  strykerConfig.matchAll(/!(src\/[\w.$/-]+\.tsx?)/g),
   (match) => match[1] ?? "",
 );
 
 describe("the mutate exclusions and the untestable files are the same set", () => {
   it("excludes nothing that could have been tested", () => {
     // The direction that matters most: an exclusion without a cause is a
-    // file quietly opted out of the gate.
+    // file quietly opted out of the gate. A route qualifies by being a
+    // route; anything else has to have failed to import.
     for (const path of negations) {
-      expect(untestable, `${path} is excluded but is testable`).toContain(path);
+      expect(untestable, `${path} is excluded for no reason`).toContain(path);
+    }
+  });
+
+  it("excludes every route, since none of them can be mutated", () => {
+    // All of them, not only the ones that fail to import — see `isRoute`.
+    for (const path of routeFiles) {
+      expect(negations, `${path} is a route and not excluded`).toContain(path);
     }
   });
 

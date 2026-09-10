@@ -9,6 +9,7 @@ import {
   manualTempInput,
   runIdInput,
   stravaCallbackInput,
+  stravaCallbackSearch,
 } from "../../src/modules/runs/inputs";
 
 /**
@@ -73,6 +74,31 @@ describe("manualTempInput", () => {
     expect(() => manualTempInput.parse({ runId: "01RUN", tempC: -61 })).toThrow();
     expect(() => manualTempInput.parse({ runId: "01RUN", tempC: 61 })).toThrow();
     expect(() => manualTempInput.parse({ runId: "01RUN", tempC: "10" })).toThrow();
+  });
+});
+
+describe("stravaCallbackSearch", () => {
+  it("takes the three params Strava can send back", () => {
+    expect(
+      stravaCallbackSearch.parse({ code: "c", state: "s", error: "e" }),
+    ).toStrictEqual({ code: "c", state: "s", error: "e" });
+  });
+
+  it("is looser than the POST input on purpose", () => {
+    // `validateSearch` runs before anything else and throws if it refuses,
+    // so a redirect carrying `?code=` with nothing after it would blow up
+    // the route rather than reach `stravaCallbackOutcome`, whose whole job
+    // is to answer "no" politely.
+    expect(stravaCallbackSearch.parse({ code: "" })).toStrictEqual({ code: "" });
+    expect(() => stravaCallbackInput.parse({ code: "" })).toThrow();
+  });
+
+  it("takes a callback with nothing on it at all", () => {
+    expect(stravaCallbackSearch.parse({})).toStrictEqual({});
+  });
+
+  it("still refuses a param of the wrong type", () => {
+    expect(() => stravaCallbackSearch.parse({ code: 7 })).toThrow();
   });
 });
 

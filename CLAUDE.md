@@ -56,6 +56,13 @@ src/
 
 - A module may import: `db`, `env`, `lib`, `ui`, and **other modules only via
   their `index.ts`**. Never deep-import another module's internals.
+- **A component never imports a server function.** `modules/*/functions.ts`
+  pulls TanStack Start's virtual server entry, so any file that reaches it
+  cannot be imported by a test — in either vitest project, because the
+  constraint is the import graph and not the runtime. Routes wire server
+  functions and pass them down; components take them as props, typed with
+  the server function's own shape so the route needs no wrapper. That is
+  what keeps `src/modules/**/*.tsx` in the mutation ratchet.
 - Nothing imports from `routes/`; route files import modules, never each other.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
@@ -345,9 +352,10 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
 - **`stryker.conf.json`'s `mutate` array is the ratchet.** Every glob in
   it has been paid down to 100% and `break: 100` keeps it there: `npm run
   mutate` exits non-zero the moment a change stops a mutant being killed.
-  Today it holds `src/lib`, `src/ui/**/*.tsx`, and every module under
-  `src/modules`: `weather`, `ops`, `products`, `notifications`, `auth`,
-  `closet`, `feed` and `runs`. Adding code anywhere under those globs means
+  Today it holds `src/lib`, `src/ui/**/*.tsx`, `src/modules/**/*.tsx`, and
+  every module under `src/modules`: `weather`, `ops`, `products`,
+  `notifications`, `auth`, `closet`, `feed` and `runs`. **Everything the
+  app ships is in it except `src/routes/`.** Adding code anywhere under those globs means
   adding tests that *observe* its behaviour, not tests that merely execute
   it.
 
@@ -364,17 +372,35 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   look.
 
   A `!<path>` negation inside a scope entry is not an exemption you may
-  copy. It is for one thing: a file that **cannot be imported in the
-  workers pool**, because it pulls `@tanstack/react-start` directly or
-  through a barrel, and so cannot be mutated either.
+  copy. It is for two things, and nothing else. A file that **cannot be
+  imported by a test**, because it pulls `@tanstack/react-start` directly
+  or through a barrel — and **every file under `src/routes/`**, which
+  cannot be mutated meaningfully even when it does import: what is left in
+  one is route registration, `<head>` metadata and wiring, and its mutants
+  need the real generated router to reach. The route negations ride on the
+  `src/modules/**/*.tsx` entry because they have no positive glob of their
+  own, and a negation-only entry makes stryker exit non-zero, so it could
+  not be a CI shard. The commit-gate analyzer reads negations from the
+  whole array (guardrails ≥ 0.2.1), which is what stops a route edit being
+  blocked by mutants no test can kill.
   `test/architecture/server-functions-are-glue.test.ts` finds that set by
-  importing every module file and seeing which throw, then checks it
-  against the config's negations in both directions — and requires each
-  such file to be glue: it may import, wire and delegate, and may not
-  branch, loop, throw or declare a schema. Input schemas go in `inputs.ts`
-  next door and decisions in a plain sibling, where a test can reach them.
-  `auth/session-user.ts` and `auth/require-session.ts` are the worked
-  examples.
+  importing every module file and seeing which throw, adds every route,
+  then checks it against the config's negations in both directions — and
+  requires each such file to be glue: it may import, wire and delegate, and
+  may not branch, loop, throw, declare a schema, `.map(`, or choose markup
+  with a ternary or an `&&`. Input schemas go in `inputs.ts` next door,
+  decisions in a plain sibling, and anything a route used to render in a
+  component under `modules/*/components/` — where a test can reach them.
+  `auth/session-user.ts` and `feed/photos.ts`'s `photoResponse` are the
+  worked examples.
+
+  **The last three forbidden patterns are about JSX, and they are the ones
+  people push back on.** A route is unimportable, so nothing can execute
+  the markup it chooses: `{items.map(…)}` is a list nobody can assert on,
+  `{x ? <A/> : <B/>}` an empty state nobody can reach. Moving one into a
+  component is not a chore the rule invented — it is what "route files are
+  thin" already meant, and the routes lane found three real bugs hiding in
+  exactly those spots.
 
   `.github/workflows/mutation.yml` **reads that array** and runs one CI
   shard per entry — never restate the list there, or local and CI drift and
@@ -444,7 +470,12 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.2.0; CLI bin
   When a survivor is genuinely equivalent — no possible input distinguishes
   it — write the proof at the site, use a **mutator-scoped**
   `// Stryker disable next-line <Mutator>`, and add a keyed grant to
-  `guardrails.config.json`. Prefer restructuring so the mutant cannot exist:
+  `guardrails.config.json`. Two placement traps, both of which cost an
+  hour: a directive does **not** attach inside a JSX comment
+  (`{/* … */}`), so hoist the expression to a named constant above the
+  markup; and `next-line` does not attach when the mutant's line begins
+  with a closing brace (`} catch`, `}, [deps]`) — use the block
+  `disable`/`restore` pair there. Prefer restructuring so the mutant cannot exist:
   two of the first four were removed that way, and both left better code.
   See `docs/guardrails/crushing-mutants.md`.
 

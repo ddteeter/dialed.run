@@ -13,6 +13,7 @@ import {
   MAX_PHOTOS_PER_ENTRY,
   getPhotoObject,
   isPhotoVisible,
+  photoResponse,
   photoKeyFor,
   photoUploadFrom,
   uploadPhoto,
@@ -374,5 +375,86 @@ describe("photoUploadFrom", () => {
     expect(() =>
       photoUploadFrom(formWith({ entryId: "nope", photo: jpeg() })),
     ).toThrow();
+  });
+});
+
+async function ownedPhoto(isPublic = true) {
+  const userId = await makeUser();
+  const runId = await makeRun({ userId });
+  const entryId = await makeEntry({ userId, runId, isPublic });
+  const key = await uploadPhoto({
+    userId,
+    entryId,
+    contentType: "image/jpeg",
+    bytes: JPEG_BYTES,
+  });
+  return { userId, key };
+}
+
+describe("photoResponse: the whole cached GET, in one function", () => {
+  /**
+   * This was the body of `routes/feed/photo.$.tsx` — the one kind of file
+   * no test can import. Three refusals and a set of headers, all of them
+   * enforcing that a private entry's photos are never fetchable by anyone
+   * but its owner.
+   */
+  beforeEach(resetTables);
+
+  it("serves the bytes, with the etag and a private cache", async () => {
+    const { userId, key } = await ownedPhoto();
+
+    const response = await photoResponse(key, userId);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("etag")).not.toBeNull();
+    // `writeHttpMetadata` is what carries the stored content type across;
+    // without it the browser sniffs an untyped body.
+    expect(response.headers.get("content-type")).toBe("image/jpeg");
+    // `private`, because the photo is only ever visible to people the
+    // entry is shared with — a shared cache must not hold it.
+    expect(response.headers.get("cache-control")).toBe("private, max-age=3600");
+    expect(await response.arrayBuffer()).toStrictEqual(JPEG_BYTES);
+  });
+
+  it("says not found — never forbidden — for a photo the viewer may not see", async () => {
+    // A 403 tells a stranger the photo exists, which is most of what they
+    // wanted to know.
+    const { key } = await ownedPhoto(false);
+    const stranger = await makeUser();
+
+    const response = await photoResponse(key, stranger);
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("not found");
+  });
+
+  it("says not found for a signed-out viewer of a private entry", async () => {
+    const { key } = await ownedPhoto(false);
+    const refused = await photoResponse(key, undefined);
+    expect(refused.status).toBe(404);
+  });
+
+  it("serves a public entry's photo to a signed-out viewer", async () => {
+    const { key } = await ownedPhoto(true);
+    const served = await photoResponse(key, undefined);
+    expect(served.status).toBe(200);
+  });
+
+  it("says not found when there is no key at all", async () => {
+    // The key is a splat, so an empty one is a request for the directory.
+    const noKey = await photoResponse(undefined, undefined);
+    const emptyKey = await photoResponse("", undefined);
+    expect(noKey.status).toBe(404);
+    expect(emptyKey.status).toBe(404);
+  });
+
+  it("says not found when the row allows it but the object has gone", async () => {
+    // R2 and D1 are two systems, so a photo row can outlive its object.
+    // The visibility check passes and there is still nothing to serve.
+    const { userId, key } = await ownedPhoto();
+    await env.MEDIA.delete(key);
+
+    const gone = await photoResponse(key, userId);
+    expect(gone.status).toBe(404);
   });
 });

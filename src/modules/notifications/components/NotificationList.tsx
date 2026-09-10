@@ -2,23 +2,37 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Mono } from "../../../ui";
-import { markAllNotificationsReadFn } from "../functions";
 import type { listNotifications } from "../service";
 
 type NotificationRow = Awaited<
   ReturnType<typeof listNotifications>
 >[number];
 
+/**
+ * The server function, handed in rather than imported.
+ *
+ * `../functions` pulls TanStack Start's virtual server entry, and a file
+ * that reaches it cannot be imported by any test — in either vitest
+ * project, because the constraint is the import graph and not the runtime.
+ * So the route wires it and this renders. The prop's shape is the server
+ * function's own, so the route passes it with no wrapper.
+ */
+export interface NotificationListProps {
+  notifications: readonly NotificationRow[];
+  markAllRead: () => Promise<unknown>;
+}
+
 export function NotificationList({
   notifications,
-}: Readonly<{ notifications: readonly NotificationRow[] }>) {
+  markAllRead,
+}: Readonly<NotificationListProps>) {
   const navigate = useNavigate();
   const [isMarking, setIsMarking] = useState(false);
 
-  async function markAllRead() {
+  async function onMarkAllRead() {
     setIsMarking(true);
     try {
-      await markAllNotificationsReadFn();
+      await markAllRead();
       await navigate({ to: "/notifications" });
     } finally {
       setIsMarking(false);
@@ -31,7 +45,7 @@ export function NotificationList({
         type="button"
         disabled={isMarking}
         onClick={() => {
-          void markAllRead();
+          void onMarkAllRead();
         }}
         className="self-start rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
       >

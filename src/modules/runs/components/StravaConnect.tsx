@@ -1,14 +1,20 @@
 import { RETRY_GENERIC } from "../../../lib/copy";
 import { useState } from "react";
 
-import {
-  disconnectStravaFn,
-  getStravaAuthorizeUrlFn,
-} from "../functions";
-
+/**
+ * The server functions, handed in rather than imported.
+ *
+ * `../functions` pulls TanStack Start's virtual server entry, and a file
+ * that reaches it cannot be imported by any test — in either vitest
+ * project, because the constraint is the import graph and not the runtime.
+ * So the route wires them and this renders. Each prop's shape is the
+ * server function's own, so the route passes them with no wrapper.
+ */
 export interface StravaConnectProps {
   configured: boolean;
   status: "ok" | "broken" | undefined;
+  getAuthorizeUrl: () => Promise<string | undefined>;
+  disconnect: () => Promise<unknown>;
 }
 
 /**
@@ -17,7 +23,12 @@ consent screen — a plain external `<a>`, not a typed Link (the "no
 string-literal app URLs" lint rule only fires on root-relative literals;
 this is a full external URL fetched from the server at click time).
 */
-export function StravaConnect({ configured, status }: Readonly<StravaConnectProps>) {
+export function StravaConnect({
+  configured,
+  status,
+  getAuthorizeUrl,
+  disconnect,
+}: Readonly<StravaConnectProps>) {
   const [authorizeUrl, setAuthorizeUrl] = useState<string | undefined>();
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -26,7 +37,7 @@ export function StravaConnect({ configured, status }: Readonly<StravaConnectProp
     setError(undefined);
     setIsBusy(true);
     try {
-      const url = await getStravaAuthorizeUrlFn();
+      const url = await getAuthorizeUrl();
       if (url === undefined) {
         setError("Strava isn't configured yet.");
         return;
@@ -40,11 +51,11 @@ export function StravaConnect({ configured, status }: Readonly<StravaConnectProp
     }
   }
 
-  async function disconnect() {
+  async function onDisconnect() {
     setError(undefined);
     setIsBusy(true);
     try {
-      await disconnectStravaFn();
+      await disconnect();
       globalThis.location.reload();
     } catch {
       setError(RETRY_GENERIC);
@@ -108,7 +119,7 @@ export function StravaConnect({ configured, status }: Readonly<StravaConnectProp
         type="button"
         disabled={isBusy}
         onClick={() => {
-          void disconnect();
+          void onDisconnect();
         }}
         className="rounded-md border border-night/20 px-4 py-2 font-semibold text-night disabled:opacity-50"
       >

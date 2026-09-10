@@ -295,13 +295,83 @@
     },
     {
       "key": "src/ui/Sheet.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutant, proof at the site: React attaches refs before it runs effects, and this effect has no cleanup that could run after a detach, so the ref is always populated here. The check is the compiler's — the ref type includes undefined — not the runtime's.",
+      "reason": "Equivalent mutant, proof at the site: React attaches refs before it runs effects, and this effect has no cleanup that could run after a detach, so the ref is always populated here. The check is the compiler's \u2014 the ref type includes undefined \u2014 not the runtime's.",
       "count": 1
     },
     {
       "key": "src/modules/closet/components/GarmentForm.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression,StringLiteral",
-      "reason": "Two equivalent mutants, proof at the site: `GarmentFormValues` types an unanswered select as `\"\"` and `ThermalInput` types it as absent. The conversion from empty string to undefined is for the compiler, not the runtime — the estimator reads `layer === \"outer\"` and indexes its tables by weight, so an empty string and an absent value already behave identically. These are the same class as `estimateTempRange`'s own weight guard.",
+      "reason": "Two equivalent mutants, proof at the site: `GarmentFormValues` types an unanswered select as `\"\"` and `ThermalInput` types it as absent. The conversion from empty string to undefined is for the compiler, not the runtime \u2014 the estimator reads `layer === \"outer\"` and indexes its tables by weight, so an empty string and an absent value already behave identically. These are the same class as `estimateTempRange`'s own weight guard.",
       "count": 2
+    },
+    {
+      "key": "src/lib/measures.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Equivalent mutant, proof at the site: `formatTemp` branches only on \"c\", so every other unit string takes the same Fahrenheit path and no input distinguishes them. The literal exists so D-6 (a real unit preference) has one place to change rather than every call site.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/components/GarmentDetail.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` — empty when the picker was dismissed — so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/AttachKit.tsx|mutation-suppress|// Stryker disable ArrayDeclaration",
+      "reason": "Equivalent mutant, proof at the site: stryker's replacement for an empty dependency array is a constant array, which is exactly as stable as `[]`, so the geolocation effect still runs once. Block-scoped rather than next-line because the directive has to sit above `useEffect` while the array is at its close.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/AttachKit.tsx|mutation-suppress|// Stryker restore ArrayDeclaration",
+      "reason": "Closes the block-scoped disable above it — the pair is one grant, not two decisions.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Equivalent mutant, proof at the site: `flags` is seeded from every entry item, so the lookup always finds one and the `??` fallback is unreachable. It is `noUncheckedIndexedAccess`'s requirement rather than the runtime's, and it is hoisted to a named function because a directive does not attach inside a JSX expression container.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line ArrayDeclaration,ConditionalExpression",
+      "reason": "Equivalent mutants, proof at the site: a `change` from a file input always carries a `FileList`, so the `[]` fallback and the guard reading it are the compiler's rather than the runtime's.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Two equivalent mutants, each proved at its site: an empty file list does nothing observable — the loop has no iterations and React batches the `uploading` flag on and off inside one commit, so no render ever shows it; and the Save button is disabled until a verdict is chosen, so the `verdict === undefined` return cannot be reached from the screen and is what narrows `verdict` to a number for the payload.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable BlockStatement,ArrayDeclaration,CallExpression",
+      "reason": "Equivalent mutants, proof at the site: React 18 no longer warns on a state update after unmount, so dropping the `clearTimeout` leaves a stray timer that nothing can observe; and stryker's replacement dependency array is a constant, so the effect still runs once. The cleanup stays because a timer outliving its component is a leak whether or not a test can see it.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker restore BlockStatement,ArrayDeclaration,CallExpression",
+      "reason": "Closes the block-scoped disable above it — the pair is one grant, not two decisions.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable next-line ArrayDeclaration,StringLiteral",
+      "reason": "Equivalent mutants, proof at the site: this component builds its own `QueryClient`, so nothing else shares the cache and no two query keys can collide. The key's shape is for readability in devtools.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable next-line LogicalOperator,ConditionalExpression",
+      "reason": "Equivalent mutants, proof at the site: react-query surfaces an `undefined` result as an error rather than as data, so a missing row arrives through `isError` and the absent-data operand is never the reachable one. It stays because `data` is typed `ImportRow | undefined` and this is what narrows it.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/ManualRunForm.tsx|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Two equivalent mutants, each proved at its site: anything stryker substitutes for the empty `startedAt` is no more a parseable datetime, so `toEpochSeconds` answers NaN either way and the schema refuses both — and the empty string is what a `datetime-local` renders as blank; and `successMessage` is announced into a live region that `onSuccess` unmounts in the same commit, so nothing can observe the sentence. The second is a finding rather than a gap, recorded as D-44.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/runs/components/ManualRunForm.tsx|mutation-suppress|// Stryker disable next-line CallExpression",
+      "reason": "Equivalent mutant, proof at the site: rotating the idempotency key matters for a second run typed into the same mounted form, and the navigation immediately after means there never is one. It stays because the navigation is the caller's to change.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/UploadForm.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` — empty when the picker was dismissed — so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
+      "count": 1
     }
   ]
 }

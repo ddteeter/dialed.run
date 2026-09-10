@@ -6,6 +6,8 @@ import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
   DUPLICATE_WINDOW_S,
+  RunNotFoundError,
+  runOrNotFound,
   createManualRun,
   didRecordManualTemp,
   findDuplicateRun,
@@ -451,5 +453,32 @@ describe("getRun", () => {
 
   it("answers with nothing for a run that does not exist", async () => {
     expect(await getRun(coreDb(), newUlid(), newUlid())).toBeUndefined();
+  });
+});
+
+describe("runOrNotFound", () => {
+  /**
+   * TanStack's own `notFound()` returns a plain options object rather than
+   * an Error, and the house `only-throw-error` rule rejects throwing that.
+   * This is the wrapper, and it lives here rather than in the route
+   * because a route file cannot be imported by any test.
+   */
+  it("hands the run back when there is one", () => {
+    const run = { id: "01RUN" };
+    expect(runOrNotFound(run)).toBe(run);
+  });
+
+  it("throws something the router reads as a 404", () => {
+    // `isNotFound` is what the router duck-types on. Without it the miss
+    // is a 500 — an error screen where a "no such run" belongs.
+    let thrown: unknown;
+    try {
+      runOrNotFound(undefined);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(RunNotFoundError);
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).toMatchObject({ isNotFound: true, message: "Run not found." });
   });
 });

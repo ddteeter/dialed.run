@@ -31,6 +31,22 @@ export const manualTempInput = z.object({
   tempC: z.number().min(-60).max(60),
 });
 
+/**
+ * The callback's *search params*, which are looser than the input above on
+ * purpose.
+ *
+ * `validateSearch` runs before anything else and throws if it refuses, so
+ * a redirect carrying `?code=` with nothing after it would blow up the
+ * route rather than reach `stravaCallbackOutcome`, whose whole job is to
+ * answer "no" politely. The tightening lives in `stravaCallbackInput`,
+ * which the server function validates with.
+ */
+export const stravaCallbackSearch = z.object({
+  code: z.string().optional(),
+  state: z.string().optional(),
+  error: z.string().optional(),
+});
+
 export const stravaCallbackInput = z.object({
   code: z.string().min(1).optional(),
   state: z.string().min(1).optional(),

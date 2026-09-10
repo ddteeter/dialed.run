@@ -3,6 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
 import { StravaConnect } from "../../modules/runs/components/StravaConnect";
 import {
+  disconnectStravaFn,
+  getStravaAuthorizeUrlFn,
+} from "../../modules/runs/functions";
+import {
   getStravaStatusFn,
 } from "../../modules/runs/functions";
 import {
@@ -38,7 +42,12 @@ function StravaPage() {
           If that seems like more work than it needs to be, we agree. Take it
           up with Strava&rsquo;s terms of use.
         </p>
-        <StravaConnect configured={strava.configured} status={strava.status} />
+        <StravaConnect
+          configured={strava.configured}
+          status={strava.status}
+          getAuthorizeUrl={getStravaAuthorizeUrlFn}
+          disconnect={disconnectStravaFn}
+        />
       </div>
     </Layout>
   );

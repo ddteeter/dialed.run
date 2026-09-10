@@ -22,13 +22,19 @@ const POLL_INTERVAL_MS = 2000;
  * Two minutes is well past the queue's redelivery window for a job of this
  * size, so stopping means something is actually wrong rather than slow.
  */
-const POLL_BUDGET_MS = 120_000;
+/**
+The watching budget. Exported because the component needs a timer for it:
+a status that stops changing stops re-rendering, so nothing would ever
+re-evaluate the stall rule (see ImportStatus).
+*/
+export const POLL_BUDGET_MS = 120_000;
 const MAX_POLLS = POLL_BUDGET_MS / POLL_INTERVAL_MS;
 
 /**
  * Milliseconds until the next poll, or **0 meaning stop**. Pure, so the
- * policy can be tested without timers or a rendered component; the caller
- * translates 0 into react-query's `false`.
+ * policy can be tested without timers or a rendered component. 0 is what
+ * react-query wants too — it schedules only for a positive number — so
+ * the caller passes it through rather than converting it.
  */
 export function importPollIntervalMs(
   status: string | undefined,

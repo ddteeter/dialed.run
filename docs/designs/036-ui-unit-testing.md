@@ -1,7 +1,8 @@
 # Design: 036 UI unit testing
 
-Spike, answered, and applied: **`src/ui` is at 100% and in the ratchet.**
-`src/modules/**/*.tsx` and `src/routes/**/*.tsx` are still open (D-42).
+Spike, answered, and applied everywhere. **`src/ui` and
+`src/modules/**/*.tsx` are at 100% and in the ratchet; every route is glue
+and excluded.** D-42 is closed.
 
 ## Problem
 
@@ -117,10 +118,21 @@ without testing anything.
   `.tsx` surface). `test/closet/components.test.tsx` builds its fixtures
   through drizzle against D1; a component that needs a database to test is
   a smell, and those move to plain props as part of migrating it.
-- **Are routes glue?** CLAUDE.md says they are thin by mandate — "no
-  business logic in route files" — which would make them structurally the
-  same case as `functions.ts`, where an exclusion is honest only because an
-  architecture test enforces the glue rule. But 38 mutants per route file
-  is a lot for glue, so the premise needs checking. Settle it by taking one
-  route to 100% and looking at what is actually in there, the way
-  `form.tsx` settled this document's first question.
+- ~~**Are routes glue?**~~ **They are now, and it took work.** They were
+  not: twelve of them held an `if`, a `.map()` or a JSX ternary, and one —
+  `feed/photo.$.tsx` — held an entire server GET handler, visibility rule
+  and all. The rule was widened to cover `src/routes/**/*.tsx` and to
+  forbid a `.map(`, a JSX ternary and a JSX `&&`, and roughly a thousand
+  lines moved into ten components and five plain functions. All 24 routes
+  are excluded rather than the 21 that fail to import: the other three are
+  route registration and `<head>` metadata, and their 54 mutants need the
+  real generated router to reach.
+
+  What that refactor found, which is the argument for it: **a denied
+  location prompt left "attach the kit" on a skeleton forever** with no way
+  through (the code comment claimed it degraded to the picker; it did not);
+  **the per-entry photo cap did not count photos from the same selection**,
+  so the server refused the extras and the runner saw a generic upload
+  error; and **re-opening a verdict cleared per-item flags**, because the
+  pickers were never seeded from what had been saved. All three lived in
+  markup inside a route, where nothing could execute them.

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
 import { NotificationList } from "../../modules/notifications/components/NotificationList";
+import { markAllNotificationsReadFn } from "../../modules/notifications/functions";
 import {
   listNotificationsFn,
   unreadNotificationCountFn,
@@ -25,7 +26,10 @@ function NotificationsPage() {
         <h1 className="m-0 font-display text-3xl uppercase leading-none">
           Notifications
         </h1>
-        <NotificationList notifications={notifications} />
+        <NotificationList
+          notifications={notifications}
+          markAllRead={markAllNotificationsReadFn}
+        />
       </div>
     </Layout>
   );
