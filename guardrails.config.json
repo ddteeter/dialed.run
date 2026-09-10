@@ -297,6 +297,11 @@
       "key": "src/ui/Sheet.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant, proof at the site: React attaches refs before it runs effects, and this effect has no cleanup that could run after a detach, so the ref is always populated here. The check is the compiler's — the ref type includes undefined — not the runtime's.",
       "count": 1
+    },
+    {
+      "key": "src/modules/closet/components/GarmentForm.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression,StringLiteral",
+      "reason": "Two equivalent mutants, proof at the site: `GarmentFormValues` types an unanswered select as `\"\"` and `ThermalInput` types it as absent. The conversion from empty string to undefined is for the compiler, not the runtime — the estimator reads `layer === \"outer\"` and indexes its tables by weight, so an empty string and an absent value already behave identically. These are the same class as `estimateTempRange`'s own weight guard.",
+      "count": 2
     }
   ]
 }
