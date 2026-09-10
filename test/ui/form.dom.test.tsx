@@ -37,7 +37,11 @@ const schema = z.object({
 
 function Harness({
   action,
-}: Readonly<{ action: (values: z.output<typeof schema>) => Promise<unknown> }>) {
+  onSuccess,
+}: Readonly<{
+  action: (values: z.output<typeof schema>) => Promise<unknown>;
+  onSuccess?: (() => void) | undefined;
+}>) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const form = useFormSubmit({
@@ -45,6 +49,7 @@ function Harness({
     action,
     successMessage: "Saved.",
     labels: { name: "Name", brand: "Brand" },
+    ...(onSuccess !== undefined && { onSuccess }),
   });
 
   return (
@@ -484,5 +489,49 @@ describe("the failure band", () => {
     const band = retry.parentElement;
     const classes = band?.className ?? "";
     expect(classes).not.toMatch(/animate-|transition|breathe|motion-/);
+  });
+});
+
+describe("announce, then move (D-44)", () => {
+  it("has filled the live region before onSuccess runs", async () => {
+    /**
+     * The rule is *announce, then move*, and every form in the app that
+     * navigates on success was breaking it: `onSuccess` typically calls
+     * `navigate`, which unmounts this `role="status"` region — so the
+     * success sentence was set and destroyed without a commit in between
+     * and no screen reader could ever read it.
+     *
+     * Asserting "it was announced" from outside is impossible once the
+     * region is gone, so this reads the region *at the moment `onSuccess`
+     * runs*, which is exactly the ordering under test. Before the fix this
+     * is the empty string.
+     *
+     * The failure path already did it correctly — it sets the status and
+     * defers its focus move — so the fix is to give success the same
+     * grace rather than invent one.
+     */
+    const user = userEvent.setup();
+    // A flag as well as the value: "onSuccess has not run yet" and "it ran
+    // and the region was empty" are the two outcomes under test, and one
+    // variable cannot tell them apart.
+    let didRun = false;
+    let statusWhenSuccessRan = "";
+    render(
+      <Harness
+        action={() => Promise.resolve(undefined)}
+        onSuccess={() => {
+          didRun = true;
+          statusWhenSuccessRan = screen.getByRole("status").textContent;
+        }}
+      />,
+    );
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(didRun).toBe(true);
+    });
+    expect(statusWhenSuccessRan).toBe("Saved.");
   });
 });

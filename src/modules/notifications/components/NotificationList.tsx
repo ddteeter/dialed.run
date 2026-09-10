@@ -1,7 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { Mono } from "../../../ui";
+import type { FormFailure } from "../../../ui";
+import {
+  FormFailureBand,
+  FormStatus,
+  Mono,
+  classifyFailure,
+} from "../../../ui";
 import type { listNotifications } from "../service";
 
 type NotificationRow = Awaited<
@@ -28,29 +34,64 @@ export function NotificationList({
 }: Readonly<NotificationListProps>) {
   const navigate = useNavigate();
   const [isMarking, setIsMarking] = useState(false);
+  const [failure, setFailure] = useState<FormFailure | undefined>();
+  const [status, setStatus] = useState("");
+  const inFlight = useRef(false);
+  const retryRef = useRef<HTMLButtonElement>(null);
 
+  /**
+   * D-43: this was `try { … } finally { … }` with no `catch`, so a D1
+   * failure re-threw out of a `void`-ed call. The button re-enabled, the
+   * user was told nothing, and nothing reached Sentry (laws 5 and 7) — the
+   * failure was an unhandled rejection and looked, on screen, exactly like
+   * a click that had not registered.
+   *
+   * The register named the answer: the failure band the forms contract
+   * already defines. `classifyFailure` is the same one a submit uses, so
+   * this cannot drift into a second sentence for the same condition.
+   */
   async function onMarkAllRead() {
+    // The double-action guard lives here rather than on a `disabled`
+    // attribute — §5, and the reason is the same one the contract gives:
+    // a disabled button drops focus and stops announcing.
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsMarking(true);
+    setFailure(undefined);
     try {
       await markAllRead();
       await navigate({ to: "/notifications" });
+    } catch (error: unknown) {
+      const classified = classifyFailure(error);
+      setFailure(classified);
+      setStatus(`Nothing saved. ${classified.message}`);
     } finally {
       setIsMarking(false);
+      inFlight.current = false;
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
+      <FormStatus>{status}</FormStatus>
       <button
         type="button"
-        disabled={isMarking}
+        aria-disabled={isMarking || undefined}
+        aria-busy={isMarking || undefined}
         onClick={() => {
           void onMarkAllRead();
         }}
-        className="self-start rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
+        className="self-start rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
       >
         Mark all read
       </button>
+      <FormFailureBand
+        failure={failure}
+        onRetry={() => {
+          void onMarkAllRead();
+        }}
+        retryRef={retryRef}
+      />
       {notifications.length === 0 ? (
         <p className="text-night/70">Nothing yet.</p>
       ) : (

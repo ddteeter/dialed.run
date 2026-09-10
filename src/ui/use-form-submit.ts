@@ -100,7 +100,14 @@ function zodIssuesOf(error: unknown): readonly FieldIssue[] | undefined {
  * Copy rules (§6): one sentence, under ten words, sentence case, no
  * "please", no "error", no exclamation.
  */
-function classifyFailure(error: unknown): FormFailure {
+/**
+ * Exported because a *non-form* action needs the same classification.
+ * "Mark all read" is not a form and has no schema, but a D1 failure there
+ * should read exactly as it does under a submit button — a second
+ * hand-written sentence would be the drift `docs/product.md` §Forms &
+ * failure exists to stop, one layer down.
+ */
+export function classifyFailure(error: unknown): FormFailure {
   // Session is decided by a code, not by the message text. The reference
   // matched /401|403|session|unauthenticated/ against a string, which
   // stops working the day an upstream reworded something and does so
@@ -117,6 +124,26 @@ function classifyFailure(error: unknown): FormFailure {
     return { kind: "network", message: "Your connection dropped." };
   }
   return { kind: "server", message: "Our end failed. Nothing changed." };
+}
+
+/**
+ * A macrotask's grace, so a `setStatus` has been committed before anything
+ * is allowed to unmount what it filled.
+ *
+ * The contract's rule is *announce, then move* (§1). `onSuccess` almost
+ * always navigates, and navigation unmounts the `role="status"` region —
+ * so without this the success sentence was set and destroyed inside one
+ * commit and no screen reader could read it. Recorded as D-44; every form
+ * in the app that navigates on success had the shape, which is why the
+ * wait lives in the hook and not in any of them.
+ *
+ * `DURATION.instant` because the failure path below already defers its
+ * focus move by exactly this, for exactly this reason.
+ */
+function announced(): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, DURATION.instant);
+  });
 }
 
 export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
@@ -209,6 +236,15 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         const result = await action(pre.data);
         setFieldErrors({});
         setStatus(successMessage);
+        // The submission is over at this point, and the guard is
+        // per-submission rather than a latch — so release it before the
+        // announce-and-move below, which is aftermath rather than part of
+        // the attempt. Leaving it held made a resubmit land inside the
+        // grace period and be silently dropped.
+        setPending(false);
+        inFlight.current = false;
+        // Announce, then move — see `announced` above (D-44).
+        await announced();
         await onSuccess?.(result);
       } catch (error: unknown) {
         const issues = zodIssuesOf(error);
