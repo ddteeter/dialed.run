@@ -6,6 +6,7 @@ import { Bracketed, Mono, Skeleton } from "../../../ui";
 import { uiGroupLabels } from "../groups";
 import type { PickerGroup } from "../picker";
 import type { PrefillCandidate } from "../prefill";
+import { toggledIn } from "../../../lib/toggled-in";
 
 /**
  * Attach the kit (screen A2), and the whole of the prefill idea.
@@ -176,12 +177,7 @@ export function AttachKit({
             groups={groups}
             selected={selected}
             onToggle={(itemId) => {
-              setSelected((prev) => {
-                const next = new Set(prev);
-                if (next.has(itemId)) next.delete(itemId);
-                else next.add(itemId);
-                return next;
-              });
+              setSelected((prev) => toggledIn(prev, itemId));
             }}
             onSubmit={() => {
               void submit([...selected]);

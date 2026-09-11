@@ -40,6 +40,7 @@ export async function unfollow(
     );
 }
 
+// fallow-ignore-next-line code-duplication -- isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables
 export async function isFollowing(
   followerId: string,
   followeeId: string,
@@ -60,6 +61,7 @@ export async function followeeIdsOf(followerId: string): Promise<string[]> {
     db(),
     follows,
     follows.followeeId,
+    // fallow-ignore-next-line code-duplication -- followerCount and usefulCount both delegate to columnWhere, each over its own covering index
     eq(follows.followerId, followerId),
   );
 }

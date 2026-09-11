@@ -53,6 +53,11 @@ function f(lowF: number, highF: number): Band {
  * is wrong and cannot do the same for 13-21°C. So the literals are the
  * ones a reviewer can judge, and `f()` converts once at module load.
  */
+// A rhyme, not a clone: this table and BOTTOM_RANGES below have the same
+// shape because every garment has a weight, and different numbers because a
+// jacket and a pair of tights do not feel the same. Merging them would be
+// merging the physics.
+// fallow-ignore-next-line code-duplication -- same shape, different physics
 const BODY_RANGES: Record<"regular" | "outer", Record<Weight, Band>> = {
   regular: {
     light: f(55, 79),

@@ -12,6 +12,8 @@ import { z } from "zod";
 import { runDraftSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { ImportUploadError, MAX_IMPORT_BYTES } from "./imports";
+import { filePartFrom } from "../../lib/file-part";
+import type { FilePartProblem } from "../../lib/file-part";
 
 export const manualRunInput = runDraftSchema.extend({
   // Minted once when the form mounts, resent on every retry of that same
@@ -54,6 +56,15 @@ export const stravaCallbackInput = z.object({
 });
 
 /**
+The sentences this screen uses for each refusal.
+*/
+const IMPORT_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
+  "not-form-data": "Expected multipart form data.",
+  missing: "No file was attached.",
+  "too-large": "That file is larger than 25 MB.",
+};
+
+/**
  * The file out of a multipart import upload, or the reason it is not one.
  *
  * Size is checked here, before the bytes are read: an oversized upload is
@@ -62,15 +73,7 @@ export const stravaCallbackInput = z.object({
  * the guarantee.
  */
 export function importUploadFrom(input: unknown): { file: File } {
-  if (!(input instanceof FormData)) {
-    throw new ImportUploadError("Expected multipart form data.");
-  }
-  const file = input.get("file");
-  if (!(file instanceof File)) {
-    throw new ImportUploadError("No file was attached.");
-  }
-  if (file.size > MAX_IMPORT_BYTES) {
-    throw new ImportUploadError("That file is larger than 25 MB.");
-  }
-  return { file };
+  const part = filePartFrom(input, "file", MAX_IMPORT_BYTES);
+  if (!part.ok) throw new ImportUploadError(IMPORT_REFUSALS[part.problem]);
+  return { file: part.file };
 }

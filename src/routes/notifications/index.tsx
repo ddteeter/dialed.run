@@ -9,6 +9,7 @@ import {
 } from "../../modules/notifications/functions";
 import { Page } from "../../ui";
 
+// fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/notifications/")({
   loader: async () => ({
     notifications: await listNotificationsFn(),

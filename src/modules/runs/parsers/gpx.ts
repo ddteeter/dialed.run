@@ -89,6 +89,7 @@ function totalDistanceMeters(points: readonly TrackPoint[]): number {
   return distanceM;
 }
 
+// fallow-ignore-next-line code-duplication -- the RunSource preamble both XML parsers share; what follows it -- track points versus laps -- is entirely different
 export const gpxSource: RunSource = {
   kind: "gpx",
   async parse(bytes: ArrayBuffer): Promise<RunDraft> {

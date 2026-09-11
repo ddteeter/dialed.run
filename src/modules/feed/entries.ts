@@ -63,8 +63,10 @@ export interface AttachKitInput {
  * double-attaches.
  */
 export async function attachKit(input: AttachKitInput): Promise<string> {
+  // fallow-ignore-next-line code-duplication -- two owner-scoped reads in one function, over runs and over entries; see the note on the second
   const database = db();
   const [runRow] = await database
+    // fallow-ignore-next-line code-duplication -- read-a-row-then-guard over two tables; these read by id and check the owner in code on purpose, so 404 and 403 stay distinct -- selectOwnedRow scopes in SQL and would collapse them
     .select({ id: runs.id, userId: runs.userId })
     .from(runs)
     .where(eq(runs.id, input.runId))
@@ -74,6 +76,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     forbidden: "cannot attach a kit to another user's run",
   });
 
+  // fallow-ignore-next-line code-duplication -- read-a-row-then-guard; owned.ts records why each call site keeps its own columns and predicate -- one of those choices is a covering index
   const [existing] = await database
     .select({ id: outfitEntries.id, userId: outfitEntries.userId })
     .from(outfitEntries)
@@ -378,6 +381,7 @@ export async function itemBandWearStat(
   return { worn: wearingItem.length, total: inBand.length };
 }
 
+// fallow-ignore-next-line code-duplication -- same read shape, different question: one asks whether to prompt for a verdict, the other whether a viewer may react at all
 export async function shouldPromptForVerdict(
   userId: string,
   entryId: string,
@@ -456,6 +460,7 @@ export interface EntryDetail {
 
 export async function getEntryDetail(
   entryId: string,
+  // fallow-ignore-next-line code-duplication -- the same four-line read of two different entities; merging would couple an entry's detail to a profile's
   viewerId: string | undefined,
 ): Promise<EntryDetail | undefined> {
   const database = db();

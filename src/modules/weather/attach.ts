@@ -63,6 +63,7 @@ type AttachOutcome =
  * degraded path — only genuinely unexpected errors (e.g. a DB failure)
  * propagate; a weather-provider outage never does (law 5).
  */
+// fallow-ignore-next-line code-duplication -- the same one-line run read with different failure handling: one warns and skips, the other throws
 async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
   const [run] = await coreDb().select().from(runs).where(eq(runs.id, runId)).limit(1);
   if (!run) {

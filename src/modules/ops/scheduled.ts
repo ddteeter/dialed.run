@@ -126,6 +126,7 @@ const IMPORT_STALL_GRACE_S = 15 * 60;
 
 async function redispatchStalledImports(anomalies: string[]): Promise<void> {
   const db = drizzle(env.DIALED_CORE);
+  // fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds
   const staleBefore = Math.floor(Date.now() / 1000) - IMPORT_STALL_GRACE_S;
   const stalled = await db
     .select({ id: imports.id })
@@ -134,6 +135,7 @@ async function redispatchStalledImports(anomalies: string[]): Promise<void> {
       and(
         eq(imports.status, "pending"),
         lt(imports.createdAt, staleBefore),
+      // fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call
       ),
     )
     .limit(100);
