@@ -483,6 +483,29 @@ export interface WeatherProvider {
 export const thermalLevelSchema = z.number().int().min(-2).max(2);
 
 /**
+ * The five answers to O1's one question, in the order they are shown.
+ *
+ * Shaped like `verdictScale` and here for the same reason: the mapping was
+ * a *comment* on the schema above, so onboarding and settings-recalibrate
+ * would each have restated it, and a comment cannot be pinned by a test.
+ *
+ * **Positive means runs cold.** +2 is "Always freezing" — someone who needs
+ * more clothes than the table suggests — and −2 is the person sweating in a
+ * t-shirt at 40°. That reads backwards to about half of people on first
+ * encounter, which is exactly why it is written once.
+ *
+ * Copy is the design's own (`design/Onboarding.dc.html`, O1).
+ */
+export const thermalScale = [
+  { value: 2, token: "always_freezing", label: "Always freezing" },
+  { value: 1, token: "little_cold", label: "Run a little cold" },
+  { value: 0, token: "average", label: "About average" },
+  { value: -1, token: "little_warm", label: "Run a little warm" },
+  { value: -2, token: "sweating_at_40", label: "Sweating in a t-shirt at 40°" },
+] as const;
+export type ThermalLevel = (typeof thermalScale)[number]["value"];
+
+/**
  * The units a person reads their own data in — display only. The contract
  * stores SI regardless: `temp_c`, `distance_m`.
  *

@@ -31,6 +31,7 @@
     "src/modules/closet/**/*.ts,!src/modules/closet/functions.ts",
     "src/modules/feed/**/*.ts,!src/modules/feed/functions.ts",
     "src/modules/notifications/**/*.ts,!src/modules/notifications/functions.ts",
+    "src/modules/onboarding/**/*.ts",
     "src/modules/ops/**/*.ts",
     "src/modules/products/**/*.ts,!src/modules/products/functions.ts",
     "src/modules/runs/**/*.ts,!src/modules/runs/functions.ts",
