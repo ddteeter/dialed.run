@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
+import { pointConditions } from "../feed/conditions-fixture";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -153,14 +154,7 @@ describe("EntryDetail: conditions", () => {
   it("shows the temperature and the condition when there are any", async () => {
     await renderWithRouter(
       detail({
-        conditions: {
-          tempC: 10,
-          feelsLikeC: 8,
-          precipMm: 0,
-          condition: "Clear",
-          windKph: 5,
-          source: "visualcrossing",
-        },
+        conditions: pointConditions({ tempC: 10, feelsLikeC: 8, condition: "Clear" }),
       }),
     );
     expect(screen.getByText(/Clear/)).toBeVisible();
@@ -172,17 +166,24 @@ describe("EntryDetail: conditions", () => {
     // whitespace between expressions.
     await renderWithRouter(
       detail({
-        conditions: {
-          tempC: 10,
-          feelsLikeC: 8,
-          precipMm: 0,
-          condition: "Clear",
-          windKph: 5,
-          source: "visualcrossing",
-        },
+        conditions: pointConditions({ tempC: 10, feelsLikeC: 8, condition: "Clear" }),
       }),
     );
     expect(screen.getByText(/Clear/)).toHaveTextContent("50° Clear");
+  });
+
+  it("shows the range when the run spanned more than one hour", async () => {
+    // D-5: a 2->14 run is not a 2 degree run. The reader sees what the run
+    // covered, whatever it is banded at.
+    await renderWithRouter(
+      detail({
+        conditions: {
+          ...pointConditions({ tempC: 2, feelsLikeC: 2, condition: "Clear" }),
+          span: { minTempC: 2, maxTempC: 14, minFeelsLikeC: 2, maxFeelsLikeC: 14 },
+        },
+      }),
+    );
+    expect(screen.getByText(/Clear/)).toHaveTextContent("36–57° Clear");
   });
 
   it("says nothing at all on an entry with none", async () => {

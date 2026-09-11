@@ -18,6 +18,7 @@ import { forIds } from "../../lib/for-ids";
 import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
 import { conditionsAt, observationsForEntries } from "./conditions";
+import { judgedFeelsLikeC } from "./judged-conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
 
@@ -52,10 +53,25 @@ export interface ConsensusResult {
   widened: boolean;
 }
 
-function isWithinConsensusWindow(observation: Conditions, viewer: Conditions, deltaC: number): boolean {
+/**
+ * The two sides are deliberately asymmetric. The **entry** is compared at
+ * the hour its runner actually judged by (`judgedFeelsLikeC`), because that
+ * is the temperature their verdict is a statement about. The **viewer** is
+ * a live reading with no verdict to be worst relative to, so it stays the
+ * point it is. "What did people wear when it felt like it does to me now."
+ */
+function isWithinConsensusWindow(
+  observation: Conditions,
+  verdict: number | null,
+  viewer: Conditions,
+  deltaC: number,
+): boolean {
   if (observation.source === "manual") return false;
   if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm)) return false;
-  return Math.abs(observation.feelsLikeC - viewer.feelsLikeC) <= deltaC;
+  return (
+    Math.abs(judgedFeelsLikeC(observation, verdict) - viewer.feelsLikeC) <=
+    deltaC
+  );
 }
 
 async function qualifyingEntryIdsInWindow(
@@ -77,7 +93,10 @@ async function qualifyingEntryIdsInWindow(
       // Both halves matter: an entry whose conditions were never resolved
       // cannot be compared to the viewer's, and reading one anyway is a
       // crash on the consensus block rather than a miscount.
-      return observation !== undefined && isWithinConsensusWindow(observation, viewer, deltaC);
+      return (
+        observation !== undefined &&
+        isWithinConsensusWindow(observation, entry.verdict, viewer, deltaC)
+      );
     })
     .map((entry) => entry.id);
 }

@@ -32,6 +32,7 @@ function conditions(overrides: Partial<Conditions> = {}): Conditions {
     windKph: 10,
     condition: "clear",
     source: "visualcrossing",
+    span: { minTempC: 5, maxTempC: 5, minFeelsLikeC: 3, maxFeelsLikeC: 3 },
     ...overrides,
   };
 }

@@ -135,23 +135,8 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ArrowFunction",
-      "reason": "Equivalent mutant, same reasoning again: emptying the `or` scans every observation instead of the chunk's cells, and the answer is still looked up by key. Only the scan grows.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the entry\u2192run\u2192observation walk answers with an empty map either way. The return saves the query.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
-      "reason": "Equivalent mutant, proof at the site: the answer is assembled by matching each run's key against the rows afterwards, so an off-by-one chunk changes what is scanned and not what is returned. Rows scanned are what D1 bills, which is why the chunking stays.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
-      "reason": "Equivalent mutant, same reasoning as the chunk bound: an unsliced chunk widens the query and not the answer, which is keyed off each run afterwards.",
       "count": 1
     },
     {
@@ -502,6 +487,31 @@
     {
       "key": "src/lib/thermal.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same shape, different physics",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: same shape, different physics.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic.",
+      "count": 1
+    },
+    {
+      "key": "test/feed/helpers.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the shape of a test factory, twice: params -> newUlid -> insert -> return id. The tables, columns and defaults differ, and merging them would mean one factory generic over its own row",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: the shape of a test factory, twice: params -> newUlid -> insert -> return id. The tables, columns and defaults differ, and merging them would mean one factory generic over its own row.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable ArrowFunction",
+      "reason": "Equivalent mutant: emptying the where-clause arrow widens the query to every observation, and the answer is assembled by matching cache keys against the rows afterwards — so a superset changes what D1 *scans*, which is what it bills, and not what is returned. Block form because the read is one statement over five lines and a next-line directive would attach to its first line and silently do nothing.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker restore ArrowFunction",
+      "reason": "Closing directive for the block-scoped disable above it — the pair is one grant, not two decisions.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/judged-conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent by design: an unrated run and a dialed one have the same answer, so deleting the null guard lets null fall through two comparisons it fails and reach the same return. It stays because \"no verdict yet\" and \"the outfit was right\" are different facts that happen to share a value. The two comparisons below carry no directive and are not equivalent.",
       "count": 1
     }
   ]

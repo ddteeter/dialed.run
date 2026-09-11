@@ -10,6 +10,7 @@ import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
 import { otherProfile } from "../../src/modules/feed/profiles";
 import { yourConditionsConsensus } from "../../src/modules/feed/consensus";
+import { pointConditions } from "../feed/conditions-fixture";
 import {
   makeEntry,
   makeItem,
@@ -103,7 +104,7 @@ describe("authorization", () => {
     await makeObservation({ lat, lng, startedAt: NOW, tempC: 10, feelsLikeC: 9 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 10, feelsLikeC: 9, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 10, feelsLikeC: 9 }),
       NOW,
     );
     expect(result.total).toBe(0);

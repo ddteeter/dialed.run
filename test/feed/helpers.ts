@@ -47,10 +47,15 @@ export async function makeUser(overrides?: {
 }
 
 export async function makeRun(params: {
+  // fallow-ignore-next-line code-duplication -- the shape of a test factory, twice: params -> newUlid -> insert -> return id. The tables, columns and defaults differ, and merging them would mean one factory generic over its own row
   userId: string;
   lat?: number;
   lng?: number;
   startedAt?: number;
+  /**
+  Default 1800s. Set it longer to span more than one hour bucket.
+  */
+  durationS?: number;
 }): Promise<string> {
   const runId = newUlid();
   await coreDb()
@@ -60,7 +65,7 @@ export async function makeRun(params: {
       userId: params.userId,
       source: "manual",
       startedAt: params.startedAt ?? NOW,
-      durationS: 1800,
+      durationS: params.durationS ?? 1800,
       distanceM: 5000,
       lat: params.lat ?? 44.98,
       lng: params.lng ?? -93.27,
@@ -175,3 +180,4 @@ export async function makeObservation(params: {
       fetchedAt: NOW,
     });
 }
+
