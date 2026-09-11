@@ -502,7 +502,17 @@ export interface WeatherProvider {
 
 /** UI: +2 "always freezing" … −2 "sweating in a t-shirt at 40°".
  *  Degree mapping (code, not DB): level × 2.2 °C. */
-export const thermalLevelSchema = z.number().int().min(-2).max(2);
+export const thermalLevelSchema = z
+  .number({
+    // Error copy lives in the schema (§Forms & failure), and this one is
+    // load-bearing: O1 submits `Number(undefined)` when nobody has picked,
+    // so without a message a runner who taps straight past the question is
+    // told "expected number, received nan".
+    message: "Pick the one that sounds most like you.",
+  })
+  .int()
+  .min(-2)
+  .max(2);
 
 /**
  * The five answers to O1's one question, in the order they are shown.

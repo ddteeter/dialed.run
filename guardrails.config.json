@@ -523,6 +523,11 @@
       "key": "src/modules/onboarding/components/CallLadder.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Unreachable, proof at the site: this branch runs only when verdictTotal > 0, which means at least one band, which means ladderFrom found a thinnest one. The guard narrows the type for the compiler and nothing else. Hoisted to a statement because a next-line directive does not attach inside a JSX expression.",
       "count": 1
+    },
+    {
+      "key": "src/ui/form.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group.",
+      "count": 1
     }
   ]
 }

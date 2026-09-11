@@ -8,6 +8,7 @@ export { Sheet } from "./Sheet";
 export { Skeleton } from "./Skeleton";
 export {
   ChoiceField,
+  ChoiceList,
   FormErrorSummary,
   FormFailureBand,
   FormField,

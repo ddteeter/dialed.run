@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import {
   ChoiceField,
+  ChoiceList,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -1156,5 +1157,95 @@ describe("ToggleField", () => {
     await user.click(screen.getByText("Wind resistant"));
 
     expect(onChange).toHaveBeenCalledWith(true);
+  });
+});
+
+/**
+ * `ChoiceList` — the radio group O1's five answers need, because a select
+ * hides its options and comparing them is how a runner picks.
+ */
+describe("ChoiceList", () => {
+  const LEVELS = ["hot", "mild", "cold"] as const;
+  const LABELS = { hot: "Runs hot", mild: "About average", cold: "Runs cold" };
+
+  function renderList(
+    onChange: (value: "hot" | "mild" | "cold") => void,
+    value?: "hot" | "mild" | "cold",
+    error?: string,
+  ) {
+    return render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={value}
+        field={restingField}
+        onChange={onChange}
+        error={error}
+      />,
+    );
+  }
+
+  it("names the group with the question, so the answers are not orphaned", () => {
+    // A screen reader announces the legend when focus enters the group. A
+    // div with a heading above it looks identical and announces five
+    // unexplained options.
+    renderList(vi.fn());
+
+    expect(
+      screen.getByRole("group", { name: "Do you run warm or cold?" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows every answer at once", () => {
+    renderList(vi.fn());
+
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByLabelText("About average")).toBeInTheDocument();
+  });
+
+  it("reports the answer that was chosen, not the one before it", async () => {
+    // The third option on purpose: a handler that reported the first would
+    // pass if the test only ever picked the first.
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderList(onChange);
+
+    await user.click(screen.getByLabelText("Runs cold"));
+
+    expect(onChange).toHaveBeenCalledWith("cold");
+  });
+
+  it("marks the current answer, and only that one", () => {
+    renderList(vi.fn(), "mild");
+
+    expect(screen.getByLabelText("About average")).toBeChecked();
+    expect(screen.getByLabelText("Runs hot")).not.toBeChecked();
+  });
+
+  it("marks nothing when nothing has been answered", () => {
+    // O1 opens unanswered — a pre-selected middle option would be the app
+    // guessing on the runner's behalf and recording it as their answer.
+    renderList(vi.fn());
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).not.toBeChecked();
+    }
+  });
+
+  it("shows the field's error in the hi-viz band, not in colour alone", () => {
+    renderList(vi.fn(), undefined, "Pick one to carry on.");
+
+    const message = screen.getByText("Pick one to carry on.");
+    expect(message).toBeVisible();
+    expect(message).toHaveClass("bg-hi-viz");
+    expect(message).toHaveAttribute("id", "thermal-message");
+  });
+
+  it("says nothing at rest, rather than reserving an empty line", () => {
+    renderList(vi.fn());
+
+    expect(screen.queryByText(/Pick one/)).toBeNull();
   });
 });

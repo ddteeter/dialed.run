@@ -48,6 +48,33 @@ export function FormStatus({ children }: Readonly<{ children?: string }>) {
  * announcing, and two live regions firing at once means one of them is
  * lost. This one is wired by `aria-describedby` instead.
  */
+/**
+ * The one sentence a field shows when it is wrong.
+ *
+ * A hi-viz band, never a colour on the border alone — that is the Forms
+ * contract's rule and the reason this is a component rather than a class
+ * string: `FormField` and `ChoiceList` both need it, and a second copy is
+ * how one of them ends up marking an error some other way.
+ *
+ * The `id` is what `field()`'s `aria-describedby` points at, so the
+ * message and the control that owns it agree without either restating the
+ * convention.
+ */
+function FieldMessage({
+  name,
+  error,
+}: Readonly<{ name: string; error: string | undefined }>): JSX.Element | undefined {
+  if (error === undefined) return undefined;
+  return (
+    <span
+      id={`${name}-message`}
+      className="self-start bg-hi-viz px-[10px] py-[7px] text-[13px] leading-snug text-night"
+    >
+      {error}
+    </span>
+  );
+}
+
 export function FormField({
   name,
   label,
@@ -85,14 +112,7 @@ export function FormField({
       {hint !== undefined && !isInvalid ? (
         <span className="text-xs leading-snug text-night/50">{hint}</span>
       ) : undefined}
-      {isInvalid ? (
-        <span
-          id={`${name}-message`}
-          className="self-start bg-hi-viz px-[10px] py-[7px] text-[13px] leading-snug text-night"
-        >
-          {error}
-        </span>
-      ) : undefined}
+      <FieldMessage name={name} error={error} />
     </div>
   );
 }
@@ -290,6 +310,26 @@ export function SubmitButton({
 }
 
 /**
+ * What every "pick one of a set" control needs, whatever it looks like.
+ *
+ * `ChoiceField` and `ChoiceList` are deliberately different controls — a
+ * select hides its options, a radio group shows them, and which one is
+ * right depends on whether comparing the choices *is* the question. What
+ * they genuinely share is this: a named field, a set of options, the words
+ * for them, the `field()` helper, and one sentence when it is wrong.
+ *
+ * Shared as a type rather than merged as a component, because the part
+ * that repeats is the shape of the inputs and not the behaviour.
+ */
+interface ChoosableProps<TOption extends string> {
+  name: string;
+  options: readonly TOption[];
+  optionLabels: Readonly<Record<TOption, string>>;
+  field: (name: string) => FieldProps;
+  error?: string | undefined;
+}
+
+/**
  * A `<select>` over a set the schema already holds.
  *
  * `GarmentForm` had three of these written out — layer, weight, fabric —
@@ -309,6 +349,7 @@ export function SubmitButton({
  * choice is a different control and should not reuse this one by adding a
  * flag to it.
  */
+// fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group
 export function ChoiceField<TOption extends string>({
   name,
   label,
@@ -318,23 +359,13 @@ export function ChoiceField<TOption extends string>({
   options,
   optionLabels,
   onChange,
-}: Readonly<{
-  name: string;
-  label: string;
-  error?: string | undefined;
-  /**
-   * `useFormSubmit`'s `field`, spread for the same reason every text input
-   * spreads it: it carries `readOnly` for §5's "inputs stay focusable
-   * while in flight, never disabled". A `<select>` has no such attribute
-   * and React drops it, so it is inert here rather than wrong — which is
-   * why this spreads the same helper rather than a filtered copy of it.
-   */
-  field: (name: string) => FieldProps;
-  value: TOption | "";
-  options: readonly TOption[];
-  optionLabels: Readonly<Record<TOption, string>>;
-  onChange: (value: TOption | "") => void;
-}>): JSX.Element {
+}: Readonly<
+  ChoosableProps<TOption> & {
+    label: string;
+    value: TOption | "";
+    onChange: (value: TOption | "") => void;
+  }
+>): JSX.Element {
   return (
     <FormField name={name} label={label} error={error}>
       <select
@@ -398,5 +429,68 @@ export function ToggleField({
       />
       {label}
     </label>
+  );
+}
+
+/**
+ * One of a handful of choices, all visible at once.
+ *
+ * A `<select>` hides its options behind a tap and reads them out one at a
+ * time; O1's five answers are the question, and comparing them is how a
+ * runner picks. So this is a radio group, not a `ChoiceField`, and the
+ * difference is not styling — it is whether the choices can be read
+ * together.
+ *
+ * **A real `<fieldset>` and `<legend>`.** The label of a radio group is
+ * the question, and a screen reader announces it from the legend when
+ * focus enters the group. A `<div>` with a heading above it looks
+ * identical and announces five unexplained options.
+ *
+ * `field()` is spread onto each input for the same reason every other
+ * control spreads it: `readOnly` carries §5's "inputs stay focusable while
+ * in flight, never disabled". A radio ignores `readOnly` the way a select
+ * does, so it is inert here rather than wrong, and the double-submit guard
+ * lives in the handler regardless.
+ */
+export function ChoiceList<TOption extends string>({
+  name,
+  legend,
+  options,
+  optionLabels,
+  value,
+  field,
+  onChange,
+  error,
+}: Readonly<
+  ChoosableProps<TOption> & {
+    legend: string;
+    value: TOption | undefined;
+    onChange: (value: TOption) => void;
+  }
+>): JSX.Element {
+  return (
+    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+      <legend className="mb-2 p-0 font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
+        {legend}
+      </legend>
+      {options.map((option) => (
+        <label
+          key={option}
+          className="flex items-center gap-3 rounded-lg border border-night/15 bg-chalk px-[14px] py-[12px] text-sm font-semibold"
+        >
+          <input
+            {...field(name)}
+            type="radio"
+            value={option}
+            checked={value === option}
+            onChange={() => {
+              onChange(option);
+            }}
+          />
+          {optionLabels[option]}
+        </label>
+      ))}
+      <FieldMessage name={name} error={error} />
+    </fieldset>
   );
 }
