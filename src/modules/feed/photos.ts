@@ -15,7 +15,7 @@ import { isAllowedPhotoType } from "../../lib/photo-constraints";
 import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
-import { ForbiddenError, NotFoundError } from "./entries";
+import { requireOwned } from "../../lib/owned";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -53,10 +53,10 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
     .from(outfitEntries)
     .where(eq(outfitEntries.id, input.entryId))
     .limit(1);
-  if (!entry) throw new NotFoundError("entry not found");
-  if (entry.userId !== input.userId) {
-    throw new ForbiddenError("cannot add photos to another user's entry");
-  }
+  requireOwned(entry, input.userId, {
+    missing: "entry not found",
+    forbidden: "cannot add photos to another user's entry",
+  });
 
   // A repeat of a submission we already stored returns the key it made
   // (law 8b). Worth more here than on a plain row insert: without it a

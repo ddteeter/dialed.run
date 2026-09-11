@@ -1,7 +1,10 @@
 import { and, eq } from "drizzle-orm";
+
 import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+
+import { ForbiddenError, NotFoundError } from "./errors";
 
 /**
  * "This row, and it belongs to this user" — the predicate behind every
@@ -50,4 +53,47 @@ export async function selectOwnedRow<
     .where(ownedBy(table, row))
     .limit(1);
   return rows[0];
+}
+
+/**
+ * "Found it, and it is yours" — the two guards that follow an owner-scoped
+ * read, in the order that keeps 404 and 403 separate.
+ *
+ * Takes the row that was already read rather than doing the reading, and
+ * that is the point: the three call sites select different columns from
+ * different tables by different predicates, and one of those choices is a
+ * covering index. A helper that owned the query would have to own the
+ * column list too, and the first caller needing a different one would copy
+ * it back out.
+ *
+ * The message pair is required rather than defaulted. "not found" tells a
+ * reader nothing about which thing, and these throw across module
+ * boundaries where the stack is the only other clue.
+ */
+export function requireOwned<TRow extends Readonly<{ userId: string }>>(
+  row: TRow | undefined,
+  userId: string,
+  messages: Readonly<{ missing: string; forbidden: string }>,
+): TRow {
+  if (row === undefined) throw new NotFoundError(messages.missing);
+  return requireOwner(row, userId, messages.forbidden);
+}
+
+/**
+ * The ownership half on its own, for a row the caller already knows is
+ * there.
+ *
+ * Separate because a caller inside `if (row)` has no missing case, and
+ * handing `requireOwned` a message for it would be a sentence no input
+ * could ever produce — a dead string sitting in the source looking like
+ * live copy. `attachKit` is the example: an absent entry there is not an
+ * error, it is the signal to create one.
+ */
+export function requireOwner<TRow extends Readonly<{ userId: string }>>(
+  row: TRow,
+  userId: string,
+  forbidden: string,
+): TRow {
+  if (row.userId !== userId) throw new ForbiddenError(forbidden);
+  return row;
 }

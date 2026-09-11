@@ -185,11 +185,6 @@
       "count": 2
     },
     {
-      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
-      "reason": "The two error classes' default messages. Every construction in this module passes its own sentence, so the defaults are unreachable \u2014 they exist so a future caller that forgets one still says something.",
-      "count": 2
-    },
-    {
       "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: an empty page produces empty reads and an empty map either way. What the return saves is six queries and a batch on every empty feed \u2014 which is what a new account sees.",
       "count": 1

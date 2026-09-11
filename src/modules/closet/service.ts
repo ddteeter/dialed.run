@@ -36,6 +36,7 @@ import type {
 } from "../../lib/contracts";
 import { garmentSchema, uiGroupFor } from "../../lib/contracts";
 import { garmentTypesFor } from "../../lib/garment-fields";
+import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/thermal";
@@ -59,11 +60,13 @@ const RETIRE_CANDIDATE_DAYS = 180;
 const SECONDS_PER_DAY = 86_400;
 const RETIRE_CANDIDATE_S = RETIRE_CANDIDATE_DAYS * SECONDS_PER_DAY;
 
-export class NotFoundError extends Error {
-  constructor() {
-    super("Item not found.");
-  }
-}
+/**
+Re-exported, not re-declared. This was a third `NotFoundError` — same name
+as `modules/feed`'s, incompatible shape (no message argument), and neither
+carried the `isNotFound` marker the router duck-types on. One type now,
+in `lib/errors.ts`.
+*/
+export { NotFoundError } from "../../lib/errors";
 
 /**
  * Column value that clears a nullable column without the `null` literal.
@@ -174,7 +177,7 @@ export async function getOwnedItem(
     .from(wardrobeItems)
     .where(ownedBy(wardrobeItems, { id: itemId, userId }))
     .limit(1);
-  if (!row) throw new NotFoundError();
+  if (!row) throw new NotFoundError("Item not found.");
   return row;
 }
 

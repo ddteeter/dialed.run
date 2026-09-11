@@ -27,7 +27,9 @@ import {
 } from "../../db/schema-core";
 import { env } from "../../env";
 import type { entryTags, itemFlagSchema } from "../../lib/contracts";
+import { ForbiddenError } from "../../lib/errors";
 import { forIds } from "../../lib/for-ids";
+import { requireOwned, requireOwner } from "../../lib/owned";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
@@ -41,18 +43,13 @@ function db() {
   return drizzle(env.DIALED_CORE);
 }
 
-export class ForbiddenError extends Error {
-  // Stryker disable next-line StringLiteral
-  constructor(message = "not allowed") {
-    super(message);
-  }
-}
-export class NotFoundError extends Error {
-  // Stryker disable next-line StringLiteral
-  constructor(message = "not found") {
-    super(message);
-  }
-}
+/**
+Re-exported, not re-declared. These were a private pair here and a third,
+incompatible `NotFoundError` in `closet/service.ts`; they live in
+`lib/errors.ts` now. The re-export keeps `modules/feed`'s public surface
+unchanged for its callers.
+*/
+export { ForbiddenError, NotFoundError } from "../../lib/errors";
 
 export interface AttachKitInput {
   userId: string;
@@ -67,15 +64,15 @@ export interface AttachKitInput {
  */
 export async function attachKit(input: AttachKitInput): Promise<string> {
   const database = db();
-  const [run] = await database
+  const [runRow] = await database
     .select({ id: runs.id, userId: runs.userId })
     .from(runs)
     .where(eq(runs.id, input.runId))
     .limit(1);
-  if (!run) throw new NotFoundError("run not found");
-  if (run.userId !== input.userId) {
-    throw new ForbiddenError("cannot attach a kit to another user's run");
-  }
+  requireOwned(runRow, input.userId, {
+    missing: "run not found",
+    forbidden: "cannot attach a kit to another user's run",
+  });
 
   const [existing] = await database
     .select({ id: outfitEntries.id, userId: outfitEntries.userId })
@@ -83,9 +80,11 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     .where(eq(outfitEntries.runId, input.runId))
     .limit(1);
   if (existing) {
-    if (existing.userId !== input.userId) {
-      throw new ForbiddenError("run already has another user's entry");
-    }
+    requireOwner(
+      existing,
+      input.userId,
+      "run already has another user's entry",
+    );
     // Already idempotent, and by a natural key: a run has exactly one entry
     // (UNIQUE `entries_run`), so the run id *is* the key and no column is
     // needed — task 108 requirement 1, prefer a natural key over inventing
@@ -179,11 +178,10 @@ async function assertOwnsEntry(
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId))
     .limit(1);
-  if (!entry) throw new NotFoundError("entry not found");
-  if (entry.userId !== userId) {
-    throw new ForbiddenError("cannot modify another user's entry");
-  }
-  return entry;
+  return requireOwned(entry, userId, {
+    missing: "entry not found",
+    forbidden: "cannot modify another user's entry",
+  });
 }
 
 /**
