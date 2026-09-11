@@ -185,11 +185,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/profiles.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
-      "reason": "Equivalent mutant on the unit argument: `bandLabel` reads \"c\" and treats everything else as Fahrenheit, so an empty string produces exactly the same label. The literal says which unit was meant.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: a `LIKE` never matches NULL, so the predicate cannot drop a row. It is here because the column is nullable and the result type promises a name.",
       "count": 1
@@ -283,11 +278,6 @@
       "key": "src/modules/closet/components/GarmentForm.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression,StringLiteral",
       "reason": "Two equivalent mutants, proof at the site: `GarmentFormValues` types an unanswered select as `\"\"` and `ThermalInput` types it as absent. The conversion from empty string to undefined is for the compiler, not the runtime \u2014 the estimator reads `layer === \"outer\"` and indexes its tables by weight, so an empty string and an absent value already behave identically. These are the same class as `estimateTempRange`'s own weight guard.",
       "count": 2
-    },
-    {
-      "key": "src/lib/measures.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
-      "reason": "Equivalent mutant, proof at the site: `formatTemp` branches only on \"c\", so every other unit string takes the same Fahrenheit path and no input distinguishes them. The literal exists so D-6 (a real unit preference) has one place to change rather than every call site.",
-      "count": 1
     },
     {
       "key": "src/modules/closet/components/GarmentDetail.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
