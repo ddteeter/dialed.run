@@ -559,3 +559,17 @@ export interface Units {
 
 export const defaultUnits: Readonly<Units> = { temp: "f", distance: "mi" };
 export const CALL_VERDICT_THRESHOLD = 15;
+
+/**
+ * How many verdicts in one 5°C band before the ladder calls it covered.
+ *
+ * Derived from `CALL_VERDICT_THRESHOLD` rather than picked: 15 verdicts
+ * spread across the five bands a runner's year typically spans is three
+ * each, so three is what "covered" means for a band. Two or one is
+ * partial; none is unknown (O6: "pink bands are covered, teal is partial,
+ * grey is unknown").
+ *
+ * A threshold the owner may want to move — it decides how fast the ladder
+ * looks finished, which is the screen's whole emotional job.
+ */
+export const BAND_COVERED_VERDICTS = 3;

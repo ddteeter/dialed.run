@@ -508,6 +508,11 @@
       "key": "src/routes/feed/attach.$runId.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route.",
       "count": 1
+    },
+    {
+      "key": "src/modules/feed/ladder-read.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: with no entries the walk answers an empty ladder anyway (observationsForEntries guards its own empty case, and a tally with no range spans no floors). The return saves two cross-database reads on every Call-tab open by a runner who has logged nothing, which is every runner first visit.",
+      "count": 1
     }
   ]
 }
