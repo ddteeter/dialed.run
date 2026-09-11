@@ -59,69 +59,46 @@ round (D-26…D-33).
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
 
-5. **O3's tap-list: one climate-weighted list, or one of three lists?**
-   Raised by lane 105 while building it, and blocking that screen.
+## Answered in round 6 (imported 2026-09-11)
 
-   **The artboard shows one list.** `Onboarding.dc.html` O3 renders a single
-   column under `COMMON IN YOUR CLIMATE · TAP TO ADD`, running singlet →
-   short-sleeve tee → merino base → 5" shorts → 7" shorts → tights → wind
-   shell → rain jacket → gloves → mittens → beanie → buff → vest → arm
-   warmers. Fourteen rows, spanning a July singlet and January mittens, with
-   six shown ticked and eight offered with a `+`.
+Both raised by lane 105 while building, and both answered with a change to
+the artboards rather than a note.
 
-   **The code is three lists.** `closet/tap-list-data.ts` holds
-   `TAP_LISTS: Record<"cold" | "mild" | "hot", TapListEntry[]>`, five rows
-   each, disjoint — a runner sees `cold` *or* `mild` *or* `hot`.
+**5 — O3 is one list.** The climate band is a **sort key and a fold point,
+never a filter**: 24 canonical rows, ranked by cohort frequency in the
+runner's zone, folded at 14 with the remainder one tap behind a disclosure
+that states its own count. **No row is ever absent** — a Minneapolis runner
+owns tights and a singlet, and one band per person is a season rather than
+a wardrobe.
 
-   Three things say the artboard is right and the code drifted:
+**Nothing arrives ticked.** A tick means "you tapped it just now", is a
+toggle, and the counter counts taps. The artboard's six pre-ticks were O2
+residue and are gone; "12 pieces" was a mock and not a target. "Enough to
+start" appears at six and is advice, not a gate; Next is live from the
+first tap. When O2 returns a photo-derived row is ticked, non-toggling and
+tagged `FROM PHOTO` — visibly a different thing from a tap.
 
-   - A Minneapolis runner needs tights **and** a singlet. They run in July.
-     One band per person is a season, not a wardrobe.
-   - The packet's counter copy is "12 pieces — enough to start". No band can
-     reach 12; five is the ceiling.
-   - The header says "common in your climate", which reads as *weighting*,
-     not as *the only things you may tap*.
+Section AA of `Remaining Screens.dc.html` carries the six-rule contract and
+addresses lane 105 directly: replace `Record<band, TapListEntry[]>` with
+one `TAP_LIST: TapListEntry[]` of 24 rows, and give each entry a
+`rank[band]`.
 
-   **What design is being asked**, precisely: is the climate band meant to
-   choose the list, or to choose which rows of one shared list arrive
-   ticked? And if the latter — what do the ticks mean on a screen with no
-   O2 before it? O2 (photo capture) is cut from v1, so in the shipped flow
-   nothing has filled the closet yet and every row would presumably arrive
-   unticked.
+**6 — hue means verdict; coverage becomes ink density.** Pink/teal/grey are
+cold/dialed/warm **permanently**. Coverage goes monochrome — solid, 135°
+hatch, hairline — because coverage is *ordinal* (none → all) and density
+says that natively, while cold/dialed/warm is a *direction around a centre*
+that density cannot express.
 
-   Lane 105 is **not guessing**: O3 is on hold until this is answered. The
-   band itself is being built either way, since it is a useful signal under
-   both readings.
+Verdict also stops being hue-alone: a three-slot mark whose filled slot's
+**position** carries the meaning, plus a word. **`text-night/30` for warm is
+retired — opacity never encodes meaning.** O6's bar and caption are
+redrawn, so the Call teaser drops its bracket placeholder for the real
+thing. AA3's weighting diagram now encodes by bar length, keeping the
+density channel exclusively coverage's.
 
-6. **Pink, teal and grey mean two different things on two adjacent
-   screens.** Found by lane 105 while building the Call teaser.
-
-   - **O6 says they are coverage:** *"Pink bands are covered, teal is
-     partial, grey is unknown."*
-   - **The shipped profile (G) uses them for verdict kind:**
-     `OwnProfile.tsx`'s temperature-coverage row renders
-     `text-pink` × `band.cold`, `text-teal` × `band.dialed`,
-     `text-night/30` × `band.warm`.
-
-   Both readings are coherent alone. Together they are not: a runner moves
-   between the profile and the Call tab, and pink cannot mean "you were
-   cold" on one and "we know this band" on the other.
-
-   Worth noting the profile's reading has an accessibility problem of its
-   own — cold/dialed/warm is a three-way distinction carried by **hue
-   alone**, with identical dots. The Form Contract already rules that out
-   for errors ("a field error is marked by border weight and a hi-viz band,
-   never by hue alone"); the same argument applies here.
-
-   **Lane 105 is not guessing.** The teaser ships coverage as bracket-
-   notation text — `[COVERED]`, `[PARTIAL]`, `[UNKNOWN]` — per CLAUDE.md's
-   undesigned-surface protocol, which says a text label in the existing
-   system is always the correct placeholder. That is deliberately not a
-   proposal for the final look; it is the option that adds no new meaning
-   to a colour while this is open.
-
-   What design is being asked: which meaning wins, and what the losing
-   screen uses instead.
+That answers the accessibility half of the question too: the profile's
+cold/dialed/warm was a three-way distinction carried by hue alone, and it
+no longer is.
 
 ## Answered in round 5 (imported 2026-09-08)
 
