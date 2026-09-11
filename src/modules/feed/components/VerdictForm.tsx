@@ -19,6 +19,7 @@ import {
 } from "../../../ui";
 import { submitVerdictInput } from "../inputs";
 import type { entryDetailForViewer } from "../entries";
+import { toggledIn } from "../../../lib/toggled-in";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -344,12 +345,7 @@ export function VerdictForm({
                 key={tag}
                 type="button"
                 onClick={() => {
-                  setTags((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(tag)) next.delete(tag);
-                    else next.add(tag);
-                    return next;
-                  });
+                  setTags((prev) => toggledIn(prev, tag));
                 }}
                 className={
                   tags.has(tag)

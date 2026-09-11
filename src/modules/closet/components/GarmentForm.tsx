@@ -223,7 +223,11 @@ export function GarmentForm({
 
       <fieldset className="flex flex-col gap-3">
         <legend className="font-display text-lg uppercase">What is it?</legend>
-        <FormField name="brand" label={LABELS.brand} error={form.fieldErrors.brand}>
+        <FormField
+          name="brand"
+          label={LABELS.brand}
+          error={form.fieldErrors.brand}
+        >
           <input
             {...form.field("brand")}
             id="brand"
@@ -287,20 +291,23 @@ export function GarmentForm({
 
       <fieldset className="flex flex-col gap-3 border-t border-night/10 pt-4">
         <legend className="sr-only">Attributes</legend>
-        {fields.layer ? (
-          <ChoiceField
-            name="layer"
-            label={LABELS.layer}
-            error={form.fieldErrors.layer}
-            field={form.field}
-            value={values.layer}
-            options={layerSchema.options}
-            optionLabels={LAYER_LABELS}
-            onChange={(picked) => {
-              update("layer", picked);
-            }}
-          />
-        ) : undefined}
+        {
+          // fallow-ignore-next-line code-duplication -- three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField
+          fields.layer ? (
+            <ChoiceField
+              name="layer"
+              label={LABELS.layer}
+              error={form.fieldErrors.layer}
+              field={form.field}
+              value={values.layer}
+              options={layerSchema.options}
+              optionLabels={LAYER_LABELS}
+              onChange={(picked) => {
+                update("layer", picked);
+              }}
+            />
+          ) : undefined
+        }
         {fields.weight ? (
           <ChoiceField
             name="weight"

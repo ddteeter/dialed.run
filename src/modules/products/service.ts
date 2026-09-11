@@ -118,6 +118,7 @@ export async function searchBrands(
   return db
     .select()
     .from(brands)
+    // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
     .where(like(brands.normalized, likePattern))
     .orderBy(brands.name)
     .limit(limit);

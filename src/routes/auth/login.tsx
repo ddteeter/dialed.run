@@ -11,6 +11,7 @@ export const Route = createFileRoute("/auth/login")({ component: LoginPage });
 const LABELS = { email: "Email", password: "Password" };
 
 function LoginPage() {
+  // fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +27,7 @@ function LoginPage() {
   });
 
   return (
+    // fallow-ignore-next-line code-duplication -- the AuthPage call both auth screens make; what differs is the fields, which is the entire content of the two screens
     <AuthPage
       heading="Log in"
       submitLabel="Log in"

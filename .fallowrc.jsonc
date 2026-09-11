@@ -6,8 +6,9 @@
   // repository root with no --config and no tuning flags, so everything below
   // is what actually governs clone detection.
   "duplicates": {
-    // "mild" for now, and "semantic" is the destination — the sequencing is
-    // deliberate and the measurement is below.
+    // "semantic", the destination this file has named since the analyzer was
+    // adopted. The staging step is over: the ~17 extractions it demanded are
+    // done, and the measurement is below.
     //
     // Semantic ignores identifier names, so it finds the copy-then-rename an
     // agent produces. Measured against six clone groups confirmed real by
@@ -23,13 +24,39 @@
     // hand-rolling the same run-ownership check, two files each building the
     // same garment-name map. Semantic is the right mode.
     //
-    // It is not switched on in the same change that switches the analyzer
+    // It was not switched on in the same change that switched the analyzer
     // on, because the gate reports clones in files a change *touches*: with
     // semantic at the bottom of a stack, five unrelated PRs each inherit a
-    // slice of a `modules/feed` refactor they have nothing to do with. The
-    // flip and the ~17 extractions it demands land together, in their own
-    // change, where they can be reviewed as one thing.
-    "mode": "mild",
+    // slice of a `modules/feed` refactor they have nothing to do with. So
+    // the extractions landed first (PRs #61-#63) and the flip last, with the
+    // count at zero.
+    //
+    // WHAT THE PAYDOWN LEARNED, because it changes how to read a finding
+    // here. Semantic matches *skeletons*, so it reports two shapes that are
+    // alike whether or not they are the same idea, and two classes of that
+    // do not go away by extracting:
+    //
+    //   1. `src/routes/**`. Two routes of a kind are `createFileRoute` +
+    //      loader + `useLoaderData` + shell, which is exactly what
+    //      `server-functions-are-glue.test.ts` *requires*; the branching
+    //      that would make them differ is what that test forbids.
+    //   2. A well-factored pair. Extraction moves the body out and leaves
+    //      two call sites that are skeletally identical. Measured both
+    //      ways: `isFollowing`/`hasReacted` were *still* a 16-line group
+    //      after `hasRowWhere` was extracted, and `ops/scheduled.ts`'s two
+    //      callers became a 27-line group — bigger than several groups the
+    //      same PR had just fixed — after `redispatchEach` was extracted.
+    //
+    // So a `fallow-ignore` here is the normal outcome for those two, not a
+    // defeat, and the inventory grows as the code gets *better* factored.
+    // It is still not for a clone you would rather not fix: every one of
+    // the 19 carries a reason naming what the two things actually are, and
+    // `fallow suppressions` prints them all. If a reason reads like
+    // "different enough", it is wrong.
+    //
+    // The paydown ran 31 groups -> 0 (4.62% -> 0.00%): 12 real extractions
+    // and 19 suppressions.
+    "mode": "semantic",
     // The floor for what counts as a clone. Lower finds more and rhymes more;
     // 50 is fallow's default and a reasonable place to start tuning.
     "minTokens": 50,

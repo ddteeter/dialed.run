@@ -408,6 +408,101 @@
       "key": "src/ui/use-idempotency-key.ts|mutation-suppress|// Stryker restore ArrayDeclaration",
       "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
       "count": 1
+    },
+    {
+      "key": "src/routes/auth/login.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids.",
+      "count": 1
+    },
+    {
+      "key": "src/routes/auth/login.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the AuthPage call both auth screens make; what differs is the fields, which is the entire content of the two screens",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: the AuthPage call both auth screens make; what differs is the fields, which is the entire content of the two screens.",
+      "count": 1
+    },
+    {
+      "key": "src/routes/notifications/index.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids.",
+      "count": 1
+    },
+    {
+      "key": "src/routes/runs/manual.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/follows.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/follows.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- followerCount and usefulCount both delegate to columnWhere, each over its own covering index",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: followerCount and usefulCount both delegate to columnWhere, each over its own covering index.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two owner-scoped reads in one function, over runs and over entries; see the note on the second",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two owner-scoped reads in one function, over runs and over entries; see the note on the second.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- read-a-row-then-guard over two tables; these read by id and check the owner in code on purpose, so 404 and 403 stay distinct -- selectOwnedRow scopes in SQL and would collapse them",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: read-a-row-then-guard over two tables; these read by id and check the owner in code on purpose, so 404 and 403 stay distinct -- selectOwnedRow scopes in SQL and would collapse them.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- read-a-row-then-guard; owned.ts records why each call site keeps its own columns and predicate -- one of those choices is a covering index",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: read-a-row-then-guard; owned.ts records why each call site keeps its own columns and predicate -- one of those choices is a covering index.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same read shape, different question: one asks whether to prompt for a verdict, the other whether a viewer may react at all",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: same read shape, different question: one asks whether to prompt for a verdict, the other whether a viewer may react at all.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the same four-line read of two different entities; merging would couple an entry's detail to a profile's",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: the same four-line read of two different entities; merging would couple an entry's detail to a profile's.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/photos.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/products/service.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/components/GarmentForm.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/attach.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the same one-line run read with different failure handling: one warns and skips, the other throws",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: the same one-line run read with different failure handling: one warns and skips, the other throws.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the RunSource preamble both XML parsers share; what follows it -- track points versus laps -- is entirely different",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: the RunSource preamble both XML parsers share; what follows it -- track points versus laps -- is entirely different.",
+      "count": 1
+    },
+    {
+      "key": "src/lib/thermal.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same shape, different physics",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: same shape, different physics.",
+      "count": 1
     }
   ]
 }

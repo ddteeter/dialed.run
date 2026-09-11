@@ -17,6 +17,8 @@ import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
+import { filePartFrom } from "../../lib/file-part";
+import type { FilePartProblem } from "../../lib/file-part";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -57,6 +59,7 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
   requireOwned(entry, input.userId, {
     missing: "entry not found",
     forbidden: "cannot add photos to another user's entry",
+  // fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ
   });
 
   // A repeat of a submission we already stored returns the key it made
@@ -141,6 +144,15 @@ export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | n
 }
 
 /**
+The sentences this screen uses for each refusal.
+*/
+const PHOTO_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
+  "not-form-data": "expected multipart form data",
+  missing: "no photo in upload",
+  "too-large": "photo too large",
+};
+
+/**
  * Pulls a photo upload out of a multipart body, refusing anything the
  * pipeline cannot store.
  *
@@ -152,20 +164,13 @@ export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | n
 export function photoUploadFrom(
   input: unknown,
 ): z.infer<typeof uploadPhotoFields> & { file: File } {
-  if (!(input instanceof FormData)) {
-    throw new InvalidPhotoError("expected multipart form data");
-  }
-  const file = input.get("photo");
-  if (!(file instanceof File)) {
-    throw new InvalidPhotoError("no photo in upload");
-  }
-  if (file.size > MAX_PHOTO_BYTES) {
-    throw new InvalidPhotoError("photo too large");
-  }
+  const part = filePartFrom(input, "photo", MAX_PHOTO_BYTES);
+  if (!part.ok) throw new InvalidPhotoError(PHOTO_REFUSALS[part.problem]);
+  const { file, form } = part;
   const fields = uploadPhotoFields.parse({
-    entryId: input.get("entryId"),
+    entryId: form.get("entryId"),
     contentType: file.type,
-    idempotencyKey: input.get("idempotencyKey") ?? undefined,
+    idempotencyKey: form.get("idempotencyKey") ?? undefined,
   });
   return { ...fields, file };
 }
