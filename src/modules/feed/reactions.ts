@@ -8,6 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
+import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -60,18 +61,20 @@ export async function hasReacted(
   entryId: string,
   userId: string,
 ): Promise<boolean> {
-  const rows = await db()
-    .select({ userId: reactions.userId })
-    .from(reactions)
-    .where(and(eq(reactions.entryId, entryId), eq(reactions.userId, userId)))
-    .limit(1);
-  return rows.length > 0;
+  return hasRowWhere(
+    db(),
+    reactions,
+    reactions.userId,
+    and(eq(reactions.entryId, entryId), eq(reactions.userId, userId)),
+  );
 }
 
 export async function usefulCount(entryId: string): Promise<number> {
-  const rows = await db()
-    .select({ userId: reactions.userId })
-    .from(reactions)
-    .where(eq(reactions.entryId, entryId));
-  return rows.length;
+  const reactors = await columnWhere(
+    db(),
+    reactions,
+    reactions.userId,
+    eq(reactions.entryId, entryId),
+  );
+  return reactors.length;
 }
