@@ -12,6 +12,7 @@ import {
   FormStatus,
   SubmitButton,
   TextField,
+  ToggleField,
 } from "../../src/ui/form";
 import { DURATION } from "../../src/ui/motion";
 import { useFormSubmit } from "../../src/ui/use-form-submit";
@@ -1064,5 +1065,96 @@ describe("ChoiceField", () => {
       "aria-describedby",
       "layer-message",
     );
+  });
+});
+
+/**
+A resting `field()`: nothing invalid, nothing in flight.
+*/
+function restingField(name: string) {
+  return {
+    name,
+    readOnly: false,
+    "aria-invalid": undefined,
+    "aria-describedby": undefined,
+    onInput: () => {
+      // not what these cases are about
+    },
+  };
+}
+
+/**
+ * `ToggleField` — the checkbox `GarmentForm` wrote twice.
+ */
+describe("ToggleField", () => {
+  it("reports the box's new state, not its old one", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ToggleField
+        name="windResistant"
+        label="Wind resistant"
+        field={restingField}
+        isOn={false}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "Wind resistant" }));
+
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it("reports being turned off as well as on", async () => {
+    // `checked` rather than the inverse of the old value: a handler that
+    // read the prop instead of the event would answer `true` both times.
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ToggleField
+        name="waterResistant"
+        label="Water resistant"
+        field={restingField}
+        isOn
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "Water resistant" }));
+
+    expect(onChange).toHaveBeenCalledWith(false);
+  });
+
+  it("takes its state from the caller, so the form owns the value", () => {
+    render(
+      <ToggleField
+        name="windResistant"
+        label="Wind resistant"
+        field={restingField}
+        isOn
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Wind resistant" })).toBeChecked();
+  });
+
+  it("labels the box by wrapping it, so the words are part of the hit area", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ToggleField
+        name="windResistant"
+        label="Wind resistant"
+        field={restingField}
+        isOn={false}
+        onChange={onChange}
+      />,
+    );
+
+    // Clicking the text, not the box.
+    await user.click(screen.getByText("Wind resistant"));
+
+    expect(onChange).toHaveBeenCalledWith(true);
   });
 });

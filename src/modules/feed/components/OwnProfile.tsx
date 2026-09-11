@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import { Bracketed, Mono } from "../../../ui";
 import type { ownProfile } from "../profiles";
+import { ListSection } from "./ListSection";
 
 type Profile = Awaited<ReturnType<typeof ownProfile>>;
 
@@ -53,64 +54,44 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
         <Mono className="text-sm">{String(profile.entryCount)} entries</Mono>
       </div>
 
-      {profile.coverage.length === 0 ? undefined : (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">
-            Temperature coverage
-          </h2>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0">
-            {profile.coverage.map((band) => (
-              <li
-                key={band.bandFloorC}
-                className="flex items-center gap-2 text-sm"
-              >
-                <Bracketed className="w-24 shrink-0 text-night/40">
-                  {band.label}
-                </Bracketed>
-                <span className="text-pink">{"●".repeat(band.cold)}</span>
-                <span className="text-teal">{"●".repeat(band.dialed)}</span>
-                <span className="text-night/30">{"●".repeat(band.warm)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <ListSection title="Temperature coverage" items={profile.coverage}>
+        {(band) => (
+          <li key={band.bandFloorC} className="flex items-center gap-2 text-sm">
+            <Bracketed className="w-24 shrink-0 text-night/40">
+              {band.label}
+            </Bracketed>
+            <span className="text-pink">{"●".repeat(band.cold)}</span>
+            <span className="text-teal">{"●".repeat(band.dialed)}</span>
+            <span className="text-night/30">{"●".repeat(band.warm)}</span>
+          </li>
+        )}
+      </ListSection>
 
-      {profile.mostWornItems.length === 0 ? undefined : (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">Most worn</h2>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0">
-            {profile.mostWornItems.map((item) => (
-              <li
-                key={item.itemId}
-                className="flex items-center justify-between text-sm"
-              >
-                <span>{item.name}</span>
-                <Mono className="text-night/40">[{String(item.wearCount)}]</Mono>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <ListSection title="Most worn" items={profile.mostWornItems}>
+        {(item) => (
+          <li
+            key={item.itemId}
+            className="flex items-center justify-between text-sm"
+          >
+            <span>{item.name}</span>
+            <Mono className="text-night/40">[{String(item.wearCount)}]</Mono>
+          </li>
+        )}
+      </ListSection>
 
-      {profile.recentEntries.length === 0 ? undefined : (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">Recent entries</h2>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0">
-            {profile.recentEntries.map((entry) => (
-              <li key={entry.entryId}>
-                <Link
-                  to="/feed/entry/$entryId"
-                  params={{ entryId: entry.entryId }}
-                  className="text-sm font-semibold text-night no-underline"
-                >
-                  {entry.verdict === null ? "No verdict yet" : "Entry"}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <ListSection title="Recent entries" items={profile.recentEntries}>
+        {(entry) => (
+          <li key={entry.entryId}>
+            <Link
+              to="/feed/entry/$entryId"
+              params={{ entryId: entry.entryId }}
+              className="text-sm font-semibold text-night no-underline"
+            >
+              {entry.verdict === null ? "No verdict yet" : "Entry"}
+            </Link>
+          </li>
+        )}
+      </ListSection>
     </div>
   );
 }

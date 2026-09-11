@@ -9,6 +9,7 @@ import {
 } from "../../../lib/measures";
 import { Bracketed, Mono } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
+import { ListSection } from "./ListSection";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -120,29 +121,24 @@ export function EntryDetail({
         <p className="m-0 text-base">{entry.caption}</p>
       )}
 
-      {entry.items.length === 0 ? undefined : (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">Kit</h2>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0">
-            {entry.items.map((item) => (
-              <li
-                key={item.itemId}
-                className="flex items-center justify-between text-sm"
-              >
-                <span>
-                  {item.brand === undefined ? "" : `${item.brand} `}
-                  {item.name}
-                </span>
-                {item.flag === undefined ? undefined : (
-                  <Bracketed className="text-xs text-night/40">
-                    {item.flag.replaceAll("_", " ")}
-                  </Bracketed>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <ListSection title="Kit" items={entry.items}>
+        {(item) => (
+          <li
+            key={item.itemId}
+            className="flex items-center justify-between text-sm"
+          >
+            <span>
+              {item.brand === undefined ? "" : `${item.brand} `}
+              {item.name}
+            </span>
+            {item.flag === undefined ? undefined : (
+              <Bracketed className="text-xs text-night/40">
+                {item.flag.replaceAll("_", " ")}
+              </Bracketed>
+            )}
+          </li>
+        )}
+      </ListSection>
 
       {entry.tags.length === 0 ? undefined : (
         <div className="flex flex-wrap gap-2">
