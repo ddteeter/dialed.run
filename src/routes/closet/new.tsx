@@ -1,11 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { requireSession } from "../../modules/auth/functions";
-import type { GarmentFormValues } from "../../modules/closet/components/GarmentForm";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import { createItemFn } from "../../modules/closet/functions";
 import { searchBrandsFn } from "../../modules/products/functions";
-import { garmentFromFormValues } from "../../modules/closet/form-mapping";
 import { Layout, useIdempotencyKey } from "../../ui";
 
 export const Route = createFileRoute("/closet/new")({
@@ -24,16 +22,6 @@ function NewGarmentPage() {
   const navigate = useNavigate();
   const { idempotencyKey, rotate } = useIdempotencyKey();
 
-  async function handleSubmit(values: GarmentFormValues) {
-    const garment = garmentFromFormValues(values);
-
-    const created = await createItemFn({
-      data: { garment, idempotencyKey },
-    });
-    rotate();
-    await navigate({ to: "/closet/$itemId", params: { itemId: created.id } });
-  }
-
   return (
     <Layout>
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-8 sm:px-6">
@@ -41,13 +29,20 @@ function NewGarmentPage() {
           Add a piece
         </h1>
         <GarmentForm
-          onSubmit={(values) => {
-            void handleSubmit(values);
+          save={async (garment) => createItemFn({ data: { garment, idempotencyKey } })}
+          onSaved={async (created) => {
+            rotate();
+            await navigate({
+              to: "/closet/$itemId",
+              params: { itemId: created.id },
+            });
           }}
           onBrandInput={(value) => {
             void handleBrandInput(value);
           }}
           submitLabel="Add to closet"
+          pendingLabel="Adding"
+          successMessage="Added to your closet."
         />
       </div>
     </Layout>
