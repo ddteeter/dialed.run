@@ -65,6 +65,46 @@ export async function handleScheduled(
 
 
 /**
+ * Re-dispatch a batch of rows to the imports queue, one message each.
+ *
+ * Both re-dispatch paths below had written this out: the early return on
+ * an empty batch, the per-row `send` in a `try` so one bad row cannot
+ * abandon the rest, the Sentry capture, and the anomaly line at the end.
+ * They differed in the message, the Sentry context and the sentence, which
+ * is what the three callbacks are.
+ *
+ * **The `try` is inside the loop on purpose and must stay there.** A
+ * failed send is reported and skipped, not fatal: these are reconciliation
+ * passes, so a row that cannot be dispatched this hour is picked up the
+ * next. Hoisting the `try` out would let one failure strand every row
+ * behind it until someone noticed.
+ *
+ * The anomaly is pushed on the row count, not on the number of successful
+ * sends, and that is also deliberate — the digest is reporting that a
+ * backlog existed, which is true whether or not the re-dispatch landed.
+ */
+async function redispatchEach<TRow extends { id: string }>(
+  anomalies: string[],
+  rows: readonly TRow[],
+  handlers: Readonly<{
+    message: (row: TRow) => Parameters<typeof env.IMPORTS_QUEUE.send>[0];
+    errorContext: (row: TRow) => Record<string, string>;
+    describe: (count: number) => string;
+  }>,
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  for (const row of rows) {
+    try {
+      await env.IMPORTS_QUEUE.send(handlers.message(row));
+    } catch (error) {
+      captureException(error, handlers.errorContext(row));
+    }
+  }
+  anomalies.push(handlers.describe(rows.length));
+}
+
+/**
  * Reconciliation for the upload path.
  *
  * `startImport` writes to three systems in sequence — R2, then the row,
@@ -97,21 +137,15 @@ async function redispatchStalledImports(anomalies: string[]): Promise<void> {
       ),
     )
     .limit(100);
-  if (stalled.length === 0) return;
-
-  for (const row of stalled) {
-    try {
-      await env.IMPORTS_QUEUE.send({ type: "import", importId: row.id });
-    } catch (error) {
-      captureException(error, {
-        surface: "import-redispatch",
-        importId: row.id,
-      });
-    }
-  }
-  anomalies.push(
-    `${String(stalled.length)} import(s) stalled pending and were re-dispatched`,
-  );
+  await redispatchEach(anomalies, stalled, {
+    message: (row) => ({ type: "import", importId: row.id }),
+    errorContext: (row) => ({
+      surface: "import-redispatch",
+      importId: row.id,
+    }),
+    describe: (count) =>
+      `${String(count)} import(s) stalled pending and were re-dispatched`,
+  });
 }
 
 /**
@@ -134,24 +168,15 @@ async function redispatchStrandedRevocations(
     .select({ id: stravaRevocations.id })
     .from(stravaRevocations)
     .limit(100);
-  if (stranded.length === 0) return;
-
-  for (const row of stranded) {
-    try {
-      await env.IMPORTS_QUEUE.send({
-        type: "strava_revoke",
-        revocationId: row.id,
-      });
-    } catch (error) {
-      captureException(error, {
-        surface: "revocation-redispatch",
-        revocationId: row.id,
-      });
-    }
-  }
-  anomalies.push(
-    `${String(stranded.length)} Strava revocation(s) awaited re-dispatch`,
-  );
+  await redispatchEach(anomalies, stranded, {
+    message: (row) => ({ type: "strava_revoke", revocationId: row.id }),
+    errorContext: (row) => ({
+      surface: "revocation-redispatch",
+      revocationId: row.id,
+    }),
+    describe: (count) =>
+      `${String(count)} Strava revocation(s) awaited re-dispatch`,
+  });
 }
 
 /**

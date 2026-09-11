@@ -23,6 +23,7 @@ import {
   Mono,
   SubmitButton,
   TextField,
+  ToggleField,
   useFormSubmit,
 } from "../../../ui";
 import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
@@ -329,30 +330,26 @@ export function GarmentForm({
           />
         ) : undefined}
         {fields.windResistant ? (
-          <label className="flex items-center gap-2 text-sm font-semibold">
-            <input
-              {...form.field("windResistant")}
-              type="checkbox"
-              checked={values.windResistant}
-              onChange={(event) => {
-                update("windResistant", event.target.checked);
-              }}
-            />
-            Wind resistant
-          </label>
+          <ToggleField
+            name="windResistant"
+            label="Wind resistant"
+            field={form.field}
+            isOn={values.windResistant}
+            onChange={(next) => {
+              update("windResistant", next);
+            }}
+          />
         ) : undefined}
         {fields.waterResistant ? (
-          <label className="flex items-center gap-2 text-sm font-semibold">
-            <input
-              {...form.field("waterResistant")}
-              type="checkbox"
-              checked={values.waterResistant}
-              onChange={(event) => {
-                update("waterResistant", event.target.checked);
-              }}
-            />
-            Water resistant
-          </label>
+          <ToggleField
+            name="waterResistant"
+            label="Water resistant"
+            field={form.field}
+            isOn={values.waterResistant}
+            onChange={(next) => {
+              update("waterResistant", next);
+            }}
+          />
         ) : undefined}
       </fieldset>
 

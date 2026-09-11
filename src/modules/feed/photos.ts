@@ -10,6 +10,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
 import { env } from "../../env";
+import { firstColumnWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
 import type { z } from "zod";
@@ -68,17 +69,16 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
   // seek, and an in-memory `.find` over a capped list is the habit that
   // breaks the moment the cap moves.
   if (input.idempotencyKey !== undefined) {
-    const [already] = await database
-      .select({ photoKey: entryPhotos.photoKey })
-      .from(entryPhotos)
-      .where(
-        and(
-          eq(entryPhotos.entryId, input.entryId),
-          eq(entryPhotos.idempotencyKey, input.idempotencyKey),
-        ),
-      )
-      .limit(1);
-    if (already !== undefined) return already.photoKey;
+    const already = await firstColumnWhere(
+      database,
+      entryPhotos,
+      entryPhotos.photoKey,
+      and(
+        eq(entryPhotos.entryId, input.entryId),
+        eq(entryPhotos.idempotencyKey, input.idempotencyKey),
+      ),
+    );
+    if (already !== undefined) return already;
   }
 
   const existing = await database

@@ -359,3 +359,44 @@ export function ChoiceField<TOption extends string>({
     </FormField>
   );
 }
+
+/**
+ * A checkbox with its label, for a yes/no attribute.
+ *
+ * `GarmentForm` wrote this twice — wind resistant, water resistant —
+ * identical but for the field name and the words, which is the same
+ * copy-then-rename `ChoiceField` above replaced for the selects.
+ *
+ * The label wraps the input rather than pointing at it with `htmlFor`,
+ * which is why this does not compose `FormField`: a checkbox's hit area
+ * should include its words, and `FormField`'s bordered box is sized for a
+ * control that fills it. A checkbox that grows a validation error is a
+ * different control and should not be bolted on here.
+ */
+export function ToggleField({
+  name,
+  label,
+  field,
+  isOn,
+  onChange,
+}: Readonly<{
+  name: string;
+  label: string;
+  field: (name: string) => FieldProps;
+  isOn: boolean;
+  onChange: (isOn: boolean) => void;
+}>): JSX.Element {
+  return (
+    <label className="flex items-center gap-2 text-sm font-semibold">
+      <input
+        {...field(name)}
+        type="checkbox"
+        checked={isOn}
+        onChange={(event) => {
+          onChange(event.target.checked);
+        }}
+      />
+      {label}
+    </label>
+  );
+}

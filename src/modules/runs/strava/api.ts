@@ -111,43 +111,65 @@ export function stravaConfigFrom(
   return { clientId, clientSecret };
 }
 
+/**
+ * A token-grant round trip: post the credentials plus the grant, parse the
+ * answer, or refuse it.
+ *
+ * `exchangeCode` and `refreshToken` are the same call with a different
+ * grant and a different schema — the credentials, the `safeParse`, and the
+ * refusal were written out twice.
+ *
+ * **The `false` is the fact worth having in one place.** `StravaApiError`'s
+ * second argument says whether the grant is gone, and a response we cannot
+ * parse never means that: it means a bug on our side or a change on
+ * Strava's. Getting it wrong in either direction is a real failure — `true`
+ * here would silently disconnect a working account on a Strava schema
+ * change (resilience law 5: degrade, don't destroy), while `true` missing
+ * from `postForm`'s 400/401 would retry a grant the user actually revoked.
+ */
+async function tokenGrant<TSchema extends z.ZodType>(
+  config: StravaConfig,
+  grant: Record<string, string>,
+  schema: TSchema,
+  malformed: string,
+): Promise<z.output<TSchema>> {
+  const json = await postForm(TOKEN_URL, {
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    ...grant,
+  });
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) throw new StravaApiError(malformed, false);
+  return parsed.data;
+}
+
 export function createStravaApi(config: StravaConfig): StravaApi {
   return {
     async exchangeCode(code) {
-      const json = await postForm(TOKEN_URL, {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        code,
-        grant_type: "authorization_code",
-      });
-      const parsed = exchangeResponseSchema.safeParse(json);
-      if (!parsed.success) {
-        // A shape we cannot parse is a bug or a Strava change, not a
-        // revoked grant.
-        throw new StravaApiError("Malformed token-exchange response.", false);
-      }
+      const data = await tokenGrant(
+        config,
+        { code, grant_type: "authorization_code" },
+        exchangeResponseSchema,
+        "Malformed token-exchange response.",
+      );
       return {
-        athleteId: String(parsed.data.athlete.id),
-        accessToken: parsed.data.access_token,
-        refreshToken: parsed.data.refresh_token,
-        expiresAt: parsed.data.expires_at,
+        athleteId: String(data.athlete.id),
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: data.expires_at,
       };
     },
     async refreshToken(refreshToken) {
-      const json = await postForm(TOKEN_URL, {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        refresh_token: refreshToken,
-        grant_type: "refresh_token",
-      });
-      const parsed = tokenResponseSchema.safeParse(json);
-      if (!parsed.success) {
-        throw new StravaApiError("Malformed token-refresh response.", false);
-      }
+      const data = await tokenGrant(
+        config,
+        { refresh_token: refreshToken, grant_type: "refresh_token" },
+        tokenResponseSchema,
+        "Malformed token-refresh response.",
+      );
       return {
-        accessToken: parsed.data.access_token,
-        refreshToken: parsed.data.refresh_token,
-        expiresAt: parsed.data.expires_at,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: data.expires_at,
       };
     },
     async deauthorize(accessToken) {

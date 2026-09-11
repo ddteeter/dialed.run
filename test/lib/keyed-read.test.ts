@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 import { follows } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { columnWhere, hasRowWhere } from "../../src/lib/keyed-read";
+import {
+  columnWhere,
+  firstColumnWhere,
+  hasRowWhere,
+} from "../../src/lib/keyed-read";
 
 /**
  * The two reads a join table gets, against a real D1.
@@ -111,5 +115,43 @@ describe("hasRowWhere", () => {
         eq(follows.followerId, follower),
       ),
     ).toBe(true);
+  });
+});
+
+/**
+ * The read law 8b's idempotency check makes: *have we already stored this
+ * submission, and if so what did it produce.* Both callers ask it of a
+ * UNIQUE index, so the answer is one row or none.
+ */
+describe("firstColumnWhere", () => {
+  it("answers with the value, not with the row that held it", async () => {
+    const follower = newUlid();
+    const followee = newUlid();
+    await followRow(follower, followee);
+
+    const found = await firstColumnWhere(
+      coreDb(),
+      follows,
+      follows.followeeId,
+      eq(follows.followerId, follower),
+    );
+
+    // The string itself — a caller that got `{ followeeId }` back would
+    // have to know the helper's own projection name to read it.
+    expect(found).toBe(followee);
+  });
+
+  it("answers undefined when nothing matches, rather than throwing", async () => {
+    // The miss is the common case on the idempotency path: almost every
+    // submission is a first submission. Reading `.value` off the absent
+    // row instead of through `?.` would make the happy path throw.
+    const found = await firstColumnWhere(
+      coreDb(),
+      follows,
+      follows.followeeId,
+      eq(follows.followerId, newUlid()),
+    );
+
+    expect(found).toBeUndefined();
   });
 });

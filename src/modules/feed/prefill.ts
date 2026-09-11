@@ -5,14 +5,14 @@
  * entries (own history is small at MVP scale; still index-backed via
  * `entries_user_created`).
  */
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
+import { outfitEntries, outfitEntryItems } from "../../db/schema-core";
 import { env } from "../../env";
 import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { conditionsAt, observationsForRuns } from "./conditions";
+import { conditionsAt, observationsForEntries } from "./conditions";
 
 const HISTORY_LIMIT = 200;
 
@@ -54,16 +54,12 @@ export async function nearestPriorEntry(
   // Stryker disable next-line ConditionalExpression
   if (own.length === 0) return undefined;
 
-  const ownRuns = await database
-    .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
-    .from(runs)
-    .where(
-      inArray(
-        runs.id,
-        own.map((e) => e.runId),
-      ),
-    );
-  const observations = await observationsForRuns(ownRuns);
+  // `observationsForEntries` is this exact walk — entry -> run ->
+  // observation, assembled in code because DIALED_CORE and DIALED_WEATHER
+  // are separate databases and D1 cannot join across them (law 8c). Its
+  // own comment names three call sites that had copy-pasted it; this was a
+  // fourth, and the copy is what the clone detector found.
+  const observations = await observationsForEntries(database, own);
   const targetPrecip = precipClassOf(currentConditions.precipMm);
 
   let best: BestMatch | undefined;
