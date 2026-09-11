@@ -31,15 +31,7 @@ function SignupPage() {
       heading="Sign up"
       submitLabel="Sign up"
       pendingLabel="Signing up"
-      status={form.status}
-      summaryRows={form.summaryRows}
-      summaryRef={form.summaryRef}
-      onFocusField={form.focusField}
-      failure={form.failure}
-      onRetry={form.retry}
-      retryRef={form.retryRef}
-      pending={form.pending}
-      formRef={form.formRef}
+      form={form}
       onSubmit={() => {
         void form.submit({ name, email, password });
       }}

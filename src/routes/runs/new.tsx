@@ -1,12 +1,10 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
-import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { unreadNotificationCountFn } from "../../modules/notifications/functions";
 import { UploadForm } from "../../modules/runs/components/UploadForm";
-import {
-  unreadNotificationCountFn,
-} from "../../modules/notifications/functions";
 import { startFileImport } from "../../modules/runs/functions";
-import { Layout } from "../../ui";
+import { Page } from "../../ui";
 
 /**
 Screen A1: upload & auto-conditions (docs/product.md). The dupe-warning
@@ -22,11 +20,8 @@ function NewRunPage() {
   const { unreadCount } = Route.useLoaderData();
 
   return (
-    <Layout bell={<NotificationBell unreadCount={unreadCount} />}>
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-6 py-8">
-        <h1 className="m-0 font-display text-3xl uppercase leading-none">
-          Log a run
-        </h1>
+    <BelledLayout unreadCount={unreadCount}>
+      <Page title="Log a run">
         <UploadForm upload={startFileImport} />
         <p className="text-center text-sm text-night/50">
           or{" "}
@@ -34,7 +29,7 @@ function NewRunPage() {
             enter it manually
           </Link>
         </p>
-      </div>
-    </Layout>
+      </Page>
+    </BelledLayout>
   );
 }
