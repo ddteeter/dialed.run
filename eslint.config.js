@@ -146,5 +146,34 @@ export default tseslint.config(
       "sonarjs/no-duplicate-string": "off",
     },
   },
+  {
+    /**
+     * Two test files, named rather than a `test/**` blanket, because the
+     * exemption is about one specific fact and should not spread quietly.
+     *
+     * `useFormSubmit` *parses* a rejection instead of using `instanceof`,
+     * because a server function's rejection has crossed a structured clone
+     * and arrives as a plain object with no prototype. These tests must
+     * therefore reject with the shapes production actually produces —
+     * plain objects, bare strings, malformed payloads. Wrapping them in an
+     * `Error` to satisfy the rule makes every one of them assert a case
+     * that cannot occur, which is worse than not testing at all.
+     *
+     * Turning it off here rather than dodging it: the tests previously
+     * routed through a helper that `throw`s (allowed, since
+     * `only-throw-error` permits an `unknown` throw) purely to sit outside
+     * this rule. A construct that exists to avoid a rule invites being
+     * "corrected" — a fixer did exactly that, rewriting a rejection to
+     * `Object.assign(new Error(), { issues })` and silently destroying
+     * what the test proved.
+     */
+    files: [
+      "test/ui/form.dom.test.tsx",
+      "test/modules/verdict-form.dom.test.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/prefer-promise-reject-errors": "off",
+    },
+  },
   prettier,
 );
