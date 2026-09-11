@@ -34,6 +34,10 @@ function weatherDb() {
 export async function makeUser(overrides?: {
   displayName?: string;
   shareDefault?: boolean;
+  /** Left unset by default, which is what a profile predating D-6 looks
+   *  like: the columns exist and hold NULL. */
+  tempUnit?: "f" | "c";
+  distanceUnit?: "mi" | "km";
 }): Promise<string> {
   const userId = newUlid();
   await coreDb()
@@ -42,6 +46,8 @@ export async function makeUser(overrides?: {
       userId,
       displayName: overrides?.displayName ?? `runner-${userId.slice(-6)}`,
       shareDefault: overrides?.shareDefault ?? true,
+      tempUnit: overrides?.tempUnit,
+      distanceUnit: overrides?.distanceUnit,
     });
   return userId;
 }

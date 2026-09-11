@@ -513,6 +513,11 @@
       "key": "src/modules/feed/judged-conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent by design: an unrated run and a dialed one have the same answer, so deleting the null guard lets null fall through two comparisons it fails and reach the same return. It stays because \"no verdict yet\" and \"the outfit was right\" are different facts that happen to share a value. The two comparisons below carry no directive and are not equivalent.",
       "count": 1
+    },
+    {
+      "key": "src/routes/feed/attach.$runId.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route.",
+      "count": 1
     }
   ]
 }

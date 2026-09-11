@@ -13,6 +13,8 @@
  * structurally safe to import from a route component.
  */
 
+import type { TempUnit } from "./contracts";
+
 export type PrecipClass = "dry" | "damp" | "wet";
 
 export function precipClassOf(precipMm: number): PrecipClass {
@@ -35,13 +37,13 @@ function cToF(c: number): number {
 /**
 "[38–46°]"-style band text in the user's unit (docs/product.md).
 */
-export function bandLabel(bandFloor: number, unit: "f" | "c"): string {
+export function bandLabel(bandFloor: number, unit: TempUnit): string {
   return unit === "c"
     ? `${String(bandFloor)}–${String(bandFloor + 5)}°`
     : `${String(cToF(bandFloor))}–${String(cToF(bandFloor + 5))}°`;
 }
 
-export function formatTemp(tempC: number, unit: "f" | "c"): string {
+export function formatTemp(tempC: number, unit: TempUnit): string {
   return unit === "c"
     ? `${String(Math.round(tempC))}°`
     : `${String(cToF(tempC))}°`;

@@ -481,4 +481,36 @@ export interface WeatherProvider {
 /** UI: +2 "always freezing" … −2 "sweating in a t-shirt at 40°".
  *  Degree mapping (code, not DB): level × 2.2 °C. */
 export const thermalLevelSchema = z.number().int().min(-2).max(2);
+
+/**
+ * The units a person reads their own data in — display only. The contract
+ * stores SI regardless: `temp_c`, `distance_m`.
+ *
+ * One `z.enum` each, because these were two independent lists: a bare
+ * `"f" | "c"` union in `lib/temperature.ts` and a column enum in
+ * `db/schema-core.ts`, with nothing making them agree (D-7). A validator, a
+ * type and the stored vocabulary are one fact, so they get one statement —
+ * the type comes off the schema via `z.infer`, and `unit-contract.test.ts`
+ * pins both against the columns so a value added to one has to be added to
+ * the other.
+ */
+export const tempUnitSchema = z.enum(["f", "c"]);
+export type TempUnit = z.infer<typeof tempUnitSchema>;
+
+export const distanceUnitSchema = z.enum(["mi", "km"]);
+export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
+
+/**
+ * What the app shows when a person has not chosen. Fahrenheit and miles
+ * because the owner is US-based and the calibration tables are authored in
+ * Fahrenheit (see `lib/thermal.ts`); 105 replaces this with a locale guess
+ * at onboarding, and this stays the fallback for a profile that predates
+ * the question.
+ */
+export interface Units {
+  temp: TempUnit;
+  distance: DistanceUnit;
+}
+
+export const defaultUnits: Readonly<Units> = { temp: "f", distance: "mi" };
 export const CALL_VERDICT_THRESHOLD = 15;

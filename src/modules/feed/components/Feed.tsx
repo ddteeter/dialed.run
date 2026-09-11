@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { formatDistance, inFahrenheitRange } from "../../../lib/measures";
+import { formatDistance, formatTempRange } from "../../../lib/measures";
+import type { Units } from "../../../lib/contracts";
 import { Bracketed, Mono, Skeleton } from "../../../ui";
 import type { ConsensusResult } from "../consensus";
 import type { FeedItem } from "../feed";
@@ -18,8 +19,13 @@ import { uiGroupLabels, uiGroups } from "../groups";
 export function Feed({
   items,
   conditionsFor,
+  units,
 }: Readonly<{
   items: FeedItem[];
+  /**
+  The viewer's own units — every number on this screen is theirs.
+  */
+  units: Units;
   conditionsFor: (input: {
     data: { lat: number; lng: number };
   }) => Promise<ConsensusResult | undefined>;
@@ -53,7 +59,7 @@ export function Feed({
           ))}
         </div>
         {tab === "following" ? (
-          <FollowingTab items={items} />
+          <FollowingTab items={items} units={units} />
         ) : (
           <ConditionsTab conditionsFor={conditionsFor} />
         )}
@@ -61,7 +67,10 @@ export function Feed({
   );
 }
 
-function FollowingTab({ items }: Readonly<{ items: FeedItem[] }>) {
+function FollowingTab({
+  items,
+  units,
+}: Readonly<{ items: FeedItem[]; units: Units }>) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col gap-3 py-12 text-center text-night/60">
@@ -84,13 +93,14 @@ function FollowingTab({ items }: Readonly<{ items: FeedItem[] }>) {
             <div className="flex items-center justify-between">
               <span className="font-semibold">{item.authorDisplayName ?? "A runner"}</span>
               {item.conditions ? (
-                <Mono className="text-xs text-teal">{inFahrenheitRange(
+                <Mono className="text-xs text-teal">{formatTempRange(
                     item.conditions.span.minTempC,
                     item.conditions.span.maxTempC,
+                    units.temp,
                   )}</Mono>
               ) : undefined}
             </div>
-            <Mono className="text-xs text-night/60">{formatDistance(item.distanceM)}</Mono>
+            <Mono className="text-xs text-night/60">{formatDistance(item.distanceM, units.distance)}</Mono>
             {item.caption ? <p className="m-0 text-sm">{item.caption}</p> : undefined}
             <Mono className="text-xs text-night/40">
               useful [{String(item.usefulCount)}]
