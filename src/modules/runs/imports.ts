@@ -9,6 +9,7 @@
 import { and, eq } from "drizzle-orm";
 
 import { imports } from "../../db/schema-core";
+import { firstColumnWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { IMPORT_EXTENSIONS, importExtensionOf } from "./parsers";
@@ -73,17 +74,16 @@ export async function startImport(
   // (law 8b). Checked before the R2 put, because the put is the expensive
   // half.
   if (input.idempotencyKey !== undefined) {
-    const [existing] = await db
-      .select({ id: imports.id })
-      .from(imports)
-      .where(
-        and(
-          eq(imports.userId, input.userId),
-          eq(imports.idempotencyKey, input.idempotencyKey),
-        ),
-      )
-      .limit(1);
-    if (existing !== undefined) return { importId: existing.id };
+    const existing = await firstColumnWhere(
+      db,
+      imports,
+      imports.id,
+      and(
+        eq(imports.userId, input.userId),
+        eq(imports.idempotencyKey, input.idempotencyKey),
+      ),
+    );
+    if (existing !== undefined) return { importId: existing };
   }
 
   const importId = newUlid();

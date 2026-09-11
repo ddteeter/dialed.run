@@ -51,3 +51,38 @@ export async function hasRowWhere(
     .limit(1);
   return rows.length > 0;
 }
+
+/**
+ * The first matching row's value for `column`, or `undefined` when nothing
+ * matches — `LIMIT 1`, like `hasRowWhere`, but it answers *with* the value
+ * rather than with whether one exists.
+ *
+ * This is the read law 8b's idempotency check makes: "have we already
+ * stored this submission, and if so what did it produce". `feed/photos`
+ * and `runs/imports` had written it out identically around their own
+ * UNIQUE index — a twelve-line select whose only variable parts were the
+ * table, the column and the two `eq`s.
+ *
+ * Separate from `hasRowWhere` rather than derived from it, for the same
+ * reason that one is separate from `columnWhere`: a caller that needs the
+ * value cannot get it from a boolean, and a caller that needs only the
+ * boolean should not be handed a value it might read a `NULL` out of.
+ *
+ * The column is the caller's, as everywhere else in this file — these
+ * reads are matched by a UNIQUE index and answer from it, and a helper
+ * that picked `select *` would turn each into a row read (see
+ * `columnWhere`).
+ */
+export async function firstColumnWhere<TColumn extends SQLiteColumn>(
+  database: DrizzleD1Database,
+  table: SQLiteTable,
+  column: TColumn,
+  where: SQL | undefined,
+): Promise<TColumn["_"]["data"] | undefined> {
+  const [row] = await database
+    .select({ value: column })
+    .from(table)
+    .where(where)
+    .limit(1);
+  return row?.value;
+}
