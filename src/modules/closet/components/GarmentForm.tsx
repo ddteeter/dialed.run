@@ -15,6 +15,7 @@ import {
 import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
+  ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -286,64 +287,46 @@ export function GarmentForm({
       <fieldset className="flex flex-col gap-3 border-t border-night/10 pt-4">
         <legend className="sr-only">Attributes</legend>
         {fields.layer ? (
-          <FormField name="layer" label={LABELS.layer} error={form.fieldErrors.layer}>
-            <select
-              {...form.field("layer")}
-              id="layer"
-              value={values.layer}
-              onChange={(event) => {
-                update("layer", event.target.value as GarmentFormValues["layer"]);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            >
-              <option value="">—</option>
-              {layerSchema.options.map((option) => (
-                <option key={option} value={option}>
-                  {LAYER_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          <ChoiceField
+            name="layer"
+            label={LABELS.layer}
+            error={form.fieldErrors.layer}
+            field={form.field}
+            value={values.layer}
+            options={layerSchema.options}
+            optionLabels={LAYER_LABELS}
+            onChange={(picked) => {
+              update("layer", picked);
+            }}
+          />
         ) : undefined}
         {fields.weight ? (
-          <FormField name="weight" label={LABELS.weight} error={form.fieldErrors.weight}>
-            <select
-              {...form.field("weight")}
-              id="weight"
-              value={values.weight}
-              onChange={(event) => {
-                update("weight", event.target.value as GarmentFormValues["weight"]);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            >
-              <option value="">—</option>
-              {weightSchema.options.map((option) => (
-                <option key={option} value={option}>
-                  {WEIGHT_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          <ChoiceField
+            name="weight"
+            label={LABELS.weight}
+            error={form.fieldErrors.weight}
+            field={form.field}
+            value={values.weight}
+            options={weightSchema.options}
+            optionLabels={WEIGHT_LABELS}
+            onChange={(picked) => {
+              update("weight", picked);
+            }}
+          />
         ) : undefined}
         {fields.fabric ? (
-          <FormField name="fabric" label={LABELS.fabric} error={form.fieldErrors.fabric}>
-            <select
-              {...form.field("fabric")}
-              id="fabric"
-              value={values.fabric}
-              onChange={(event) => {
-                update("fabric", event.target.value as GarmentFormValues["fabric"]);
-              }}
-              className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
-            >
-              <option value="">—</option>
-              {fabricSchema.options.map((option) => (
-                <option key={option} value={option}>
-                  {FABRIC_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          <ChoiceField
+            name="fabric"
+            label={LABELS.fabric}
+            error={form.fieldErrors.fabric}
+            field={form.field}
+            value={values.fabric}
+            options={fabricSchema.options}
+            optionLabels={FABRIC_LABELS}
+            onChange={(picked) => {
+              update("fabric", picked);
+            }}
+          />
         ) : undefined}
         {fields.windResistant ? (
           <label className="flex items-center gap-2 text-sm font-semibold">

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
+  ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -954,5 +955,114 @@ describe("the summary names a field", () => {
 
     expect(await screen.findByRole("button", { name: /^name/ })).toBeVisible();
     expect(screen.getByRole("button", { name: /^brand/ })).toBeVisible();
+  });
+});
+
+/**
+ * `ChoiceField` — the `<select>` over a set the schema already holds.
+ *
+ * The three that `GarmentForm` used to write out by hand each cast
+ * `event.target.value` to the field's type. This looks the value up in
+ * `options` instead, so the tests that matter are about what comes back
+ * out of a choice, not about what the markup looks like.
+ */
+describe("ChoiceField", () => {
+  const LAYERS = ["base", "mid", "outer"] as const;
+  const LAYER_LABELS = { base: "Base", mid: "Mid", outer: "Outer" };
+
+  function renderChoice(onChange: (value: "base" | "mid" | "outer" | "") => void) {
+    return render(
+      <ChoiceField
+        name="layer"
+        label="Layer"
+        field={(name) => ({
+          name,
+          readOnly: false,
+          "aria-invalid": undefined,
+          "aria-describedby": undefined,
+          onInput: () => {
+            // not what these cases are about
+          },
+        })}
+        value=""
+        options={LAYERS}
+        optionLabels={LAYER_LABELS}
+        onChange={onChange}
+      />,
+    );
+  }
+
+  it("hands back the option that was chosen, not the one before it", async () => {
+    // "mid" rather than "base" on purpose: a lookup that compared the
+    // wrong way round would answer with the first option for every
+    // choice, and picking the first option could not tell the difference.
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderChoice(onChange);
+
+    await user.selectOptions(screen.getByLabelText("Layer"), "mid");
+
+    expect(onChange).toHaveBeenCalledWith("mid");
+  });
+
+  it("answers with nothing when the empty choice is taken", async () => {
+    // The empty option is not in `options`, so the lookup misses and the
+    // field reads as unanswered — which is what an optional attribute
+    // needs to be able to say.
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderChoice(onChange);
+
+    await user.selectOptions(screen.getByLabelText("Layer"), "mid");
+    onChange.mockClear();
+    await user.selectOptions(screen.getByLabelText("Layer"), "");
+
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("offers every option the schema holds, labelled, plus the empty one", () => {
+    renderChoice(vi.fn());
+
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toStrictEqual([
+      "—",
+      "Base",
+      "Mid",
+      "Outer",
+    ]);
+    // The *values* are the schema's own, so an option can never exist that
+    // the contract would reject.
+    expect(
+      options.map((option) => option.getAttribute("value")),
+    ).toStrictEqual(["", "base", "mid", "outer"]);
+  });
+
+  it("wears the field's error the way every other field does", () => {
+    render(
+      <ChoiceField
+        name="layer"
+        label="Layer"
+        error="Pick a layer."
+        field={(name) => ({
+          name,
+          readOnly: false,
+          "aria-invalid": true,
+          "aria-describedby": `${name}-message`,
+          onInput: () => {
+            // not what this case is about
+          },
+        })}
+        value="base"
+        options={LAYERS}
+        optionLabels={LAYER_LABELS}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Pick a layer.")).toBeVisible();
+    expect(screen.getByLabelText("Layer")).toHaveAttribute(
+      "aria-describedby",
+      "layer-message",
+    );
   });
 });

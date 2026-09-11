@@ -7,6 +7,7 @@ export { Page } from "./Page";
 export { Sheet } from "./Sheet";
 export { Skeleton } from "./Skeleton";
 export {
+  ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormField,
