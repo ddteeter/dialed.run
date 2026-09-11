@@ -27,7 +27,15 @@ import strykerConfig from "../../stryker.conf.json?raw";
  */
 
 const sources: Record<string, string> = import.meta.glob(
-  ["../../src/modules/**/*.{ts,tsx}", "../../src/routes/**/*.tsx"],
+  [
+    "../../src/modules/**/*.{ts,tsx}",
+    "../../src/routes/**/*.tsx",
+    // The generated route tree, which `isRoute` counts as a route: it is
+    // registration and nothing else, and its mutants need the real router
+    // to reach. Globbed explicitly because the generator writes it one
+    // level above `src/routes/`.
+    "../../src/routeTree.gen.ts",
+  ],
   { query: "?raw", import: "default", eager: true },
 );
 
@@ -40,6 +48,7 @@ const sources: Record<string, string> = import.meta.glob(
 const loaders: Record<string, () => Promise<unknown>> = import.meta.glob([
   "../../src/modules/**/*.{ts,tsx}",
   "../../src/routes/**/*.tsx",
+  "../../src/routeTree.gen.ts",
 ]);
 
 /**
@@ -196,7 +205,11 @@ function isInstrumented(source: string): boolean {
  * mutants no test could ever kill.
  */
 function isRoute(path: string): boolean {
-  return path.startsWith("src/routes/");
+  // `routeTree.gen.ts` counts, and for the same reason the routes do: it
+  // is route registration and nothing else, nobody writes it, and its
+  // mutants need the real generated router to reach. It is not under
+  // `src/routes/` only because the generator puts it a level up.
+  return path.startsWith("src/routes/") || path === "src/routeTree.gen.ts";
 }
 
 /**

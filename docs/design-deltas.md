@@ -93,6 +93,36 @@ round (D-26…D-33).
    band itself is being built either way, since it is a useful signal under
    both readings.
 
+6. **Pink, teal and grey mean two different things on two adjacent
+   screens.** Found by lane 105 while building the Call teaser.
+
+   - **O6 says they are coverage:** *"Pink bands are covered, teal is
+     partial, grey is unknown."*
+   - **The shipped profile (G) uses them for verdict kind:**
+     `OwnProfile.tsx`'s temperature-coverage row renders
+     `text-pink` × `band.cold`, `text-teal` × `band.dialed`,
+     `text-night/30` × `band.warm`.
+
+   Both readings are coherent alone. Together they are not: a runner moves
+   between the profile and the Call tab, and pink cannot mean "you were
+   cold" on one and "we know this band" on the other.
+
+   Worth noting the profile's reading has an accessibility problem of its
+   own — cold/dialed/warm is a three-way distinction carried by **hue
+   alone**, with identical dots. The Form Contract already rules that out
+   for errors ("a field error is marked by border weight and a hi-viz band,
+   never by hue alone"); the same argument applies here.
+
+   **Lane 105 is not guessing.** The teaser ships coverage as bracket-
+   notation text — `[COVERED]`, `[PARTIAL]`, `[UNKNOWN]` — per CLAUDE.md's
+   undesigned-surface protocol, which says a text label in the existing
+   system is always the correct placeholder. That is deliberately not a
+   proposal for the final look; it is the option that adds no new meaning
+   to a colour while this is open.
+
+   What design is being asked: which meaning wins, and what the losing
+   screen uses instead.
+
 ## Answered in round 5 (imported 2026-09-08)
 
 **Where a manually-added garment's type comes from** — screens Z/Z1/Z2/Z3,

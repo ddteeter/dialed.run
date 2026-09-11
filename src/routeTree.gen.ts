@@ -14,6 +14,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as CallIndexRouteImport } from './routes/call/index'
 import { Route as ClosetIndexRouteImport } from './routes/closet/index'
 import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
@@ -60,6 +61,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/auth/signup',
   path: '/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CallIndexRoute = CallIndexRouteImport.update({
+  id: '/call/',
+  path: '/call/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClosetIndexRoute = ClosetIndexRouteImport.update({
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
   '/feed': typeof FeedIndexRoute
   '/notifications': typeof NotificationsIndexRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/call/'
     | '/closet/'
     | '/feed/'
     | '/notifications/'
@@ -307,6 +317,7 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/call'
     | '/closet'
     | '/feed'
     | '/notifications'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/call/'
     | '/closet/'
     | '/feed/'
     | '/notifications/'
@@ -366,6 +378,7 @@ export interface RootRouteChildren {
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  CallIndexRoute: typeof CallIndexRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
   FeedIndexRoute: typeof FeedIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
@@ -416,6 +429,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/signup'
       fullPath: '/auth/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/call/': {
+      id: '/call/'
+      path: '/call'
+      fullPath: '/call/'
+      preLoaderRoute: typeof CallIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/closet/': {
@@ -590,6 +610,7 @@ const rootRouteChildren: RootRouteChildren = {
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  CallIndexRoute: CallIndexRoute,
   ClosetIndexRoute: ClosetIndexRoute,
   FeedIndexRoute: FeedIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,
