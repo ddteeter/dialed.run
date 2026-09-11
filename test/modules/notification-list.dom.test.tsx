@@ -130,13 +130,12 @@ describe("NotificationList", () => {
     });
   });
 
-  it("locks the button while it works, and releases it after", async () => {
-    // A second click mid-clear is a second request for the same thing.
+  it("marks itself busy without ever being disabled, and releases after", async () => {
+    // A second click mid-clear is a second request for the same thing —
+    // but the guard is in the handler, never on a `disabled` attribute.
+    // §5: a disabled button drops focus and stops announcing, so the
+    // button stays enabled, keeps its name, and says it is busy with aria.
     //
-    // The release is asserted on the success path rather than a failure,
-    // because `onMarkAllRead` has a `finally` and no `catch`: a rejection
-    // escapes as an unhandled one, which is a real gap (law 5) rather than
-    // something a test should reach into. Recorded as D-43.
     // Started on /notifications, which is where the clear navigates to, so
     // the component is not remounted underneath the assertion — a remount
     // would reset `isMarking` and the release would look observed when it
@@ -152,16 +151,158 @@ describe("NotificationList", () => {
     );
     const button = screen.getByRole("button", { name: "Mark all read" });
 
+    // At rest first. A button that starts busy is telling a screen reader
+    // that work is under way before anyone has asked for any, and the
+    // clean state afterwards would look identical.
+    expect(button).not.toHaveAttribute("aria-busy");
+    expect(button).not.toHaveAttribute("aria-disabled");
+
     await user.click(button);
     await waitFor(() => {
-      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute("aria-busy", "true");
     });
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    // The two that a `disabled` attribute would have taken away.
+    expect(button).toBeEnabled();
+    expect(button).toHaveAccessibleName("Mark all read");
 
     pending.resolve(undefined);
     await waitFor(() => {
       expect(
         screen.getByRole("button", { name: "Mark all read" }),
-      ).not.toBeDisabled();
+      ).not.toHaveAttribute("aria-busy");
     });
+    // Both of them go, not just the one. A button permanently marked
+    // `aria-disabled` reads as broken to a screen reader while looking
+    // perfectly fine on screen.
+    expect(
+      screen.getByRole("button", { name: "Mark all read" }),
+    ).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("starts one clear however many times the button is clicked", async () => {
+    // The guard moved off the DOM and into the handler, so this is what
+    // now holds it — nothing about the button's attributes stops a second
+    // click reaching the handler.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    const markAllRead = vi.fn(() => pending.promise);
+    await renderWithRouter(
+      <NotificationList
+        notifications={[notification()]}
+        markAllRead={markAllRead}
+      />,
+      "/notifications",
+    );
+    const button = screen.getByRole("button", { name: "Mark all read" });
+
+    await user.click(button);
+    await user.click(button);
+    await user.click(button);
+
+    expect(markAllRead).toHaveBeenCalledTimes(1);
+
+    // And it is a guard, not a latch: once the first clear finishes, a
+    // second click has to get through. Leaving `inFlight` set would make
+    // the button work exactly once per page load, which looks like a dead
+    // button rather than a bug.
+    pending.resolve(undefined);
+    await waitFor(() => {
+      expect(button).not.toHaveAttribute("aria-busy");
+    });
+    await user.click(button);
+    await waitFor(() => {
+      expect(markAllRead).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("says nothing until something happens", async () => {
+    // The live region is permanently mounted and starts empty. Seeded with
+    // any text it would announce on arrival, before the user has done
+    // anything — and a `sr-only` region saying something wrong is invisible
+    // to everyone who could report it.
+    await renderWithRouter(
+      <NotificationList
+        notifications={[notification()]}
+        markAllRead={() => Promise.resolve(undefined)}
+      />,
+      "/notifications",
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("clears a stale failure when the next attempt starts", async () => {
+    // `setFailure(undefined)` at the top of the handler. Without it the
+    // band from a failed clear outlives the retry that fixed it, so the
+    // screen says the thing failed while the notifications sit there
+    // marked read.
+    const user = userEvent.setup();
+    const markAllRead = vi
+      .fn<() => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("D1 went away"))
+      .mockResolvedValueOnce(undefined);
+    await renderWithRouter(
+      <NotificationList
+        notifications={[notification()]}
+        markAllRead={markAllRead}
+      />,
+      "/notifications",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Mark all read" }));
+    const retry = await screen.findByRole("button", { name: "Try again" });
+
+    await user.click(retry);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Our end failed. Nothing changed."),
+      ).toBeNull();
+    });
+    expect(markAllRead).toHaveBeenCalledTimes(2);
+  });
+
+  it("says a failed clear failed, instead of escaping as an unhandled rejection", async () => {
+    // D-43. This was `try { … } finally { … }` with no `catch`, so a D1
+    // failure re-threw out of a `void`-ed call: the button re-enabled, the
+    // user was told nothing, and on screen it looked exactly like a click
+    // that had not registered.
+    //
+    // The rejection is watched for rather than assumed absent — an
+    // unhandled one does not fail the assertion that follows it, which is
+    // how this survived being tested at all.
+    const user = userEvent.setup();
+    const escaped: string[] = [];
+    const watch = (event: PromiseRejectionEvent) => {
+      escaped.push(String(event.reason));
+      event.preventDefault();
+    };
+    globalThis.addEventListener("unhandledrejection", watch);
+    try {
+      await renderWithRouter(
+        <NotificationList
+          notifications={[notification()]}
+          markAllRead={() => Promise.reject(new Error("D1 went away"))}
+        />,
+        "/notifications",
+      );
+      await user.click(screen.getByRole("button", { name: "Mark all read" }));
+
+      // The same sentence a failed submit gives, from the same classifier.
+      expect(
+        await screen.findByText("Our end failed. Nothing changed."),
+      ).toBeVisible();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Nothing saved. Our end failed. Nothing changed.",
+      );
+      expect(
+        screen.getByRole("button", { name: "Try again" }),
+      ).toBeVisible();
+    } finally {
+      globalThis.removeEventListener("unhandledrejection", watch);
+    }
+
+    expect(escaped).toStrictEqual([]);
   });
 });

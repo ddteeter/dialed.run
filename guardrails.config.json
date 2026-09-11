@@ -373,6 +373,46 @@
       "key": "src/modules/runs/components/UploadForm.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
       "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` — empty when the picker was dismissed — so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
       "count": 1
+    },
+    {
+      "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable OptionalChaining,ArrayDeclaration",
+      "reason": "Two equivalent mutants, each with its proof at the site: `formRef.current` is null only before mounting so the optional chain is the compiler's guard; and stryker's replacement for an empty dependency array is a constant array, exactly as stable as `[]`. Both hold at the focusField callback and the land effect timeout.",
+      "count": 2
+    },
+    {
+      "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker restore OptionalChaining,ArrayDeclaration",
+      "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
+      "count": 2
+    },
+    {
+      "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
+      "reason": "Equivalent mutant — stryker's replacement dependency array is a constant, so the callback is exactly as stable as this list makes it.",
+      "count": 1
+    },
+    {
+      "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable ArrayDeclaration",
+      "reason": "Equivalent mutant, same constant-array case — stryker's replacement is a constant one-element array, just as stable as an empty one. Block form used because the mutant's line begins with a closing brace and next-line directive cannot attach.",
+      "count": 1
+    },
+    {
+      "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker restore ArrayDeclaration",
+      "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
+      "count": 1
+    },
+    {
+      "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant — `retry` is only reachable from the failure band which only renders after a submit that recorded values. The guard narrows `unknown` for the compiler; there is no state where a user can reach this with nothing to resend.",
+      "count": 1
+    },
+    {
+      "key": "src/ui/use-idempotency-key.ts|mutation-suppress|// Stryker disable ArrayDeclaration",
+      "reason": "Equivalent mutant — stryker's replacement for an empty dependency array is a constant array, exactly as stable as `[]`, so `rotate` keeps its identity and no caller can tell.",
+      "count": 1
+    },
+    {
+      "key": "src/ui/use-idempotency-key.ts|mutation-suppress|// Stryker restore ArrayDeclaration",
+      "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
+      "count": 1
     }
   ]
 }

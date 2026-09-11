@@ -14,7 +14,7 @@ export {
   TextField,
 } from "./form";
 export { TabBar } from "./TabBar";
-export { useFormSubmit } from "./use-form-submit";
+export { classifyFailure, useFormSubmit } from "./use-form-submit";
 export type { FormFailure, SummaryRow } from "./use-form-submit";
 export { useIdempotencyKey } from "./use-idempotency-key";
 export { Wordmark } from "./Wordmark";

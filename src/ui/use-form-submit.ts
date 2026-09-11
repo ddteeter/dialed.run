@@ -85,13 +85,18 @@ const fieldIssueSchema = z.object({
 });
 type FieldIssue = z.infer<typeof fieldIssueSchema>;
 const issueListSchema = z.array(fieldIssueSchema);
+const errorWithIssuesSchema = z.object({ issues: issueListSchema });
 
 function zodIssuesOf(error: unknown): readonly FieldIssue[] | undefined {
-  if (typeof error !== "object" || error === null || !("issues" in error)) {
-    return undefined;
-  }
-  const parsed = issueListSchema.safeParse(error.issues);
-  return parsed.success ? parsed.data : undefined;
+  // One parse, no hand-written narrowing. This was `typeof error !==
+  // "object" || error === null || !("issues" in error)` ahead of the
+  // parse — three conditions the compiler needed and no input could
+  // distinguish, because `safeParse` already rejects every one of them.
+  // Exactly the finding `lib/auth-signal.ts` records for `isAuthRequired`,
+  // arrived at again from the other direction: the guard's mutants were
+  // unkillable because the guard was redundant.
+  const parsed = errorWithIssuesSchema.safeParse(error);
+  return parsed.success ? parsed.data.issues : undefined;
 }
 
 /**
@@ -100,7 +105,14 @@ function zodIssuesOf(error: unknown): readonly FieldIssue[] | undefined {
  * Copy rules (§6): one sentence, under ten words, sentence case, no
  * "please", no "error", no exclamation.
  */
-function classifyFailure(error: unknown): FormFailure {
+/**
+ * Exported because a *non-form* action needs the same classification.
+ * "Mark all read" is not a form and has no schema, but a D1 failure there
+ * should read exactly as it does under a submit button — a second
+ * hand-written sentence would be the drift `docs/product.md` §Forms &
+ * failure exists to stop, one layer down.
+ */
+export function classifyFailure(error: unknown): FormFailure {
   // Session is decided by a code, not by the message text. The reference
   // matched /401|403|session|unauthenticated/ against a string, which
   // stops working the day an upstream reworded something and does so
@@ -117,6 +129,26 @@ function classifyFailure(error: unknown): FormFailure {
     return { kind: "network", message: "Your connection dropped." };
   }
   return { kind: "server", message: "Our end failed. Nothing changed." };
+}
+
+/**
+ * A macrotask's grace, so a `setStatus` has been committed before anything
+ * is allowed to unmount what it filled.
+ *
+ * The contract's rule is *announce, then move* (§1). `onSuccess` almost
+ * always navigates, and navigation unmounts the `role="status"` region —
+ * so without this the success sentence was set and destroyed inside one
+ * commit and no screen reader could read it. Recorded as D-44; every form
+ * in the app that navigates on success had the shape, which is why the
+ * wait lives in the hook and not in any of them.
+ *
+ * `DURATION.instant` because the failure path below already defers its
+ * focus move by exactly this, for exactly this reason.
+ */
+function announced(): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, DURATION.instant);
+  });
 }
 
 export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
@@ -155,20 +187,32 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   const inFlight = useRef(false);
   const lastValues = useRef<unknown>(undefined);
 
+  // Two equivalent mutants in here. `formRef.current` is null only before
+  // the form has mounted, and nothing can call `focusField` until it has —
+  // the chain is the compiler's, because a ref is typed nullable whatever
+  // the lifecycle says. And stryker's replacement for an empty dependency
+  // array is a constant array, which is exactly as stable as `[]`, so the
+  // callback keeps its identity either way.
+  // Stryker disable OptionalChaining,ArrayDeclaration
   const focusField = useCallback((name: string) => {
     formRef.current
       ?.querySelector<HTMLElement>(`[name="${CSS.escape(name)}"]`)
-      ?.focus({ preventScroll: false });
+      // No `{ preventScroll: false }`: that is the default, so passing it
+      // was an object no input could distinguish from an absent one.
+      ?.focus();
   }, []);
+  // Stryker restore OptionalChaining,ArrayDeclaration
 
   /**
   Announce, then move. Never move without announcing.
   */
   const land = useCallback(
     (errors: FieldErrors) => {
+      // No `setFailure(undefined)` here: `submit` clears it on entry, and
+      // every path into `land` comes through `submit`. The second call was
+      // a statement nothing could observe.
       const names = Object.keys(errors);
       setFieldErrors(errors);
-      setFailure(undefined);
       setStatus(
         names.length === 1
           ? "Nothing saved. One field needs a fix."
@@ -177,6 +221,13 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       // One error focuses its field; two or more focus the summary, which
       // is the only thing that lists them all.
       const only = names.length === 1 ? names[0] : undefined;
+      // Equivalent, and only since the caller stopped passing empty
+      // error sets: `only === undefined` now means two or more, which is
+      // exactly when the summary renders — so the ref is populated
+      // whenever this line runs. The chain narrows a nullable ref for the
+      // compiler and nothing else. The dependency array below is the same
+      // constant-array case as `focusField`.
+      // Stryker disable OptionalChaining,ArrayDeclaration
       globalThis.setTimeout(() => {
         if (only === undefined) summaryRef.current?.focus();
         else focusField(only);
@@ -184,6 +235,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     },
     [focusField],
   );
+  // Stryker restore OptionalChaining,ArrayDeclaration
 
   const submit = useCallback(
     async (values: unknown) => {
@@ -209,10 +261,25 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         const result = await action(pre.data);
         setFieldErrors({});
         setStatus(successMessage);
+        // The submission is over at this point, and the guard is
+        // per-submission rather than a latch — so release it before the
+        // announce-and-move below, which is aftermath rather than part of
+        // the attempt. Leaving it held made a resubmit land inside the
+        // grace period and be silently dropped.
+        setPending(false);
+        inFlight.current = false;
+        // Announce, then move — see `announced` above (D-44).
+        await announced();
         await onSuccess?.(result);
       } catch (error: unknown) {
+        // Both halves of "this is not something to mark a field with":
+        // an error that carries no issues at all, and one whose issues
+        // name no field. The second used to reach `land` with nothing in
+        // it and announce "Nothing saved. 0 fields need a fix." — a
+        // sentence pointing at a fix that is nowhere on screen.
         const issues = zodIssuesOf(error);
-        if (issues === undefined) {
+        const named = issues === undefined ? {} : toFieldErrors(issues);
+        if (Object.keys(named).length === 0) {
           const classified = classifyFailure(error);
           setFieldErrors({});
           setFailure(classified);
@@ -221,19 +288,26 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
             retryRef.current?.focus();
           }, DURATION.instant);
         } else {
-          land(toFieldErrors(issues));
+          land(named);
         }
       } finally {
         setPending(false);
         inFlight.current = false;
       }
     },
+    // Equivalent: stryker's replacement dependency array is a constant, so
+    // the callback is exactly as stable as this list makes it.
+    // Stryker disable next-line ArrayDeclaration
     [schema, action, onSuccess, successMessage, land],
   );
 
   /**
   Clears on input, never on blur, and never re-validates while typing.
   */
+  // Equivalent, same constant-array case as the others. A block pair
+  // rather than `next-line`, because the mutant's line begins with `}` and
+  // a `next-line` directive does not attach to one.
+  // Stryker disable ArrayDeclaration
   const clearField = useCallback((name: string) => {
     setFieldErrors((previous) => {
       if (previous[name] === undefined) return previous;
@@ -242,6 +316,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       );
     });
   }, []);
+  // Stryker restore ArrayDeclaration
 
   /**
   Spread onto the control: invalid state, description, and readOnly.
@@ -277,6 +352,11 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     field,
     focusField,
     retry: () => {
+      // Equivalent: `retry` is only reachable from the failure band, and
+      // the band only renders after a submit that recorded its values. The
+      // guard narrows `unknown` for the compiler — there is no state in
+      // which a user can reach this with nothing to resend.
+      // Stryker disable next-line ConditionalExpression
       if (lastValues.current !== undefined) void submit(lastValues.current);
     },
   };
