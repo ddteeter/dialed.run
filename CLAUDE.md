@@ -526,11 +526,32 @@ This repo runs agentic-guardrails-scaffolding (pinned v0.3.1; CLI bin
   turning it on did not require a 74-group cleanup first. If it names a
   block you did not write, you inherited it by editing the file: fix it, or
   say in the PR why the two are a rhyme rather than a copy. `.fallowrc.jsonc`
-  runs in `mild` mode. `semantic` — which ignores identifier names entirely
-  — was tried first and rejected: it matches any two stretches of code with
-  the same *skeleton*, and in a codebase whose modules are deliberately
-  shaped alike that swamps the real findings. The config carries the
-  measurement.
+  runs in `mild` mode, which is a **staging step and not the destination** —
+  the config's own comments say so, and this paragraph used to say the
+  opposite ("semantic was tried first and rejected"). It was not. The
+  measurement in `.fallowrc.jsonc` is the other way round: against six clone
+  groups confirmed real by reading them, mild keeps **3 of 6** and semantic
+  **6 of 6**, and the half mild loses is the dangerous half — the
+  copy-then-rename an agent produces, which mild cannot see because mild
+  compares identifiers. Today mild reports **0 groups**, which is no signal
+  at all.
+  Semantic's cost is real but it is not "swamps the real findings": it
+  matches *skeletons*, so it reports two shapes that are alike whether or
+  not they are the same idea. Two classes of that are structural and do not
+  go away by extracting:
+  **`src/routes/**`** — two routes of the same kind are `createFileRoute` +
+  loader + `useLoaderData` + shell, which is exactly what
+  `server-functions-are-glue.test.ts` *requires*; the branching that would
+  make them differ is the branching that test forbids.
+  **A well-factored pair** — extraction moves the body out and leaves two
+  call sites that are skeletally identical. Measured: after `hasRowWhere`,
+  `isFollowing` and `hasReacted` are still a 16-line group; after
+  `redispatchEach`, `ops/scheduled.ts`'s two callers are a 27-line group.
+  So the flip's price is a set of `fallow-ignore` comments that grows as the
+  code gets *better* factored, not worse. That is a decision for the owner
+  with the numbers in front of them, not a background assumption — the
+  paydown ran 31 groups -> 21 (4.62% -> 3.55%) before it stopped being
+  extraction and started being suppression.
   Its `ignore` list is for **generated files, data tables, and one file
   class that is framework boilerplate by convention** — schema definitions,
   the icon manifest, tap-lists, and `src/modules/*/functions.ts`, which
