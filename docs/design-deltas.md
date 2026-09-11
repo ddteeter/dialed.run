@@ -59,6 +59,40 @@ round (D-26…D-33).
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
 
+5. **O3's tap-list: one climate-weighted list, or one of three lists?**
+   Raised by lane 105 while building it, and blocking that screen.
+
+   **The artboard shows one list.** `Onboarding.dc.html` O3 renders a single
+   column under `COMMON IN YOUR CLIMATE · TAP TO ADD`, running singlet →
+   short-sleeve tee → merino base → 5" shorts → 7" shorts → tights → wind
+   shell → rain jacket → gloves → mittens → beanie → buff → vest → arm
+   warmers. Fourteen rows, spanning a July singlet and January mittens, with
+   six shown ticked and eight offered with a `+`.
+
+   **The code is three lists.** `closet/tap-list-data.ts` holds
+   `TAP_LISTS: Record<"cold" | "mild" | "hot", TapListEntry[]>`, five rows
+   each, disjoint — a runner sees `cold` *or* `mild` *or* `hot`.
+
+   Three things say the artboard is right and the code drifted:
+
+   - A Minneapolis runner needs tights **and** a singlet. They run in July.
+     One band per person is a season, not a wardrobe.
+   - The packet's counter copy is "12 pieces — enough to start". No band can
+     reach 12; five is the ceiling.
+   - The header says "common in your climate", which reads as *weighting*,
+     not as *the only things you may tap*.
+
+   **What design is being asked**, precisely: is the climate band meant to
+   choose the list, or to choose which rows of one shared list arrive
+   ticked? And if the latter — what do the ticks mean on a screen with no
+   O2 before it? O2 (photo capture) is cut from v1, so in the shipped flow
+   nothing has filled the closet yet and every row would presumably arrive
+   unticked.
+
+   Lane 105 is **not guessing**: O3 is on hold until this is answered. The
+   band itself is being built either way, since it is a useful signal under
+   both readings.
+
 ## Answered in round 5 (imported 2026-09-08)
 
 **Where a manually-added garment's type comes from** — screens Z/Z1/Z2/Z3,

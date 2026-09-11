@@ -1,5 +1,6 @@
 import { climateBandSchema } from "../closet";
 import type { ClimateBand } from "../closet";
+import type { ClimateNormals } from "../../lib/contracts";
 
 /**
  * Which starter list a person sees, from where they run.
@@ -43,3 +44,59 @@ export function climateBandFor(lat: number): ClimateBand {
  */
 export const BAND_WITHOUT_LOCATION: ClimateBand =
   climateBandSchema.parse("mild");
+
+/**
+ * The band from what a place is actually like, rather than from where it
+ * sits on the globe.
+ *
+ * **Thresholds are set against measured normals, not chosen for roundness.**
+ * Visual Crossing's `include=stats`, probed 2026-09-11:
+ *
+ * | place       | winter mean low | summer mean high | band |
+ * | ----------- | --------------: | ---------------: | ---- |
+ * | Minneapolis |          −12.1  |            28.7  | cold |
+ * | Denver      |           −8.0  |            31.0  | cold |
+ * | Reykjavík   |           −2.8  |            14.0  | mild |
+ * | Seattle     |            1.3  |            24.1  | mild |
+ * | Phoenix     |            6.5  |            42.0  | hot  |
+ *
+ * `winterLowC <= -5` separates Denver from Reykjavík, which is the pair
+ * that matters: both are "not Minneapolis", and only one needs mittens.
+ * `summerHighC >= 32` separates Phoenix from Denver, whose 31.0 sits just
+ * under it — deliberately, because Denver's winters are the thing its
+ * wardrobe is built around.
+ *
+ * **Cold wins when a place is both**, which a continental desert can be.
+ * You can run a hot day in a tee you already own; −20 needs equipment.
+ */
+const COLD_WINTER_LOW_C = -5;
+const HOT_SUMMER_HIGH_C = 32;
+
+export function bandFromNormals(normals: ClimateNormals): ClimateBand {
+  if (normals.winterLowC <= COLD_WINTER_LOW_C) return "cold";
+  if (normals.summerHighC >= HOT_SUMMER_HIGH_C) return "hot";
+  return "mild";
+}
+
+/**
+ * The band for a place, preferring what the weather says and falling back
+ * to where the place is.
+ *
+ * The fallback is not decoration: onboarding must not block on a third
+ * party (resilience law 5), and `climateBandFor` is wrong for four of the
+ * five cities above — so a runner who hits a provider outage gets a
+ * starter list that is plausible rather than right, and fixes it with a
+ * tap. That is the correct trade, and the reason the latitude heuristic
+ * stays rather than being deleted once normals landed.
+ */
+export async function resolveClimateBand(
+  lat: number,
+  lng: number,
+  normalsFor: (lat: number, lng: number) => Promise<ClimateNormals>,
+): Promise<ClimateBand> {
+  try {
+    return bandFromNormals(await normalsFor(lat, lng));
+  } catch {
+    return climateBandFor(lat);
+  }
+}
