@@ -51,4 +51,43 @@ describe("stryker.conf.json", () => {
   it("still breaks at 100 — the ratchet is the whole point", () => {
     expect(strykerConfig.thresholds.break).toBe(100);
   });
+
+  it("covers every file in src/lib, which three positive entries cannot do on their own", () => {
+    /**
+     * `src/lib` is split across three entries rather than one
+     * `src/lib/**\/*.ts` glob, because it was the longest shard in every
+     * run — 31.8 minutes cold, 4.3 warm, about 2.5x the next one either
+     * way — and `contracts.ts` plus `thermal.ts` are 248 of its 367
+     * mutants.
+     *
+     * The split has to be by *positive* path. A `!src/lib/contracts.ts`
+     * negation would read as "this file cannot be mutated" to the
+     * commit-gate analyzer, which appends every negation in the array to
+     * its own `--mutate` — exempting the file from the gate entirely.
+     *
+     * The cost is that adding a file to `src/lib` joins no shard unless
+     * someone remembers to list it, and nothing would fail: the file would
+     * simply never be mutated, and the ratchet would report 100% on a
+     * scope that no longer covers the directory. This is the check that
+     * makes the split safe.
+     */
+    // `import.meta.glob`, not `readdirSync`: these run in the workers
+    // pool, which has no real filesystem — `readdir("src/lib")` resolves
+    // inside workerd and fails. Vite resolves this at build time, so it
+    // sees the directory as it is on disk. Same device
+    // `server-functions-are-glue` uses to enumerate modules.
+    const onDisk = Object.keys(
+      import.meta.glob("../../src/lib/*.ts", { query: "?raw" }),
+    ).map((path) => path.replace("../../", ""));
+
+    const inScopes = strykerConfig.mutate
+      .filter((entry) => entry.startsWith("src/lib/"))
+      .flatMap((entry) => entry.split(","))
+      .filter((path) => !path.startsWith("!"));
+
+    // Sets, because the order entries appear in is a sharding decision and
+    // not a fact about coverage — and `toSorted` is not in this project's
+    // lib.
+    expect(new Set(inScopes)).toStrictEqual(new Set(onDisk));
+  });
 });

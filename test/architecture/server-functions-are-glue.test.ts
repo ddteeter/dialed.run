@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import strykerParsed from "../../stryker.conf.json";
 import strykerConfig from "../../stryker.conf.json?raw";
 
 /**
@@ -265,11 +266,17 @@ describe("files that cannot be mutation tested are glue", () => {
  * where a file is actually excluded.
  */
 const negations = Array.from(
+  // Scanned over the `mutate` entries, not the raw file. Scanning the text
+  // meant a *comment* mentioning `!some/path.ts` read as a real exclusion
+  // — which happened the moment one explained why negations are the wrong
+  // way to split a scope, and reported the file it was warning about as
+  // "excluded for no reason".
+  //
   // `.tsx?` and `$`: a route file is `.tsx`, and a dynamic segment puts a
   // `$` in its name. The first version of this matched neither, so it read
   // `!src/routes/closet/index.tsx` as `…/index.ts` and skipped
   // `$itemId.tsx` entirely — an exclusion the check could not see.
-  strykerConfig.matchAll(/!(src\/[\w.$/-]+\.tsx?)/g),
+  strykerParsed.mutate.join(",").matchAll(/!(src\/[\w.$/-]+\.tsx?)/g),
   (match) => match[1] ?? "",
 );
 
