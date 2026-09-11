@@ -30,15 +30,7 @@ function LoginPage() {
       heading="Log in"
       submitLabel="Log in"
       pendingLabel="Signing in"
-      status={form.status}
-      summaryRows={form.summaryRows}
-      summaryRef={form.summaryRef}
-      onFocusField={form.focusField}
-      failure={form.failure}
-      onRetry={form.retry}
-      retryRef={form.retryRef}
-      pending={form.pending}
-      formRef={form.formRef}
+      form={form}
       onSubmit={() => {
         void form.submit({ email, password });
       }}

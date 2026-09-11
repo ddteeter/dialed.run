@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthCrossLink, AuthPage } from "../../src/modules/auth/auth-page";
 import { authClient } from "../../src/modules/auth/client";
 import { GoogleButton } from "../../src/modules/auth/google-button";
+import type { FormShell } from "../../src/ui";
 
 // Better Auth's browser client talks to the network; the button's job is
 // what it does with the two answers it can get back.
@@ -30,25 +31,39 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
+/**
+ * A resting form: nothing submitted, nothing wrong, nothing pending.
+ *
+ * `AuthPage` takes the form's state as one prop rather than nine, so this
+ * is the one place the shell's idle state is described — and `FormShell`
+ * is picked off `useFormSubmit`, so a member added to the hook shows up
+ * here as a type error rather than as a silently stale literal.
+ */
+function restingForm(): FormShell {
+  return {
+    status: "",
+    summaryRows: [],
+    summaryRef: createRef<HTMLDivElement>(),
+    focusField: () => {
+      // the summary is empty in these cases
+    },
+    failure: undefined,
+    retry: () => {
+      // no failure band in these cases
+    },
+    retryRef: createRef<HTMLButtonElement>(),
+    pending: false,
+    formRef: createRef<HTMLFormElement>(),
+  };
+}
+
 function page(overrides: Partial<Parameters<typeof AuthPage>[0]> = {}) {
   return (
     <AuthPage
       heading="Sign in"
       submitLabel="Sign in"
       pendingLabel="Signing in"
-      status=""
-      summaryRows={[]}
-      summaryRef={createRef<HTMLDivElement>()}
-      onFocusField={() => {
-        // the summary is empty in these cases
-      }}
-      failure={undefined}
-      onRetry={() => {
-        // no failure band in these cases
-      }}
-      retryRef={createRef<HTMLButtonElement>()}
-      pending={false}
-      formRef={createRef<HTMLFormElement>()}
+      form={restingForm()}
       onSubmit={() => {
         // overridden where the call is what is being asserted
       }}

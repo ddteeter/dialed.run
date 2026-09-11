@@ -288,3 +288,74 @@ export function SubmitButton({
     </button>
   );
 }
+
+/**
+ * A `<select>` over a set the schema already holds.
+ *
+ * `GarmentForm` had three of these written out — layer, weight, fabric —
+ * identical but for the field name, the enum and the label map, which is
+ * the copy-then-rename `semantic` mode sees.
+ *
+ * **It parses the choice rather than casting it.** Each of the three used
+ * to read `event.target.value as GarmentFormValues["layer"]` — a cast on
+ * a value that arrives from the DOM as a plain `string`, which is the
+ * thing CLAUDE.md's trust-boundary rule is about. Looking the value up in
+ * `options` instead is both narrower and honest: anything that is not one
+ * of them, including the empty choice, comes back as `""`.
+ *
+ * The empty option is unconditional because all three fields are
+ * optional — a category that admits a layer does not require one, and a
+ * select with no empty choice cannot express "not answered". A required
+ * choice is a different control and should not reuse this one by adding a
+ * flag to it.
+ */
+export function ChoiceField<TOption extends string>({
+  name,
+  label,
+  error,
+  field,
+  value,
+  options,
+  optionLabels,
+  onChange,
+}: Readonly<{
+  name: string;
+  label: string;
+  error?: string | undefined;
+  /**
+   * `useFormSubmit`'s `field`, spread for the same reason every text input
+   * spreads it: it carries `readOnly` for §5's "inputs stay focusable
+   * while in flight, never disabled". A `<select>` has no such attribute
+   * and React drops it, so it is inert here rather than wrong — which is
+   * why this spreads the same helper rather than a filtered copy of it.
+   */
+  field: (name: string) => FieldProps;
+  value: TOption | "";
+  options: readonly TOption[];
+  optionLabels: Readonly<Record<TOption, string>>;
+  onChange: (value: TOption | "") => void;
+}>): JSX.Element {
+  return (
+    <FormField name={name} label={label} error={error}>
+      <select
+        {...field(name)}
+        id={name}
+        value={value}
+        onChange={(event) => {
+          const picked = options.find(
+            (option) => option === event.target.value,
+          );
+          onChange(picked ?? "");
+        }}
+        className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
+      >
+        <option value="">—</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {optionLabels[option]}
+          </option>
+        ))}
+      </select>
+    </FormField>
+  );
+}

@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
-import type { RefObject } from "react";
 
 import {
   FormErrorSummary,
@@ -10,7 +9,7 @@ import {
   SubmitButton,
   Wordmark,
 } from "../../ui";
-import type { FormFailure, SummaryRow } from "../../ui";
+import type { FormShell } from "../../ui";
 import { GoogleButton } from "./google-button";
 
 /**
@@ -31,15 +30,7 @@ export function AuthPage({
   heading,
   submitLabel,
   pendingLabel,
-  status,
-  summaryRows,
-  summaryRef,
-  onFocusField,
-  failure,
-  onRetry,
-  retryRef,
-  pending,
-  formRef,
+  form,
   onSubmit,
   children,
   footer,
@@ -47,15 +38,13 @@ export function AuthPage({
   heading: string;
   submitLabel: string;
   pendingLabel: string;
-  status: string;
-  summaryRows: readonly SummaryRow[];
-  summaryRef: RefObject<HTMLDivElement | null>;
-  onFocusField: (name: string) => void;
-  failure: FormFailure | undefined;
-  onRetry: () => void;
-  retryRef: RefObject<HTMLButtonElement | null>;
-  pending: boolean;
-  formRef: RefObject<HTMLFormElement | null>;
+  /**
+   * The form's own state, as one prop. Both routes used to forward nine
+   * separate members of it, which is all a clone detector saw between
+   * them — see `FormShell`, which is picked off the hook rather than
+   * restated.
+   */
+  form: FormShell;
   onSubmit: () => void;
   children: ReactNode;
   footer: ReactNode;
@@ -71,7 +60,7 @@ export function AuthPage({
             error system that fires before ours and says "Please fill in
             this field" — banned copy, and it would pre-empt the schema. */}
         <form
-          ref={formRef}
+          ref={form.formRef}
           noValidate
           className="flex flex-col gap-4"
           onSubmit={(event) => {
@@ -79,22 +68,22 @@ export function AuthPage({
             onSubmit();
           }}
         >
-          <FormStatus>{status}</FormStatus>
+          <FormStatus>{form.status}</FormStatus>
           <FormErrorSummary
-            rows={summaryRows}
-            onFocusField={onFocusField}
-            summaryRef={summaryRef}
+            rows={form.summaryRows}
+            onFocusField={form.focusField}
+            summaryRef={form.summaryRef}
           />
           {children}
           <FormFailureBand
-            failure={failure}
-            onRetry={onRetry}
-            retryRef={retryRef}
+            failure={form.failure}
+            onRetry={form.retry}
+            retryRef={form.retryRef}
           />
           <SubmitButton
             label={submitLabel}
             pendingLabel={pendingLabel}
-            pending={pending}
+            pending={form.pending}
           />
         </form>
         <p className="text-center text-xs uppercase text-night/40">or</p>

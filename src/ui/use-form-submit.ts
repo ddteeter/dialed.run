@@ -361,3 +361,34 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     },
   };
 }
+
+/**
+ * The part of `useFormSubmit`'s result a form *shell* needs — everything
+ * that renders the contract's scaffolding (status region, error summary,
+ * failure band, submit button) and nothing that belongs to a particular
+ * field.
+ *
+ * `AuthPage` took these as nine separate props and both auth routes
+ * forwarded all nine, which is the whole of what a clone detector saw
+ * there. One prop instead.
+ *
+ * **Derived, not restated.** `Pick<ReturnType<typeof useFormSubmit>, …>`
+ * reads the shape off the hook, so a field that changes type cannot leave
+ * a hand-written copy behind disagreeing with it in silence (CLAUDE.md,
+ * "derive, don't mirror"). The picked members are the ones that do not
+ * mention either type parameter, so instantiating the generic at its
+ * constraints to read them is sound — `submit` is deliberately not among
+ * them.
+ */
+export type FormShell = Pick<
+  ReturnType<typeof useFormSubmit>,
+  | "formRef"
+  | "pending"
+  | "failure"
+  | "status"
+  | "summaryRows"
+  | "summaryRef"
+  | "retryRef"
+  | "focusField"
+  | "retry"
+>;

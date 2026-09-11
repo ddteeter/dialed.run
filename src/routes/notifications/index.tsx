@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { NotificationBell } from "../../modules/notifications/components/NotificationBell";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { NotificationList } from "../../modules/notifications/components/NotificationList";
-import { markAllNotificationsReadFn } from "../../modules/notifications/functions";
 import {
   listNotificationsFn,
+  markAllNotificationsReadFn,
   unreadNotificationCountFn,
 } from "../../modules/notifications/functions";
-import { Layout } from "../../ui";
+import { Page } from "../../ui";
 
 export const Route = createFileRoute("/notifications/")({
   loader: async () => ({
@@ -21,16 +21,13 @@ function NotificationsPage() {
   const { notifications, unreadCount } = Route.useLoaderData();
 
   return (
-    <Layout bell={<NotificationBell unreadCount={unreadCount} />}>
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-6 py-8">
-        <h1 className="m-0 font-display text-3xl uppercase leading-none">
-          Notifications
-        </h1>
+    <BelledLayout unreadCount={unreadCount}>
+      <Page title="Notifications">
         <NotificationList
           notifications={notifications}
           markAllRead={markAllNotificationsReadFn}
         />
-      </div>
-    </Layout>
+      </Page>
+    </BelledLayout>
   );
 }
