@@ -12,10 +12,10 @@ import {
   outfitEntryItems,
   runs,
   userProfiles,
-  wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
 import { forIds } from "../../lib/for-ids";
+import { garmentNamesByIds } from "./garment-names";
 import { bandFloorC, bandLabel } from "../../lib/temperature";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForRuns } from "./conditions";
@@ -138,13 +138,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     wearCounts.set(row.itemId, (wearCounts.get(row.itemId) ?? 0) + 1);
   }
   const topItemIds = topByCount(wearCounts, 5).map(([itemId]) => itemId);
-  const topGarments = await forIds(topItemIds, () =>
-    database
-      .select({ id: wardrobeItems.id, name: wardrobeItems.name })
-      .from(wardrobeItems)
-      .where(inArray(wardrobeItems.id, topItemIds)),
-  );
-  const nameById = new Map(topGarments.map((g) => [g.id, g.name]));
+  const nameById = await garmentNamesByIds(database, topItemIds);
 
   const [followers, following] = await Promise.all([
     followerCount(userId),

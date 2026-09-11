@@ -8,6 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { follows } from "../../db/schema-core";
 import { env } from "../../env";
+import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -43,33 +44,34 @@ export async function isFollowing(
   followerId: string,
   followeeId: string,
 ): Promise<boolean> {
-  const rows = await db()
-    .select({ followeeId: follows.followeeId })
-    .from(follows)
-    .where(
-      and(eq(follows.followerId, followerId), eq(follows.followeeId, followeeId)),
-    )
-    .limit(1);
-  return rows.length > 0;
+  return hasRowWhere(
+    db(),
+    follows,
+    follows.followeeId,
+    and(eq(follows.followerId, followerId), eq(follows.followeeId, followeeId)),
+  );
 }
 
 /**
 Covering index `follows(follower_id, followee_id)` — index seek, not a scan.
 */
 export async function followeeIdsOf(followerId: string): Promise<string[]> {
-  const rows = await db()
-    .select({ followeeId: follows.followeeId })
-    .from(follows)
-    .where(eq(follows.followerId, followerId));
-  return rows.map((r) => r.followeeId);
+  return columnWhere(
+    db(),
+    follows,
+    follows.followeeId,
+    eq(follows.followerId, followerId),
+  );
 }
 
 export async function followerCount(userId: string): Promise<number> {
-  const rows = await db()
-    .select({ followerId: follows.followerId })
-    .from(follows)
-    .where(eq(follows.followeeId, userId));
-  return rows.length;
+  const followers = await columnWhere(
+    db(),
+    follows,
+    follows.followerId,
+    eq(follows.followeeId, userId),
+  );
+  return followers.length;
 }
 
 export async function followingCount(userId: string): Promise<number> {

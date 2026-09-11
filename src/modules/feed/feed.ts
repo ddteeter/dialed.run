@@ -16,10 +16,9 @@ import {
   reactions,
   runs,
   userProfiles,
-  wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { forIds } from "../../lib/for-ids";
+import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import { followeeIdsOf } from "./follows";
@@ -135,13 +134,7 @@ async function hydrateEntries(
   const runsById = new Map(runRows.map((r) => [r.id, r]));
   const authorsById = new Map(authorRows.map((a) => [a.userId, a]));
   const itemIds = [...new Set(itemRows.map((i) => i.itemId))];
-  const garments = await forIds(itemIds, () =>
-    database
-      .select({ id: wardrobeItems.id, name: wardrobeItems.name })
-      .from(wardrobeItems)
-      .where(inArray(wardrobeItems.id, itemIds)),
-  );
-  const garmentNameById = new Map(garments.map((g) => [g.id, g.name]));
+  const garmentNameById = await garmentNamesByIds(database, itemIds);
 
   const observations = await observationsForRuns(runRows);
 
