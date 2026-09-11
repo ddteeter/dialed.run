@@ -63,6 +63,7 @@ jobs:
     outputs:
       list: ${{ steps.read.outputs.list }}
       relevant: ${{ steps.changed.outputs.relevant }}
+      deps: ${{ steps.deps.outputs.digest }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -92,6 +93,37 @@ jobs:
               const name = nameOf(mutate);
               return { mutate, name, slug: slugOf(name) };
             }));
+          ')" >> "$GITHUB_OUTPUT"
+
+      # The cache key hashed the whole lockfile, which meant a prettier or
+      # tailwind bump threw away every shard's stored verdicts and cost a
+      # full cold cycle — 32 minutes — to re-learn what it already knew.
+      # Two of three cold runs on 2026-09-10 were exactly that.
+      #
+      # What can actually change whether a mutant is killed: anything the
+      # code imports at runtime, and the stack that runs the tests. What
+      # cannot: the linters, the formatter, the clone detector, the build
+      # tooling. So the digest covers every runtime dependency plus an
+      # explicit allowlist of the test stack, and nothing else.
+      #
+      # Deliberately conservative on `dependencies`: a zod or drizzle bump
+      # genuinely can flip a verdict, so all of them count. The saving is
+      # from devDependencies, which is where the churn is.
+      - id: deps
+        run: |
+          echo "digest=$(node -p '
+            const fs = require("node:fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+            const RUNS_THE_TESTS = /^(@stryker-mutator\/|vitest$|@vitest\/|@cloudflare\/vitest-pool-workers$|@testing-library\/|happy-dom$|jsdom$)/;
+            const names = [
+              ...Object.keys(pkg.dependencies ?? {}),
+              ...Object.keys(pkg.devDependencies ?? {}).filter((name) => RUNS_THE_TESTS.test(name)),
+            ].sort();
+            const pinned = names
+              .map((name) => `${name}@${lock.packages?.[`node_modules/${name}`]?.version ?? "missing"}`)
+              .join(",");
+            require("node:crypto").createHash("sha256").update(pinned).digest("hex").slice(0, 16);
           ')" >> "$GITHUB_OUTPUT"
 
       # Mutation is the slowest thing in CI, so a PR that touches nothing
@@ -154,10 +186,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: reports/stryker-incremental.json
-          key: stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-${{ github.ref }}-${{ github.sha }}
+          key: stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-${{ github.sha }}
           restore-keys: |
-            stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-${{ github.ref }}-
-            stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-refs/heads/main-
+            stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-
+            stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-refs/heads/main-
 
       # Sharded by scope because this is minutes, not seconds, and the
       # whole ratcheted set only gets bigger. `--mutate` narrows what is
@@ -180,7 +212,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: reports/stryker-incremental.json
-          key: stryker-v1-${{ matrix.slug }}-${{ hashFiles('package-lock.json') }}-${{ github.ref }}-${{ github.sha }}
+          key: stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-${{ github.sha }}
 
   # The one context branch protection requires. Scopes come and go from
   # the ratchet; this does not.

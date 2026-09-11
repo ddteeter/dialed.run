@@ -19,8 +19,11 @@
   "timeoutMS": 120000,
   "incremental": true,
   "//functions.ts": "Each `!.../functions.ts` negation is the same fact: a server-function module imports `createServerFn`, which drags TanStack Start's virtual entries in with it, so it cannot be imported in the workers pool and cannot be mutation tested at all (D-41). The exclusion is only honest while those files hold nothing worth an assertion, which `test/architecture/server-functions-are-glue.test.ts` enforces.",
+  "//lib": "src/lib is three entries, not one glob, and positive paths rather than negations. It was the longest shard in every run \u2014 31.8 minutes cold and 4.3 warm, about 2.5x the next one either way \u2014 because everything imports it and 43% of its mutants are static, and a static mutant re-runs the whole suite. contracts.ts and thermal.ts are 248 of its 367 mutants between them, so each gets its own shard. NEGATIONS WOULD BE WRONG HERE: the commit-gate analyzer appends every ! in this array to its own --mutate, so !src/lib/contracts.ts would exempt that file from the gate entirely. The cost of listing the rest positively is that a new file in src/lib would join no shard silently \u2014 which is why test/architecture/mutation-config.test.ts asserts the three entries cover the directory.",
   "mutate": [
-    "src/lib/**/*.ts",
+    "src/lib/contracts.ts",
+    "src/lib/thermal.ts",
+    "src/lib/auth-signal.ts,src/lib/copy.ts,src/lib/errors.ts,src/lib/for-ids.ts,src/lib/garment-fields.ts,src/lib/ids.ts,src/lib/measures.ts,src/lib/normalize.ts,src/lib/owned.ts,src/lib/photo-constraints.ts,src/lib/temperature.ts,src/lib/top-by-count.ts",
     "src/ui/**/*.tsx",
     "src/ui/**/*.ts",
     "src/modules/**/*.tsx,!src/routes/__root.tsx,!src/routes/auth/login.tsx,!src/routes/auth/signup.tsx,!src/routes/closet/$itemId.tsx,!src/routes/closet/edit.$itemId.tsx,!src/routes/closet/index.tsx,!src/routes/closet/new.tsx,!src/routes/feed/attach.$runId.tsx,!src/routes/feed/entry.$entryId.tsx,!src/routes/feed/index.tsx,!src/routes/feed/me.tsx,!src/routes/feed/photo.$.tsx,!src/routes/feed/search.tsx,!src/routes/feed/u.$userId.tsx,!src/routes/feed/verdict.$entryId.tsx,!src/routes/index.tsx,!src/routes/notifications/index.tsx,!src/routes/runs/$runId.tsx,!src/routes/runs/import.$importId.tsx,!src/routes/runs/index.tsx,!src/routes/runs/manual.tsx,!src/routes/runs/new.tsx,!src/routes/runs/strava-callback.tsx,!src/routes/runs/strava.tsx",
