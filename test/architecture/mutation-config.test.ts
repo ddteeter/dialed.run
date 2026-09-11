@@ -52,6 +52,25 @@ describe("stryker.conf.json", () => {
     expect(strykerConfig.thresholds.break).toBe(100);
   });
 
+  it("does not turn --incremental on for everyone, because the gate must not have it", () => {
+    /**
+     * `mutation.yml` passes `--incremental` per shard, where it is sound:
+     * a shard's `--mutate` is one fixed glob, so the stored report and the
+     * run describe the same set. That workflow's own comment says it is
+     * *"safe here in a way it is not on the commit gate"* — and the gate's
+     * `--mutate` really is a different set of changed files every run.
+     *
+     * Setting it in this file turned it on for the gate and for every
+     * local run too. The cost was measured rather than imagined: a mutant
+     * came back `Survived` that a test demonstrably killed — applying it by
+     * hand failed the test, and a run with the report deleted scored 100.
+     *
+     * So the flag belongs on the command line that can reason about its own
+     * scope, and nowhere else. CI is unaffected: it passes it explicitly.
+     */
+    expect(strykerConfig).not.toHaveProperty("incremental");
+  });
+
   it("covers every file in src/lib, which three positive entries cannot do on their own", () => {
     /**
      * `src/lib` is split across three entries rather than one
