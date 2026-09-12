@@ -121,3 +121,38 @@ Still open: **nothing routes a new account into the flow** (D-52). Signup
 lands on `/`, so O1 is reachable only by URL or from settings. Wiring it is
 a product call with a demo-spec blast radius across four other lanes — the
 options and their costs are in the register row.
+
+## What shipped
+
+Every screen the packet owns: **O1** (calibrate, with the visible offset
+requirement 1 names — it had been a comment on `thermalLevelSchema` and
+nothing read it), **O3** (the one list, design round 6 §AA), **P2.5** (make
+them real, design round 7 §AC), **P3** (now go run), **settings** (the
+three rows of design's U1 this packet owns), and the **Call teaser** (O6).
+
+`/` sends a signed-in runner with `onboarding_complete` false to O1, so
+bailing is recoverable — a signup-only redirect would strand exactly the
+person the skippable design invites (D-52).
+
+**D-48's redraw landed with it**: hue means verdict everywhere and
+permanently, coverage became ink density, and the profile row stopped
+carrying a three-way distinction on hue alone at 30% ink.
+
+### What this packet could not finish, and why
+
+- **D-54** — P2.5's payout lines. §AC3 makes the on-save moment the
+  screen's argument "made literal", and all three lines need something that
+  does not exist: `products.type` (lane 107), an owner count (no such read),
+  O4's tagged runs. The row states what happened and stops.
+- **The ranked heading in P2.5 is inert.** Rule 01 sorts by O4-tagged runs
+  and O4 is out of scope, so rule 02's flat-list fallback is what every v1
+  runner sees. Design wrote that branch, so it is their answer — but the
+  screen shipped is the fallback, not AC1 as drawn.
+- **D-49** — the tap list is 18 rows where design specified 24. Unspecified
+  content, not structure: the fold, the ranking and the disclosure all work
+  at any length.
+- **D-57** — the onboarding demo needs a retry roughly one run in three,
+  because a D1 write makes the dev server reload the page a few seconds
+  later and wipe the taps. Recording only; CI is unaffected.
+- **D-31** — the tab bar still renders text rather than glyphs, deferred to
+  its own PR because it is visible and wants its own demo.
