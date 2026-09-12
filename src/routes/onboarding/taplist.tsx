@@ -22,8 +22,10 @@ export const Route = createFileRoute("/onboarding/taplist")({
 function TapListPage() {
   const { starter } = Route.useLoaderData();
   const navigate = useNavigate();
+  // Both Next and Skip land on P2.5, which is itself skippable — the flow
+  // is a chain of offers, not a funnel with a gate in it.
   const done = () => {
-    void navigate({ to: "/onboarding/done" });
+    void navigate({ to: "/onboarding/name" });
   };
 
   return (

@@ -9,9 +9,15 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { optionalUserId, requireUserId } from "../auth";
+import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { climateNormals } from "../weather";
-import { calibrationInput, preferencesInput } from "./inputs";
+import {
+  brandPrefixInput,
+  calibrationInput,
+  nameGarmentInput,
+  preferencesInput,
+} from "./inputs";
 import { ladderFrom } from "./ladder";
 import {
   completeOnboarding,
@@ -20,6 +26,7 @@ import {
   saveCalibration,
   savePreferences,
 } from "./profile";
+import { namedResult, namingOffer, namingSuggestions } from "./naming";
 import { starterList } from "./starter-list";
 import { unitsFromLocale } from "./units-from-locale";
 
@@ -62,3 +69,19 @@ export const savePreferencesFn = createServerFn({ method: "POST" })
 export const onboardingGateQuery = createServerFn({ method: "GET" }).handler(
   async () => requiresOnboarding(db(), await optionalUserId()),
 );
+
+export const namingOfferQuery = createServerFn({ method: "GET" }).handler(
+  async () => namingOffer(db(), await requireUserId()),
+);
+
+export const nameGarmentFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => nameGarmentInput.parse(data))
+  .handler(async ({ data }) =>
+    namedResult(
+      await nameItem(db(), await requireUserId(), data.itemId, data),
+    ),
+  );
+
+export const namingSuggestionsQuery = createServerFn({ method: "GET" })
+  .validator((data: unknown) => brandPrefixInput.parse(data))
+  .handler(async ({ data }) => namingSuggestions(db(), data.brand));

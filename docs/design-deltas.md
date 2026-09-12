@@ -15,77 +15,47 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
-6. **P2.5 "make them real" has no artboard, and it is the last screen in
-   lane 105.** `docs/product.md` lists it as "new (D-27); needs design". Six
-   questions went to design 2026-09-11: which tapped rows it offers and who
-   chooses; how many fields naming costs (F asks brand → name → link →
-   photo, and P2.5 should be lighter or it is just F again); whether a
-   link-paste field exists at all **given lane 107 is unmerged, so
-   `src/modules/enrichment/` does not exist and a paste would do nothing
-   visible**; whether the screen states a target the way O3's "enough to
-   start" does; how a named row reads against a generic one while naming;
-   and what skip looks like. Assumed unless design says otherwise: fully
-   skippable, never blocking, no link paste in v1. Copy is not part of the
-   ask — D-45 collects all user-facing text in one pass and P2.5's rides
-   along; what is needed is the screen's argument, since the packet
-   requires it to sell "the specific piece is what learns".
 
-5. **Onboarding's steps are inside the app's page column, and the
-   artboards draw them full-bleed.** O1, O3 and P3 are each a card with
-   their own internal structure and no app heading; `src/routes/onboarding/*`
-   renders them inside `ui/Page`, which adds an `<h1>` above each. A heading
-   is not optional — a screen with none is an accessibility failure — so the
-   three are design's own copy where it exists ("One question does most of
-   the work", O1) and new where it does not ("Start your closet" for O3,
-   chosen to avoid repeating that screen's own "TAP WHAT YOU OWN" caption).
-   **The question for design is whether these steps should sit in the page
-   column at all**, or be full-bleed like the artboards, in which case the
-   heading moves inside the card and the copy is design's to write. Raised
-   by lane 105 while building; nothing is blocked either way.
+## Answered in round 7 (imported 2026-09-12)
 
-1. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
-   Epic 200 opens, incl. multi-part fabric display on garment/product
-   detail (D-34) if composition surfaces there. The Call tab's own glyph
-   is deliberately deferred to the same moment (see round 4, item 7).
-2. **Motion Doctrine adoption.** Not a design ask — an implementation debt.
-   Shipped v1 surfaces predate the doctrine and animate either not at all or
-   ad hoc; lanes adopt the per-surface map opportunistically, audited at the
-   launch gate (workflow.md checklist #5).
-   RESOLVED 2026-09-06 for demos: they record full motion — the fixture's
-   motion-strip and the demo project's reduced-motion emulation were removed,
-   because demo videos are a primary review surface and must show the
-   doctrine's real behaviour.
-3. **Transient feedback for actions with no landing place** — narrowed by
-   round 4, not closed. The Form Contract settles it *inside a form*: a
-   failure band sits above the submit button and stays, because "a toast
-   takes the retry with it when it leaves", and success gets no toast and no
-   green check at all. S2 removes the other case we had — notifications
-   clear their unread dot when the screen opens, so there is no per-row
-   "marked read" to confirm.
-   What is still unanswered is an action with no screen to land on: copying
-   a share link, an autosave. Wanted before the first one ships, not after:
-   what it looks like, where it appears, how long it stays, how it behaves
-   under the doctrine, and how a screen reader is told. The default answer
-   may well be "design the action so the state change is visible instead" —
-   that is the position round 4 took twice — but that has to be a decision,
-   not a gap.
-4. **Does a garment carry a type?** **Answered: yes**, by the owner on
-   2026-09-07. `garmentSchema` now carries an optional per-category `type`,
-   named for the pack's glyphs so a garment's icon *is* its type. The
-   tap-list sets one on every row.
+**P2.5 — §AC · Make them real**, answering all six questions lane 105 asked.
+The argument design settled on: *a category can't remember.* "Merino base
+layer" cannot hold a temperature range, because no two of them are the same
+garment; a named product is one object, and naming is how a runner's piece
+joins a population.
 
-   Kept here because it is the one place a reader would look for it, and
-   because it is worth recording what design's role in it was: **none, and
-   that was the point.** It arrived filed as a question for design with
-   three options, two of which were impossible. P2's tap-list is already a
-   list of types and the pack already draws one glyph each, so design had
-   answered twice before being asked; the disagreement was between our
-   contract and both of them. Asking for category-level glyphs would have
-   put the same icon on all sixteen rows of P2.
+- **Q1 — every generic row is offered, ranked never filtered**, the same
+  doctrine as §AA. Rows worn on an O4-tagged run sort first under their own
+  heading; the rest follow, folded past five. No badge claims to know a
+  stranger's favourites — *the order* carries the suggestion.
+- **Q2 — two fields, one required.** Brand (seed-list autocomplete) and
+  model (optional, suggestions from that brand's products). **No photo:**
+  naming is an act of identity, and a photo says nothing about which
+  product this is.
+- **Q3 — no link field**, agreeing with the recommendation. *"A field that
+  swallows a URL and shows nothing is a screen making a promise the build
+  can't keep, on the one screen whose entire job is to be believed."*
+- **Q4 — no target, no gate**, and no "enough to start" equivalent. O3 can
+  say it because six taps is a real threshold for a first call; naming
+  changes nothing about whether the app works today.
+- **Q5 — the Z language verbatim** while generic; named, the subtitle
+  becomes the product's type.
+- **Q6 — Next always enabled**, skip as O3's underlined text, both land on
+  P3, and P2.5 never reappears. The closet nudge is the only follow-up.
 
-   The rule: if the answer is a drawing, it comes here. If the answer is a
-   schema or a product call, it goes to the owner and lives in
-   `docs/deferred.md`.
+**What v1 could not build, and why** — two rows rather than silent gaps:
+
+- **D-54**: §AC3's three payout lines each need something that does not
+  exist (`products.type` → lane 107; an owner count → no such read; tagged
+  runs → O4). The named row states what happened and stops.
+- **The ranked heading is inert.** Rule 01 sorts by O4-tagged runs and O4
+  is out of scope, so rule 02's fallback — *"the first heading is absent —
+  not empty. One flat list, closet order"* — is what every v1 runner sees.
+
+**Design also flagged one back at us, and the build was already right:**
+O3's artboard still draws a paste field with `SPECS FOUND`, same lane-107
+dependency. `TapListForm` never built one. Recorded as **D-55** so nobody
+"fixes" the code to match a stale artboard.
 
 ## Answered in round 6 (imported 2026-09-11)
 

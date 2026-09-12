@@ -25,6 +25,11 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/routes/onboarding/name.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes of one flow are the same shape by mandate: createFileRoute + requireSession + one loader call + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "P2.5 and the settings page, which server-functions-are-glue REQUIRES to be createFileRoute + a session guard + a loader call + a shell — and which it forbids from differing, since branching in a route file is exactly what that test rejects. Same class as the route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx, onboarding/calibrate.tsx, onboarding/taplist.tsx). Two other clones in the same change were fixed rather than granted: the fold became MoreDisclosure, and the second turned out to be a real defect — nameGarmentInput typed itemId as any non-empty string where item ids are ULIDs.",
+      "count": 1
+    },
+    {
       "key": "src/routes/onboarding/calibrate.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
       "reason": "Two steps of one onboarding flow. server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ — so the shape is mandated, not copied. Same class as the five route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx).",
       "count": 1

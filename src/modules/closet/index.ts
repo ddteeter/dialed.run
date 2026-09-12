@@ -22,6 +22,7 @@ export {
   getItemsByIds,
   getOwnedItem,
   listItems,
+  nameItem,
   NotFoundError,
   retireItem,
   unretireItem,

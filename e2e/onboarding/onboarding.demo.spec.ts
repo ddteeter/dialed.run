@@ -1,6 +1,6 @@
 /**
- * Covers: O1 (calibrate), O3 (the one list), P3 (now go run), O6 (the Call
- * teaser) — one journey, one video.
+ * Covers: O1 (calibrate), O3 (the one list), P2.5 (make them real), P3 (now
+ * go run), O6 (the Call teaser) — one journey, one video.
  *
  * The journey is the packet's own done-criterion read literally: a fresh
  * account reaches "now go run" with a real closet, and the Call tab then
@@ -81,6 +81,26 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(page.getByText("Closet: 6 pieces")).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
 
+  // P2.5. Every generic row is offered — ranked, never filtered — and
+  // naming one is two fields with only the first required. The screen
+  // never gates: the counter is a fraction, not a quota.
+  await expect(
+    page.getByText(/A category can.t remember/),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("0 of 6 named")).toBeVisible();
+
+  await page.getByRole("button", { name: "Name it" }).first().click();
+  await page.getByLabel("Brand").fill("Smartwool");
+  await page.getByLabel("Model").fill("Intraknit 200");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  // The payout is what actually happened and nothing more (D-54): the
+  // piece is linked to a shared product. Design's three GAINED/KEPT lines
+  // need lane 107, an owner count and O4, none of which exist.
+  await expect(page.getByText("Smartwool Intraknit 200")).toBeVisible();
+  await expect(page.getByText("1 of 6 named")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+
   // P3. An instruction and a promise, not a payoff — there is nothing to
   // celebrate yet and the screen does not pretend otherwise.
   await expect(
@@ -101,9 +121,14 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await page.goto("/closet");
   await hydrated(page);
   await expect(page.getByRole("link", { name: /^Beanie/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Running tights/ })).toBeVisible();
+  // The named piece carries its brand now, and the nudge counts one fewer
+  // — the closet and P2.5 agreeing without either being told about the
+  // other.
   await expect(
-    page.getByText("6 of 6 pieces are still generic."),
+    page.getByRole("link", { name: /Smartwool Intraknit 200/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("5 of 6 pieces are still generic."),
   ).toBeVisible();
 
   // O6. The teaser with no verdicts behind it: it says it is listening, and

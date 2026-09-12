@@ -146,6 +146,7 @@ export function TextField({
   hint,
   type = "text",
   autoComplete,
+  list,
 }: Readonly<{
   name: string;
   label: string;
@@ -156,6 +157,19 @@ export function TextField({
   hint?: string | undefined;
   type?: "text" | "email" | "password" | "url";
   autoComplete?: string | undefined;
+  /**
+   * The id of a `<datalist>` holding suggestions for this field.
+   *
+   * Here because two forms needed it and both hand-rolled `FormField` plus
+   * a raw `<input>` to get it — screen F for brands, and P2.5 for brands
+   * and models. That is the shape §Forms & failure warns about: the
+   * primitive exists so a field cannot quietly lose its `id`, its `name`,
+   * or its `aria-describedby`, and a form that rebuilds it to add one
+   * attribute gives all of that up. P2.5's brand field did exactly that
+   * and shipped a datalist nothing pointed at — caught by a test asserting
+   * the `list` named an element that exists.
+   */
+  list?: string | undefined;
 }>): JSX.Element {
   return (
     <FormField name={name} label={label} error={error} hint={hint}>
@@ -164,6 +178,7 @@ export function TextField({
         id={name}
         type={type}
         autoComplete={autoComplete}
+        list={list}
         value={value}
         onChange={(event) => {
           onChange(event.target.value);

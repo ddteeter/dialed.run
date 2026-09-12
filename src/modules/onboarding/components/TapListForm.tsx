@@ -14,6 +14,7 @@ import {
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
 import type { TapListEntry } from "../../closet";
+import { MoreDisclosure } from "./MoreDisclosure";
 
 /**
  * How many taps before the screen says the closet is worth something.
@@ -149,7 +150,7 @@ export function TapListForm({
             />
           ))}
         </div>
-        <Disclosure
+        <MoreDisclosure
           remaining={hidden.length}
           expanded={expanded}
           onToggle={() => {
@@ -235,38 +236,3 @@ function TapChip({
   );
 }
 
-/**
- * "Everything else · N more".
- *
- * The label does not change when it opens: a disclosure's accessible name
- * is what it discloses, and `aria-expanded` is what carries the state. A
- * button whose name flips to "Fewer" announces a different control every
- * time it is pressed.
- *
- * It renders nothing when nothing is hidden — a disclosure over an empty
- * set is a control that lies. The fold works at any list length, which is
- * what makes D-49's six missing rows a content gap rather than a blocked
- * screen.
- */
-function Disclosure({
-  remaining,
-  expanded,
-  onToggle,
-}: Readonly<{
-  remaining: number;
-  expanded: boolean;
-  onToggle: () => void;
-}>): JSX.Element | undefined {
-  if (remaining === 0) return undefined;
-  return (
-    <button
-      type="button"
-      aria-expanded={expanded}
-      onClick={onToggle}
-      className="cursor-pointer self-start rounded-full border border-dashed border-night/30 bg-transparent px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.04em] text-night/60"
-    >
-      Everything else · {remaining} more
-      <span aria-hidden="true"> ▾</span>
-    </button>
-  );
-}

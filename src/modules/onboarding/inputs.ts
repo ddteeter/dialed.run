@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ulidSchema } from "../../lib/ids";
+
 import {
   distanceUnitSchema,
   tempUnitSchema,
@@ -65,3 +67,35 @@ export const preferencesInput = z.object({
   shareDefault: z.boolean(),
 });
 export type Preferences = z.infer<typeof preferencesInput>;
+
+/**
+ * What P2.5 writes: a brand, and optionally which one of that brand's.
+ *
+ * **Brand required, model optional** — design §AC rule 04. Brand alone is
+ * a true answer, and the error copy says so rather than demanding both,
+ * because the screen's own caption promises it ("Brand alone is enough").
+ */
+export const nameIdentityInput = z.object({
+  brand: z
+    .string()
+    .trim()
+    .min(1, { message: "Which brand? That alone is enough." })
+    .max(60),
+  model: z.string().trim().min(1).max(120).optional(),
+});
+export type NameIdentity = z.infer<typeof nameIdentityInput>;
+
+/**
+Which garment to name, alongside the identity to give it.
+*/
+export const nameGarmentInput = nameIdentityInput.extend({
+  // A ULID, not any non-empty string. Wardrobe item ids are ULIDs and
+  // `closet/inputs.ts` already validates them that way — this is a trust
+  // boundary, and `min(1)` would wave through anything a client sent.
+  itemId: ulidSchema,
+});
+
+/**
+What the brand field has been typed so far.
+*/
+export const brandPrefixInput = z.object({ brand: z.string().max(60) });

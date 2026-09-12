@@ -38,6 +38,27 @@ export const garmentCategories = [
   "shoes",
   "accessory",
 ] as const;
+/**
+ * The words a category goes by on screen.
+ *
+ * Here rather than in `GarmentForm`, because it was there and P2.5 needs
+ * the same words: design's Z ruling makes a generic garment's subtitle
+ * `type ?? categoryLabel + " · GENERIC"`, so the naming screen and the add
+ * form must agree on what a `neckwear` is called. A second copy is how one
+ * screen ends up saying "Neck" and the other "Neckwear" — the same rival
+ * truth `uiGroupLabels` below already exists to prevent.
+ */
+export const garmentCategoryLabels = {
+  top: "Top",
+  bottom: "Bottom",
+  headwear: "Headwear",
+  neckwear: "Neckwear",
+  gloves: "Gloves",
+  socks: "Socks",
+  shoes: "Shoes",
+  accessory: "Accessory",
+} as const satisfies Record<(typeof garmentCategories)[number], string>;
+
 export const layerSchema = z.enum(["base", "mid", "outer"]);
 export const weightSchema = z.enum(["light", "mid", "heavy"]);
 export const fabricSchema = z.enum([

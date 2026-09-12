@@ -1276,6 +1276,38 @@ describe("ChoiceList", () => {
     );
   });
 
+  it("points a field at its suggestion list, and omits the attribute without one", () => {
+    // Two forms hand-rolled `FormField` + a raw input to get this, and one
+    // of them shipped a datalist nothing pointed at. `undefined` rather
+    // than `""` when absent: an empty `list` names an element that does
+    // not exist, which is a different bug wearing the same clothes.
+    const { rerender } = render(
+      <TextField
+        name="brand"
+        label="Brand"
+        value=""
+        onChange={vi.fn()}
+        field={restingField}
+        list="brand-options"
+      />,
+    );
+    expect(screen.getByLabelText("Brand")).toHaveAttribute(
+      "list",
+      "brand-options",
+    );
+
+    rerender(
+      <TextField
+        name="brand"
+        label="Brand"
+        value=""
+        onChange={vi.fn()}
+        field={restingField}
+      />,
+    );
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("list");
+  });
+
   it("adds no empty line when there is no hint", () => {
     // Not just "no text" — no *element*. An empty <span> renders nothing
     // and still takes a line's worth of gap in the flex column, so a group
