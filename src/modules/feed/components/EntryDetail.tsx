@@ -2,10 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { verdictLabel } from "../../../lib/contracts";
+import type { Units } from "../../../lib/contracts";
 import {
   formatDistance,
   formatDuration,
-  inFahrenheitRange,
+  formatTempRange,
 } from "../../../lib/measures";
 import { Bracketed, Mono } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
@@ -30,8 +31,13 @@ export function EntryDetail({
   shouldPromptVerdict,
   recordPrompted,
   toggleUseful,
+  units,
 }: Readonly<{
   entry: Entry;
+  /**
+  The viewer's own units — every number on this screen is theirs.
+  */
+  units: Units;
   entryId: string;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
@@ -90,13 +96,14 @@ export function EntryDetail({
 
       <div className="flex items-center gap-4">
         <Mono className="text-sm text-night/60">
-          {formatDistance(entry.distanceM)} · {formatDuration(entry.durationS)}
+          {formatDistance(entry.distanceM, units.distance)} · {formatDuration(entry.durationS)}
         </Mono>
         {entry.conditions === undefined ? undefined : (
           <Mono className="text-sm text-teal">
-            {inFahrenheitRange(
+            {formatTempRange(
               entry.conditions.span.minTempC,
               entry.conditions.span.maxTempC,
+              units.temp,
             )}{" "}
             {entry.conditions.condition}
           </Mono>

@@ -9,12 +9,19 @@
  * Unit choice is display-only and stays here: D-6 will make it a user
  * preference, and the contract keeps storing SI either way.
  */
+import type { DistanceUnit, TempUnit } from "./contracts";
 import { formatTemp } from "./temperature";
 
 const METRES_PER_MILE = 1609.34;
+const METRES_PER_KM = 1000;
 
-export function formatDistance(distanceM: number): string {
-  return `${(distanceM / METRES_PER_MILE).toFixed(1)}mi`;
+export function formatDistance(
+  distanceM: number,
+  unit: DistanceUnit,
+): string {
+  return unit === "km"
+    ? `${(distanceM / METRES_PER_KM).toFixed(1)}km`
+    : `${(distanceM / METRES_PER_MILE).toFixed(1)}mi`;
 }
 
 /**
@@ -27,17 +34,7 @@ export function formatDuration(durationS: number): string {
   return `${String(minutes)}:${seconds.toString().padStart(2, "0")}`;
 }
 
-/**
- * A temperature as the app shows it today.
- *
- * Equivalent mutant on the unit inside: `formatTemp` branches only on
- * "c", so anything else takes the same Fahrenheit path and no test can
- * tell the two apart. D-6 turns this into a user preference, and then it
- * becomes a real choice — in one place rather than at every call site,
- * which is why this exists.
- */
-// Stryker disable next-line StringLiteral
-export const inFahrenheit = (tempC: number): string => formatTemp(tempC, "f");
+
 
 /**
  * The temperature a run actually covered: `[4°]` when it fits one hour,
@@ -45,18 +42,22 @@ export const inFahrenheit = (tempC: number): string => formatTemp(tempC, "f");
  *
  * The en dash, and no space around it, is what `bandLabel` already renders
  * for a band ("38–46°"), so a range of conditions and a range of bands read
- * as the same kind of thing. That is the whole reason this reuses the
- * existing device instead of inventing one (CLAUDE.md, undesigned
- * surfaces).
+ * as the same kind of thing.
  *
  * Collapsing when the ends agree is not cosmetic: most runs are inside one
  * hour, and `[4–4°]` would read as a measurement error rather than a short
- * run. Rounding happens before the comparison, so 4.2° and 4.4° collapse
- * too — they render identically, and a range whose ends print the same is
- * the thing this exists to avoid.
+ * run. Rounding happens before the comparison — in the reader's own unit,
+ * which is why the unit is an argument rather than applied afterwards: two
+ * temperatures a degree apart in Celsius can round to the same Fahrenheit
+ * value, and the range should collapse when the numbers a person sees are
+ * the same.
  */
-export const inFahrenheitRange = (minC: number, maxC: number): string => {
-  const low = inFahrenheit(minC);
-  const high = inFahrenheit(maxC);
+export const formatTempRange = (
+  minC: number,
+  maxC: number,
+  unit: TempUnit,
+): string => {
+  const low = formatTemp(minC, unit);
+  const high = formatTemp(maxC, unit);
   return low === high ? low : `${low.replace("°", "")}–${high}`;
 };

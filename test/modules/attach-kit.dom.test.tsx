@@ -133,7 +133,7 @@ function attach(
   } = {},
 ) {
   return (
-    <AttachKit
+    <AttachKit units={{ temp: "f", distance: "mi" }}
       runId="01RUN"
       prefillFor={overrides.prefillFor ?? (() => Promise.resolve(undefined))}
       pickerGroupsFor={overrides.pickerGroupsFor ?? (() => Promise.resolve([]))}

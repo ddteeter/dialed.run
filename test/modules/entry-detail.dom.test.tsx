@@ -88,7 +88,7 @@ const noReaction = () => Promise.resolve({ useful: true });
 
 function detail(overrides: Partial<Entry> = {}, shouldPrompt = false) {
   return (
-    <EntryDetail
+    <EntryDetail units={{ temp: "f", distance: "mi" }}
       entry={entry(overrides)}
       entryId="01ENTRY"
       shouldPromptVerdict={shouldPrompt}
@@ -303,7 +303,7 @@ describe("EntryDetail: the useful reaction", () => {
     const user = userEvent.setup();
     const toggleUseful = vi.fn(() => Promise.resolve({ useful: true }));
     await renderWithRouter(
-      <EntryDetail
+      <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry({ usefulCount: 4, viewerHasReacted: false })}
         entryId="01ENTRY"
         shouldPromptVerdict={false}
@@ -325,7 +325,7 @@ describe("EntryDetail: the useful reaction", () => {
   it("counts down when they take it back", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      <EntryDetail
+      <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry({ usefulCount: 4, viewerHasReacted: true })}
         entryId="01ENTRY"
         shouldPromptVerdict={false}
@@ -361,7 +361,7 @@ describe("EntryDetail: the useful reaction", () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<{ useful: boolean }>();
     await renderWithRouter(
-      <EntryDetail
+      <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
         entryId="01ENTRY"
         shouldPromptVerdict={false}
@@ -394,7 +394,7 @@ describe("EntryDetail: the verdict prompt", () => {
     // what spends the budget, so the record happens on mount.
     const recordPrompted = vi.fn(() => Promise.resolve());
     await renderWithRouter(
-      <EntryDetail
+      <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
         entryId="01ENTRY"
         shouldPromptVerdict
@@ -420,7 +420,7 @@ describe("EntryDetail: the verdict prompt", () => {
     const user = userEvent.setup();
     const recordPrompted = vi.fn(() => Promise.resolve());
     await renderWithRouter(
-      <EntryDetail
+      <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
         entryId="01ENTRY"
         shouldPromptVerdict
@@ -462,7 +462,7 @@ describe("EntryDetail: the verdict prompt", () => {
           >
             The prompt arrives
           </button>
-          <EntryDetail
+          <EntryDetail units={{ temp: "f", distance: "mi" }}
             entry={entry()}
             entryId="01ENTRY"
             shouldPromptVerdict={prompt}
@@ -488,7 +488,7 @@ describe("EntryDetail: the verdict prompt", () => {
   it("spends nothing when there is no prompt to show", async () => {
     const recordPrompted = vi.fn(() => Promise.resolve());
     await renderWithRouter(
-      <EntryDetail
+      <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
         entryId="01ENTRY"
         shouldPromptVerdict={false}

@@ -1,7 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { inFahrenheit } from "../../../lib/measures";
+import { formatTemp } from "../../../lib/temperature";
+import type { Units } from "../../../lib/contracts";
 import { Bracketed, Mono, Skeleton } from "../../../ui";
 import { uiGroupLabels } from "../groups";
 import type { PickerGroup } from "../picker";
@@ -74,8 +75,13 @@ export function AttachKit({
   prefillFor,
   pickerGroupsFor,
   attachKit,
+  units,
 }: Readonly<{
   runId: string;
+  /**
+  The viewer's own units — every number on this screen is theirs.
+  */
+  units: Units;
   prefillFor: (input: {
     data: { lat: number; lng: number };
   }) => Promise<PrefillCandidate | undefined>;
@@ -136,7 +142,7 @@ export function AttachKit({
         {!showPicker && prefill && prefill !== "none" ? (
           <div className="flex flex-col gap-3 rounded-xl border border-night/10 p-4">
             <Bracketed className="text-xs text-teal">
-              Most likely · from {inFahrenheit(prefill.conditions.tempC)},{" "}
+              Most likely · from {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
               {Math.round(prefill.feelsLikeDeltaC)}° off
             </Bracketed>
             <button

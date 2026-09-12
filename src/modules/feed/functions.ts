@@ -4,7 +4,9 @@
  * (and only from here) — no business logic lives in `src/routes/feed/`.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { drizzle } from "drizzle-orm/d1";
 
+import { env } from "../../env";
 import { optionalUserId, requireUserId } from "../auth";
 import {
   attachKitInput,
@@ -35,6 +37,7 @@ import { pickerGroups } from "./picker";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { prefillAt } from "./prefill";
 import { otherProfile, ownProfile } from "./profiles";
+import { unitsFor } from "./units";
 import { toggleUsefulReaction } from "./reactions";
 import { searchByDisplayName } from "./search";
 
@@ -160,6 +163,19 @@ export const yourConditionsQuery = createServerFn({ method: "GET" })
     await requireUserId();
     return consensusAt(data.lat, data.lng, Math.floor(Date.now() / 1000));
   });
+
+// ---- Units (D-6) --------------------------------------------------------------
+
+/**
+ * The viewer's own units, for the screens that render measured values.
+ *
+ * `optionalUserId` rather than `requireUserId`: a signed-out viewer still
+ * renders numbers, and gets the defaults. Refusing here would make the
+ * unit preference an auth gate on the feed.
+ */
+export const viewerUnitsQuery = createServerFn({ method: "GET" }).handler(
+  async () => unitsFor(drizzle(env.DIALED_CORE), await optionalUserId()),
+);
 
 // ---- Profiles (G/H) -----------------------------------------------------------
 

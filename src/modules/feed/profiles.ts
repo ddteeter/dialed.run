@@ -19,6 +19,7 @@ import { garmentNamesByIds } from "./garment-names";
 import { bandFloorC, bandLabel } from "../../lib/temperature";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForRuns } from "./conditions";
+import { unitsFor } from "./units";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { followerCount, followingCount } from "./follows";
 
@@ -106,6 +107,8 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
       .where(inArray(runs.id, runIds)),
   );
   const observations = await observationsForRuns(profileRuns);
+  // The ladder is this person's own history, so it reads in their units.
+  const units = await unitsFor(database, userId);
 
   const bands = new Map<number, CoverageBand>();
   let bandRange: { min: number; max: number } | undefined;
@@ -118,10 +121,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     const floor = bandFloorC(judgedFeelsLikeC(observation, entry.verdict));
     const band = bands.get(floor) ?? {
       bandFloorC: floor,
-        // Equivalent mutant on the unit: `bandLabel` reads "c" and treats
-      // everything else as Fahrenheit, so `""` produces the same label.
-      // Stryker disable next-line StringLiteral
-      label: bandLabel(floor, "f"),
+      label: bandLabel(floor, units.temp),
       cold: 0,
       dialed: 0,
       warm: 0,

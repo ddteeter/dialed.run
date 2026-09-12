@@ -103,7 +103,7 @@ const noConditions = () => Promise.resolve(undefined);
 describe("Feed: the following tab", () => {
   it("opens on Following, and offers a way to find runners", async () => {
     await renderWithRouter(
-      <Feed items={[feedItem()]} conditionsFor={noConditions} />,
+      <Feed units={{ temp: "f", distance: "mi" }} items={[feedItem()]} conditionsFor={noConditions} />,
     );
 
     expect(screen.getByRole("heading", { name: "Feed" })).toBeVisible();
@@ -119,7 +119,7 @@ describe("Feed: the following tab", () => {
   it("sends someone with an empty feed to look for runners", async () => {
     // An empty feed is a new account, not a broken one — the way out is
     // the whole content of the state.
-    await renderWithRouter(<Feed items={[]} conditionsFor={noConditions} />);
+    await renderWithRouter(<Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={noConditions} />);
 
     expect(screen.getByText("Nobody you follow has posted yet.")).toBeVisible();
     expect(
@@ -130,7 +130,7 @@ describe("Feed: the following tab", () => {
 
   it("renders one card per entry, linked to it", async () => {
     await renderWithRouter(
-      <Feed
+      <Feed units={{ temp: "f", distance: "mi" }}
         items={[
           feedItem({ entryId: "01A", authorDisplayName: "Drew" }),
           feedItem({ entryId: "01B" }),
@@ -151,7 +151,7 @@ describe("Feed: the following tab", () => {
 
   it("shows the distance, the useful count, and a caption where there is one", async () => {
     await renderWithRouter(
-      <Feed
+      <Feed units={{ temp: "f", distance: "mi" }}
         items={[feedItem({ caption: "Perfect morning", usefulCount: 3 })]}
         conditionsFor={noConditions}
       />,
@@ -164,14 +164,14 @@ describe("Feed: the following tab", () => {
 
   it("omits the caption line entirely when there is none", async () => {
     const { container } = await renderWithRouter(
-      <Feed items={[feedItem()]} conditionsFor={noConditions} />,
+      <Feed units={{ temp: "f", distance: "mi" }} items={[feedItem()]} conditionsFor={noConditions} />,
     );
     expect(container.querySelectorAll("p")).toHaveLength(0);
   });
 
   it("shows the temperature on an entry that has conditions", async () => {
     await renderWithRouter(
-      <Feed
+      <Feed units={{ temp: "f", distance: "mi" }}
         items={[
           feedItem({
             conditions: pointConditions({ tempC: 10, feelsLikeC: 8, condition: "Clear" }),
@@ -201,7 +201,7 @@ describe("Feed: your conditions", () => {
     // reason this is not in the route's loader.
     withLocation({ latitude: 44.98, longitude: -93.27 });
     const conditionsFor = vi.fn(() => Promise.resolve(result));
-    await renderWithRouter(<Feed items={[]} conditionsFor={conditionsFor} />);
+    await renderWithRouter(<Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={conditionsFor} />);
 
     expect(conditionsFor).not.toHaveBeenCalled();
 
@@ -217,7 +217,7 @@ describe("Feed: your conditions", () => {
   it("counts the runners, and each group against that total", async () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
-      <Feed items={[]} conditionsFor={() => Promise.resolve(result)} />,
+      <Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={() => Promise.resolve(result)} />,
     );
 
     await openConditions();
@@ -232,7 +232,7 @@ describe("Feed: your conditions", () => {
   it("says runner, singular, for one", async () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
-      <Feed
+      <Feed units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() =>
           Promise.resolve({ total: 1, groups: { tops: 1 }, widened: false })
@@ -250,7 +250,7 @@ describe("Feed: your conditions", () => {
     // about neighbouring conditions, not these ones.
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
-      <Feed
+      <Feed units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() =>
           Promise.resolve({ total: 2, groups: { tops: 2 }, widened: true })
@@ -268,7 +268,7 @@ describe("Feed: your conditions", () => {
   it("says nobody has logged these conditions when the answer is empty", async () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
-      <Feed
+      <Feed units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() =>
           Promise.resolve({ total: 0, groups: {}, widened: false })
@@ -283,7 +283,7 @@ describe("Feed: your conditions", () => {
 
   it("asks for location when the browser refuses to give it", async () => {
     withLocation();
-    await renderWithRouter(<Feed items={[]} conditionsFor={noConditions} />);
+    await renderWithRouter(<Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={noConditions} />);
 
     await openConditions();
 
@@ -295,7 +295,7 @@ describe("Feed: your conditions", () => {
   it("says the same on a browser with no geolocation at all", async () => {
     withoutGeolocation();
     const conditionsFor = vi.fn(noConditions);
-    await renderWithRouter(<Feed items={[]} conditionsFor={conditionsFor} />);
+    await renderWithRouter(<Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={conditionsFor} />);
 
     await openConditions();
 
@@ -307,7 +307,7 @@ describe("Feed: your conditions", () => {
 
   it("says the same when the server has no consensus to give", async () => {
     withLocation({ latitude: 1, longitude: 2 });
-    await renderWithRouter(<Feed items={[]} conditionsFor={noConditions} />);
+    await renderWithRouter(<Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={noConditions} />);
 
     await openConditions();
 
@@ -320,7 +320,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     const pending = Promise.withResolvers<ConsensusResult | undefined>();
     const { container } = await renderWithRouter(
-      <Feed items={[]} conditionsFor={() => pending.promise} />,
+      <Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={() => pending.promise} />,
     );
 
     await openConditions();
@@ -336,7 +336,7 @@ describe("Feed: your conditions", () => {
     // by hue alone.
     withLocation({ latitude: 1, longitude: 2 });
     const user = userEvent.setup();
-    await renderWithRouter(<Feed items={[]} conditionsFor={noConditions} />);
+    await renderWithRouter(<Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={noConditions} />);
 
     const following = screen.getByRole("button", { name: "Following" });
     const conditions = screen.getByRole("button", { name: "Your conditions" });
@@ -375,7 +375,7 @@ describe("Feed: your conditions", () => {
           >
             Swap the query
           </button>
-          <Feed items={[]} conditionsFor={query} />
+          <Feed units={{ temp: "f", distance: "mi" }} items={[]} conditionsFor={query} />
         </>
       );
     }
@@ -393,7 +393,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     const user = userEvent.setup();
     await renderWithRouter(
-      <Feed items={[feedItem()]} conditionsFor={() => Promise.resolve(result)} />,
+      <Feed units={{ temp: "f", distance: "mi" }} items={[feedItem()]} conditionsFor={() => Promise.resolve(result)} />,
     );
 
     await openConditions();

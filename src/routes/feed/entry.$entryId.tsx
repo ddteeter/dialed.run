@@ -8,6 +8,7 @@ import {
   recordVerdictPromptedAction,
   toggleUsefulAction,
   verdictPromptQuery,
+  viewerUnitsQuery,
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { Layout } from "../../ui";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
     );
     return {
       entry,
+      units: await viewerUnitsQuery(),
       shouldPromptVerdict: await shouldAskForVerdict(entry, session.user.id, () =>
         verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
@@ -33,13 +35,14 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
 
 function EntryDetailPage() {
   const { entryId } = Route.useParams();
-  const { entry, shouldPromptVerdict } = Route.useLoaderData();
+  const { entry, shouldPromptVerdict, units } = Route.useLoaderData();
 
   return (
     <Layout>
       <EntryDetail
         entry={entry}
         entryId={entryId}
+        units={units}
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
         toggleUseful={toggleUsefulAction}
