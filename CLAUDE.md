@@ -65,10 +65,26 @@ src/
   what keeps `src/modules/**/*.tsx` in the mutation ratchet.
 - Nothing imports from `routes/`; route files import modules, never each other.
 - **A route is in the client bundle, so what it imports at module scope must
-  be reachable without `env`.** Server functions and `server.handlers` are
-  stripped by the Start plugin, so reaching bindings *through* those is fine —
-  what is not fine is a plain top-level import of a module file that reaches
-  `src/env` or `src/db/schema*`. Pulling one decision out of `feed/entries.ts`
+  be reachable without `env`.** Server functions and `server.handlers` have
+  their *handler bodies* replaced by the Start plugin, so reaching bindings
+  *through* those is fine — what is not fine is a plain top-level import of a
+  module file that reaches `src/env` or `src/db/schema*`.
+
+  **What survives the strip is a module-scope call rollup cannot prove
+  pure**, and nothing else. The handler body goes, and everything only it
+  used goes with it — measured: the shipped chunk holds no
+  `onConflictDoUpdate` and not even a string constant from a parser module.
+  But `const x = new XMLParser({…})` and `export const runs = sqliteTable(…)`
+  are side effects it must keep, and keeping one keeps its whole library. Two
+  of those were a quarter of the 354 kB client entry chunk (D-50, fixed
+  2026-09-11: −89 kB). So **construct on first use, not at module scope**, and
+  annotate a pure-but-unprovable constructor `/*#__PURE__*/`.
+
+  **Nothing fails while this is wrong**, which is why it lasted: the broken
+  `npm run build` below is specific to the *binding* import, because
+  `cloudflare:workers` is externalised rather than bundled. Everything else is
+  silent. `npm run check:bundle` reads the built chunk for server-only
+  markers, and `test/architecture/client-bundle.test.ts` pins the fixes. Pulling one decision out of `feed/entries.ts`
   into a route loader dragged `cloudflare:workers` into the browser bundle and
   broke `npm run build`; a second did the same with the whole drizzle schema,
   23kB of it, and that one did not even fail. **Neither is visible to tsc, to

@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { runDraftSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
-import { ImportUploadError, MAX_IMPORT_BYTES } from "./imports";
+import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 
