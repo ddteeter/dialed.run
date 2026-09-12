@@ -18,12 +18,22 @@ honest ladder instead of a promise.
   −2 "Sweating in a t-shirt at 40°". Today that mapping lives in a *comment*
   on `thermalLevelSchema`, and onboarding plus settings-recalibrate would
   otherwise each restate it. Pinned against `thermalLevelSchema`'s range.
-- **`climateBandFor(lat)`** in `onboarding/climate.ts`, documented at the
-  site: |lat| ≥ 45 → `cold`, ≥ 30 → `mild`, else `hot`. Latitude alone, no
-  table — the packet allows "rough … from latitude", and Minneapolis (45.0)
-  landing `cold` while Phoenix (33.4) lands `mild` is the case it names.
-  Permission denied or no location → `mild`, the band whose list is a
-  superset of neither extreme.
+- **The climate band, revised twice while building, and both times by
+  checking rather than by preference.**
+  1. `climateBandFor(lat)` — latitude alone — was the plan. Its boundary
+     was written as 45, which put Minneapolis (44.98) in `mild`: the
+     packet's own worked example, failed by the code meant to satisfy it.
+     Now 40/30, with `Math.abs` for the southern hemisphere.
+  2. The owner asked whether latitude is reliable enough. It is not:
+     against measured normals it is wrong for **four of five** cities
+     (Phoenix, Seattle, Denver, Reykjavík). Visual Crossing answers this on
+     the endpoint we already use — `include=stats` — so `resolveClimateBand`
+     reads normals and **falls back to latitude**, which is why the
+     heuristic stays rather than being deleted (law 5: onboarding must not
+     block on a third party).
+  Permission denied or no location → `mild`, and no provider call at all.
+  Since round 6 the band only *orders* the list, so a wrong band costs a
+  scroll rather than a garment.
 - **Steps are routes, not a wizard component**: `/onboarding/calibrate`,
   `/thermal`... each writes on submit and redirects, so a bail keeps what
   was answered. `onboarding_complete` flips only at P3.
@@ -36,8 +46,9 @@ honest ladder instead of a promise.
 - Schema changes needed: **none.** `onboarding_complete`, `city_label`,
   `thermal_level`, `temp_unit`, `distance_unit` all already exist — checked
   before designing, since requirement 6 reads like it wants a new flag.
-- New route files: `src/routes/onboarding/{calibrate,taplist,name,done,
-  settings}.tsx`, `src/routes/call/index.tsx`.
+- New route files: `src/routes/onboarding/{calibrate,taplist,done}.tsx` and
+  `src/routes/call/index.tsx` are built; `{name,settings}.tsx` are P2.5 and
+  the settings surface, still to come.
 - New bindings/queues/crons: **none.**
 - Screens: O1, O3, O6 (ladder), P3. **P2.5 has no artboard** — product.md
   already says "needs design", so it ships under the placeholder protocol:
@@ -58,18 +69,43 @@ honest ladder instead of a promise.
   without re-running the rest.
 - Ladder: bucket counts, the 0-verdict state, and threshold-reached copy.
 
+## What O3 became (design round 6, §AA)
+
+The packet describes a per-band list. Design replaced that while this lane
+was building: **one `TAP_LIST`, ranked per band, folded at 14**, and the
+band never removes a row — *a Minneapolis runner owns tights and a
+singlet*. `TapListForm` is built to the six rules that came with it; the
+two that are easiest to lose are **nothing arrives ticked** (so the
+component has no prop for a starting selection, deliberately) and **the
+disclosure states the real remainder** (so nothing hardcodes design's "10
+more", which was true of 24 rows and is not true of the 18 that exist —
+D-49).
+
+Two things that fell out of building it, both recorded at their sites:
+
+- **`tapListSelectionSchema` moved to `lib/contracts.ts`.** The form needs
+  the same schema object the server validates with, and a component may not
+  import `modules/closet`'s barrel — it re-exports the service, which
+  reaches `db/schema`. That is CLAUDE.md's own escape hatch for this exact
+  case.
+- **`addFromTapList` dedupes.** The screen holds a `Set`, so it was the
+  payload it did *not* build — a retry, a hand-made request — that could
+  create the same beanie twice. Deduping there is also what let the schema
+  drop a length cap that was never the real bound.
+
 ## Open questions
 
-Two touch files this packet does not list as mine, and both are implied by
-requirement 5 rather than optional. Proceeding, flagged for veto:
+Both resolved in build, and both touched files outside the packet's
+ownership list with the owner's go-ahead:
 
-1. **`src/modules/feed/index.ts` does not exist**, so "reads via the feed
-   module's public API" has no API to read. I intend to create it exporting
-   the coverage read only. That fixes feed's public surface, which is
-   arguably the feed lane's call.
-2. **The Call tab links to `/`** in `src/ui/TabBar.tsx`. A Call route that
-   the Call tab does not reach is not the requirement. D-31 (tab bar renders
-   text, not glyphs) touches the same file and is folded in.
+1. **`src/modules/feed/index.ts` did not exist**, so "reads via the feed
+   module's public API" had no API to read. Created, exporting the coverage
+   read and nothing else.
+2. **The Call tab linked to `/`** in `src/ui/TabBar.tsx`; it now reaches
+   `/call`. D-31 (tab bar renders text, not glyphs) touches the same file
+   and stays deferred to its own PR, because it is visible and wants its own
+   demo.
 
-Also: no settings surface exists yet from 104, so `onboarding/settings.tsx`
-is the first, and owns units + share default + recalibrate.
+Still open: no settings surface exists yet from 104, so
+`onboarding/settings.tsx` will be the first, and owns units + share default
++ recalibrate.

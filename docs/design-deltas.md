@@ -15,6 +15,19 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+5. **Onboarding's steps are inside the app's page column, and the
+   artboards draw them full-bleed.** O1, O3 and P3 are each a card with
+   their own internal structure and no app heading; `src/routes/onboarding/*`
+   renders them inside `ui/Page`, which adds an `<h1>` above each. A heading
+   is not optional — a screen with none is an accessibility failure — so the
+   three are design's own copy where it exists ("One question does most of
+   the work", O1) and new where it does not ("Start your closet" for O3,
+   chosen to avoid repeating that screen's own "TAP WHAT YOU OWN" caption).
+   **The question for design is whether these steps should sit in the page
+   column at all**, or be full-bleed like the artboards, in which case the
+   heading moves inside the card and the copy is design's to write. Raised
+   by lane 105 while building; nothing is blocked either way.
+
 1. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
    Epic 200 opens, incl. multi-part fabric display on garment/product
    detail (D-34) if composition surfaces there. The Call tab's own glyph

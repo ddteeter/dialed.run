@@ -25,6 +25,21 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/routes/onboarding/calibrate.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "Two steps of one onboarding flow. server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ — so the shape is mandated, not copied. Same class as the five route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx).",
+      "count": 1
+    },
+    {
+      "key": "src/routes/onboarding/taplist.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "The other half of the calibrate.tsx pair; fallow reports both sides of a clone group. See that entry.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/onboarding/starter-list.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the query is the same read as feed/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since \"no location\" and \"no unit preference\" are different facts with different right answers",
+      "reason": "Same two-column read of user_profiles as feed/units.ts's unitsFor, and the extraction into lib/keyed-read provably does not compile: drizzle infers a row type for a literal column map and stops for a generic one, widening select().from().where() to a union that includes the query builder, so the awaited value is neither iterable nor indexable. Four shapes were tried (annotated result, .all(), .execute(), a generic table param) — the same class of failure CLAUDE.md already records for wrapping createServerFn. What differs after the query is the part that matters: “no location” and “no unit preference” are different facts with different right answers.",
+      "count": 1
+    },
+    {
       "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
       "reason": "Equivalent mutant, proof at the site: a heavy OUTER layer has no lower bound (nothing goes over it), so estimateTempRange drops this floor before returning and no input can distinguish -4 from +4. Hoisted to a named constant because a Stryker directive cannot attach inside an object literal.",
       "count": 1

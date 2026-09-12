@@ -22,6 +22,9 @@ import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
+import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
+import { Route as OnboardingDoneRouteImport } from './routes/onboarding/done'
+import { Route as OnboardingTaplistRouteImport } from './routes/onboarding/taplist'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as RunsManualRouteImport } from './routes/runs/manual'
@@ -101,6 +104,21 @@ const FeedSearchRoute = FeedSearchRouteImport.update({
 const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
   id: '/notifications/',
   path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingCalibrateRoute = OnboardingCalibrateRouteImport.update({
+  id: '/onboarding/calibrate',
+  path: '/onboarding/calibrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
+  id: '/onboarding/done',
+  path: '/onboarding/done',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingTaplistRoute = OnboardingTaplistRouteImport.update({
+  id: '/onboarding/taplist',
+  path: '/onboarding/taplist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RunsIndexRoute = RunsIndexRouteImport.update({
@@ -189,6 +207,9 @@ export interface FileRoutesByFullPath {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/onboarding/calibrate': typeof OnboardingCalibrateRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
@@ -219,6 +240,9 @@ export interface FileRoutesByTo {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/onboarding/calibrate': typeof OnboardingCalibrateRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
@@ -250,6 +274,9 @@ export interface FileRoutesById {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/onboarding/calibrate': typeof OnboardingCalibrateRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
@@ -282,6 +309,9 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/onboarding/calibrate'
+    | '/onboarding/done'
+    | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
@@ -312,6 +342,9 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/onboarding/calibrate'
+    | '/onboarding/done'
+    | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
@@ -342,6 +375,9 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/onboarding/calibrate'
+    | '/onboarding/done'
+    | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
@@ -373,6 +409,9 @@ export interface RootRouteChildren {
   ClosetNewRoute: typeof ClosetNewRoute
   FeedMeRoute: typeof FeedMeRoute
   FeedSearchRoute: typeof FeedSearchRoute
+  OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
+  OnboardingDoneRoute: typeof OnboardingDoneRoute
+  OnboardingTaplistRoute: typeof OnboardingTaplistRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsManualRoute: typeof RunsManualRoute
   RunsNewRoute: typeof RunsNewRoute
@@ -485,6 +524,27 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications/'
       preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/calibrate': {
+      id: '/onboarding/calibrate'
+      path: '/onboarding/calibrate'
+      fullPath: '/onboarding/calibrate'
+      preLoaderRoute: typeof OnboardingCalibrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/done': {
+      id: '/onboarding/done'
+      path: '/onboarding/done'
+      fullPath: '/onboarding/done'
+      preLoaderRoute: typeof OnboardingDoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/taplist': {
+      id: '/onboarding/taplist'
+      path: '/onboarding/taplist'
+      fullPath: '/onboarding/taplist'
+      preLoaderRoute: typeof OnboardingTaplistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/runs/': {
@@ -605,6 +665,9 @@ const rootRouteChildren: RootRouteChildren = {
   ClosetNewRoute: ClosetNewRoute,
   FeedMeRoute: FeedMeRoute,
   FeedSearchRoute: FeedSearchRoute,
+  OnboardingCalibrateRoute: OnboardingCalibrateRoute,
+  OnboardingDoneRoute: OnboardingDoneRoute,
+  OnboardingTaplistRoute: OnboardingTaplistRoute,
   RunsRunIdRoute: RunsRunIdRoute,
   RunsManualRoute: RunsManualRoute,
   RunsNewRoute: RunsNewRoute,
