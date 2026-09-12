@@ -528,6 +528,36 @@ export const thermalLevelSchema = z
  *
  * Copy is the design's own (`design/Onboarding.dc.html`, O1).
  */
+/**
+ * What one step of the thermal scale is worth, in °C.
+ *
+ * It was a *comment* on `thermalLevelSchema` — "Degree mapping (code, not
+ * DB): level × 2.2 °C" — and nothing implemented it, so O1 could not show
+ * the offset its own design copy promises ("The offset is visible on
+ * purpose. You'll see it change as we learn."). A number described in prose
+ * and used nowhere is the shape a wrong number hides in.
+ */
+export const THERMAL_LEVEL_C = 2.2;
+
+/**
+ * The offset a thermal level implies, in the unit asked for.
+ *
+ * **A temperature *difference*, so Fahrenheit is ×9/5 and never +32.** That
+ * is the whole reason this is a function and not two call sites: converting
+ * a delta with the absolute formula is a classic bug, and it would be an
+ * invisible one here — +8° would read as +40°, which is not obviously
+ * absurd on a screen that is talking about how warm someone runs.
+ *
+ * Rounded to whole degrees, which is what the artboard shows: +8°, +4°, 0°,
+ * −4°, −8° in Fahrenheit. The precision is not real — 2.2°C per step is
+ * itself a round number — and a runner is being told roughly how much more
+ * clothing they need, not a measurement.
+ */
+export function thermalOffset(level: number, unit: TempUnit): number {
+  const celsius = level * THERMAL_LEVEL_C;
+  return Math.round(unit === "f" ? celsius * 1.8 : celsius);
+}
+
 export const thermalScale = [
   { value: 2, token: "always_freezing", label: "Always freezing" },
   { value: 1, token: "little_cold", label: "Run a little cold" },
@@ -583,3 +613,36 @@ export const CALL_VERDICT_THRESHOLD = 15;
  * looks finished, which is the screen's whole emotional job.
  */
 export const BAND_COVERED_VERDICTS = 3;
+
+/**
+ * What O3 sends back: the keys a runner tapped.
+ *
+ * **Here rather than in `closet/tap-list.ts`, and that is the documented
+ * escape hatch rather than a preference.** The form needs the *same schema
+ * object* the server validates with — that is what "one schema, run twice"
+ * means — and a component cannot import `modules/closet`'s barrel: the
+ * barrel re-exports `./service`, which pulls `db/schema`, and a route that
+ * imports it ships 23kB of drizzle to the browser without failing anything
+ * (CLAUDE.md, the client-bundle rule). Deep-importing the one pure file is
+ * a boundary violation. So the shared contract moves to `lib/`, which is
+ * exactly what "move the shared constants to lib/ where both sides can
+ * import them" says to do.
+ *
+ * No upper bound on the array. It used to carry `.max(TAP_LIST.length)`,
+ * which looked like a guard and was not one: the length that matters is
+ * the number of *distinct known* keys, and `addFromTapList` now dedupes and
+ * skips unknowns, so a padded payload creates nothing either way. Keeping
+ * the bound here would also have meant keeping this file's knowledge of how
+ * long that table is, which is the coupling the move exists to remove.
+ */
+export const tapListSelectionSchema = z.object({
+  // The message is what a zero-tap "Next" says, and it names the way out:
+  // O3 is skippable, and design's rule is that Next is live from the first
+  // tap. A `disabled` button is how that is usually drawn and is forbidden
+  // by §Forms & failure — it drops focus and announces nothing — so the
+  // sentence does the job the grey button was drawn to do, out loud.
+  keys: z
+    .array(z.string())
+    .min(1, { message: "Tap what you own, or skip for now." }),
+});
+export type TapListSelection = z.infer<typeof tapListSelectionSchema>;

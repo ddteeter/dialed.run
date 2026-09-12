@@ -56,11 +56,18 @@ export function FormStatus({ children }: Readonly<{ children?: string }>) {
  * string: `FormField` and `ChoiceList` both need it, and a second copy is
  * how one of them ends up marking an error some other way.
  *
+ * Exported for the third caller, which is neither: O3's tap-list is a grid
+ * of toggles whose one error belongs to the group rather than to any chip.
+ * A control that does not fit `FormField`'s bordered box still owes the
+ * user the same sentence in the same place, and the alternative to
+ * exporting this is that control writing its own — the drift one layer
+ * down that §Forms & failure exists to stop.
+ *
  * The `id` is what `field()`'s `aria-describedby` points at, so the
  * message and the control that owns it agree without either restating the
  * convention.
  */
-function FieldMessage({
+export function FieldMessage({
   name,
   error,
 }: Readonly<{ name: string; error: string | undefined }>): JSX.Element | undefined {
@@ -455,8 +462,10 @@ export function ToggleField({
 export function ChoiceList<TOption extends string>({
   name,
   legend,
+  hint,
   options,
   optionLabels,
+  optionNotes,
   value,
   field,
   onChange,
@@ -464,6 +473,21 @@ export function ChoiceList<TOption extends string>({
 }: Readonly<
   ChoosableProps<TOption> & {
     legend: string;
+    /**
+    One sentence under the group, for what the answer is used for.
+    */
+    hint?: string | undefined;
+    /**
+     * A measured value shown beside each option — O1's `+8°` offsets.
+     *
+     * Mono, because that is what mono is for: the tell that a number came
+     * from the system rather than from a person. It sits *inside* the
+     * label, so it joins the option's accessible name ("Always freezing
+     * plus 8 degrees") instead of being decoration a screen reader skips —
+     * which matters here, since design's whole point is that the offset is
+     * visible on purpose.
+     */
+    optionNotes?: Readonly<Record<TOption, string>> | undefined;
     value: TOption | undefined;
     onChange: (value: TOption) => void;
   }
@@ -488,8 +512,16 @@ export function ChoiceList<TOption extends string>({
             }}
           />
           {optionLabels[option]}
+          {optionNotes === undefined ? undefined : (
+            <span className="ml-auto font-mono text-[13px] font-normal tabular-nums text-night/60">
+              {optionNotes[option]}
+            </span>
+          )}
         </label>
       ))}
+      {hint !== undefined && error === undefined ? (
+        <span className="text-xs leading-snug text-night/50">{hint}</span>
+      ) : undefined}
       <FieldMessage name={name} error={error} />
     </fieldset>
   );

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -14,6 +14,7 @@ const DEFAULTS = { temp: "f", distance: "mi" } as const;
 function renderForm(
   overrides: {
     locate?: () => Promise<{ lat: number; lng: number } | undefined>;
+    onSaved?: () => void;
   } = {},
 ) {
   // Typed and echoing its input, so `mock.calls[0]` has a shape.
@@ -23,6 +24,7 @@ function renderForm(
       defaults={DEFAULTS}
       locate={overrides.locate ?? (() => Promise.resolve(undefined))}
       saveCalibration={save}
+      onSaved={overrides.onSaved ?? vi.fn()}
     />,
   );
   return save;
@@ -37,10 +39,53 @@ describe("CalibrateForm", () => {
         name: "Compared to people you run with, do you run warm or cold?",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Always freezing")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Always freezing/)).toBeInTheDocument();
     expect(
-      screen.getByLabelText("Sweating in a t-shirt at 40°"),
+      screen.getByLabelText(/^Sweating in a t-shirt at 40°/),
     ).toBeInTheDocument();
+  });
+
+  it("shows the offset, because design says it is visible on purpose", () => {
+    // Requirement 1 names this copy. The numbers are the artboard's:
+    // +8°/+4°/0°/−4°/−8° in Fahrenheit, from 2.2°C per step.
+    renderForm();
+
+    // A tuple array, so both halves are typed and neither needs a non-null
+    // assertion to destructure. The minus is U+2212, which is what the
+    // component renders: a hyphen sits at the wrong height in mono.
+    const offsets: readonly (readonly [string, string])[] = [
+      ["Always freezing", "+8\u{00B0}"],
+      ["Run a little cold", "+4\u{00B0}"],
+      ["About average", "0\u{00B0}"],
+      ["Run a little warm", "\u{2212}4\u{00B0}"],
+      ["Sweating in a t-shirt at 40°", "\u{2212}8\u{00B0}"],
+    ];
+    for (const [answer, offset] of offsets) {
+      expect(
+        screen.getByLabelText(new RegExp(`^${answer}`)).closest("label"),
+      ).toHaveTextContent(offset);
+    }
+    expect(
+      screen.getByText(
+        "The offset is visible on purpose. You'll see it change as we learn.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("moves the offsets when the unit changes", () => {
+    // A temperature *difference*: Fahrenheit is ×9/5, never +32. Getting
+    // that wrong turns +8° into +40°, which is wrong and not obviously so.
+    renderForm();
+
+    const alwaysFreezing = () =>
+      screen.getByLabelText(/^Always freezing/).closest("label");
+    expect(alwaysFreezing()).toHaveTextContent("+8°");
+
+    fireEvent.change(screen.getByLabelText("Temperature"), {
+      target: { value: "c" },
+    });
+
+    expect(alwaysFreezing()).toHaveTextContent("+4°");
   });
 
   it("finishes on the one required answer", async () => {
@@ -49,7 +94,7 @@ describe("CalibrateForm", () => {
     const user = userEvent.setup();
     const save = renderForm();
 
-    await user.click(screen.getByLabelText("Always freezing"));
+    await user.click(screen.getByLabelText(/^Always freezing/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save).toHaveBeenCalledWith({
@@ -70,7 +115,7 @@ describe("CalibrateForm", () => {
     const user = userEvent.setup();
     const save = renderForm();
 
-    await user.click(screen.getByLabelText("Sweating in a t-shirt at 40°"));
+    await user.click(screen.getByLabelText(/^Sweating in a t-shirt at 40°/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
@@ -98,7 +143,7 @@ describe("CalibrateForm", () => {
     const user = userEvent.setup();
     const save = renderForm();
 
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.type(screen.getByLabelText("Where you run"), "  Seattle, WA  ");
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
@@ -116,7 +161,7 @@ describe("CalibrateForm", () => {
     await user.click(screen.getByRole("button", { name: "Use my location" }));
     expect(await screen.findByText("Got it.")).toBeVisible();
 
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
@@ -136,7 +181,7 @@ describe("CalibrateForm", () => {
     ).toBeVisible();
     expect(screen.queryByText(/didn't work|try again/i)).toBeNull();
 
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save).toHaveBeenCalledTimes(1);
@@ -166,7 +211,7 @@ describe("CalibrateForm", () => {
 
     await user.selectOptions(screen.getByLabelText("Temperature"), "c");
     await user.selectOptions(screen.getByLabelText("Distance"), "km");
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
@@ -206,7 +251,7 @@ describe("CalibrateForm", () => {
     const save = renderForm();
 
     await user.selectOptions(screen.getByLabelText("Temperature"), "");
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
@@ -221,7 +266,7 @@ describe("CalibrateForm", () => {
     const save = renderForm();
 
     await user.selectOptions(screen.getByLabelText("Distance"), "");
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
@@ -233,7 +278,7 @@ describe("CalibrateForm", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(await screen.findByText("Calibrated.")).toBeVisible();
@@ -244,7 +289,7 @@ describe("CalibrateForm", () => {
     // navigates away mid-submit and the handler's result is lost.
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
 
     let prevented: boolean | undefined;
     const watch = (event: Event) => {
@@ -266,7 +311,7 @@ describe("CalibrateForm", () => {
     const user = userEvent.setup();
     const save = renderForm();
 
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
     await user.click(screen.getByRole("button", { name: "Start running" }));
 
     expect(save.mock.calls[0]?.[0].data.cityLabel).toBeUndefined();
@@ -277,7 +322,7 @@ describe("CalibrateForm", () => {
     // announcing. The double-submit guard lives in the handler.
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByLabelText("About average"));
+    await user.click(screen.getByLabelText(/^About average/));
 
     const submit = screen.getByRole("button", { name: "Start running" });
     await user.click(submit);

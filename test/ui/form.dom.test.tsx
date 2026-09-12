@@ -1168,10 +1168,13 @@ describe("ChoiceList", () => {
   const LEVELS = ["hot", "mild", "cold"] as const;
   const LABELS = { hot: "Runs hot", mild: "About average", cold: "Runs cold" };
 
+  const NOTES = { hot: "\u{2212}8\u{00B0}", mild: "0\u{00B0}", cold: "+8\u{00B0}" };
+
   function renderList(
     onChange: (value: "hot" | "mild" | "cold") => void,
     value?: "hot" | "mild" | "cold",
     error?: string,
+    extras: { notes?: typeof NOTES; hint?: string } = {},
   ) {
     return render(
       <ChoiceList
@@ -1179,6 +1182,8 @@ describe("ChoiceList", () => {
         legend="Do you run warm or cold?"
         options={LEVELS}
         optionLabels={LABELS}
+        optionNotes={extras.notes}
+        hint={extras.hint}
         value={value}
         field={restingField}
         onChange={onChange}
@@ -1247,5 +1252,44 @@ describe("ChoiceList", () => {
     renderList(vi.fn());
 
     expect(screen.queryByText(/Pick one/)).toBeNull();
+  });
+
+  it("puts a note inside the option's own name, in mono", () => {
+    // O1's offsets. Inside the label, so a screen reader announces "Runs
+    // cold plus 8 degrees" rather than skipping a number design put there
+    // on purpose; mono, because it is a measured value and that is what
+    // mono means in this system.
+    renderList(vi.fn(), undefined, undefined, { notes: NOTES });
+
+    const cold = screen.getByLabelText(/^Runs cold/);
+    expect(cold).toHaveAccessibleName("Runs cold +8\u{00B0}");
+    expect(screen.getByText("+8\u{00B0}")).toHaveClass("font-mono");
+  });
+
+  it("leaves the names alone when there are no notes", () => {
+    // The default, and every other caller. A group that appended an empty
+    // span would still change the name.
+    renderList(vi.fn());
+
+    expect(screen.getByLabelText("Runs cold")).toHaveAccessibleName(
+      "Runs cold",
+    );
+  });
+
+  it("shows the hint, and gives way to the error", () => {
+    // Same rule `FormField` follows: a hint explains, a message corrects,
+    // and showing both at once makes the reader decide which one is
+    // addressed to them.
+    const { unmount } = renderList(vi.fn(), undefined, undefined, {
+      hint: "The offset is visible on purpose.",
+    });
+    expect(screen.getByText("The offset is visible on purpose.")).toBeVisible();
+    unmount();
+
+    renderList(vi.fn(), undefined, "Pick one to carry on.", {
+      hint: "The offset is visible on purpose.",
+    });
+    expect(screen.queryByText("The offset is visible on purpose.")).toBeNull();
+    expect(screen.getByText("Pick one to carry on.")).toBeVisible();
   });
 });

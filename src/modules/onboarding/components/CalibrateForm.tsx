@@ -3,7 +3,9 @@ import { useState } from "react";
 
 import {
   distanceUnitSchema,
+  defaultUnits,
   tempUnitSchema,
+  thermalOffset,
   thermalScale,
 } from "../../../lib/contracts";
 import type { DistanceUnit, TempUnit, Units } from "../../../lib/contracts";
@@ -37,6 +39,34 @@ const THERMAL_LABELS = Object.fromEntries(
   thermalScale.map((entry) => [String(entry.value), entry.label]),
 );
 
+/**
+ * `+8°` … `−8°`, in whichever unit is currently selected.
+ *
+ * **Design's requirement, not decoration**: *"The offset is visible on
+ * purpose. You'll see it change as we learn."* A calibration that showed
+ * only words would be asking someone to trust a number they are never
+ * shown, and the packet names this copy explicitly.
+ *
+ * Recomputed from the unit rather than stored, so switching to Celsius
+ * moves the offsets with it — which is the honest behaviour and also the
+ * cheapest: there is one mapping, in `thermalOffset`.
+ *
+ * The minus sign is U+2212, not a hyphen: it is a measured value in mono,
+ * where a hyphen sits at the wrong height and the wrong width.
+ */
+function offsetLabels(unit: TempUnit): Record<string, string> {
+  return Object.fromEntries(
+    thermalScale.map((entry) => {
+      const degrees = thermalOffset(entry.value, unit);
+      const sign = degrees > 0 ? "+" : "";
+      return [
+        String(entry.value),
+        `${sign}${String(degrees).replace("-", "\u{2212}")}°`,
+      ];
+    }),
+  );
+}
+
 const TEMP_LABELS: Readonly<Record<TempUnit, string>> = {
   f: "Fahrenheit",
   c: "Celsius",
@@ -61,6 +91,7 @@ export function CalibrateForm({
   defaults,
   locate,
   saveCalibration,
+  onSaved,
 }: Readonly<{
   /**
   Units guessed from the browser's locale, editable here.
@@ -73,6 +104,14 @@ export function CalibrateForm({
    */
   locate: () => Promise<{ lat: number; lng: number } | undefined>;
   saveCalibration: (input: { data: Calibration }) => Promise<unknown>;
+  /**
+   * Where O1 goes next. A prop rather than a `navigate` inside the action,
+   * because the contract is announce-*then*-move (D-44): `useFormSubmit`
+   * waits a macrotask after setting the success sentence so the live region
+   * is read before the route unmounts it, and a navigation folded into the
+   * action would happen before the announcement instead of after it.
+   */
+  onSaved: () => void;
 }>): JSX.Element {
   const [thermalLevel, setThermalLevel] = useState<string | undefined>();
   const [cityLabel, setCityLabel] = useState("");
@@ -85,6 +124,7 @@ export function CalibrateForm({
   const form = useFormSubmit({
     schema: calibrationInput,
     action: (values) => saveCalibration({ data: values }),
+    onSuccess: onSaved,
     successMessage: "Calibrated.",
     labels: LABELS,
   });
@@ -118,6 +158,8 @@ export function CalibrateForm({
         legend="Compared to people you run with, do you run warm or cold?"
         options={THERMAL_OPTIONS}
         optionLabels={THERMAL_LABELS}
+        optionNotes={offsetLabels(tempUnit === "" ? defaultUnits.temp : tempUnit)}
+        hint="The offset is visible on purpose. You'll see it change as we learn."
         value={thermalLevel}
         field={form.field}
         onChange={setThermalLevel}

@@ -156,15 +156,32 @@ describe("tapListSelectionSchema", () => {
     expect(parsed).not.toHaveProperty("band");
   });
 
-  it("caps the selection at the whole table", () => {
+  it("does not cap the array, because length was never the bound", () => {
+    // It used to carry `.max(TAP_LIST.length)`, which looked like a guard
+    // and was not one: what bounds the work is the number of *distinct
+    // known* keys, and `addFromTapList` enforces both by deduping and
+    // skipping unknowns. The cap's only real effect was to reject a
+    // payload that repeated a key — a request that should create one
+    // garment, not an error — and to make this schema's home depend on
+    // how long that table is, which is what stopped it living in `lib/`
+    // where O3's form can reach it.
     const everything = TAP_LIST.map((row) => row.key);
 
-    expect(tapListSelectionSchema.safeParse({ keys: everything }).success).toBe(
-      true,
-    );
     expect(
-      tapListSelectionSchema.safeParse({ keys: [...everything, "extra"] })
+      tapListSelectionSchema.safeParse({ keys: [...everything, "tee", "tee"] })
         .success,
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("says what to do about an empty selection, not what is wrong with it", () => {
+    // O3's zero-tap "Next" lands here, and the forms contract forbids the
+    // grey disabled button that would otherwise have said this silently.
+    // So the sentence has to name the way out.
+    const failed = tapListSelectionSchema.safeParse({ keys: [] });
+
+    expect(failed.success).toBe(false);
+    expect(failed.error?.issues[0]?.message).toBe(
+      "Tap what you own, or skip for now.",
+    );
   });
 });

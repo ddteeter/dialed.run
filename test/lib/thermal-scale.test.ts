@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { thermalLevelSchema, thermalScale } from "../../src/lib/contracts";
+import {
+  THERMAL_LEVEL_C,
+  thermalLevelSchema,
+  thermalOffset,
+  thermalScale,
+} from "../../src/lib/contracts";
 
 /**
  * The five answers to O1, pinned against the schema that stores them.
@@ -40,5 +45,37 @@ describe("thermalScale", () => {
   it("gives every answer its own token and its own words", () => {
     expect(new Set(thermalScale.map((e) => e.token)).size).toBe(thermalScale.length);
     expect(new Set(thermalScale.map((e) => e.label)).size).toBe(thermalScale.length);
+  });
+});
+
+/**
+ * The offset O1 shows beside each answer — the other half of the mapping
+ * that used to be a comment.
+ */
+describe("thermalOffset", () => {
+  it("matches the artboard, in Fahrenheit", () => {
+    // O1 draws +8°, +4°, 0°, −4°, −8°. Those are the numbers a runner sees,
+    // so they are what this pins — not the °C the app stores.
+    expect(thermalScale.map((entry) => thermalOffset(entry.value, "f")))
+      .toStrictEqual([8, 4, 0, -4, -8]);
+  });
+
+  it("converts a difference, never an absolute temperature", () => {
+    // The bug this function exists to prevent: `c * 1.8 + 32` turns +8 into
+    // +40, and +40 on a screen about how warm someone runs is wrong in a
+    // way nobody would notice. Zero is the tell — a delta of 0°C is 0°F,
+    // and an absolute conversion makes it 32.
+    expect(thermalOffset(0, "f")).toBe(0);
+  });
+
+  it("gives Celsius the step it is defined in", () => {
+    expect(thermalOffset(2, "c")).toBe(Math.round(2 * THERMAL_LEVEL_C));
+    expect(thermalOffset(-2, "c")).toBe(-Math.round(2 * THERMAL_LEVEL_C));
+  });
+
+  it("is symmetric, because the scale is", () => {
+    for (const { value } of thermalScale) {
+      expect(thermalOffset(value, "f")).toBe(-thermalOffset(-value, "f"));
+    }
   });
 });

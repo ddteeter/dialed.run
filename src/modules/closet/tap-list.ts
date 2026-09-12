@@ -11,6 +11,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { garmentSchema } from "../../lib/contracts";
+import type { TapListSelection } from "../../lib/contracts";
 import { createItem } from "./service";
 import type { WardrobeItemRow } from "./service";
 import { climateBands, TAP_LIST } from "./tap-list-data";
@@ -41,13 +42,18 @@ export function tapListFor(band: ClimateBand): TapListEntry[] {
   return TAP_LIST.toSorted((a, b) => a.rank[band] - b.rank[band]);
 }
 
-export const tapListSelectionSchema = z.object({
-  // No band: it orders what a runner is shown and has nothing to do with
-  // what they tapped. Sending one would invite a reader to think a key
-  // only means something inside a band, which was the old shape.
-  keys: z.array(z.string()).min(1).max(TAP_LIST.length),
-});
-export type TapListSelection = z.infer<typeof tapListSelectionSchema>;
+/**
+ * Re-exported, not declared: the shape lives in `lib/contracts.ts` because
+ * O3's form and this write path both need the same schema object and a
+ * component cannot reach this module's barrel. See the definition there.
+ *
+ * It carries no band. The band orders what a runner is shown and has
+ * nothing to do with what they tapped — sending one would invite a reader
+ * to think a key only means something inside a band, which was the old
+ * shape.
+ */
+export { tapListSelectionSchema } from "../../lib/contracts";
+export type { TapListSelection } from "../../lib/contracts";
 
 /**
  * Creates one `origin='taplist'` wardrobe item per selected key. Unknown
@@ -60,7 +66,14 @@ export async function addFromTapList(
   selection: TapListSelection,
 ): Promise<WardrobeItemRow[]> {
   const created: WardrobeItemRow[] = [];
-  for (const key of selection.keys) {
+  // Deduped, because a key repeated in the payload would otherwise create
+  // the garment twice. The screen holds a `Set` so its own submissions
+  // cannot repeat one, which is exactly why this needs saying here: the
+  // server is the side that has to survive a payload the screen did not
+  // build. It is also what lets the schema carry no length bound — the work
+  // is bounded by the table, not by what was sent.
+  const distinct = new Set(selection.keys);
+  for (const key of distinct) {
     const found = findEntry(key);
     if (!found) continue;
     const parsed = garmentSchema.parse(found.garment);
