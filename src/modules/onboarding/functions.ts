@@ -11,9 +11,14 @@ import { env } from "../../env";
 import { requireUserId } from "../auth";
 import { coverageLadder } from "../feed";
 import { climateNormals } from "../weather";
-import { calibrationInput } from "./inputs";
+import { calibrationInput, preferencesInput } from "./inputs";
 import { ladderFrom } from "./ladder";
-import { completeOnboarding, saveCalibration } from "./profile";
+import {
+  completeOnboarding,
+  currentSettings,
+  saveCalibration,
+  savePreferences,
+} from "./profile";
 import { starterList } from "./starter-list";
 import { unitsFromLocale } from "./units-from-locale";
 
@@ -42,3 +47,13 @@ export const starterListQuery = createServerFn({ method: "GET" }).handler(
 export const completeOnboardingFn = createServerFn({ method: "POST" }).handler(
   async () => completeOnboarding(db(), await requireUserId()),
 );
+
+export const settingsQuery = createServerFn({ method: "GET" }).handler(
+  async () => currentSettings(db(), await requireUserId()),
+);
+
+export const savePreferencesFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => preferencesInput.parse(data))
+  .handler(async ({ data }) =>
+    savePreferences(db(), await requireUserId(), data),
+  );

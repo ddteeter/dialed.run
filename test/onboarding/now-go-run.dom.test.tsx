@@ -50,6 +50,47 @@ describe("NowGoRun", () => {
     ).toBeVisible();
   });
 
+  it("says what logging buys, in design's own three lines", async () => {
+    // The first two are fixed copy and the third is derived; all three are
+    // the screen's only content besides the instruction, so a blank one is
+    // a promise silently withdrawn.
+    await renderScreen();
+
+    expect(
+      screen.getByText(
+        "Weather attaches itself from your GPS and the time — you never type it.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Each piece learns the range it actually works in, for you.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("numbers them 01, 02, 03", async () => {
+    // Mono two-digit numbering, as the artboard draws it. One-based: "00"
+    // would be the array index leaking onto the screen, and an unpadded
+    // "1" is a different typographic object in this system.
+    await renderScreen();
+
+    const numbers = screen
+      .getAllByRole("listitem")
+      .map((row) => row.firstElementChild?.textContent);
+
+    expect(numbers).toEqual(["01", "02", "03"]);
+  });
+
+  it("draws four completed steps, one per onboarding screen", async () => {
+    // O1, O3, P2.5, P3. All filled, because arriving here is the end —
+    // which is also why it is decoration rather than a progressbar.
+    await renderScreen();
+
+    const marker = document.querySelector("[aria-hidden='true']");
+
+    expect(marker?.childElementCount).toBe(4);
+  });
+
   it("offers both ways out, and neither is a dead end", async () => {
     await renderScreen();
 

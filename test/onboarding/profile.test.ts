@@ -8,8 +8,10 @@ import { newUlid } from "../../src/lib/ids";
 import { calibrationInput } from "../../src/modules/onboarding/inputs";
 import {
   completeOnboarding,
+  currentSettings,
   hasOnboarded,
   saveCalibration,
+  savePreferences,
 } from "../../src/modules/onboarding/profile";
 import { makeUser, resetTables } from "../feed/helpers";
 
@@ -168,5 +170,112 @@ describe("calibrationInput", () => {
     });
 
     expect(parsed.cityLabel).toBe("Seattle, WA");
+  });
+});
+
+describe("savePreferences and currentSettings", () => {
+  it("creates the profile row for an account that has none", async () => {
+    // Same reason `saveCalibration` upserts: someone can reach settings
+    // without having finished O1, and an UPDATE would report success
+    // while writing nothing.
+    const userId = newUlid();
+
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+  });
+
+  it("leaves the calibration alone", async () => {
+    // The two screens write disjoint column sets on purpose. Saving units
+    // must not silently un-answer the one question O1 asks.
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 2,
+      cityLabel: "Minneapolis",
+    });
+
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      thermalLevel: 2,
+      tempUnit: "c",
+    });
+    const row = await profileOf(userId);
+    expect(row?.cityLabel).toBe("Minneapolis");
+  });
+
+  it("is not reset by a later recalibration", async () => {
+    // And the other direction, which is the one requirement 6 depends on:
+    // "recalibrate" reaches O1, and O1 writes units too. It writes the
+    // ones the form was showing, so a person who changed units in settings
+    // and then recalibrated keeps them.
+    const userId = newUlid();
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: -1,
+      tempUnit: "c",
+      distanceUnit: "km",
+    });
+
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      thermalLevel: -1,
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+  });
+
+  it("answers with the app defaults for an account with no row", async () => {
+    // Not a throw and not blanks: settings shows the same Fahrenheit and
+    // miles a feed reader is already being shown, because `feed/units.ts`
+    // falls back to exactly these.
+    expect(await currentSettings(coreDb(), newUlid())).toEqual({
+      thermalLevel: undefined,
+      tempUnit: "f",
+      distanceUnit: "mi",
+      shareDefault: true,
+    });
+  });
+
+  it("reports no thermal level rather than a made-up one", async () => {
+    // A row can exist with the question unanswered — O1's units are
+    // optional and so is everything after the first question.
+    const userId = newUlid();
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "f",
+      distanceUnit: "mi",
+      shareDefault: true,
+    });
+
+    const settings = await currentSettings(coreDb(), userId);
+    expect(settings.thermalLevel).toBeUndefined();
+  });
+
+  it("keeps sharing on by default, per the product rule", async () => {
+    // "Entries are public by default with a per-entry toggle and a
+    // per-user default preference." The default half of that is a column
+    // default, and this is what reads it.
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, { thermalLevel: 0 });
+
+    const settings = await currentSettings(coreDb(), userId);
+    expect(settings.shareDefault).toBe(true);
   });
 });

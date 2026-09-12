@@ -106,6 +106,18 @@ ownership list with the owner's go-ahead:
    and stays deferred to its own PR, because it is visible and wants its own
    demo.
 
-Still open: no settings surface exists yet from 104, so
-`onboarding/settings.tsx` will be the first, and owns units + share default
-+ recalibrate.
+**Settings landed as the first rows of design's U1**, which is a ten-row
+index spanning account, privacy, blocked runners, notifications,
+connections, export and delete. Three of those rows are this packet's —
+how you run warm or cold, units, and the sharing default — and the rest
+belong to other lanes and to D-32. The page is where they will join.
+
+U1's rule is that every row states its current value, "a settings list you
+can read without opening anything"; the calibration row honours it
+literally, stating the answer *and* the offset, in whichever unit is
+selected above it.
+
+Still open: **nothing routes a new account into the flow** (D-52). Signup
+lands on `/`, so O1 is reachable only by URL or from settings. Wiring it is
+a product call with a demo-spec blast radius across four other lanes — the
+options and their costs are in the register row.

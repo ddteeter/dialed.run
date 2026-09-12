@@ -88,6 +88,24 @@ describe("CalibrateForm", () => {
     expect(alwaysFreezing()).toHaveTextContent("+4°");
   });
 
+  it("keeps a unit on the offsets when the select is cleared", () => {
+    // `ChoiceField` carries an empty option, so "" is a state a person can
+    // reach. The offsets are the screen's promise that the answer means
+    // something measurable; they cannot lose their unit halfway.
+    renderForm();
+    expect(
+      screen.getByLabelText(/^Always freezing/).closest("label"),
+    ).toHaveTextContent("+8°");
+
+    fireEvent.change(screen.getByLabelText("Temperature"), {
+      target: { value: "" },
+    });
+
+    expect(
+      screen.getByLabelText(/^Always freezing/).closest("label"),
+    ).toHaveTextContent("+8°");
+  });
+
   it("finishes on the one required answer", async () => {
     // The two-tap target: pick an answer, submit. No city, no location, no
     // unit change.

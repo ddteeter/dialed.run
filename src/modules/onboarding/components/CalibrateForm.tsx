@@ -2,15 +2,12 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import {
-  distanceUnitSchema,
   defaultUnits,
-  tempUnitSchema,
-  thermalOffset,
+  thermalOffsetLabel,
   thermalScale,
 } from "../../../lib/contracts";
 import type { DistanceUnit, TempUnit, Units } from "../../../lib/contracts";
 import {
-  ChoiceField,
   ChoiceList,
   FormErrorSummary,
   FormFailureBand,
@@ -19,14 +16,14 @@ import {
   TextField,
   useFormSubmit,
 } from "../../../ui";
+import { UNIT_LABELS, UnitFields } from "./UnitFields";
 import { calibrationInput } from "../inputs";
 import type { Calibration } from "../inputs";
 
 const LABELS = {
   thermalLevel: "Warm or cold",
   cityLabel: "Where you run",
-  tempUnit: "Temperature",
-  distanceUnit: "Distance",
+  ...UNIT_LABELS,
 };
 
 /**
@@ -48,33 +45,18 @@ const THERMAL_LABELS = Object.fromEntries(
  * shown, and the packet names this copy explicitly.
  *
  * Recomputed from the unit rather than stored, so switching to Celsius
- * moves the offsets with it — which is the honest behaviour and also the
- * cheapest: there is one mapping, in `thermalOffset`.
- *
- * The minus sign is U+2212, not a hyphen: it is a measured value in mono,
- * where a hyphen sits at the wrong height and the wrong width.
+ * moves the offsets with it. The formatting itself lives in
+ * `thermalOffsetLabel` — settings prints the same value, and two copies of
+ * a sign-and-symbol rule drift.
  */
 function offsetLabels(unit: TempUnit): Record<string, string> {
   return Object.fromEntries(
-    thermalScale.map((entry) => {
-      const degrees = thermalOffset(entry.value, unit);
-      const sign = degrees > 0 ? "+" : "";
-      return [
-        String(entry.value),
-        `${sign}${String(degrees).replace("-", "\u{2212}")}°`,
-      ];
-    }),
+    thermalScale.map((entry) => [
+      String(entry.value),
+      thermalOffsetLabel(entry.value, unit),
+    ]),
   );
 }
-
-const TEMP_LABELS: Readonly<Record<TempUnit, string>> = {
-  f: "Fahrenheit",
-  c: "Celsius",
-};
-const DISTANCE_LABELS: Readonly<Record<DistanceUnit, string>> = {
-  mi: "Miles",
-  km: "Kilometres",
-};
 
 /**
  * Screen O1 — "one question does the calibration".
@@ -181,25 +163,13 @@ export function CalibrateForm({
         onLocated={setLocated}
       />
 
-      <ChoiceField
-        name="tempUnit"
-        label={LABELS.tempUnit}
+      <UnitFields
+        tempUnit={tempUnit}
+        distanceUnit={distanceUnit}
+        onTempUnit={setTempUnit}
+        onDistanceUnit={setDistanceUnit}
         field={form.field}
-        value={tempUnit}
-        options={tempUnitSchema.options}
-        optionLabels={TEMP_LABELS}
-        onChange={setTempUnit}
-        error={form.fieldErrors.tempUnit}
-      />
-      <ChoiceField
-        name="distanceUnit"
-        label={LABELS.distanceUnit}
-        field={form.field}
-        value={distanceUnit}
-        options={distanceUnitSchema.options}
-        optionLabels={DISTANCE_LABELS}
-        onChange={setDistanceUnit}
-        error={form.fieldErrors.distanceUnit}
+        errors={form.fieldErrors}
       />
 
       <FormFailureBand

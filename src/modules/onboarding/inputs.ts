@@ -37,3 +37,31 @@ export const calibrationInput = z.object({
   distanceUnit: distanceUnitSchema.optional(),
 });
 export type Calibration = z.infer<typeof calibrationInput>;
+
+/**
+ * What the settings screen writes: the two display units and the sharing
+ * default.
+ *
+ * **Required here, optional in `calibrationInput`, and the difference is
+ * the screen.** O1 offers a guess from the locale and must let someone
+ * finish having answered one question, so its units are optional. Settings
+ * shows the values a person already has and asks them to confirm or change
+ * them — an absent unit there would mean "unset the thing you can see",
+ * which no control on that screen expresses.
+ *
+ * The thermal level is deliberately not here. Recalibrating is O1's
+ * question, reached from settings as a link, because it is five answers
+ * with a visible offset and not a row in a preferences form (requirement
+ * 6). One question, one place it is asked.
+ */
+export const preferencesInput = z.object({
+  tempUnit: tempUnitSchema,
+  distanceUnit: distanceUnitSchema,
+  /**
+   * The per-entry toggle's starting position, never a lock: the contract
+   * is "public by default with a per-entry toggle and a per-user default
+   * preference", and this is only the third of those.
+   */
+  shareDefault: z.boolean(),
+});
+export type Preferences = z.infer<typeof preferencesInput>;

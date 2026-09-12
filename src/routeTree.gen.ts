@@ -24,6 +24,7 @@ import { Route as FeedSearchRouteImport } from './routes/feed/search'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
 import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding/done'
+import { Route as OnboardingSettingsRouteImport } from './routes/onboarding/settings'
 import { Route as OnboardingTaplistRouteImport } from './routes/onboarding/taplist'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
@@ -114,6 +115,11 @@ const OnboardingCalibrateRoute = OnboardingCalibrateRouteImport.update({
 const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
   id: '/onboarding/done',
   path: '/onboarding/done',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingSettingsRoute = OnboardingSettingsRouteImport.update({
+  id: '/onboarding/settings',
+  path: '/onboarding/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingTaplistRoute = OnboardingTaplistRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/feed/search': typeof FeedSearchRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/feed/search': typeof FeedSearchRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/feed/search': typeof FeedSearchRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/feed/search'
     | '/onboarding/calibrate'
     | '/onboarding/done'
+    | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/feed/search'
     | '/onboarding/calibrate'
     | '/onboarding/done'
+    | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/feed/search'
     | '/onboarding/calibrate'
     | '/onboarding/done'
+    | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
@@ -411,6 +423,7 @@ export interface RootRouteChildren {
   FeedSearchRoute: typeof FeedSearchRoute
   OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
   OnboardingDoneRoute: typeof OnboardingDoneRoute
+  OnboardingSettingsRoute: typeof OnboardingSettingsRoute
   OnboardingTaplistRoute: typeof OnboardingTaplistRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsManualRoute: typeof RunsManualRoute
@@ -540,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingDoneRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/settings': {
+      id: '/onboarding/settings'
+      path: '/onboarding/settings'
+      fullPath: '/onboarding/settings'
+      preLoaderRoute: typeof OnboardingSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding/taplist': {
       id: '/onboarding/taplist'
       path: '/onboarding/taplist'
@@ -667,6 +687,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedSearchRoute: FeedSearchRoute,
   OnboardingCalibrateRoute: OnboardingCalibrateRoute,
   OnboardingDoneRoute: OnboardingDoneRoute,
+  OnboardingSettingsRoute: OnboardingSettingsRoute,
   OnboardingTaplistRoute: OnboardingTaplistRoute,
   RunsRunIdRoute: RunsRunIdRoute,
   RunsManualRoute: RunsManualRoute,

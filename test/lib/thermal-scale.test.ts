@@ -4,6 +4,7 @@ import {
   THERMAL_LEVEL_C,
   thermalLevelSchema,
   thermalOffset,
+  thermalOffsetLabel,
   thermalScale,
 } from "../../src/lib/contracts";
 
@@ -77,5 +78,41 @@ describe("thermalOffset", () => {
     for (const { value } of thermalScale) {
       expect(thermalOffset(value, "f")).toBe(-thermalOffset(-value, "f"));
     }
+  });
+});
+
+/**
+ * How the offset is printed, once, for both screens that print it.
+ *
+ * It lived in O1 and then, four hours later, in settings as well — which
+ * is the second-copy failure §Derive, don't mirror describes. These
+ * assertions are what stop the two drifting on the sign, the symbol, or
+ * the minus character.
+ */
+describe("thermalOffsetLabel", () => {
+  it("signs the warm end and not the cold one", () => {
+    expect(thermalOffsetLabel(2, "f")).toBe("+8°");
+    expect(thermalOffsetLabel(-2, "f")).toBe("−8°");
+  });
+
+  it("leaves zero unsigned", () => {
+    // `+0°` reads as a direction when the answer is that there is none.
+    expect(thermalOffsetLabel(0, "f")).toBe("0°");
+    expect(thermalOffsetLabel(0, "c")).toBe("0°");
+  });
+
+  it("uses a minus sign, not a hyphen", () => {
+    // U+2212. These render in mono as a measured value, where a hyphen
+    // sits at the wrong height and width — and the two are impossible to
+    // tell apart by reading the source, which is why this is asserted by
+    // code point.
+    const label = thermalOffsetLabel(-1, "f");
+
+    expect(label.codePointAt(0)).toBe(0x22_12);
+    expect(label).not.toContain("-");
+  });
+
+  it("prints the unit it was asked for", () => {
+    expect(thermalOffsetLabel(2, "c")).toBe("+4°");
   });
 });

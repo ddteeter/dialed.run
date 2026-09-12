@@ -558,6 +558,26 @@ export function thermalOffset(level: number, unit: TempUnit): number {
   return Math.round(unit === "f" ? celsius * 1.8 : celsius);
 }
 
+/**
+ * The offset as O1 and settings print it: `+8°`, `0°`, `−8°`.
+ *
+ * Here rather than in either screen because it was in *both* — O1 draws it
+ * beside each answer and settings states the saved one, and the second
+ * copy arrived four hours after the first. A formatter for a measured
+ * value is exactly the "rival truth" §Derive, don't mirror is about: two
+ * copies drift on the sign, the degree symbol, or the minus character, and
+ * nothing makes them disagree loudly.
+ *
+ * **U+2212, not a hyphen.** These render in mono as a measured value, and
+ * a hyphen sits at the wrong height and width there. No `+` on zero: `+0°`
+ * reads as a direction when the answer is that there is none.
+ */
+export function thermalOffsetLabel(level: number, unit: TempUnit): string {
+  const degrees = thermalOffset(level, unit);
+  const sign = degrees > 0 ? "+" : "";
+  return `${sign}${String(degrees).replace("-", "\u{2212}")}°`;
+}
+
 export const thermalScale = [
   { value: 2, token: "always_freezing", label: "Always freezing" },
   { value: 1, token: "little_cold", label: "Run a little cold" },
