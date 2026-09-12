@@ -15,6 +15,21 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+6. **P2.5 "make them real" has no artboard, and it is the last screen in
+   lane 105.** `docs/product.md` lists it as "new (D-27); needs design". Six
+   questions went to design 2026-09-11: which tapped rows it offers and who
+   chooses; how many fields naming costs (F asks brand → name → link →
+   photo, and P2.5 should be lighter or it is just F again); whether a
+   link-paste field exists at all **given lane 107 is unmerged, so
+   `src/modules/enrichment/` does not exist and a paste would do nothing
+   visible**; whether the screen states a target the way O3's "enough to
+   start" does; how a named row reads against a generic one while naming;
+   and what skip looks like. Assumed unless design says otherwise: fully
+   skippable, never blocking, no link paste in v1. Copy is not part of the
+   ask — D-45 collects all user-facing text in one pass and P2.5's rides
+   along; what is needed is the screen's argument, since the packet
+   requires it to sell "the specific piece is what learns".
+
 5. **Onboarding's steps are inside the app's page column, and the
    artboards draw them full-bleed.** O1, O3 and P3 are each a card with
    their own internal structure and no app heading; `src/routes/onboarding/*`
