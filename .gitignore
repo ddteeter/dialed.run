@@ -32,4 +32,3 @@ test-results/
 demo.mp4
 *.demo.mp4
 playwright-report/
-e2e/.auth/

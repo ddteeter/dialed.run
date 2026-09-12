@@ -27,9 +27,22 @@ export const DEMO_ACCOUNTS = [
 export type DemoAccount = (typeof DEMO_ACCOUNTS)[number];
 
 /**
- * Gitignored: these hold live session cookies for a local dev database.
+ * **Outside the source tree, and that is the whole point.**
+ *
+ * These hold live session cookies for a local dev database, so they are
+ * not committed — but gitignoring them is not enough. Vite watches the
+ * project root, and writing five files under `e2e/` mid-run made the dev
+ * server hot-reload *during* a paced demo: React Fast Refresh remounted
+ * the tap list and reset its state, so taps already made silently
+ * disappeared. It failed differently every run — two taps lost, then one,
+ * then three — because it is a race between the watcher's debounce and
+ * the pacing, and the unpaced suite finished before the reload landed.
+ *
+ * `node_modules` is the one directory Vite ignores by default, so the
+ * state goes there. Nothing else in the harness writes inside the watched
+ * tree while a test is running.
  */
-const AUTH_DIR = "e2e/.auth";
+const AUTH_DIR = "node_modules/.cache/dialed-demo-auth";
 
 export function storageStateFor(account: DemoAccount): string {
   return `${AUTH_DIR}/${account}.json`;

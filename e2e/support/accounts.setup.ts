@@ -15,11 +15,13 @@ import { DEMO_ACCOUNTS, storageStateFor } from "./accounts";
  * records no video.
  *
  * **One test, not one per account**, so the accounts file is written once
- * with no read-modify-write race. Each account gets its own browser
+ * with no read-modify-write race. It writes under `node_modules`, because
+ * Vite watches the source tree and a mid-run write there hot-reloads the
+ * app out from under a running demo — see `./accounts.ts`. Each account gets its own browser
  * context, because signing up logs you in and the next one needs a clean
  * slate.
  */
-const AUTH_DIR = "e2e/.auth";
+const AUTH_DIR = "node_modules/.cache/dialed-demo-auth";
 
 setup("create the demo accounts", async ({ browser }, testInfo) => {
   // Five signups through a real browser, serially. Nothing here is paced —
