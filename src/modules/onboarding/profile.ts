@@ -148,3 +148,25 @@ export async function currentSettings(
     shareDefault: row?.shareDefault ?? true,
   };
 }
+
+/**
+ * Whether this visitor should be sent into onboarding.
+ *
+ * **A signed-out visitor never is.** `/` is the marketing page and the only
+ * thing a logged-out reader can see; bouncing them to a screen that
+ * requires a session would be a redirect loop dressed as a feature.
+ *
+ * **And it is asked on every visit, not once at signup**, which is the
+ * whole point (D-52). Every step past O1 is skippable and a runner who
+ * bails still has a working app — so bailing has to be *recoverable*, and
+ * a one-shot redirect at account creation strands exactly the person the
+ * skippable design invites. `onboarding_complete` flips only at P3, so
+ * "came back to finish" and "never started" are the same question.
+ */
+export async function requiresOnboarding(
+  db: DrizzleD1Database,
+  userId: string | undefined,
+): Promise<boolean> {
+  if (userId === undefined) return false;
+  return !(await hasOnboarded(db, userId));
+}

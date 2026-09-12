@@ -23,7 +23,12 @@ import {
 } from "../../src/db/schema-core";
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
+import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on the feed rather than on a signup form.
+test.use({ storageState: storageStateFor("feed") });
 import { withLocalDb } from "../support/local-db";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
@@ -196,17 +201,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   });
 
   try {
-    const demoEmail = `demo-${suffix}@example.com`;
-    await page.goto("/auth/signup");
+    await page.goto("/feed");
     await hydrated(page);
-    await page.getByLabel("Name").fill("Demo Runner");
-    await page.getByLabel("Email").fill(demoEmail);
-    await page.getByLabel("Password").fill("a-long-enough-password");
-    await page.getByRole("button", { name: "Sign up" }).click();
-    await expect(page.getByText(demoEmail)).toBeVisible({ timeout: 15_000 });
 
     // Browse the feed (E1) with zero follows — the documented empty state.
-    await page.getByRole("link", { name: "Feed" }).click();
     await expect(
       page.getByText("Nobody you follow has posted yet."),
     ).toBeVisible();

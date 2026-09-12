@@ -18,7 +18,12 @@ import { outfitEntries, outfitEntryItems, runs, wardrobeItems } from "../../src/
 import { user } from "../../src/db/schema-auth";
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
+import { accountEmail, storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on the verdict screen rather than on a signup form.
+test.use({ storageState: storageStateFor("verdict") });
 import { withLocalDb } from "../support/local-db";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
@@ -46,8 +51,9 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // Paced runs (npm run demo) need headroom; at full speed this is quick.
   testInfo.setTimeout(150_000);
 
-  const suffix = String(Date.now());
-  const email = `verdict-${suffix}@example.com`;
+  // The address the setup signed this account up with. The seeding below
+  // has to own its rows — the verdict screen is owner-only.
+  const email = accountEmail("verdict");
   const itemId = newUlid();
   const runId = newUlid();
   const entryId = newUlid();
@@ -60,14 +66,6 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // run.
   const latR = 40.71;
   const lngR = -74.01;
-
-  await page.goto("/auth/signup");
-  await hydrated(page);
-  await page.getByLabel("Name").fill("Demo Runner");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a-long-enough-password");
-  await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
 
   // Seed a run and an un-verdicted entry owned by the account that just
   // signed up — the verdict screen is owner-only, so the rows have to

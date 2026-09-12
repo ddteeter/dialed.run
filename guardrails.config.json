@@ -275,16 +275,6 @@
       "count": 1
     },
     {
-      "key": "src/ui/Layout.tsx|mutation-suppress|// Stryker disable ArrayDeclaration",
-      "reason": "Equivalent mutant, proof at the site: stryker replaces `[]` with a constant one-element array, which is just as stable across renders, so the effect still runs exactly once either way. Block form used because the mutant's line begins with the arrow function's closing brace, and a next-line directive does not attach.",
-      "count": 1
-    },
-    {
-      "key": "src/ui/Layout.tsx|mutation-suppress|// Stryker restore ArrayDeclaration",
-      "reason": "Closing directive for the block-form suppression above.",
-      "count": 1
-    },
-    {
       "key": "src/ui/Sheet.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant, proof at the site: React attaches refs before it runs effects, and this effect has no cleanup that could run after a detach, so the ref is always populated here. The check is the compiler's \u2014 the ref type includes undefined \u2014 not the runtime's.",
       "count": 1

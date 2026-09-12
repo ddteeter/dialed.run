@@ -8,7 +8,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { requireUserId } from "../auth";
+import { optionalUserId, requireUserId } from "../auth";
 import { coverageLadder } from "../feed";
 import { climateNormals } from "../weather";
 import { calibrationInput, preferencesInput } from "./inputs";
@@ -16,6 +16,7 @@ import { ladderFrom } from "./ladder";
 import {
   completeOnboarding,
   currentSettings,
+  requiresOnboarding,
   saveCalibration,
   savePreferences,
 } from "./profile";
@@ -57,3 +58,7 @@ export const savePreferencesFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     savePreferences(db(), await requireUserId(), data),
   );
+
+export const onboardingGateQuery = createServerFn({ method: "GET" }).handler(
+  async () => requiresOnboarding(db(), await optionalUserId()),
+);

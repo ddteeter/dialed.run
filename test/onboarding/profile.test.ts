@@ -10,6 +10,7 @@ import {
   completeOnboarding,
   currentSettings,
   hasOnboarded,
+  requiresOnboarding,
   saveCalibration,
   savePreferences,
 } from "../../src/modules/onboarding/profile";
@@ -277,5 +278,34 @@ describe("savePreferences and currentSettings", () => {
 
     const settings = await currentSettings(coreDb(), userId);
     expect(settings.shareDefault).toBe(true);
+  });
+});
+
+describe("requiresOnboarding", () => {
+  it("says no for a signed-out visitor", async () => {
+    // `/` is the only page a logged-out reader can see. Sending them to a
+    // screen that requires a session would be a redirect loop.
+    expect(await requiresOnboarding(coreDb(), undefined)).toBe(false);
+  });
+
+  it("says yes for an account that has never started", async () => {
+    expect(await requiresOnboarding(coreDb(), newUlid())).toBe(true);
+  });
+
+  it("keeps saying yes to someone who bailed halfway", async () => {
+    // The case D-52 exists for, and the one a signup-only redirect
+    // strands: O1 answered, tab closed, `onboarding_complete` still false.
+    // Every step past O1 is skippable, so bailing has to be recoverable.
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, { thermalLevel: 1 });
+
+    expect(await requiresOnboarding(coreDb(), userId)).toBe(true);
+  });
+
+  it("stops once they reach P3", async () => {
+    const userId = newUlid();
+    await completeOnboarding(coreDb(), userId);
+
+    expect(await requiresOnboarding(coreDb(), userId)).toBe(false);
   });
 });

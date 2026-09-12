@@ -74,10 +74,16 @@ export default defineConfig({
   // edge-case specs around it are not. Recording everything would bury the
   // journey in thirty validation cases and make the video unwatchable.
   projects: [
-    { name: "e2e", testIgnore: "**/*.demo.spec.ts" },
+    { name: "e2e", testIgnore: ["**/*.demo.spec.ts", "**/*.setup.ts"] },
+    // Creates one account per demo and saves its session, so no demo spends
+    // the first eleven seconds of its video filling in a signup form. It is
+    // a separate project on purpose: `video` is configured on `demo` alone,
+    // so nothing here is recorded.
+    { name: "demo-setup", testMatch: "**/*.setup.ts" },
     {
       name: "demo",
       testMatch: "**/*.demo.spec.ts",
+      dependencies: ["demo-setup"],
       use: {
         viewport: { width: 1280, height: 720 },
         // "no-preference", explicitly: motion.css collapses moves under

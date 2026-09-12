@@ -11,7 +11,12 @@
  * retire one item and confirm it moves behind the retired toggle instead
  * of disappearing (CLAUDE.md: retire, don't delete).
  */
+import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on the closet rather than on a signup form.
+test.use({ storageState: storageStateFor("closet") });
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -31,17 +36,8 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   // per-spec bump the config tells you to add; it started failing the
   // moment this branch merged main. See e2e/run-logging for the same fix.
   testInfo.setTimeout(150_000);
-  const email = `demo-${String(Date.now())}@example.com`;
-
-  await page.goto("/auth/signup");
+  await page.goto("/closet");
   await hydrated(page);
-  await page.getByLabel("Name").fill("Demo Runner");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a-long-enough-password");
-  await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
-
-  await page.getByRole("link", { name: "Closet" }).click();
   await expect(page.getByText("Nothing in here yet")).toBeVisible();
 
   // First piece: real product identity, not a generic placeholder — brand

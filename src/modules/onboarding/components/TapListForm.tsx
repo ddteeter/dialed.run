@@ -36,8 +36,8 @@ const ENOUGH_TO_START = 6;
  * `tap-list-form.dom.test.tsx` asserts both states so a later restyle
  * cannot quietly reintroduce a coloured tick.
  */
-const CHIP_ON = "flex items-center gap-1.5 rounded-full bg-night px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-chalk has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
-const CHIP_OFF = "flex items-center gap-1.5 rounded-full border border-night/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-night/70 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
+const CHIP_ON = "relative flex items-center gap-1.5 rounded-full bg-night px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-chalk has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
+const CHIP_OFF = "relative flex items-center gap-1.5 rounded-full border border-night/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-night/70 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
 
 /**
  * Screen O3 — "tap what you own", the one list.
@@ -215,10 +215,17 @@ function TapChip({
 }>): JSX.Element {
   return (
     <label className={isOn ? CHIP_ON : CHIP_OFF}>
+      {/* The control fills the chip rather than being `sr-only`. Both
+          versions work for a person — clicking a label toggles its input
+          either way — but `sr-only` clips the input to a 1px corner, so a
+          pointer aimed at the chip lands on the `+` span instead of on the
+          checkbox. That is the standard styled-checkbox shape, and the
+          onboarding demo is what found it: Playwright clicks the control,
+          not the label, and reported the span intercepting. */}
       <input
         {...field("keys")}
         type="checkbox"
-        className="sr-only"
+        className="absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0"
         checked={isOn}
         onChange={onToggle}
       />

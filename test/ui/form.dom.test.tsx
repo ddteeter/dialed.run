@@ -1276,6 +1276,28 @@ describe("ChoiceList", () => {
     );
   });
 
+  it("adds no empty line when there is no hint", () => {
+    // Not just "no text" — no *element*. An empty <span> renders nothing
+    // and still takes a line's worth of gap in the flex column, so a group
+    // without a hint would sit taller than one beside it. Same rule
+    // `FormField` follows, asserted the same way.
+    const { container } = render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const fieldset = container.querySelector("fieldset");
+    // The three option labels and nothing after them.
+    expect(fieldset?.querySelectorAll(":scope > span")).toHaveLength(0);
+  });
+
   it("shows the hint, and gives way to the error", () => {
     // Same rule `FormField` follows: a hint explains, a message corrects,
     // and showing both at once makes the reader decide which one is

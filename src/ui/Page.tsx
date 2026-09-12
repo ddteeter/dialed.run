@@ -1,5 +1,7 @@
 import type { JSX, ReactNode } from "react";
 
+import { useHydrated } from "./use-hydrated";
+
 /**
  * The column an authenticated page's content sits in, and its heading.
  *
@@ -53,6 +55,11 @@ export function Page({
   headingAction?: ReactNode;
   children: ReactNode;
 }>): JSX.Element {
+  // Onboarding renders `Page` with no `Layout`, so this is where those
+  // screens get their hydration signal. Harmless when both are present —
+  // the attribute is set to the same value twice.
+  useHydrated();
+
   return (
     <div
       className={`mx-auto flex w-full ${WIDTH_CLASS[width]} flex-col gap-6 px-6 py-8`}

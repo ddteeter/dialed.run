@@ -30,6 +30,14 @@ test("signup -> authenticated home -> sign out", async ({ page }) => {
   await page.getByLabel("Password").fill("a-long-enough-password");
   await page.getByRole("button", { name: "Sign up" }).click();
 
+  // A new account lands in onboarding now, not on `/` (D-52) — and the
+  // sign-out control lives on `/`. So the journey goes through the close
+  // screen and out of its own "Done for now" link, which is the route a
+  // real runner takes to reach the home page for the first time.
+  await expect(page).toHaveURL(/\/onboarding\/calibrate/, { timeout: 15_000 });
+  await page.goto("/onboarding/done");
+  await page.getByRole("link", { name: "Done for now" }).click();
+
   await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();

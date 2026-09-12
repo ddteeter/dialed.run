@@ -19,7 +19,12 @@
  * FIT/GPX file wired into this branch yet). Both are noted in the PR
  * comment rather than faked here.
  */
+import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on logging a run rather than on a signup form.
+test.use({ storageState: storageStateFor("run-logging") });
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -29,24 +34,15 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
     .waitFor({ state: "attached" });
 }
 
-test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list", async ({
+test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   page,
 }, testInfo) => {
   // slowMo doubled to 900 (demo-legibility upgrade, PR #8) roughly doubles
   // per-action overhead across this journey's ~20 interactions; the default
   // 30s test timeout is too tight for that plus real network round-trips.
   testInfo.setTimeout(60_000);
-  const email = `demo-${String(Date.now())}@example.com`;
-
-  await page.goto("/auth/signup");
+  await page.goto("/runs/new");
   await hydrated(page);
-  await page.getByLabel("Name").fill("Demo Runner");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a-long-enough-password");
-  await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
-
-  await page.getByRole("link", { name: "+ Add" }).click();
   await page.getByRole("link", { name: "enter it manually" }).click();
   await hydrated(page);
 
