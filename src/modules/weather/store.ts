@@ -187,3 +187,31 @@ export function toWeatherObservation(row: ObservationRow): WeatherObservation {
     condition: row.condition,
   };
 }
+
+/**
+ * Every distinct hour-bucket cache key a run touches, starting with its
+ * start hour.
+ *
+ * **The write and the read share this walk, and must.** `attach.ts` calls it
+ * to decide which hours to resolve, and `feed/conditions.ts` calls it to
+ * decide which to read back. A second copy of the rounding or the cap would
+ * let the two disagree silently: the reader would look for an hour the
+ * writer never fetched, or stop before an hour it did. Capped: a plausible long run is a handful of hours, and the
+ * cap stops a bad duration turning one attach into hundreds of upstream
+ * calls.
+ */
+const MAX_SAMPLED_HOURS = 6;
+
+export function runHourKeys(
+  lat: number,
+  lng: number,
+  startedAt: number,
+  durationS: number,
+): CacheKey[] {
+  const spanned = Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
+    Math.floor(startedAt / 3600);
+  const hours = Math.min(spanned + 1, MAX_SAMPLED_HOURS);
+  return Array.from({ length: hours }, (_unused, index) =>
+    cacheKeyFor(lat, lng, new Date((startedAt + index * 3600) * 1000)),
+  );
+}

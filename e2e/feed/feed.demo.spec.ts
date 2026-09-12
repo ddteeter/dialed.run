@@ -11,7 +11,7 @@
  * entry seeded for the followed runner must never surface in the follower's
  * feed or on the runner's own public profile.
  */
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import {
   entryTags as entryTagsTable,
@@ -46,8 +46,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   const privateRunId = newUlid();
   const privateEntryId = newUlid();
   const observationId = newUlid();
+  const midObservationId = newUlid();
+  const endObservationId = newUlid();
 
-  const startedAt = Math.floor(Date.now() / 1000) - 3600;
+  // Three hours back, so a two-hour run is entirely in the past.
+  const startedAt = Math.floor(Date.now() / 1000) - 3 * 3600;
   const latR = 45.52;
   const lngR = -122.68;
   const hourBucket = Math.floor(startedAt / 3600);
@@ -82,7 +85,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         userId: otherUserId,
         source: "manual",
         startedAt,
-        durationS: 1800,
+        // Two hours, so the run spans three hour buckets and the feed can
+        // show what it actually covered rather than the hour it began in
+        // (D-5). The caption is already written for a run that warms up.
+        durationS: 2 * 3600,
         distanceM: 6437,
         lat: latR,
         lng: lngR,
@@ -136,21 +142,57 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // Weather is seeded, never stubbed: this cache-key row makes the feed
     // module hit cache and never call Visual Crossing, with the real code
     // path still running.
-    await weather.insert(weatherObservations).values({
-      id: observationId,
-      runId: publicRunId,
-      latR,
-      lngR,
-      hourBucket,
-      tempC: 6,
-      feelsLikeC: 4,
-      humidity: 70,
-      windKph: 12,
-      precipMm: 0.4,
-      condition: "light rain",
-      source: "visualcrossing",
-      fetchedAt: startedAt,
-    });
+    // One row per hour the run spans — which is what `attach.ts` resolves
+    // for a real run, and what the feed now reads back. Warming 6 -> 14
+    // across the two hours: a chilly first mile that settles in.
+    //
+    // Only the starting hour carries `runId`; the others are shared cache
+    // cells, exactly as the attach path writes them.
+    await weather.insert(weatherObservations).values([
+      {
+        id: observationId,
+        runId: publicRunId,
+        latR,
+        lngR,
+        hourBucket,
+        tempC: 6,
+        feelsLikeC: 4,
+        humidity: 70,
+        windKph: 12,
+        precipMm: 0.4,
+        condition: "light rain",
+        source: "visualcrossing",
+        fetchedAt: startedAt,
+      },
+      {
+        id: midObservationId,
+        latR,
+        lngR,
+        hourBucket: hourBucket + 1,
+        tempC: 10,
+        feelsLikeC: 9,
+        humidity: 65,
+        windKph: 10,
+        precipMm: 0,
+        condition: "cloudy",
+        source: "visualcrossing",
+        fetchedAt: startedAt,
+      },
+      {
+        id: endObservationId,
+        latR,
+        lngR,
+        hourBucket: hourBucket + 2,
+        tempC: 14,
+        feelsLikeC: 13,
+        humidity: 55,
+        windKph: 8,
+        precipMm: 0,
+        condition: "clear",
+        source: "visualcrossing",
+        fetchedAt: startedAt,
+      },
+    ]);
   });
 
   try {
@@ -195,7 +237,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // Open the entry detail (D): verdict, conditions, per-item kit.
     await page.getByText(publicCaption).click();
     await expect(page.getByText("[Dialed]")).toBeVisible();
-    await expect(page.getByText("43°")).toBeVisible();
+    // The range the run actually covered, not the hour it started in.
+    // 6C -> 43F and 14C -> 57F (D-5).
+    await expect(page.getByText("43–57°")).toBeVisible();
     await expect(page.getByText("light rain")).toBeVisible();
     await expect(page.getByText("Rover Half-Zip")).toBeVisible();
 
@@ -220,7 +264,13 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await core.delete(userProfiles).where(eq(userProfiles.userId, otherUserId));
       await weather
         .delete(weatherObservations)
-        .where(eq(weatherObservations.id, observationId));
+        .where(
+          inArray(weatherObservations.id, [
+            observationId,
+            midObservationId,
+            endObservationId,
+          ]),
+        );
     });
   }
 });

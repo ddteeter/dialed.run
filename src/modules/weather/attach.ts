@@ -13,6 +13,7 @@ import { env } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { weatherProvider } from "./provider";
 import {
+  runHourKeys,
   cacheKeyFor,
   findObservationRow,
   upsertManualObservation,
@@ -162,27 +163,6 @@ async function sampleRunHours(
   }
 }
 
-/**
- * Every distinct hour-bucket cache key a run touches, starting with its
- * start hour. Capped: a plausible long run is a handful of hours, and the
- * cap stops a bad duration turning one attach into hundreds of upstream
- * calls.
- */
-const MAX_SAMPLED_HOURS = 6;
-
-function runHourKeys(
-  lat: number,
-  lng: number,
-  startedAt: number,
-  durationS: number,
-): CacheKey[] {
-  const spanned = Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
-    Math.floor(startedAt / 3600);
-  const hours = Math.min(spanned + 1, MAX_SAMPLED_HOURS);
-  return Array.from({ length: hours }, (_unused, index) =>
-    cacheKeyFor(lat, lng, new Date((startedAt + index * 3600) * 1000)),
-  );
-}
 
 /**
  * Public API: attach conditions to a run. No-op with a structured log when

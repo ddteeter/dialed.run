@@ -89,6 +89,7 @@ const conditions = {
   condition: "Clear",
   windKph: 5,
   source: "visualcrossing" as const,
+  span: { minTempC: 10, maxTempC: 10, minFeelsLikeC: 8, maxFeelsLikeC: 8 },
 };
 
 function candidate(overrides: Partial<PrefillCandidate> = {}): PrefillCandidate {

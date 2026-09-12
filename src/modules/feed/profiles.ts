@@ -19,6 +19,7 @@ import { garmentNamesByIds } from "./garment-names";
 import { bandFloorC, bandLabel } from "../../lib/temperature";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForRuns } from "./conditions";
+import { judgedFeelsLikeC } from "./judged-conditions";
 import { followerCount, followingCount } from "./follows";
 
 function db() {
@@ -94,7 +95,13 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
   const runIds = profileEntries.map((e) => e.runId);
   const profileRuns = await forIds(runIds, () =>
     database
-      .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
+      .select({
+        id: runs.id,
+        lat: runs.lat,
+        lng: runs.lng,
+        startedAt: runs.startedAt,
+        durationS: runs.durationS,
+      })
       .from(runs)
       .where(inArray(runs.id, runIds)),
   );
@@ -106,7 +113,9 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     if (entry.verdict === null) continue;
     const observation = observations.get(entry.runId);
     if (!observation) continue;
-    const floor = bandFloorC(observation.feelsLikeC);
+    // The hour the verdict was actually about, not the one the run
+    // began in — a 4->12 run rated "way warm" belongs in the 10 band.
+    const floor = bandFloorC(judgedFeelsLikeC(observation, entry.verdict));
     const band = bands.get(floor) ?? {
       bandFloorC: floor,
         // Equivalent mutant on the unit: `bandLabel` reads "c" and treats

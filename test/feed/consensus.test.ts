@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
+import { pointConditions } from "../feed/conditions-fixture";
 import {
   consensusAt,
   recentPublicEntriesStatement,
@@ -36,7 +37,7 @@ describe("your conditions consensus (E2-lite)", () => {
     await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 6, precipMm: 0 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 7, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 7 }),
       NOW,
     );
     expect(result.total).toBe(1);
@@ -53,7 +54,7 @@ describe("your conditions consensus (E2-lite)", () => {
     await makeObservation({ lat, lng, startedAt: NOW, tempC: 20, feelsLikeC: 20, precipMm: 0 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 8, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
       NOW,
     );
     expect(result.total).toBe(0);
@@ -69,7 +70,7 @@ describe("your conditions consensus (E2-lite)", () => {
     await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 8, precipMm: 5 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 8, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
       NOW,
     );
     expect(result.total).toBe(0);
@@ -92,7 +93,7 @@ describe("your conditions consensus (E2-lite)", () => {
     });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 8, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
       NOW,
     );
     expect(result.total).toBe(0);
@@ -108,7 +109,7 @@ describe("your conditions consensus (E2-lite)", () => {
     await makeObservation({ lat, lng, startedAt: eightDaysAgo, tempC: 8, feelsLikeC: 8, precipMm: 0 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 8, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
       NOW,
     );
     expect(result.total).toBe(0);
@@ -126,7 +127,7 @@ describe("your conditions consensus (E2-lite)", () => {
     await makeObservation({ lat, lng, startedAt: fourDaysAgo, tempC: 12, feelsLikeC: 12, precipMm: 0 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 8, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
       NOW,
     );
     expect(result.total).toBe(1);
@@ -155,7 +156,7 @@ describe("your conditions consensus (E2-lite)", () => {
     await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 8, precipMm: 0 });
 
     const result = await yourConditionsConsensus(
-      { tempC: 8, feelsLikeC: 8, precipMm: 0, condition: "clear", windKph: 5, source: "visualcrossing" },
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
       NOW,
     );
     expect(result.total).toBe(2);
@@ -202,14 +203,7 @@ describe("consensus: the edges of the window", () => {
     });
 
     const result = await yourConditionsConsensus(
-      {
-        tempC: 8,
-        feelsLikeC: 7,
-        precipMm: 0,
-        condition: "clear",
-        windKph: 5,
-        source: "visualcrossing",
-      },
+      pointConditions({ tempC: 8, feelsLikeC: 7 }),
       NOW,
     );
 
@@ -234,14 +228,7 @@ describe("consensus: the edges of the window", () => {
     });
 
     const result = await yourConditionsConsensus(
-      {
-        tempC: 8,
-        feelsLikeC: 7,
-        precipMm: 0,
-        condition: "clear",
-        windKph: 5,
-        source: "visualcrossing",
-      },
+      pointConditions({ tempC: 8, feelsLikeC: 7 }),
       NOW,
     );
 
@@ -254,14 +241,7 @@ describe("consensus: the edges of the window", () => {
     // widened too — claiming otherwise reads as "nobody nearby ran in
     // these exact conditions", which is a different statement.
     const empty = await yourConditionsConsensus(
-      {
-        tempC: 8,
-        feelsLikeC: 7,
-        precipMm: 0,
-        condition: "clear",
-        windKph: 5,
-        source: "visualcrossing",
-      },
+      pointConditions({ tempC: 8, feelsLikeC: 7 }),
       NOW,
     );
 
@@ -299,14 +279,7 @@ describe("consensus: the edges of the window", () => {
     });
 
     const result = await yourConditionsConsensus(
-      {
-        tempC: 8,
-        feelsLikeC: 7,
-        precipMm: 0,
-        condition: "clear",
-        windKph: 5,
-        source: "visualcrossing",
-      },
+      pointConditions({ tempC: 8, feelsLikeC: 7 }),
       NOW,
     );
 

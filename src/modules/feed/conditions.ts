@@ -20,32 +20,44 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
+import { chunked } from "../../lib/chunked";
+import { pointSpan } from "./conditions-shape";
+import type { Conditions } from "./conditions-shape";
+
+type ObservationRow = typeof weatherObservations.$inferSelect;
 import { env } from "../../env";
 // The cache key and its predicate come from the module that owns the table
 // (docs/architecture.md: only modules/weather touches dialed-weather).
-import { cacheKeyFor, matchesKey } from "../weather";
+import { cacheKeyFor, matchesKey, runHourKeys } from "../weather";
 
 /** The core D1 handle. Callers hold their own — consensus takes one as
  * an argument so the cron can pass a non-request binding. */
 type CoreDb = DrizzleD1Database;
 
-export interface Conditions {
-  tempC: number;
-  feelsLikeC: number;
-  precipMm: number;
-  condition: string;
-  windKph: number;
-  source: "visualcrossing" | "manual";
-}
 
+
+
+export { pointSpan } from "./conditions-shape";
+export type { Conditions, ConditionsSpan } from "./conditions-shape";
 
 const CHUNK = 20;
+
+/**
+One observation cache cell, as a Map key.
+*/
+function cellKey(latR: number, lngR: number, hourBucket: number): string {
+  return `${String(latR)}|${String(lngR)}|${String(hourBucket)}`;
+}
+
 
 interface Locatable {
   id: string;
   lat: number | null;
   lng: number | null;
   startedAt: number;
+  /** How far past `startedAt` to read. Without it a 2-hour run reads as
+   *  the hour it began in, which is D-5. */
+  durationS: number;
 }
 
 /**
@@ -72,6 +84,7 @@ export async function observationsForEntries(
       lat: runs.lat,
       lng: runs.lng,
       startedAt: runs.startedAt,
+      durationS: runs.durationS,
     })
     .from(runs)
     .where(
@@ -91,52 +104,86 @@ export async function observationsForEntries(
 export async function observationsForRuns(
   batch: readonly Locatable[],
 ): Promise<Map<string, Conditions>> {
-  const keyed = batch.flatMap((run) =>
+  // Every hour the run touched, not just the one it began in. The walk is
+  // `runHourKeys` from the weather module rather than a local copy,
+  // because `attach.ts` uses the same one to decide which hours to
+  // *resolve* — a second copy of the rounding or the cap would let the
+  // reader look for an hour the writer never fetched.
+  const spans = batch.flatMap((run) =>
     run.lat === null || run.lng === null
       ? []
       : [
           {
             runId: run.id,
-            key: cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000)),
+            keys: runHourKeys(run.lat, run.lng, run.startedAt, run.durationS),
           },
         ],
   );
+  const keyed = spans.flatMap(({ runId, keys }) =>
+    keys.map((key) => ({ runId, key })),
+  );
   const db = drizzle(env.DIALED_WEATHER);
-  const result = new Map<string, Conditions>();
-  // Three equivalent mutants live in the next three lines, and they are
-  // equivalent for the same reason: the answer is assembled by matching
-  // each run's key against the rows afterwards, so widening the query —
-  // an off-by-one chunk, an unsliced chunk, an emptied `or` — changes what
-  // is *scanned* and not what is *returned*. Rows scanned are what D1
-  // bills, which is why the chunking stays.
-  // Stryker disable next-line EqualityOperator
-  for (let index = 0; index < keyed.length; index += CHUNK) {
-    // Stryker disable next-line MethodExpression
-    const chunk = keyed.slice(index, index + CHUNK);
-    // Stryker disable next-line ArrowFunction
-    const chunkScope = or(...chunk.map(({ key }) => matchesKey(key)));
-    const rows = await db
+  // Keyed by cache cell rather than collected into a list: a run spans up
+  // to six hours and a page holds two hundred runs, so a linear scan per
+  // key is twelve hundred passes over the rows for an answer a lookup
+  // gives directly.
+  const byCell = new Map<string, ObservationRow>();
+  // The chunking is what keeps the `or(...)` bounded, and it is about what
+  // D1 *scans* — which is what it bills — not about what comes back. The
+  // answer is assembled by matching keys afterwards either way, which is
+  // why `chunked` is tested where its mutants are visible rather than
+  // excused here.
+  for (const chunk of chunked(keyed, CHUNK)) {
+    // Equivalent mutant, and the proof is the one the chunking rests on:
+    // emptying this arrow widens the `where` to every observation, and the
+    // answer is assembled by matching keys against the rows afterwards —
+    // so a superset changes what is *scanned* and not what is *returned*.
+    // Scanned rows are what D1 bills, which is why the predicate stays.
+    //
+    // Block form, not `next-line`: the read is one statement spanning five
+    // lines, so a `next-line` directive above `.where(` attaches to the
+    // statement's first line and silently does nothing.
+    // Stryker disable ArrowFunction
+    const found = await db
       .select()
       .from(weatherObservations)
-      .where(chunkScope);
-    for (const { runId, key } of chunk) {
-      const row = rows.find(
-        (r) =>
-          r.latR === key.latR &&
-          r.lngR === key.lngR &&
-          r.hourBucket === key.hourBucket,
-      );
-      if (row) {
-        result.set(runId, {
-          tempC: row.tempC,
-          feelsLikeC: row.feelsLikeC,
-          precipMm: row.precipMm,
-          condition: row.condition,
-          windKph: row.windKph,
-          source: row.source,
-        });
-      }
+      .where(or(...chunk.map(({ key }) => matchesKey(key))));
+    // Stryker restore ArrowFunction
+    for (const row of found) {
+      byCell.set(cellKey(row.latR, row.lngR, row.hourBucket), row);
     }
+  }
+
+  const result = new Map<string, Conditions>();
+  for (const { runId, keys } of spans) {
+    // Aligned with `keys`, so index 0 is the *starting* hour whether or
+    // not it resolved. Taking "the first row found" instead would let a
+    // run whose start never resolved answer with its second hour, under a
+    // field that means "what they set out in".
+    const hourRows = keys.map((key) =>
+      byCell.get(cellKey(key.latR, key.lngR, key.hourBucket)),
+    );
+    const [start] = hourRows;
+    // The starting hour is what `tempC`/`feelsLikeC` mean, so a run
+    // missing it has no conditions at all — the behaviour before this
+    // lane, kept. A run missing only its *later* hours still answers, over
+    // the hours that did resolve.
+    if (start === undefined) continue;
+    const hours = hourRows.flatMap((row) => (row === undefined ? [] : [row]));
+    result.set(runId, {
+      tempC: start.tempC,
+      feelsLikeC: start.feelsLikeC,
+      precipMm: start.precipMm,
+      condition: start.condition,
+      windKph: start.windKph,
+      source: start.source,
+      span: {
+        minTempC: Math.min(...hours.map((h) => h.tempC)),
+        maxTempC: Math.max(...hours.map((h) => h.tempC)),
+        minFeelsLikeC: Math.min(...hours.map((h) => h.feelsLikeC)),
+        maxFeelsLikeC: Math.max(...hours.map((h) => h.feelsLikeC)),
+      },
+    });
   }
   return result;
 }
@@ -199,6 +246,11 @@ export async function currentConditions(
     condition: best.condition,
     windKph: best.windKph,
     source: best.source,
+    // A live reading is one hour by construction — this answers "what is
+    // it like there now", not "what was a run like". The span is that one
+    // hour, so a viewer's conditions compare against a runner's the same
+    // way whichever side they are on.
+    span: pointSpan(best.tempC, best.feelsLikeC),
   };
 }
 

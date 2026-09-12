@@ -13,6 +13,7 @@ import {
 } from "../../src/modules/feed/conditions";
 import { follow, followerCount } from "../../src/modules/feed/follows";
 import { searchByDisplayName } from "../../src/modules/feed/search";
+import { pointConditions } from "../feed/conditions-fixture";
 import {
   makeEntry,
   makeObservation,
@@ -74,8 +75,8 @@ describe("observationsForRuns", () => {
     });
 
     const observations = await observationsForRuns([
-      { id: first, lat: 41.11, lng: -93.27, startedAt: NOW },
-      { id: second, lat: 42.22, lng: -93.27, startedAt: NOW },
+      { id: first, lat: 41.11, lng: -93.27, startedAt: NOW, durationS: 0 },
+      { id: second, lat: 42.22, lng: -93.27, startedAt: NOW, durationS: 0 },
     ]);
 
     expect(observations.get(first)?.tempC).toBe(1);
@@ -109,9 +110,9 @@ describe("observationsForRuns", () => {
 
     const missing = coordinateNull();
     const observations = await observationsForRuns([
-      { id: "no-lat", lat: missing, lng: -73.33, startedAt: NOW },
-      { id: "no-lng", lat: 43.33, lng: missing, startedAt: NOW },
-      { id: "neither", lat: missing, lng: missing, startedAt: NOW },
+      { id: "no-lat", lat: missing, lng: -73.33, startedAt: NOW, durationS: 0 },
+      { id: "no-lng", lat: 43.33, lng: missing, startedAt: NOW, durationS: 0 },
+      { id: "neither", lat: missing, lng: missing, startedAt: NOW, durationS: 0 },
     ]);
 
     expect(observations.size).toBe(0);
@@ -137,6 +138,7 @@ describe("observationsForRuns", () => {
     const observations = await observationsForRuns(
       runIds.map((id, index) => ({
         id,
+        durationS: 0,
         lat: 44 + index / 100,
         lng: -93.27,
         startedAt: NOW,
@@ -170,8 +172,8 @@ describe("observationsForRuns", () => {
     });
 
     const observations = await observationsForRuns([
-      { id: here, lat: 53.11, lng: -93.27, startedAt: NOW },
-      { id: there, lat: 53.11, lng: -80.27, startedAt: NOW },
+      { id: here, lat: 53.11, lng: -93.27, startedAt: NOW, durationS: 0 },
+      { id: there, lat: 53.11, lng: -80.27, startedAt: NOW, durationS: 0 },
     ]);
 
     expect(observations.get(here)?.tempC).toBe(2);
@@ -200,8 +202,8 @@ describe("observationsForRuns", () => {
     });
 
     const observations = await observationsForRuns([
-      { id: early, lat: 46.11, lng: -93.27, startedAt: NOW },
-      { id: late, lat: 46.11, lng: -93.27, startedAt: NOW + HOUR },
+      { id: early, lat: 46.11, lng: -93.27, startedAt: NOW, durationS: 0 },
+      { id: late, lat: 46.11, lng: -93.27, startedAt: NOW + HOUR, durationS: 0 },
     ]);
 
     expect(observations.get(early)?.tempC).toBe(2);
@@ -314,14 +316,7 @@ describe("currentConditions", () => {
       precipMm: 2,
     });
 
-    expect(await currentConditions(52.11, -93.27, NOW)).toStrictEqual({
-      tempC: 6,
-      feelsLikeC: 4,
-      precipMm: 2,
-      condition: "clear",
-      windKph: 10,
-      source: "visualcrossing",
-    });
+    expect(await currentConditions(52.11, -93.27, NOW)).toStrictEqual(pointConditions({ tempC: 6, feelsLikeC: 4, precipMm: 2, windKph: 10 }));
   });
 });
 

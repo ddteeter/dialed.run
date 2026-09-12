@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { formatDistance, inFahrenheit } from "../../../lib/measures";
+import { formatDistance, inFahrenheitRange } from "../../../lib/measures";
 import { Bracketed, Mono, Skeleton } from "../../../ui";
 import type { ConsensusResult } from "../consensus";
 import type { FeedItem } from "../feed";
@@ -84,7 +84,10 @@ function FollowingTab({ items }: Readonly<{ items: FeedItem[] }>) {
             <div className="flex items-center justify-between">
               <span className="font-semibold">{item.authorDisplayName ?? "A runner"}</span>
               {item.conditions ? (
-                <Mono className="text-xs text-teal">{inFahrenheit(item.conditions.tempC)}</Mono>
+                <Mono className="text-xs text-teal">{inFahrenheitRange(
+                    item.conditions.span.minTempC,
+                    item.conditions.span.maxTempC,
+                  )}</Mono>
               ) : undefined}
             </div>
             <Mono className="text-xs text-night/60">{formatDistance(item.distanceM)}</Mono>

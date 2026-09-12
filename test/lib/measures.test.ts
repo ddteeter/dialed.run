@@ -4,6 +4,7 @@ import {
   formatDistance,
   formatDuration,
   inFahrenheit,
+  inFahrenheitRange,
 } from "../../src/lib/measures";
 
 /**
@@ -53,5 +54,32 @@ describe("inFahrenheit", () => {
     expect(inFahrenheit(10)).toBe("50°");
     expect(inFahrenheit(0)).toBe("32°");
     expect(inFahrenheit(-10)).toBe("14°");
+  });
+});
+
+/**
+ * `inFahrenheitRange` — the span a run actually covered.
+ */
+describe("inFahrenheitRange", () => {
+  it("renders the two ends when a run spanned them", () => {
+    // 2C -> 36F, 14C -> 57F. En dash, no spaces, matching bandLabel.
+    expect(inFahrenheitRange(2, 14)).toBe("36–57°");
+  });
+
+  it("collapses to one value when the run fits a single hour", () => {
+    // Not cosmetic: most runs are inside one hour, and "36–36°" reads as a
+    // measurement error rather than a short run.
+    expect(inFahrenheitRange(2, 2)).toBe("36°");
+  });
+
+  it("collapses when the two ends round to the same degree", () => {
+    // 4.2C and 4.4C both render 40F; a range whose ends print the same is
+    // the thing the collapse exists to avoid, and comparing the rounded
+    // strings is what catches it.
+    expect(inFahrenheitRange(4.2, 4.4)).toBe("40°");
+  });
+
+  it("keeps the degree sign on the high end only", () => {
+    expect(inFahrenheitRange(0, 10)).toBe("32–50°");
   });
 });

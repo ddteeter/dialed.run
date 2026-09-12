@@ -34,6 +34,7 @@ import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
+import { judgedFeelsLikeC } from "./judged-conditions";
 import { hasReacted, usefulCount } from "./reactions";
 
 type EntryTag = (typeof entryTags)[number];
@@ -175,6 +176,7 @@ export interface SubmitVerdictInput {
 async function assertOwnsEntry(
   entryId: string,
   userId: string,
+// fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
 ): Promise<{ id: string; userId: string; runId: string }> {
   const [entry] = await db()
     .select({ id: outfitEntries.id, userId: outfitEntries.userId, runId: outfitEntries.runId })
@@ -328,7 +330,8 @@ export async function verdictBandCounts(
   for (const entry of verdicted) {
     const observation = observations.get(entry.runId);
     if (!observation) continue;
-    if (bandFloorC(observation.feelsLikeC) !== targetBandFloorC) continue;
+    if (bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) !== targetBandFloorC)
+      continue;
     counts[entry.verdict] = (counts[entry.verdict] ?? 0) + 1;
   }
   return counts;
@@ -350,7 +353,11 @@ export async function itemBandWearStat(
   // is not decorative — LIMIT without it makes "the 200 rows we looked at"
   // depend on the query plan.
   const own = await db()
-    .select({ id: outfitEntries.id, runId: outfitEntries.runId })
+    .select({
+      id: outfitEntries.id,
+      runId: outfitEntries.runId,
+      verdict: outfitEntries.verdict,
+    })
     .from(outfitEntries)
     .where(eq(outfitEntries.userId, userId))
     .orderBy(desc(outfitEntries.createdAt))
@@ -362,7 +369,13 @@ export async function itemBandWearStat(
   const observations = await observationsForEntries(db(), own);
   const inBand = own.filter((entry) => {
     const observation = observations.get(entry.runId);
-    return observation !== undefined && bandFloorC(observation.feelsLikeC) === targetBandFloorC;
+    // `own` here is not filtered to rated entries, so an unrated one
+    // bands at its starting hour — see `judgedFeelsLikeC`.
+    return (
+      observation !== undefined &&
+      bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) ===
+        targetBandFloorC
+    );
   });
   // Equivalent mutant: an empty `inArray` matches nothing, so `worn`
   // would be 0 and `total` already is. The return saves the query.

@@ -38,3 +38,25 @@ export function formatDuration(durationS: number): string {
  */
 // Stryker disable next-line StringLiteral
 export const inFahrenheit = (tempC: number): string => formatTemp(tempC, "f");
+
+/**
+ * The temperature a run actually covered: `[4°]` when it fits one hour,
+ * `[4–12°]` when it does not.
+ *
+ * The en dash, and no space around it, is what `bandLabel` already renders
+ * for a band ("38–46°"), so a range of conditions and a range of bands read
+ * as the same kind of thing. That is the whole reason this reuses the
+ * existing device instead of inventing one (CLAUDE.md, undesigned
+ * surfaces).
+ *
+ * Collapsing when the ends agree is not cosmetic: most runs are inside one
+ * hour, and `[4–4°]` would read as a measurement error rather than a short
+ * run. Rounding happens before the comparison, so 4.2° and 4.4° collapse
+ * too — they render identically, and a range whose ends print the same is
+ * the thing this exists to avoid.
+ */
+export const inFahrenheitRange = (minC: number, maxC: number): string => {
+  const low = inFahrenheit(minC);
+  const high = inFahrenheit(maxC);
+  return low === high ? low : `${low.replace("°", "")}–${high}`;
+};

@@ -5,7 +5,7 @@ import { verdictLabel } from "../../../lib/contracts";
 import {
   formatDistance,
   formatDuration,
-  inFahrenheit,
+  inFahrenheitRange,
 } from "../../../lib/measures";
 import { Bracketed, Mono } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
@@ -94,7 +94,10 @@ export function EntryDetail({
         </Mono>
         {entry.conditions === undefined ? undefined : (
           <Mono className="text-sm text-teal">
-            {inFahrenheit(entry.conditions.tempC)}{" "}
+            {inFahrenheitRange(
+              entry.conditions.span.minTempC,
+              entry.conditions.span.maxTempC,
+            )}{" "}
             {entry.conditions.condition}
           </Mono>
         )}

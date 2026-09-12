@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Feed } from "../../src/modules/feed/components/Feed";
 import type { ConsensusResult } from "../../src/modules/feed/consensus";
 import type { FeedItem } from "../../src/modules/feed/feed";
+import { pointConditions } from "../feed/conditions-fixture";
 
 /**
  * The feed's two tabs (E1 and E2-lite).
@@ -173,14 +174,7 @@ describe("Feed: the following tab", () => {
       <Feed
         items={[
           feedItem({
-            conditions: {
-              tempC: 10,
-              feelsLikeC: 8,
-              precipMm: 0,
-              condition: "Clear",
-              windKph: 5,
-              source: "visualcrossing",
-            },
+            conditions: pointConditions({ tempC: 10, feelsLikeC: 8, condition: "Clear" }),
           }),
         ]}
         conditionsFor={noConditions}
