@@ -1,8 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { CoverageBand } from "../../src/modules/feed";
-import { CallLadder } from "../../src/modules/onboarding/components/CallLadder";
+import {
+  CallLadder,
+  ThinnestAsk,
+} from "../../src/modules/onboarding/components/CallLadder";
 import { ladderFrom } from "../../src/modules/onboarding/ladder";
 
 /**
@@ -22,6 +25,14 @@ function band(bandFloorC: number, counts: Partial<CoverageBand> = {}): CoverageB
     warm: 0,
     ...counts,
   };
+}
+
+/**
+The band rows, not the legend's — both are lists of `<li>`.
+*/
+function bandRows() {
+  const [bands] = screen.getAllByRole("list");
+  return within(bands ?? document.body).getAllByRole("listitem");
 }
 
 describe("CallLadder", () => {
@@ -82,17 +93,20 @@ describe("CallLadder", () => {
       />,
     );
 
-    const rows = screen.getAllByRole("listitem");
+    const rows = bandRows();
     expect(rows).toHaveLength(3);
     // The gap is the point of the screen — it has to be visible to be
     // asked for.
     expect(rows[1]).toHaveTextContent("[5–10°]");
-    expect(rows[1]).toHaveTextContent("[unknown]");
+    // Coverage lost its brackets with the §AB redraw — bracket notation is
+    // for measured values, and "unknown" is a level rather than a
+    // measurement. The band label keeps them.
+    expect(rows[1]).toHaveTextContent("unknown");
   });
 
-  it("labels coverage as text, not as a colour alone", () => {
-    // design-deltas item 6: pink/teal/grey already mean cold/dialed/warm
-    // on the profile. Until that is resolved, coverage is words.
+  it("labels coverage as text, never as a mark alone", () => {
+    // Design round 6 §AB gave coverage ink density, and the words stay:
+    // "the counts are there so the reading never depends on the swatch".
     render(
       <CallLadder
         ladder={ladderFrom([
@@ -103,15 +117,71 @@ describe("CallLadder", () => {
       />,
     );
 
-    const rows = screen.getAllByRole("listitem");
+    const rows = bandRows();
     // Lower case on purpose, and this is the assertion for it: `Mono`
     // applies the uppercase in CSS so the *accessible name* stays in
     // normal case — several screen readers spell a short all-caps token
     // out letter by letter. Typing "COVERED" here would pass while
     // shipping a worse announcement.
-    expect(rows[0]).toHaveTextContent("[covered]");
-    expect(rows[1]).toHaveTextContent("[partial]");
-    expect(rows[2]).toHaveTextContent("[unknown]");
+    expect(rows[0]).toHaveTextContent("covered");
+    expect(rows[1]).toHaveTextContent("partial");
+    expect(rows[2]).toHaveTextContent("unknown");
+  });
+
+  it("marks coverage in ink density, and never in a hue", () => {
+    // §AB rule 02: coverage is monochrome, on every surface. Hue means
+    // verdict — pink cold, teal dialed, grey warm — and a swatch that
+    // borrowed one would be teaching a second meaning for the same colour
+    // on the one screen that shows both ideas.
+    render(
+      <CallLadder
+        ladder={ladderFrom([
+          band(0, { dialed: 3 }),
+          band(5, { dialed: 1 }),
+          band(10),
+        ])}
+      />,
+    );
+
+    // Typed, because `querySelectorAll` answers with `Element` and only an
+    // `HTMLElement` carries `dataset`.
+    const marks = [
+      ...document.querySelectorAll<HTMLElement>("[data-coverage]"),
+    ];
+    expect(marks.map((mark) => mark.dataset.coverage)).toEqual([
+      // Three bands, then the legend's own three.
+      "covered",
+      "partial",
+      "unknown",
+      "covered",
+      "partial",
+      "unknown",
+    ]);
+    for (const mark of marks) {
+      expect(mark.className).not.toMatch(/pink|teal/);
+    }
+  });
+
+  it("counts the bands at each level, so a hollow year reads as hollow", () => {
+    // "Forty verdicts all at 50° leaves January hollow, and a hollow bar
+    // looks hollow." The legend is what makes that a number rather than a
+    // texture to decode.
+    render(
+      <CallLadder
+        ladder={ladderFrom([
+          band(0, { dialed: 3 }),
+          band(5, { dialed: 3 }),
+          band(10, { dialed: 1 }),
+          band(15),
+        ])}
+      />,
+    );
+
+    const legend = screen.getAllByRole("list")[1];
+    expect(legend).toBeDefined();
+    expect(within(legend ?? document.body).getByText(/covered 2/)).toBeVisible();
+    expect(within(legend ?? document.body).getByText(/partial 1/)).toBeVisible();
+    expect(within(legend ?? document.body).getByText(/unknown 1/)).toBeVisible();
   });
 
   it("shows how many verdicts each band holds, adding all three kinds", () => {
@@ -124,7 +194,8 @@ describe("CallLadder", () => {
       />,
     );
 
-    expect(screen.getByRole("listitem")).toHaveTextContent("7");
+    const [row] = bandRows();
+    expect(row).toHaveTextContent("7");
   });
 
   it("never recommends a garment", () => {
@@ -135,5 +206,28 @@ describe("CallLadder", () => {
     );
 
     expect(screen.queryByText(/wear|jacket|tights|singlet/i)).toBeNull();
+  });
+});
+
+/**
+ * The ask, on its own, because inside the ladder its empty case cannot
+ * happen — a runner with verdicts always has a thinnest band. Lifting it
+ * out is what turned an equivalent mutant into a tested one.
+ */
+describe("ThinnestAsk", () => {
+  it("names the band worth logging next", () => {
+    render(<ThinnestAsk band={band(-5, { dialed: 1 })} />);
+
+    expect(screen.getByText(/Thinnest so far/)).toHaveTextContent(
+      "Thinnest so far: [-5–0°]",
+    );
+  });
+
+  it("renders nothing when there is no band to ask for", () => {
+    // Not an empty paragraph: a blank line under the headline would read
+    // as something that failed to load.
+    const { container } = render(<ThinnestAsk band={undefined} />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

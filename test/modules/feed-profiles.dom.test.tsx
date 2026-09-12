@@ -142,7 +142,12 @@ describe("OwnProfile: the sections that only appear when there is something in t
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
   });
 
-  it("draws the coverage bands as dots by verdict", async () => {
+  it("names how each band was called, in three redundant channels", async () => {
+    // Design §AB3. The row this replaces had one channel — hue, on three
+    // identical dot runs, with warm at 30% ink — which is a three-way
+    // distinction carried by colour alone *and* a contrast failure. Now
+    // the filled slot's position carries it, hue repeats it, and a word
+    // says it outright.
     await renderWithRouter(
       <OwnProfile
         profile={ownProfile({
@@ -154,12 +159,53 @@ describe("OwnProfile: the sections that only appear when there is something in t
     );
 
     expect(
-      screen.getByRole("heading", { name: "Temperature coverage" }),
+      screen.getByRole("heading", { name: "How you call it, by band" }),
     ).toBeVisible();
     expect(screen.getByText("[0–5°]")).toBeVisible();
-    expect(screen.getByText("●●")).toHaveClass("text-pink");
-    expect(screen.getByText("●●●")).toHaveClass("text-teal");
-    expect(screen.getByText("●")).toHaveClass("text-night/30");
+    // Dialed leads 3–2–1, and the count is every verdict in the band.
+    expect(screen.getByText("Dialed")).toBeVisible();
+    expect(screen.getByText("6 runs")).toBeVisible();
+    expect(document.querySelector("[data-verdict]")).toHaveAttribute(
+      "data-verdict",
+      "dialed",
+    );
+  });
+
+  it("retires the 30%-ink warm, and names it as over-dressed", async () => {
+    // §AB rule 04: `text-night/30` is gone, because opacity never encodes
+    // meaning. Warm is full-strength ink with its own slot and its own
+    // word.
+    await renderWithRouter(
+      <OwnProfile
+        profile={ownProfile({
+          coverage: [
+            { bandFloorC: 10, label: "10–15°", cold: 1, dialed: 0, warm: 4 },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Over-dressed")).toBeVisible();
+    expect(document.querySelector("[data-verdict='warm']")).not.toBeNull();
+    expect(document.querySelector(String.raw`.text-night\/30`)).toBeNull();
+  });
+
+  it("calls a band under-dressed when cold leads, ties included", async () => {
+    // Ties go to the colder end — the same rule `ladderFrom` uses to pick
+    // its thinnest band, and for the same reason: underdressing is the
+    // failure that ends a run early.
+    await renderWithRouter(
+      <OwnProfile
+        profile={ownProfile({
+          coverage: [
+            { bandFloorC: -5, label: "-5–0°", cold: 3, dialed: 3, warm: 0 },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Under-dressed")).toBeVisible();
+    expect(document.querySelector("[data-verdict='cold']")).not.toBeNull();
   });
 
   it("lists most-worn items with their counts", async () => {

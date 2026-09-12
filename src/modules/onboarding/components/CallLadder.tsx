@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, CoverageMark, Mono } from "../../../ui";
+import type { CoverageLevel } from "../../../ui";
 import type { Ladder } from "../ladder";
 
 /**
@@ -15,35 +16,47 @@ import type { Ladder } from "../ladder";
  * at 50° is still nothing known about January, so the ladder renders the
  * bands a runner has *not* covered alongside the ones they have.
  *
- * **Coverage is a text label, not a colour, and that is on purpose.** O6
- * says pink/teal/grey mean covered/partial/unknown; the shipped profile
- * already uses the same three for cold/dialed/warm verdicts. Until design
- * resolves which meaning wins (design-deltas item 6), bracket notation
- * carries it — CLAUDE.md's undesigned-surface protocol says a text label
- * in the existing system is always the correct placeholder, and it avoids
- * teaching a colour a second meaning that may have to be untaught.
+ * **Coverage is ink density, never a hue** (design round 6 §AB, D-48).
+ * This screen shipped bracket notation as a placeholder precisely because
+ * pink/teal/grey were claimed by two meanings at once, and design's answer
+ * was that hue belongs to verdict — so coverage got the channel it should
+ * have had. Their note on the artboard is explicit that the placeholder
+ * was the right call: *"Lane 105 was right to ship text rather than borrow
+ * a colour."*
+ *
+ * The words stay beside the swatches. *"The counts are there so the
+ * reading never depends on the swatch"* — and ink is knowledge, so a band
+ * nobody has logged looks hollow rather than merely differently coloured.
  */
-export function CallLadder({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
+export function CallLadder({
+  ladder,
+}: Readonly<{ ladder: Ladder }>): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <LadderHeadline ladder={ladder} />
+      {/* One guard, not two: the bar and its legend are the same fact, and
+          a ladder with no bands has neither. */}
       {ladder.bands.length === 0 ? undefined : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {ladder.bands.map(({ band, coverage }) => (
-            <li
-              key={band.bandFloorC}
-              className="flex items-center justify-between gap-3 text-sm"
-            >
-              <Bracketed className="w-24 shrink-0 text-night/40">
-                {band.label}
-              </Bracketed>
-              <Bracketed className="text-xs text-night/50">{coverage}</Bracketed>
-              <Mono className="text-xs text-night/40">
-                {String(band.cold + band.dialed + band.warm)}
-              </Mono>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {ladder.bands.map(({ band, coverage }) => (
+              <li
+                key={band.bandFloorC}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
+                <Bracketed className="w-24 shrink-0 text-night/40">
+                  {band.label}
+                </Bracketed>
+                <CoverageMark level={coverage} />
+                <Mono className="text-xs text-night/50">{coverage}</Mono>
+                <Mono className="text-xs text-night/40">
+                  {String(band.cold + band.dialed + band.warm)}
+                </Mono>
+              </li>
+            ))}
+          </ul>
+          <CoverageLegend levels={ladder.bands.map((row) => row.coverage)} />
+        </>
       )}
     </div>
   );
@@ -72,27 +85,65 @@ function LadderHeadline({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
       </p>
     );
   }
-  // Equivalent mutant, and unreachable rather than merely untested:
-  // this branch is only reached when `verdictTotal > 0`, which means at
-  // least one band, which means `ladderFrom` found a thinnest one. The
-  // guard narrows the type for the compiler and nothing else.
-  //
-  // Hoisted to a statement because a `next-line` directive does not attach
-  // inside a JSX expression.
-  // Stryker disable next-line ConditionalExpression
-  const ask = ladder.thinnestBand === undefined ? undefined : (
-    <p className="m-0 text-sm text-night/60">
-      Thinnest so far:{" "}
-      <Bracketed className="text-night/50">{ladder.thinnestBand.label}</Bracketed>
-    </p>
-  );
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 text-base">
         <Mono>{String(ladder.verdictsUntilCall)}</Mono> verdicts until your
         first call.
       </p>
-      {ask}
+      <ThinnestAsk band={ladder.thinnestBand} />
     </div>
+  );
+}
+
+/**
+ * How many bands sit at each level.
+ *
+ * Design's own legend, and the line that earns it: *"Forty verdicts all at
+ * 50° leaves January hollow, and a hollow bar looks hollow."* The counts
+ * make that readable without decoding the swatches, which is the point of
+ * printing them at all.
+ */
+function CoverageLegend({
+  levels,
+}: Readonly<{ levels: readonly CoverageLevel[] }>): JSX.Element {
+  const order: readonly CoverageLevel[] = ["covered", "partial", "unknown"];
+  return (
+    <ul className="m-0 flex list-none flex-wrap gap-4 border-t border-night/15 p-0 pt-3">
+      {order.map((level) => (
+        <li key={level} className="flex items-center gap-2">
+          <CoverageMark level={level} />
+          <Mono className="text-[11px] text-night/50">
+            {level} {levels.filter((row) => row === level).length}
+          </Mono>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The band worth logging next, when there is one.
+ *
+ * **Its own component so the empty case is reachable.** Inside
+ * `LadderHeadline` this guard could never be false — that branch only runs
+ * when `verdictTotal > 0`, which means at least one band, which means
+ * `ladderFrom` found a thinnest one — so it was an equivalent mutant
+ * carrying a Stryker suppression. Prettier then wrapped the line and
+ * silently detached the directive, which is how it came back.
+ *
+ * Lifted out, "no thinnest band" is a state a test can simply render, and
+ * the suppression is gone rather than repaired. Exported for that test:
+ * the reachable version is the one worth keeping.
+ */
+export function ThinnestAsk({
+  band,
+}: Readonly<{ band: Ladder["thinnestBand"] }>): JSX.Element | undefined {
+  if (band === undefined) return undefined;
+  return (
+    <p className="m-0 text-sm text-night/60">
+      Thinnest so far:{" "}
+      <Bracketed className="text-night/50">{band.label}</Bracketed>
+    </p>
   );
 }

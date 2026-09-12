@@ -1,3 +1,5 @@
+import type { VerdictKind } from "../../ui";
+
 import { bandFloorC } from "../../lib/temperature";
 import type { Conditions } from "./conditions-shape";
 import { judgedFeelsLikeC } from "./judged-conditions";
@@ -122,3 +124,21 @@ function spanFloors(tally: CoverageTally): number[] {
   }
   return floors;
 }
+
+/**
+ * How a runner called a band, in one word.
+ *
+ * Design §AB3 gives each band a single characterisation — "Under-dressed",
+ * "Dialed", "Over-dressed" — beside its run count, rather than three
+ * competing dot runs. This is the derivation that produces it.
+ *
+ * **Ties go to the colder end**, the same rule and the same reason
+ * `ladderFrom` picks its thinnest band that way: underdressing is the
+ * failure that ends a run early, so a band a runner gets wrong in both
+ * directions equally is worth naming as the direction that costs more.
+ */
+export function bandVerdict(band: CoverageBand): VerdictKind {
+  if (band.cold >= band.dialed && band.cold >= band.warm) return "cold";
+  return band.dialed >= band.warm ? "dialed" : "warm";
+}
+
