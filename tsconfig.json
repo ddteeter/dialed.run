@@ -16,7 +16,18 @@
     // `unicorn/prefer-promise-with-resolvers` requires it, so without the
     // lib entry the two rules contradict each other and the only way out
     // is a suppression. Just the one API, not the whole ES2024 surface.
-    "lib": ["ES2022", "ES2024.Promise", "DOM", "DOM.Iterable"],
+    //
+    // ES2023.Array is here for the same reason and by the same rule:
+    // `unicorn/no-array-sort` requires `toSorted`, and `sort` mutates in
+    // place — which is a real bug waiting on a shared table, not a style
+    // preference. workerd and Node both have it; only tsc did not.
+    "lib": [
+      "ES2022",
+      "ES2023.Array",
+      "ES2024.Promise",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "types": ["./worker-configuration.d.ts", "node", "vite/client"],
 
     /* Bundler mode */

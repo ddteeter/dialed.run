@@ -3,131 +3,167 @@ import { describe, expect, it } from "vitest";
 import { garmentSchema } from "../../src/lib/contracts";
 import {
   climateBands,
+  TAP_LIST,
+  TAP_LIST_FOLD,
+  tapListFor,
   tapListSelectionSchema,
-  TAP_LISTS,
-  type ClimateBand,
 } from "../../src/modules/closet/tap-list";
 
 /**
- * The curated tap lists, asserted as a table rather than transcribed.
- *
- * Sixty-seven mutants survived in `tap-list-data.ts` — every string and
- * every flag in it. The obvious answer, writing each row out again in a
- * test, is the wrong one: a hand-written second copy of a table is not a
- * check on the table, it is a rival copy of it, and CLAUDE.md's "derive,
- * don't mirror" is about exactly this. Nothing would make the two disagree
- * loudly.
- *
- * So these assert the *invariants* the table has to hold, and let
- * `garmentSchema` do the rest: an emptied category, layer, weight or name
- * stops parsing, and an emptied key breaks the band-prefix convention. One
- * assertion is about content, and it is a product rule rather than a
- * transcription: the cold list has to offer wind protection.
+ * One list, ordered per band (design round 6, `Remaining Screens.dc.html`
+ * §AA). The rule the tests exist to hold is the one sentence the artboard
+ * leads with: **the band never removes a row.**
  */
-
-function everyEntry(): { band: ClimateBand; key: string; garment: unknown }[] {
-  return climateBands.flatMap((band) =>
-    TAP_LISTS[band].map((entry) => ({
-      band,
-      key: entry.key,
-      garment: entry.garment,
-    })),
-  );
+function garmentFor(key: string) {
+  return TAP_LIST.find((row) => row.key === key)?.garment;
 }
 
 describe("the tap-list table", () => {
-  it("offers something in every band", () => {
-    for (const band of climateBands) {
-      expect(TAP_LISTS[band].length, band).toBeGreaterThan(0);
-    }
-  });
-
   it("holds only garments the contract accepts", () => {
-    // Every wardrobe write goes through `garmentSchema` (CLAUDE.md), and a
-    // tap-list save is a write. A row that cannot parse is a row that
-    // throws on the one path onboarding depends on.
-    for (const { band, key, garment } of everyEntry()) {
-      const parsed = garmentSchema.safeParse(garment);
-      expect(parsed.success, `${band}/${key}: ${parsed.error?.message ?? ""}`).toBe(
-        true,
-      );
+    for (const { garment } of TAP_LIST) {
+      expect(garmentSchema.safeParse(garment).success).toBe(true);
     }
   });
 
-  it("names every row, distinctly within its band", () => {
-    // The name is what a runner taps. Two identical labels in one band is
-    // a picker with two indistinguishable buttons.
-    for (const band of climateBands) {
-      const names = TAP_LISTS[band].map((entry) => entry.garment.name);
-      for (const name of names) expect(name.length).toBeGreaterThan(0);
-      expect(new Set(names).size, band).toBe(names.length);
-    }
+  it("keys every row uniquely, and names every row distinctly", () => {
+    expect(new Set(TAP_LIST.map((row) => row.key)).size).toBe(TAP_LIST.length);
+    expect(new Set(TAP_LIST.map((row) => row.garment.name)).size).toBe(
+      TAP_LIST.length,
+    );
   });
 
-  it("keys every row by its band, uniquely across the whole table", () => {
-    // The key is what the client sends back, and `addFromTapList` looks it
-    // up within a band — so a key that does not carry its band is a key
-    // that can silently match the wrong list.
-    const keys = everyEntry().map((entry) => entry.key);
-    expect(new Set(keys).size).toBe(keys.length);
-    for (const { band, key } of everyEntry()) {
-      expect(key.startsWith(`${band}-`), key).toBe(true);
-    }
+  it("marks the rows whose whole point is keeping weather out", () => {
+    // Not decoration: `estimateTempRange` reads `windResistant`, so a wind
+    // shell that is not marked wind resistant estimates as a mid layer and
+    // the closet's temperature guess moves with it.
+    expect(garmentFor("wind-shell")).toMatchObject({ windResistant: true });
+    expect(garmentFor("vest")).toMatchObject({ windResistant: true });
+    expect(garmentFor("rain-jacket")).toMatchObject({ waterResistant: true });
   });
 
   it("gives no row a type", () => {
     // Type is a property of the *product*, written on match or by
-    // enrichment; a tap-list save creates a generic garment with no
-    // product. The row label is not a type — see the note in
-    // tap-list-data.ts.
-    for (const { key, garment } of everyEntry()) {
-      expect(Object.hasOwn(garment as object, "type"), key).toBe(false);
+    // enrichment — never inferred from a tap-list label.
+    for (const { garment } of TAP_LIST) {
+      expect(garment).not.toHaveProperty("type");
     }
   });
 
-  it("offers wind protection in the cold band", () => {
-    // A product rule rather than a transcription: whatever the cold list
-    // holds, a runner picking from it has to be able to get something that
-    // blocks wind. Which row provides it is the table's business.
-    const windproof = TAP_LISTS.cold.filter(
-      (entry) =>
-        "windResistant" in entry.garment && entry.garment.windResistant === true,
-    );
-    expect(windproof.length).toBeGreaterThan(0);
+  it("ranks every row in every band", () => {
+    // A missing rank sorts as `undefined` and puts the row somewhere
+    // arbitrary, which looks like a deliberate order and is not.
+    for (const row of TAP_LIST) {
+      for (const band of climateBands) {
+        expect(typeof row.rank[band]).toBe("number");
+      }
+    }
+  });
+
+  it("gives each band a total order, with no ties", () => {
+    for (const band of climateBands) {
+      const ranks = TAP_LIST.map((row) => row.rank[band]);
+      expect(new Set(ranks).size).toBe(TAP_LIST.length);
+    }
+  });
+});
+
+describe("tapListFor", () => {
+  it("shows every band every row", () => {
+    // The rule from the artboard: a Minneapolis runner owns tights and a
+    // singlet. Mittens fall behind the fold in Phoenix, not out of it.
+    for (const band of climateBands) {
+      expect(tapListFor(band)).toHaveLength(TAP_LIST.length);
+      expect(new Set(tapListFor(band).map((row) => row.key))).toStrictEqual(
+        new Set(TAP_LIST.map((row) => row.key)),
+      );
+    }
+  });
+
+  it("orders a cold band exactly as the artboard draws it", () => {
+    // Keys *and* names, pinned against §AA rather than against itself: a
+    // table that only has to be internally consistent drifts from the
+    // design one row at a time and never fails. The first fourteen are
+    // the artboard's own order for Minneapolis; the last four are what the
+    // old per-band lists contributed, and D-49 records that design
+    // specified 24 rows and named 14, so six are still unwritten.
+    expect(
+      tapListFor("cold").map((row) => [row.key, row.garment.name]),
+    ).toStrictEqual([
+      ["tights", "Running tights"],
+      ["merino-base", "Merino base layer"],
+      ["beanie", "Beanie"],
+      ["gloves", "Running gloves"],
+      ["mittens", "Mittens"],
+      ["wind-shell", "Wind shell"],
+      ["vest", "Running vest"],
+      ["buff", "Buff"],
+      ["shorts-7", '7" shorts'],
+      ["tee", "Short sleeve tee"],
+      ["arm-warmers", "Arm warmers"],
+      ["rain-jacket", "Rain jacket"],
+      ["shorts-5", '5" shorts'],
+      ["singlet", "Singlet"],
+      ["quarter-zip", "Long sleeve quarter-zip"],
+      ["socks", "Running socks"],
+      ["cap", "Running cap"],
+      ["sunglasses", "Sunglasses"],
+    ]);
+  });
+
+  it("puts cold rows first for a cold band and hot rows first for a hot one", () => {
+    const coldFirst = tapListFor("cold").map((row) => row.key);
+    const hotFirst = tapListFor("hot").map((row) => row.key);
+
+    expect(coldFirst[0]).toBe("tights");
+    expect(hotFirst[0]).toBe("shorts-5");
+    // And the other band's opener is still present, just further down.
+    expect(hotFirst).toContain("tights");
+    expect(coldFirst).toContain("shorts-5");
+  });
+
+  it("keeps mittens available to a hot band, below the fold", () => {
+    const hot = tapListFor("hot").map((row) => row.key);
+
+    expect(hot).toContain("mittens");
+    expect(hot.indexOf("mittens")).toBeGreaterThanOrEqual(TAP_LIST_FOLD);
+  });
+
+  it("does not reorder the table itself", () => {
+    // `sort` mutates, so a version without the copy would leave whichever
+    // band asked last as everyone's order.
+    const before = TAP_LIST.map((row) => row.key);
+    tapListFor("hot");
+
+    expect(TAP_LIST.map((row) => row.key)).toStrictEqual(before);
+  });
+
+  it("folds with rows left over, so the disclosure has something to say", () => {
+    expect(TAP_LIST.length).toBeGreaterThan(TAP_LIST_FOLD);
   });
 });
 
 describe("tapListSelectionSchema", () => {
-  it("needs a band and at least one key", () => {
-    expect(tapListSelectionSchema.safeParse({}).success).toBe(false);
-    expect(
-      tapListSelectionSchema.safeParse({ band: "cold", keys: [] }).success,
-    ).toBe(false);
-    expect(
-      tapListSelectionSchema.safeParse({ band: "cold", keys: ["cold-tights"] })
-        .success,
-    ).toBe(true);
+  it("needs at least one key", () => {
+    expect(tapListSelectionSchema.safeParse({ keys: [] }).success).toBe(false);
+    expect(tapListSelectionSchema.safeParse({ keys: ["tee"] }).success).toBe(
+      true,
+    );
   });
 
-  it("refuses a band that is not one", () => {
-    expect(
-      tapListSelectionSchema.safeParse({ band: "chilly", keys: ["x"] }).success,
-    ).toBe(false);
+  it("takes no band, because a key means the same thing in every band", () => {
+    const parsed = tapListSelectionSchema.parse({ keys: ["tee"] });
+
+    expect(parsed).not.toHaveProperty("band");
   });
 
-  it("caps the selection at more rows than any two bands hold", () => {
-    // The bound stops a client posting thousands of keys; it is deliberately
-    // above any real selection, so the assertion is that a plausible
-    // maximum passes and one key past the cap does not.
-    const cap = TAP_LISTS.cold.length + TAP_LISTS.mild.length;
-    const keys = Array.from({ length: cap }, (_unused, index) =>
-      String(index),
+  it("caps the selection at the whole table", () => {
+    const everything = TAP_LIST.map((row) => row.key);
+
+    expect(tapListSelectionSchema.safeParse({ keys: everything }).success).toBe(
+      true,
     );
     expect(
-      tapListSelectionSchema.safeParse({ band: "cold", keys }).success,
-    ).toBe(true);
-    expect(
-      tapListSelectionSchema.safeParse({ band: "cold", keys: [...keys, "one-more"] })
+      tapListSelectionSchema.safeParse({ keys: [...everything, "extra"] })
         .success,
     ).toBe(false);
   });

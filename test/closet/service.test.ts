@@ -309,8 +309,7 @@ describe("tap-list", () => {
   it("creates origin='taplist' rows for the selected keys", async () => {
     const userId = newUlid();
     const created = await addFromTapList(db(), userId, {
-      band: "mild",
-      keys: ["mild-tee", "mild-shorts"],
+      keys: ["tee", "shorts-5"],
     });
     expect(created).toHaveLength(2);
     for (const item of created) {
@@ -321,8 +320,7 @@ describe("tap-list", () => {
   it("skips unknown keys rather than failing the whole batch", async () => {
     const userId = newUlid();
     const created = await addFromTapList(db(), userId, {
-      band: "cold",
-      keys: ["cold-beanie", "not-a-real-key"],
+      keys: ["beanie", "not-a-real-key"],
     });
     expect(created).toHaveLength(1);
   });

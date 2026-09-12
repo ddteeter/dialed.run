@@ -32,7 +32,9 @@ export {
   addFromTapList,
   climateBandSchema,
   climateBands,
-  TAP_LISTS,
+  TAP_LIST,
+  TAP_LIST_FOLD,
+  tapListFor,
   tapListSelectionSchema,
 } from "./tap-list";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
