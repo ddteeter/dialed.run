@@ -20,25 +20,6 @@ import { expect, test } from "../support/demo";
 // this one account unfinished, because walking the flow is the journey.
 test.use({ storageState: storageStateFor("onboarding") });
 
-/**
- * Resolves once the dev server's post-write page load has landed, or once
- * it is clear none is coming.
- *
- * Not a fixed wait: it synchronises on the `load` event itself, which is
- * the thing being waited for. The timeout is the "no reload happened"
- * branch — the event is expected but not guaranteed, and a run without one
- * must carry on rather than fail.
- */
-async function settledAfterWrite(
-  page: import("@playwright/test").Page,
-): Promise<void> {
-  try {
-    await page.waitForEvent("load", { timeout: 10_000 });
-  } catch {
-    // No reload this run. Nothing to wait out.
-  }
-}
-
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
 async function hydrated(page: import("@playwright/test").Page): Promise<void> {
@@ -68,33 +49,26 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // permission produces, and it has to work.
   await page.getByLabel(/^Run a little cold/).check();
   await page.getByLabel("Where you run").fill("Minneapolis");
-  // **Armed before the click, so it cannot be missed.** O1's save writes to
-  // D1, whose local state lives under `.wrangler/` *inside the
-  // Vite-watched root*, so the watcher fires and the dev server forces a
-  // full document load about 2.7s later — wiping anything tapped in the
-  // meantime. Waiting on the load event itself is the observable
-  // condition; `catch` covers the run where it never comes.
-  const devServerReload = settledAfterWrite(page);
   await page.getByRole("button", { name: "Start running" }).click();
-
-  // Let the dev server's post-write reload land before going on, then open
-  // O3 deterministically. It can interrupt the hand-off itself, not just
-  // the taps — one run never reached the tap list at all.
-  await devServerReload;
-  await page.goto("/onboarding/taplist");
 
   // O3. Every row is on offer and nothing arrives ticked — the counter
   // starts at zero and counts taps, which is the fact design round 6
   // changed and the artboard used to contradict.
+  //
+  // **A generous timeout, because this asserts behaviour and not speed.**
+  // The dev server transforms a module the first time it is *used*, and
+  // `saveCalibrationFn` is only reached by a real submit — so the first
+  // paced run of any session pays a compile inside this wait. Fifteen
+  // seconds made that a failure, which is the test enforcing a latency
+  // budget nobody set; `playwright.config.ts` records the same trap from
+  // the other direction, where raising the pacing "made the 30s default
+  // timeout a moving target". A timeout here is for catching a hang.
+  //
+  // None of it reaches production: that is a pre-built bundle, and a
+  // Worker cold start is an isolate rather than a compile.
   await expect(page.getByText("Closet: 0 pieces")).toBeVisible({
-    timeout: 15_000,
+    timeout: 60_000,
   });
-  // Proven rather than guessed (D-57): loading this screen with no
-  // preceding write and idling eight seconds produces exactly one load.
-  // Three other suspects were eliminated the same way — Vite HMR (the
-  // browser console logs no reload), the auth state files, and
-  // Playwright's video output. The real fix is `server.watch.ignored` in
-  // `vite.config.ts`, which is human-managed.
   await hydrated(page);
   await expect(page.getByText("Tap what you own")).toBeVisible();
 
