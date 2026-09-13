@@ -91,3 +91,43 @@ function withoutTag(html: string, tag: string): string {
 export function withoutCode(html: string): string {
   return withoutTag(withoutTag(html, "script"), "style");
 }
+
+/**
+ * The page's text nodes — everything that is not inside a tag.
+ *
+ * **A bounded regex cannot do this, and `<[^>]{0,2000}>` is the third time
+ * that lesson has been paid for in this file.** Splitting on it means a tag
+ * longer than the bound is not recognised as a tag at all, so the whole
+ * opening tag — attribute names, quotes and value — arrives as prose.
+ *
+ * That is not a rare page. Measured against the eight sampled product pages,
+ * **every one** carries a tag over the bound: 9,810 characters at the
+ * shortest and 119,410 at the longest, because a Shopify theme renders the
+ * entire product JSON into a `data-product` attribute. On the rabbit page
+ * that blob was the first node a composition parsed out of, so `verbatim`
+ * became ten kilobytes of markup and the parts were the same two fabrics
+ * listed twice. On the other seven a real node happened to win first, which
+ * is why it stayed invisible.
+ *
+ * Unbounding the quantifier is not the fix either — `<[^>]*>` over a page
+ * with an unclosed quote is the backtracking shape the header warns about.
+ * An index walk is linear and has no bound to outgrow.
+ *
+ * A `<` with no `>` after it ends the document: everything past it sits
+ * inside that tag, so far as a parser can tell, and is not text.
+ */
+export function textNodes(html: string): string[] {
+  const nodes: string[] = [];
+  let cursor = 0;
+  for (;;) {
+    const open = html.indexOf("<", cursor);
+    if (open === -1) {
+      nodes.push(html.slice(cursor));
+      return nodes;
+    }
+    nodes.push(html.slice(cursor, open));
+    const close = html.indexOf(">", open);
+    if (close === -1) return nodes;
+    cursor = close + 1;
+  }
+}

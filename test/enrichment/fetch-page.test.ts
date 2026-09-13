@@ -34,9 +34,14 @@ function ipv4(a: number, b: number, c: number, d: number): string {
  */
 const INSECURE_SCHEME = "http:";
 /**
-Mirrors the module's own cap; the boundary tests need the exact number.
-*/
-const MAX_BYTES = 2 * 1024 * 1024;
+ * Mirrors the module's own cap; the boundary tests need the exact number.
+ *
+ * A mirror rather than an import, and it has to be kept in step by hand —
+ * which is exactly why `returns a page larger than two megabytes` below is
+ * pinned to a measured page size instead. Lowering the cap and updating this
+ * constant would leave every boundary test passing.
+ */
+const MAX_BYTES = 6 * 1024 * 1024;
 const INSECURE = `${INSECURE_SCHEME}//shop.example.com/p`;
 
 /**
@@ -302,7 +307,7 @@ describe("fetchProductPage", () => {
 
   it("rejects a body that declares itself too large, before reading it", async () => {
     const fetchImpl = htmlOnce("<html></html>", {
-      "content-length": String(3 * 1024 * 1024),
+      "content-length": String(7 * 1024 * 1024),
     });
     await expect(
       fetchProductPage("https://shop.example.com/p", fetchImpl),
@@ -311,12 +316,24 @@ describe("fetchProductPage", () => {
 
   it("stops reading a body that lies about its size", async () => {
     // Content-Length is a claim. The cap that matters is the one applied
-    // while streaming, so this sends 3 MB with no length header at all.
-    const oversized = "x".repeat(3 * 1024 * 1024);
+    // while streaming, so this sends 7 MB with no length header at all.
+    const oversized = "x".repeat(7 * 1024 * 1024);
     const fetchImpl = htmlOnce(oversized);
     await expect(
       fetchProductPage("https://shop.example.com/p", fetchImpl),
     ).rejects.toThrow(/exceeded/u);
+  });
+
+  it("returns a page larger than two megabytes", async () => {
+    // Two of the eight sampled product pages are over 2 MB — the cap was
+    // there first and dropped them. Pinned at a real size rather than at
+    // the cap, so lowering the cap back fails here instead of in a month.
+    const heavy = `<html><title>Chaser</title>${"x".repeat(2.5 * 1024 * 1024)}</html>`;
+    const page = await fetchProductPage(
+      "https://shop.example.com/p",
+      htmlOnce(heavy),
+    );
+    expect(page.html).toBe(heavy);
   });
 
   it("returns the page when everything is in bounds", async () => {
