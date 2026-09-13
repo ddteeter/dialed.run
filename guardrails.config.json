@@ -25,6 +25,16 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/modules/enrichment/rungs/jsonld.ts|mutation-suppress|// Stryker restore BlockStatement",
+      "reason": "The closing half of the block pair below, not a second decision. A `next-line` directive does not attach to a line opening with `} catch`, so the equivalent catch in parseJson has to be bracketed by disable/restore \u2014 and the diff-auditor counts each comment as its own suppression. Restoring immediately after the try keeps the scope to those five lines rather than the rest of the file; dropping it would silence BlockStatement everywhere below. See the paired entry for the proof. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/enrichment/rungs/jsonld.ts|mutation-suppress|// Stryker disable BlockStatement",
+      "reason": "Equivalent mutant, proof at the site: emptying the catch in parseJson falls off the end of the function, which is undefined \u2014 the same value the explicit return produces. No caller can distinguish them, and that is by design rather than by accident: malformed JSON and \"no Product in this block\" must both skip to the next block, because a page shipping one broken script beside a good one has to still yield the good one (tested). Making it observable would mean inventing behaviour \u2014 recording a parse failure somewhere nothing reads \u2014 to satisfy a mutant rather than a requirement. Three restructurings were tried: inlining the try/catch with continue, returning a result wrapper, and moving the guard to the call site; the caller behaves identically in all three. A block disable/restore pair rather than next-line, because the mutated line opens with `} catch` and next-line does not attach to a line beginning with a closing brace. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
       "key": "src/modules/enrichment/composition.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: String.split with a capturing group always returns [before, capture, text, capture, text, \u2026], so after dropping the first element the list starts with a label and alternates \u2014 index 0 is always even and always assigns pendingLabel before any odd index reads it. No input can reach the seed, because the loop cannot begin on a section. Four restructurings were tried (index walk, at(index+1), filter-and-zip, push-then-fill) and each trades the seed for an undefined check that is unreachable for the same reason: TypeScript cannot express \"even length, alternating\", so something unobservable has to absorb that invariant. Owner's call, 2026-09-13.",
       "count": 1
