@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseComposition } from "../../src/modules/enrichment/composition";
+import {
+  findComposition,
+  parseComposition,
+} from "../../src/modules/enrichment/composition";
 
 /**
  * Composition is the field the lane exists for, and it never arrives tidy —
@@ -103,12 +106,11 @@ describe("parseComposition", () => {
     expect(parsed?.parts?.[0]?.part).toBe("Shell");
   });
 
-  it("has no material to record when a percentage stands alone", () => {
-    // "50% / 50%" names no fibres. The row keeps verbatim and claims no
-    // parts, rather than recording two materials with empty names.
-    const parsed = parseComposition("50% / 50%");
-    expect(parsed?.verbatim).toBe("50% / 50%");
-    expect(parsed?.parts).toBeUndefined();
+  it("says nothing when a percentage names no fibre at all", () => {
+    // "50% / 50%" names nothing. Storing a verbatim with no parts would put
+    // that string in the column and, under fill-only-what-is-blank, stop a
+    // later rung that had the real composition.
+    expect(parseComposition("50% / 50%")).toBeUndefined();
   });
 
   it("drops prose that shares a sentence with a real composition", () => {
@@ -123,21 +125,17 @@ describe("parseComposition", () => {
     ]);
   });
 
-  it("can be fooled, which is exactly why verbatim is the authority", () => {
-    // "Made with 100% care in Portugal" is marketing, and a percentage next
-    // to words is all this parser asks for — so it produces a fibre called
-    // "made with care in portugal". That is the honest limit of a regex over
-    // prose, and it is survivable only because the original is kept: a
-    // better parser, or the LLM rung, re-runs over `verbatim` later (D-31).
-    //
-    // Asserted rather than hidden. A test that pretended this case comes out
-    // clean would be describing a parser we do not have.
-    const raw = "Made with 100% care in Portugal";
-    const parsed = parseComposition(raw);
-    expect(parsed?.verbatim).toBe(raw);
-    expect(parsed?.parts?.[0]?.materials).toStrictEqual([
-      { material: "made with care in portugal", pct: 100 },
-    ]);
+  it.each([
+    ["Made with 100% care in Portugal", "marketing that mentions a number"],
+    ["20% off today! Save 15% with code RUN.", "a sale"],
+    ["Rated 100% by 40 runners", "a review score"],
+  ])("is not fooled by %s — %s", (raw) => {
+    // This used to be a documented failure: a percentage beside words was
+    // all the parser asked for, so it produced a fibre called "made with
+    // care in portugal". Requiring a *known fibre* beside the number is what
+    // retired it, and the discount cases are not hypothetical — the Janji
+    // page carries six "% off" strings against three real ones.
+    expect(parseComposition(raw)).toBeUndefined();
   });
 
   it("is not a composition without a number", () => {
@@ -154,5 +152,64 @@ describe("parseComposition", () => {
     expect(
       parseComposition("  88%   polyester,\n  12% elastane  ")?.verbatim,
     ).toBe("88% polyester, 12% elastane");
+  });
+
+  it("ignores a fibre named with no percentage of its own", () => {
+    // "88% polyester, elastane" states one proportion and mentions a second
+    // fibre. Without the percentage guard the second becomes a material with
+    // a NaN percentage — a number that survives into the column and makes
+    // every later comparison against it false.
+    const parsed = parseComposition("88% polyester, elastane");
+    expect(parsed?.parts?.[0]?.materials).toStrictEqual([
+      { material: "polyester", pct: 88 },
+    ]);
+  });
+});
+
+describe("findComposition", () => {
+  it("finds a composition wherever the shop put it", () => {
+    // Measured on 14 real pages: it is in metafields, description divs, meta
+    // descriptions and JSON-LD, never reliably one field. So the search is
+    // over text nodes rather than a payload.
+    const html = `<html><body>
+      <div class="tabs"><details><summary>Specs</summary>
+        <div class="metafield-rich_text_field">
+          <p><strong>Repeat Merino</strong><br/>47% merino wool, 38% nylon</p>
+        </div>
+      </details></div>
+    </body></html>`;
+    expect(findComposition(html)?.parts?.[0]?.materials).toStrictEqual([
+      { material: "merino wool", pct: 47 },
+      { material: "nylon", pct: 38 },
+    ]);
+  });
+
+  it("ignores a page's embedded JSON, however much fabric it mentions", () => {
+    // A product page ships its own description inside a script, so the first
+    // text node with a percentage in it is often JSON. Searching that found
+    // a fibre called "amp", from a JSON-escaped ampersand.
+    const html = String.raw`<html><head>
+      <script type="application/ld+json">{"description":"88% polyester \u0026amp;amp; 12% elastane"}</script>
+      </head><body><p>Fabric: 100% merino wool</p></body></html>`;
+    expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
+  });
+
+  it("decodes an ampersand that arrives through JSON escaping", () => {
+    // Product data embedded in an *attribute* spills past naive tag
+    // splitting when the value contains `>`, so stripping scripts does not
+    // catch it — the text arrives with `\\u0026amp;amp;` in the middle.
+    const parsed = findComposition(
+      String.raw`<p>91% recycled polyester \u0026amp;amp; 9% spandex</p>`,
+    );
+    expect(parsed?.parts?.[0]?.materials).toStrictEqual([
+      { material: "recycled polyester", pct: 91 },
+      { material: "spandex", pct: 9 },
+    ]);
+  });
+
+  it("says nothing for a page with no composition on it", () => {
+    expect(
+      findComposition("<html><body><p>20% off today!</p></body></html>"),
+    ).toBeUndefined();
   });
 });

@@ -60,3 +60,34 @@ export function scriptBodies(html: string, openTag: RegExp): string[] {
   }
   return bodies;
 }
+
+/**
+ * The page with its `<script>` and `<style>` bodies removed.
+ *
+ * **A bounded regex cannot do this either.** `<script[^>]*>[\s\S]{0,N}?</script>`
+ * silently fails to match any block longer than N — and a product page ships
+ * scripts far larger than a sane N. The consequence was specific: the rabbit
+ * fixture's embedded JSON survived stripping, and a composition search over
+ * it read `\u0026amp;amp;` as a fibre called "amp".
+ *
+ * One pass per tag name, so no capture group is needed to know which closing
+ * tag to look for — and therefore no unreachable default on it.
+ */
+function withoutTag(html: string, tag: string): string {
+  const open = new RegExp(String.raw`<${tag}\b[^>]{0,500}>`, "giu");
+  const close = `</${tag}>`;
+  let out = "";
+  let cursor = 0;
+  for (const match of html.matchAll(open)) {
+    if (match.index < cursor) continue;
+    const from = match.index + match[0].length;
+    const end = html.indexOf(close, from);
+    out += `${html.slice(cursor, match.index)} `;
+    cursor = end === -1 ? html.length : end + close.length;
+  }
+  return out + html.slice(cursor);
+}
+
+export function withoutCode(html: string): string {
+  return withoutTag(withoutTag(html, "script"), "style");
+}
