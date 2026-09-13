@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   findComposition,
   parseComposition,
+  stopwords,
 } from "../../src/modules/enrichment/composition";
 
 /**
@@ -162,6 +163,65 @@ describe("parseComposition", () => {
     const parsed = parseComposition("88% polyester, elastane");
     expect(parsed?.parts?.[0]?.materials).toStrictEqual([
       { material: "polyester", pct: 88 },
+    ]);
+  });
+  it("puts a space where an entity was, not nothing", () => {
+    // "merino&nbsp;wool" is two words. Deleting the entity instead of
+    // replacing it yields "merinowool", which is not a fibre this knows —
+    // so the composition disappears rather than arriving slightly wrong.
+    expect(
+      parseComposition("100% merino&nbsp;wool")?.parts?.[0]?.materials,
+    ).toStrictEqual([{ material: "merino wool", pct: 100 }]);
+  });
+
+  it("drops a stray unit character sitting against the fibre", () => {
+    // Spec sheets write the micron grade: "47% 17.5μ merino wool". The
+    // digits go with the percentage and leave a lone "μ", which is a letter
+    // and would otherwise become part of the fibre's name.
+    expect(
+      parseComposition("47% 17.5\u{3BC} merino wool")?.parts?.[0]?.materials,
+    ).toStrictEqual([{ material: "merino wool", pct: 47 }]);
+  });
+
+  it("drops every stopword it lists, next to a fibre", () => {
+    // Looped at run time rather than `it.each`, which is evaluated while the
+    // file is being collected: a `stopwords()` that returned nothing would
+    // break collection instead of failing an assertion, and a test that
+    // never ran reads the same as one that passed.
+    //
+    // Driven off the list itself, so an entry added without a case is not an
+    // entry nothing checks. Each is a word that can sit against a fibre in
+    // prose and is never part of its name.
+    expect(stopwords().length).toBeGreaterThan(3);
+    for (const word of stopwords()) {
+      expect(
+        parseComposition(`100% ${word} wool`)?.parts?.[0]?.materials,
+        word,
+      ).toStrictEqual([{ material: "wool", pct: 100 }]);
+    }
+  });
+
+  it("keeps the fibre and its qualifiers, not the sentence around them", () => {
+    // Five words of prose in front of the fibre. The name is the fibre plus
+    // at most two words, so the run-up is dropped — otherwise a meta
+    // description becomes a material.
+    expect(
+      parseComposition("24% a lightweight woven fabric places merino wool")
+        ?.parts?.[0]?.materials,
+    ).toStrictEqual([{ material: "places merino wool", pct: 24 }]);
+  });
+
+  it("unwraps an ampersand nested as deep as it comes", () => {
+    // JSON-escaped, then HTML-escaped twice. Stopping one unwrap short
+    // leaves an entity the strip eats, taking the separator between two
+    // fibres with it and merging them into one nonsense material.
+    expect(
+      parseComposition(
+        String.raw`91% recycled polyester \u0026amp;amp; 9% spandex`,
+      )?.parts?.[0]?.materials,
+    ).toStrictEqual([
+      { material: "recycled polyester", pct: 91 },
+      { material: "spandex", pct: 9 },
     ]);
   });
 });
