@@ -1,6 +1,8 @@
 import type { z } from "zod";
 
 import { fabricPartSchema, type FabricComposition } from "../../lib/contracts";
+import { isFibre } from "./fibres";
+import { withoutCode } from "./html";
 
 /**
 Derived from the schema rather than restated (CLAUDE.md §Derive, don't mirror).
@@ -46,6 +48,90 @@ Runs of letters — the fibre name, once the numbers are set aside.
 const WORDS = /[\p{Letter}'-]+/gu;
 
 /**
+ * HTML entities, removed before anything reads the text.
+ *
+ * A description arrives with `&amp;` in it — often double-encoded, as
+ * `&amp;amp;` — and a letter-run match turns that into a fibre called "amp".
+ *
+ * Decoded before stripping, and that order is the point: stripping
+ * `&amp;amp;` twice leaves a bare `amp;`, because the second pass has no `&`
+ * left to match. Decoding to `&` first collapses the nesting, and whatever
+ * entities remain are then removed.
+ *
+ * `\u0026` is the same character arriving through JSON, which reaches this
+ * from product data embedded in an *attribute* — a value containing `>`
+ * spills past naive tag splitting and lands in the text. Stripping scripts
+ * does not catch it, because it was never in a script.
+ */
+const AMPERSAND = /&amp;|\\u0026/giu;
+const ENTITY = /&#?[a-z0-9]{1,8};/giu;
+const MAX_DECODE_PASSES = 4;
+
+/**
+ * A text node as a reader would see it: entities resolved, whitespace
+ * collapsed.
+ *
+ * Decoded until it stops changing rather than a fixed number of passes. The
+ * nesting is genuinely three deep in the wild — `\u0026amp;amp;` unwraps to
+ * `&amp;amp;`, then `&amp;`, then `&` — and stopping one short leaves an
+ * entity the strip below eats, taking the separator between two fibres with
+ * it and merging them into one nonsense material.
+ */
+function readableText(raw: string): string {
+  let decoded = raw;
+  for (let pass = 0; pass < MAX_DECODE_PASSES; pass += 1) {
+    const next = decoded.replaceAll(AMPERSAND, "&");
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded.replaceAll(ENTITY, " ").replaceAll(/\s+/gu, " ").trim();
+}
+
+/**
+ * Words that are never part of a fibre name, and the cap on how long one is.
+ *
+ * A material is "merino wool" or "recycled polyester" — two or three words.
+ * Unbounded, a meta description yields a fibre called "a lightweight woven
+ * fabric places a merino wool inner face against the skin": a sentence that
+ * happens to contain a fibre.
+ */
+const STOPWORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "with",
+  "of",
+  "and",
+  "in",
+  "from",
+]);
+const MAX_MATERIAL_WORDS = 3;
+
+/**
+ * The fibre name inside a chunk: the last known fibre word, plus up to two
+ * words in front of it.
+ *
+ * Anchored to the *end* because qualifiers precede a fibre — "recycled
+ * polyester", "17.5μ merino wool" — and never follow it. Single characters
+ * are dropped, which is what removes the stray micron grade.
+ */
+function materialName(words: readonly string[]): string | undefined {
+  let last = -1;
+  for (let index = words.length - 1; index >= 0; index -= 1) {
+    if (isFibre(words[index] ?? "")) {
+      last = index;
+      break;
+    }
+  }
+  if (last === -1) return undefined;
+  const name = words
+    .slice(Math.max(0, last - MAX_MATERIAL_WORDS + 1), last + 1)
+    .filter((word) => word.length > 1 && !STOPWORDS.has(word))
+    .join(" ");
+  return name === "" ? undefined : name;
+}
+
+/**
  * What separates one material from the next inside a section.
  *
  * A character class rather than an alternation wrapped in `\s*` on both
@@ -71,8 +157,14 @@ function materialsIn(section: string): FabricPart["materials"] {
     // The name is every letter-run joined, rather than the chunk with the
     // non-letters stripped out. Same answer, and it needs no separate pass
     // to collapse what the stripping left behind.
-    const material = (chunk.match(WORDS) ?? []).join(" ").toLowerCase();
-    if (material === "") continue;
+    const words: string[] = [];
+    for (const [word] of chunk.toLowerCase().matchAll(WORDS)) words.push(word);
+    // A percentage beside words is not a composition — "20% off today" and
+    // "Save 15%" are the common case on a product page. A known fibre is
+    // what makes it a fact rather than a sale, and it is why this no longer
+    // invents a fibre from "Made with 100% care in Portugal".
+    const material = materialName(words);
+    if (material === undefined) continue;
     materials.push({ material, pct: Number(pct) });
   }
   return materials;
@@ -86,10 +178,11 @@ function materialsIn(section: string): FabricPart["materials"] {
  * number is the cheapest signal that someone was stating a fact.
  */
 export function parseComposition(raw: string): FabricComposition | undefined {
-  const verbatim = raw.replaceAll(/\s+/gu, " ").trim();
-  // No `verbatim === ""` clause: an empty string has no percentage either,
-  // so it is already covered by the test below.
-  if (!PERCENTAGE.test(verbatim)) return undefined;
+  const verbatim = readableText(raw);
+  // No early bail on "has no percentage": since a run with no materials now
+  // returns undefined anyway, the guard could not change an answer — it only
+  // saved work on a string the loop below dismisses in a pass. Dead code in
+  // a parser is worse than the microseconds.
 
   // `split` with a capturing group hands back [before, label, section,
   // label, section, …] — the section boundaries fall out of it, with no
@@ -136,5 +229,34 @@ export function parseComposition(raw: string): FabricComposition | undefined {
     }
   }
 
-  return parts.length === 0 ? { verbatim } : { verbatim, parts };
+  // No parts means no fibre was named, which means this was never a
+  // composition — a stray percentage in marketing copy. Returning a verbatim
+  // with no parts would write that text into the column and, under
+  // fill-only-what-is-blank, block a later rung that had the real thing.
+  return parts.length === 0 ? undefined : { verbatim, parts };
+}
+
+/**
+ * The composition on a page, wherever a shop chose to put it.
+ *
+ * Measured against 14 real pages: composition is in metafields rendered into
+ * a "Specs" panel, in description prose, in `<meta name="description">`, and
+ * in JSON-LD — never reliably in one field. So this searches the page's text
+ * nodes rather than reading a payload.
+ *
+ * **A text node is the right granularity** because a composition is written
+ * as one: `47% 17.5μ merino wool, 38% 37.5® nylon, 15% nylon` arrives whole,
+ * and so does `Toray Primeflex™: 100% polyester`. Splitting finer would cut
+ * a composition in half; coarser would glue a sale onto it.
+ *
+ * The first node that parses wins. A page can mention fabric more than once
+ * — related products, variant blurbs — and the first is nearest the product
+ * being described.
+ */
+export function findComposition(html: string): FabricComposition | undefined {
+  for (const node of withoutCode(html).split(/<[^>]{0,2000}>/gu)) {
+    const composition = parseComposition(node);
+    if (composition !== undefined) return composition;
+  }
+  return undefined;
 }
