@@ -123,20 +123,30 @@ is honoured, or it measures the wrong thing.
    live at `applyExtraction`, where the next reader of the rule is.
 3. **Model choice** is the owner's, on the eval table above.
 
-## Open — decide on the fixtures, not on reasoning
+## Closed — the Shopify `.json` question, answered twice
 
-**Should the Shopify rung fetch `/products/{handle}.json`?** The packet allows
-one fetch per job; this would be a second, to the same host. It is better
-_extraction_ (structured JSON, what Shopify's own themes consume) but not
-better _fetching_ — same origin, same bot protection, so a 403 on the page is
-a 403 here. It may also be unnecessary: most themes emit JSON-LD, which rung
-one already reads, plus an inline theme blob.
+**No.** Measured 2026-09-13, and it fails on both axes independently.
 
-**The description must not be fed to `parseComposition` either way.** It asks
-only for a percentage beside words, so "20% off" yields a fibre called `off`.
-Telling a composition from a discount in prose is semantic — so the division
-is regex on _declared_ fields, model on prose.
+It would not carry the data: composition lives in Shopify _metafields_
+rendered into the page, and those are not in `/products/{handle}.json`. And
+it is not reachable anyway — from a Worker, the `.json` endpoint returns the
+same 403 challenge as the page it sits beside, on 9 of 9 stores tested. The
+packet's "one fetch per job" stands, on evidence rather than assumption.
 
-The fixture capture settles it: for each page, record where composition
-actually lives (JSON-LD `material`, JSON-LD `description`, inline theme JSON,
-rendered HTML, or only `.json`). Amend the packet then, with the count.
+## Open — the fetch fallback is a cost decision
+
+A plain Worker fetch is blocked on 11 of 14 pages (above). Residential or
+mobile proxy egress is the only thing that answers a 403, and on Firecrawl
+that means stealth mode, which is **not** on the free tier — free is 1,000
+credits of basic mode, which is the datacenter egress already being refused.
+
+Stealth is 5 credits a page. Hobby is $19/month ($16 annual) for 5,000
+credits, so **about 1,000 enriched pastes a month for $19**, with auto-reload
+at $5 per 1,000 credits after that.
+
+**Recommendation: build the adapter, do not subscribe yet.** The fallback
+goes behind the same shape as the model rung — configured by a key, absent by
+default — so enrichment degrades to the deterministic rungs when there is no
+key (law 5), and lights up when there is one. That makes the spend a decision
+about users rather than a refactor, and Nike and Arc'teryx work without it
+either way.
