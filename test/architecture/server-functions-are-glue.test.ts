@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import strykerParsed from "../../stryker.conf.json";
 import strykerConfig from "../../stryker.conf.json?raw";
-import {
-  codeOnly,
-  isInstrumented,
-  repoPath,
-} from "./source-text";
+import { codeOnly, isInstrumented, repoPath } from "./source-text";
 
 /**
  * A module file that imports `@tanstack/react-start` cannot be mutation
@@ -197,14 +193,77 @@ const negations = Array.from(
   (match) => match[1] ?? "",
 );
 
+/**
+The positive globs — every `mutate` entry that is not a `!` exclusion.
+*/
+const positives = strykerParsed.mutate
+  .flatMap((entry) => entry.split(","))
+  .map((entry) => entry.trim())
+  .filter((entry) => entry !== "" && !entry.startsWith("!"));
+
+/**
+ * Does any positive glob in the ratchet cover this path? `**` spans
+ * directories and `*` stops at one, which is the whole of the glob syntax
+ * this array uses.
+ */
+function isInTheRatchet(path: string): boolean {
+  return positives.some((glob) => {
+    // One pass, so `**/` is decided before `*` can claim its stars — two
+    // passes would turn it into a pair of single-segment wildcards and
+    // stop `src/modules/**/*.tsx` covering anything nested.
+    const pattern = glob.replaceAll(
+      /\*\*\/|\*|[.+?^${}()|[\]\\]/gu,
+      (token) => {
+        if (token === "**/") return "(?:.*/)?";
+        if (token === "*") return "[^/]*";
+        return `\\${token}`;
+      },
+    );
+    return new RegExp(`^${pattern}$`, "u").test(path);
+  });
+}
+
 describe("the mutate exclusions and the untestable files are the same set", () => {
   it("excludes nothing that could have been tested", () => {
     // The direction that matters most: an exclusion without a cause is a
     // file quietly opted out of the gate. A route qualifies by being a
     // route; anything else has to have failed to import.
+    //
+    // **A third cause, and it is about the analyzer rather than the
+    // ratchet.** A negation does two jobs: it carves a file out of the
+    // glob beside it, and — because the commit-gate analyzer appends every
+    // `!` in this array to its own `--mutate` — it exempts that file from
+    // the gate. For a file the ratchet covers, the second job is the
+    // hazard the `//lib` note warns about. For one no positive glob has
+    // ever covered, there is no coverage to lose and the second job is the
+    // entire point: `src/db/schema-*.ts` are a forbidden zone under the
+    // schema protocol, so a diff that touches them cannot be answered by
+    // hand-editing them, and asserting a drizzle column name is not a test
+    // anyone should write.
+    //
+    // Checked rather than allowed: the day one of those files joins a
+    // positive glob, it stops qualifying here and this fails, instead of
+    // hollowing out the scope it just entered.
     for (const path of negations) {
+      if (!isInTheRatchet(path)) continue;
       expect(untestable, `${path} is excluded for no reason`).toContain(path);
     }
+  });
+
+  it("finds the ratchet's own files, so the escape above cannot swallow everything", () => {
+    // `isInTheRatchet` returning false for everything would turn the loop
+    // above into a no-op and every exclusion would pass unexamined.
+    expect(isInTheRatchet("src/lib/contracts.ts")).toBe(true);
+    expect(isInTheRatchet("src/modules/closet/service.ts")).toBe(true);
+    expect(isInTheRatchet("src/ui/Marks.tsx")).toBe(true);
+    expect(
+      isInTheRatchet("src/modules/onboarding/components/NamePieces.tsx"),
+    ).toBe(true);
+
+    // And the files the escape is for really are outside it.
+    expect(isInTheRatchet("src/db/schema-core.ts")).toBe(false);
+    expect(isInTheRatchet("src/db/schema-auth.ts")).toBe(false);
+    expect(isInTheRatchet("src/db/schema-weather.ts")).toBe(false);
   });
 
   it("excludes every route, since none of them can be mutated", () => {
