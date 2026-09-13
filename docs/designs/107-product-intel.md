@@ -50,19 +50,38 @@ the part a later run could improve.
   `MEDIA` are already bound. `OPENROUTER_API_KEY` is a secret, not a binding.
 - New routes: none. Screens: none. Design-delta items: none.
 
-## Fetching is the part that cannot be redone
+## Fetching is the part that cannot be redone — and a plain Worker fetch mostly cannot
 
-Extraction improves retroactively — that is what `reextract` over snapshots is
-for. **Fetching does not:** a page never retrieved has no snapshot to re-run, so
-a fetch failure is permanent where an extraction miss is not.
+Extraction improves retroactively; `reextract` re-runs the ladder over a
+stored snapshot. **Fetching does not:** a page never retrieved has no
+snapshot, so a fetch failure is permanent where an extraction miss is not.
 
-v1 is a plain fetch, because a fallback is only worth buying against measured
-failure, and the two failure modes want different tools — 403 wants residential
-stealth, an empty 200 wants a real browser. The ladder, the costs and why
-Cloudflare Browser Rendering is the _wrong_ answer to a Cloudflare-protected
-403 are at the top of `fetch-page.ts`, where someone reading a 403 will look.
-Fixture capture runs through the real fetch path and records status, whether
-composition was present, and whether the response carried `cf-ray`.
+**Measured 2026-09-13, and it inverts the earlier reading of this section.**
+The same 14 product pages, fetched twice:
+
+| from                                                 | 200 | 403 + challenge |
+| ---------------------------------------------------- | --- | --------------- |
+| a laptop on a residential IP                         | 14  | 0               |
+| a Worker on Cloudflare's edge (`deploy --temporary`) | 3   | 11              |
+
+Every Shopify store in the sample — and Brooks — returns a 6 kB Cloudflare
+challenge to a Worker while serving a laptop happily. Only Arc'teryx and
+Nike let the Worker through, which is the reverse of what brand size would
+predict.
+
+So the earlier conclusion, that no fallback was worth buying, was drawn from
+the wrong network and is wrong. **A fallback is the primary path, not an
+escalation.** And Cloudflare Browser Rendering is specifically the wrong one:
+these are Cloudflare-protected sites refusing Cloudflare egress, so the
+detection advantage is theirs. Residential or mobile proxy egress is what the
+403s call for — Firecrawl's stealth mode is ~4 credits, roughly $3.30 per
+1,000.
+
+The alternative is to accept it: the packet already says a bot-blocked fetch
+is `extraction_status='failed'` and never a user-facing error, and
+user-entered fields stay the floor. That is a working product in which
+enrichment succeeds about a fifth of the time. It is the owner's call, and it
+is a vendor and cost decision rather than a technical one.
 
 ## Test plan
 
