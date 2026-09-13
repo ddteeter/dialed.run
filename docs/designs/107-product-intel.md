@@ -1,95 +1,110 @@
 # Design: 107 Product Intelligence
 
-> Runs to ~120 lines rather than the template's ~60. Owner doubled the cap for
-> this lane (2026-09-13): the packet requires the eval results table to live
-> here, and the doc also carries decisions made _during_ implementation that
-> the template did not anticipate. Reasoning is moved to its code site
-> wherever there is one — the precedence case table is at `applyExtraction`,
-> the fetch-fallback ladder at the top of `fetch-page.ts` — so this stays a
-> map rather than the territory.
+> ~150 lines against the template's 60. The owner doubled the cap for this
+> lane (2026-09-13); this is over even that, and the overage is the two
+> measurements that changed the design — where a Worker gets blocked, and
+> where composition actually lives. Reasoning lives at its code site wherever
+> there is one (the precedence table at `applyExtraction`, the fetch-fallback
+> ladder atop `fetch-page.ts`), and the commits carry it in full, so this
+> stays a map. Trimmed four times; say the word and it loses the tables.
 
 ## Problem
 
 A pasted product link should become durable product data — fabric composition
-above all, since that is what the Call will reason about. Links rot, so the page
+above all, since that is what the Call reasons about. Links rot, so the page
 is snapshotted permanently and extraction re-runs over the snapshot as it
-improves. Invisible: results arrive as pre-filled, editable fields, never a screen.
+improves. Invisible: results arrive as pre-filled, editable fields.
 
 ## Approach
 
 `src/modules/enrichment/`, consumed only through its `index.ts`:
 
-- `fetch-page.ts` — https only, private address space blocked **before and after
-  redirects**, `AbortSignal.timeout(10_000)`, 2 MB enforced _while streaming_ (a
-  cap checked on an already-buffered body is not a cap).
-- `snapshot.ts` — HTML to `MEDIA` at `products/{id}/snapshot-{ts}.html`, then the
-  `product_snapshots` row. R2 first: nothing spans R2 and D1 (law 8c), and an
-  orphaned object is recoverable where a row pointing at no object is not.
-- `rungs/{jsonld,shopify,og}.ts` — each a `PageExtractor` from `lib/contracts`.
-- `composition.ts` — parser incl. labeled multi-part → `fabricCompositionSchema.parts`;
-  `verbatim` always preserved.
-- `model/openrouter.ts` — `ExtractionModel` over OpenRouter. Prompts carry page
-  content and the URL only (5b).
-- `consume.ts` — the consumer, into the existing `ops/queues.ts` stub.
-
-Best data wins **per field**, not per rung: a JSON-LD page with no `material`
-still falls through to Shopify's `body_html` for composition alone. The rung
-recorded is the **deepest** that contributed — this doc first said highest,
-which is the less useful of the two. The column's job is to say whether
-re-running would help, and a page whose every field came from JSON-LD has
-nothing to gain from a better parser or model; recording `jsonld` because it
-supplied a name, on a page whose composition came from a description, hides
-the part a later run could improve.
+- `fetch-page.ts` — https only, private address space blocked before and after
+  redirects, 10s, 2 MB enforced while streaming.
+- `snapshot.ts` — HTML to `MEDIA` before parsing, then the row. R2 first:
+  nothing spans R2 and D1 (law 8c), and an orphaned object is recoverable
+  where a row pointing at no object is not.
+- `html.ts` — script payloads, sliced to `</script>` rather than captured.
+- `rungs/{jsonld,shopify,og}.ts` — each a `PageExtractor`.
+- `composition.ts` — the fibre-gated composition pass (below).
+- `ladder.ts` — runs the rungs best-first, best answer **per field**.
+- `model/openrouter.ts` — the LLM rung. `consume.ts` — the queue consumer.
 
 ## Contract touches
 
-- **Schema changes: none.** Phase 0 shipped `product_snapshots` and every
-  extraction column on `products`, plus `PageExtractor`, `ExtractionModel`,
-  `extractedProductSchema`.
-- **New bindings/queues/crons: none.** `ENRICHMENT_QUEUE`, both consumers and
+- **Schema: none so far.** Phase 0 shipped `product_snapshots` and every
+  extraction column. A `fibre_candidates` table lands with the model rung —
+  additive, so it proceeds under the protocol.
+- **Bindings/queues/crons: none.** `ENRICHMENT_QUEUE`, both consumers and
   `MEDIA` are already bound. `OPENROUTER_API_KEY` is a secret, not a binding.
+- `PageExtractor.extract` returns `| undefined`, not `| null`: the Phase 0
+  signature could not be implemented under `unicorn/no-null`.
 - New routes: none. Screens: none. Design-delta items: none.
 
-## Fetching is the part that cannot be redone — and a plain Worker fetch mostly cannot
+## Fetching is the part that cannot be redone
 
-Extraction improves retroactively; `reextract` re-runs the ladder over a
-stored snapshot. **Fetching does not:** a page never retrieved has no
-snapshot, so a fetch failure is permanent where an extraction miss is not.
+Extraction improves retroactively — `reextract` re-runs the ladder over a
+stored snapshot. Fetching does not: a page never retrieved has no snapshot.
 
-**Measured 2026-09-13, and it inverts the earlier reading of this section.**
-The same 14 product pages, fetched twice:
+**Measured 2026-09-13.** The same 14 product pages, twice:
 
-| from                                                 | 200 | 403 + challenge |
-| ---------------------------------------------------- | --- | --------------- |
-| a laptop on a residential IP                         | 14  | 0               |
-| a Worker on Cloudflare's edge (`deploy --temporary`) | 3   | 11              |
+| from                          | 200 | 403 + challenge |
+| ----------------------------- | --- | --------------- |
+| a laptop, residential IP      | 14  | 0               |
+| a Worker on Cloudflare's edge | 3   | 11              |
 
-Every Shopify store in the sample — and Brooks — returns a 6 kB Cloudflare
-challenge to a Worker while serving a laptop happily. Only Arc'teryx and
-Nike let the Worker through, which is the reverse of what brand size would
-predict.
+Every Shopify store in the sample, plus Brooks, refuses a Worker while
+serving a laptop. Only Arc'teryx and Nike let it through. So a fallback is the
+**primary path**, not an escalation — and Cloudflare Browser Rendering is
+specifically the wrong one, since these are Cloudflare-protected sites
+refusing Cloudflare egress. Residential or mobile proxy egress is what a 403
+calls for. The full ladder and its costs are at the top of `fetch-page.ts`.
 
-So the earlier conclusion, that no fallback was worth buying, was drawn from
-the wrong network and is wrong. **A fallback is the primary path, not an
-escalation.** And Cloudflare Browser Rendering is specifically the wrong one:
-these are Cloudflare-protected sites refusing Cloudflare egress, so the
-detection advantage is theirs. Residential or mobile proxy egress is what the
-403s call for — Firecrawl's enhanced proxies, 5 credits a page.
+## Closed — the Shopify `.json` question
 
-The alternative is to accept it: the packet already says a bot-blocked fetch
-is `extraction_status='failed'` and never a user-facing error, and
-user-entered fields stay the floor. That is a working product in which
-enrichment succeeds about a fifth of the time. It is the owner's call, and it
-is a vendor and cost decision rather than a technical one.
+**No**, and it fails on both axes independently. It would not carry the data:
+composition lives in Shopify _metafields_ rendered into the page, which are
+not in `/products/{handle}.json`. And from a Worker it is not reachable —
+same 403 as the page beside it, 9 of 9 stores.
+
+## Composition is found by fibre, not by cue — and the vocabulary learns
+
+The ladder found composition on **0 of 14** real pages while the text was
+present in 12. It is not in `body_html`, the only place the Shopify rung
+looked; it is in metafields, description divs, `<meta name="description">`
+and JSON-LD.
+
+So composition is its own pass over the page's **text nodes** — the right
+granularity, because a composition is written as one: `47% 17.5μ merino wool,
+38% 37.5® nylon, 15% nylon` arrives whole.
+
+**The discriminator is a known fibre, not a cue word.** Cues fail on real
+phrasing (`composition :`, `PacerWeave™ body:`, a `<strong>` fabric name, or
+nothing). A fibre word separates a fact from a discount, and the noise is
+real — the Janji page carries six `% off` strings against three genuine fibre
+percentages. `parseComposition` therefore requires a percentage **and** a
+known fibre, which retires its worst failure: "Made with 100% care in
+Portugal" no longer yields a fibre.
+
+**A fixed list would rot, so it learns.** Proprietary names are mostly _part
+labels_ (`PacerWeave™ body`), which is harmless. The real gap is a
+proprietary _fibre_ (`100% Primeflex`), which no list will have. So when the
+model rung returns a composition, unrecognised fibres are recorded as
+candidates with their snapshot; a human promotes real ones by editing
+`fibres.ts` — deliberately a code change, so the vocabulary stays reviewed —
+and every promotion improves every stored snapshot on the next `reextract`.
+The model teaches the deterministic path instead of being a permanent
+dependency, and the share of pages resolved without a model call becomes a
+number that should climb.
 
 ## Test plan
 
 - `fetch-page`: http, private-IP, and a **redirect** into private space;
   timeout; the 2 MB cap on a body that lies about its length. (unit)
-- Each rung against one real captured fixture — Shopify, JSON-LD, OG-only,
-  garbage — asserting what it claims and nothing where it has nothing. (unit)
-- `composition`: percentage variants; labelled multi-part → parts; unlabeled
-  multi-fabric degrades to one part, `verbatim` intact. (unit)
+- Each rung against a captured fixture, asserting what it claims and nothing
+  where it has nothing. (unit)
+- `composition`: percentage variants; labelled multi-part → parts; a discount
+  percentage yields no fibre; `verbatim` intact. (unit)
 - Consumer: happy path; fetch failure → `failed`; malformed model output
   retryable; redelivery writes no second snapshot. (workers pool)
 - Write-back: skips an edited field, skips a **cleared** one, fills a
@@ -97,67 +112,42 @@ is a vendor and cost decision rather than a technical one.
 
 ## Eval (D-32) — pending `OPENROUTER_API_KEY`
 
-~20 real pages, fixtures committed, ≥2 multi-part garments, hand-labeled for
-composition/weight/wind/water; per-field accuracy per model lands here before
-anything ships. Confirmed at design time, sharpening the packet's warning:
-OpenRouter's structured-output support is per **endpoint**, not per model — the
-same model on another provider may downgrade `json_schema` to `json_object` or
-treat it as a hint. The eval pins a provider per model and asserts strict mode
-is honoured, or it measures the wrong thing.
+~20 real pages, fixtures committed as **fragments** rather than whole pages —
+the repo is public and these are copyrighted marketing pages, and a rung only
+needs the fragment. A manifest carries URL, fetch date and SHA-256 so they
+stay reproducible.
+
+Per-field accuracy per model lands here before anything ships. Confirmed at
+design time: OpenRouter's structured-output support is per **endpoint**, not
+per model, so the eval pins a provider per model and asserts strict mode is
+honoured, or it measures routing luck.
 
 ## Decided
 
 1. **Writer signature** — `applyExtraction(db, productId, extracted, rung)` in
-   `modules/products`, owning precedence. Enrichment never writes product
-   columns directly. (Owner, 2026-09-13.)
+   `modules/products`, owning precedence. (Owner, 2026-09-13.)
 2. **Precedence is derived, not stored.** "Never overwrite a field a human
-   edited" needs one bit per field — _has a human set this?_ — and that is
-   already implied by data we keep: compare each column against what
-   `extracted` last recorded. Differs ⇒ a human changed it ⇒ skip.
-   Fill-only-what-is-null cannot do this — a field someone deliberately
-   **cleared** looks identical to one never set, and would be refilled. A
-   stored `edited_fields` column would be a rival truth that can drift
-   (§Derive, don't mirror); an audit log answers a larger question and the bit
-   would still be derived from it. The case table and its two accepted limits
-   live at `applyExtraction`, where the next reader of the rule is.
-3. **Model choice** is the owner's, on the eval table above.
+   edited" needs one bit per field, and comparing each column against what
+   `extracted` last recorded answers it. Fill-only-what-is-null cannot: a
+   deliberately **cleared** field looks identical to one never set. Case table
+   at `applyExtraction`.
+3. **The recorded rung is the deepest that contributed**, not the highest —
+   the column's job is to say whether re-running would help.
+4. **Model choice** is the owner's, on the eval table above.
 
-## Closed — the Shopify `.json` question, answered twice
+## Open
 
-**No.** Measured 2026-09-13, and it fails on both axes independently.
+**The fetch fallback is a cost decision.** Enhanced proxies are 5 credits a
+page; Firecrawl's cheapest paid plan is 5,000 credits at $16-19/month, so
+about 1,000 enriched pastes a month. Pay-as-you-go tops up only _within_ a
+paid plan; there is no bucket without a subscription.
 
-It would not carry the data: composition lives in Shopify _metafields_
-rendered into the page, and those are not in `/products/{handle}.json`. And
-it is not reachable anyway — from a Worker, the `.json` endpoint returns the
-same 403 challenge as the page it sits beside, on 9 of 9 stores tested. The
-packet's "one fetch per job" stands, on evidence rather than assumption.
+**Whether that plan includes enhanced proxies is unverified** — the pricing
+page does not mention proxy modes and the docs do not mention plan gating.
+The free tier settles it for nothing: 1,000 credits, one blocked URL, `proxy:
+"auto"`. A 200 means the cheapest tier is enough; a 403 means the question
+becomes which tier.
 
-## Open — the fetch fallback is a cost decision
-
-A plain Worker fetch is blocked on 11 of 14 pages (above). Residential or
-mobile proxy egress is the only thing that answers a 403, and on Firecrawl
-that means stealth mode, which is **not** on the free tier — free is 1,000
-credits of basic mode, which is the datacenter egress already being refused.
-
-Costs, and what is _not_ confirmed. Enhanced proxies are 5 credits a page,
-so Hobby's 5,000 credits at $16-19/month is **about 1,000 enriched pastes a
-month**, roughly $16 per 1,000 — not the $3.30 first written here, which was
-the Standard-tier credit rate applied to the wrong plan. Pay-as-you-go exists
-but only *within* a paid plan (manual top-ups in $5 blocks); there is no way
-to buy a bucket of credits without a subscription, and the free tier cannot
-top up at all.
-
-**Whether the cheapest paid plan includes enhanced proxies is unverified.**
-The pricing page does not mention proxy modes and the docs do not mention
-plan gating; "stealth" is already stale terminology, replaced by
-basic/enhanced/auto. Secondary sources say paid-only, which is not the same
-as saying Hobby. The free tier settles it empirically for nothing: 1,000
-credits, one blocked URL, `proxy: "auto"` — if it comes back 200 the cheapest
-tier is enough, and if it 403s like our Worker did, it is not.
-
-**Recommendation: build the adapter, do not subscribe yet.** The fallback
-goes behind the same shape as the model rung — configured by a key, absent by
-default — so enrichment degrades to the deterministic rungs when there is no
-key (law 5), and lights up when there is one. That makes the spend a decision
-about users rather than a refactor, and Nike and Arc'teryx work without it
-either way.
+Either way the adapter is built and unconfigured by default, degrading to the
+deterministic rungs when no key is set (law 5), so the spend is a decision
+about users rather than a refactor.
