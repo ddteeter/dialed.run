@@ -135,11 +135,24 @@ function productFrom(node: object): ExtractedProduct | undefined {
 export const jsonLdExtractor: PageExtractor = {
   rung: "jsonld",
   extract(_url, html) {
-    // Destructured with a default rather than read off `groups`: the capture
-    // always participates, so both the optional chain and the undefined
-    // check it forces are unreachable branches nothing can kill. An empty
-    // string simply fails to parse and the block is skipped, which is the
-    // same outcome by a shorter route.
+    /**
+     * Destructured with a default rather than read off `groups`: the capture
+     * always participates, so both the optional chain and the undefined
+     * check it forces are unreachable branches nothing can kill. This shape
+     * has one such branch where that one had two.
+     *
+     * **The default itself is the remaining one, and it is unreachable for
+     * the same reason.** `LD_BLOCK` has exactly one group and no alternation
+     * that could skip it, so a match always binds `json` to a string and the
+     * default never runs. `noUncheckedIndexedAccess` is what forces it to
+     * exist: TypeScript cannot know the group participated.
+     *
+     * Collecting the blocks through a `replaceAll` callback removes it —
+     * the parameter can be annotated `string` — but using `replaceAll` as an
+     * iterator is a hack a reader would stumble over, and restructuring is
+     * only the better answer when it leaves better code.
+     */
+    // Stryker disable next-line StringLiteral
     for (const [, json = ""] of html.matchAll(LD_BLOCK)) {
       const node = findProduct(parseJson(json));
       if (node === undefined) continue;
