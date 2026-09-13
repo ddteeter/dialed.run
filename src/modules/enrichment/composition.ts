@@ -65,7 +65,6 @@ const WORDS = /[\p{Letter}'-]+/gu;
  */
 const AMPERSAND = /&amp;|\\u0026/giu;
 const ENTITY = /&#?[a-z0-9]{1,8};/giu;
-const MAX_DECODE_PASSES = 4;
 
 /**
  * A text node as a reader would see it: entities resolved, whitespace
@@ -78,11 +77,18 @@ const MAX_DECODE_PASSES = 4;
  * it and merging them into one nonsense material.
  */
 function readableText(raw: string): string {
+  // Until it stops changing, with no pass counter. Every decode strictly
+  // shortens the string — `&amp;` and `\u0026` are both longer than the `&`
+  // they become — so this terminates, and a bound would only be a number
+  // nothing could distinguish from a larger one.
   let decoded = raw;
-  for (let pass = 0; pass < MAX_DECODE_PASSES; pass += 1) {
-    const next = decoded.replaceAll(AMPERSAND, "&");
-    if (next === decoded) break;
+  let next = decoded.replaceAll(AMPERSAND, "&");
+  // Compared against the *result* rather than a seeded previous value: any
+  // seed is a string the first comparison can never depend on, which is a
+  // mutant nothing distinguishes.
+  while (next !== decoded) {
     decoded = next;
+    next = decoded.replaceAll(AMPERSAND, "&");
   }
   return decoded.replaceAll(ENTITY, " ").replaceAll(/\s+/gu, " ").trim();
 }
@@ -95,16 +101,18 @@ function readableText(raw: string): string {
  * fabric places a merino wool inner face against the skin": a sentence that
  * happens to contain a fibre.
  */
-const STOPWORDS = new Set([
-  "a",
-  "an",
-  "the",
-  "with",
-  "of",
-  "and",
-  "in",
-  "from",
-]);
+// "and" is deliberately absent: it separates materials ("70% merino and 30%
+// nylon"), so it is consumed before this filter ever sees it. Listing it here
+// would be a rule that cannot fire.
+const STOPWORD_LIST = ["a", "an", "from", "in", "of", "the", "with"] as const;
+const STOPWORDS = new Set<string>(STOPWORD_LIST);
+
+/**
+Exported so every entry is covered by a case rather than the list as a whole.
+*/
+export function stopwords(): readonly string[] {
+  return STOPWORD_LIST;
+}
 const MAX_MATERIAL_WORDS = 3;
 
 /**
@@ -116,14 +124,16 @@ const MAX_MATERIAL_WORDS = 3;
  * are dropped, which is what removes the stray micron grade.
  */
 function materialName(words: readonly string[]): string | undefined {
+  // Scanned forward, keeping the last hit, rather than backward from the
+  // end: a backward loop needs `words[index]`, and the undefined that
+  // indexing forces is a branch the loop bounds already make unreachable.
   let last = -1;
-  for (let index = words.length - 1; index >= 0; index -= 1) {
-    if (isFibre(words[index] ?? "")) {
-      last = index;
-      break;
-    }
+  for (const [index, word] of words.entries()) {
+    if (isFibre(word)) last = index;
   }
-  if (last === -1) return undefined;
+  // No `last === -1` guard: the slice below is empty for a negative index,
+  // so the empty-name check already answers it. Two guards where one fires
+  // means neither can be killed.
   const name = words
     .slice(Math.max(0, last - MAX_MATERIAL_WORDS + 1), last + 1)
     .filter((word) => word.length > 1 && !STOPWORDS.has(word))
