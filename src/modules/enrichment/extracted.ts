@@ -53,3 +53,29 @@ export function someExtracted(
   }
   return Object.keys(found).length > 0 ? found : undefined;
 }
+
+/**
+ * Fill the blanks in `into` from `from`, and say how many landed.
+ *
+ * This is "best data wins **per field**" — the ladder's actual rule. A
+ * JSON-LD page carrying a name but no `material` still falls through to
+ * Shopify's description for the composition alone, rather than the first
+ * rung that answers at all taking the whole answer.
+ *
+ * Earlier rungs win ties because the ladder runs best-first: a field already
+ * filled is never overwritten.
+ */
+export function fillBlanksFrom(
+  into: ExtractedProduct,
+  from: Readonly<ExtractedProduct>,
+): number {
+  let filled = 0;
+  for (const key of FIELDS) {
+    if (Reflect.get(into, key) !== undefined) continue;
+    const value: unknown = Reflect.get(from, key);
+    if (value === undefined) continue;
+    Reflect.set(into, key, value);
+    filled += 1;
+  }
+  return filled;
+}

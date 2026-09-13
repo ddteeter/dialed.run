@@ -34,7 +34,12 @@ improves. Invisible: results arrive as pre-filled, editable fields, never a scre
 
 Best data wins **per field**, not per rung: a JSON-LD page with no `material`
 still falls through to Shopify's `body_html` for composition alone. The rung
-recorded is the highest that contributed.
+recorded is the **deepest** that contributed — this doc first said highest,
+which is the less useful of the two. The column's job is to say whether
+re-running would help, and a page whose every field came from JSON-LD has
+nothing to gain from a better parser or model; recording `jsonld` because it
+supplied a name, on a page whose composition came from a description, hides
+the part a later run could improve.
 
 ## Contract touches
 
