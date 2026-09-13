@@ -74,8 +74,7 @@ the wrong network and is wrong. **A fallback is the primary path, not an
 escalation.** And Cloudflare Browser Rendering is specifically the wrong one:
 these are Cloudflare-protected sites refusing Cloudflare egress, so the
 detection advantage is theirs. Residential or mobile proxy egress is what the
-403s call for — Firecrawl's stealth mode is ~4 credits, roughly $3.30 per
-1,000.
+403s call for — Firecrawl's enhanced proxies, 5 credits a page.
 
 The alternative is to accept it: the packet already says a bot-blocked fetch
 is `extraction_status='failed'` and never a user-facing error, and
@@ -140,9 +139,21 @@ mobile proxy egress is the only thing that answers a 403, and on Firecrawl
 that means stealth mode, which is **not** on the free tier — free is 1,000
 credits of basic mode, which is the datacenter egress already being refused.
 
-Stealth is 5 credits a page. Hobby is $19/month ($16 annual) for 5,000
-credits, so **about 1,000 enriched pastes a month for $19**, with auto-reload
-at $5 per 1,000 credits after that.
+Costs, and what is _not_ confirmed. Enhanced proxies are 5 credits a page,
+so Hobby's 5,000 credits at $16-19/month is **about 1,000 enriched pastes a
+month**, roughly $16 per 1,000 — not the $3.30 first written here, which was
+the Standard-tier credit rate applied to the wrong plan. Pay-as-you-go exists
+but only *within* a paid plan (manual top-ups in $5 blocks); there is no way
+to buy a bucket of credits without a subscription, and the free tier cannot
+top up at all.
+
+**Whether the cheapest paid plan includes enhanced proxies is unverified.**
+The pricing page does not mention proxy modes and the docs do not mention
+plan gating; "stealth" is already stale terminology, replaced by
+basic/enhanced/auto. Secondary sources say paid-only, which is not the same
+as saying Hobby. The free tier settles it empirically for nothing: 1,000
+credits, one blocked URL, `proxy: "auto"` — if it comes back 200 the cheapest
+tier is enough, and if it 403s like our Worker did, it is not.
 
 **Recommendation: build the adapter, do not subscribe yet.** The fallback
 goes behind the same shape as the model rung — configured by a key, absent by

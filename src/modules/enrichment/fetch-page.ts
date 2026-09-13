@@ -22,8 +22,10 @@
  * failure modes look similar and want opposite tools:
  *
  * - **403 or a challenge page** — bot blocked. The answer is residential or
- *   mobile proxy egress (Firecrawl stealth, ~4 credits, roughly $3.30 per
- *   1,000). It is **not** Cloudflare Browser Rendering: that is *headless*
+ *   mobile proxy egress — Firecrawl's enhanced proxies, 5 credits a page,
+ *   which is about $16 per 1,000 on its cheapest paid plan. Unverified
+ *   whether that plan includes them; the docs do not say and the pricing
+ *   page does not mention proxy modes at all. It is **not** Cloudflare Browser Rendering: that is *headless*
  *   Chromium leaving from Cloudflare datacenter ranges, and a large share of
  *   retailers sit behind Cloudflare, which identifies its own infrastructure
  *   better than it identifies a random home connection. Same network is their
