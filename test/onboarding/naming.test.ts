@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { addFromTapList, getOwnedItem, nameItem } from "../../src/modules/closet";
+import {
+  addFromTapList,
+  getOwnedItem,
+  nameItem,
+} from "../../src/modules/closet";
 import {
   namedResult,
   namingOffer,
@@ -162,6 +166,11 @@ describe("nameItem", () => {
     expect(named.productId).toBeNull();
     // The tap list's own words survive: there is no model to replace them.
     expect(named.name).toBe("Merino base layer");
+    // And this branch flips origin as surely as the model branch does — a
+    // person said what it is, so it is no longer the tap list's guess.
+    // Asserted here because the branch writes its own `origin`, and the
+    // model path's test cannot reach this one.
+    expect(named.origin).toBe("manual");
   });
 
   it("treats a blank model as no model", async () => {
@@ -173,7 +182,7 @@ describe("nameItem", () => {
 
     const named = await nameItem(coreDb(), userId, row?.itemId ?? "", {
       brand: "Smartwool",
-      model: ' '.repeat(3),
+      model: " ".repeat(3),
     });
 
     expect(named.productId).toBeNull();
@@ -340,13 +349,15 @@ describe("the naming schemas", () => {
   it("refuses a model that is only whitespace", () => {
     // It trims to "", and an empty product name would create a canonical
     // product named after nothing.
-    expect(nameIdentityInput.safeParse({ brand: "S", model: ' '.repeat(3) }).success).toBe(
-      false,
-    );
+    expect(
+      nameIdentityInput.safeParse({ brand: "S", model: " ".repeat(3) }).success,
+    ).toBe(false);
   });
 
   it("needs to know which garment is being named", () => {
-    expect(nameGarmentInput.safeParse({ brand: "Smartwool" }).success).toBe(false);
+    expect(nameGarmentInput.safeParse({ brand: "Smartwool" }).success).toBe(
+      false,
+    );
     // A ULID, not any non-empty string: item ids are ULIDs everywhere else
     // and this is a trust boundary.
     expect(
