@@ -272,4 +272,43 @@ describe("findComposition", () => {
       findComposition("<html><body><p>20% off today!</p></body></html>"),
     ).toBeUndefined();
   });
+
+  it("ignores a script far too long for a bounded pattern to match", () => {
+    // The regression the real pages caught and the trimmed fixtures cannot.
+    // Stripping code with `<script>[\s\S]{0,N}?</script>` silently fails on
+    // any block longer than N, and product pages ship scripts far larger —
+    // the surviving JSON was then searched for fabric and yielded "amp".
+    //
+    // Reproduced synthetically now that the shape is known: a real page is
+    // not needed to pin a structure, only to discover it.
+    const padding = "x".repeat(300_000);
+    const html = `<html><head><script>${padding}"88% polyester ${padding}"</script></head>
+      <body><p>Fabric: 100% merino wool</p></body></html>`;
+    expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
+  });
+
+  it("takes the first composition when a page states several", () => {
+    // Pages mention fabric more than once — related products, variant
+    // blurbs, a size chart. The rabbit page offered eleven candidates. The
+    // first is the one nearest the product being described.
+    const html = `<html><body>
+      <p>Fabric: 100% merino wool</p>
+      <section class="related"><p>Also try: 88% polyester, 12% elastane</p></section>
+    </body></html>`;
+    expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
+  });
+
+  it("reads a composition that spilled out of an attribute", () => {
+    // An attribute whose JSON value contains `>` ends the tag early as far
+    // as a tag-splitter is concerned, so the rest of the value lands in the
+    // text — carrying JSON escaping with it. That is how `\u0026` reaches
+    // the parser, and stripping scripts does not catch it because it was
+    // never in a script.
+    const html =
+      '<div data-product="{"body":"<p>91% recycled polyester &amp;amp; 9% spandex</p>"}">x</div>';
+    expect(findComposition(html)?.parts?.[0]?.materials).toStrictEqual([
+      { material: "recycled polyester", pct: 91 },
+      { material: "spandex", pct: 9 },
+    ]);
+  });
 });
