@@ -15,6 +15,19 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+8. **P2.5's payout counts owners, and a social-proof count may not.**
+   §AC3's middle line reads *GAINED 412 runners own this piece*. Ownership
+   is closet contents, and CLAUDE.md's product rules say a social-proof
+   count derives **only from public entries, never closet contents** — a
+   count drawn from closets leaks that someone owns a piece they never
+   posted about, which is the thing that rule exists to prevent. So the
+   line as drawn cannot be built, and the owner's call (2026-09-12) is to
+   derive it from public entries instead; it is also the cheaper query.
+   **The wording is design's, not ours**: "own" is what the artboard says,
+   and "have logged this" is a guess at what it should say instead. Nothing
+   is blocked — the count has no read behind it either way (D-54), and the
+   named row says what actually happened until one exists.
+
 7. **O3's artboard still draws a paste field, and the code correctly does
    not.** Design raised this against lane 105 in round 7 rather than
    silently redrawing it: `Onboarding.dc.html`'s O3 shows a
