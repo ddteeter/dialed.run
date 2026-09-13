@@ -1,0 +1,35 @@
+/**
+ * dialed.run ink density — design round 6 §AB, the coverage channel.
+ *
+ * **Coverage is monochrome and never takes a hue, on any surface.** Hue
+ * means verdict — pink cold, teal dialed, grey warm — everywhere and
+ * permanently, and the two axes are different shapes of fact: coverage is
+ * *ordinal*, none to all, which density says natively; cold/dialed/warm is
+ * a *direction around a centre*, which density cannot say at all.
+ *
+ * Density also survives greyscale, a dim screen and colour-blind vision
+ * without a legend, which is the other half of why the axis that moved was
+ * this one.
+ *
+ * Solid, 135° hatch, hairline. The hatch angle is design's; the 2px-on,
+ * 3px-off rhythm reads as texture rather than as stripes at the sizes
+ * these marks are used at.
+ */
+.ink-covered {
+  background-color: var(--night-run);
+}
+
+.ink-partial {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--night-run) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+/* A hairline, not a tint: `text-night/30` is retired for exactly this
+ * reason — opacity never encodes meaning (§AB rule 04). An outline is
+ * full-strength ink describing an empty amount. */
+.ink-unknown {
+  box-shadow: inset 0 0 0 1px var(--night-run);
+}

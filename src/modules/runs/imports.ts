@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 
 import { imports } from "../../db/schema-core";
 import { firstColumnWhere } from "../../lib/keyed-read";
+import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { IMPORT_EXTENSIONS, importExtensionOf } from "./parsers";
@@ -17,11 +18,14 @@ import type { ImportExtension } from "./parsers";
 import type { ImportJob } from "./queue-messages";
 import { selectOwnedRow } from "../../lib/owned";
 
-export const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
+/**
+ * Re-exported, not declared: both live in `./upload-limits` so a route can
+ * reach them without reaching this file's schema and parser imports. See
+ * that file for the measurement.
+ */
+export { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 
 export type ImportRow = typeof imports.$inferSelect;
-
-export class ImportUploadError extends Error {}
 
 export interface ImportsQueueProducer {
   send(message: ImportJob): Promise<unknown>;

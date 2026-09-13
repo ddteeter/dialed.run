@@ -57,7 +57,7 @@ describe("columnWhere", () => {
 
     // Strings, not `{ followeeId }` objects: the caller asked for a
     // column and gets that column. Order is the database's, so compare as
-    // sets rather than sorting (`toSorted` is not in this project's lib).
+    // sets rather than sorting: order is the database's to choose.
     expect(new Set(followees)).toStrictEqual(new Set([first, second]));
     expect(followees.every((id) => typeof id === "string")).toBe(true);
   });

@@ -213,6 +213,41 @@ export interface ResolveProductInput {
  * to link `product_id`, or the caller skips this entirely for a generic
  * entry (category only).
  */
+/**
+ * A brand's known products, for P2.5's model suggestions.
+ *
+ * **Distinct from `searchProducts`, which needs a prefix.** Design §AC
+ * asks for "a suggestion chip row from that brand's known products, typed
+ * only if none fit" — chips a runner reads *before* typing, so there is no
+ * prefix to match on. `searchProducts` with an empty one returns nothing
+ * by design, because a blank autocomplete should not dump a table.
+ *
+ * Resolves the brand by its normalized name and **does not create it**:
+ * this runs while someone is still typing, and a lookup that created a
+ * brand per keystroke would fill the shared vocabulary with fragments.
+ * An unknown brand simply has no products yet.
+ */
+export async function productsForBrand(
+  db: Db,
+  brandName: string,
+  limit = AUTOCOMPLETE_LIMIT,
+): Promise<ProductRow[]> {
+  const normalized = normalizeIdentity(brandName);
+  if (normalized === "") return [];
+  const [brand] = await db
+    .select({ id: brands.id })
+    .from(brands)
+    .where(eq(brands.normalized, normalized))
+    .limit(1);
+  if (brand === undefined) return [];
+  return db
+    .select()
+    .from(products)
+    .where(and(eq(products.brandId, brand.id), eq(products.status, "active")))
+    .orderBy(products.name)
+    .limit(limit);
+}
+
 export async function resolveProduct(
   db: Db,
   input: ResolveProductInput,

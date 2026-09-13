@@ -9,6 +9,7 @@ import {
   createOrGetProduct,
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
+  productsForBrand,
   resolveProduct,
   searchBrands,
   searchProducts,
@@ -288,5 +289,51 @@ describe("attribute defaults distinguish false from not-stated", () => {
     const defaults = await getProductAttributeDefaultsBulk(client, ids);
 
     expect(new Set(defaults.keys())).toStrictEqual(new Set(ids));
+  });
+});
+
+/**
+ * Counts reads, because the guard below is about *not* doing one.
+ *
+ * `createOrGetBrand` refuses a name that normalizes to empty, so no brand
+ * row can ever carry `normalized = ""` — which means the early return in
+ * `productsForBrand` cannot change the *answer*, only whether a query is
+ * sent at all. Asserting the answer therefore proves nothing about it: the
+ * lookup returns `[]` either way.
+ *
+ * What the guard actually buys is a round trip skipped on every keystroke
+ * that is still punctuation or whitespace, and autocomplete runs on every
+ * keystroke. So that is what gets asserted.
+ */
+function countingDb(): { db: ReturnType<typeof db>; reads: () => number } {
+  let reads = 0;
+  const counted = new Proxy(db(), {
+    get(target, property, receiver) {
+      if (property === "select") reads += 1;
+      return Reflect.get(target, property, receiver) as unknown;
+    },
+  });
+  return { db: counted, reads: () => reads };
+}
+
+describe("productsForBrand", () => {
+  it("does not go to the database for a brand that cannot exist", async () => {
+    const punctuation = countingDb();
+    expect(await productsForBrand(punctuation.db, "!!!")).toStrictEqual([]);
+    expect(punctuation.reads()).toBe(0);
+
+    const blank = countingDb();
+    expect(await productsForBrand(blank.db, " ".repeat(3))).toStrictEqual([]);
+    expect(blank.reads()).toBe(0);
+  });
+
+  it("does go to the database for a name that could be one", async () => {
+    // The other half of the counter: without this, a broken proxy that
+    // never counted would make the assertions above pass vacuously.
+    const real = countingDb();
+    expect(await productsForBrand(real.db, "Nobody Has This")).toStrictEqual(
+      [],
+    );
+    expect(real.reads()).toBeGreaterThan(0);
   });
 });

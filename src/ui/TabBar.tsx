@@ -8,7 +8,9 @@ const TAB_CLASS =
  * separate typed <Link> (rather than a generic map over a shared `to`)
  * because TanStack's route paths are checked as literals against the
  * generated route tree — widening them into a shared `string` field would
- * defeat that check. Tabs whose lane hasn't landed yet still point at "/".
+ * defeat that check. Every tab now points at its own
+ * route; D-31 is what is left here, and wants its own change because a tab
+ * bar growing glyphs is worth a demo of its own.
  */
 export function TabBar() {
   return (
@@ -33,8 +35,7 @@ export function TabBar() {
           </Link>
         </li>
         <li>
-          {/* Placeholder target: lane 105 repoints this at /call. */}
-          <Link to="/" className={TAB_CLASS}>
+          <Link to="/call" className={TAB_CLASS}>
             Call
           </Link>
         </li>

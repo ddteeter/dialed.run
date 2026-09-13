@@ -7,7 +7,7 @@
  */
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-export const user = sqliteTable(
+export const user = /*#__PURE__*/ sqliteTable(
   "user",
   {
     id: text("id").primaryKey(),
@@ -21,7 +21,7 @@ export const user = sqliteTable(
   (t) => [uniqueIndex("user_email").on(t.email)],
 );
 
-export const session = sqliteTable(
+export const session = /*#__PURE__*/ sqliteTable(
   "session",
   {
     id: text("id").primaryKey(),
@@ -38,7 +38,7 @@ export const session = sqliteTable(
   (t) => [uniqueIndex("session_token").on(t.token)],
 );
 
-export const account = sqliteTable("account", {
+export const account = /*#__PURE__*/ sqliteTable("account", {
   id: text("id").primaryKey(),
   issuer: text("issuer").notNull(),
   accountId: text("account_id").notNull(),
@@ -61,7 +61,7 @@ export const account = sqliteTable("account", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-export const verification = sqliteTable("verification", {
+export const verification = /*#__PURE__*/ sqliteTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
