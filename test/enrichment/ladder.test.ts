@@ -88,4 +88,34 @@ describe("runLadder", () => {
       rung: "og",
     });
   });
+
+  it("finds a composition in the page text when no rung declares one", () => {
+    // The measurement that put this in the ladder: over 14 real pages the
+    // three declared rungs found composition on none, because it lives in a
+    // metafield or a description rather than a `material` field.
+    const html = `${ldBlock({ name: "Rover Half-Zip" })}
+      <div class="specs"><p>Fabric: 88% polyester, 12% elastane</p></div>`;
+    const { extracted, rung } = runLadder(PAGE, html);
+    expect(extracted.name).toBe("Rover Half-Zip");
+    expect(extracted.fabricComposition?.parts?.[0]?.materials).toStrictEqual([
+      { material: "polyester", pct: 88 },
+      { material: "elastane", pct: 12 },
+    ]);
+    // Deepest contributor: the text search is where the new fact came from,
+    // and it is the part a better parser could later improve.
+    expect(rung).toBe("text");
+  });
+
+  it("prefers a declared material over one found in prose", () => {
+    // JSON-LD's `material` is a shop stating the composition; the page text
+    // is us inferring it. When both exist the declared one wins, and the
+    // recorded rung does not drop to "text" for a field already filled.
+    const html = `${ldBlock({
+      name: "Rover Half-Zip",
+      material: "100% merino wool",
+    })}<p>Fabric: 88% polyester, 12% elastane</p>`;
+    const { extracted, rung } = runLadder(PAGE, html);
+    expect(extracted.fabricComposition?.verbatim).toBe("100% merino wool");
+    expect(rung).toBe("jsonld");
+  });
 });

@@ -120,8 +120,12 @@ export const productSnapshots = sqliteTable("product_snapshots", {
   productId: text("product_id").notNull(),
   url: text("url").notNull(),
   r2Key: text("r2_key").notNull(),
+  // "text" is the page's rendered text, searched for a fibre percentage —
+  // added by 107 once measurement showed composition is almost never in a
+  // declared field. Type-level only: the column is plain TEXT with no CHECK,
+  // so widening the set needs no migration.
   rung: text("rung", {
-    enum: ["jsonld", "shopify", "og", "llm", "none"],
+    enum: ["jsonld", "shopify", "og", "text", "llm", "none"],
   }).notNull(),
   fetchedAt: integer("fetched_at").notNull(),
 });
