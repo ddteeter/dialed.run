@@ -298,6 +298,20 @@ describe("findComposition", () => {
     expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
   });
 
+  it("does not read a composition out of an attribute that stayed in its tag", () => {
+    // Measured against the eight sampled pages: **every one** has a tag
+    // longer than 2,000 characters, because a Shopify theme renders the
+    // whole product JSON — description included — into `data-product`.
+    // While the tag splitter was a bounded regex, that blob was not
+    // recognised as a tag, so on the rabbit page `verbatim` came back as ten
+    // kilobytes of markup and the parts were two fabrics listed twice. The
+    // other seven hid it: a real node happened to parse first.
+    const filler = " ".repeat(3000);
+    const html = `<div data-product="{${filler} desc : 91% recycled polyester, 9% spandex }"><p>Fabric: 100% merino wool</p></div>`;
+    const composition = findComposition(html);
+    expect(composition?.verbatim).toBe("Fabric: 100% merino wool");
+  });
+
   it("reads a composition that spilled out of an attribute", () => {
     // An attribute whose JSON value contains `>` ends the tag early as far
     // as a tag-splitter is concerned, so the rest of the value lands in the

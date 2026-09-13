@@ -135,19 +135,58 @@ honoured, or it measures routing luck.
    the column's job is to say whether re-running would help.
 4. **Model choice** is the owner's, on the eval table above.
 
-## Open
+## Closed — the fetch fallback, and it is cheaper than the estimate
 
-**The fetch fallback is a cost decision.** Enhanced proxies are 5 credits a
-page; Firecrawl's cheapest paid plan is 5,000 credits at $16-19/month, so
-about 1,000 enriched pastes a month. Pay-as-you-go tops up only _within_ a
-paid plan; there is no bucket without a subscription.
+**Measured 2026-09-13, free tier.** All eight blocked pages through
+Firecrawl's `/v2/scrape` with `proxy: "auto"`:
 
-**Whether that plan includes enhanced proxies is unverified** — the pricing
-page does not mention proxy modes and the docs do not mention plan gating.
-The free tier settles it for nothing: 1,000 credits, one blocked URL, `proxy:
-"auto"`. A 200 means the cheapest tier is enough; a 403 means the question
-becomes which tier.
+| result | count |
+| ------ | ----- |
+| 200    | 8     |
+| 403    | 0     |
 
-Either way the adapter is built and unconfigured by default, degrading to the
+Every one came back on the **basic** proxy — `auto` never had to escalate —
+at **1 credit each**, confirmed against the team credit balance before and
+after (1023 → 1015). The enhanced tier is not gated either: an explicit
+`proxy: "stealth"` on the same free key returned 200 and also billed 1.
+
+So the estimate in the previous version of this section was pessimistic in
+both directions. It is not 5 credits a page, it is 1; and enhanced is
+available, not a plan upsell. The cheapest paid plan's 5,000 credits is
+~5,000 enriched pastes a month, not 1,000. Pay-as-you-go still tops up only
+_within_ a paid plan — there is no bucket without a subscription — and the
+free tier's 1,000/month is itself real headroom before launch.
+
+The adapter is still built unconfigured by default, degrading to the
 deterministic rungs when no key is set (law 5), so the spend is a decision
 about users rather than a refactor.
+
+## What a full page taught that a fixture could not
+
+The fixtures are trimmed fragments. Running the ladder over the eight
+**whole** pages Firecrawl returned found two things the fragments hid:
+
+- **A tag can be longer than any bound.** `findComposition` split text nodes
+  on `<[^>]{0,2000}>`, so a tag over the bound was not recognised as a tag
+  and its attributes arrived as prose. Every one of the eight pages has such
+  a tag — 9,810 characters at the shortest, 119,410 at the longest — because
+  a Shopify theme renders the whole product JSON into `data-product`. On the
+  rabbit page that blob parsed first, so `verbatim` was ten kilobytes of
+  markup and the parts were two fabrics listed twice; the other seven hid it
+  because a real node happened to win. Now an index walk (`textNodes`), for
+  the same reason `withoutCode` is one.
+- **2 MB was too small a cap.** The pages run 619 kB to 2,450 kB and two are
+  over 2 MB, so `MAX_BYTES` was dropping a quarter of the sample before
+  extraction ever ran. Raised to 6 MB, which is a guard against an endless
+  stream rather than a budget.
+
+With both fixed, composition extracts from **7 of 8** whole pages, and the
+rabbit page's `verbatim` is now `PacerWeaveTM body: 91% recycled polyester &
+9% spandex` rather than ten kilobytes of markup.
+
+The miss is the SOAR shorts page, and it is not an extraction failure: the
+delivered HTML states no composition. Its only fibre words are product names
+in a recommendations payload ("Merino Beanie", "Merino & Silk Base Layer"),
+so there is nothing for any parser to find. That is the shape a **200 with
+the content missing** takes — the case the `fetch-page.ts` header reserves
+for Browser Rendering, now with one measured instance behind it.

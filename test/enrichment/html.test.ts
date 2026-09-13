@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { scriptBodies, withoutCode } from "../../src/modules/enrichment/html";
+import {
+  scriptBodies,
+  textNodes,
+  withoutCode,
+} from "../../src/modules/enrichment/html";
 
 const ANY_SCRIPT = /<script[^>]{0,500}>/giu;
 
@@ -111,5 +115,48 @@ describe("withoutCode", () => {
     // "before" and "after" land either side of the stray one.
     const html = `X</script><script type="application/json">y</script>`;
     expect(withoutCode(html)).toBe("X</script> ");
+  });
+});
+
+describe("textNodes", () => {
+  it("returns what is between the tags, in order", () => {
+    expect(textNodes("<p>one</p><p>two</p>")).toStrictEqual([
+      "",
+      "one",
+      "",
+      "two",
+      "",
+    ]);
+  });
+
+  it("keeps text before the first tag and after the last", () => {
+    expect(textNodes("before<br>after")).toStrictEqual([
+      "before",
+      "after",
+    ]);
+  });
+
+  it("treats a tag longer than any bound as a tag", () => {
+    // The regression this function exists for. Every one of the eight
+    // sampled product pages carries a tag over 2,000 characters — a Shopify
+    // theme renders the whole product JSON into `data-product` — and a
+    // bounded split read that blob as prose.
+    const blob = "x".repeat(50_000);
+    const html = `<div data-product="${blob}">100% merino wool</div>`;
+    expect(textNodes(html)).toStrictEqual(["", "100% merino wool", ""]);
+  });
+
+  it("ends the document at a `<` that is never closed", () => {
+    // Everything after it sits inside that tag, so far as a parser can
+    // tell, so it is not text and must not be offered as text.
+    expect(textNodes("kept<div class=\"unclosed")).toStrictEqual(["kept"]);
+  });
+
+  it("returns the whole string when there are no tags at all", () => {
+    expect(textNodes("100% merino wool")).toStrictEqual(["100% merino wool"]);
+  });
+
+  it("does not leave the closing angle bracket on the next node", () => {
+    expect(textNodes("<b>x")).toStrictEqual(["", "x"]);
   });
 });

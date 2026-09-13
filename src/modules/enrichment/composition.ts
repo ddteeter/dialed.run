@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import { fabricPartSchema, type FabricComposition } from "../../lib/contracts";
 import { isFibre } from "./fibres";
-import { withoutCode } from "./html";
+import { textNodes, withoutCode } from "./html";
 
 /**
 Derived from the schema rather than restated (CLAUDE.md §Derive, don't mirror).
@@ -264,7 +264,8 @@ export function parseComposition(raw: string): FabricComposition | undefined {
  * being described.
  */
 export function findComposition(html: string): FabricComposition | undefined {
-  for (const node of withoutCode(html).split(/<[^>]{0,2000}>/gu)) {
+  const nodes = textNodes(withoutCode(html));
+  for (const node of nodes) {
     const composition = parseComposition(node);
     if (composition !== undefined) return composition;
   }

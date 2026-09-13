@@ -3,7 +3,7 @@
  * reaches the network.
  *
  * Everything here is a bound: https only, no private address space, ten
- * seconds, two megabytes, five redirects.
+ * seconds, six megabytes, five redirects.
  *
  * **The SSRF guard is hygiene, not the real risk, and overselling it would be
  * the mistake.** There is no VPC, no origin server, and no instance metadata
@@ -22,10 +22,13 @@
  * failure modes look similar and want opposite tools:
  *
  * - **403 or a challenge page** — bot blocked. The answer is residential or
- *   mobile proxy egress — Firecrawl's enhanced proxies, 5 credits a page,
- *   which is about $16 per 1,000 on its cheapest paid plan. Unverified
- *   whether that plan includes them; the docs do not say and the pricing
- *   page does not mention proxy modes at all. It is **not** Cloudflare Browser Rendering: that is *headless*
+ *   mobile proxy egress, and it is measured: all eight blocked pages came
+ *   back 200 through Firecrawl's `/v2/scrape` with `proxy: "auto"`, on the
+ *   **basic** proxy, at **1 credit each** — `auto` never escalated. The
+ *   enhanced tier is not plan-gated either; an explicit `proxy: "stealth"`
+ *   on a free key also returned 200 and also billed 1. So the cheapest paid
+ *   plan's 5,000 credits is ~5,000 pages, not the ~1,000 an earlier estimate
+ *   assumed at 5 credits each. It is **not** Cloudflare Browser Rendering: that is *headless*
  *   Chromium leaving from Cloudflare datacenter ranges, and a large share of
  *   retailers sit behind Cloudflare, which identifies its own infrastructure
  *   better than it identifies a random home connection. Same network is their
@@ -36,12 +39,28 @@
  *   Rendering is right, and it is on-platform and effectively free at our
  *   volume: 10 browser hours/month included, which is thousands of pages.
  *
- * Neither is wired, deliberately. A fallback bought before the failure is
- * measured is a guess with a bill attached.
+ * Neither is wired yet, and the 403 path is now the one with evidence
+ * behind it: a Worker is refused by 11 of 14 sampled retailers, so the
+ * proxy fetch is the primary path rather than an escalation. The 200-with-
+ * nothing-in-it path has exactly one measured instance (the SOAR shorts
+ * page), which is enough to know the shape and not enough to buy for.
  */
 
 const TIMEOUT_MS = 10_000;
-const MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * **Measured, not guessed — and 2 MB was too small.** The eight sampled
+ * product pages run 619 kB to 2,450 kB, and two of them are over 2 MB, so
+ * the original cap silently dropped a quarter of the sample. A modern
+ * Shopify theme is heavy in a way that has nothing to do with the product:
+ * the whole product JSON is rendered into a `data-product` attribute, once
+ * per related product.
+ *
+ * 6 MB clears the largest seen with room over it, and stays far under a
+ * Worker's 128 MB: this is a guard against a stream that never ends, not a
+ * budget. The reason it has to be a cap at all is in `readCapped` below.
+ */
+const MAX_BYTES = 6 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 
 /**
