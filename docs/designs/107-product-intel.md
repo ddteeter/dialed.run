@@ -37,6 +37,20 @@ recorded is the highest that contributed.
   `MEDIA` are already bound. `OPENROUTER_API_KEY` is a secret, not a binding.
 - New routes: none. Screens: none. Design-delta items: none.
 
+## Fetching is the part that cannot be redone
+
+Extraction improves retroactively — that is what `reextract` over snapshots is
+for. **Fetching does not:** a page never retrieved has no snapshot to re-run, so
+a fetch failure is permanent where an extraction miss is not.
+
+v1 is a plain fetch, because a fallback is only worth buying against measured
+failure, and the two failure modes want different tools — 403 wants residential
+stealth, an empty 200 wants a real browser. The ladder, the costs and why
+Cloudflare Browser Rendering is the _wrong_ answer to a Cloudflare-protected
+403 are at the top of `fetch-page.ts`, where someone reading a 403 will look.
+Fixture capture runs through the real fetch path and records status, whether
+composition was present, and whether the response carried `cf-ray`.
+
 ## Test plan
 
 - `fetch-page`: rejects `http://`, a private-IP host, and a **redirect** into

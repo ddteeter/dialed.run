@@ -33,6 +33,10 @@ function ipv4(a: number, b: number, c: number, d: number): string {
  * asserted. A test whose subject is refusing http cannot hold the literal.
  */
 const INSECURE_SCHEME = "http:";
+/**
+Mirrors the module's own cap; the boundary tests need the exact number.
+*/
+const MAX_BYTES = 2 * 1024 * 1024;
 const INSECURE = `${INSECURE_SCHEME}//shop.example.com/p`;
 
 /**
@@ -47,6 +51,31 @@ function sweep(
   for (let octet = 0; octet <= 255; octet += 1) {
     expect(isBlockedHost(build(octet)), build(octet)).toBe(isPrivate(octet));
   }
+}
+
+/**
+A fetch that redirects `count` times before answering.
+*/
+function redirectChain(count: number): typeof fetch {
+  let seen = 0;
+  return () => {
+    seen += 1;
+    return Promise.resolve(
+      seen > count
+        ? new Response("<html>ok</html>", { status: 200 })
+        : new Response(undefined, {
+            status: 302,
+            headers: { location: `https://shop.example.com/p/${String(seen)}` },
+          }),
+    );
+  };
+}
+
+/**
+A fetch that always answers with one status.
+*/
+function status(code: number): typeof fetch {
+  return () => Promise.resolve(new Response("nope", { status: code }));
 }
 
 function htmlOnce(html: string, headers: Record<string, string> = {}) {
@@ -122,6 +151,17 @@ describe("isBlockedHost", () => {
     expect(isBlockedHost("a.b.c.d")).toBe(false);
   });
 
+  it("stops at the first octet for none of the checks it makes", () => {
+    // Each of these is a hostname that starts 10. and must still be allowed.
+    // Every guard in the v4 parser has a mutant whose only tell is one of
+    // them: drop the length check and "10.0.0.1.5" reads as private; drop
+    // the NaN check and "10.a.0.1" does; drop the negative check and
+    // "10.-1.0.1" does. A leading octet that is not 10 distinguishes none.
+    expect(isBlockedHost("10.0.0.1.5")).toBe(false);
+    expect(isBlockedHost("10.a.0.1")).toBe(false);
+    expect(isBlockedHost("10.-1.0.1")).toBe(false);
+  });
+
   it("refuses to read an out-of-range octet as an address", () => {
     // 999 is not an octet, so this is a hostname that merely looks numeric —
     // and 10.0.0.999 is the one that matters: stopping at the first octet
@@ -134,19 +174,61 @@ describe("isBlockedHost", () => {
   it("tells a public IPv6 address from a private one", () => {
     expect(isBlockedHost("[::]")).toBe(true);
     expect(isBlockedHost("[fd00::1]")).toBe(true);
+    expect(isBlockedHost("[fc00::1]")).toBe(true);
     expect(isBlockedHost("[2001:db8::1]")).toBe(false);
     expect(isBlockedHost("[fe81::1]")).toBe(false);
+    // "fc"/"fd" mean unique-local only at the START. An address that merely
+    // contains them is a normal public address.
+    expect(isBlockedHost("[2001:fc00::1]")).toBe(false);
+    expect(isBlockedHost("[2001:db8::fd00]")).toBe(false);
+  });
+
+  it("sees through a v4-mapped address of any octet width", () => {
+    // The mapped form carries a real v4 address, so every octet rule has to
+    // apply to it — not just the single-digit ones a narrower parse catches.
+    expect(isBlockedHost(`[::ffff:${ipv4(10, 10, 0, 1)}]`)).toBe(true);
+    expect(isBlockedHost(`[::ffff:${ipv4(172, 20, 30, 40)}]`)).toBe(true);
+    expect(isBlockedHost("[::ffff:8.8.8.8]")).toBe(false);
+    expect(isBlockedHost("[::ffff:not.an.ip.here]")).toBe(false);
+  });
+
+  it("fails closed on a bracket it cannot parse", () => {
+    // Not reachable through `URL.hostname`, but this is the guard: refusing
+    // input it cannot parse is the whole difference between a guard and a
+    // formality.
+    expect(isBlockedHost("[::1")).toBe(true);
+    expect(isBlockedHost("[")).toBe(true);
   });
 
   it("refuses names that cannot be public", () => {
+    expect(isBlockedHost("")).toBe(true);
     expect(isBlockedHost("localhost")).toBe(true);
+    expect(isBlockedHost("anything.internal")).toBe(true);
+    expect(isBlockedHost("internal.example.com")).toBe(false);
     expect(isBlockedHost("router.local")).toBe(true);
     expect(isBlockedHost("metadata.google.internal")).toBe(true);
     expect(isBlockedHost("shop.example.com")).toBe(false);
   });
 });
 
+describe("PageFetchError", () => {
+  it("is named, so a Sentry group is not just 'Error'", async () => {
+    // `toMatchObject` rather than catching and casting: the name is the
+    // grouping key upstream, and a subclass that forgot to set it reports as
+    // a bare Error with no hint of where it came from.
+    await expect(
+      fetchProductPage(INSECURE, htmlOnce("")),
+    ).rejects.toMatchObject({ name: "PageFetchError" });
+  });
+});
+
 describe("fetchProductPage", () => {
+  it("names the protocol it refused, so a log says which link failed", async () => {
+    await expect(fetchProductPage(INSECURE, htmlOnce(""))).rejects.toThrow(
+      /http:/u,
+    );
+  });
+
   it("refuses http, without asking the network", async () => {
     const fetchImpl = htmlOnce("<html></html>");
     await expect(fetchProductPage(INSECURE, fetchImpl)).rejects.toThrow(
@@ -238,13 +320,33 @@ describe("fetchProductPage", () => {
   });
 
   it("returns the page when everything is in bounds", async () => {
-    const fetchImpl = htmlOnce("<html><title>Rover Half-Zip</title></html>");
+    // Exactly, not `toContain`: the accumulator starts empty, and a test
+    // that only looks for a substring cannot tell that from one that starts
+    // with something else already in it.
+    const body = "<html><title>Rover Half-Zip</title></html>";
     const page = await fetchProductPage(
       "https://shop.example.com/p",
-      fetchImpl,
+      htmlOnce(body),
     );
-    expect(page.html).toContain("Rover Half-Zip");
+    expect(page.html).toBe(body);
     expect(page.finalUrl).toBe("https://shop.example.com/p");
+  });
+
+  it("allows a page of exactly the cap, on both the claim and the bytes", async () => {
+    // The cap is a maximum, not a limit one short of it. `>` and `>=` differ
+    // on exactly this input and on no other.
+    const exact = "x".repeat(MAX_BYTES);
+    const declared = await fetchProductPage(
+      "https://shop.example.com/p",
+      htmlOnce(exact, { "content-length": String(MAX_BYTES) }),
+    );
+    expect(declared.html).toHaveLength(MAX_BYTES);
+
+    const undeclared = await fetchProductPage(
+      "https://shop.example.com/p",
+      htmlOnce(exact),
+    );
+    expect(undeclared.html).toHaveLength(MAX_BYTES);
   });
 
   it("passes a timeout signal, so a slow upstream cannot wedge the consumer", async () => {
@@ -287,11 +389,8 @@ describe("fetchProductPage", () => {
   });
 
   it("reports the status when the page is not ok", async () => {
-    const fetchImpl = vi.fn(() =>
-      Promise.resolve(new Response("nope", { status: 503 })),
-    );
     await expect(
-      fetchProductPage("https://shop.example.com/p", fetchImpl),
+      fetchProductPage("https://shop.example.com/p", status(503)),
     ).rejects.toThrow(/503/u);
   });
 
@@ -302,5 +401,95 @@ describe("fetchProductPage", () => {
     await expect(
       fetchProductPage("https://shop.example.com/p", fetchImpl),
     ).rejects.toThrow(/no body/u);
+  });
+
+  it("decodes a character split across two chunks", async () => {
+    // "é" is two UTF-8 bytes. Delivered one per chunk, a non-streaming
+    // decode turns each into a replacement character and the page quietly
+    // becomes mojibake — which an extraction rung then reads as the product
+    // name.
+    const bytes = new TextEncoder().encode("<p>café</p>");
+    const impl: typeof fetch = () =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              for (const byte of bytes)
+                controller.enqueue(new Uint8Array([byte]));
+              controller.close();
+            },
+          }),
+        ),
+      );
+
+    const page = await fetchProductPage("https://shop.example.com/p", impl);
+    expect(page.html).toBe("<p>café</p>");
+  });
+
+  it("releases the body when it gives up on an oversized page", async () => {
+    // Without the cancel the stream stays open, and an isolate that leaks
+    // one per failed job is a consumer that degrades over a batch.
+    let wasCancelled = false;
+    const impl: typeof fetch = () =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              controller.enqueue(new Uint8Array(64 * 1024));
+            },
+            cancel() {
+              wasCancelled = true;
+            },
+          }),
+        ),
+      );
+
+    await expect(
+      fetchProductPage("https://shop.example.com/p", impl),
+    ).rejects.toThrow(/exceeded/u);
+    expect(wasCancelled).toBe(true);
+  });
+
+  it("allows exactly five redirects, and the sixth is one too many", async () => {
+    const page = await fetchProductPage(
+      "https://shop.example.com/p",
+      redirectChain(5),
+    );
+    expect(page.html).toContain("ok");
+
+    await expect(
+      fetchProductPage("https://shop.example.com/p", redirectChain(6)),
+    ).rejects.toThrow(/redirects/u);
+  });
+
+  it("asks for HTML, so a server that content-negotiates sends some", async () => {
+    const fetchImpl = htmlOnce("<html></html>");
+    await fetchProductPage("https://shop.example.com/p", fetchImpl);
+    const init = fetchImpl.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).get("accept")).toContain("text/html");
+  });
+
+  it("treats 300 as a redirect and 400 as a failure, exactly", async () => {
+    // The ends of the 3xx range. 300 carries a Location and must be
+    // followed; 400 is a client error and must be reported as one, not
+    // chased for a header it does not have.
+    let seen = 0;
+    const at300: typeof fetch = () => {
+      seen += 1;
+      return Promise.resolve(
+        seen === 1
+          ? new Response(undefined, {
+              status: 300,
+              headers: { location: "https://shop.example.com/p/final" },
+            })
+          : new Response("<html>ok</html>", { status: 200 }),
+      );
+    };
+    const page = await fetchProductPage("https://shop.example.com/p", at300);
+    expect(page.finalUrl).toBe("https://shop.example.com/p/final");
+
+    await expect(
+      fetchProductPage("https://shop.example.com/p", status(400)),
+    ).rejects.toThrow(/400/u);
   });
 });
