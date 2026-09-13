@@ -18,11 +18,11 @@ improves. Invisible: results arrive as pre-filled, editable fields, never a scre
   `product_snapshots` row. R2 first: nothing spans R2 and D1 (law 8c), and an
   orphaned object is recoverable where a row pointing at no object is not.
 - `rungs/{jsonld,shopify,og}.ts` — each a `PageExtractor` from `lib/contracts`.
-- `composition.ts` — composition parser incl. labeled multi-part forms →
-  `fabricCompositionSchema.parts`; `verbatim` always preserved.
-- `model/openrouter.ts` — `ExtractionModel` over OpenRouter's OpenAI-compatible
-  endpoint. Prompts carry page content and the URL only (5b).
-- `consume.ts` — the `dialed-enrichment` consumer, into the existing `ops/queues.ts` stub.
+- `composition.ts` — parser incl. labeled multi-part → `fabricCompositionSchema.parts`;
+  `verbatim` always preserved.
+- `model/openrouter.ts` — `ExtractionModel` over OpenRouter. Prompts carry page
+  content and the URL only (5b).
+- `consume.ts` — the consumer, into the existing `ops/queues.ts` stub.
 
 Best data wins **per field**, not per rung: a JSON-LD page with no `material`
 still falls through to Shopify's `body_html` for composition alone. The rung
@@ -45,10 +45,10 @@ recorded is the highest that contributed.
   garbage — asserting what it claims and `null` where it has nothing. (unit)
 - `composition`: percentage variants; labeled multi-part → parts; unlabeled
   multi-fabric degrades to one unlabeled part, `verbatim` intact. (unit)
-- Consumer: happy path; fetch failure → `extraction_status='failed'`; malformed
-  model output retryable, not a crash; redelivery writes no second snapshot.
-  (workers pool, stubbed model)
-- Write-back never clobbers a populated field. (workers pool)
+- Consumer: happy path; fetch failure → `failed`; malformed model output
+  retryable not a crash; redelivery writes no second snapshot. (workers pool)
+- Write-back: skips an edited field, skips a **cleared** one, fills a never-set
+  one. (workers pool)
 
 ## Eval (D-32) — pending `OPENROUTER_API_KEY`
 
@@ -60,16 +60,19 @@ same model on another provider may downgrade `json_schema` to `json_object` or
 treat it as a hint. The eval pins a provider per model and asserts strict mode
 is honoured, or it measures the wrong thing.
 
-## Open questions
+## Decided
 
-1. **Writer signature** (packet says coordinate). `modules/products` exports no
-   writer for extracted fields. Proposed `applyExtraction(db, productId,
-extracted, rung)` living in 101's module and owning precedence, so enrichment
-   never writes product columns directly.
-2. **Precedence has nothing to key on.** "Never overwrite a field a human edited"
-   is unimplementable as written — `products` has no per-field provenance.
-   Proceeding with **fill-only-what-is-null**, which honours "user-entered fields
-   are the floor" but cannot distinguish a field deliberately cleared from one
-   never set; extraction would refill it. Per-field provenance is the real fix
-   and is out of scope. Flagging rather than quietly growing the schema.
+1. **Writer signature** — `applyExtraction(db, productId, extracted, rung)` in
+   `modules/products`, owning precedence. Enrichment never writes product
+   columns directly. (Owner, 2026-09-13.)
+2. **Precedence is derived, not stored.** "Never overwrite a field a human
+   edited" needs one bit per field — _has a human set this?_ — and that is
+   already implied by data we keep: compare each column against what
+   `extracted` last recorded. Differs ⇒ a human changed it ⇒ skip.
+   Fill-only-what-is-null cannot do this — a field someone deliberately
+   **cleared** looks identical to one never set, and would be refilled. A
+   stored `edited_fields` column would be a rival truth that can drift
+   (§Derive, don't mirror); an audit log answers a larger question and the bit
+   would still be derived from it. The case table and its two accepted limits
+   live at `applyExtraction`, where the next reader of the rule is.
 3. **Model choice** is the owner's, on the eval table above.
