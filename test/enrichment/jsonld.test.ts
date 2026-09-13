@@ -232,4 +232,20 @@ describe("the JSON-LD rung", () => {
     })}</script></head></html>`;
     expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
   });
+
+  it("reads a block whose JSON contains markup", () => {
+    // The bug a capture group hid: `>([^<]*)</script>` stops at the first
+    // `<` inside the payload, so a description carrying HTML truncated the
+    // JSON mid-string and the whole block failed to parse — silently, and
+    // on exactly the pages most likely to describe a fabric.
+    const html = pageWith(
+      JSON.stringify({
+        "@type": "Product",
+        name: "Rover Half-Zip",
+        description: "<p>Built for cold mornings.</p>",
+        material: "88% polyester",
+      }),
+    );
+    expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
+  });
 });
