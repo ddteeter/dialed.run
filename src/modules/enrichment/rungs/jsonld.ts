@@ -85,12 +85,32 @@ function findProduct(value: unknown, depth = 0): object | undefined {
  * broken script beside a good one.
  */
 function parseJson(json: string): unknown {
+  /**
+   * **Equivalent mutant: emptying the catch changes nothing.**
+   *
+   * `catch {}` falls off the end of the function, which is `undefined` — the
+   * same value the explicit return produces. No caller can tell them apart,
+   * and that is not an accident of this code: malformed JSON and "no Product
+   * in this block" *must* do the same thing, which is skip to the next
+   * block. A page that ships one broken script beside a good one has to
+   * still yield the good one (there is a test for it), so the two cases
+   * converge by design.
+   *
+   * Making it observable would mean inventing behaviour — recording a parse
+   * failure somewhere — to satisfy a mutant rather than a requirement.
+   *
+   * A block pair rather than `next-line`: the mutated line begins with
+   * `} catch`, and a `next-line` directive does not attach to one that opens
+   * with a closing brace.
+   */
+  // Stryker disable BlockStatement
   try {
     const parsed: unknown = JSON.parse(json);
     return parsed;
   } catch {
     return undefined;
   }
+  // Stryker restore BlockStatement
 }
 
 function productFrom(node: object): ExtractedProduct | undefined {
