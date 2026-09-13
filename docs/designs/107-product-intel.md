@@ -53,16 +53,16 @@ composition was present, and whether the response carried `cf-ray`.
 
 ## Test plan
 
-- `fetch-page`: rejects `http://`, a private-IP host, and a **redirect** into
-  private space; aborts past 10s; stops reading past 2 MB. (unit)
+- `fetch-page`: http, private-IP, and a **redirect** into private space;
+  timeout; the 2 MB cap on a body that lies about its length. (unit)
 - Each rung against one real captured fixture — Shopify, JSON-LD, OG-only,
-  garbage — asserting what it claims and `null` where it has nothing. (unit)
-- `composition`: percentage variants; labeled multi-part → parts; unlabeled
-  multi-fabric degrades to one unlabeled part, `verbatim` intact. (unit)
+  garbage — asserting what it claims and nothing where it has nothing. (unit)
+- `composition`: percentage variants; labelled multi-part → parts; unlabeled
+  multi-fabric degrades to one part, `verbatim` intact. (unit)
 - Consumer: happy path; fetch failure → `failed`; malformed model output
-  retryable not a crash; redelivery writes no second snapshot. (workers pool)
-- Write-back: skips an edited field, skips a **cleared** one, fills a never-set
-  one. (workers pool)
+  retryable; redelivery writes no second snapshot. (workers pool)
+- Write-back: skips an edited field, skips a **cleared** one, fills a
+  never-set one. (workers pool)
 
 ## Eval (D-32) — pending `OPENROUTER_API_KEY`
 
@@ -90,3 +90,21 @@ is honoured, or it measures the wrong thing.
    would still be derived from it. The case table and its two accepted limits
    live at `applyExtraction`, where the next reader of the rule is.
 3. **Model choice** is the owner's, on the eval table above.
+
+## Open — decide on the fixtures, not on reasoning
+
+**Should the Shopify rung fetch `/products/{handle}.json`?** The packet allows
+one fetch per job; this would be a second, to the same host. It is better
+_extraction_ (structured JSON, what Shopify's own themes consume) but not
+better _fetching_ — same origin, same bot protection, so a 403 on the page is
+a 403 here. It may also be unnecessary: most themes emit JSON-LD, which rung
+one already reads, plus an inline theme blob.
+
+**The description must not be fed to `parseComposition` either way.** It asks
+only for a percentage beside words, so "20% off" yields a fibre called `off`.
+Telling a composition from a discount in prose is semantic — so the division
+is regex on _declared_ fields, model on prose.
+
+The fixture capture settles it: for each page, record where composition
+actually lives (JSON-LD `material`, JSON-LD `description`, inline theme JSON,
+rendered HTML, or only `.json`). Amend the packet then, with the count.
