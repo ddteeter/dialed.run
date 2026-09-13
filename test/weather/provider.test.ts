@@ -5,6 +5,10 @@ import {
   createVisualCrossingProvider,
 } from "../../src/modules/weather/provider/visual-crossing";
 import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
+import {
+  visualCrossingSummerStatsFixture,
+  visualCrossingWinterStatsFixture,
+} from "./fixtures/visual-crossing-stats";
 
 function jsonFetch(body: unknown, status = 200): typeof fetch {
   return vi.fn(() => Promise.resolve(Response.json(body, { status })));
@@ -246,5 +250,166 @@ describe("picking the hour", () => {
     );
 
     expect(observation.tempC).toBeCloseTo(-3.9, 5);
+  });
+});
+
+/**
+ * The adapter always passes a `URL`, so narrow to it rather than
+ * stringifying a `RequestInfo` union — which is what
+ * `no-base-to-string` is warning about.
+ */
+function requestedUrls(fetchImpl: typeof fetch): URL[] {
+  return vi.mocked(fetchImpl).mock.calls.map(([input]) => {
+    if (!(input instanceof URL)) throw new TypeError("expected a URL");
+    return input;
+  });
+}
+
+function statsFetch(): typeof fetch {
+  // Winter probe first, then summer — the order the adapter asks in.
+  const bodies = [
+    visualCrossingWinterStatsFixture,
+    visualCrossingSummerStatsFixture,
+  ];
+  let call = 0;
+  return vi.fn(() => {
+    const body = bodies[call];
+    call += 1;
+    return Promise.resolve(Response.json(body));
+});
+}
+
+describe("visual crossing climate normals (105)", () => {
+
+  it("reads the mean of each triple, not the extreme", async () => {
+    // `[min, mean, max]` — index 1. Taking index 0 would make every place
+    // look arctic, which is the kind of wrong that still produces a
+    // plausible-looking band.
+    const provider = createVisualCrossingProvider("test-key", statsFetch());
+
+    expect(await provider.climateNormals(44.98, -93.27)).toStrictEqual({
+      winterLowC: -12.1,
+      summerHighC: 28.7,
+    });
+  });
+
+  it("asks for stats, and sends no elements filter", async () => {
+    // Both are load-bearing and both were found by probing: `normals` is
+    // accepted and returns nothing, and an `elements=` filter strips the
+    // `normal` block even when `normal` is named in it.
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+    await provider.climateNormals(44.98, -93.27);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    for (const url of requestedUrls(fetchImpl)) {
+      expect(url.searchParams.get("include")).toBe("stats");
+      expect(url.searchParams.has("elements")).toBe(false);
+      expect(url.searchParams.get("unitGroup")).toBe("metric");
+    }
+  });
+
+  it("probes two dates, so a place gets both ends of its year", async () => {
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+    await provider.climateNormals(44.98, -93.27);
+
+    const dates = requestedUrls(fetchImpl).map((url) =>
+      url.pathname.split("/").at(-1),
+    );
+    expect(dates).toStrictEqual(["2027-01-15", "2027-07-15"]);
+  });
+
+  it("takes the colder low and the warmer high whichever probe found them", async () => {
+    // Southern hemisphere: the "winter" probe lands in summer. The naming
+    // is northern shorthand; the maths only cares which is colder.
+    const swapped = [
+      visualCrossingSummerStatsFixture,
+      visualCrossingWinterStatsFixture,
+    ];
+    let call = 0;
+    const fetchImpl = vi.fn(() => {
+      const body = swapped[call];
+      call += 1;
+      return Promise.resolve(Response.json(body));
+    });
+    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+
+    expect(await provider.climateNormals(-33.87, 151.21)).toStrictEqual({
+      winterLowC: -12.1,
+      summerHighC: 28.7,
+    });
+  });
+
+  it("refuses a response with no normal block rather than guessing", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ days: [{ datetime: "2027-01-15" }] }),
+    );
+
+    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+      WeatherUnavailableError,
+    );
+  });
+
+  it("refuses without a key, before reaching the network", async () => {
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider(undefined, fetchImpl);
+
+    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+      WeatherUnavailableError,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("refuses a non-2xx answer, naming which read failed", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ message: "over quota" }, 429),
+    );
+
+    // The exact sentence, not just the class: the noun in it is what tells
+    // a reader whether the observation read or the stats read broke, and
+    // asserting only `toThrow(WeatherUnavailableError)` lets it go empty.
+    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+      "Visual Crossing stats responded 429",
+    );
+  });
+
+  it("names the observation read when that one fails", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ message: "nope" }, 500),
+    );
+
+    await expect(
+      provider.observation(44.98, -93.27, new Date()),
+    ).rejects.toThrow("Visual Crossing observation responded 500");
+  });
+
+  it("refuses an empty key the same as a missing one", async () => {
+    // An unset secret arrives as "" at least as often as undefined, and
+    // the difference between them is invisible at the call site.
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider("", fetchImpl);
+
+    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+      "VISUAL_CROSSING_API_KEY is not configured",
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("refuses a response whose days list is empty", async () => {
+    // Distinct from "no normal block": an empty list parses under a looser
+    // schema and then reads `undefined.normal`, which is a TypeError rather
+    // than the adapter's own refusal.
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ days: [] }),
+    );
+
+    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+      "Visual Crossing stats response failed validation",
+    );
   });
 });

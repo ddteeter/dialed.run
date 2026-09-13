@@ -25,6 +25,26 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/routes/onboarding/name.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes of one flow are the same shape by mandate: createFileRoute + requireSession + one loader call + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "P2.5 and the settings page, which server-functions-are-glue REQUIRES to be createFileRoute + a session guard + a loader call + a shell — and which it forbids from differing, since branching in a route file is exactly what that test rejects. Same class as the route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx, onboarding/calibrate.tsx, onboarding/taplist.tsx). Two other clones in the same change were fixed rather than granted: the fold became MoreDisclosure, and the second turned out to be a real defect — nameGarmentInput typed itemId as any non-empty string where item ids are ULIDs.",
+      "count": 1
+    },
+    {
+      "key": "src/routes/onboarding/calibrate.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "Two steps of one onboarding flow. server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ — so the shape is mandated, not copied. Same class as the five route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx).",
+      "count": 1
+    },
+    {
+      "key": "src/routes/onboarding/taplist.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "The other half of the calibrate.tsx pair; fallow reports both sides of a clone group. See that entry.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/onboarding/starter-list.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the query is the same read as feed/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since \"no location\" and \"no unit preference\" are different facts with different right answers",
+      "reason": "Same two-column read of user_profiles as feed/units.ts's unitsFor, and the extraction into lib/keyed-read provably does not compile: drizzle infers a row type for a literal column map and stops for a generic one, widening select().from().where() to a union that includes the query builder, so the awaited value is neither iterable nor indexable. Four shapes were tried (annotated result, .all(), .execute(), a generic table param) — the same class of failure CLAUDE.md already records for wrapping createServerFn. What differs after the query is the part that matters: “no location” and “no unit preference” are different facts with different right answers.",
+      "count": 1
+    },
+    {
       "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
       "reason": "Equivalent mutant, proof at the site: a heavy OUTER layer has no lower bound (nothing goes over it), so estimateTempRange drops this floor before returning and no input can distinguish -4 from +4. Hoisted to a named constant because a Stryker directive cannot attach inside an object literal.",
       "count": 1
@@ -257,16 +277,6 @@
     {
       "key": "src/modules/runs/strava/api-from-env.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Unreachable code: with no configured binding in the isolate, `config` is always undefined here and the other arm cannot be reached. `test/runs/strava-api.test.ts` covers both arms of the decision where it actually lives.",
-      "count": 1
-    },
-    {
-      "key": "src/ui/Layout.tsx|mutation-suppress|// Stryker disable ArrayDeclaration",
-      "reason": "Equivalent mutant, proof at the site: stryker replaces `[]` with a constant one-element array, which is just as stable across renders, so the effect still runs exactly once either way. Block form used because the mutant's line begins with the arrow function's closing brace, and a next-line directive does not attach.",
-      "count": 1
-    },
-    {
-      "key": "src/ui/Layout.tsx|mutation-suppress|// Stryker restore ArrayDeclaration",
-      "reason": "Closing directive for the block-form suppression above.",
       "count": 1
     },
     {
@@ -507,6 +517,21 @@
     {
       "key": "src/routes/feed/attach.$runId.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/ladder-read.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant: with no entries the walk answers an empty ladder anyway (observationsForEntries guards its own empty case, and a tally with no range spans no floors). The return saves two cross-database reads on every Call-tab open by a runner who has logged nothing, which is every runner first visit.",
+      "count": 1
+    },
+    {
+      "key": "src/routes/call/index.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes with a two-call loader are the same route shape by mandate: createFileRoute + Promise.all + shell is what server-functions-are-glue requires of a route",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two signed-in routes with a two-call loader are the same route shape by mandate: createFileRoute + Promise.all + shell is what server-functions-are-glue requires of a route.",
+      "count": 1
+    },
+    {
+      "key": "src/ui/form.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group.",
       "count": 1
     }
   ]

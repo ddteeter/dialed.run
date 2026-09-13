@@ -14,6 +14,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as CallIndexRouteImport } from './routes/call/index'
 import { Route as ClosetIndexRouteImport } from './routes/closet/index'
 import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
@@ -21,6 +22,11 @@ import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
+import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
+import { Route as OnboardingDoneRouteImport } from './routes/onboarding/done'
+import { Route as OnboardingNameRouteImport } from './routes/onboarding/name'
+import { Route as OnboardingSettingsRouteImport } from './routes/onboarding/settings'
+import { Route as OnboardingTaplistRouteImport } from './routes/onboarding/taplist'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as RunsManualRouteImport } from './routes/runs/manual'
@@ -62,6 +68,11 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallIndexRoute = CallIndexRouteImport.update({
+  id: '/call/',
+  path: '/call/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClosetIndexRoute = ClosetIndexRouteImport.update({
   id: '/closet/',
   path: '/closet/',
@@ -95,6 +106,31 @@ const FeedSearchRoute = FeedSearchRouteImport.update({
 const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
   id: '/notifications/',
   path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingCalibrateRoute = OnboardingCalibrateRouteImport.update({
+  id: '/onboarding/calibrate',
+  path: '/onboarding/calibrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
+  id: '/onboarding/done',
+  path: '/onboarding/done',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingNameRoute = OnboardingNameRouteImport.update({
+  id: '/onboarding/name',
+  path: '/onboarding/name',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingSettingsRoute = OnboardingSettingsRouteImport.update({
+  id: '/onboarding/settings',
+  path: '/onboarding/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingTaplistRoute = OnboardingTaplistRouteImport.update({
+  id: '/onboarding/taplist',
+  path: '/onboarding/taplist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RunsIndexRoute = RunsIndexRouteImport.update({
@@ -183,11 +219,17 @@ export interface FileRoutesByFullPath {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/onboarding/calibrate': typeof OnboardingCalibrateRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/settings': typeof OnboardingSettingsRoute
+  '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
@@ -212,11 +254,17 @@ export interface FileRoutesByTo {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/onboarding/calibrate': typeof OnboardingCalibrateRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/settings': typeof OnboardingSettingsRoute
+  '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
   '/feed': typeof FeedIndexRoute
   '/notifications': typeof NotificationsIndexRoute
@@ -242,11 +290,17 @@ export interface FileRoutesById {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/onboarding/calibrate': typeof OnboardingCalibrateRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/settings': typeof OnboardingSettingsRoute
+  '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
@@ -273,11 +327,17 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/onboarding/calibrate'
+    | '/onboarding/done'
+    | '/onboarding/name'
+    | '/onboarding/settings'
+    | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/call/'
     | '/closet/'
     | '/feed/'
     | '/notifications/'
@@ -302,11 +362,17 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/onboarding/calibrate'
+    | '/onboarding/done'
+    | '/onboarding/name'
+    | '/onboarding/settings'
+    | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/call'
     | '/closet'
     | '/feed'
     | '/notifications'
@@ -331,11 +397,17 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/onboarding/calibrate'
+    | '/onboarding/done'
+    | '/onboarding/name'
+    | '/onboarding/settings'
+    | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/call/'
     | '/closet/'
     | '/feed/'
     | '/notifications/'
@@ -361,11 +433,17 @@ export interface RootRouteChildren {
   ClosetNewRoute: typeof ClosetNewRoute
   FeedMeRoute: typeof FeedMeRoute
   FeedSearchRoute: typeof FeedSearchRoute
+  OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
+  OnboardingDoneRoute: typeof OnboardingDoneRoute
+  OnboardingNameRoute: typeof OnboardingNameRoute
+  OnboardingSettingsRoute: typeof OnboardingSettingsRoute
+  OnboardingTaplistRoute: typeof OnboardingTaplistRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsManualRoute: typeof RunsManualRoute
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  CallIndexRoute: typeof CallIndexRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
   FeedIndexRoute: typeof FeedIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
@@ -418,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/call/': {
+      id: '/call/'
+      path: '/call'
+      fullPath: '/call/'
+      preLoaderRoute: typeof CallIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/closet/': {
       id: '/closet/'
       path: '/closet'
@@ -465,6 +550,41 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications/'
       preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/calibrate': {
+      id: '/onboarding/calibrate'
+      path: '/onboarding/calibrate'
+      fullPath: '/onboarding/calibrate'
+      preLoaderRoute: typeof OnboardingCalibrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/done': {
+      id: '/onboarding/done'
+      path: '/onboarding/done'
+      fullPath: '/onboarding/done'
+      preLoaderRoute: typeof OnboardingDoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/name': {
+      id: '/onboarding/name'
+      path: '/onboarding/name'
+      fullPath: '/onboarding/name'
+      preLoaderRoute: typeof OnboardingNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/settings': {
+      id: '/onboarding/settings'
+      path: '/onboarding/settings'
+      fullPath: '/onboarding/settings'
+      preLoaderRoute: typeof OnboardingSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/taplist': {
+      id: '/onboarding/taplist'
+      path: '/onboarding/taplist'
+      fullPath: '/onboarding/taplist'
+      preLoaderRoute: typeof OnboardingTaplistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/runs/': {
@@ -585,11 +705,17 @@ const rootRouteChildren: RootRouteChildren = {
   ClosetNewRoute: ClosetNewRoute,
   FeedMeRoute: FeedMeRoute,
   FeedSearchRoute: FeedSearchRoute,
+  OnboardingCalibrateRoute: OnboardingCalibrateRoute,
+  OnboardingDoneRoute: OnboardingDoneRoute,
+  OnboardingNameRoute: OnboardingNameRoute,
+  OnboardingSettingsRoute: OnboardingSettingsRoute,
+  OnboardingTaplistRoute: OnboardingTaplistRoute,
   RunsRunIdRoute: RunsRunIdRoute,
   RunsManualRoute: RunsManualRoute,
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  CallIndexRoute: CallIndexRoute,
   ClosetIndexRoute: ClosetIndexRoute,
   FeedIndexRoute: FeedIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,

@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const weatherObservations = sqliteTable(
+export const weatherObservations = /*#__PURE__*/ sqliteTable(
   "weather_observations",
   {
     id: text("id").primaryKey(),

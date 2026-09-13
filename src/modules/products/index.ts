@@ -7,6 +7,7 @@
 export type { BrandRow, ProductAttributeDefaults, ProductRow } from "./service";
 export {
   createOrGetBrand,
+  productsForBrand,
   createOrGetProduct,
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,

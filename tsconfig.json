@@ -5,18 +5,33 @@
   // would fail the gates on sight. eslint already ignores both.
   "exclude": ["design/", "plan/"],
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "jsx": "react-jsx",
     "module": "ESNext",
     "paths": {
       "#/*": ["./src/*"],
       "@/*": ["./src/*"]
     },
-    // ES2024.Promise, granularly, for `Promise.withResolvers`: eslint's
-    // `unicorn/prefer-promise-with-resolvers` requires it, so without the
-    // lib entry the two rules contradict each other and the only way out
-    // is a suppression. Just the one API, not the whole ES2024 surface.
-    "lib": ["ES2022", "ES2024.Promise", "DOM", "DOM.Iterable"],
+    // ES2024 wholesale, replacing a floor at ES2022 that had drifted well
+    // behind every runtime this ships to and was costing a round trip each
+    // time a lint rule wanted a modern method — `Promise.withResolvers`
+    // for `unicorn/prefer-promise-with-resolvers`, then `toSorted` for
+    // `unicorn/no-array-sort`, each added granularly. The rules are right
+    // both times, and a `lib` below the runtime does not buy safety: it
+    // only hides APIs that are already there, and manufactures a
+    // contradiction whose only exit is a suppression.
+    //
+    // **`target` is not what ships.** `noEmit` is true — tsc type-checks
+    // and never emits, and Vite/Rolldown builds. So this governs which
+    // syntax tsc accepts, not what a browser receives.
+    //
+    // The real constraint is not Cloudflare, which runs a current V8
+    // (`compatibility_date` 2025-09-02) far ahead of this. It is the
+    // *client* bundle: nothing polyfills, so an API here must be old
+    // enough for the browsers people use. ES2024 cleared Baseline widely
+    // available in 2024, which is the reason to stop here rather than at
+    // ESNext.
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["./worker-configuration.d.ts", "node", "vite/client"],
 
     /* Bundler mode */

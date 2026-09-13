@@ -12,6 +12,9 @@
 export { attachObservation, recordManualObservation, retryPendingWeather } from "./attach";
 export { WeatherAttribution } from "./components/WeatherAttribution";
 export { forecast } from "./forecast";
+// Seasonal normals, for onboarding's starter list (O3). See ./normals for
+// why this one is not cached.
+export { climateNormals } from "./normals";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
 export type { CacheKey } from "./store";

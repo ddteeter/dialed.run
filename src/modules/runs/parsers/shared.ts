@@ -37,12 +37,27 @@ export class RunParseError extends Error {
  * so a hostile upload cannot smuggle an external-entity or billion-laughs
  * payload through. It was configured identically in both parsers — which
  * is one place for that decision to be changed and another to be forgotten.
+ *
+ * **Built per call, not at module scope, and that is a bundle decision
+ * rather than a performance one (D-50).** `new XMLParser(…)` is a call
+ * rollup cannot prove pure, so a module-scope one is a side effect it must
+ * keep — and keeping it kept `fast-xml-parser` and its four dependencies,
+ * ~63 kB, in the *client* entry chunk that every visitor downloads.
+ * Nothing else in this file survived tree-shaking; that one constant did.
+ *
+ * Per call rather than memoised because the constructor only stores
+ * options — the work is all in `parse` — and the caller is a queue
+ * consumer handling one file per message. A cache here would buy nothing
+ * and would mean assigning to a module binding from inside a function,
+ * which is its own small trap.
  */
-const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "@_",
-  processEntities: false,
-});
+function xmlParser(): XMLParser {
+  return new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    processEntities: false,
+  });
+}
 
 /**
  * Decodes and parses an uploaded XML document, or fails with the reason it
@@ -57,7 +72,7 @@ export function parseXmlDocument(bytes: ArrayBuffer, kind: string): unknown {
     throw new RunParseError(`${kind}: bytes are not valid UTF-8`, { cause: error });
   }
   try {
-    return xmlParser.parse(text);
+    return xmlParser().parse(text);
   } catch (error) {
     throw new RunParseError(`${kind}: XML parser threw`, { cause: error });
   }

@@ -19,7 +19,12 @@
  * FIT/GPX file wired into this branch yet). Both are noted in the PR
  * comment rather than faked here.
  */
-import { expect, test } from "../support/demo";
+import { storageStateFor } from "../support/accounts";
+import { expect, scene, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on logging a run rather than on a signup form.
+test.use({ storageState: storageStateFor("run-logging") });
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -29,27 +34,21 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
     .waitFor({ state: "attached" });
 }
 
-test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list", async ({
+test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   page,
 }, testInfo) => {
-  // slowMo doubled to 900 (demo-legibility upgrade, PR #8) roughly doubles
-  // per-action overhead across this journey's ~20 interactions; the default
-  // 30s test timeout is too tight for that plus real network round-trips.
+  // Generous, because recording pace is not a latency budget. `scene()`
+  // holds a beat at each boundary and slowMo paces the actions between
+  // them (D-58), so a recorded run takes minutes where CI's takes seconds.
+  // A timeout here is for catching a hang.
   testInfo.setTimeout(60_000);
-  const email = `demo-${String(Date.now())}@example.com`;
-
-  await page.goto("/auth/signup");
+  await page.goto("/runs/new");
   await hydrated(page);
-  await page.getByLabel("Name").fill("Demo Runner");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a-long-enough-password");
-  await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
-
-  await page.getByRole("link", { name: "+ Add" }).click();
+  await scene(page, "Weather is never typed — manual is the fallback");
   await page.getByRole("link", { name: "enter it manually" }).click();
   await hydrated(page);
 
+  await scene(page, "Log a run: what, when, how long, how far");
   await page.getByLabel("Title").fill("Demo tempo run");
   await page.getByLabel("Started").fill("2026-09-06T07:15");
   await page.getByLabel("Minutes").fill("32");
@@ -62,12 +61,14 @@ test("signup -> log a run by hand -> manual-temp fallback -> shows in runs list"
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("[Unavailable]")).toBeVisible();
 
+  await scene(page, "No observation resolved, so the runner may say");
   await page.getByLabel("Temp (°C)").fill("12");
   await page.getByRole("button", { name: "Save temperature" }).click();
   await expect(page.getByText("[Unavailable]")).toBeHidden({
     timeout: 15_000,
   });
 
+  await scene(page, "And it is marked manual wherever it is read");
   await page.goto("/runs");
   await hydrated(page);
   await expect(

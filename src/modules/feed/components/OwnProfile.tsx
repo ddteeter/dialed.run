@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, Mono, VerdictMark } from "../../../ui";
+import type { VerdictKind } from "../../../ui";
+import { bandVerdict } from "../coverage";
 import type { ownProfile } from "../profiles";
 import { ListSection } from "./ListSection";
 
@@ -11,6 +13,25 @@ type Profile = Awaited<ReturnType<typeof ownProfile>>;
  * are presentational only and deliberately not part of the shared
  * contract — the number is the fact, this is how it reads.
  */
+/**
+ * How a band reads in words — design §AB3's own copy.
+ *
+ * **Three redundant channels: slot position, hue, and this.** The row this
+ * replaces had one — hue, on three identical dot runs, with warm at 30%
+ * ink. A three-way distinction carried by colour alone is the failure
+ * §Forms & failure rules out for errors, and the 30% made it a contrast
+ * failure as well. `text-night/30` is retired outright (§AB rule 04):
+ * opacity never encodes meaning.
+ *
+ * Under- and over-dressed rather than "cold" and "warm": the band already
+ * says the temperature, so the useful fact is what the runner did about it.
+ */
+const VERDICT_WORD: Readonly<Record<VerdictKind, string>> = {
+  cold: "Under-dressed",
+  dialed: "Dialed",
+  warm: "Over-dressed",
+};
+
 const THERMAL_BLURBS: Record<number, string> = {
   "-2": "Runs hot — sweating in a t-shirt at 40°",
   "-1": "Runs warm",
@@ -54,15 +75,20 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
         <Mono className="text-sm">{String(profile.entryCount)} entries</Mono>
       </div>
 
-      <ListSection title="Temperature coverage" items={profile.coverage}>
+      <ListSection title="How you call it, by band" items={profile.coverage}>
         {(band) => (
-          <li key={band.bandFloorC} className="flex items-center gap-2 text-sm">
+          <li
+            key={band.bandFloorC}
+            className="flex items-center gap-3 text-sm"
+          >
             <Bracketed className="w-24 shrink-0 text-night/40">
               {band.label}
             </Bracketed>
-            <span className="text-pink">{"●".repeat(band.cold)}</span>
-            <span className="text-teal">{"●".repeat(band.dialed)}</span>
-            <span className="text-night/30">{"●".repeat(band.warm)}</span>
+            <VerdictMark kind={bandVerdict(band)} />
+            <span className="flex-1">{VERDICT_WORD[bandVerdict(band)]}</span>
+            <Mono className="text-xs text-night/50">
+              {String(band.cold + band.dialed + band.warm)} runs
+            </Mono>
           </li>
         )}
       </ListSection>

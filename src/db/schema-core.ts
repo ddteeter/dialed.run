@@ -15,7 +15,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const userProfiles = sqliteTable(
+export const userProfiles = /*#__PURE__*/ sqliteTable(
   "user_profiles",
   {
     userId: text("user_id").primaryKey(),
@@ -52,7 +52,7 @@ export const userProfiles = sqliteTable(
   ],
 );
 
-export const brands = sqliteTable(
+export const brands = /*#__PURE__*/ sqliteTable(
   "brands",
   {
     id: text("id").primaryKey(),
@@ -63,7 +63,7 @@ export const brands = sqliteTable(
   (t) => [uniqueIndex("brands_normalized").on(t.normalized)],
 );
 
-export const products = sqliteTable(
+export const products = /*#__PURE__*/ sqliteTable(
   "products",
   {
     id: text("id").primaryKey(),
@@ -115,7 +115,7 @@ export const products = sqliteTable(
   (t) => [uniqueIndex("products_brand_name").on(t.brandId, t.normalizedName)],
 );
 
-export const productSnapshots = sqliteTable("product_snapshots", {
+export const productSnapshots = /*#__PURE__*/ sqliteTable("product_snapshots", {
   id: text("id").primaryKey(),
   productId: text("product_id").notNull(),
   url: text("url").notNull(),
@@ -126,7 +126,7 @@ export const productSnapshots = sqliteTable("product_snapshots", {
   fetchedAt: integer("fetched_at").notNull(),
 });
 
-export const wardrobeItems = sqliteTable(
+export const wardrobeItems = /*#__PURE__*/ sqliteTable(
   "wardrobe_items",
   {
     id: text("id").primaryKey(),
@@ -223,7 +223,7 @@ export const wardrobeItems = sqliteTable(
   ],
 );
 
-export const runs = sqliteTable(
+export const runs = /*#__PURE__*/ sqliteTable(
   "runs",
   {
     id: text("id").primaryKey(),
@@ -263,7 +263,7 @@ export const runs = sqliteTable(
   ],
 );
 
-export const outfitEntries = sqliteTable(
+export const outfitEntries = /*#__PURE__*/ sqliteTable(
   "outfit_entries",
   {
     id: text("id").primaryKey(),
@@ -281,7 +281,7 @@ export const outfitEntries = sqliteTable(
   ],
 );
 
-export const outfitEntryItems = sqliteTable(
+export const outfitEntryItems = /*#__PURE__*/ sqliteTable(
   "outfit_entry_items",
   {
     entryId: text("entry_id").notNull(),
@@ -292,7 +292,7 @@ export const outfitEntryItems = sqliteTable(
   (t) => [uniqueIndex("entry_items_pk").on(t.entryId, t.itemId)],
 );
 
-export const entryTags = sqliteTable(
+export const entryTags = /*#__PURE__*/ sqliteTable(
   "entry_tags",
   {
     entryId: text("entry_id").notNull(),
@@ -301,7 +301,7 @@ export const entryTags = sqliteTable(
   (t) => [uniqueIndex("entry_tags_pk").on(t.entryId, t.tag)],
 );
 
-export const entryPhotos = sqliteTable(
+export const entryPhotos = /*#__PURE__*/ sqliteTable(
   "entry_photos",
   {
     id: text("id").primaryKey(),
@@ -324,7 +324,7 @@ export const entryPhotos = sqliteTable(
   ],
 );
 
-export const follows = sqliteTable(
+export const follows = /*#__PURE__*/ sqliteTable(
   "follows",
   {
     followerId: text("follower_id").notNull(),
@@ -334,7 +334,7 @@ export const follows = sqliteTable(
   (t) => [uniqueIndex("follows_pk").on(t.followerId, t.followeeId)],
 );
 
-export const reactions = sqliteTable(
+export const reactions = /*#__PURE__*/ sqliteTable(
   "reactions",
   {
     entryId: text("entry_id").notNull(),
@@ -347,7 +347,7 @@ export const reactions = sqliteTable(
   (t) => [uniqueIndex("reactions_pk").on(t.entryId, t.userId)],
 );
 
-export const notifications = sqliteTable(
+export const notifications = /*#__PURE__*/ sqliteTable(
   "notifications",
   {
     id: text("id").primaryKey(),
@@ -370,7 +370,7 @@ export const notifications = sqliteTable(
   ],
 );
 
-export const stravaConnections = sqliteTable(
+export const stravaConnections = /*#__PURE__*/ sqliteTable(
   "strava_connections",
   {
     userId: text("user_id").primaryKey(),
@@ -415,7 +415,7 @@ export const stravaConnections = sqliteTable(
  * revocation that has not happened yet, which the digest can see and
  * re-dispatch.
  */
-export const stravaRevocations = sqliteTable("strava_revocations", {
+export const stravaRevocations = /*#__PURE__*/ sqliteTable("strava_revocations", {
   id: text("id").primaryKey(),
   // The only thing deauthorize needs. The connection row it came from is
   // already gone by the time this exists.
@@ -423,7 +423,7 @@ export const stravaRevocations = sqliteTable("strava_revocations", {
   createdAt: integer("created_at").notNull(),
 });
 
-export const processedWebhookEvents = sqliteTable(
+export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
   "processed_webhook_events",
   {
     objectId: text("object_id").notNull(),
@@ -435,12 +435,12 @@ export const processedWebhookEvents = sqliteTable(
   ],
 );
 
-export const cronCheckpoints = sqliteTable("cron_checkpoints", {
+export const cronCheckpoints = /*#__PURE__*/ sqliteTable("cron_checkpoints", {
   cronName: text("cron_name").primaryKey(),
   lastRunAt: integer("last_run_at").notNull(),
 });
 
-export const imports = sqliteTable(
+export const imports = /*#__PURE__*/ sqliteTable(
   "imports",
   {
     id: text("id").primaryKey(),

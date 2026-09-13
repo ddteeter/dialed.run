@@ -1,1 +1,3 @@
-{}
+{
+  "sonarjs/no-fixed-wait-in-tests": 1
+}

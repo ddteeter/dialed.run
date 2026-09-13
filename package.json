@@ -18,7 +18,7 @@
     "mutate": "node -e \"const {execFileSync} = require('node:child_process');const {rmSync} = require('node:fs');for (const scope of require('./stryker.conf.json').mutate) {console.log('=== ' + scope);rmSync('reports/stryker-incremental.json', {force: true});execFileSync('npx', ['stryker', 'run', '--mutate', scope], {stdio: 'inherit'});}\"",
     "postmutate": "rm -rf .stryker-tmp",
     "e2e": "playwright test --project=e2e",
-    "demo": "DEMO_SLOWMO=1800 playwright test --project=demo",
+    "demo": "DEMO_SLOWMO=250 playwright test --project=demo",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
@@ -29,6 +29,7 @@
     "db:generate:weather": "drizzle-kit generate --config drizzle-weather.config.ts",
     "db:migrate:local:core": "wrangler d1 migrations apply dialed-core --local",
     "db:migrate:local:weather": "wrangler d1 migrations apply dialed-weather --local",
+    "check:bundle": "node -e \"const fs=require('node:fs');const d='dist/client/assets';if(!fs.existsSync(d))throw new Error('run npm run build first');const bad=[[/drizzle:entityKind/,'drizzle-orm'],[/processEntities/,'fast-xml-parser'],[/wardrobe_items/,'db/schema-core'],[/FIT_EPOCH|fitsdk/,'@garmin/fitsdk']];const hits=[];for(const f of fs.readdirSync(d).filter(x=>x.endsWith('.js'))){const t=fs.readFileSync(d+'/'+f,'utf8');for(const [re,name] of bad) if(re.test(t)) hits.push(f+': '+name);}if(hits.length){console.error('server-only code in the client bundle:');for(const h of hits)console.error('  '+h);process.exit(1);}console.log('client bundle clean');\"",
     "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify"
   },
   "dependencies": {

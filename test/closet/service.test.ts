@@ -309,8 +309,7 @@ describe("tap-list", () => {
   it("creates origin='taplist' rows for the selected keys", async () => {
     const userId = newUlid();
     const created = await addFromTapList(db(), userId, {
-      band: "mild",
-      keys: ["mild-tee", "mild-shorts"],
+      keys: ["tee", "shorts-5"],
     });
     expect(created).toHaveLength(2);
     for (const item of created) {
@@ -321,9 +320,29 @@ describe("tap-list", () => {
   it("skips unknown keys rather than failing the whole batch", async () => {
     const userId = newUlid();
     const created = await addFromTapList(db(), userId, {
-      band: "cold",
-      keys: ["cold-beanie", "not-a-real-key"],
+      keys: ["beanie", "not-a-real-key"],
     });
     expect(created).toHaveLength(1);
+  });
+
+  it("creates one garment per distinct key, however many times it was sent", async () => {
+    // The screen holds a `Set`, so its own submissions cannot repeat a
+    // key — which is exactly why this is the server's problem: a retried
+    // or hand-built payload is the one that repeats, and two identical
+    // beanies in a closet is a bug the runner has to clean up by hand.
+    const userId = newUlid();
+    const created = await addFromTapList(db(), userId, {
+      keys: ["beanie", "beanie", "tee", "beanie"],
+    });
+
+    expect(created).toHaveLength(2);
+    expect(
+      created
+        .map((item) => item.name)
+        .toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual([
+      "Beanie",
+      "Short sleeve tee",
+    ]);
   });
 });

@@ -14,11 +14,21 @@
  */
 import { eq } from "drizzle-orm";
 
-import { outfitEntries, outfitEntryItems, runs, wardrobeItems } from "../../src/db/schema-core";
+import {
+  outfitEntries,
+  outfitEntryItems,
+  runs,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { user } from "../../src/db/schema-auth";
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
-import { expect, test } from "../support/demo";
+import { accountEmail, storageStateFor } from "../support/accounts";
+import { expect, scene, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on the verdict screen rather than on a signup form.
+test.use({ storageState: storageStateFor("verdict") });
 import { withLocalDb } from "../support/local-db";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
@@ -46,8 +56,9 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // Paced runs (npm run demo) need headroom; at full speed this is quick.
   testInfo.setTimeout(150_000);
 
-  const suffix = String(Date.now());
-  const email = `verdict-${suffix}@example.com`;
+  // The address the setup signed this account up with. The seeding below
+  // has to own its rows — the verdict screen is owner-only.
+  const email = accountEmail("verdict");
   const itemId = newUlid();
   const runId = newUlid();
   const entryId = newUlid();
@@ -60,14 +71,6 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // run.
   const latR = 40.71;
   const lngR = -74.01;
-
-  await page.goto("/auth/signup");
-  await hydrated(page);
-  await page.getByLabel("Name").fill("Demo Runner");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a-long-enough-password");
-  await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
 
   // Seed a run and an un-verdicted entry owned by the account that just
   // signed up — the verdict screen is owner-only, so the rows have to
@@ -117,21 +120,23 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // the screen has no temperature band, and saving takes a different
   // branch — so this is seeded deliberately rather than left to chance.
   await withLocalDb(async ({ weather }) => {
-    await weather.insert(weatherObservations).values({
-      id: observationId,
-      runId,
-      latR,
-      lngR,
-      hourBucket: Math.floor(startedAt / 3600),
-      tempC: 6,
-      feelsLikeC: 4,
-      humidity: 70,
-      windKph: 12,
-      precipMm: 0,
-      condition: "clear",
-      source: "visualcrossing",
-      fetchedAt: startedAt,
-    })
+    await weather
+      .insert(weatherObservations)
+      .values({
+        id: observationId,
+        runId,
+        latR,
+        lngR,
+        hourBucket: Math.floor(startedAt / 3600),
+        tempC: 6,
+        feelsLikeC: 4,
+        humidity: 70,
+        windKph: 12,
+        precipMm: 0,
+        condition: "clear",
+        source: "visualcrossing",
+        fetchedAt: startedAt,
+      })
       // (lat_r, lng_r, hour_bucket) is the cache key and is UNIQUE, so a
       // re-run inside the same hour hits the row the last run left. Upsert
       // rather than insert: the spec has to be re-runnable, and the values
@@ -151,12 +156,15 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
 
   // A3: the five-point scale, coldest to warmest, from the one shared
   // verdictScale rather than a per-screen copy.
+  await scene(page, "A3 · five points, coldest to warmest, one scale");
   await page.getByRole("button", { name: "A bit cold" }).click();
 
   // Per-item signal is a flag, never a second verdict (CLAUDE.md).
+  await scene(page, "Per-item signal is a flag, never a second verdict");
   await page.getByRole("combobox").first().selectOption("not_enough");
 
   // The upload under test: a real file, streamed as multipart.
+  await scene(page, "A real photo, streamed as multipart and stored in R2");
   await page.setInputFiles('input[type="file"]', {
     name: "kit.png",
     mimeType: "image/png",
@@ -170,6 +178,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
     timeout: 15_000,
   });
 
+  await scene(page, "Saving reports the wear rate in this temperature band");
   await page.getByRole("button", { name: "Save verdict" }).click();
 
   // With conditions resolved, saving reports the item's wear rate in this
@@ -180,6 +189,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   });
 
   // And the verdict is on the entry.
+  await scene(page, "And the verdict is on the entry");
   await page.goto(`/feed/entry/${entryId}`);
   await expect(page.getByText("[A bit cold]")).toBeVisible({ timeout: 15_000 });
 

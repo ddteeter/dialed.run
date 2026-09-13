@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import {
   ChoiceField,
+  ChoiceList,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -1156,5 +1157,193 @@ describe("ToggleField", () => {
     await user.click(screen.getByText("Wind resistant"));
 
     expect(onChange).toHaveBeenCalledWith(true);
+  });
+});
+
+/**
+ * `ChoiceList` — the radio group O1's five answers need, because a select
+ * hides its options and comparing them is how a runner picks.
+ */
+describe("ChoiceList", () => {
+  const LEVELS = ["hot", "mild", "cold"] as const;
+  const LABELS = { hot: "Runs hot", mild: "About average", cold: "Runs cold" };
+
+  const NOTES = { hot: "\u{2212}8\u{00B0}", mild: "0\u{00B0}", cold: "+8\u{00B0}" };
+
+  function renderList(
+    onChange: (value: "hot" | "mild" | "cold") => void,
+    value?: "hot" | "mild" | "cold",
+    error?: string,
+    extras: { notes?: typeof NOTES; hint?: string } = {},
+  ) {
+    return render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        optionNotes={extras.notes}
+        hint={extras.hint}
+        value={value}
+        field={restingField}
+        onChange={onChange}
+        error={error}
+      />,
+    );
+  }
+
+  it("names the group with the question, so the answers are not orphaned", () => {
+    // A screen reader announces the legend when focus enters the group. A
+    // div with a heading above it looks identical and announces five
+    // unexplained options.
+    renderList(vi.fn());
+
+    expect(
+      screen.getByRole("group", { name: "Do you run warm or cold?" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows every answer at once", () => {
+    renderList(vi.fn());
+
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByLabelText("About average")).toBeInTheDocument();
+  });
+
+  it("reports the answer that was chosen, not the one before it", async () => {
+    // The third option on purpose: a handler that reported the first would
+    // pass if the test only ever picked the first.
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderList(onChange);
+
+    await user.click(screen.getByLabelText("Runs cold"));
+
+    expect(onChange).toHaveBeenCalledWith("cold");
+  });
+
+  it("marks the current answer, and only that one", () => {
+    renderList(vi.fn(), "mild");
+
+    expect(screen.getByLabelText("About average")).toBeChecked();
+    expect(screen.getByLabelText("Runs hot")).not.toBeChecked();
+  });
+
+  it("marks nothing when nothing has been answered", () => {
+    // O1 opens unanswered — a pre-selected middle option would be the app
+    // guessing on the runner's behalf and recording it as their answer.
+    renderList(vi.fn());
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).not.toBeChecked();
+    }
+  });
+
+  it("shows the field's error in the hi-viz band, not in colour alone", () => {
+    renderList(vi.fn(), undefined, "Pick one to carry on.");
+
+    const message = screen.getByText("Pick one to carry on.");
+    expect(message).toBeVisible();
+    expect(message).toHaveClass("bg-hi-viz");
+    expect(message).toHaveAttribute("id", "thermal-message");
+  });
+
+  it("says nothing at rest, rather than reserving an empty line", () => {
+    renderList(vi.fn());
+
+    expect(screen.queryByText(/Pick one/)).toBeNull();
+  });
+
+  it("puts a note inside the option's own name, in mono", () => {
+    // O1's offsets. Inside the label, so a screen reader announces "Runs
+    // cold plus 8 degrees" rather than skipping a number design put there
+    // on purpose; mono, because it is a measured value and that is what
+    // mono means in this system.
+    renderList(vi.fn(), undefined, undefined, { notes: NOTES });
+
+    const cold = screen.getByLabelText(/^Runs cold/);
+    expect(cold).toHaveAccessibleName("Runs cold +8\u{00B0}");
+    expect(screen.getByText("+8\u{00B0}")).toHaveClass("font-mono");
+  });
+
+  it("leaves the names alone when there are no notes", () => {
+    // The default, and every other caller. A group that appended an empty
+    // span would still change the name.
+    renderList(vi.fn());
+
+    expect(screen.getByLabelText("Runs cold")).toHaveAccessibleName(
+      "Runs cold",
+    );
+  });
+
+  it("points a field at its suggestion list, and omits the attribute without one", () => {
+    // Two forms hand-rolled `FormField` + a raw input to get this, and one
+    // of them shipped a datalist nothing pointed at. `undefined` rather
+    // than `""` when absent: an empty `list` names an element that does
+    // not exist, which is a different bug wearing the same clothes.
+    const { rerender } = render(
+      <TextField
+        name="brand"
+        label="Brand"
+        value=""
+        onChange={vi.fn()}
+        field={restingField}
+        list="brand-options"
+      />,
+    );
+    expect(screen.getByLabelText("Brand")).toHaveAttribute(
+      "list",
+      "brand-options",
+    );
+
+    rerender(
+      <TextField
+        name="brand"
+        label="Brand"
+        value=""
+        onChange={vi.fn()}
+        field={restingField}
+      />,
+    );
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("list");
+  });
+
+  it("adds no empty line when there is no hint", () => {
+    // Not just "no text" — no *element*. An empty <span> renders nothing
+    // and still takes a line's worth of gap in the flex column, so a group
+    // without a hint would sit taller than one beside it. Same rule
+    // `FormField` follows, asserted the same way.
+    const { container } = render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const fieldset = container.querySelector("fieldset");
+    // The three option labels and nothing after them.
+    expect(fieldset?.querySelectorAll(":scope > span")).toHaveLength(0);
+  });
+
+  it("shows the hint, and gives way to the error", () => {
+    // Same rule `FormField` follows: a hint explains, a message corrects,
+    // and showing both at once makes the reader decide which one is
+    // addressed to them.
+    const { unmount } = renderList(vi.fn(), undefined, undefined, {
+      hint: "The offset is visible on purpose.",
+    });
+    expect(screen.getByText("The offset is visible on purpose.")).toBeVisible();
+    unmount();
+
+    renderList(vi.fn(), undefined, "Pick one to carry on.", {
+      hint: "The offset is visible on purpose.",
+    });
+    expect(screen.queryByText("The offset is visible on purpose.")).toBeNull();
+    expect(screen.getByText("Pick one to carry on.")).toBeVisible();
   });
 });

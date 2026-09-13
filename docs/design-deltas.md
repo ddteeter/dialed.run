@@ -15,6 +15,27 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+7. **O3's artboard still draws a paste field, and the code correctly does
+   not.** Design raised this against lane 105 in round 7 rather than
+   silently redrawing it: `Onboarding.dc.html`'s O3 shows a
+   `brand.com/product…` field with a `SPECS FOUND` result, which has the
+   same lane-107 dependency §AC2b ruled out for P2.5. `TapListForm` never
+   built one, so the build is right and the artboard is stale. Tracked as
+   **D-55** so nobody "fixes" the code to match the drawing.
+
+5. **Onboarding's steps are inside the app's page column, and the
+   artboards draw them full-bleed.** O1, O3 and P3 are each a card with
+   their own internal structure and no app heading; `src/routes/onboarding/*`
+   renders them inside `ui/Page`, which adds an `<h1>` above each. A heading
+   is not optional — a screen with none is an accessibility failure — so the
+   three are design's own copy where it exists ("One question does most of
+   the work", O1) and new where it does not ("Start your closet" for O3,
+   chosen to avoid repeating that screen's own "TAP WHAT YOU OWN" caption).
+   **The question for design is whether these steps should sit in the page
+   column at all**, or be full-bleed like the artboards, in which case the
+   heading moves inside the card and the copy is design's to write. Raised
+   by lane 105 while building; nothing is blocked either way.
+
 1. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
    Epic 200 opens, incl. multi-part fabric display on garment/product
    detail (D-34) if composition surfaces there. The Call tab's own glyph
@@ -58,6 +79,88 @@ round (D-26…D-33).
    The rule: if the answer is a drawing, it comes here. If the answer is a
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
+
+## Answered in round 7 (imported 2026-09-12)
+
+**P2.5 — §AC · Make them real**, answering all six questions lane 105 asked.
+The argument design settled on: *a category can't remember.* "Merino base
+layer" cannot hold a temperature range, because no two of them are the same
+garment; a named product is one object, and naming is how a runner's piece
+joins a population.
+
+- **Q1 — every generic row is offered, ranked never filtered**, the same
+  doctrine as §AA. Rows worn on an O4-tagged run sort first under their own
+  heading; the rest follow, folded past five. No badge claims to know a
+  stranger's favourites — *the order* carries the suggestion.
+- **Q2 — two fields, one required.** Brand (seed-list autocomplete) and
+  model (optional, suggestions from that brand's products). **No photo:**
+  naming is an act of identity, and a photo says nothing about which
+  product this is.
+- **Q3 — no link field**, agreeing with the recommendation. *"A field that
+  swallows a URL and shows nothing is a screen making a promise the build
+  can't keep, on the one screen whose entire job is to be believed."*
+- **Q4 — no target, no gate**, and no "enough to start" equivalent. O3 can
+  say it because six taps is a real threshold for a first call; naming
+  changes nothing about whether the app works today.
+- **Q5 — the Z language verbatim** while generic; named, the subtitle
+  becomes the product's type.
+- **Q6 — Next always enabled**, skip as O3's underlined text, both land on
+  P3, and P2.5 never reappears. The closet nudge is the only follow-up.
+
+**What v1 could not build, and why** — two rows rather than silent gaps:
+
+- **D-54**: §AC3's three payout lines each need something that does not
+  exist (`products.type` → lane 107; an owner count → no such read; tagged
+  runs → O4). The named row states what happened and stops.
+- **The ranked heading is inert.** Rule 01 sorts by O4-tagged runs and O4
+  is out of scope, so rule 02's fallback — *"the first heading is absent —
+  not empty. One flat list, closet order"* — is what every v1 runner sees.
+
+**Design also flagged one back at us, and the build was already right:**
+O3's artboard still draws a paste field with `SPECS FOUND`, same lane-107
+dependency. `TapListForm` never built one. Recorded as **D-55** so nobody
+"fixes" the code to match a stale artboard.
+
+## Answered in round 6 (imported 2026-09-11)
+
+Both raised by lane 105 while building, and both answered with a change to
+the artboards rather than a note.
+
+**5 — O3 is one list.** The climate band is a **sort key and a fold point,
+never a filter**: 24 canonical rows, ranked by cohort frequency in the
+runner's zone, folded at 14 with the remainder one tap behind a disclosure
+that states its own count. **No row is ever absent** — a Minneapolis runner
+owns tights and a singlet, and one band per person is a season rather than
+a wardrobe.
+
+**Nothing arrives ticked.** A tick means "you tapped it just now", is a
+toggle, and the counter counts taps. The artboard's six pre-ticks were O2
+residue and are gone; "12 pieces" was a mock and not a target. "Enough to
+start" appears at six and is advice, not a gate; Next is live from the
+first tap. When O2 returns a photo-derived row is ticked, non-toggling and
+tagged `FROM PHOTO` — visibly a different thing from a tap.
+
+Section AA of `Remaining Screens.dc.html` carries the six-rule contract and
+addresses lane 105 directly: replace `Record<band, TapListEntry[]>` with
+one `TAP_LIST: TapListEntry[]` of 24 rows, and give each entry a
+`rank[band]`.
+
+**6 — hue means verdict; coverage becomes ink density.** Pink/teal/grey are
+cold/dialed/warm **permanently**. Coverage goes monochrome — solid, 135°
+hatch, hairline — because coverage is *ordinal* (none → all) and density
+says that natively, while cold/dialed/warm is a *direction around a centre*
+that density cannot express.
+
+Verdict also stops being hue-alone: a three-slot mark whose filled slot's
+**position** carries the meaning, plus a word. **`text-night/30` for warm is
+retired — opacity never encodes meaning.** O6's bar and caption are
+redrawn, so the Call teaser drops its bracket placeholder for the real
+thing. AA3's weighting diagram now encodes by bar length, keeping the
+density channel exclusively coverage's.
+
+That answers the accessibility half of the question too: the profile's
+cold/dialed/warm was a three-way distinction carried by hue alone, and it
+no longer is.
 
 ## Answered in round 5 (imported 2026-09-08)
 

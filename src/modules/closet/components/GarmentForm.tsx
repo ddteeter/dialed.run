@@ -4,6 +4,7 @@ import type { Garment } from "../../../lib/contracts";
 import {
   fabricSchema,
   garmentCategories,
+  garmentCategoryLabels,
   layerSchema,
   weightSchema,
 } from "../../../lib/contracts";
@@ -30,16 +31,6 @@ import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
 
 type Category = (typeof garmentCategories)[number];
 
-const CATEGORY_LABELS: Record<Category, string> = {
-  top: "Top",
-  bottom: "Bottom",
-  headwear: "Headwear",
-  neckwear: "Neckwear",
-  gloves: "Gloves",
-  socks: "Socks",
-  shoes: "Shoes",
-  accessory: "Accessory",
-};
 
 /**
  * Display names only. The *values* come from the schema's own enums below,
@@ -283,7 +274,7 @@ export function GarmentForm({
         >
           {garmentCategoriesInOrder.map((category) => (
             <option key={category} value={category}>
-              {CATEGORY_LABELS[category]}
+              {garmentCategoryLabels[category]}
             </option>
           ))}
         </select>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import strykerParsed from "../../stryker.conf.json";
 import strykerConfig from "../../stryker.conf.json?raw";
+import { codeOnly, isInstrumented, repoPath } from "./source-text";
 
 /**
  * A module file that imports `@tanstack/react-start` cannot be mutation
@@ -27,7 +28,15 @@ import strykerConfig from "../../stryker.conf.json?raw";
  */
 
 const sources: Record<string, string> = import.meta.glob(
-  ["../../src/modules/**/*.{ts,tsx}", "../../src/routes/**/*.tsx"],
+  [
+    "../../src/modules/**/*.{ts,tsx}",
+    "../../src/routes/**/*.tsx",
+    // The generated route tree, which `isRoute` counts as a route: it is
+    // registration and nothing else, and its mutants need the real router
+    // to reach. Globbed explicitly because the generator writes it one
+    // level above `src/routes/`.
+    "../../src/routeTree.gen.ts",
+  ],
   { query: "?raw", import: "default", eager: true },
 );
 
@@ -40,6 +49,7 @@ const sources: Record<string, string> = import.meta.glob(
 const loaders: Record<string, () => Promise<unknown>> = import.meta.glob([
   "../../src/modules/**/*.{ts,tsx}",
   "../../src/routes/**/*.tsx",
+  "../../src/routeTree.gen.ts",
 ]);
 
 /**
@@ -48,80 +58,6 @@ const loaders: Record<string, () => Promise<unknown>> = import.meta.glob([
  * fails below, so it cannot be left behind once the file is cleaned.
  */
 const NOT_YET_GLUE = new Set<string>();
-
-const QUOTES = new Set(['"', "'", "`"]);
-
-function skipLineComment(source: string, start: number): number {
-  let index = start;
-  while (index < source.length && source.charAt(index) !== "\n") index += 1;
-  return index;
-}
-
-function skipBlockComment(source: string, start: number): number {
-  let index = start + 2;
-  while (index < source.length) {
-    if (source.charAt(index) === "*" && source.charAt(index + 1) === "/") {
-      return index + 2;
-    }
-    index += 1;
-  }
-  return index;
-}
-
-function endOfStringLiteral(source: string, start: number): number {
-  const quote = source.charAt(start);
-  let index = start + 1;
-  while (index < source.length) {
-    const char = source.charAt(index);
-    if (char === "\\") {
-      index += 2;
-      continue;
-    }
-    index += 1;
-    if (char === quote) return index;
-  }
-  return index;
-}
-
-/**
- * Source with comments removed and strings kept. A regex over raw source
- * finds "@tanstack/react-start" in the paragraph explaining why a file
- * avoids it — which is how three files that import nothing of the sort
- * ended up looking like they did.
- *
- * `charAt` rather than indexing: it returns "" past the end, so no step
- * needs undefined handling.
- */
-function withoutComments(source: string): string {
-  let out = "";
-  let index = 0;
-  while (index < source.length) {
-    const pair = source.slice(index, index + 2);
-    if (pair === "//") {
-      index = skipLineComment(source, index);
-    } else if (pair === "/*") {
-      index = skipBlockComment(source, index);
-    } else if (QUOTES.has(source.charAt(index))) {
-      const end = endOfStringLiteral(source, index);
-      out += source.slice(index, end);
-      index = end;
-    } else {
-      out += source.charAt(index);
-      index += 1;
-    }
-  }
-  return out;
-}
-
-/**
-Code with the string bodies blanked too, so `case "x":` still reads as code.
-*/
-function codeOnly(source: string): string {
-  return withoutComments(source).replaceAll(
-    /(["'`])(?:\\.|(?!\1).)*\1/gs,
-    '""',
-  );
-}
 
 /**
  * The last three are about JSX, and they are why this rule is stricter for
@@ -148,38 +84,11 @@ const FORBIDDEN = [
   { name: "a JSX `&&`", pattern: /&&\s*(?:\(\s*)?</ },
 ];
 
-function repoPath(globPath: string): string {
-  return globPath.replace("../../", "");
-}
-
 function rawSource(path: string): string {
   const entry = Object.entries(sources).find(
     ([globPath]) => repoPath(globPath) === path,
   );
   return entry?.[1] ?? "";
-}
-
-/**
- * Is this the source a human wrote, or stryker's rewrite of it?
- *
- * Stryker instruments in a sandbox copy, and its instrumentation turns
- * every block statement into `if (stryMutAct_…) {} else {…}`. Vite's `?raw`
- * then inlines *that*, so a scan below would find stryker's `if` rather
- * than ours and fail on a file that is perfectly good glue — which is
- * exactly what the mutation analyzer running over a changed `functions.ts`
- * produced, as a dry-run crash with no hint of the cause.
- *
- * The rule is a statement about what a human wrote, so it is checked
- * against human-written source only: a mutation run skips whichever files
- * it is currently instrumenting, and every ordinary `npm test` and CI run
- * — which never instrument — scans all of them.
- *
- * `stryMutAct_` is a generated identifier no human writes, so this cannot
- * quietly disable the check on real source. `grep -r stryMutAct_ src` is
- * the one-line way to confirm that.
- */
-function isInstrumented(source: string): boolean {
-  return source.includes("stryMutAct_");
 }
 
 /**
@@ -196,7 +105,11 @@ function isInstrumented(source: string): boolean {
  * mutants no test could ever kill.
  */
 function isRoute(path: string): boolean {
-  return path.startsWith("src/routes/");
+  // `routeTree.gen.ts` counts, and for the same reason the routes do: it
+  // is route registration and nothing else, nobody writes it, and its
+  // mutants need the real generated router to reach. It is not under
+  // `src/routes/` only because the generator puts it a level up.
+  return path.startsWith("src/routes/") || path === "src/routeTree.gen.ts";
 }
 
 /**
@@ -280,14 +193,77 @@ const negations = Array.from(
   (match) => match[1] ?? "",
 );
 
+/**
+The positive globs — every `mutate` entry that is not a `!` exclusion.
+*/
+const positives = strykerParsed.mutate
+  .flatMap((entry) => entry.split(","))
+  .map((entry) => entry.trim())
+  .filter((entry) => entry !== "" && !entry.startsWith("!"));
+
+/**
+ * Does any positive glob in the ratchet cover this path? `**` spans
+ * directories and `*` stops at one, which is the whole of the glob syntax
+ * this array uses.
+ */
+function isInTheRatchet(path: string): boolean {
+  return positives.some((glob) => {
+    // One pass, so `**/` is decided before `*` can claim its stars — two
+    // passes would turn it into a pair of single-segment wildcards and
+    // stop `src/modules/**/*.tsx` covering anything nested.
+    const pattern = glob.replaceAll(
+      /\*\*\/|\*|[.+?^${}()|[\]\\]/gu,
+      (token) => {
+        if (token === "**/") return "(?:.*/)?";
+        if (token === "*") return "[^/]*";
+        return `\\${token}`;
+      },
+    );
+    return new RegExp(`^${pattern}$`, "u").test(path);
+  });
+}
+
 describe("the mutate exclusions and the untestable files are the same set", () => {
   it("excludes nothing that could have been tested", () => {
     // The direction that matters most: an exclusion without a cause is a
     // file quietly opted out of the gate. A route qualifies by being a
     // route; anything else has to have failed to import.
+    //
+    // **A third cause, and it is about the analyzer rather than the
+    // ratchet.** A negation does two jobs: it carves a file out of the
+    // glob beside it, and — because the commit-gate analyzer appends every
+    // `!` in this array to its own `--mutate` — it exempts that file from
+    // the gate. For a file the ratchet covers, the second job is the
+    // hazard the `//lib` note warns about. For one no positive glob has
+    // ever covered, there is no coverage to lose and the second job is the
+    // entire point: `src/db/schema-*.ts` are a forbidden zone under the
+    // schema protocol, so a diff that touches them cannot be answered by
+    // hand-editing them, and asserting a drizzle column name is not a test
+    // anyone should write.
+    //
+    // Checked rather than allowed: the day one of those files joins a
+    // positive glob, it stops qualifying here and this fails, instead of
+    // hollowing out the scope it just entered.
     for (const path of negations) {
+      if (!isInTheRatchet(path)) continue;
       expect(untestable, `${path} is excluded for no reason`).toContain(path);
     }
+  });
+
+  it("finds the ratchet's own files, so the escape above cannot swallow everything", () => {
+    // `isInTheRatchet` returning false for everything would turn the loop
+    // above into a no-op and every exclusion would pass unexamined.
+    expect(isInTheRatchet("src/lib/contracts.ts")).toBe(true);
+    expect(isInTheRatchet("src/modules/closet/service.ts")).toBe(true);
+    expect(isInTheRatchet("src/ui/Marks.tsx")).toBe(true);
+    expect(
+      isInTheRatchet("src/modules/onboarding/components/NamePieces.tsx"),
+    ).toBe(true);
+
+    // And the files the escape is for really are outside it.
+    expect(isInTheRatchet("src/db/schema-core.ts")).toBe(false);
+    expect(isInTheRatchet("src/db/schema-auth.ts")).toBe(false);
+    expect(isInTheRatchet("src/db/schema-weather.ts")).toBe(false);
   });
 
   it("excludes every route, since none of them can be mutated", () => {

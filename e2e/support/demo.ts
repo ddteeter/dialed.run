@@ -1,4 +1,6 @@
 import { test as base } from "@playwright/test";
+
+import { captionRule, holdFor } from "./caption";
 import type { Page } from "@playwright/test";
 
 /**
@@ -9,7 +11,8 @@ import type { Page } from "@playwright/test";
  *   because otherwise a click reads as content mutating for no visible
  *   reason — animated from rAF, independent of page CSS;
  * - `goto` resolves only after `document.fonts.ready`, so a recording never
- *   opens on fallback-font frames mid-swap (the FOUT window).
+ *   opens on fallback-font frames mid-swap (the FOUT window);
+ * - `scene()` captions and paces the recording (see below).
  *
  * Motion is deliberately NOT stripped: demos are a primary review surface
  * and must show the Motion Doctrine's real behavior (owner decision,
@@ -18,10 +21,58 @@ import type { Page } from "@playwright/test";
  * actionability checks wait out moving targets. If a demo flakes on
  * timing, fix its waits — do not re-add a motion-strip stylesheet.
  */
+/**
+ * Milliseconds of pacing per Playwright action, and the switch that decides
+ * whether anything is recorded at all. Mirrors `playwright.config.ts`, which
+ * owns the `slowMo` and `video` options this cannot reach.
+ */
+const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
+
+/**
+ * Caption the recording and hold a beat, so a viewer can see what is being
+ * demonstrated before it happens.
+ *
+ * **This narrates; the `expect` beside it proves.** A caption is a claim
+ * about what the next few actions show, and it is checked by the assertion
+ * that follows — never instead of one. Write it in the spec, where a
+ * reviewer reads it in the diff; nothing here generates text at record
+ * time, which is how a video ends up describing intent rather than
+ * behaviour.
+ *
+ * **Inert without `DEMO_SLOWMO`.** CI runs these journeys as assertions and
+ * has no use for the pause, so this returns immediately and costs nothing.
+ *
+ * **The text never enters the DOM.** It is the `content` of an `html::after`
+ * rule, so it is painted without existing in the document and no locator
+ * can match it — `getByText("Closet: 6 pieces")` cannot be satisfied by a
+ * caption that happens to say the same words. A caption rendered as a real
+ * element would make every narrated assertion vacuous, which is the one way
+ * this helper could quietly destroy the suite it decorates.
+ *
+ * **A stylesheet rather than `page.evaluate`**, which cannot be used here:
+ * `unicorn/isolated-functions` rejects a callback that reaches `document`,
+ * and rightly — the callback runs in the browser, where this file's scope
+ * does not exist. `addStyleTag` takes a plain string from Node instead.
+ *
+ * **Each tag carries the whole rule**, rather than a shared box in the init
+ * script that scenes only fill the `content` of. The init script runs before
+ * the document is parsed, so inserting an element there throws on a null
+ * `documentElement` — and an init script that throws takes everything after
+ * it down, which silently killed the `data-fonts-ready` poller below and
+ * hung every `goto` in the suite. Nothing in the init script is worth that.
+ * Superseded tags simply lose to the next by document order.
+ */
+export async function scene(page: Page, text: string): Promise<void> {
+  if (demoSlowMo === 0) return;
+  await page.addStyleTag({ content: captionRule(text) });
+  await page.waitForTimeout(holdFor(text));
+}
+
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.addInitScript(() => {
       const layer = "pointer-events:none;z-index:2147483647;position:fixed;";
+
       const pink = "255,45,135";
       let dot: HTMLDivElement | undefined;
       let targetX = -100;
