@@ -1,5 +1,13 @@
 # Design: 107 Product Intelligence
 
+> Runs to ~120 lines rather than the template's ~60. Owner doubled the cap for
+> this lane (2026-09-13): the packet requires the eval results table to live
+> here, and the doc also carries decisions made _during_ implementation that
+> the template did not anticipate. Reasoning is moved to its code site
+> wherever there is one — the precedence case table is at `applyExtraction`,
+> the fetch-fallback ladder at the top of `fetch-page.ts` — so this stays a
+> map rather than the territory.
+
 ## Problem
 
 A pasted product link should become durable product data — fabric composition
