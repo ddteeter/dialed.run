@@ -248,4 +248,30 @@ describe("the JSON-LD rung", () => {
     );
     expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
   });
+
+  it.each([
+    ["ProductGroup", "the type every garment with sizes uses"],
+    ["schema:ProductGroup", "namespaced"],
+    ["https://schema.org/ProductGroup", "written as a full URL"],
+    ["ProductModel", "a specific model of one"],
+  ])("matches @type %s — %s", (type) => {
+    // The bug this replaced: `endsWith("Product")` rejects "ProductGroup",
+    // which is what Nike, Arc'teryx and Smartwool all publish. The rung fell
+    // through to Open Graph on the pages with the richest declared data, and
+    // nothing said so.
+    const html = pageWith(
+      JSON.stringify({ "@type": type, name: "Rover Half-Zip" }),
+    );
+    expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
+  });
+
+  it("still rejects a type that merely ends in Product", () => {
+    // The old check was a suffix test, so it accepted anything ending that
+    // way. The new one compares the local name, so a different type with a
+    // Product-ish tail is not a product.
+    const html = pageWith(
+      JSON.stringify({ "@type": "SomeOtherProduct", name: "Not ours" }),
+    );
+    expect(jsonLdExtractor.extract(PAGE, html)).toBeUndefined();
+  });
 });

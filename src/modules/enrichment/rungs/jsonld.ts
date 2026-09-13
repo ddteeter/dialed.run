@@ -47,15 +47,45 @@ function firstOf<T>(schema: z.ZodType<T>, value: unknown): T | undefined {
 }
 
 /**
-Is this node a Product? `@type` may be a string or a list of them.
+ * The schema.org types that describe a product we can read.
+ *
+ * **`ProductGroup` is the one that matters and the one this first missed.**
+ * It is the type for a product with variants — sizes and colours — which is
+ * every garment. Nike, Arc'teryx and Smartwool all publish it, and a check
+ * for `Product` alone rejected all three: the rung fell through to Open
+ * Graph on exactly the pages carrying the richest declared data, silently
+ * and on the majors rather than the indies.
+ */
+const PRODUCT_TYPES = new Set(["product", "productgroup", "productmodel"]);
+
+/**
+ * The local name of a schema.org type, with any namespace removed.
+ *
+ * Shops write it as `Product`, `schema:Product`, or a full
+ * `https://schema.org/Product`, so the last colon- or slash-separated
+ * segment is the only part that identifies it.
+ */
+function localType(value: string): string {
+  // Index arithmetic rather than `split(...).pop() ?? ""`: split always
+  // returns at least one element, so that default is a branch nothing can
+  // reach. `lastIndexOf` returns -1 when the separator is absent, and
+  // slicing from 0 is exactly the right answer for a bare `Product`.
+  const cut = Math.max(value.lastIndexOf(":"), value.lastIndexOf("/"));
+  return value.slice(cut + 1).toLowerCase();
+}
+
+/**
+Is this node a product? `@type` may be a string or a list of them.
 */
 function isProduct(value: unknown): value is object {
   if (typeof value !== "object" || value === null) return false;
   const type: unknown = Reflect.get(value, "@type");
-  if (typeof type === "string") return type.endsWith("Product");
+  if (typeof type === "string") return PRODUCT_TYPES.has(localType(type));
   return (
     Array.isArray(type) &&
-    type.some((one) => typeof one === "string" && one.endsWith("Product"))
+    type.some(
+      (one) => typeof one === "string" && PRODUCT_TYPES.has(localType(one)),
+    )
   );
 }
 
