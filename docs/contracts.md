@@ -380,7 +380,14 @@ export type ExtractedProduct = z.infer<typeof extractedProductSchema>;
 /** Deterministic rungs (JSON-LD, Shopify JSON, OG) implement this per source. */
 export interface PageExtractor {
   readonly rung: "jsonld" | "shopify" | "og";
-  extract(url: URL, html: string): ExtractedProduct | null;
+  /**
+   * `undefined`, not `null`, for "this rung found nothing" — `unicorn/no-null`
+   * is repo policy and `src/` contains no `return null`, so the original
+   * signature could not be implemented without a suppression nobody may add.
+   * Changed by 107 when the first rung was written; no other lane implements
+   * or calls this.
+   */
+  extract(url: URL, html: string): ExtractedProduct | undefined;
 }
 
 /** LLM rung behind an adapter; eval decides the implementation (D-32). */
