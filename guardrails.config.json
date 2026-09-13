@@ -45,6 +45,11 @@
       "count": 1
     },
     {
+      "key": "src/modules/enrichment/composition.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Equivalent mutant, proof at the site: String.split with a capturing group always returns [before, capture, text, capture, text, \u2026], so after dropping the first element the list starts with a label and alternates \u2014 index 0 is always even and always assigns pendingLabel before any odd index reads it. No input can reach the seed, because the loop cannot begin on a section. Four restructurings were tried (index walk, at(index+1), filter-and-zip, push-then-fill) and each trades the seed for an undefined check that is unreachable for the same reason: TypeScript cannot express \"even length, alternating\", so something unobservable has to absorb that invariant. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
       "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
       "reason": "Equivalent mutant, proof at the site: a heavy OUTER layer has no lower bound (nothing goes over it), so estimateTempRange drops this floor before returning and no input can distinguish -4 from +4. Hoisted to a named constant because a Stryker directive cannot attach inside an object literal.",
       "count": 1

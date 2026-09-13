@@ -108,9 +108,23 @@ export function parseComposition(raw: string): FabricComposition | undefined {
     const materials = materialsIn(verbatim);
     if (materials.length > 0) parts.push({ materials });
   } else {
-    // Seeded rather than left undefined for the same reason: the regex
-    // guarantees a non-empty label at every even position, so a guard here
-    // would never fire.
+    /**
+     * **Equivalent mutant, and the proof is the shape of `split`.**
+     *
+     * `String.split` with a capturing group always returns
+     * [before, capture, text, capture, text, …]. Dropping the first element
+     * leaves a list that starts with a capture and alternates, so index 0 is
+     * always a label, always even, and always assigns this variable before
+     * any odd index reads it. No input reaches the seed — the loop cannot
+     * begin on a section.
+     *
+     * Restructuring was tried four ways and each only moves the problem:
+     * an index walk, `at(index + 1)`, filter-and-zip, and push-then-fill all
+     * trade this seed for an `undefined` check that is unreachable for the
+     * same reason. TypeScript cannot express "even length, alternating", so
+     * something unobservable has to absorb that fact.
+     */
+    // Stryker disable next-line StringLiteral
     let pendingLabel = "";
     for (const [index, piece] of labelled.entries()) {
       if (index % 2 === 0) {
