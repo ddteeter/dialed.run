@@ -25,6 +25,11 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/modules/enrichment/rungs/jsonld.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "reason": "Unreachable mutant, proof at the site: the destructuring default on the matchAll loop never runs, because LD_BLOCK has exactly one capture group and no alternation that could skip it \u2014 a match always binds json to a string. noUncheckedIndexedAccess is what forces the default to exist at all, since TypeScript cannot know the group participated. Reported NoCoverage rather than Survived for that reason. It replaced two unreachable guards (an optional chain on .groups and the undefined check it forced), so this shape has one where the previous had two. Collecting blocks through a replaceAll callback removes it entirely by letting the parameter be annotated string, but using replaceAll as an iterator is a hack a reader would stumble over \u2014 and CLAUDE.md conditions the preference for restructuring on it leaving better code. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
       "key": "src/modules/enrichment/rungs/jsonld.ts|mutation-suppress|// Stryker restore BlockStatement",
       "reason": "The closing half of the block pair below, not a second decision. A `next-line` directive does not attach to a line opening with `} catch`, so the equivalent catch in parseJson has to be bracketed by disable/restore \u2014 and the diff-auditor counts each comment as its own suppression. Restoring immediately after the try keeps the scope to those five lines rather than the rest of the file; dropping it would silence BlockStatement everywhere below. See the paired entry for the proof. Owner's call, 2026-09-13.",
       "count": 1
