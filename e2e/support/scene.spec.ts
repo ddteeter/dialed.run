@@ -14,7 +14,7 @@
  */
 import { expect, test } from "@playwright/test";
 
-import { captionRule } from "./demo";
+import { captionRule } from "./caption";
 
 const CAPTION = "Closet: 6 pieces";
 
