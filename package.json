@@ -18,7 +18,7 @@
     "mutate": "node -e \"const {execFileSync} = require('node:child_process');const {rmSync} = require('node:fs');for (const scope of require('./stryker.conf.json').mutate) {console.log('=== ' + scope);rmSync('reports/stryker-incremental.json', {force: true});execFileSync('npx', ['stryker', 'run', '--mutate', scope], {stdio: 'inherit'});}\"",
     "postmutate": "rm -rf .stryker-tmp",
     "e2e": "playwright test --project=e2e",
-    "demo": "DEMO_SLOWMO=1800 playwright test --project=demo",
+    "demo": "DEMO_SLOWMO=250 playwright test --project=demo",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

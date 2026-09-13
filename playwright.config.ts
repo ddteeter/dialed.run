@@ -93,20 +93,27 @@ export default defineConfig({
         //
         // A demo that runs at machine speed is unwatchable — the first
         // recording of the auth journey was 1.7s end to end — so `npm run
-        // demo` sets DEMO_SLOWMO=1800 and every action is paced (raised
-        // 450 -> 900 -> 1800 on review feedback: reviewers kept losing the
-        // cause of a state change).
+        // demo` sets DEMO_SLOWMO and every action is paced.
         //
         // But CI does not watch videos, and it was paying the pacing
         // anyway: the closet journey measured 7.7s unpaced against 51.9s
         // paced — 44s of pure waiting, per demo, per run. Worse, it made
         // the 30s default timeout a moving target, which is exactly how
-        // that spec broke when this raise landed on a branch written
-        // before it.
-        //
-        // So: bare `playwright test` (what CI runs) exercises the demo
+        // that spec broke when a raise landed on a branch written before
+        // it. So bare `playwright test` (what CI runs) exercises the demo
         // journeys at full speed and asserts everything they assert.
         // Recording is a separate, deliberate act.
+        //
+        // **This number is small now, and `scene()` is why** (D-58).
+        // Pacing used to be 1800ms on *every* action — keystrokes and
+        // trivial clicks included — because one knob had to serve both
+        // "keep an action legible" and "give the viewer time to understand
+        // a new screen". They want very different amounts of time. So the
+        // second job moved to `e2e/support/demo.ts`'s `scene()`, which
+        // holds a beat and captions what it is holding for, and this went
+        // back to being only the first job. A caption also says what the
+        // neighbouring assertion proves, which is what PR review actually
+        // checks — see the pr-demo-video skill.
         //
         // Slowing the video in post is not the alternative — Playwright
         // captures ~25fps, so a 7.7s run is ~192 frames, and stretching

@@ -14,7 +14,7 @@
  * this depends on is what the runner types into it.
  */
 import { storageStateFor } from "../support/accounts";
-import { expect, test } from "../support/demo";
+import { expect, scene, test } from "../support/demo";
 
 // Signed in already, and deliberately NOT past onboarding: the setup leaves
 // this one account unfinished, because walking the flow is the journey.
@@ -47,6 +47,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // answers the one and types a city rather than granting geolocation.
   // That is deliberately the *worst* path: it is the one a denied
   // permission produces, and it has to work.
+  await scene(page, "O1 · one question is the whole requirement");
   await page.getByLabel(/^Run a little cold/).check();
   await page.getByLabel("Where you run").fill("Minneapolis");
   await page.getByRole("button", { name: "Start running" }).click();
@@ -66,6 +67,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   //
   // None of it reaches production: that is a pre-built bundle, and a
   // Worker cold start is an isolate rather than a compile.
+  await scene(page, "O3 · every row on offer, nothing arrives ticked");
   await expect(page.getByText("Closet: 0 pieces")).toBeVisible({
     timeout: 60_000,
   });
@@ -89,6 +91,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
     "Running gloves",
     "Short sleeve tee",
   ];
+  await scene(page, "The counter counts taps, and is checked after each one");
   for (const [index, piece] of tapped.entries()) {
     await page.getByRole("checkbox", { name: piece }).check();
     await expect(
@@ -98,6 +101,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
 
   // The remainder is one tap behind a disclosure that states its own
   // count — never absent, whatever the climate band decided.
+  await scene(page, "The remainder states its own count — never absent");
   await page.getByRole("button", { name: /Everything else/ }).click();
   await page.getByRole("checkbox", { name: "Running socks" }).check();
 
@@ -110,9 +114,10 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // P2.5. Every generic row is offered — ranked, never filtered — and
   // naming one is two fields with only the first required. The screen
   // never gates: the counter is a fraction, not a quota.
-  await expect(
-    page.getByText(/A category can.t remember/),
-  ).toBeVisible({ timeout: 15_000 });
+  await scene(page, "P2.5 · ranked, never filtered; a fraction, not a quota");
+  await expect(page.getByText(/A category can.t remember/)).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByText("0 of 6 named")).toBeVisible();
 
   await page.getByRole("button", { name: "Name it" }).first().click();
@@ -123,15 +128,17 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // The payout is what actually happened and nothing more (D-54): the
   // piece is linked to a shared product. Design's three GAINED/KEPT lines
   // need lane 107, an owner count and O4, none of which exist.
+  await scene(page, "The payout states what happened, and stops (D-54)");
   await expect(page.getByText("Smartwool Intraknit 200")).toBeVisible();
   await expect(page.getByText("1 of 6 named")).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
 
   // P3. An instruction and a promise, not a payoff — there is nothing to
   // celebrate yet and the screen does not pretend otherwise.
-  await expect(
-    page.getByRole("heading", { name: "Now go run." }),
-  ).toBeVisible({ timeout: 15_000 });
+  await scene(page, "P3 · an instruction and a promise, not a payoff");
+  await expect(page.getByRole("heading", { name: "Now go run." })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(
     page.getByText(/verdicts we start making the call for you/),
   ).toBeVisible();
@@ -144,6 +151,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // generic" is the closet telling the runner what P2.5 exists to fix, and
   // it is what proves the tap list created scaffolding rather than
   // finished garments.
+  await scene(page, "The closet the tap list built — six rows, all generic");
   await page.goto("/closet");
   await hydrated(page);
   await expect(page.getByRole("link", { name: /^Beanie/ })).toBeVisible();
@@ -160,6 +168,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // O6. The teaser with no verdicts behind it: it says it is listening, and
   // it makes no call. A recommendation here would be the one thing this
   // screen exists to avoid shipping.
+  await scene(page, "O6 · it says it is listening, and makes no call");
   await page.goto("/call");
   await hydrated(page);
   await expect(page.getByText(/Logging now, calling later/)).toBeVisible();

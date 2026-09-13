@@ -24,7 +24,7 @@ import {
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { storageStateFor } from "../support/accounts";
-import { expect, test } from "../support/demo";
+import { expect, scene, test } from "../support/demo";
 
 // Signed in already: the account is created by the `demo-setup` project, so
 // this video opens on the feed rather than on a signup form.
@@ -201,6 +201,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   });
 
   try {
+    await scene(page, "E1 · a feed with nobody followed yet");
     await page.goto("/feed");
     await hydrated(page);
 
@@ -213,6 +214,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await page
       .getByRole("link", { name: "Search for runners to follow" })
       .click();
+    await scene(page, "Find a runner, and see only their public entries");
     await page.getByPlaceholder("Search by name").fill(otherDisplayName);
     await page.getByRole("link", { name: otherDisplayName }).click();
     await expect(page.getByText("Portland, OR")).toBeVisible();
@@ -222,6 +224,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page.getByText(privateCaption)).toHaveCount(0);
 
     // Follow them.
+    await scene(page, "Following is what puts them in the feed");
     await page.getByRole("button", { name: "Follow" }).click();
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
@@ -233,6 +236,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page.getByText(privateCaption)).toHaveCount(0);
 
     // Open the entry detail (D): verdict, conditions, per-item kit.
+    await scene(page, "D · the verdict, the conditions, and the kit");
     await page.getByText(publicCaption).click();
     await expect(page.getByText("[Dialed]")).toBeVisible();
     // The range the run actually covered, not the hour it started in.
@@ -242,6 +246,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page.getByText("Rover Half-Zip")).toBeVisible();
 
     // Mark it useful — the reaction verb is "useful", never "like".
+    await scene(page, "Useful, never liked — the lexicon is a code rule");
     await page.getByRole("button", { name: /^Useful/u }).click();
     await expect(
       page.getByRole("button", { name: "Useful [1]" }),
@@ -254,12 +259,18 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await core
         .delete(entryTagsTable)
         .where(eq(entryTagsTable.entryId, publicEntryId));
-      await core.delete(outfitEntries).where(eq(outfitEntries.id, publicEntryId));
-      await core.delete(outfitEntries).where(eq(outfitEntries.id, privateEntryId));
+      await core
+        .delete(outfitEntries)
+        .where(eq(outfitEntries.id, publicEntryId));
+      await core
+        .delete(outfitEntries)
+        .where(eq(outfitEntries.id, privateEntryId));
       await core.delete(runs).where(eq(runs.id, publicRunId));
       await core.delete(runs).where(eq(runs.id, privateRunId));
       await core.delete(wardrobeItems).where(eq(wardrobeItems.id, itemId));
-      await core.delete(userProfiles).where(eq(userProfiles.userId, otherUserId));
+      await core
+        .delete(userProfiles)
+        .where(eq(userProfiles.userId, otherUserId));
       await weather
         .delete(weatherObservations)
         .where(

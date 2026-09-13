@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import strykerParsed from "../../stryker.conf.json";
 import strykerConfig from "../../stryker.conf.json?raw";
+import {
+  codeOnly,
+  isInstrumented,
+  repoPath,
+} from "./source-text";
 
 /**
  * A module file that imports `@tanstack/react-start` cannot be mutation
@@ -58,80 +63,6 @@ const loaders: Record<string, () => Promise<unknown>> = import.meta.glob([
  */
 const NOT_YET_GLUE = new Set<string>();
 
-const QUOTES = new Set(['"', "'", "`"]);
-
-function skipLineComment(source: string, start: number): number {
-  let index = start;
-  while (index < source.length && source.charAt(index) !== "\n") index += 1;
-  return index;
-}
-
-function skipBlockComment(source: string, start: number): number {
-  let index = start + 2;
-  while (index < source.length) {
-    if (source.charAt(index) === "*" && source.charAt(index + 1) === "/") {
-      return index + 2;
-    }
-    index += 1;
-  }
-  return index;
-}
-
-function endOfStringLiteral(source: string, start: number): number {
-  const quote = source.charAt(start);
-  let index = start + 1;
-  while (index < source.length) {
-    const char = source.charAt(index);
-    if (char === "\\") {
-      index += 2;
-      continue;
-    }
-    index += 1;
-    if (char === quote) return index;
-  }
-  return index;
-}
-
-/**
- * Source with comments removed and strings kept. A regex over raw source
- * finds "@tanstack/react-start" in the paragraph explaining why a file
- * avoids it — which is how three files that import nothing of the sort
- * ended up looking like they did.
- *
- * `charAt` rather than indexing: it returns "" past the end, so no step
- * needs undefined handling.
- */
-function withoutComments(source: string): string {
-  let out = "";
-  let index = 0;
-  while (index < source.length) {
-    const pair = source.slice(index, index + 2);
-    if (pair === "//") {
-      index = skipLineComment(source, index);
-    } else if (pair === "/*") {
-      index = skipBlockComment(source, index);
-    } else if (QUOTES.has(source.charAt(index))) {
-      const end = endOfStringLiteral(source, index);
-      out += source.slice(index, end);
-      index = end;
-    } else {
-      out += source.charAt(index);
-      index += 1;
-    }
-  }
-  return out;
-}
-
-/**
-Code with the string bodies blanked too, so `case "x":` still reads as code.
-*/
-function codeOnly(source: string): string {
-  return withoutComments(source).replaceAll(
-    /(["'`])(?:\\.|(?!\1).)*\1/gs,
-    '""',
-  );
-}
-
 /**
  * The last three are about JSX, and they are why this rule is stricter for
  * a route than a reader might expect.
@@ -157,38 +88,11 @@ const FORBIDDEN = [
   { name: "a JSX `&&`", pattern: /&&\s*(?:\(\s*)?</ },
 ];
 
-function repoPath(globPath: string): string {
-  return globPath.replace("../../", "");
-}
-
 function rawSource(path: string): string {
   const entry = Object.entries(sources).find(
     ([globPath]) => repoPath(globPath) === path,
   );
   return entry?.[1] ?? "";
-}
-
-/**
- * Is this the source a human wrote, or stryker's rewrite of it?
- *
- * Stryker instruments in a sandbox copy, and its instrumentation turns
- * every block statement into `if (stryMutAct_…) {} else {…}`. Vite's `?raw`
- * then inlines *that*, so a scan below would find stryker's `if` rather
- * than ours and fail on a file that is perfectly good glue — which is
- * exactly what the mutation analyzer running over a changed `functions.ts`
- * produced, as a dry-run crash with no hint of the cause.
- *
- * The rule is a statement about what a human wrote, so it is checked
- * against human-written source only: a mutation run skips whichever files
- * it is currently instrumenting, and every ordinary `npm test` and CI run
- * — which never instrument — scans all of them.
- *
- * `stryMutAct_` is a generated identifier no human writes, so this cannot
- * quietly disable the check on real source. `grep -r stryMutAct_ src` is
- * the one-line way to confirm that.
- */
-function isInstrumented(source: string): boolean {
-  return source.includes("stryMutAct_");
 }
 
 /**
