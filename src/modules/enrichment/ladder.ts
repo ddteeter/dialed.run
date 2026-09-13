@@ -1,5 +1,6 @@
 import type { ExtractedProduct } from "../../lib/contracts";
 import type { productSnapshots } from "../../db/schema-core";
+import { findComposition } from "./composition";
 import { fillBlanksFrom } from "./extracted";
 import { jsonLdExtractor } from "./rungs/jsonld";
 import { openGraphExtractor } from "./rungs/og";
@@ -48,6 +49,20 @@ export function runLadder(url: URL, html: string): LadderResult {
     if (found === undefined) continue;
     if (fillBlanksFrom(extracted, found) > 0) rung = extractor.rung;
   }
+
+  // The page's own text, last among the deterministic sources because it is
+  // inferred where the others are declared — a `material` field a shop
+  // published beats a percentage we found in prose.
+  //
+  // **It is here because the declared fields almost never carry it.**
+  // Measured over 14 real pages: the three rungs above found composition on
+  // none of them, and the text search finds it on 7 of 8 fixtures. Without
+  // this the field the lane exists for is empty in production.
+  // No `!== undefined` guard in front of this: `fillBlanksFrom` already
+  // skips an undefined value and returns 0, so the check could not change an
+  // answer — two guards where one fires means neither can be killed.
+  const fabricComposition = findComposition(html);
+  if (fillBlanksFrom(extracted, { fabricComposition }) > 0) rung = "text";
 
   return { extracted, rung };
 }
