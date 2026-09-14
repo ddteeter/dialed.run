@@ -29,22 +29,26 @@ const IMAGE_BYTES = new Uint8Array([9, 8, 7]);
 const PAGE_WITH_IMAGE = `<html><head>
 <meta property="og:image" content="${IMAGE_URL}">
 <meta property="og:title" content="Repeat Merino Tech Tee">
-<script type="application/ld+json">{"@type":"Product","material":"47% merino wool, 53% nylon"}</script>
 </head><body><p>Built for cold mornings.</p></body></html>`;
 
 /**
- * A page that **declares** its composition, in JSON-LD's `material`.
+ * An ordinary page: JSON-LD names it, and says nothing about fabric.
  *
- * It used to state it in prose and rely on the text search to find it. That
- * search was retired (owner, 2026-09-14), so a page whose composition is
- * only prose now extracts none — which is a case of its own below, not the
- * backdrop for every other test.
+ * It used to declare `material` and, before that, state the composition in
+ * prose. Neither reaches the column any more — the ladder stopped
+ * answering the field entirely on 2026-09-14 — so composition in these
+ * tests comes from the stub model, exactly as it does in production.
  */
 const PAGE = `<html><head>
-<script type="application/ld+json">{"@type":"Product","name":"Repeat Merino Tech Tee","brand":{"@type":"Brand","name":"Janji"},"material":"47% merino wool, 53% nylon"}</script>
+<script type="application/ld+json">{"@type":"Product","name":"Repeat Merino Tech Tee","brand":{"@type":"Brand","name":"Janji"}}</script>
 </head><body><p>Built for cold mornings.</p></body></html>`;
 
 const URL_UNDER_TEST = "https://shop.example.com/products/tee";
+
+/**
+What the stub model reports, standing in for the one source of composition.
+*/
+const COMPOSITION = "47% merino wool, 53% nylon";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -152,7 +156,33 @@ async function statusOf(productId: string): Promise<string> {
   return row.extractionStatus;
 }
 
+function modelAnswering(verbatim: string) {
+  return {
+    extract: vi.fn(() => Promise.resolve({ fabricComposition: { verbatim } })),
+  };
+}
+
+/**
+ * A configured worker: a page fetcher and a model.
+ *
+ * **The model is part of the default now**, because composition has no
+ * other source (owner, 2026-09-14). A worker without one is a real state —
+ * a dev machine with no key — but it is the exception, and the tests that
+ * care about it pass no model explicitly.
+ */
 function depsWith(fetchImpl: typeof fetch) {
+  return {
+    db: db(),
+    captureException: vi.fn(),
+    fetchImpl,
+    model: modelAnswering(COMPOSITION),
+  };
+}
+
+/**
+Deps with no model configured, which is the unconfigured-worker case.
+*/
+function depsWithoutModel(fetchImpl: typeof fetch) {
   return { db: db(), captureException: vi.fn(), fetchImpl };
 }
 
@@ -180,7 +210,7 @@ describe("handleEnrichmentBatch: the happy path", () => {
     expect(row.fabricComposition).toBe("47% merino wool, 53% nylon");
 
     const [snapshot] = await snapshotsOf(productId);
-    expect(snapshot).toMatchObject({ url: URL_UNDER_TEST, rung: "jsonld" });
+    expect(snapshot).toMatchObject({ url: URL_UNDER_TEST, rung: "llm" });
     const stored = await env.MEDIA.get(snapshot?.r2Key ?? "");
     expect(await stored?.text()).toBe(PAGE);
   });
@@ -330,7 +360,7 @@ describe("handleEnrichmentBatch: rows that are not work", () => {
     expect(message.ack).toHaveBeenCalledTimes(1);
     expect(await statusOf(productId)).toBe("done");
     const [snapshot] = await snapshotsOf(productId);
-    expect(snapshot?.rung).toBe("jsonld");
+    expect(snapshot?.rung).toBe("llm");
   });
 
   it("fails a pending product that has no URL, rather than retrying forever", async () => {
@@ -500,7 +530,7 @@ describe("reextract", () => {
     const edited = await rowOf(productId);
     expect(edited.fabricComposition).toBe("hand-edited");
     const [after] = await snapshotsOf(productId);
-    expect(after?.rung).toBe("jsonld");
+    expect(after?.rung).toBe("llm");
   });
 
   it("does nothing for a product that has never been snapshotted", async () => {
@@ -630,12 +660,6 @@ const OPAQUE = `<html><head>
 <meta property="og:title" content="Graves Shell">
 </head><body><p>Built for cold mornings.</p></body></html>`;
 
-function modelAnswering(verbatim: string) {
-  return {
-    extract: vi.fn(() => Promise.resolve({ fabricComposition: { verbatim } })),
-  };
-}
-
 describe("handleEnrichmentBatch: the model rung", () => {
   it("asks the model when the page states no composition, and records `llm`", async () => {
     const productId = await pendingProduct();
@@ -651,22 +675,6 @@ describe("handleEnrichmentBatch: the model rung", () => {
     expect(row.fabricComposition).toBe("100% Primeflex");
     const [snapshot] = await snapshotsOf(productId);
     expect(snapshot?.rung).toBe("llm");
-  });
-
-  it("does not ask when the page already stated one", async () => {
-    // The cost control: seven of the eight sampled pages answer without a
-    // model, and a shop's own words beat an inference anyway.
-    const productId = await pendingProduct();
-    const model = modelAnswering("100% Primeflex");
-
-    await handleEnrichmentBatch(batchOf("dialed-enrichment", [jobFor(productId)]), {
-      ...depsWith(serving(PAGE)),
-      model,
-    });
-
-    expect(model.extract).not.toHaveBeenCalled();
-    const [snapshot] = await snapshotsOf(productId);
-    expect(snapshot?.rung).toBe("jsonld");
   });
 
   it("leaves the rung alone when the model answers nothing new", async () => {
@@ -691,7 +699,7 @@ describe("handleEnrichmentBatch: the model rung", () => {
     // reported, which leaves the same row behind and a Sentry event for
     // every product, so the silence is the assertion.
     const productId = await pendingProduct();
-    const deps = depsWith(serving(OPAQUE));
+    const deps = depsWithoutModel(serving(OPAQUE));
     const message = jobFor(productId);
 
     await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
@@ -753,7 +761,7 @@ describe("handleEnrichmentBatch: the model rung", () => {
 
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
-      depsWith(serving(prose)),
+      depsWithoutModel(serving(prose)),
     );
 
     const row = await rowOf(productId);

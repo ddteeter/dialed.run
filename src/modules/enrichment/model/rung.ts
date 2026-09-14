@@ -15,24 +15,6 @@ import { pageTextFor } from "./page-text";
  * strangely.
  */
 
-/**
- * What the model is worth calling for.
- *
- * `fabricComposition` alone, and deliberately. It is the field the lane
- * exists for and the one a page states in prose rather than in a field; the
- * rest — name, brand, image — come from Open Graph on essentially every
- * page, so a model asked for them would be an expensive way to re-read a
- * `<meta>` tag.
- *
- * One field, so one comparison: a list of fields to check reads as more
- * general and is not, since `some` and `every` cannot be told apart over a
- * single entry. When a second field earns a model call, this becomes a
- * list and the test that pins it says why.
- */
-export function requiresModel(extracted: Readonly<ExtractedProduct>): boolean {
-  return extracted.fabricComposition === undefined;
-}
-
 export interface ModelPassDeps {
   model: ExtractionModel;
 }
