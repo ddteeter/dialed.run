@@ -156,27 +156,37 @@ deterministic pass found one. It also showed the prompt needs decoded text —
 given `&amp;` it copied `&amp;` into `verbatim`, exactly as instructed — so
 `pageTextFor` runs the same entity decode the composition pass does.
 
-## The vocabulary learns, and the loop is closed
+## Retired — the vocabulary feedback loop
 
-The model rung runs **only where the deterministic rungs left the
-composition blank** — seven of the eight sampled pages answer without it, so
-this fires on the eighth. That is the cost control and the quality control
-at once: a shop that publishes its own composition has already answered
-better than a model can.
+`fibre_candidates` recorded every material the model named that
+`fibres.ts` did not recognise, so a human could promote the real ones and
+make the *deterministic* composition pass better on the next `reextract`.
+It was removed on 2026-09-14, in the same breath as the pass it existed to
+improve.
 
-Every material the model names that `fibres.ts` does not recognise becomes a
-`fibre_candidates` row, with the snapshot and the composition string it
-appeared in. A reviewer needs that context, because it is what separates
-`primeflex` (a fibre) from `pacerweave` (a part label). Promotion is a pull
-request against `fibres.ts`, and that is the point rather than an
-inconvenience: a table the system writes *and* reads its vocabulary from
-would learn its own mistakes. Each promotion improves every stored page on
-the next `reextract`, so the share of products resolved without a model call
-is a number that should climb.
+**It had no consumer left.** A model's composition never goes through
+`parseComposition` — it arrives structured and zod-parsed — so the
+vocabulary never touched it. The only thing a promotion improved was the
+prose search, and the prose search is gone.
 
-`rung` records `llm` only when the model actually filled a blank. A model
-that answered nothing new did not deepen anything, and the column's job is
-to say whether re-running would help.
+**And the eval showed what it was actually collecting**: `decoration`,
+`2:09 mesh`, `coreloft™ 80 (80 g/m²)`, `10d x 20d ripstop`, `arato™ 15`,
+`recycled n6 microrip`, `jigger dyed` — against five genuine abbreviations
+(`pa`, `el`, `ea`, `wv`, `pes`). A review queue that is mostly fabric trade
+names, feeding a path that no longer exists, is maintenance without a
+product. Migration `0015` was deleted rather than dropped: it had never
+been applied anywhere real.
+
+**What survives it.** `fibres.ts` still gates `parseComposition`, which the
+JSON-LD and Shopify rungs call on a declared field. The unknown-material
+walk moved into `eval/report.ts`, where its only reader is a person
+reading the report.
+
+**Open, and smaller than it looks:** that gate may not belong on a declared
+field at all. It exists to tell `20% off today` from a composition in
+*prose*; a shop writing `material: "100% Primeflex"` has already said what
+the field is, and the gate silently drops it. Worth measuring before
+changing.
 
 ## Eval (D-32) — and the decision it produced
 

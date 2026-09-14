@@ -192,7 +192,7 @@ async function extractFrom(
   const { model } = deps;
   const rung =
     model !== undefined && requiresModel(result.extracted)
-      ? await askModel(deps, model, result, productId, snapshot, html)
+      ? await askModel(model, result, snapshot, html)
       : result.rung;
   await deps.db
     .update(productSnapshots)
@@ -209,20 +209,17 @@ async function extractFrom(
  * new leaves the deterministic rung as the honest deepest contributor.
  */
 async function askModel(
-  deps: EnrichmentDeps,
   // Narrowed by the caller and passed in, rather than read off `deps` and
   // narrowed a second time — the second check is one no input can reach.
   model: ExtractionModel,
   result: LadderResult,
-  productId: string,
-  snapshot: { id: string; url: string },
+  snapshot: { url: string },
   html: string,
 ): Promise<LadderResult["rung"]> {
-  const pass = await modelPass(
-    { db: deps.db, model },
-    result.extracted,
-    { html, url: snapshot.url, snapshotId: snapshot.id, productId },
-  );
+  const pass = await modelPass({ model }, result.extracted, {
+    html,
+    url: snapshot.url,
+  });
   return pass.didContribute ? "llm" : result.rung;
 }
 

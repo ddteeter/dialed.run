@@ -1,5 +1,5 @@
 import type { FabricComposition } from "../src/lib/contracts";
-import { unknownMaterialsIn } from "../src/modules/enrichment/fibres";
+import { isFibre } from "../src/modules/enrichment/fibres";
 import type { PageExtractions } from "./extractions";
 
 /**
@@ -20,14 +20,23 @@ export function materialCount(composition: FabricComposition | undefined): numbe
 }
 
 /**
-Every material named by anyone, that `fibres.ts` does not recognise.
-*/
+ * Every material named by anyone, that `fibres.ts` does not recognise.
+ *
+ * An eval concern rather than a module one. This walk used to live in
+ * `fibres.ts` and feed a `fibre_candidates` table, which was removed with
+ * the prose search it existed to improve (2026-09-14). What is left is a
+ * review column: seeing that a model called `Coreloft™ 80` a material is
+ * useful to a person reading this report, and to nothing else.
+ */
 export function unrecognised(page: PageExtractions): string[] {
   const words = new Set<string>();
   for (const candidate of page.candidates) {
-    const composition = candidate.composition;
-    if (composition === undefined) continue;
-    for (const material of unknownMaterialsIn(composition)) words.add(material);
+    const parts = candidate.composition?.parts ?? [];
+    for (const part of parts) {
+      for (const { material } of part.materials) {
+        if (!isFibre(material)) words.add(material.toLowerCase());
+      }
+    }
   }
   // Insertion order, not sorted: the candidates are visited in a fixed
   // order, so this is already deterministic, and `toSorted` is not in this
