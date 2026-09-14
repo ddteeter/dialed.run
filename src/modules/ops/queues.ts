@@ -1,7 +1,11 @@
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { handleEnrichmentBatch, handleEnrichmentDlqBatch } from "../enrichment";
+import {
+  extractionModelFromEnv,
+  handleEnrichmentBatch,
+  handleEnrichmentDlqBatch,
+} from "../enrichment";
 import {
   handleImportsBatch,
   handleImportsDlqBatch,
@@ -36,6 +40,7 @@ function enrichmentDeps() {
     db: drizzle(env.DIALED_CORE),
     captureException,
     proxyApiKey: env.FIRECRAWL_API_KEY,
+    model: extractionModelFromEnv(),
   };
 }
 
