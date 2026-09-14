@@ -23,6 +23,14 @@ import { batchOf, fakeMessage } from "../queue-fakes";
  * status and columns, the snapshot row, and the bytes in the bucket.
  */
 
+const IMAGE_URL = "https://cdn.example.com/products/tee.jpg";
+const IMAGE_BYTES = new Uint8Array([9, 8, 7]);
+
+const PAGE_WITH_IMAGE = `<html><head>
+<meta property="og:image" content="${IMAGE_URL}">
+<meta property="og:title" content="Repeat Merino Tech Tee">
+</head><body><p>Fabric: 47% merino wool, 53% nylon</p></body></html>`;
+
 const PAGE = `<html><head>
 <script type="application/ld+json">{"@type":"Product","name":"Repeat Merino Tech Tee","brand":{"@type":"Brand","name":"Janji"}}</script>
 </head><body><p>Fabric: 47% merino wool, 53% nylon</p></body></html>`;
@@ -107,6 +115,28 @@ const servingOnlyTee: typeof fetch = (input) =>
   urlOf(input).includes("tee")
     ? Promise.resolve(new Response(PAGE))
     : Promise.reject(new TypeError("down"));
+
+/**
+Serves the page at its URL and the image bytes at the CDN's.
+*/
+const servingPageAndImage: typeof fetch = (input) =>
+  Promise.resolve(
+    urlOf(input) === IMAGE_URL
+      ? new Response(IMAGE_BYTES, {
+          headers: { "content-type": "image/jpeg" },
+        })
+      : new Response(PAGE_WITH_IMAGE),
+  );
+
+/**
+The same page, but the image it advertises is gone.
+*/
+const servingPageWithMissingImage: typeof fetch = (input) =>
+  Promise.resolve(
+    urlOf(input) === IMAGE_URL
+      ? new Response("gone", { status: 404 })
+      : new Response(PAGE_WITH_IMAGE),
+  );
 
 async function statusOf(productId: string): Promise<string> {
   const row = await rowOf(productId);
@@ -480,5 +510,100 @@ describe("reextract", () => {
       fetchedAt: 1,
     });
     expect(await reextract(db(), productId)).toBeUndefined();
+  });
+});
+
+describe("handleEnrichmentBatch: the primary image", () => {
+  it("copies the image the page advertises, and points the row at it", async () => {
+    const productId = await pendingProduct();
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(vi.fn(servingPageAndImage)),
+    );
+
+    const row = await rowOf(productId);
+    // Filed under the product, beside its snapshots, stamped with the
+    // fetch — the timestamp is the run's, so the prefix is what a test can
+    // name and the bytes are what prove it is the right object.
+    expect(row.imageKey).toMatch(
+      new RegExp(String.raw`^products/${productId}/image-\d+$`, "u"),
+    );
+    const stored = await env.MEDIA.get(row.imageKey ?? "");
+    expect(new Uint8Array(await (stored?.arrayBuffer() ?? new ArrayBuffer(0))))
+      .toStrictEqual(IMAGE_BYTES);
+  });
+
+  it("copies it once: a later fetch of the same product re-reads the page and not the image", async () => {
+    // Fill-only-what-is-blank, and here that is right — nobody edits an R2
+    // key, so the only question is whether we have already paid for this
+    // image (D-59). Driven through a *second real fetch*: the snapshot is
+    // aged past the reuse window, so the page is fetched again and the
+    // image is the only thing that must not be.
+    const productId = await pendingProduct();
+    const fetchImpl = vi.fn(servingPageAndImage);
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(fetchImpl),
+    );
+    const first = await rowOf(productId);
+    expect(first.imageKey).not.toBeNull();
+
+    await db()
+      .update(productSnapshots)
+      .set({ fetchedAt: Date.now() - 24 * 60 * 60 * 1000 })
+      .where(eq(productSnapshots.productId, productId));
+    await db()
+      .update(products)
+      .set({ extractionStatus: "pending" })
+      .where(eq(products.id, productId));
+    fetchImpl.mockClear();
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId, "m2")]),
+      depsWith(fetchImpl),
+    );
+
+    const fetched = fetchImpl.mock.calls.map((call) => urlOf(call[0]));
+    expect(fetched).toStrictEqual([URL_UNDER_TEST]);
+    const after = await rowOf(productId);
+    expect(after.imageKey).toBe(first.imageKey);
+  });
+
+  it("keeps the extraction when the image cannot be fetched", async () => {
+    // A product whose picture 404s is still a product with a composition,
+    // and the page is already stored. Failing the job over the image would
+    // throw away the text (law 5).
+    const productId = await pendingProduct();
+    const deps = depsWith(vi.fn(servingPageWithMissingImage));
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("done");
+    expect(row.fabricComposition).toBe("Fabric: 47% merino wool, 53% nylon");
+    expect(row.imageKey).toBeNull();
+    expect(deps.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "PageFetchError" }),
+      { surface: "enrichment-image", productId },
+    );
+  });
+
+  it("copies nothing, and reports nothing, when the page advertises no image", async () => {
+    // "No image" is not a failure. Without the guard this asks the network
+    // for `undefined` and files the refusal in Sentry, which is an alert
+    // for every product whose shop ships no og:image.
+    const productId = await pendingProduct();
+    const deps = depsWith(serving(PAGE));
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      deps,
+    );
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("done");
+    expect(row.imageKey).toBeNull();
+    expect(deps.captureException).not.toHaveBeenCalled();
   });
 });

@@ -1,12 +1,13 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { products, productSnapshots } from "../../db/schema-core";
-import { firstRowWhere } from "../../lib/keyed-read";
+import { firstColumnWhere, firstRowWhere } from "../../lib/keyed-read";
 import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
 import { applyExtraction, type ApplyReport } from "../products";
 import { PageFetchError } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
+import { copyProductImage } from "./image";
 import { runLadder } from "./ladder";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
@@ -89,6 +90,60 @@ async function latestSnapshot(db: Db, productId: string, since: number) {
 }
 
 /**
+ * Copy the primary image, once.
+ *
+ * **Fill-only-what-is-blank, and here that is the right rule** — the
+ * opposite of the ledger `applyExtraction` needs. That ledger exists
+ * because a person edits a composition and must not have it overwritten;
+ * nobody edits an R2 key, so there is no human intent to protect. What is
+ * left is "have we already paid for this image", and a non-null key
+ * answers it.
+ *
+ * A later run finding a *different* image therefore does not replace the
+ * stored one. That is deliberate and recorded (D-59): refreshing a product
+ * image needs a rule about the old object and anything holding its URL, and
+ * inventing one here would be guessing.
+ *
+ * Never throws. A product whose image 404s is still a product with a
+ * composition, and the page is already stored — failing the job over the
+ * picture would throw away the text (law 5).
+ */
+async function copyImageOnce(
+  deps: EnrichmentDeps,
+  productId: string,
+  imageUrl: string | undefined,
+  fetchedAt: number,
+): Promise<void> {
+  if (imageUrl === undefined) return;
+  // Asked in SQL — "does this product already have an image" — rather than
+  // by reading the row and testing the column. A row read would have to
+  // answer for a product that is not there, which cannot happen here
+  // (`applyExtraction` has just written to it) and so would be a branch no
+  // test could reach.
+  const already = await firstColumnWhere(
+    deps.db,
+    products,
+    products.id,
+    and(eq(products.id, productId), isNotNull(products.imageKey)),
+  );
+  if (already !== undefined) return;
+  try {
+    const imageKey = await copyProductImage(
+      productId,
+      imageUrl,
+      deps.fetchImpl ?? fetch,
+      fetchedAt,
+    );
+    await deps.db
+      .update(products)
+      .set({ imageKey })
+      .where(eq(products.id, productId));
+  } catch (error) {
+    deps.captureException(error, { surface: "enrichment-image", productId });
+  }
+}
+
+/**
  * Run the ladder over a stored page and write the result back, updating
  * the snapshot's rung to what this run found — the column's job is to say
  * whether re-running would help, and after a re-run that is a new answer.
@@ -132,7 +187,16 @@ async function fetchAndExtract(
     rung: result.rung,
     fetchedAt,
   });
-  return applyExtraction(deps.db, productId, result.extracted, result.rung);
+  const report = await applyExtraction(
+    deps.db,
+    productId,
+    result.extracted,
+    result.rung,
+  );
+  // After the write-back, so a failed apply does not leave an image copied
+  // for a product whose extraction never landed.
+  await copyImageOnce(deps, productId, result.extracted.imageUrl, fetchedAt);
+  return report;
 }
 
 async function processEnrichJob(
