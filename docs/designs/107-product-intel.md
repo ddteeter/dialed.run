@@ -174,7 +174,54 @@ is a number that should climb.
 that answered nothing new did not deepen anything, and the column's job is
 to say whether re-running would help.
 
-## Eval (D-32) — the harness is next
+## Eval (D-32) — and what it says about the deterministic path
+
+`npm run eval` (`eval/`, not collected by vitest — it costs money, depends
+on twenty shops being up, and answers a judgement rather than a pass).
+Corpus of 22 pages across 14 brands, chosen for spread rather than size:
+Shopify, Salesforce Commerce and hand-rolled storefronts; tops, bottoms,
+socks, gloves, headwear and technical outerwear.
+
+**Deterministic against the one model that answered every page:**
+
+| | pages |
+| --- | --- |
+| same materials as the best model | 14 |
+| deterministic found **fewer** | 4 |
+| deterministic found **nothing** | 1 |
+| deterministic found **more** | 3 |
+
+So it is right or better on 17 of 22, and materially worse on 5 — and the
+five have three causes, not five:
+
+1. **"The first node that parses wins" loses everything after it.** Four of
+   the five. A composition split over several nodes — `rabbit`'s three
+   labelled sections, On's `Front:`/`Back:` — yields only the first, and the
+   answer looks complete because it is well-formed.
+2. **No abbreviations in `fibres.ts`.** European brands write `88% PA 12%
+   EL`; the vocabulary has `polyamide` and `elastane`. SOAR's shorts
+   returned nothing at all for this reason.
+3. **Marketing prose outranking the spec**, which is caused by (2): on
+   SOAR's half-tights the real spec (`Main: 49% PA, 27% EA, 24% WV`) was
+   invisible, so a sentence containing "24% merino wool" won instead. The
+   worst failure shape there is — confident, plausible and wrong.
+
+**The model is not a superset, which is the argument against just using
+it.** On three pages the deterministic pass found a composition the model
+missed entirely: Tracksmith's `2:09 Mesh: 82% Polyester, 18% Spandex` and
+Arc'teryx's GORE-TEX spec both came back `_nothing_` from the model. A
+second opinion is worth having; it is not worth *deferring* to.
+
+**Cheap is not the same as usable.** Over the same 22 pages,
+`gpt-5.6-luna` answered 22; `qwen3.8-flash` 9 (timeouts at 30s);
+`qwen3.8-27b` 5 (mostly 429). That is a reliability finding the accuracy
+question would have hidden.
+
+**The candidate vocabulary works as designed.** The unrecognised materials
+the corpus surfaced were `pa`, `el`, `ea`, `wv`, `pes` — real fibres in
+abbreviated form — alongside `decoration` and `2:09 mesh`, which are not
+fibres and which a reviewer would decline. That is exactly the mix
+`fibre_candidates` exists to put in front of a person.
 
 ~20 real pages, fixtures committed as **fragments** rather than whole pages —
 the repo is public and these are copyrighted marketing pages, and a rung only
@@ -294,9 +341,12 @@ With both fixed, composition extracts from **7 of 8** whole pages, and the
 rabbit page's `verbatim` is now `PacerWeaveTM body: 91% recycled polyester &
 9% spandex` rather than ten kilobytes of markup.
 
-The miss is the SOAR shorts page, and it is not an extraction failure: the
-delivered HTML states no composition. Its only fibre words are product names
-in a recommendations payload ("Merino Beanie", "Merino & Silk Base Layer"),
-so there is nothing for any parser to find. That is the shape a **200 with
-the content missing** takes — the case the `fetch-page.ts` header reserves
-for Browser Rendering, now with one measured instance behind it.
+The miss was the SOAR shorts page, and an earlier version of this section
+said it "states no composition" and cited it as a measured instance of
+client-rendered content. **That was wrong.** The page states its composition
+plainly — `Shell 88% PA 12% EL` — and the eval below found it. Two mistakes
+produced the claim: a grep over raw HTML missed text that spans several
+nodes, and `fibres.ts` has no abbreviations, so the deterministic pass could
+not see a fibre there either. So there is **no** measured instance of the
+200-with-nothing-in-it case; `fetch-page.ts` still reserves Browser
+Rendering for it, on zero evidence rather than one.
