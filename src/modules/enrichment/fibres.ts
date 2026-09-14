@@ -1,22 +1,28 @@
 /**
- * The fibres a composition can name.
+ * The fibres a composition names — **taught to the model, not enforced by a
+ * parser** (owner, 2026-09-14).
  *
- * **This is the discriminator, and it replaced a cue word.** Requiring a
- * percentage alone turns "20% off today" into a fibre called `off`; requiring
- * a preceding cue ("Fabric:", "Composition:") fails on how shops actually
- * write it — `composition :`, `PacerWeave™ body:`, a bare `<strong>` fabric
- * name, or nothing at all. A percentage *beside a fibre we know* is the test
- * that survives both, measured against 14 real pages.
+ * It used to be a gate. `parseComposition` accepted a percentage only when
+ * one of its words was on this list, which is what stopped "20% off today"
+ * becoming a fibre called `off`. The gate went with the prose search it was
+ * built for, and the measurement said why it could not stay: on a
+ * *declared* field it silently dropped `100% Primeflex`, `88% PA 12% EL`
+ * and `Shell: 100% Coreloft`, because a list of fibres cannot contain the
+ * trade names shops invent.
  *
- * **A data table, and deliberately a code change to extend.** The list will
- * be wrong — proprietary fibres like `Primeflex` are not on it and cannot be
- * — so the model rung records unrecognised fibres as candidates and a human
- * promotes them here. Keeping promotion in version control is the point: the
- * vocabulary is reviewed, and every addition improves every stored snapshot
- * on the next `reextract` (D-31).
+ * As a hint it does the opposite job, and a job the eval showed is needed:
+ * models called `Coreloft™ 80`, `Arato™ 15`, `2:09 Mesh` and `decoration`
+ * materials. Telling one what a fibre *is* costs a few dozen tokens and
+ * addresses that directly, where a gate could only discard the answer
+ * afterwards.
  *
- * Brand names that have become fibre names in ordinary use — lycra, cordura,
- * tencel — are included, because that is how product pages write them.
+ * So this list is now wrong in a harmless direction. Missing a fibre used
+ * to mean losing a composition; now it means the prompt's examples are a
+ * little less complete.
+ *
+ * Brand names that have become fibre names in ordinary use — lycra,
+ * cordura, tencel — are included, because that is how product pages write
+ * them.
  */
 const FIBRES = [
   "acrylic",
@@ -48,30 +54,8 @@ const FIBRES = [
   "wool",
 ] as const;
 
-const KNOWN = new Set<string>(FIBRES);
-
 /**
- * Does this material name a fibre we know?
- *
- * Matched on any word, not the whole string, because a fibre arrives with
- * qualifiers attached: "recycled polyester", "merino wool", "17.5μ merino
- * wool". The qualifier is worth keeping in the material name — it is what a
- * runner reads — so it is kept and the *presence* of a known word is what
- * makes it a composition rather than a sale.
- */
-export function isFibre(material: string): boolean {
-  // Letter runs matched rather than split on the gaps between them: `split`
-  // needs a `+` whose absence only ever produces empty strings nothing
-  // matches, which is a mutant no input can distinguish. `matchAll` yields
-  // the words directly and never returns null.
-  for (const [word] of material.toLowerCase().matchAll(/\p{Letter}+/gu)) {
-    if (KNOWN.has(word)) return true;
-  }
-  return false;
-}
-
-/**
-Every fibre the vocabulary knows, for the candidate check in the model rung.
+The vocabulary, for the prompt and for the eval's review column.
 */
 export function knownFibres(): readonly string[] {
   return FIBRES;

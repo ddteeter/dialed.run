@@ -1,7 +1,6 @@
 import type { z } from "zod";
 
 import { fabricPartSchema, type FabricComposition } from "../../lib/contracts";
-import { isFibre } from "./fibres";
 import { readableText } from "./html";
 
 /**
@@ -70,26 +69,24 @@ export function stopwords(): readonly string[] {
 const MAX_MATERIAL_WORDS = 3;
 
 /**
- * The fibre name inside a chunk: the last known fibre word, plus up to two
- * words in front of it.
+ * The fibre name inside a chunk: its words, less the noise.
  *
- * Anchored to the *end* because qualifiers precede a fibre — "recycled
- * polyester", "17.5μ merino wool" — and never follow it. Single characters
- * are dropped, which is what removes the stray micron grade.
+ * **It used to require a known fibre and no longer does** (owner,
+ * 2026-09-14). That gate was what separated a composition from a sale in
+ * *prose*, and prose no longer reaches this function: what does is a
+ * `material` field a shop declared, or a stretch of `body_html` behind an
+ * explicit `composition|fabric|material` cue. A field labelled "material"
+ * saying `100% Primeflex` has already told us what it is, and dropping it
+ * for not being on a list we maintain is the parser overruling the page.
+ *
+ * Single characters are still dropped, which is what removes a stray
+ * micron grade, and the last three words are kept because a fibre is
+ * written with its qualifiers in front — "recycled polyester", "17.5μ
+ * merino wool" — never behind.
  */
 function materialName(words: readonly string[]): string | undefined {
-  // Scanned forward, keeping the last hit, rather than backward from the
-  // end: a backward loop needs `words[index]`, and the undefined that
-  // indexing forces is a branch the loop bounds already make unreachable.
-  let last = -1;
-  for (const [index, word] of words.entries()) {
-    if (isFibre(word)) last = index;
-  }
-  // No `last === -1` guard: the slice below is empty for a negative index,
-  // so the empty-name check already answers it. Two guards where one fires
-  // means neither can be killed.
   const name = words
-    .slice(Math.max(0, last - MAX_MATERIAL_WORDS + 1), last + 1)
+    .slice(-MAX_MATERIAL_WORDS)
     .filter((word) => word.length > 1 && !STOPWORDS.has(word))
     .join(" ");
   return name === "" ? undefined : name;
@@ -123,10 +120,9 @@ function materialsIn(section: string): FabricPart["materials"] {
     // to collapse what the stripping left behind.
     const words: string[] = [];
     for (const [word] of chunk.toLowerCase().matchAll(WORDS)) words.push(word);
-    // A percentage beside words is not a composition — "20% off today" and
-    // "Save 15%" are the common case on a product page. A known fibre is
-    // what makes it a fact rather than a sale, and it is why this no longer
-    // invents a fibre from "Made with 100% care in Portugal".
+    // What makes this a fact rather than a sale is now the *caller*: both
+    // are reading a field a shop labelled as the material. See
+    // `materialName`.
     const material = materialName(words);
     if (material === undefined) continue;
     materials.push({ material, pct: Number(pct) });

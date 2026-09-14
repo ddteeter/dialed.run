@@ -50,45 +50,30 @@ describe("the Shopify rung", () => {
     expect(shopifyExtractor.extract(PAGE, html)?.categoryHint).toBe("Tops");
   });
 
-  it.each([
-    ["Composition: 88% polyester, 12% elastane"],
-    ["Fabric: 88% polyester, 12% elastane"],
-    ["Material — 88% polyester, 12% elastane"],
-    ["Made from 88% polyester, 12% elastane"],
-  ])("reads a cued composition out of the description (%s)", (line) => {
-    const html = withProductJson({
+  it("reads no composition at all, cued or not", () => {
+    // **The rung stopped reading `body_html` for a composition**
+    // (2026-09-14). It was the last prose parse left after the text search
+    // was retired, and it was never earning its keep: measured over 14 real
+    // pages it found a composition on none, because shops put it in
+    // metafields and spec panels rather than the description. What it could
+    // still do was turn a sale into a fabric once the known-fibre gate came
+    // off, so it went too. Composition comes from a declared `material`
+    // field or from the model.
+    const cued = withProductJson({
       title: "Rover Half-Zip",
-      body_html: `<p>Built for cold mornings.</p><p>${line}</p>`,
+      body_html: "<p>Fabric: 88% polyester, 12% elastane</p>",
     });
-    expect(
-      shopifyExtractor.extract(PAGE, html)?.fabricComposition?.parts?.[0]
-        ?.materials,
-    ).toStrictEqual([
-      { material: "polyester", pct: 88 },
-      { material: "elastane", pct: 12 },
-    ]);
-  });
-
-  it("reads a cued multi-part composition", () => {
-    const html = withProductJson({
-      body_html: "<p>Fabric: Body: 100% nylon; Liner: 88% polyester</p>",
-    });
-    const parts = shopifyExtractor.extract(PAGE, html)?.fabricComposition
-      ?.parts;
-    expect(parts?.map((part) => part.part)).toStrictEqual(["Body", "Liner"]);
-  });
-
-  it("does NOT read a percentage with no cue in front of it", () => {
-    // The rung's one rule, and the reason it exists: an uncued parse of a
-    // description turns a sale into a fabric. "off" and "save" are not
-    // fibres, and a typed column saying they are is worse than an empty one.
-    const html = withProductJson({
+    const sale = withProductJson({
       title: "Rover Half-Zip",
       body_html: "<p>20% off today! Save 15% with code RUN.</p>",
     });
-    const extracted = shopifyExtractor.extract(PAGE, html);
-    expect(extracted?.fabricComposition).toBeUndefined();
-    expect(extracted?.name).toBe("Rover Half-Zip");
+
+    for (const html of [cued, sale]) {
+      const extracted = shopifyExtractor.extract(PAGE, html);
+      expect(extracted?.fabricComposition).toBeUndefined();
+      // Everything the rung is still for survives.
+      expect(extracted?.name).toBe("Rover Half-Zip");
+    }
   });
 
   it("survives a description with no composition at all", () => {
@@ -120,36 +105,6 @@ describe("the Shopify rung", () => {
     expect(shopifyExtractor.rung).toBe("shopify");
   });
 
-  it("strips a tag with attributes, not just a bare one", () => {
-    // Real descriptions are `<p class="desc">`, not `<p>`. A pattern that
-    // allows exactly one character inside the tag matches the tidy fixture
-    // and leaves the markup in on every real page — where the leftover
-    // attribute text then sits between the cue and the composition.
-    const html = withProductJson({
-      body_html:
-        '<div class="product-description"><p data-x="1">Fabric: 88% polyester, 12% elastane</p></div>',
-    });
-    expect(
-      shopifyExtractor.extract(PAGE, html)?.fabricComposition?.parts?.[0]
-        ?.materials,
-    ).toStrictEqual([
-      { material: "polyester", pct: 88 },
-      { material: "elastane", pct: 12 },
-    ]);
-  });
-
-  it("puts a space where a tag was, so neighbouring words stay apart", () => {
-    // "Made" and "from" are in separate elements, which is ordinary markup.
-    // Deleting the tag instead of replacing it yields "Madefrom", the cue
-    // stops matching, and the composition is lost on a page that had one.
-    const html = withProductJson({
-      body_html: "<p>Made</p><p>from 88% merino</p>",
-    });
-    expect(
-      shopifyExtractor.extract(PAGE, html)?.fabricComposition?.parts?.[0]
-        ?.materials,
-    ).toStrictEqual([{ material: "merino", pct: 88 }]);
-  });
 
   it.each([
     ['id="ProductJson"', "no suffix on the id"],
@@ -176,29 +131,4 @@ describe("the Shopify rung", () => {
     ).toBe("Janji");
   });
 
-  it("reads a cue with no separator after it at all", () => {
-    // "Fabric 88% polyester" — no colon, no dash. The separator is optional,
-    // and requiring exactly one loses every description written that way.
-    const html = withProductJson({
-      body_html: "<p>Fabric 88% polyester</p>",
-    });
-    expect(
-      shopifyExtractor.extract(PAGE, html)?.fabricComposition?.parts?.[0]
-        ?.materials,
-    ).toStrictEqual([{ material: "polyester", pct: 88 }]);
-  });
-
-  it("eats the whole separator between cue and composition", () => {
-    // "Fabric: - 88% polyester" is four characters of punctuation and space
-    // before the fact starts. `verbatim` is what a runner reads and what a
-    // later parser re-runs over, so leaving "- " on the front of it is a
-    // real defect — and the only one that distinguishes consuming the whole
-    // separator from consuming one character of it.
-    const html = withProductJson({
-      body_html: "<p>Fabric: - 88% polyester</p>",
-    });
-    expect(
-      shopifyExtractor.extract(PAGE, html)?.fabricComposition?.verbatim,
-    ).toBe("88% polyester");
-  });
 });

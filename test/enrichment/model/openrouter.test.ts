@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { garmentCategories } from "../../../src/lib/contracts";
+import { knownFibres } from "../../../src/modules/enrichment/fibres";
 
 import {
   createOpenRouterModel,
@@ -195,6 +196,28 @@ describe("createOpenRouterModel: the request", () => {
     expect(system).toContain("only what the page states. Never infer");
     expect(system).toContain("return null");
     expect(system).toContain("copied from the page exactly");
+  });
+
+  it("teaches the model what a fibre is, from the vocabulary", async () => {
+    // **Where `fibres.ts` went when it stopped being a gate**
+    // (2026-09-14). The eval measured the need: models called
+    // `Coreloft™ 80`, `Arato™ 15`, `2:09 Mesh` and `decoration` materials.
+    // And the hint is examples, never an allow-list — a shop may state
+    // `100% Primeflex`, and dropping it for not being on our list was the
+    // gate's mistake, which the prompt must not inherit.
+    const fetchImpl = answering(FOUND);
+    await modelWith(fetchImpl).extract(PAGE_TEXT, HINT);
+    const system = sentBody(fetchImpl).messages[0]?.content ?? "";
+
+    expect(system).toContain(
+      `A material is a fibre, such as: ${knownFibres().join(", ")}.`,
+    );
+    expect(system).toContain("trade name is not a material");
+    // And where to put it instead — a trade name is a *part label*, which
+    // is how `Coreloft™ 80` and `PacerWeave body` reach the row without
+    // being claimed as fibres.
+    expect(system).toContain("part label where the page puts it");
+    expect(system).toContain("not in that list, report it as written");
   });
 
   it("names the category vocabulary from the contract, not from memory", async () => {
