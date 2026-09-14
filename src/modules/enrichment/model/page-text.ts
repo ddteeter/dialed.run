@@ -18,12 +18,28 @@ import { readableText, textNodes, withoutCode } from "../html";
  * times the prose a real product page carries, so the cap almost never
  * fires and is a guard rather than a filter.
  *
- * Nodes are kept whole, in order, until the budget runs out. A composition
- * arrives as one text node (measured — that is why the composition pass
- * works on nodes), so cutting mid-node is the one way to turn a fact into
- * a fragment.
+ * Nodes are kept whole, in order. A composition arrives as one text node
+ * (measured — that is why the composition pass works on nodes), so cutting
+ * mid-node is the one way to turn a fact into a fragment.
  */
 const MAX_CHARS = 24_000;
+
+/**
+ * Longer than this, a "text node" is not prose.
+ *
+ * **Measured, and it was hiding a worse bug.** Tracksmith's page carries
+ * text nodes of 168,000, 159,000 and 129,000 characters — data that
+ * survived script-stripping, not words anyone reads. Sending one would
+ * spend the whole budget on a blob; and because the loop below used to
+ * *stop* at the first node too big to fit, one of them truncated that page
+ * to 2,028 of its 889,578 characters. The model was then recorded as having
+ * "found nothing" on a page it had never been shown — which is how a bug in
+ * this file became evidence about a model.
+ *
+ * 8,000 characters is roughly two thousand words, comfortably longer than
+ * any real description in the corpus and far below the blobs.
+ */
+const MAX_NODE_CHARS = 8000;
 
 export function pageTextFor(html: string): string {
   const kept: string[] = [];
@@ -37,7 +53,10 @@ export function pageTextFor(html: string): string {
     // which is exactly what it did.
     const text = readableText(node);
     if (text === "") continue;
-    if (total + text.length > MAX_CHARS) break;
+    // `continue`, never `break`: a node that does not fit is one node, and
+    // the page's real copy is usually still to come.
+    if (text.length > MAX_NODE_CHARS) continue;
+    if (total + text.length > MAX_CHARS) continue;
     kept.push(text);
     total += text.length + 1;
   }

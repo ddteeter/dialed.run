@@ -36,27 +36,57 @@ describe("pageTextFor", () => {
     expect(pageTextFor("<p>a</p>\n   \n<p>b</p>")).toBe("a\nb");
   });
 
-  it("stops at the budget, and keeps whole nodes when it does", () => {
-    // A composition arrives as one text node — that is why the composition
-    // pass works on nodes — so cutting mid-node is the one way to turn a
-    // fact into a fragment.
-    const filler = `<p>${"x".repeat(12_000)}</p>`;
-    const text = pageTextFor(`${filler}${filler}<p>100% merino wool</p>`);
+  it("skips a node that does not fit and keeps reading past it", () => {
+    // It used to `break` here, and that was the bug: one oversized node
+    // stopped collection entirely. Tracksmith's page has three text nodes
+    // over 100,000 characters, so it reached the model as 2,028 of its
+    // 889,578 characters — and the model was then recorded as having
+    // "found nothing" on a page nobody had shown it.
+    const filler = `<p>${"x".repeat(7000)}</p>`;
+    const text = pageTextFor(
+      `${filler}${filler}${filler}${filler}<p>100% merino wool</p>`,
+    );
+    expect(text).toContain("100% merino wool");
     expect(text.length).toBeLessThanOrEqual(24_000);
-    expect(text).not.toContain("merino");
-    // Whole nodes: what survived is exactly one filler, not a cut one.
-    expect(text).toBe("x".repeat(12_000));
   });
 
-  it("keeps a node that lands exactly on the budget", () => {
-    // The budget is a maximum, not one short of it: `>` and `>=` differ on
-    // exactly this input and on no other.
-    expect(pageTextFor(`<p>${"x".repeat(24_000)}</p>`)).toHaveLength(24_000);
-    expect(pageTextFor(`<p>${"x".repeat(24_001)}</p>`)).toBe("");
+  it("drops a node too long to be prose, however much budget is left", () => {
+    // A single text node of 168,000 characters is data that survived
+    // script-stripping, not words a person reads. Spending the budget on
+    // one is the same failure by a different route.
+    const blob = "x".repeat(8001);
+    const text = pageTextFor(`<p>${blob}</p><p>100% merino wool</p>`);
+    expect(text).toBe("100% merino wool");
+  });
+
+  it("keeps a node of exactly the per-node limit", () => {
+    // The limit is a maximum, not one short of it.
+    const text = pageTextFor(`<p>${"x".repeat(8000)}</p>`);
+    expect(text).toHaveLength(8000);
+  });
+
+  it("keeps a node that lands the total exactly on the budget", () => {
+    // `>` and `>=` differ on exactly this input and on no other. Two full
+    // nodes plus their separators leave room for 7,998 more characters, so
+    // the third node fits precisely.
+    const full = `<p>${"x".repeat(8000)}</p>`;
+    const exact = `<p>${"x".repeat(7998)}</p>`;
+    expect(pageTextFor(`${full}${full}${exact}`)).toHaveLength(24_000);
+    // One more character and it is refused, leaving the two that fit.
+    const over = `<p>${"x".repeat(7999)}</p>`;
+    expect(pageTextFor(`${full}${full}${over}`)).toHaveLength(16_001);
+  });
+
+  it("stops adding once the total budget is spent", () => {
+    // Three nodes that each fit on their own, and together do not.
+    const node = `<p>${"x".repeat(8000)}</p>`;
+    const text = pageTextFor(`${node}${node}${node}${node}`);
+    expect(text.length).toBeLessThanOrEqual(24_000);
+    expect(text.length).toBeGreaterThan(16_000);
   });
 
   it("keeps a page that fits entirely", () => {
-    const text = pageTextFor(`<p>${"x".repeat(23_000)}</p><p>tail</p>`);
+    const text = pageTextFor(`<p>${"x".repeat(7000)}</p><p>tail</p>`);
     expect(text.endsWith("tail")).toBe(true);
   });
 

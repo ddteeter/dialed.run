@@ -104,6 +104,20 @@ export interface OpenRouterOptions {
   model: string;
   provider: string;
   fetchImpl?: typeof fetch | undefined;
+  /**
+   * Overrides the default bound, and exists for the eval rather than for
+   * production.
+   *
+   * The default is a *resilience* limit (law 4) — a slow upstream must not
+   * wedge a consumer — and 30 seconds is right for work a queue is waiting
+   * on. The eval is asking a different question: whether a model *can*
+   * extract, not whether it can do so inside our budget. Scoring a slow
+   * provider as incapable conflates the two, which is exactly what happened
+   * the first time round: two models were recorded as answering 9 and 5
+   * pages of 22, and every failure was a timeout or a rate limit rather
+   * than a bad extraction.
+   */
+  timeoutMs?: number;
 }
 
 export function createOpenRouterModel(
@@ -126,7 +140,7 @@ async function askModel(
 ): Promise<ExtractedProduct> {
   const response = await fetchImpl(ENDPOINT, {
     method: "POST",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
