@@ -139,8 +139,13 @@ weight             text          -- NULLABLE enum: light | mid | heavy
 fabric             text          -- NULLABLE enum (same as garments)
 wind_resistant     int           -- NULLABLE 0/1
 water_resistant    int           -- NULLABLE 0/1
-extracted          text          -- NULLABLE JSON: everything else the
-                                 -- extraction ladder found (D-31 "raw extras")
+extracted          text          -- NULLABLE JSON, written only by 107's
+                                 -- applyExtraction: { rung, found, written }.
+                                 -- `found` is everything the ladder found
+                                 -- (D-31 "raw extras"); `written` is what it
+                                 -- last put in each typed column, which is
+                                 -- how "never overwrite a human edit" is
+                                 -- decided without a per-column flag
 extraction_status  text          -- enum: none | pending | done | failed
 status             text          -- 'active' | 'hidden' (106 moderation —
                                  -- product names are UGC, D-26)
