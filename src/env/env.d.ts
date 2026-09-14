@@ -17,5 +17,9 @@ declare namespace Cloudflare {
     STRAVA_CLIENT_ID?: string;
     STRAVA_CLIENT_SECRET?: string;
     STRAVA_WEBHOOK_VERIFY_TOKEN?: string;
+    /** Firecrawl key (107) — the proxy fetch for shops that refuse a
+     * Worker. Absent: a refusal is recorded as a failed fetch and nothing
+     * else happens (law 5). See `modules/enrichment/firecrawl.ts`. */
+    FIRECRAWL_API_KEY?: string;
   }
 }

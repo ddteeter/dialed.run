@@ -1,3 +1,6 @@
+import { PageFetchError, readCapped } from "./bounds";
+import { scrapeThroughProxy } from "./firecrawl";
+
 /**
  * The one outbound fetch enrichment makes, and the only place a product URL
  * reaches the network.
@@ -39,41 +42,27 @@
  *   Rendering is right, and it is on-platform and effectively free at our
  *   volume: 10 browser hours/month included, which is thousands of pages.
  *
- * Neither is wired yet, and the 403 path is now the one with evidence
- * behind it: a Worker is refused by 11 of 14 sampled retailers, so the
- * proxy fetch is the primary path rather than an escalation. The 200-with-
- * nothing-in-it path has exactly one measured instance (the SOAR shorts
- * page), which is enough to know the shape and not enough to buy for.
+ * The first is wired, in `firecrawl.ts`: a direct fetch first, because it
+ * is free and three of fourteen shops allow it, and on a refusal the same URL
+ * through the proxy. The second is not — it has exactly one measured
+ * instance (the SOAR shorts page), which is enough to know the shape and not
+ * enough to buy for.
  */
 
 const TIMEOUT_MS = 10_000;
-
-/**
- * **Measured, not guessed — and 2 MB was too small.** The eight sampled
- * product pages run 619 kB to 2,450 kB, and two of them are over 2 MB, so
- * the original cap silently dropped a quarter of the sample. A modern
- * Shopify theme is heavy in a way that has nothing to do with the product:
- * the whole product JSON is rendered into a `data-product` attribute, once
- * per related product.
- *
- * 6 MB clears the largest seen with room over it, and stays far under a
- * Worker's 128 MB: this is a guard against a stream that never ends, not a
- * budget. The reason it has to be a cap at all is in `readCapped` below.
- */
-const MAX_BYTES = 6 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 
 /**
- * Any bounded-fetch failure. Always caught by the consumer and recorded as
- * `extraction_status='failed'` — never surfaced to the person who pasted the
- * link, because their save already succeeded (law 5).
+ * The statuses a proxy can do something about: the page exists and the
+ * server chose not to serve *us*. 403 is the measured one — every blocked
+ * shop in the sample answered with it — and the other three are the
+ * shapes a bot wall takes elsewhere: a challenge dressed as auth, a rate
+ * limit, a "temporarily unavailable" that is available to a browser. A 404
+ * is not here on purpose: a page that does not exist does not exist from a
+ * residential address either, and paying a credit to learn that twice is
+ * the wrong kind of thorough.
  */
-export class PageFetchError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "PageFetchError";
-  }
-}
+const REFUSALS = new Set([401, 403, 429, 503]);
 
 /**
 Literal IPv4 in the ranges that must never be reachable from a fetch.
@@ -166,50 +155,62 @@ function assertFetchable(url: URL): void {
   }
 }
 
-/**
- * Read at most `MAX_BYTES`, and stop reading when we pass it.
- *
- * A cap applied to an already-buffered body is not a cap — by the time you
- * can measure it you have already held it in a 128 MB isolate. Content-Length
- * is a claim, not a measurement, so it is used only as an early reject.
- */
-async function readCapped(response: Response): Promise<string> {
-  // `Number(null)` is 0, so a missing header needs no branch of its own.
-  const claimed = Number(response.headers.get("content-length"));
-  if (claimed > MAX_BYTES) {
-    throw new PageFetchError(`Page declares ${String(claimed)} bytes`);
-  }
-  const body = response.body;
-  if (body === null) throw new PageFetchError("Page had no body");
-
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let total = 0;
-  let html = "";
-  try {
-    let isDone = false;
-    while (!isDone) {
-      const chunk = await reader.read();
-      isDone = chunk.done;
-      if (chunk.value === undefined) continue;
-      total += chunk.value.byteLength;
-      if (total > MAX_BYTES) {
-        throw new PageFetchError(`Page exceeded ${String(MAX_BYTES)} bytes`);
-      }
-      html += decoder.decode(chunk.value, { stream: true });
-    }
-  } finally {
-    await reader.cancel();
-  }
-  return html + decoder.decode();
-}
-
 export interface FetchedPage {
   /**
   Where the bytes actually came from, after redirects.
   */
   finalUrl: string;
   html: string;
+  /**
+   * Which door the page came through. Recorded so the share of pastes that
+   * needed the proxy is a number, and a bill that grows has a cause.
+   */
+  via: "direct" | "proxy";
+}
+
+export interface FetchOptions {
+  /**
+   * The Firecrawl key, read from `env` by the consumer and passed in so this
+   * module stays importable without bindings. Absent means no proxy: a
+   * refusal is recorded as a failed fetch, exactly as before there was one.
+   */
+  proxyApiKey?: string | undefined;
+}
+
+/**
+The next hop of a redirect, resolved against the one that sent us there.
+*/
+function redirectTarget(response: Response, from: URL): URL {
+  const location = response.headers.get("location");
+  if (location === null) throw new PageFetchError("Redirect with no target");
+  const next = URL.parse(location, from.href);
+  if (next === null) throw new PageFetchError("Redirect to an unparseable URL");
+  return next;
+}
+
+/**
+ * A response that is neither a redirect nor ok — through the proxy if the
+ * status is one a proxy can answer and there is a key, a failure otherwise.
+ *
+ * Proxied from the hop that was refused: every hop before it passed
+ * `assertFetchable`, and the proxy follows any further redirects on its own
+ * network, where a hop into private space reaches nothing of ours.
+ */
+async function refused(
+  response: Response,
+  at: URL,
+  fetchImpl: typeof fetch,
+  options: FetchOptions,
+): Promise<FetchedPage> {
+  if (REFUSALS.has(response.status) && options.proxyApiKey !== undefined) {
+    const proxied = await scrapeThroughProxy(
+      at.href,
+      options.proxyApiKey,
+      fetchImpl,
+    );
+    return { ...proxied, via: "proxy" };
+  }
+  throw new PageFetchError(`Page returned ${String(response.status)}`);
 }
 
 /**
@@ -223,6 +224,7 @@ export interface FetchedPage {
 export async function fetchProductPage(
   rawUrl: string,
   fetchImpl: typeof fetch = fetch,
+  options: FetchOptions = {},
 ): Promise<FetchedPage> {
   const parsed = URL.parse(rawUrl);
   if (parsed === null) throw new PageFetchError("Unparseable URL");
@@ -238,20 +240,22 @@ export async function fetchProductPage(
     });
 
     if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (location === null)
-        throw new PageFetchError("Redirect with no target");
-      const next = URL.parse(location, current.href);
-      if (next === null)
-        throw new PageFetchError("Redirect to an unparseable URL");
-      current = next;
+      current = redirectTarget(response, current);
       continue;
     }
-
+    // `await`, not a bare `return` of the promise: under workerd the inner
+    // rejection is reported as unhandled before the outer promise adopts
+    // it — twelve of them across the suite, from tests that passed — and
+    // the mutation runner cannot stringify an error that crossed the
+    // isolate boundary, so it crashed the dry run instead of reporting it.
     if (!response.ok) {
-      throw new PageFetchError(`Page returned ${String(response.status)}`);
+      return await refused(response, current, fetchImpl, options);
     }
-    return { finalUrl: current.href, html: await readCapped(response) };
+    return {
+      finalUrl: current.href,
+      html: await readCapped(response),
+      via: "direct",
+    };
   }
   throw new PageFetchError(`More than ${String(MAX_REDIRECTS)} redirects`);
 }

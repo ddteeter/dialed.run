@@ -20,7 +20,11 @@ improves. Invisible: results arrive as pre-filled, editable fields.
 `src/modules/enrichment/`, consumed only through its `index.ts`:
 
 - `fetch-page.ts` — https only, private address space blocked before and after
-  redirects, 10s, 2 MB enforced while streaming.
+  redirects, 10s; direct from the Worker first, then through the proxy on a
+  refusal (401/403/429/503 — a 404 is not a refusal and earns no credit).
+- `bounds.ts` — the 6 MB cap, enforced while streaming, shared by both doors.
+- `firecrawl.ts` — the proxy: `/v2/scrape`, `proxy: "auto"`, the envelope
+  zod-parsed and held to the same cap. Unconfigured means unwired.
 - `snapshot.ts` — HTML to `MEDIA` before parsing, then the row. R2 first:
   nothing spans R2 and D1 (law 8c), and an orphaned object is recoverable
   where a row pointing at no object is not.
@@ -157,9 +161,10 @@ available, not a plan upsell. The cheapest paid plan's 5,000 credits is
 _within_ a paid plan — there is no bucket without a subscription — and the
 free tier's 1,000/month is itself real headroom before launch.
 
-The adapter is still built unconfigured by default, degrading to the
-deterministic rungs when no key is set (law 5), so the spend is a decision
-about users rather than a refactor.
+The proxy is wired (`firecrawl.ts`) and unconfigured by default: with no
+`FIRECRAWL_API_KEY` a refusal is recorded as a failed fetch, exactly as
+before there was a proxy (law 5). So the spend is a decision about users
+rather than a refactor — setting the secret is the whole switch.
 
 ## What a full page taught that a fixture could not
 
