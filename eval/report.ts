@@ -1,5 +1,5 @@
 import type { FabricComposition } from "../src/lib/contracts";
-import { isFibre } from "../src/modules/enrichment/fibres";
+import { knownFibres } from "../src/modules/enrichment/fibres";
 import type { PageExtractions } from "./extractions";
 
 /**
@@ -20,13 +20,28 @@ export function materialCount(composition: FabricComposition | undefined): numbe
 }
 
 /**
+ * Does any word of this material name a fibre the vocabulary knows?
+ *
+ * Matched on a word rather than the whole string, because a fibre arrives
+ * with qualifiers attached — "recycled polyester", "17.5μ merino wool".
+ */
+function isKnownFibre(material: string): boolean {
+  const known = new Set<string>(knownFibres());
+  for (const [word] of material.toLowerCase().matchAll(/\p{Letter}+/gu)) {
+    if (known.has(word)) return true;
+  }
+  return false;
+}
+
+/**
  * Every material named by anyone, that `fibres.ts` does not recognise.
  *
- * An eval concern rather than a module one. This walk used to live in
- * `fibres.ts` and feed a `fibre_candidates` table, which was removed with
- * the prose search it existed to improve (2026-09-14). What is left is a
- * review column: seeing that a model called `Coreloft™ 80` a material is
- * useful to a person reading this report, and to nothing else.
+ * **This is the verification half of the vocabulary**, and the only half
+ * left in code. The list is a *hint* in the prompt now, not a gate in the
+ * parser (2026-09-14): a model is told what a fibre is, and this reports
+ * what it named anyway. Seeing `Coreloft™ 80` or `decoration` in this
+ * column is how a person judges whether the hint is working — a gate could
+ * only have thrown the answer away.
  */
 export function unrecognised(page: PageExtractions): string[] {
   const words = new Set<string>();
@@ -34,7 +49,7 @@ export function unrecognised(page: PageExtractions): string[] {
     const parts = candidate.composition?.parts ?? [];
     for (const part of parts) {
       for (const { material } of part.materials) {
-        if (!isFibre(material)) words.add(material.toLowerCase());
+        if (!isKnownFibre(material)) words.add(material.toLowerCase());
       }
     }
   }

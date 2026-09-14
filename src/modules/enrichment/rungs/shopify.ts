@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import type { PageExtractor } from "../../../lib/contracts";
-import { parseComposition } from "../composition";
 import { someExtracted, textAt } from "../extracted";
 import { parseJson, scriptBodies } from "../html";
 
@@ -33,19 +32,6 @@ const PRODUCT_JSON_TAG =
 */
 const ANALYTICS_META = /var\s+meta\s*=\s*(\{[^\n]*?\});/iu;
 
-/**
-A composition is only read from a *cued* stretch of the description.
-
-`body_html` is prose, and `parseComposition` asks only for a percentage
-beside words — so an uncued parse turns "20% off today" into a fibre called
-"off" and "Save 15%" into one called "save". A shop that is stating a
-composition nearly always says so first, and requiring the cue is what
-separates a fact from a discount without needing to understand either.
-
-Anything uncued is left for the model rung, which can tell them apart.
-*/
-const CUED_COMPOSITION =
-  /(?:composition|fabrication|fabric|material|made\s{1,4}(?:from|of|with))[\s:–-]{0,4}([^<\n]{0,200})/iu;
 
 /**
 The product object, wherever the theme put it.
@@ -67,17 +53,6 @@ function productFrom(html: string): unknown {
   return meta.success ? meta.data.product : undefined;
 }
 
-/**
- * Tags out, entities left alone — the cue only needs readable text.
- *
- * The tag body is bounded rather than `*`: an unclosed `<` in a description
- * makes the unbounded form backtrack across the rest of the document, and
- * this runs on markup someone else wrote.
- */
-function textOf(bodyHtml: string): string {
-  return bodyHtml.replaceAll(/<[^>]{0,2000}>/gu, " ");
-}
-
 export const shopifyExtractor: PageExtractor = {
   rung: "shopify",
   extract(_url, html) {
@@ -87,17 +62,12 @@ export const shopifyExtractor: PageExtractor = {
     // near-copy of the garment contract to the clone detector while being a
     // different idea entirely.
     const product = productFrom(html);
-    const body = textAt(product, "body_html");
-    const cued =
-      body === undefined ? undefined : CUED_COMPOSITION.exec(textOf(body))?.[1];
 
     return someExtracted({
       name: textAt(product, "title"),
       brand: textAt(product, "vendor"),
       categoryHint: textAt(product, "product_type") ?? textAt(product, "type"),
       imageUrl: textAt(product, "featured_image"),
-      fabricComposition:
-        cued === undefined ? undefined : parseComposition(cued),
     });
   },
 };

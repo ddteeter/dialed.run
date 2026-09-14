@@ -129,13 +129,21 @@ describe("parseComposition", () => {
     ["Made with 100% care in Portugal", "marketing that mentions a number"],
     ["20% off today! Save 15% with code RUN.", "a sale"],
     ["Rated 100% by 40 runners", "a review score"],
-  ])("is not fooled by %s — %s", (raw) => {
-    // This used to be a documented failure: a percentage beside words was
-    // all the parser asked for, so it produced a fibre called "made with
-    // care in portugal". Requiring a *known fibre* beside the number is what
-    // retired it, and the discount cases are not hypothetical — the Janji
-    // page carries six "% off" strings against three real ones.
-    expect(parseComposition(raw)).toBeUndefined();
+    ["100% Primeflex", "a proprietary fibre no list can contain"],
+  ])("takes %s at face value — %s", (raw) => {
+    // **This is the trade the gate removal made, stated both ways.**
+    //
+    // A known-fibre requirement used to reject all four: the first three
+    // correctly, the fourth — a real fibre a shop declared — as collateral
+    // damage, which is why it went (owner, 2026-09-14).
+    //
+    // What replaced it is the *caller*. Nothing hands this function prose
+    // any more: the only path left is a `material` field a shop labelled as
+    // the material, and a page that labels a discount "material" has told
+    // us something we have no business second-guessing. Marketing reaches
+    // the model instead, which is told what a fibre is rather than asked to
+    // match a list.
+    expect(parseComposition(raw)).toBeDefined();
   });
 
   it("is not a composition without a number", () => {

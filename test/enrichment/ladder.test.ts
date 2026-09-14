@@ -23,18 +23,18 @@ function ogBlock(property: string, content: string): string {
 
 describe("runLadder", () => {
   it("takes the best source for each field, not the first that answers", () => {
-    // The rule the whole ladder exists for. JSON-LD names the product but
-    // declares no material; the composition is in Shopify's description; the
-    // only image is an og tag. A ladder that stopped at the first rung to
-    // return anything would have the name and nothing else.
+    // The rule the whole ladder exists for. JSON-LD names the product and
+    // declares the material; Shopify's payload has the vendor; the only
+    // image is an og tag. A ladder that stopped at the first rung to return
+    // anything would have the name and nothing else.
     const html = `<html><head>
-      ${ldBlock({ name: "Rover Half-Zip" })}
+      ${ldBlock({
+        name: "Rover Half-Zip",
+        material: "88% polyester, 12% elastane",
+      })}
       ${ogBlock("og:image", "https://cdn.example.com/rover.jpg")}
     </head><body>
-      ${shopifyBlock({
-        vendor: "Janji",
-        body_html: "<p>Fabric: 88% polyester, 12% elastane</p>",
-      })}
+      ${shopifyBlock({ vendor: "Janji" })}
     </body></html>`;
 
     const { extracted } = runLadder(PAGE, html);
@@ -56,12 +56,11 @@ describe("runLadder", () => {
   });
 
   it("records the deepest rung that contributed, not the highest", () => {
-    // The column's job is to say whether re-running could help. Everything
-    // here came from JSON-LD except the composition, which needed Shopify's
-    // description — recording "jsonld" would hide the part a later parser or
-    // model could actually improve.
-    const html = `${ldBlock({ name: "Rover Half-Zip", brand: "Janji" })}
-      ${shopifyBlock({ body_html: "<p>Fabric: 100% merino</p>" })}`;
+    // The column's job is to say whether re-running could help. The name
+    // came from JSON-LD and the vendor from Shopify's payload — recording
+    // "jsonld" would hide the rung that actually added something.
+    const html = `${ldBlock({ name: "Rover Half-Zip" })}
+      ${shopifyBlock({ vendor: "Janji" })}`;
     expect(runLadder(PAGE, html).rung).toBe("shopify");
   });
 

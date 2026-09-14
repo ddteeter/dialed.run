@@ -7,6 +7,7 @@ import {
   type ExtractedProduct,
   type ExtractionModel,
 } from "../../../lib/contracts";
+import { knownFibres } from "../fibres";
 import { parseJson } from "../html";
 import { strictSchemaFor, withoutNulls } from "./json-schema";
 
@@ -94,6 +95,20 @@ const SYSTEM_PROMPT = [
   "If the page does not state a field, return null for it.",
   "fabricComposition.verbatim must be copied from the page exactly, character for character.",
   `categoryHint must be one of: ${garmentCategories.join(", ")}.`,
+  // The vocabulary as a *hint*, which is where it moved to when it stopped
+  // being a parser gate (2026-09-14). The eval measured the need: models
+  // called `Coreloft™ 80`, `Arato™ 15`, `2:09 Mesh` and `decoration`
+  // materials. Those are fabric trade names and a legal disclaimer, and a
+  // model that has been told what a fibre is stops offering them.
+  //
+  // Examples rather than an allow-list, deliberately. A shop may state a
+  // proprietary fibre this list cannot contain — `100% Primeflex` — and the
+  // answer there is to report it, not to drop it. That was the gate's
+  // mistake and the prompt must not inherit it.
+  `A material is a fibre, such as: ${knownFibres().join(", ")}.`,
+  "A fabric's trade name is not a material: report the fibres it is made of,",
+  "and put the trade name in the part label where the page puts it.",
+  "If the page states a fibre not in that list, report it as written.",
 ].join(" ");
 
 export interface OpenRouterOptions {
