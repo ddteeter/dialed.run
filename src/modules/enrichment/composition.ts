@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import { fabricPartSchema, type FabricComposition } from "../../lib/contracts";
 import { isFibre } from "./fibres";
-import { textNodes, withoutCode } from "./html";
+import { readableText, textNodes, withoutCode } from "./html";
 
 /**
 Derived from the schema rather than restated (CLAUDE.md §Derive, don't mirror).
@@ -46,52 +46,6 @@ const PERCENTAGE = /(\d{1,3}(?:\.\d+)?)\s?%/u;
 Runs of letters — the fibre name, once the numbers are set aside.
 */
 const WORDS = /[\p{Letter}'-]+/gu;
-
-/**
- * HTML entities, removed before anything reads the text.
- *
- * A description arrives with `&amp;` in it — often double-encoded, as
- * `&amp;amp;` — and a letter-run match turns that into a fibre called "amp".
- *
- * Decoded before stripping, and that order is the point: stripping
- * `&amp;amp;` twice leaves a bare `amp;`, because the second pass has no `&`
- * left to match. Decoding to `&` first collapses the nesting, and whatever
- * entities remain are then removed.
- *
- * `\u0026` is the same character arriving through JSON, which reaches this
- * from product data embedded in an *attribute* — a value containing `>`
- * spills past naive tag splitting and lands in the text. Stripping scripts
- * does not catch it, because it was never in a script.
- */
-const AMPERSAND = /&amp;|\\u0026/giu;
-const ENTITY = /&#?[a-z0-9]{1,8};/giu;
-
-/**
- * A text node as a reader would see it: entities resolved, whitespace
- * collapsed.
- *
- * Decoded until it stops changing rather than a fixed number of passes. The
- * nesting is genuinely three deep in the wild — `\u0026amp;amp;` unwraps to
- * `&amp;amp;`, then `&amp;`, then `&` — and stopping one short leaves an
- * entity the strip below eats, taking the separator between two fibres with
- * it and merging them into one nonsense material.
- */
-function readableText(raw: string): string {
-  // Until it stops changing, with no pass counter. Every decode strictly
-  // shortens the string — `&amp;` and `\u0026` are both longer than the `&`
-  // they become — so this terminates, and a bound would only be a number
-  // nothing could distinguish from a larger one.
-  let decoded = raw;
-  let next = decoded.replaceAll(AMPERSAND, "&");
-  // Compared against the *result* rather than a seeded previous value: any
-  // seed is a string the first comparison can never depend on, which is a
-  // mutant nothing distinguishes.
-  while (next !== decoded) {
-    decoded = next;
-    next = decoded.replaceAll(AMPERSAND, "&");
-  }
-  return decoded.replaceAll(ENTITY, " ").replaceAll(/\s+/gu, " ").trim();
-}
 
 /**
  * Words that are never part of a fibre name, and the cap on how long one is.

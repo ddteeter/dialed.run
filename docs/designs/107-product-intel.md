@@ -116,7 +116,41 @@ number that should climb.
 - Write-back: skips an edited field, skips a **cleared** one, fills a
   never-set one. (workers pool)
 
-## Eval (D-32) — pending `OPENROUTER_API_KEY`
+## The model rung, and why the provider is pinned
+
+`model/openrouter.ts` implements `ExtractionModel`. Three things it does
+that are not obvious, each measured rather than assumed:
+
+**The provider is pinned and fallbacks are off.** Structured output is a
+property of the *endpoint*, not the model — and the endpoint listing proves
+it: `openai/gpt-5.6-luna` is served by seven endpoints and the **Amazon
+Bedrock** one reports `structured_outputs: false` while OpenAI's and
+Azure's report true. Unpinned, a request can be routed to an endpoint that
+ignores `response_format` and answers with prose. That is not an error; it
+is a successful completion nobody can parse, and it would show up weeks
+later as an accuracy drop with no failing request behind it.
+
+**The JSON Schema is derived from the contract** (`model/json-schema.ts`),
+because a hand-written copy is a rival truth: a field added to
+`extractedProductSchema` and forgotten there is one the model is never asked
+for, silently. Two translations sit on top of `z.toJSONSchema`, and both are
+the provider's dialect rather than a second schema — strict mode requires
+every property in `required`, so "optional" is re-expressed as "required and
+nullable", and the nulls are dropped again before the contract parses the
+answer.
+
+**`extras` is not asked for.** It converts to `propertyNames`, which OpenAI
+refuses outright (measured: `400 invalid_json_schema`), and it is the field
+the deterministic rungs keep raw evidence in — a model inventing entries for
+it would be writing fiction into the one column kept for provenance.
+
+Verified end to end against the live API, two real pages: on the rabbit
+page the model returned all three labelled fabric sections where the
+deterministic pass found one. It also showed the prompt needs decoded text —
+given `&amp;` it copied `&amp;` into `verbatim`, exactly as instructed — so
+`pageTextFor` runs the same entity decode the composition pass does.
+
+## Eval (D-32) — the harness is next
 
 ~20 real pages, fixtures committed as **fragments** rather than whole pages —
 the repo is public and these are copyrighted marketing pages, and a rung only

@@ -1,3 +1,5 @@
+import { UpstreamError } from "../../lib/errors";
+
 /**
  * The bounds every fetched page is held to, whichever path fetched it.
  *
@@ -25,10 +27,9 @@ export const MAX_BYTES = 6 * 1024 * 1024;
  * `extraction_status='failed'` — never surfaced to the person who pasted the
  * link, because their save already succeeded (law 5).
  */
-export class PageFetchError extends Error {
+export class PageFetchError extends UpstreamError {
   constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "PageFetchError";
+    super("PageFetchError", message, options);
   }
 }
 
