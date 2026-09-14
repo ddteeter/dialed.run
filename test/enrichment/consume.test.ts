@@ -483,7 +483,7 @@ describe("reextract", () => {
       .set({ rung: "none" })
       .where(eq(productSnapshots.id, before?.id ?? ""));
 
-    const report = await reextract(db(), productId);
+    const report = await reextract(depsWith(fetchImpl), productId);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(report?.kept).toStrictEqual(["fabricComposition"]);
@@ -495,7 +495,8 @@ describe("reextract", () => {
 
   it("does nothing for a product that has never been snapshotted", async () => {
     const productId = await pendingProduct();
-    expect(await reextract(db(), productId)).toBeUndefined();
+    const deps = depsWith(serving(PAGE));
+    expect(await reextract(deps, productId)).toBeUndefined();
     expect(await statusOf(productId)).toBe("pending");
   });
 
@@ -509,7 +510,8 @@ describe("reextract", () => {
       rung: "text",
       fetchedAt: 1,
     });
-    expect(await reextract(db(), productId)).toBeUndefined();
+    const deps = depsWith(serving(PAGE));
+    expect(await reextract(deps, productId)).toBeUndefined();
   });
 });
 
@@ -605,5 +607,103 @@ describe("handleEnrichmentBatch: the primary image", () => {
     expect(row.extractionStatus).toBe("done");
     expect(row.imageKey).toBeNull();
     expect(deps.captureException).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A page a deterministic rung can read the *name* off — Open Graph, which
+ * essentially every shop ships — while stating no composition anywhere.
+ * That is the shape the model rung exists for, and it is why the rung below
+ * stays `og` rather than falling to `none`.
+ */
+const OPAQUE = `<html><head>
+<meta property="og:title" content="Graves Shell">
+</head><body><p>Built for cold mornings.</p></body></html>`;
+
+function modelAnswering(verbatim: string) {
+  return {
+    extract: vi.fn(() => Promise.resolve({ fabricComposition: { verbatim } })),
+  };
+}
+
+describe("handleEnrichmentBatch: the model rung", () => {
+  it("asks the model when the page states no composition, and records `llm`", async () => {
+    const productId = await pendingProduct();
+    const model = modelAnswering("100% Primeflex");
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [jobFor(productId)]), {
+      ...depsWith(serving(OPAQUE)),
+      model,
+    });
+
+    expect(model.extract).toHaveBeenCalledTimes(1);
+    const row = await rowOf(productId);
+    expect(row.fabricComposition).toBe("100% Primeflex");
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.rung).toBe("llm");
+  });
+
+  it("does not ask when the page already stated one", async () => {
+    // The cost control: seven of the eight sampled pages answer without a
+    // model, and a shop's own words beat an inference anyway.
+    const productId = await pendingProduct();
+    const model = modelAnswering("100% Primeflex");
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [jobFor(productId)]), {
+      ...depsWith(serving(PAGE)),
+      model,
+    });
+
+    expect(model.extract).not.toHaveBeenCalled();
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.rung).toBe("text");
+  });
+
+  it("leaves the rung alone when the model answers nothing new", async () => {
+    // The column says whether re-running would help. A model that filled
+    // no blank did not deepen anything, so `llm` would be a lie.
+    const productId = await pendingProduct();
+    const model = { extract: vi.fn(() => Promise.resolve({})) };
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [jobFor(productId)]), {
+      ...depsWith(serving(OPAQUE)),
+      model,
+    });
+
+    expect(model.extract).toHaveBeenCalledTimes(1);
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.rung).toBe("og");
+  });
+
+  it("runs no model at all when none is configured, and says nothing about it", async () => {
+    // Unconfigured means unwired, the same way the proxy fetch is — and
+    // *quietly*. Reaching for a model that is not there would be caught and
+    // reported, which leaves the same row behind and a Sentry event for
+    // every product, so the silence is the assertion.
+    const productId = await pendingProduct();
+    const deps = depsWith(serving(OPAQUE));
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.rung).toBe("og");
+    expect(deps.captureException).not.toHaveBeenCalled();
+  });
+
+  it("keeps the extraction when the model fails", async () => {
+    const productId = await pendingProduct();
+    const model = { extract: vi.fn(() => Promise.reject(new Error("upstream"))) };
+    const deps = { ...depsWith(serving(PAGE_WITH_IMAGE)), model };
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("done");
+    expect(row.fabricComposition).toBe("Fabric: 47% merino wool, 53% nylon");
   });
 });

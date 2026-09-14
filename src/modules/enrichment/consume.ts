@@ -4,11 +4,13 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { products, productSnapshots } from "../../db/schema-core";
 import { firstColumnWhere, firstRowWhere } from "../../lib/keyed-read";
 import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
+import type { ExtractionModel } from "../../lib/contracts";
 import { applyExtraction, type ApplyReport } from "../products";
 import { PageFetchError } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
 import { copyProductImage } from "./image";
-import { runLadder } from "./ladder";
+import { runLadder, type LadderResult } from "./ladder";
+import { modelPass, requiresModel } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
 
@@ -62,6 +64,11 @@ export interface EnrichmentDeps {
   page is a failed fetch.
   */
   proxyApiKey?: string | undefined;
+  /**
+  The LLM rung, built by the caller from `OPENROUTER_API_KEY` and the
+  owner's model choice (D-32). Absent means the ladder stops at `text`.
+  */
+  model?: ExtractionModel | undefined;
 }
 
 async function markFailed(db: Db, productId: string): Promise<void> {
@@ -149,17 +156,74 @@ async function copyImageOnce(
  * whether re-running would help, and after a re-run that is a new answer.
  */
 async function extractStored(
-  db: Db,
+  deps: EnrichmentDeps,
   productId: string,
   snapshot: { id: string; url: string },
   html: string,
 ): Promise<ApplyReport> {
-  const result = runLadder(new URL(snapshot.url), html);
-  await db
+  return extractFrom(
+    deps,
+    productId,
+    snapshot,
+    html,
+    runLadder(new URL(snapshot.url), html),
+  );
+}
+
+/**
+ * Everything after the ladder: the model's turn, the recorded rung, the
+ * write-back.
+ *
+ * Takes the ladder's result rather than the page alone, because the fetch
+ * path already has one — and running the ladder twice over the same
+ * megabytes to avoid passing it would be a strange saving.
+ */
+async function extractFrom(
+  deps: EnrichmentDeps,
+  productId: string,
+  snapshot: { id: string; url: string },
+  html: string,
+  result: LadderResult,
+): Promise<ApplyReport> {
+  // The model runs last and only over a blank the deterministic rungs left
+  // — see `model/rung.ts`. Unconfigured, it does not run at all and the
+  // deterministic answer is the answer, which is the same degradation the
+  // proxy fetch makes (law 5).
+  const { model } = deps;
+  const rung =
+    model !== undefined && requiresModel(result.extracted)
+      ? await askModel(deps, model, result, productId, snapshot, html)
+      : result.rung;
+  await deps.db
     .update(productSnapshots)
-    .set({ rung: result.rung })
+    .set({ rung })
     .where(eq(productSnapshots.id, snapshot.id));
-  return applyExtraction(db, productId, result.extracted, result.rung);
+  return applyExtraction(deps.db, productId, result.extracted, rung);
+}
+
+/**
+ * The model's turn, and what it does to the recorded rung.
+ *
+ * `llm` only when the model actually filled a blank — the column's job is
+ * to say whether re-running would help, and a model that answered nothing
+ * new leaves the deterministic rung as the honest deepest contributor.
+ */
+async function askModel(
+  deps: EnrichmentDeps,
+  // Narrowed by the caller and passed in, rather than read off `deps` and
+  // narrowed a second time — the second check is one no input can reach.
+  model: ExtractionModel,
+  result: LadderResult,
+  productId: string,
+  snapshot: { id: string; url: string },
+  html: string,
+): Promise<LadderResult["rung"]> {
+  const pass = await modelPass(
+    { db: deps.db, model, captureException: deps.captureException },
+    result.extracted,
+    { html, url: snapshot.url, snapshotId: snapshot.id, productId },
+  );
+  return pass.didContribute ? "llm" : result.rung;
 }
 
 /**
@@ -180,18 +244,19 @@ async function fetchAndExtract(
   const fetchedAt = Date.now();
   const r2Key = await putSnapshot(productId, page.html, fetchedAt);
   const result = runLadder(new URL(page.finalUrl), page.html);
-  await recordSnapshot(deps.db, {
+  const id = await recordSnapshot(deps.db, {
     productId,
     url: page.finalUrl,
     r2Key,
     rung: result.rung,
     fetchedAt,
   });
-  const report = await applyExtraction(
-    deps.db,
+  const report = await extractFrom(
+    deps,
     productId,
-    result.extracted,
-    result.rung,
+    { id, url: page.finalUrl },
+    page.html,
+    result,
   );
   // After the write-back, so a failed apply does not leave an image copied
   // for a product whose extraction never landed.
@@ -215,7 +280,7 @@ async function processEnrichJob(
     if (recent !== undefined) {
       const stored = await readSnapshot(recent.r2Key);
       if (stored !== undefined) {
-        await extractStored(deps.db, productId, recent, stored);
+        await extractStored(deps, productId, recent, stored);
         return;
       }
     }
@@ -278,12 +343,12 @@ export async function handleEnrichmentDlqBatch(
  * or when the snapshot row points at an object that is not there.
  */
 export async function reextract(
-  db: Db,
+  deps: EnrichmentDeps,
   productId: string,
 ): Promise<ApplyReport | undefined> {
-  const latest = await latestSnapshot(db, productId, 0);
+  const latest = await latestSnapshot(deps.db, productId, 0);
   if (latest === undefined) return undefined;
   const html = await readSnapshot(latest.r2Key);
   if (html === undefined) return undefined;
-  return extractStored(db, productId, latest, html);
+  return extractStored(deps, productId, latest, html);
 }

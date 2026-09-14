@@ -38,9 +38,11 @@ improves. Invisible: results arrive as pre-filled, editable fields.
 
 ## Contract touches
 
-- **Schema: none so far.** Phase 0 shipped `product_snapshots` and every
-  extraction column. A `fibre_candidates` table lands with the model rung —
-  additive, so it proceeds under the protocol.
+- **Schema: one additive table.** Phase 0 shipped `product_snapshots` and
+  every extraction column. `fibre_candidates` lands with the model rung —
+  a new table, so it proceeds under the protocol; migration
+  `0015_fibre_candidates`, numbered past everything on main and in the one
+  open PR (law 11).
 - **Bindings/queues/crons: none.** `ENRICHMENT_QUEUE`, both consumers and
   `MEDIA` are already bound. `OPENROUTER_API_KEY` is a secret, not a binding.
 - `PageExtractor.extract` returns `| undefined`, not `| null`: the Phase 0
@@ -149,6 +151,28 @@ page the model returned all three labelled fabric sections where the
 deterministic pass found one. It also showed the prompt needs decoded text —
 given `&amp;` it copied `&amp;` into `verbatim`, exactly as instructed — so
 `pageTextFor` runs the same entity decode the composition pass does.
+
+## The vocabulary learns, and the loop is closed
+
+The model rung runs **only where the deterministic rungs left the
+composition blank** — seven of the eight sampled pages answer without it, so
+this fires on the eighth. That is the cost control and the quality control
+at once: a shop that publishes its own composition has already answered
+better than a model can.
+
+Every material the model names that `fibres.ts` does not recognise becomes a
+`fibre_candidates` row, with the snapshot and the composition string it
+appeared in. A reviewer needs that context, because it is what separates
+`primeflex` (a fibre) from `pacerweave` (a part label). Promotion is a pull
+request against `fibres.ts`, and that is the point rather than an
+inconvenience: a table the system writes *and* reads its vocabulary from
+would learn its own mistakes. Each promotion improves every stored page on
+the next `reextract`, so the share of products resolved without a model call
+is a number that should climb.
+
+`rung` records `llm` only when the model actually filled a blank. A model
+that answered nothing new did not deepen anything, and the column's job is
+to say whether re-running would help.
 
 ## Eval (D-32) — the harness is next
 

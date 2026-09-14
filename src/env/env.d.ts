@@ -21,5 +21,10 @@ declare namespace Cloudflare {
      * Worker. Absent: a refusal is recorded as a failed fetch and nothing
      * else happens (law 5). See `modules/enrichment/firecrawl.ts`. */
     FIRECRAWL_API_KEY?: string;
+    /** OpenRouter key (107) — the LLM extraction rung. Absent: the ladder
+     * stops at the deterministic rungs, which already answer seven of the
+     * eight sampled pages (law 5). See
+     * `modules/enrichment/model/from-env.ts`. */
+    OPENROUTER_API_KEY?: string;
   }
 }
