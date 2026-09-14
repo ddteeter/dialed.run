@@ -219,7 +219,7 @@ async function askModel(
   html: string,
 ): Promise<LadderResult["rung"]> {
   const pass = await modelPass(
-    { db: deps.db, model, captureException: deps.captureException },
+    { db: deps.db, model },
     result.extracted,
     { html, url: snapshot.url, snapshotId: snapshot.id, productId },
   );

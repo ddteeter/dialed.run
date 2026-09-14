@@ -53,7 +53,6 @@ export function unknownFibres(
 export interface ModelPassDeps {
   db: Db;
   model: ExtractionModel;
-  captureException: (error: unknown, context: Record<string, string>) => void;
 }
 
 export interface ModelPass {
@@ -68,42 +67,35 @@ export interface ModelPass {
  * Ask the model, fill what it found into the blanks, and record the fibres
  * it named that we do not know.
  *
- * **A model failure is not a job failure.** Everything the deterministic
- * rungs found is already good, and the page is already stored — throwing
- * here would discard a working extraction because an optional upstream was
- * slow. The error is reported and the deterministic answer stands, which is
- * law 5 applied inside the consumer.
+ * **A model failure *is* a job failure now, and that is the change** (owner,
+ * 2026-09-14). While the deterministic pass also produced compositions, an
+ * unreachable model cost nothing: the job wrote what the rungs found and
+ * finished. Now the model is the only source of composition, so a job that
+ * swallows the error writes a product with none and marks it `done` — and
+ * `requestEnrichment` will not claim a `done` row again, so a transient
+ * outage would permanently cost that product its composition.
+ *
+ * So nothing is caught here. The error reaches the consumer, the message is
+ * retried, and the row stays `pending` — which is what "enrichment is
+ * eventually consistent" already meant. Candidates are recorded before the
+ * caller can act on the answer, so a page that named a new fibre teaches
+ * the vocabulary even if the write-back later fails.
  */
 export async function modelPass(
   deps: ModelPassDeps,
   extracted: ExtractedProduct,
   page: { html: string; url: string; snapshotId: string; productId: string },
 ): Promise<ModelPass> {
-  try {
-    const found = await deps.model.extract(pageTextFor(page.html), {
-      url: page.url,
-    });
-    // Blanks only, and the ladder's own rule: a field a shop declared beats
-    // a field a model inferred, whatever order they ran in.
-    const didContribute = fillBlanksFrom(extracted, found) > 0;
-    await recordCandidates(deps.db, found, page);
-    return { extracted, didContribute };
-  } catch (error) {
-    deps.captureException(error, {
-      surface: "enrichment-model",
-      productId: page.productId,
-    });
-    return { extracted, didContribute: false };
-  }
+  const found = await deps.model.extract(pageTextFor(page.html), {
+    url: page.url,
+  });
+  // Blanks only, and the ladder's own rule: a field a shop declared beats
+  // a field a model inferred, whatever order they ran in.
+  const didContribute = fillBlanksFrom(extracted, found) > 0;
+  await recordCandidates(deps.db, found, page);
+  return { extracted, didContribute };
 }
 
-/**
- * The words a human will be asked to rule on.
- *
- * `INSERT OR IGNORE` against the UNIQUE (material, snapshot) index rather
- * than a read-then-write: a redelivery and a `reextract` both re-derive the
- * same candidates, and idempotency belongs in the database (law 1).
- */
 async function recordCandidates(
   db: Db,
   found: Readonly<ExtractedProduct>,

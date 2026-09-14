@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { findComposition } from "../../src/modules/enrichment/composition";
+import { pageTextFor } from "../../src/modules/enrichment/model/page-text";
 
 /**
- * The extractor against phrasing real shops actually use.
+ * What the model is actually shown, on markup real shops actually serve.
  *
  * Each fixture is one text node from a real product page, kept byte-for-byte
  * — entities, JSON escapes, micron grades and all — and nothing else from
  * the page. See `fixtures/MANIFEST.md` for provenance and why so little is
  * stored.
  *
- * These are the cases that changed the design. Hand-written fixtures said
- * composition lived in `body_html` behind a "Fabric:" cue; these said it is
- * in a metafield labelled "Specs", or a sentence in a meta description, or a
- * JSON attribute, and that a cue is the wrong thing to look for.
+ * **These used to test the prose search, and the prose search is gone**
+ * (owner, 2026-09-14 — composition comes from the model rung now). They are
+ * not retired with it, because they still pin the step that matters most:
+ * the model can only find a composition it is shown, and `pageTextFor` is
+ * what decides that. The eval learned this the expensive way — a budget bug
+ * sent one page as 2,028 of its 889,578 characters, and the model was
+ * recorded as having missed a composition nobody had shown it.
+ *
+ * So each case asserts the fragment survives the journey into a prompt:
+ * decoded, whitespace collapsed, and the composition still legible in it.
  */
 /**
  * Inlined by Vite at build time, not read from disk: the workers pool
@@ -29,45 +35,37 @@ function fixture(name: string): string {
   return FIXTURES[`./fixtures/${name}.fragment.html`] ?? "";
 }
 
-describe("composition, on real pages", () => {
+describe("the prompt, built from real pages", () => {
   it.each([
-    ["ciele-ortshirt", [[100, "recycled cotton"]]],
-    [
-      "districtvision-cordura-socks",
-      [
-        [55, "cotton"],
-        [43, "nylon"],
-        [2, "polyurethane"],
-      ],
-    ],
-    [
-      "janji-merino-tee",
-      [
-        [47, "merino wool"],
-        [38, "nylon"],
-        [15, "nylon"],
-      ],
-    ],
-    ["pathprojects-shell-jacket", [[100, "toray primeflex polyester"]]],
-    [
-      "rabbit-chaser-track-pant",
-      [
-        [91, "body recycled polyester"],
-        [9, "spandex"],
-      ],
-    ],
-    ["satisfy-mothtech-tee", [[100, "organic cotton"]]],
-    ["soar-wooltech-half-tights", [[24, "merino wool"]]],
-  ])("reads %s", (name, expected) => {
-    const materials = findComposition(fixture(name))?.parts?.[0]?.materials;
-    expect(materials).toStrictEqual(
-      expected.map(([pct, material]) => ({ material, pct })),
-    );
+    ["ciele-ortshirt", "100% recycled cotton"],
+    ["districtvision-cordura-socks", "55% Cotton, 43% Nylon, 2% Polyurethane"],
+    ["janji-merino-tee", "47% 17.5μ merino wool"],
+    ["pathprojects-shell-jacket", "100% polyester"],
+    // The page that made the case for retiring the prose search: three
+    // labelled sections, of which it found one.
+    ["rabbit-chaser-track-pant", "91% recycled polyester"],
+    ["rabbit-chaser-track-pant", "82% polyester, 15% cotton"],
+    ["rabbit-chaser-track-pant", "88% polyester"],
+    ["satisfy-mothtech-tee", "100% organic cotton"],
+    ["soar-wooltech-half-tights", "24% merino wool"],
+  ])("%s: the prompt still carries %s", (name, composition) => {
+    expect(pageTextFor(fixture(name))).toContain(composition);
   });
 
-  it("finds nothing on a page that states no composition", () => {
-    // Not every product page has one, and inventing something for this one
-    // would be worse than leaving the column null.
-    expect(findComposition(fixture("soar-run-shorts"))).toBeUndefined();
+  it("decodes entities, so the model is not asked to copy them", () => {
+    // The rabbit fragment carries `&amp;` — double-encoded, through
+    // JSON, inside an attribute. Shown that, the model copied it into
+    // `verbatim` character for character, exactly as instructed to.
+    const prompt = pageTextFor(fixture("rabbit-chaser-track-pant"));
+    expect(prompt).toContain("recycled polyester & 9% spandex");
+    expect(prompt).not.toContain("&amp;");
+  });
+
+  it("carries the composition a shop wrote in abbreviations", () => {
+    // `Shell 88% PA 12% EL`. The prose search read nothing here, because
+    // `fibres.ts` knows `polyamide` and `elastane` but not `PA` and `EL` —
+    // one of the two failures that retired it. A prompt has no vocabulary
+    // to be missing, so the text simply has to arrive.
+    expect(pageTextFor(fixture("soar-run-shorts"))).toContain("88% PA 12% EL");
   });
 });

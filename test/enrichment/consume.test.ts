@@ -29,11 +29,20 @@ const IMAGE_BYTES = new Uint8Array([9, 8, 7]);
 const PAGE_WITH_IMAGE = `<html><head>
 <meta property="og:image" content="${IMAGE_URL}">
 <meta property="og:title" content="Repeat Merino Tech Tee">
-</head><body><p>Fabric: 47% merino wool, 53% nylon</p></body></html>`;
+<script type="application/ld+json">{"@type":"Product","material":"47% merino wool, 53% nylon"}</script>
+</head><body><p>Built for cold mornings.</p></body></html>`;
 
+/**
+ * A page that **declares** its composition, in JSON-LD's `material`.
+ *
+ * It used to state it in prose and rely on the text search to find it. That
+ * search was retired (owner, 2026-09-14), so a page whose composition is
+ * only prose now extracts none — which is a case of its own below, not the
+ * backdrop for every other test.
+ */
 const PAGE = `<html><head>
-<script type="application/ld+json">{"@type":"Product","name":"Repeat Merino Tech Tee","brand":{"@type":"Brand","name":"Janji"}}</script>
-</head><body><p>Fabric: 47% merino wool, 53% nylon</p></body></html>`;
+<script type="application/ld+json">{"@type":"Product","name":"Repeat Merino Tech Tee","brand":{"@type":"Brand","name":"Janji"},"material":"47% merino wool, 53% nylon"}</script>
+</head><body><p>Built for cold mornings.</p></body></html>`;
 
 const URL_UNDER_TEST = "https://shop.example.com/products/tee";
 
@@ -168,10 +177,10 @@ describe("handleEnrichmentBatch: the happy path", () => {
 
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("done");
-    expect(row.fabricComposition).toBe("Fabric: 47% merino wool, 53% nylon");
+    expect(row.fabricComposition).toBe("47% merino wool, 53% nylon");
 
     const [snapshot] = await snapshotsOf(productId);
-    expect(snapshot).toMatchObject({ url: URL_UNDER_TEST, rung: "text" });
+    expect(snapshot).toMatchObject({ url: URL_UNDER_TEST, rung: "jsonld" });
     const stored = await env.MEDIA.get(snapshot?.r2Key ?? "");
     expect(await stored?.text()).toBe(PAGE);
   });
@@ -240,8 +249,9 @@ describe("handleEnrichmentBatch: the happy path", () => {
       fetchedAt: now,
     });
 
+    const message = jobFor(productId);
     await handleEnrichmentBatch(
-      batchOf("dialed-enrichment", [jobFor(productId)]),
+      batchOf("dialed-enrichment", [message]),
       depsWith(fetchImpl),
     );
 
@@ -320,7 +330,7 @@ describe("handleEnrichmentBatch: rows that are not work", () => {
     expect(message.ack).toHaveBeenCalledTimes(1);
     expect(await statusOf(productId)).toBe("done");
     const [snapshot] = await snapshotsOf(productId);
-    expect(snapshot?.rung).toBe("text");
+    expect(snapshot?.rung).toBe("jsonld");
   });
 
   it("fails a pending product that has no URL, rather than retrying forever", async () => {
@@ -490,7 +500,7 @@ describe("reextract", () => {
     const edited = await rowOf(productId);
     expect(edited.fabricComposition).toBe("hand-edited");
     const [after] = await snapshotsOf(productId);
-    expect(after?.rung).toBe("text");
+    expect(after?.rung).toBe("jsonld");
   });
 
   it("does nothing for a product that has never been snapshotted", async () => {
@@ -585,7 +595,7 @@ describe("handleEnrichmentBatch: the primary image", () => {
     expect(message.ack).toHaveBeenCalledTimes(1);
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("done");
-    expect(row.fabricComposition).toBe("Fabric: 47% merino wool, 53% nylon");
+    expect(row.fabricComposition).toBe("47% merino wool, 53% nylon");
     expect(row.imageKey).toBeNull();
     expect(deps.captureException).toHaveBeenCalledWith(
       expect.objectContaining({ name: "PageFetchError" }),
@@ -656,7 +666,7 @@ describe("handleEnrichmentBatch: the model rung", () => {
 
     expect(model.extract).not.toHaveBeenCalled();
     const [snapshot] = await snapshotsOf(productId);
-    expect(snapshot?.rung).toBe("text");
+    expect(snapshot?.rung).toBe("jsonld");
   });
 
   it("leaves the rung alone when the model answers nothing new", async () => {
@@ -693,17 +703,63 @@ describe("handleEnrichmentBatch: the model rung", () => {
     expect(deps.captureException).not.toHaveBeenCalled();
   });
 
-  it("keeps the extraction when the model fails", async () => {
+  it("retries, and keeps the row pending, when the model fails", async () => {
+    // The model is the only source of composition now, so swallowing this
+    // would write a product without one and mark it `done` — and
+    // `requestEnrichment` never claims a `done` row again, so a transient
+    // outage would cost that product its composition permanently. The
+    // queue's retry is the mechanism (law 3), and `pending` is what the
+    // hourly sweep re-drives.
     const productId = await pendingProduct();
     const model = { extract: vi.fn(() => Promise.reject(new Error("upstream"))) };
-    const deps = { ...depsWith(serving(PAGE_WITH_IMAGE)), model };
+    const deps = { ...depsWith(serving(OPAQUE)), model };
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
+
+    expect(message.retry).toHaveBeenCalledTimes(1);
+    expect(message.ack).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("pending");
+    expect(deps.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "upstream" }),
+      expect.objectContaining({ productId }),
+    );
+  });
+
+  it("finishes quietly when no model is configured, rather than retrying forever", async () => {
+    // "We do not do model extraction here" is a different state from "the
+    // model could not be reached". A dev machine with no key must not churn
+    // every product through the retry machinery; the declared rungs'
+    // answer stands and the row is done.
+    const productId = await pendingProduct();
+    const deps = depsWith(serving(OPAQUE));
     const message = jobFor(productId);
 
     await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
 
     expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+    expect(deps.captureException).not.toHaveBeenCalled();
+  });
+
+  it("extracts no composition from prose, now that only the model reads it", async () => {
+    // The page states `Fabric: 88% polyester` in a div and declares
+    // nothing. The prose search used to answer here and was retired; with
+    // no model configured the column stays empty, which is the state the
+    // app renders and a person can correct.
+    const productId = await pendingProduct();
+    const prose = `<html><head><meta property="og:title" content="Rover Tee">
+      </head><body><div class="specs"><p>Fabric: 88% polyester, 12% elastane</p></div></body></html>`;
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(prose)),
+    );
+
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("done");
-    expect(row.fabricComposition).toBe("Fabric: 47% merino wool, 53% nylon");
+    expect(row.fabricComposition).toBeNull();
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.rung).toBe("og");
   });
 });

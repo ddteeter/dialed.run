@@ -89,21 +89,36 @@ describe("runLadder", () => {
     });
   });
 
-  it("finds a composition in the page text when no rung declares one", () => {
-    // The measurement that put this in the ladder: over 14 real pages the
-    // three declared rungs found composition on none, because it lives in a
-    // metafield or a description rather than a `material` field.
+  it("leaves composition alone when no rung declares one", () => {
+    // **The prose search used to answer here, and was retired** (owner,
+    // 2026-09-14). It lost every section after the first on a
+    // multi-component garment, could not read `88% PA 12% EL`, and on one
+    // page answered with marketing copy. Composition now comes from the
+    // model rung, and an empty column is the honest state until it does —
+    // a product with no composition is one the app renders and a person can
+    // correct, where a plausible wrong one is neither.
     const html = `${ldBlock({ name: "Rover Half-Zip" })}
       <div class="specs"><p>Fabric: 88% polyester, 12% elastane</p></div>`;
     const { extracted, rung } = runLadder(PAGE, html);
     expect(extracted.name).toBe("Rover Half-Zip");
+    expect(extracted.fabricComposition).toBeUndefined();
+    expect(rung).toBe("jsonld");
+  });
+
+  it("still takes a composition a shop declares in JSON-LD", () => {
+    // What is left is declared data: a `material` field a shop published,
+    // handed to the same `parseComposition` as before. Reading a published
+    // field is not the act that was retired.
+    const html = ldBlock({
+      name: "Rover Half-Zip",
+      material: "88% polyester, 12% elastane",
+    });
+    const { extracted, rung } = runLadder(PAGE, html);
     expect(extracted.fabricComposition?.parts?.[0]?.materials).toStrictEqual([
       { material: "polyester", pct: 88 },
       { material: "elastane", pct: 12 },
     ]);
-    // Deepest contributor: the text search is where the new fact came from,
-    // and it is the part a better parser could later improve.
-    expect(rung).toBe("text");
+    expect(rung).toBe("jsonld");
   });
 
   it("prefers a declared material over one found in prose", () => {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  findComposition,
   parseComposition,
   stopwords,
 } from "../../src/modules/enrichment/composition";
@@ -220,107 +219,6 @@ describe("parseComposition", () => {
         String.raw`91% recycled polyester \u0026amp;amp; 9% spandex`,
       )?.parts?.[0]?.materials,
     ).toStrictEqual([
-      { material: "recycled polyester", pct: 91 },
-      { material: "spandex", pct: 9 },
-    ]);
-  });
-});
-
-describe("findComposition", () => {
-  it("finds a composition wherever the shop put it", () => {
-    // Measured on 14 real pages: it is in metafields, description divs, meta
-    // descriptions and JSON-LD, never reliably one field. So the search is
-    // over text nodes rather than a payload.
-    const html = `<html><body>
-      <div class="tabs"><details><summary>Specs</summary>
-        <div class="metafield-rich_text_field">
-          <p><strong>Repeat Merino</strong><br/>47% merino wool, 38% nylon</p>
-        </div>
-      </details></div>
-    </body></html>`;
-    expect(findComposition(html)?.parts?.[0]?.materials).toStrictEqual([
-      { material: "merino wool", pct: 47 },
-      { material: "nylon", pct: 38 },
-    ]);
-  });
-
-  it("ignores a page's embedded JSON, however much fabric it mentions", () => {
-    // A product page ships its own description inside a script, so the first
-    // text node with a percentage in it is often JSON. Searching that found
-    // a fibre called "amp", from a JSON-escaped ampersand.
-    const html = String.raw`<html><head>
-      <script type="application/ld+json">{"description":"88% polyester \u0026amp;amp; 12% elastane"}</script>
-      </head><body><p>Fabric: 100% merino wool</p></body></html>`;
-    expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
-  });
-
-  it("decodes an ampersand that arrives through JSON escaping", () => {
-    // Product data embedded in an *attribute* spills past naive tag
-    // splitting when the value contains `>`, so stripping scripts does not
-    // catch it — the text arrives with `\\u0026amp;amp;` in the middle.
-    const parsed = findComposition(
-      String.raw`<p>91% recycled polyester \u0026amp;amp; 9% spandex</p>`,
-    );
-    expect(parsed?.parts?.[0]?.materials).toStrictEqual([
-      { material: "recycled polyester", pct: 91 },
-      { material: "spandex", pct: 9 },
-    ]);
-  });
-
-  it("says nothing for a page with no composition on it", () => {
-    expect(
-      findComposition("<html><body><p>20% off today!</p></body></html>"),
-    ).toBeUndefined();
-  });
-
-  it("ignores a script far too long for a bounded pattern to match", () => {
-    // The regression the real pages caught and the trimmed fixtures cannot.
-    // Stripping code with `<script>[\s\S]{0,N}?</script>` silently fails on
-    // any block longer than N, and product pages ship scripts far larger —
-    // the surviving JSON was then searched for fabric and yielded "amp".
-    //
-    // Reproduced synthetically now that the shape is known: a real page is
-    // not needed to pin a structure, only to discover it.
-    const padding = "x".repeat(300_000);
-    const html = `<html><head><script>${padding}"88% polyester ${padding}"</script></head>
-      <body><p>Fabric: 100% merino wool</p></body></html>`;
-    expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
-  });
-
-  it("takes the first composition when a page states several", () => {
-    // Pages mention fabric more than once — related products, variant
-    // blurbs, a size chart. The rabbit page offered eleven candidates. The
-    // first is the one nearest the product being described.
-    const html = `<html><body>
-      <p>Fabric: 100% merino wool</p>
-      <section class="related"><p>Also try: 88% polyester, 12% elastane</p></section>
-    </body></html>`;
-    expect(findComposition(html)?.verbatim).toBe("Fabric: 100% merino wool");
-  });
-
-  it("does not read a composition out of an attribute that stayed in its tag", () => {
-    // Measured against the eight sampled pages: **every one** has a tag
-    // longer than 2,000 characters, because a Shopify theme renders the
-    // whole product JSON — description included — into `data-product`.
-    // While the tag splitter was a bounded regex, that blob was not
-    // recognised as a tag, so on the rabbit page `verbatim` came back as ten
-    // kilobytes of markup and the parts were two fabrics listed twice. The
-    // other seven hid it: a real node happened to parse first.
-    const filler = " ".repeat(3000);
-    const html = `<div data-product="{${filler} desc : 91% recycled polyester, 9% spandex }"><p>Fabric: 100% merino wool</p></div>`;
-    const composition = findComposition(html);
-    expect(composition?.verbatim).toBe("Fabric: 100% merino wool");
-  });
-
-  it("reads a composition that spilled out of an attribute", () => {
-    // An attribute whose JSON value contains `>` ends the tag early as far
-    // as a tag-splitter is concerned, so the rest of the value lands in the
-    // text — carrying JSON escaping with it. That is how `\u0026` reaches
-    // the parser, and stripping scripts does not catch it because it was
-    // never in a script.
-    const html =
-      '<div data-product="{"body":"<p>91% recycled polyester &amp;amp; 9% spandex</p>"}">x</div>';
-    expect(findComposition(html)?.parts?.[0]?.materials).toStrictEqual([
       { material: "recycled polyester", pct: 91 },
       { material: "spandex", pct: 9 },
     ]);

@@ -30,8 +30,12 @@ improves. Invisible: results arrive as pre-filled, editable fields.
   where a row pointing at no object is not.
 - `html.ts` — script payloads, sliced to `</script>` rather than captured.
 - `rungs/{jsonld,shopify,og}.ts` — each a `PageExtractor`.
-- `composition.ts` — the fibre-gated composition pass (below).
-- `ladder.ts` — runs the rungs best-first, best answer **per field**.
+- `composition.ts` — `parseComposition`, which turns a composition *string*
+  into parts. Its prose search over the page's text nodes was retired
+  2026-09-14; what remains is called by the two rungs that read a declared
+  field.
+- `ladder.ts` — runs the declared-data rungs best-first, best answer **per
+  field**. No prose search.
 - `request.ts` — `requestEnrichment`: flips the row to `pending`, then sends.
 - `consume.ts` — the consumer, its DLQ handler, and `reextract`.
 - `model/openrouter.ts` — the LLM rung (not yet).
@@ -268,13 +272,41 @@ a prose search can. They agreed with the models on name, brand and image on
 essentially every page. Only the *composition text pass* is retired as a
 producer.
 
-**A consequence to wire.** If the model is the only source of composition,
-a model outage must leave the row **retryable**, not terminal. Today a
-dead-lettered job marks `extraction_status='failed'` and the hourly sweep
-re-drives only `pending`, so a `failed` product waits for someone to paste
-it again. That is right when failure means "this page has no composition"
-and wrong when it means "OpenRouter was down", so the sweep also re-drives
-`failed` rows past an age.
+**Wired, 2026-09-14.** Three changes carry the decision:
+
+1. `runLadder` no longer searches prose. `findComposition` is gone;
+   `parseComposition` stays, called by the JSON-LD rung on a declared
+   `material` field and by the Shopify rung on a cued stretch of
+   `body_html`.
+2. **A model failure is a job failure.** `modelPass` used to catch and
+   carry on, which was harmless while the deterministic pass also produced
+   compositions and became wrong the moment it did not: a swallowed error
+   writes a product with no composition and marks it `done`, and
+   `requestEnrichment` never claims a `done` row again — so one transient
+   outage would cost that product its composition permanently. The error
+   propagates now, the message is retried, and the row stays `pending`.
+3. **The sweep re-drives `failed` as well as `pending`.** A job that
+   exhausts its retries dead-letters and marks the product `failed`, and
+   the row cannot say whether that meant "this page states no composition"
+   or "the model was unreachable". Both are re-driven, because the costs
+   are asymmetric: re-fetching a page that has nothing is cheap — the
+   consumer reuses a snapshot from within the hour — where a product
+   wrongly abandoned stays wrong forever.
+
+**Unconfigured is not the same as unreachable.** With no
+`OPENROUTER_API_KEY` the model rung does not run and the job finishes
+quietly on whatever the declared rungs found. A dev machine without a key
+must not churn every product through the retry machinery; "we do not do
+model extraction here" is a terminal state, where "the model could not be
+reached" is not.
+
+**What the fixtures test now.** They were captured to exercise the prose
+search and are repurposed rather than retired: each asserts that
+`pageTextFor` still carries the composition into a prompt, decoded and
+legible. The model can only find what it is shown, and the eval learned
+that the expensive way. Two were re-cut, because both had been trimmed to
+what the old search could see — `rabbit` to the first of three labelled
+sections, and `soar-run-shorts` to nothing at all.
 
 ## Decided
 
