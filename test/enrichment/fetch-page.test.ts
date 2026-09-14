@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { PageFetchError } from "../../src/modules/enrichment/bounds";
 import {
-  PageFetchError,
   fetchProductPage,
   isBlockedHost,
 } from "../../src/modules/enrichment/fetch-page";
@@ -89,6 +89,52 @@ function htmlOnce(html: string, headers: Record<string, string> = {}) {
   const impl: typeof fetch = () =>
     Promise.resolve(new Response(html, { status: 200, headers }));
   return vi.fn(impl);
+}
+
+/**
+ * A shop that refuses with `code`, and a proxy that answers for it. The two
+ * are told apart by host, which is also what the escalation test asserts:
+ * the second call goes to the proxy, with the shop's URL in the body.
+ */
+function refusingShop(code: number, proxiedHtml = "<html>via proxy</html>") {
+  const impl: typeof fetch = (input) =>
+    Promise.resolve(
+      isProxyCall(input)
+        ? proxyEnvelope(proxiedHtml)
+        : new Response("blocked", { status: code }),
+    );
+  return vi.fn(impl);
+}
+
+/**
+The URL a fetch was asked for, whichever of the three shapes it arrived as.
+*/
+function urlOf(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  return input instanceof URL ? input.href : input.url;
+}
+
+function isProxyCall(input: RequestInfo | URL): boolean {
+  return urlOf(input).startsWith("https://api.firecrawl.dev/");
+}
+
+function proxyEnvelope(rawHtml: string): Response {
+  return Response.json({
+    success: true,
+    data: { rawHtml, metadata: { statusCode: 200 } },
+  });
+}
+
+/**
+The URL the module asked the proxy for, read back out of the request body.
+*/
+function proxiedUrl(init: RequestInit | undefined): unknown {
+  const body = init?.body;
+  if (typeof body !== "string") throw new TypeError("body was not a string");
+  const sent: unknown = JSON.parse(body);
+  return typeof sent === "object" && sent !== null
+    ? Reflect.get(sent, "url")
+    : undefined;
 }
 
 describe("isBlockedHost", () => {
@@ -508,5 +554,97 @@ describe("fetchProductPage", () => {
     await expect(
       fetchProductPage("https://shop.example.com/p", status(400)),
     ).rejects.toThrow(/400/u);
+  });
+});
+
+describe("fetchProductPage: through the proxy when the shop refuses a Worker", () => {
+  it("says which door a direct fetch came through", async () => {
+    const page = await fetchProductPage(
+      "https://shop.example.com/p",
+      htmlOnce("<html>direct</html>"),
+    );
+    expect(page.via).toBe("direct");
+  });
+
+  it("fails on a 403 as before when there is no key, and asks nobody else", async () => {
+    // Unconfigured means unconfigured: no key, no second request, the
+    // refusal recorded as the failure it is.
+    const fetchImpl = refusingShop(403);
+    await expect(
+      fetchProductPage("https://shop.example.com/p", fetchImpl),
+    ).rejects.toThrow(/403/u);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches the refused URL through the proxy when there is a key", async () => {
+    const fetchImpl = refusingShop(403);
+    const page = await fetchProductPage(
+      "https://shop.example.com/p",
+      fetchImpl,
+      { proxyApiKey: "fc-key" },
+    );
+    expect(page).toStrictEqual({
+      finalUrl: "https://shop.example.com/p",
+      html: "<html>via proxy</html>",
+      via: "proxy",
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    const [endpoint, init] = fetchImpl.mock.calls[1] ?? [];
+    expect(endpoint === undefined ? undefined : urlOf(endpoint)).toBe(
+      "https://api.firecrawl.dev/v2/scrape",
+    );
+    expect(proxiedUrl(init)).toBe("https://shop.example.com/p");
+  });
+
+  it("proxies the hop that was refused, not the URL that was pasted", async () => {
+    // A redirect that lands on a blocked page: every hop before it passed
+    // the private-address check, so the proxy is handed the final one.
+    let seen = 0;
+    const impl: typeof fetch = (input) => {
+      if (isProxyCall(input)) {
+        return Promise.resolve(proxyEnvelope("<html>x</html>"));
+      }
+      seen += 1;
+      return Promise.resolve(
+        seen === 1
+          ? new Response(undefined, {
+              status: 301,
+              headers: { location: "https://shop.example.com/p/moved" },
+            })
+          : new Response("blocked", { status: 403 }),
+      );
+    };
+    const fetchImpl = vi.fn(impl);
+    await fetchProductPage("https://shop.example.com/p", fetchImpl, {
+      proxyApiKey: "fc-key",
+    });
+    const init = fetchImpl.mock.calls[2]?.[1];
+    expect(proxiedUrl(init)).toBe("https://shop.example.com/p/moved");
+  });
+
+  it("escalates only the statuses a proxy can do something about", async () => {
+    // A refusal is worth a credit; a page that does not exist is not — it
+    // does not exist from a residential address either. Every member of
+    // the set, and the nearest non-members on each side of each one.
+    for (const code of [401, 403, 429, 503]) {
+      const fetchImpl = refusingShop(code);
+      const page = await fetchProductPage(
+        "https://shop.example.com/p",
+        fetchImpl,
+        { proxyApiKey: "fc-key" },
+      );
+      expect(page.via, String(code)).toBe("proxy");
+    }
+    for (const code of [400, 402, 404, 410, 428, 430, 500, 502, 504]) {
+      const fetchImpl = refusingShop(code);
+      await expect(
+        fetchProductPage("https://shop.example.com/p", fetchImpl, {
+          proxyApiKey: "fc-key",
+        }),
+        String(code),
+      ).rejects.toThrow(new RegExp(String(code), "u"));
+      expect(fetchImpl, String(code)).toHaveBeenCalledTimes(1);
+    }
   });
 });
