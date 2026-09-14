@@ -138,6 +138,15 @@ honoured, or it measures routing luck.
 3. **The recorded rung is the deepest that contributed**, not the highest —
    the column's job is to say whether re-running would help.
 4. **Model choice** is the owner's, on the eval table above.
+5. **`category_hint` takes only an enum member.** The ladder emits whatever
+   the shop wrote ("men's pants/jogger"); the column is documented as the
+   garment category enum and the closet reads it as one. A free-text hint
+   stays in the ledger's `found`. A keyword mapper (shorts → bottom, tee →
+   top) is a later, separate step, and is not in this lane's packet.
+6. **A ledger the writer cannot read stops the write.** Malformed JSON or a
+   wrong shape in `products.extracted` throws, and the consumer records a
+   failed job — because a ledger that cannot be read cannot prove
+   precedence, and the alternative is a fresh start over a person's edits.
 
 ## Closed — the fetch fallback, and it is cheaper than the estimate
 
