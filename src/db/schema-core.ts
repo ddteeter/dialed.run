@@ -130,57 +130,6 @@ export const productSnapshots = sqliteTable("product_snapshots", {
   fetchedAt: integer("fetched_at").notNull(),
 });
 
-/**
- * Fibres a model named that `fibres.ts` does not know.
- *
- * **The vocabulary has to learn, and this is the queue it learns from.**
- * `parseComposition` requires a percentage *beside a known fibre*, which is
- * what stops "20% off today" becoming a fibre called `off` — and the price
- * of that gate is a proprietary fibre the list cannot have (`100%
- * Primeflex`). So when the model rung returns a composition, every material
- * the list does not recognise lands here with the snapshot it came from,
- * and a human promotes the real ones by editing `fibres.ts`.
- *
- * **Promotion stays a code change on purpose.** A table the system writes
- * to and also reads its vocabulary from would learn its own mistakes; a
- * pull request is where a person decides that `primeflex` is a fibre and
- * `pacerweave` is a part label. Every promotion then improves every stored
- * page on the next `reextract` (D-31), so the share of products resolved
- * without a model call is a number that should climb.
- *
- * Nothing reads this at runtime. It is evidence for a review, which is why
- * it carries the snapshot and the verbatim string rather than a count: a
- * reviewer needs to see the sentence the word appeared in.
- */
-export const fibreCandidates = sqliteTable(
-  "fibre_candidates",
-  {
-    id: text("id").primaryKey(),
-    // Normalised the way `isFibre` normalises, so the same word from two
-    // pages is the same candidate.
-    material: text("material").notNull(),
-    productId: text("product_id").notNull(),
-    // The page it was read from, so a reviewer can look at the source and
-    // so a promotion can be checked against the same bytes.
-    snapshotId: text("snapshot_id").notNull(),
-    // The composition string it appeared in — the context that makes
-    // "primeflex" a fibre and "pacerweave" a part label.
-    verbatim: text("verbatim").notNull(),
-    seenAt: integer("seen_at").notNull(),
-  },
-  (t) => [
-    // One row per word per page. A redelivery, or a `reextract` over the
-    // same snapshot, re-derives the same candidates — idempotency belongs
-    // in the database (law 1), not in the consumer remembering.
-    uniqueIndex("fibre_candidate_material_snapshot").on(
-      t.material,
-      t.snapshotId,
-    ),
-    // The review query: what is waiting, commonest first.
-    index("fibre_candidate_material").on(t.material),
-  ],
-);
-
 export const wardrobeItems = sqliteTable(
   "wardrobe_items",
   {

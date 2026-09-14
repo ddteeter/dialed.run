@@ -174,29 +174,6 @@ fetched_at  int
 Snapshots exist so extraction can re-run and improve later; never delete them
 to save space (they are the un-refetchable archive — D-31).
 
-### fibre_candidates (the vocabulary's feedback loop — lane 107)
-
-```
-id           text PK
-material     text     -- normalised; a fibre the model named that
-                      -- modules/enrichment/fibres.ts does not know
-product_id   text FK -> products
-snapshot_id  text FK -> product_snapshots
-verbatim     text     -- the composition string it appeared in: the context
-                      -- that makes "primeflex" a fibre and "pacerweave" a
-                      -- part label
-seen_at      int
-```
-
-UNIQUE(material, snapshot_id), so a redelivery or a `reextract` over the
-same page re-derives the same candidates without duplicating them.
-
-Nothing reads this at runtime. It is evidence for a human review: promotion
-is a code change to `fibres.ts`, deliberately, so the vocabulary stays
-reviewed — a table the system both writes and reads its vocabulary from
-would learn its own mistakes. Every promotion improves every stored page on
-the next `reextract` (D-31).
-
 ### runs
 
 ```
