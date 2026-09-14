@@ -9,6 +9,7 @@ export {
   reextract,
   type EnrichmentDeps,
 } from "./consume";
+export { enqueueEnrichment } from "./enqueue";
 export { type EnrichJob } from "./queue-messages";
 export {
   requestEnrichment,

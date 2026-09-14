@@ -171,9 +171,20 @@ thrown so the queue's retries own it, and the DLQ handler marks the row
 when they give up. `reextract` runs the ladder over the latest stored page
 with no fetch, and re-records the snapshot's rung.
 
-**Not yet:** the primary image is not copied to R2 (`image_key`), and
-nothing calls `requestEnrichment` — the paste call-site is lane 101's
-`withResolvedProduct`, one line, and the owner's call which lane wires it.
+The primary image is copied to R2 (`image_key`) after the write-back, and
+only while the column is null: nobody hand-edits an R2 key, so the ledger
+`applyExtraction` needs has nothing to protect here, and the only question
+is whether we have already paid for this image. A later run finding a
+*different* image does not replace it — D-59, because that needs a rule for
+the old object and for anything holding its URL. A failed image fetch never
+fails the job: a product whose picture 404s still has a composition.
+
+The paste path is wired: `withResolvedProduct` in lane 101's closet service
+calls `enqueueEnrichment` (owner's go-ahead, 2026-09-13), where the
+bindings stop so `request.ts` stays importable without them. It cannot
+throw — enrichment must not be able to fail the save that asked for it.
+
+**Not yet:** the model rung and its eval, and the `fibre_candidates` table.
 
 ## Closed — the fetch fallback, and it is cheaper than the estimate
 
