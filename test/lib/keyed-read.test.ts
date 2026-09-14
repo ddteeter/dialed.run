@@ -8,6 +8,7 @@ import { newUlid } from "../../src/lib/ids";
 import {
   columnWhere,
   firstColumnWhere,
+  firstRowWhere,
   hasRowWhere,
 } from "../../src/lib/keyed-read";
 
@@ -153,5 +154,52 @@ describe("firstColumnWhere", () => {
     );
 
     expect(found).toBeUndefined();
+  });
+});
+
+describe("firstRowWhere", () => {
+  it("answers with the whole row, every column of it", async () => {
+    // The read a queue job opens with: the row this job points at. Unlike
+    // the three above, the caller needs every column, so the row is the
+    // point rather than a lapse.
+    const followerId = newUlid();
+    const followeeId = newUlid();
+    await followRow(followerId, followeeId);
+
+    const row = await firstRowWhere(
+      coreDb(),
+      follows,
+      and(eq(follows.followerId, followerId), eq(follows.followeeId, followeeId)),
+    );
+
+    expect(row).toStrictEqual({
+      followerId,
+      followeeId,
+      createdAt: 1_755_000_000,
+    });
+  });
+
+  it("answers undefined when nothing matches, rather than throwing", async () => {
+    const row = await firstRowWhere(
+      coreDb(),
+      follows,
+      eq(follows.followerId, newUlid()),
+    );
+    expect(row).toBeUndefined();
+  });
+
+  it("stops at the first match rather than reading them all", async () => {
+    // Three followees for one follower; one row back. Without the limit
+    // this reads every match to answer with one.
+    const followerId = newUlid();
+    for (let index = 0; index < 3; index += 1) {
+      await followRow(followerId, newUlid());
+    }
+    const row = await firstRowWhere(
+      coreDb(),
+      follows,
+      eq(follows.followerId, followerId),
+    );
+    expect(row?.followerId).toBe(followerId);
   });
 });

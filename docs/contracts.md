@@ -166,7 +166,8 @@ id          text PK
 product_id  text FK -> products
 url         text
 r2_key      text     -- raw fetched HTML under products/{productId}/
-rung        text     -- which ladder rung produced data: jsonld | shopify | og | llm | none
+rung        text     -- the deepest ladder rung that contributed, re-recorded
+                     -- on every reextract: jsonld | shopify | og | text | llm | none
 fetched_at  int
 ```
 

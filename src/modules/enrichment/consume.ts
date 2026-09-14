@@ -1,0 +1,225 @@
+import { and, desc, eq, gt } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+
+import { products, productSnapshots } from "../../db/schema-core";
+import { firstRowWhere } from "../../lib/keyed-read";
+import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
+import { applyExtraction, type ApplyReport } from "../products";
+import { PageFetchError } from "./bounds";
+import { fetchProductPage } from "./fetch-page";
+import { runLadder } from "./ladder";
+import { enrichJobSchema } from "./queue-messages";
+import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
+
+/**
+ * The concrete handle `drizzle(env.DIALED_CORE)` returns, spelled out:
+ * `lib/keyed-read` takes the un-parameterised `DrizzleD1Database`, and the
+ * generic `ReturnType<typeof drizzle>` other modules use is wider than it —
+ * so this names the one type both sides accept.
+ */
+type Db = DrizzleD1Database & { $client: D1Database };
+
+/**
+ * The `dialed-enrichment` consumer: fetch → snapshot → ladder → write-back,
+ * once per product, and safely more than once.
+ *
+ * **What a redelivery must not do is fetch again.** Fetching is the step
+ * with a bill and a blocklist behind it, so a job that got as far as
+ * storing the page and then failed — a D1 hiccup on the write-back, say —
+ * must resume from the snapshot it already has. A snapshot fetched inside
+ * `REUSE_WINDOW_MS` is therefore reused rather than refetched, which is the
+ * idempotency the packet asks for ("dedupe on productId + snapshot") and
+ * also what makes a duplicate message from the sweep cost nothing.
+ *
+ * **Only a `pending` row is work.** `requestEnrichment` flips the row to
+ * `pending` before sending, so `pending` is the claim: a message for a
+ * `done` product is a redelivery after success, and a message for a `none`
+ * one was sent without the row having flipped. Both are acked and ignored.
+ *
+ * **Which errors are terminal is the one judgement here.** A
+ * `PageFetchError` is the page itself refusing — a 403 with no proxy, a
+ * private host, an oversized body, a 404 — and no retry changes that, so
+ * the row goes to `failed` and the message is acked (law 6: the failure is
+ * on the row, where the closet can show it). Anything else — a network
+ * throw, a timeout, a write-back conflict — is thrown, so the queue's own
+ * retry machinery owns it (law 3) and the DLQ handler below marks the row
+ * when it gives up.
+ */
+
+const REUSE_WINDOW_MS = 60 * 60 * 1000;
+
+export interface EnrichmentDeps {
+  db: Db;
+  captureException: (error: unknown, context: Record<string, string>) => void;
+  /**
+  Injected so the workers pool can hand the consumer a page without a
+  network; production passes nothing and gets `fetch`.
+  */
+  fetchImpl?: typeof fetch | undefined;
+  /**
+  `FIRECRAWL_API_KEY`, read from `env` by the caller. Absent means a refused
+  page is a failed fetch.
+  */
+  proxyApiKey?: string | undefined;
+}
+
+async function markFailed(db: Db, productId: string): Promise<void> {
+  await db
+    .update(products)
+    .set({ extractionStatus: "failed" })
+    .where(eq(products.id, productId));
+}
+
+/**
+The newest snapshot of a product fetched after `since` (epoch ms), if any.
+*/
+async function latestSnapshot(db: Db, productId: string, since: number) {
+  const [row] = await db
+    .select()
+    .from(productSnapshots)
+    .where(
+      and(
+        eq(productSnapshots.productId, productId),
+        gt(productSnapshots.fetchedAt, since),
+      ),
+    )
+    .orderBy(desc(productSnapshots.fetchedAt))
+    .limit(1);
+  return row;
+}
+
+/**
+ * Run the ladder over a stored page and write the result back, updating
+ * the snapshot's rung to what this run found — the column's job is to say
+ * whether re-running would help, and after a re-run that is a new answer.
+ */
+async function extractStored(
+  db: Db,
+  productId: string,
+  snapshot: { id: string; url: string },
+  html: string,
+): Promise<ApplyReport> {
+  const result = runLadder(new URL(snapshot.url), html);
+  await db
+    .update(productSnapshots)
+    .set({ rung: result.rung })
+    .where(eq(productSnapshots.id, snapshot.id));
+  return applyExtraction(db, productId, result.extracted, result.rung);
+}
+
+/**
+ * Fetch, store, extract, record, write back — the bytes go to R2 before
+ * anything tries to understand them (D-31), and the row is written once the
+ * ladder has said which rung read it. A ladder that throws between the two
+ * leaves an object with no row, which is the recoverable kind of residue
+ * `snapshot.ts` already accepts.
+ */
+async function fetchAndExtract(
+  deps: EnrichmentDeps,
+  productId: string,
+  sourceUrl: string,
+): Promise<ApplyReport> {
+  const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
+    proxyApiKey: deps.proxyApiKey,
+  });
+  const fetchedAt = Date.now();
+  const r2Key = await putSnapshot(productId, page.html, fetchedAt);
+  const result = runLadder(new URL(page.finalUrl), page.html);
+  await recordSnapshot(deps.db, {
+    productId,
+    url: page.finalUrl,
+    r2Key,
+    rung: result.rung,
+    fetchedAt,
+  });
+  return applyExtraction(deps.db, productId, result.extracted, result.rung);
+}
+
+async function processEnrichJob(
+  deps: EnrichmentDeps,
+  productId: string,
+): Promise<void> {
+  const row = await firstRowWhere(deps.db, products, eq(products.id, productId));
+  if (row?.extractionStatus !== "pending") return;
+
+  try {
+    const recent = await latestSnapshot(
+      deps.db,
+      productId,
+      Date.now() - REUSE_WINDOW_MS,
+    );
+    if (recent !== undefined) {
+      const stored = await readSnapshot(recent.r2Key);
+      if (stored !== undefined) {
+        await extractStored(deps.db, productId, recent, stored);
+        return;
+      }
+    }
+    // `String(null)` is "null", which is not a URL. A pending row with no
+    // URL cannot come from `requestEnrichment`, which requires one to flip
+    // the row; a hand-edited one goes through the same door as any other
+    // bad URL — a terminal `PageFetchError`, reported, and the row failed —
+    // rather than a private branch that fails it silently.
+    await fetchAndExtract(deps, productId, String(row.sourceUrl));
+  } catch (error) {
+    if (!(error instanceof PageFetchError)) throw error;
+    deps.captureException(error, { surface: "enrichment-fetch", productId });
+    await markFailed(deps.db, productId);
+  }
+}
+
+export async function handleEnrichmentBatch(
+  batch: MessageBatch,
+  deps: EnrichmentDeps,
+): Promise<void> {
+  await consumeEach(batch, enrichJobSchema, {
+    process: (job) => processEnrichJob(deps, job.productId),
+    invalidMessage: "invalid enrichment queue message",
+    context: (job) => ({ productId: job.productId }),
+    captureException: deps.captureException,
+  });
+}
+
+/**
+ * Law 6: a job that exhausted its retries lands on the row, where the
+ * closet can show that enrichment gave up, and in Sentry. Only a row still
+ * `pending` is marked — a retry that finally succeeded before the DLQ
+ * caught up must not be un-succeeded.
+ */
+export async function handleEnrichmentDlqBatch(
+  batch: MessageBatch,
+  deps: EnrichmentDeps,
+): Promise<void> {
+  await deadLetterEach(batch, enrichJobSchema, {
+    onJob: async (job) => {
+      await deps.db
+        .update(products)
+        .set({ extractionStatus: "failed" })
+        .where(
+          and(
+            eq(products.id, job.productId),
+            eq(products.extractionStatus, "pending"),
+          ),
+        );
+    },
+    deadLettered: `dead-lettered job on ${batch.queue}`,
+    captureException: deps.captureException,
+  });
+}
+
+/**
+ * Re-run the ladder over the latest stored page without refetching — the
+ * mechanism that makes a better parser or a promoted fibre retroactive
+ * (D-31, packet §6). Nothing when the product has never been snapshotted,
+ * or when the snapshot row points at an object that is not there.
+ */
+export async function reextract(
+  db: Db,
+  productId: string,
+): Promise<ApplyReport | undefined> {
+  const latest = await latestSnapshot(db, productId, 0);
+  if (latest === undefined) return undefined;
+  const html = await readSnapshot(latest.r2Key);
+  if (html === undefined) return undefined;
+  return extractStored(db, productId, latest, html);
+}

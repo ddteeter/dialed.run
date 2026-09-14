@@ -86,3 +86,21 @@ export async function firstColumnWhere<TColumn extends SQLiteColumn>(
     .limit(1);
   return row?.value;
 }
+
+/**
+ * The first matching row, whole, or `undefined` — `LIMIT 1` like the two
+ * above, but this one reads the row rather than a column, and that is not
+ * a lapse in the doctrine above. It is for the read a queue job opens with:
+ * "the row this job points at", by primary key. There is no covering index
+ * to answer from because the caller needs every column, and a lookup by
+ * primary key is one row read whichever way it is written. Two consumers
+ * had written it out identically.
+ */
+export async function firstRowWhere<TTable extends SQLiteTable>(
+  database: DrizzleD1Database,
+  table: TTable,
+  where: SQL | undefined,
+): Promise<TTable["$inferSelect"] | undefined> {
+  const [row] = await database.select().from(table).where(where).limit(1);
+  return row;
+}

@@ -445,6 +445,11 @@
       "count": 1
     },
     {
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
+      "reason": "The enrichment sweep is the third stalled-marker reconciliation beside imports and Strava revocations, and the third caller of redispatchEach. The loop body and the stalled-row query (stalledPending) are both extracted; what remains at each site is the 13-line call naming a queue, a message shape, a Sentry context and a sentence, which fallow's identifier matching reads as a clone of the imports call. This is the well-factored-pair case CLAUDE.md records: extraction leaves call sites that are skeletally identical, and the price of the flip is a suppression per caller. Three other shapes were tried (a query helper alone, sweeps as data run by one function, a call-site helper) and each moved the clone rather than removed it. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
       "key": "src/modules/feed/follows.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables.",
       "count": 1
