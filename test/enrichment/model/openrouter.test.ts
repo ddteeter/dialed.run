@@ -152,6 +152,25 @@ describe("createOpenRouterModel: the request", () => {
     );
   });
 
+  it("falls back to a real default timeout, never to no timeout at all", async () => {
+    // The bound is optional so the eval can be patient (a slow provider is
+    // not an incapable one), and the hazard of an optional bound is that a
+    // missing one degrades to zero rather than to the default — which
+    // aborts every request instantly. Observed by letting the clock run a
+    // beat and asking the signal, since a 30-second signal and a
+    // 90-second one look identical from outside.
+    let abortedAfterATick: boolean | undefined;
+    const watching: typeof fetch = async (_input, init) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      abortedAfterATick = init?.signal?.aborted;
+      return Response.json({ choices: [{ message: { content: FOUND } }] });
+    };
+
+    await modelWith(watching).extract(PAGE_TEXT, HINT);
+
+    expect(abortedAfterATick).toBe(false);
+  });
+
   it("names the schema, because a provider matches the answer to it", async () => {
     const fetchImpl = answering(FOUND);
     await modelWith(fetchImpl).extract(PAGE_TEXT, HINT);

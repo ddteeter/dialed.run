@@ -84,6 +84,11 @@ async function askOne(
   const model = createOpenRouterModel(apiKey, {
     model: choice.id,
     provider: choice.provider,
+    // Generous on purpose — see `OpenRouterOptions.timeoutMs`. The eval
+    // asks whether a model can extract, not whether it fits production's
+    // bound; the first run answered the second question and reported it as
+    // the first.
+    timeoutMs: 120_000,
   });
   try {
     const found: ExtractedProduct = await model.extract(text, { url });

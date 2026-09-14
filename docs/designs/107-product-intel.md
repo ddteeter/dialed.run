@@ -174,7 +174,7 @@ is a number that should climb.
 that answered nothing new did not deepen anything, and the column's job is
 to say whether re-running would help.
 
-## Eval (D-32) — and what it says about the deterministic path
+## Eval (D-32) — and the decision it produced
 
 `npm run eval` (`eval/`, not collected by vitest — it costs money, depends
 on twenty shops being up, and answers a judgement rather than a pass).
@@ -182,56 +182,99 @@ Corpus of 22 pages across 14 brands, chosen for spread rather than size:
 Shopify, Salesforce Commerce and hand-rolled storefronts; tops, bottoms,
 socks, gloves, headwear and technical outerwear.
 
-**Deterministic against the one model that answered every page:**
+**Deterministic against the models' consensus:**
 
 | | pages |
 | --- | --- |
-| same materials as the best model | 14 |
-| deterministic found **fewer** | 4 |
-| deterministic found **nothing** | 1 |
-| deterministic found **more** | 3 |
+| same materials as the consensus | 18 |
+| deterministic found **fewer** | 3 |
+| deterministic found **more** | 1 |
 
-So it is right or better on 17 of 22, and materially worse on 5 — and the
-five have three causes, not five:
+All three shortfalls are one bug — **the composition split across separate
+DOM nodes**, where the pass takes the first node that parses and stops.
+`rabbit`'s three labelled sections yield one; On's `Front:`/`Back:` yields
+the front. The answer looks complete because it is well-formed.
 
-1. **"The first node that parses wins" loses everything after it.** Four of
-   the five. A composition split over several nodes — `rabbit`'s three
-   labelled sections, On's `Front:`/`Back:` — yields only the first, and the
-   answer looks complete because it is well-formed.
-2. **No abbreviations in `fibres.ts`.** European brands write `88% PA 12%
-   EL`; the vocabulary has `polyamide` and `elastane`. SOAR's shorts
-   returned nothing at all for this reason.
-3. **Marketing prose outranking the spec**, which is caused by (2): on
-   SOAR's half-tights the real spec (`Main: 49% PA, 27% EA, 24% WV`) was
-   invisible, so a sentence containing "24% merino wool" won instead. The
-   worst failure shape there is — confident, plausible and wrong.
+The single "found more" is Arc'teryx, where the deterministic pass and
+`gpt-5.6-luna` both say four and only `qwen3.8-27b` says eight — it counted
+`Coreloft™ 80`, `Arato™ 15` and `10D x 20D Ripstop` as materials. Those are
+fabric trade names, and they are the clearest evidence in the corpus that a
+model will invent fibres out of marketing copy.
 
-**The model is not a superset, which is the argument against just using
-it.** On three pages the deterministic pass found a composition the model
-missed entirely: Tracksmith's `2:09 Mesh: 82% Polyester, 18% Spandex` and
-Arc'teryx's GORE-TEX spec both came back `_nothing_` from the model. A
-second opinion is worth having; it is not worth *deferring* to.
+### Three readings this eval got wrong before it got them right
 
-**Cheap is not the same as usable.** Over the same 22 pages,
-`gpt-5.6-luna` answered 22; `qwen3.8-flash` 9 (timeouts at 30s);
-`qwen3.8-27b` 5 (mostly 429). That is a reliability finding the accuracy
-question would have hidden.
+Recorded because each was reported as a fact about a model or a corpus and
+each was a fault in our own instrumentation.
 
-**The candidate vocabulary works as designed.** The unrecognised materials
-the corpus surfaced were `pa`, `el`, `ea`, `wv`, `pes` — real fibres in
-abbreviated form — alongside `decoration` and `2:09 mesh`, which are not
-fibres and which a reviewer would decline. That is exactly the mix
-`fibre_candidates` exists to put in front of a person.
+1. **"The model is not a superset."** It missed three pages —
+   `pageTextFor` had never shown them to it. The budget loop `break`ed on
+   the first node too large to fit instead of skipping it, and Tracksmith's
+   page carries text nodes of 168,000 characters, so it reached the model
+   as 2,028 of its 889,578. With the whole page, the model returns every
+   composition it was said to have missed.
+2. **"Cheap is not the same as usable."** `qwen3.8-flash` scored 9 of 22 and
+   was written off; every failure was our own 30-second bound. Given a
+   patient timeout it answers 22 of 22. `qwen3.8-27b`'s failures are real
+   rate limits.
+3. **"Deterministic loses on five pages."** The verdict scored against the
+   *best* model rather than the consensus, which rewards over-counting: one
+   model read the legal phrase "Exclusive of decoration" as a material and
+   that inflated count marked a correct deterministic answer as a failure.
 
-~20 real pages, fixtures committed as **fragments** rather than whole pages —
-the repo is public and these are copyrighted marketing pages, and a rung only
-needs the fragment. A manifest carries URL, fetch date and SHA-256 so they
-stay reproducible.
+**A fourth is still standing**, and the numbers above are reported knowing
+it: material count conflates *finding* a composition with *structuring* it.
+On SOAR's shorts `gpt-5.6-luna` returned exactly the right verbatim
+(`Shell 88% PA 12% EL`) and no parsed parts, so it scores zero and the page
+reads as agreement with a deterministic pass that found nothing at all.
+Verbatim is the load-bearing half — it is what `fabric_composition` stores
+and what D-31 keeps so a better parser can re-read it — so the next
+revision of the report scores it separately.
 
-Per-field accuracy per model lands here before anything ships. Confirmed at
-design time: OpenRouter's structured-output support is per **endpoint**, not
-per model, so the eval pins a provider per model and asserts strict mode is
-honoured, or it measures routing luck.
+## Decided — the model is the composition, not a fallback for it
+
+**Owner's call, 2026-09-14**, on the numbers above and the costs below.
+This reverses the ladder: the deterministic composition pass is no longer
+the source of `fabric_composition`.
+
+**Cost is not the reason.** Measured against the real API: a page is ~4,800
+prompt tokens and ~270 completion, which is **$0.00065 per product** on the
+pinned endpoint — and enrichment is per *product*, not per paste, because
+products are canonical rows and `requestEnrichment` only claims `none` and
+`failed`. A thousand products is 65 cents. The Firecrawl fetch that obtains
+the page costs about five times as much as the model call that reads it.
+
+**The reasons are that the heuristic cannot close, and that falling back to
+it is worse than not answering:**
+
+- The vocabulary gate is unbounded. `Coreloft`, `Arato 15`, `PacerWeave`,
+  `rabbitDRY`, `2:09 Mesh`, `Primeflex` — on this corpus every trade name
+  happened to sit beside a real fibre (`Toray Primeflex™: 100% polyester`),
+  so the gate passed. That is luck. A page reading only `100% Primeflex`
+  extracts nothing until a human promotes the word.
+- **A fallback that produces wrong answers is worse than no answer.** On
+  SOAR's half-tights the deterministic pass does not fail — it succeeds,
+  with marketing copy, writing `24% merino wool` into the column as though
+  it were the spec. A product with no composition is a state the app
+  already renders and a user can correct; a product with a plausible wrong
+  one is a new failure mode invented to guard against an outage.
+- **Enrichment is eventually consistent already.** It is a queue job behind
+  `max_retries` + a DLQ + an hourly sweep. The right answer to an upstream
+  being down is to stay `pending` and try later; nobody is waiting on it.
+
+**What stays.** The declared-data rungs — JSON-LD, Shopify's product JSON,
+Open Graph — are not heuristics. They read a field a shop published, they
+cost nothing, they are instant, and they cannot be plausibly-wrong the way
+a prose search can. They agreed with the models on name, brand and image on
+essentially every page. Only the *composition text pass* is retired as a
+producer.
+
+**A consequence to wire.** If the model is the only source of composition,
+a model outage must leave the row **retryable**, not terminal. Today a
+dead-lettered job marks `extraction_status='failed'` and the hourly sweep
+re-drives only `pending`, so a `failed` product waits for someone to paste
+it again. That is right when failure means "this page has no composition"
+and wrong when it means "OpenRouter was down", so the sweep also re-drives
+`failed` rows past an age.
 
 ## Decided
 
