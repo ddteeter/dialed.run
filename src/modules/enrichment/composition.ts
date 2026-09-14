@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import { fabricPartSchema, type FabricComposition } from "../../lib/contracts";
 import { isFibre } from "./fibres";
-import { readableText, textNodes, withoutCode } from "./html";
+import { readableText } from "./html";
 
 /**
 Derived from the schema rather than restated (CLAUDE.md §Derive, don't mirror).
@@ -198,30 +198,4 @@ export function parseComposition(raw: string): FabricComposition | undefined {
   // with no parts would write that text into the column and, under
   // fill-only-what-is-blank, block a later rung that had the real thing.
   return parts.length === 0 ? undefined : { verbatim, parts };
-}
-
-/**
- * The composition on a page, wherever a shop chose to put it.
- *
- * Measured against 14 real pages: composition is in metafields rendered into
- * a "Specs" panel, in description prose, in `<meta name="description">`, and
- * in JSON-LD — never reliably in one field. So this searches the page's text
- * nodes rather than reading a payload.
- *
- * **A text node is the right granularity** because a composition is written
- * as one: `47% 17.5μ merino wool, 38% 37.5® nylon, 15% nylon` arrives whole,
- * and so does `Toray Primeflex™: 100% polyester`. Splitting finer would cut
- * a composition in half; coarser would glue a sale onto it.
- *
- * The first node that parses wins. A page can mention fabric more than once
- * — related products, variant blurbs — and the first is nearest the product
- * being described.
- */
-export function findComposition(html: string): FabricComposition | undefined {
-  const nodes = textNodes(withoutCode(html));
-  for (const node of nodes) {
-    const composition = parseComposition(node);
-    if (composition !== undefined) return composition;
-  }
-  return undefined;
 }

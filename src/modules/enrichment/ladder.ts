@@ -1,6 +1,5 @@
 import type { ExtractedProduct } from "../../lib/contracts";
 import type { productSnapshots } from "../../db/schema-core";
-import { findComposition } from "./composition";
 import { fillBlanksFrom } from "./extracted";
 import { jsonLdExtractor } from "./rungs/jsonld";
 import { openGraphExtractor } from "./rungs/og";
@@ -50,19 +49,20 @@ export function runLadder(url: URL, html: string): LadderResult {
     if (fillBlanksFrom(extracted, found) > 0) rung = extractor.rung;
   }
 
-  // The page's own text, last among the deterministic sources because it is
-  // inferred where the others are declared — a `material` field a shop
-  // published beats a percentage we found in prose.
+  // **No prose search here any more, and that is the lane's biggest
+  // decision** (owner, 2026-09-14). A pass that read the page's text nodes
+  // for a percentage beside a known fibre used to fill this field, and the
+  // eval retired it: it lost every section after the first on a
+  // multi-component garment, it could not see `88% PA 12% EL` because the
+  // vocabulary has no abbreviations, and on one page it answered with
+  // marketing copy — confidently, plausibly and wrongly. Composition now
+  // comes from the model rung, or it waits.
   //
-  // **It is here because the declared fields almost never carry it.**
-  // Measured over 14 real pages: the three rungs above found composition on
-  // none of them, and the text search finds it on 7 of 8 fixtures. Without
-  // this the field the lane exists for is empty in production.
-  // No `!== undefined` guard in front of this: `fillBlanksFrom` already
-  // skips an undefined value and returns 0, so the check could not change an
-  // answer — two guards where one fires means neither can be killed.
-  const fabricComposition = findComposition(html);
-  if (fillBlanksFrom(extracted, { fabricComposition }) > 0) rung = "text";
+  // What is left here is *declared* data. The JSON-LD rung reads a
+  // `material` field a shop published and the Shopify rung reads a cued
+  // stretch of `body_html`; both hand that string to `parseComposition`,
+  // which is unchanged. Reading a field someone published is not the same
+  // act as guessing from prose, and only the guessing was retired.
 
   return { extracted, rung };
 }

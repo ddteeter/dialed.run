@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { fibreCandidates } from "../../../src/db/schema-core";
 import { env } from "../../../src/env";
-import type { ExtractedProduct } from "../../../src/lib/contracts";
+import type {
+  ExtractedProduct,
+  ExtractionModel,
+} from "../../../src/lib/contracts";
 import { newUlid } from "../../../src/lib/ids";
 import {
   modelPass,
@@ -134,8 +137,8 @@ describe("unknownFibres", () => {
   });
 });
 
-function deps(model: ReturnType<typeof modelAnswering>) {
-  return { db: db(), model, captureException: vi.fn() };
+function deps(model: ExtractionModel) {
+  return { db: db(), model };
 }
 
 describe("modelPass", () => {
@@ -205,15 +208,18 @@ describe("modelPass", () => {
     expect(await candidatesFor(snapshotId)).toStrictEqual([]);
   });
 
-  it("records nothing, and reports nothing, when the model found no composition", async () => {
-    // "Nothing to record" and "it blew up and we swallowed it" both leave
-    // an empty table, so the absence of a report is what tells them apart.
+  it("records nothing, and does not fail, when the model found no composition", async () => {
+    // "Nothing to record" and "it blew up" are no longer the same shape:
+    // a failure propagates now, so completing quietly is the assertion.
     const snapshotId = newUlid();
-    const passed = deps(modelAnswering({ name: "Rover Tee" }));
-    await modelPass(passed, {}, page(newUlid(), snapshotId));
+    const pass = await modelPass(
+      deps(modelAnswering({ name: "Rover Tee" })),
+      {},
+      page(newUlid(), snapshotId),
+    );
 
+    expect(pass.didContribute).toBe(true);
     expect(await candidatesFor(snapshotId)).toStrictEqual([]);
-    expect(passed.captureException).not.toHaveBeenCalled();
   });
 
   it("re-runs over one snapshot without duplicating its candidates", async () => {
@@ -232,25 +238,36 @@ describe("modelPass", () => {
     expect(await candidatesFor(snapshotId)).toHaveLength(1);
   });
 
-  it("keeps the deterministic answer when the model fails", async () => {
-    // Everything the rungs found is already good and the page is already
-    // stored: throwing here would discard a working extraction because an
-    // optional upstream was slow (law 5).
-    const model = { extract: vi.fn(() => Promise.reject(new Error("upstream"))) };
-    const captureException = vi.fn();
-    const found: ExtractedProduct = { name: "Rover Tee" };
+  it("lets a model failure through, so the job can be retried", async () => {
+    // **It used to swallow this**, and that became wrong the moment the
+    // model was the only source of composition: a caught error means the
+    // job writes a product with none and marks it `done`, and
+    // `requestEnrichment` never claims a `done` row again — so one
+    // transient outage would permanently cost that product its
+    // composition. The queue's retry is the mechanism (law 3).
+    const failing: ExtractionModel = {
+      extract: () => Promise.reject(new Error("upstream")),
+    };
 
-    const pass = await modelPass(
-      { db: db(), model, captureException },
-      found,
-      page("prod-1", "snap-1"),
+    const attempt = modelPass(
+      deps(failing),
+      { name: "Rover Tee" },
+      page(newUlid(), newUlid()),
     );
+    await expect(attempt).rejects.toThrow("upstream");
+  });
 
-    expect(pass.didContribute).toBe(false);
-    expect(pass.extracted).toStrictEqual({ name: "Rover Tee" });
-    expect(captureException).toHaveBeenCalledWith(expect.any(Error), {
-      surface: "enrichment-model",
-      productId: "prod-1",
-    });
+  it("records candidates before the caller can act on the answer", async () => {
+    // A page that named a new fibre teaches the vocabulary even if what
+    // happens next fails, because the recording is done by the time this
+    // returns.
+    const snapshotId = newUlid();
+    const pass = await modelPass(
+      deps(modelAnswering(PROPRIETARY)),
+      {},
+      page(newUlid(), snapshotId),
+    );
+    expect(pass.didContribute).toBe(true);
+    expect(await candidatesFor(snapshotId)).toHaveLength(1);
   });
 });

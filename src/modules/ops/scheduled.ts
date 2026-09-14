@@ -1,4 +1,4 @@
-import { and, eq, lt, or } from "drizzle-orm";
+import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -229,16 +229,43 @@ async function redispatchStrandedRevocations(
  */
 const ENRICHMENT_STALL_GRACE_S = 15 * 60;
 
+/**
+ * `failed` is re-driven too, which `pending` alone would not cover.
+ *
+ * **Because composition now comes only from the model** (owner,
+ * 2026-09-14), a job that exhausts its retries while OpenRouter is
+ * unreachable dead-letters and marks the product `failed` — and
+ * `requestEnrichment` only claims `none` and `failed` on a *new paste*, so
+ * nothing would ever look at it again. That is the right terminal state for
+ * "this page states no composition" and the wrong one for "the model was
+ * down for twenty minutes", and the row cannot tell us which it was.
+ *
+ * So both are re-driven, and the cost of getting it wrong is asymmetric: a
+ * page that genuinely has nothing is re-fetched occasionally and answers
+ * nothing again, where a product wrongly abandoned stays wrong forever.
+ * The consumer's snapshot reuse makes the re-drive nearly free within the
+ * hour, and `applyExtraction` is idempotent.
+ */
+const ENRICHMENT_UNFINISHED = ["pending", "failed"] as const;
+
 async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
-  const stalled = await stalledPending(
-    {
-      table: products,
-      id: products.id,
-      status: products.extractionStatus,
-      createdAt: products.createdAt,
-    },
-    ENRICHMENT_STALL_GRACE_S,
-  );
+  // Its own query rather than `stalledPending`: that helper asks "which
+  // rows are still `pending`", and this now asks a different question over
+  // two states. Forcing both through one signature means typing the state
+  // list as the intersection of two tables' status enums, which is a worse
+  // lie than two queries.
+  const db = drizzle(env.DIALED_CORE);
+  const staleBefore = Math.floor(Date.now() / 1000) - ENRICHMENT_STALL_GRACE_S;
+  const stalled = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        inArray(products.extractionStatus, ENRICHMENT_UNFINISHED),
+        lt(products.createdAt, staleBefore),
+      ),
+    )
+    .limit(100);
   // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
   await redispatchEach(anomalies, stalled, {
     queue: env.ENRICHMENT_QUEUE,
@@ -248,7 +275,7 @@ async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> 
       productId: row.id,
     }),
     describe: (count) =>
-      `${String(count)} product(s) stalled pending enrichment and were re-dispatched`,
+      `${String(count)} product(s) unfinished by enrichment and were re-dispatched`,
   });
 }
 

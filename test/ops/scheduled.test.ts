@@ -409,7 +409,7 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     expect(outcome.cronName).toBe("enrichment-retry");
     expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
     expect(outcome.anomalies).toStrictEqual([
-      "1 product(s) stalled pending enrichment and were re-dispatched",
+      "1 product(s) unfinished by enrichment and were re-dispatched",
     ]);
   });
 
@@ -432,9 +432,30 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     expect(send).toHaveBeenCalledTimes(1);
   });
 
-  it("only re-dispatches products that are still pending", async () => {
+  it("re-drives a failed product too, so an outage heals itself", async () => {
+    // **Composition comes only from the model now**, so a job that
+    // exhausted its retries while OpenRouter was unreachable dead-lettered
+    // and marked the product `failed` — and `requestEnrichment` only claims
+    // `failed` on a *new paste*, so nothing would look at it again. The row
+    // cannot tell "this page states no composition" from "the model was
+    // down", and the costs are asymmetric: re-fetching a page that has
+    // nothing is cheap, abandoning a product is forever.
     const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
-    for (const status of ["none", "done", "failed"] as const) {
+    const productId = await insertProduct("failed", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+  });
+
+  it("leaves alone the states that are not enrichment's to finish", async () => {
+    // `none` was never asked for, and `done` succeeded. Re-driving either
+    // would be work the system already did, or never owed.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    for (const status of ["none", "done"] as const) {
       await insertProduct(status, HOUR);
     }
 
@@ -454,7 +475,7 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     const outcome = await handleScheduled(ENRICHMENT_RETRY);
 
     expect(outcome.anomalies).toStrictEqual([
-      "1 product(s) stalled pending enrichment and were re-dispatched",
+      "1 product(s) unfinished by enrichment and were re-dispatched",
     ]);
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
