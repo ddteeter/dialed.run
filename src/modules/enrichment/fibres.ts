@@ -1,3 +1,5 @@
+import type { FabricComposition } from "../../lib/contracts";
+
 /**
  * The fibres a composition can name.
  *
@@ -75,4 +77,26 @@ Every fibre the vocabulary knows, for the candidate check in the model rung.
 */
 export function knownFibres(): readonly string[] {
   return FIBRES;
+}
+
+/**
+ * Every material in a composition that this vocabulary does not recognise.
+ *
+ * Lives here rather than beside either caller because both the model rung
+ * (recording candidates) and the eval (reporting what a corpus surfaced)
+ * ask exactly this question, and the answer is a property of the
+ * vocabulary. Lower-cased, and de-duplicated, so the same word written two
+ * ways on one page is one candidate.
+ */
+export function unknownMaterialsIn(
+  composition: Readonly<FabricComposition>,
+): string[] {
+  const unknown = new Set<string>();
+  const parts = composition.parts ?? [];
+  for (const part of parts) {
+    for (const { material } of part.materials) {
+      if (!isFibre(material)) unknown.add(material.toLowerCase());
+    }
+  }
+  return [...unknown];
 }

@@ -1,14 +1,10 @@
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { fibreCandidates } from "../../../db/schema-core";
-import type {
-  ExtractedProduct,
-  ExtractionModel,
-  FabricComposition,
-} from "../../../lib/contracts";
+import type { ExtractedProduct, ExtractionModel } from "../../../lib/contracts";
 import { newUlid } from "../../../lib/ids";
 import { fillBlanksFrom } from "../extracted";
-import { isFibre } from "../fibres";
+import { unknownMaterialsIn } from "../fibres";
 import { pageTextFor } from "./page-text";
 
 type Db = DrizzleD1Database & { $client: D1Database };
@@ -51,18 +47,7 @@ export function unknownFibres(
   extracted: Readonly<ExtractedProduct>,
 ): readonly string[] {
   const composition = extracted.fabricComposition;
-  return composition === undefined ? [] : unknownIn(composition);
-}
-
-function unknownIn(composition: Readonly<FabricComposition>): string[] {
-  const unknown = new Set<string>();
-  const parts = composition.parts ?? [];
-  for (const part of parts) {
-    for (const { material } of part.materials) {
-      if (!isFibre(material)) unknown.add(material.toLowerCase());
-    }
-  }
-  return [...unknown];
+  return composition === undefined ? [] : unknownMaterialsIn(composition);
 }
 
 export interface ModelPassDeps {
@@ -126,7 +111,7 @@ async function recordCandidates(
 ): Promise<void> {
   const composition = found.fabricComposition;
   if (composition === undefined) return;
-  const rows = unknownIn(composition).map((material) => ({
+  const rows = unknownMaterialsIn(composition).map((material) => ({
     id: newUlid(),
     material,
     productId: page.productId,

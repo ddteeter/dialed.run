@@ -30,7 +30,8 @@
     "db:migrate:local:core": "wrangler d1 migrations apply dialed-core --local",
     "db:migrate:local:weather": "wrangler d1 migrations apply dialed-weather --local",
     "check:bundle": "node -e \"const fs=require('node:fs');const d='dist/client/assets';if(!fs.existsSync(d))throw new Error('run npm run build first');const bad=[[/drizzle:entityKind/,'drizzle-orm'],[/processEntities/,'fast-xml-parser'],[/wardrobe_items/,'db/schema-core'],[/FIT_EPOCH|fitsdk/,'@garmin/fitsdk']];const hits=[];for(const f of fs.readdirSync(d).filter(x=>x.endsWith('.js'))){const t=fs.readFileSync(d+'/'+f,'utf8');for(const [re,name] of bad) if(re.test(t)) hits.push(f+': '+name);}if(hits.length){console.error('server-only code in the client bundle:');for(const h of hits)console.error('  '+h);process.exit(1);}console.log('client bundle clean');\"",
-    "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify"
+    "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify",
+    "eval": "tsx eval/run.ts"
   },
   "dependencies": {
     "@cf-wasm/photon": "^0.4.0",
@@ -79,6 +80,7 @@
     "happy-dom": "^20.14.0",
     "knip": "^6.34.0",
     "prettier": "^3.9.6",
+    "tsx": "4.23.13",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.69.0",
     "vite": "^8.0.0",
