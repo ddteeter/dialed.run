@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  readableText,
   scriptBodies,
   textNodes,
   withoutCode,
@@ -158,5 +159,64 @@ describe("textNodes", () => {
 
   it("does not leave the closing angle bracket on the next node", () => {
     expect(textNodes("<b>x")).toStrictEqual(["", "x"]);
+  });
+});
+
+describe("readableText", () => {
+  /**
+   * A text node as a reader would see it. These cases lived in
+   * `composition.test.ts` until the composition parser was retired
+   * (2026-09-14); the function outlived it because the *prompt* needs the
+   * same decode — a model shown `&amp;` copies `&amp;` into `verbatim`,
+   * exactly as it is told to.
+   */
+
+  it("decodes an ampersand that arrived encoded", () => {
+    expect(readableText("91% polyester &amp; 9% spandex")).toBe(
+      "91% polyester & 9% spandex",
+    );
+  });
+
+  it("keeps decoding until it stops changing", () => {
+    // Double and triple encoding are both real: a description round-tripped
+    // through JSON and then through a template arrives as `&amp;amp;`.
+    // Stopping one pass short leaves an entity the strip below eats, taking
+    // the separator between two fibres with it.
+    expect(readableText("a &amp;amp; b")).toBe("a & b");
+    // And the JSON-escaped form, which is how it arrives from an attribute.
+    expect(readableText(String.raw`a \u0026amp;amp; b`)).toBe("a & b");
+  });
+
+  it("replaces a leftover entity with a space, not with nothing", () => {
+    // `&nbsp;` between two words is a word boundary. Deleted rather than
+    // replaced, "cold&nbsp;mornings" becomes "coldmornings" — and a cue or
+    // a fibre name stops matching on a page that had one.
+    expect(readableText("cold&nbsp;mornings")).toBe("cold mornings");
+  });
+
+  it("strips a named entity, not only a numeric one", () => {
+    // `&#8212;` and `&mdash;` are the same character written two ways, and
+    // a pattern that requires the `#` leaves half of them in the text.
+    expect(readableText("a&mdash;b")).toBe("a b");
+    expect(readableText("a&#8212;b")).toBe("a b");
+  });
+
+  it("strips an entity longer than one character", () => {
+    // The shortest real entity is `&lt;`; `&thinsp;` is seven. A pattern
+    // matching a single character inside the semicolons leaves every one of
+    // them behind.
+    expect(readableText("a&thinsp;b")).toBe("a b");
+  });
+
+  it("leaves a bare ampersand and a stray semicolon alone", () => {
+    // `&` is not an entity and `;` ends a sentence. A pattern that matched
+    // non-alphanumerics between them would eat punctuation a shop wrote.
+    expect(readableText("Body & liner; both merino")).toBe(
+      "Body & liner; both merino",
+    );
+  });
+
+  it("collapses whitespace and trims, so nodes compare as text", () => {
+    expect(readableText("  100%   merino \n  wool  ")).toBe("100% merino wool");
   });
 });

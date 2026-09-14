@@ -4,10 +4,7 @@ import type {
   ExtractedProduct,
   ExtractionModel,
 } from "../../../src/lib/contracts";
-import {
-  modelPass,
-  requiresModel,
-} from "../../../src/modules/enrichment/model/rung";
+import { modelPass } from "../../../src/modules/enrichment/model/rung";
 
 /**
  * When the model is worth asking, and what comes back.
@@ -39,37 +36,6 @@ function page() {
     url: "https://shop.example.com/products/tee",
   };
 }
-
-describe("requiresModel", () => {
-  it("asks when the deterministic rungs found no composition", () => {
-    expect(requiresModel({})).toBe(true);
-    expect(requiresModel({ name: "Rover Tee", brand: "Janji" })).toBe(true);
-  });
-
-  it("does not ask when a shop already stated its composition", () => {
-    // A shop publishing JSON-LD has answered better than a model can, so
-    // asking one is spending money for a worse answer.
-    expect(requiresModel(MERINO)).toBe(false);
-  });
-
-  it("asks for the composition and nothing else", () => {
-    // Name, brand and image come from Open Graph on essentially every
-    // page, so a model asked for them is an expensive way to re-read a
-    // `<meta>` tag. If that stops being true, this test says where to
-    // change it.
-    const everythingButComposition: ExtractedProduct = {
-      name: "Rover Tee",
-      brand: "Janji",
-      imageUrl: "https://cdn.example.com/tee.jpg",
-      weight: "light",
-      fabric: "merino",
-      categoryHint: "top",
-      windResistant: false,
-      waterResistant: false,
-    };
-    expect(requiresModel(everythingButComposition)).toBe(true);
-  });
-});
 
 describe("modelPass", () => {
   it("fills a blank the deterministic rungs left, and says it did", async () => {

@@ -25,22 +25,16 @@ describe("the JSON-LD rung", () => {
       }),
     );
 
+    // `material` is in the payload and deliberately **not** in the answer:
+    // the rung stopped reading it on 2026-09-14. It answered on 2 of 22
+    // real pages where the model answered on 22, and agreed with it on both
+    // — so composition has one source, and this rung is for the cheap
+    // declared facts it is carrying instead (name on 19 of 22, image on 21).
     expect(jsonLdExtractor.extract(PAGE, html)).toStrictEqual({
       name: "Rover Half-Zip",
       brand: "Janji",
       categoryHint: "Tops",
       imageUrl: "https://cdn.example.com/rover.jpg",
-      fabricComposition: {
-        verbatim: "88% polyester, 12% elastane",
-        parts: [
-          {
-            materials: [
-              { material: "polyester", pct: 88 },
-              { material: "elastane", pct: 12 },
-            ],
-          },
-        ],
-      },
     });
   });
 
@@ -137,19 +131,19 @@ describe("the JSON-LD rung", () => {
 
   it("drops a bad field without losing the good ones", () => {
     // The reason each field is parsed alone: a shop publishing `name: 42`
-    // must not cost us the brand and the material as well.
+    // must not cost us the brand and the image as well.
     const html = pageWith(
       JSON.stringify({
         "@type": "Product",
         name: 42,
         brand: "Janji",
-        material: "100% merino",
+        image: "https://cdn.example.com/rover.jpg",
       }),
     );
     const extracted = jsonLdExtractor.extract(PAGE, html);
     expect(extracted?.name).toBeUndefined();
     expect(extracted?.brand).toBe("Janji");
-    expect(extracted?.fabricComposition?.verbatim).toBe("100% merino");
+    expect(extracted?.imageUrl).toBe("https://cdn.example.com/rover.jpg");
   });
 
   it("says nothing rather than something empty", () => {

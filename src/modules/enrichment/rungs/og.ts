@@ -9,7 +9,7 @@ import type { ExtractedProduct, PageExtractor } from "../../../lib/contracts";
  * field, no composition. This rung is what stops a page yielding *nothing*.
  *
  * **It does not read `og:description`, deliberately.** A description is
- * marketing prose, and `parseComposition` asks only for a percentage beside
+ * marketing prose, and a composition parser asked only for a percentage beside
  * words — "20% off" would become a fibre called `off`. Telling a composition
  * from a discount is a semantic judgement, so prose belongs to the model
  * rung and this one stays with what is declared.

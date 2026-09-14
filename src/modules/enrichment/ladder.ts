@@ -49,20 +49,20 @@ export function runLadder(url: URL, html: string): LadderResult {
     if (fillBlanksFrom(extracted, found) > 0) rung = extractor.rung;
   }
 
-  // **No prose search here any more, and that is the lane's biggest
-  // decision** (owner, 2026-09-14). A pass that read the page's text nodes
-  // for a percentage beside a known fibre used to fill this field, and the
-  // eval retired it: it lost every section after the first on a
-  // multi-component garment, it could not see `88% PA 12% EL` because the
-  // vocabulary has no abbreviations, and on one page it answered with
-  // marketing copy — confidently, plausibly and wrongly. Composition now
-  // comes from the model rung, or it waits.
+  // **The ladder does not produce a composition at all** (owner,
+  // 2026-09-14). A pass that read the page's text nodes for a percentage
+  // beside a known fibre used to fill it, and the eval retired it: it lost
+  // every section after the first on a multi-component garment, could not
+  // see `88% PA 12% EL`, and on one page answered with marketing copy —
+  // confidently, plausibly and wrongly. The Shopify rung's cued read of
+  // `body_html` went next, then the JSON-LD rung's `material` field, which
+  // answered on 2 of 22 real pages against the model's 22 and agreed with
+  // it on both.
   //
-  // What is left here is *declared* data. The JSON-LD rung reads a
-  // `material` field a shop published and the Shopify rung reads a cued
-  // stretch of `body_html`; both hand that string to `parseComposition`,
-  // which is unchanged. Reading a field someone published is not the same
-  // act as guessing from prose, and only the guessing was retired.
+  // So `fabricComposition` has one source, and it is the model rung the
+  // consumer runs after this. What these rungs are for is the cheap
+  // declared facts — name on 19 of 22 pages, image on 21 — read out of a
+  // payload the shop published rather than inferred from its prose.
 
   return { extracted, rung };
 }

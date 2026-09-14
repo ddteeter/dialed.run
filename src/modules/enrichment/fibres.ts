@@ -2,13 +2,14 @@
  * The fibres a composition names — **taught to the model, not enforced by a
  * parser** (owner, 2026-09-14).
  *
- * It used to be a gate. `parseComposition` accepted a percentage only when
- * one of its words was on this list, which is what stopped "20% off today"
- * becoming a fibre called `off`. The gate went with the prose search it was
- * built for, and the measurement said why it could not stay: on a
+ * It used to be a gate. The composition parser accepted a percentage only
+ * when one of its words was on this list, which is what stopped "20% off
+ * today" becoming a fibre called `off`. The gate went with the prose search
+ * it was built for, and the measurement said why it could not stay: on a
  * *declared* field it silently dropped `100% Primeflex`, `88% PA 12% EL`
  * and `Shell: 100% Coreloft`, because a list of fibres cannot contain the
- * trade names shops invent.
+ * trade names shops invent. The parser itself followed — composition has
+ * one source now, and it is the model.
  *
  * As a hint it does the opposite job, and a job the eval showed is needed:
  * models called `Coreloft™ 80`, `Arato™ 15`, `2:09 Mesh` and `decoration`

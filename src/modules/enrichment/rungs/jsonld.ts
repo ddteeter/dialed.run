@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import type { ExtractedProduct, PageExtractor } from "../../../lib/contracts";
-import { parseComposition } from "../composition";
 import { someExtracted, textAt } from "../extracted";
 import { parseJson, scriptBodies } from "../html";
 
@@ -108,21 +107,28 @@ function findProduct(value: unknown, depth = 0): object | undefined {
   return undefined;
 }
 
+/**
+ * Name, brand, category and image — and **not** `material`.
+ *
+ * The rung read `material` into a composition until 2026-09-14 (owner's
+ * call). It answered on 2 of 22 real pages, the model answered on 22, and
+ * on both of those two it said the same thing; meanwhile the parser behind
+ * it had grown visibly weaker than the model — with the fibre gate off,
+ * `88% PA 12% EL` parses as one material called `pa el`.
+ *
+ * So composition has one source now. What this rung is *for* is the cheap
+ * declared facts, and there it is carrying the work: name on 19 of 22
+ * pages and image on 21, read straight out of a payload the shop
+ * published, in microseconds and for nothing. Asking a model what a page's
+ * title is would be paying tokens and seconds to learn something stated in
+ * a tag.
+ */
 function productFrom(node: object): ExtractedProduct | undefined {
-  const name = textAt(node, "name");
-  const categoryHint = textAt(node, "category");
-  const material = textAt(node, "material");
-  const brand = firstOf(NAMED, Reflect.get(node, "brand"));
-  const imageUrl = firstOf(LINKED, Reflect.get(node, "image"));
-  const fabricComposition =
-    material === undefined ? undefined : parseComposition(material);
-
   return someExtracted({
-    name,
-    brand,
-    categoryHint,
-    imageUrl,
-    fabricComposition,
+    name: textAt(node, "name"),
+    brand: firstOf(NAMED, Reflect.get(node, "brand")),
+    categoryHint: textAt(node, "category"),
+    imageUrl: firstOf(LINKED, Reflect.get(node, "image")),
   });
 }
 

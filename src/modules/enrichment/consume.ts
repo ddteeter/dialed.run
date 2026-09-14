@@ -10,7 +10,7 @@ import { PageFetchError } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
 import { copyProductImage } from "./image";
 import { runLadder, type LadderResult } from "./ladder";
-import { modelPass, requiresModel } from "./model/rung";
+import { modelPass } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
 
@@ -189,11 +189,17 @@ async function extractFrom(
   // — see `model/rung.ts`. Unconfigured, it does not run at all and the
   // deterministic answer is the answer, which is the same degradation the
   // proxy fetch makes (law 5).
+  // **Always, when one is configured.** There used to be a
+  // `requiresModel(result.extracted)` gate here — ask only where the
+  // deterministic rungs left the composition blank — and it stopped meaning
+  // anything when the last of those rungs gave the field up
+  // (2026-09-14): the ladder cannot fill it, so the gate was a condition
+  // no input could make false.
   const { model } = deps;
   const rung =
-    model !== undefined && requiresModel(result.extracted)
-      ? await askModel(model, result, snapshot, html)
-      : result.rung;
+    model === undefined
+      ? result.rung
+      : await askModel(model, result, snapshot, html);
   await deps.db
     .update(productSnapshots)
     .set({ rung })
