@@ -32,7 +32,9 @@ improves. Invisible: results arrive as pre-filled, editable fields.
 - `rungs/{jsonld,shopify,og}.ts` — each a `PageExtractor`.
 - `composition.ts` — the fibre-gated composition pass (below).
 - `ladder.ts` — runs the rungs best-first, best answer **per field**.
-- `model/openrouter.ts` — the LLM rung. `consume.ts` — the queue consumer.
+- `request.ts` — `requestEnrichment`: flips the row to `pending`, then sends.
+- `consume.ts` — the consumer, its DLQ handler, and `reextract`.
+- `model/openrouter.ts` — the LLM rung (not yet).
 
 ## Contract touches
 
@@ -147,6 +149,31 @@ honoured, or it measures routing luck.
    wrong shape in `products.extracted` throws, and the consumer records a
    failed job — because a ledger that cannot be read cannot prove
    precedence, and the alternative is a fresh start over a person's edits.
+
+## The consumer, and why the queue is not a transaction
+
+Nothing spans D1 and a queue (law 8c), so the paste path is reconciliation
+with a marker the row already has. `requestEnrichment` flips
+`extraction_status` to `pending` **first** — that column is "this product
+owes an extraction" — then sends, and a send that fails is reported and
+swallowed, because enrichment must never fail the garment save that asked
+for it. The `enrichment-retry` cron (`30 * * * *`, its own trigger so a
+dropped send costs an hour and not a day) re-dispatches anything `pending`
+past a fifteen-minute grace. The flip is also the dedupe: only `none` and
+`failed` become `pending`.
+
+The consumer treats **only a `pending` row as work**, and on a redelivery
+answers from a snapshot fetched inside the last hour rather than fetching
+again — fetching is the step with a bill and a blocklist behind it, so a
+retry after a failed write-back must not buy the page twice. A
+`PageFetchError` is terminal (`failed`, acked, reported); anything else is
+thrown so the queue's retries own it, and the DLQ handler marks the row
+when they give up. `reextract` runs the ladder over the latest stored page
+with no fetch, and re-records the snapshot's rung.
+
+**Not yet:** the primary image is not copied to R2 (`image_key`), and
+nothing calls `requestEnrichment` — the paste call-site is lane 101's
+`withResolvedProduct`, one line, and the owner's call which lane wires it.
 
 ## Closed — the fetch fallback, and it is cheaper than the estimate
 

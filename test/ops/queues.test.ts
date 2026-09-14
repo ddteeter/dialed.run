@@ -1,7 +1,16 @@
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Mock } from "vitest";
 
+import { products } from "../../src/db/schema-core";
+import { env } from "../../src/env";
+import { newUlid } from "../../src/lib/ids";
 import { handleQueueBatch } from "../../src/modules/ops";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../../src/modules/products";
+import { batchOf, fakeMessage } from "../queue-fakes";
 
 /**
  * The queue router: one switch over four queue names plus a default, and
@@ -11,11 +20,17 @@ import { handleQueueBatch } from "../../src/modules/ops";
  * not, whichever arm they fell into.
  *
  * These give each batch a real message and watch what happens to it. The
- * imports arms ack or retry; the enrichment stub logs; the DLQ arm reports
- * every message; the default reports the queue it did not recognise. Those
- * are four different observable outcomes, which is what makes the routing
- * itself testable.
+ * imports arms ack or retry; the enrichment arm marks a product; the DLQ
+ * arm reports every message; the default reports the queue it did not
+ * recognise. Those are four different observable outcomes, which is what
+ * makes the routing itself testable.
  */
+
+function nothing(): void {
+  /*
+   * The point is to do nothing.
+   */
+}
 
 /**
  * The exact sentences the two Sentry-side arms raise. Written out rather
@@ -25,43 +40,6 @@ import { handleQueueBatch } from "../../src/modules/ops";
 const DEAD_LETTERED = "dead-lettered job on dialed-enrichment-dlq";
 const UNKNOWN_QUEUE = "batch from unknown queue";
 
-function nothing(): void {
-  /*
-   * The point is to do nothing.
-   */
-}
-
-/**
- * A real `Message`, with `ack`/`retry` replaced by spies. The consumer's
- * only outward effect on a message is which of those two it calls, so
- * they are the assertion.
- */
-type SpiedMessage = Omit<Message, "ack" | "retry"> & {
-  ack: Mock<() => void>;
-  retry: Mock<(options?: QueueRetryOptions) => void>;
-};
-
-function fakeMessage(id: string, body: unknown): SpiedMessage {
-  return {
-    id,
-    timestamp: new Date(),
-    body,
-    attempts: 1,
-    ack: vi.fn<() => void>(),
-    retry: vi.fn<(options?: QueueRetryOptions) => void>(),
-  };
-}
-
-function batchOf(queue: string, messages: SpiedMessage[]): MessageBatch {
-  return {
-    queue,
-    metadata: { metrics: { backlogCount: 0, backlogBytes: 0 } },
-    messages,
-    ackAll: nothing,
-    retryAll: nothing,
-  };
-}
-
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -69,13 +47,20 @@ afterEach(() => {
 describe("handleQueueBatch routes by queue name", () => {
   it("hands a dialed-imports batch to the imports consumer", async () => {
     // The consumer acks structurally-invalid garbage rather than retrying
-    // it forever, so an ack is proof the message reached that arm.
-    vi.spyOn(console, "error").mockImplementation(nothing);
+    // it forever — but so does the enrichment consumer one `case` down,
+    // and an emptied case falls through to it. What proves the message
+    // reached *this* arm is the sentence only the imports consumer says.
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
     const message = fakeMessage("m1", { type: "nonsense" });
 
     await handleQueueBatch(batchOf("dialed-imports", [message]));
 
     expect(message.ack).toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ queue: "dialed-imports", messageId: "m1" }),
+      expect.objectContaining({ message: "invalid imports queue message" }),
+    );
   });
 
   it("hands a dialed-imports-dlq batch to the DLQ consumer", async () => {
@@ -85,29 +70,44 @@ describe("handleQueueBatch routes by queue name", () => {
     await handleQueueBatch(batchOf("dialed-imports-dlq", [message]));
 
     expect(message.ack).toHaveBeenCalled();
+    // The imports DLQ's own sentence, for the same reason as above: the
+    // enrichment DLQ handler one case down also acks and reports.
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
       expect.objectContaining({ queue: "dialed-imports-dlq", messageId: "m2" }),
-      expect.anything(),
+      expect.objectContaining({ message: "dead-lettered dialed-imports message" }),
     );
   });
 
-  it("acks the enrichment stub and says how much it dropped", async () => {
-    // Lane 107 replaces this. Until then the size is the only sign that
-    // anything is accumulating there.
-    const warn = vi.spyOn(console, "warn").mockImplementation(nothing);
+  it("hands a dialed-enrichment batch to the enrichment consumer", async () => {
+    // The consumer's first observable act on a pending product with no
+    // page behind it is to give up on it: a URL nothing serves is a
+    // `PageFetchError`, which is terminal, so the row goes to `failed`
+    // and the message is acked. That is enough to prove the arm routes
+    // here and not to the old stub.
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const db = drizzle(env.DIALED_CORE);
+    const brand = await createOrGetBrand(db, `Routed ${newUlid()}`);
+    const product = await createOrGetProduct(db, {
+      brandId: brand.id,
+      name: "Routed Tee",
+      sourceUrl: "https://localhost/refused",
+      createdBy: newUlid(),
+    });
+    await db
+      .update(products)
+      .set({ extractionStatus: "pending" })
+      .where(eq(products.id, product.id));
+    const message = fakeMessage("m3", { type: "enrich", productId: product.id });
 
-    await handleQueueBatch(
-      batchOf("dialed-enrichment", [
-        fakeMessage("m3", {}),
-        fakeMessage("m4", {}),
-      ]),
-    );
+    await handleQueueBatch(batchOf("dialed-enrichment", [message]));
 
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("dialed-enrichment not implemented"),
-      { size: 2 },
-    );
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    const [row] = await db
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, product.id));
+    expect(row?.status).toBe("failed");
   });
 
   it("reports every dead-lettered enrichment job, one by one", async () => {

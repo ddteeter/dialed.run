@@ -72,3 +72,16 @@ export async function recordSnapshot(
   await database.insert(productSnapshots).values({ id, ...input });
   return id;
 }
+
+/**
+ * The page a snapshot row points at, or nothing when the object is missing.
+ *
+ * Missing is a real case rather than a corruption to throw on: the row is
+ * written after the object, so a row with no object means the put failed
+ * *after* the row existed — which cannot happen in this module's order — or
+ * that someone emptied the bucket. Either way the caller refetches.
+ */
+export async function readSnapshot(r2Key: string): Promise<string | undefined> {
+  const object = await env.MEDIA.get(r2Key);
+  return object === null ? undefined : object.text();
+}

@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 import {
   cronCheckpoints,
   imports,
+  products,
   runs,
   stravaRevocations,
 } from "../../db/schema-core";
@@ -52,6 +53,11 @@ export async function handleScheduled(
       await retryPendingWeather();
       return { cronName, anomalies: [] };
     }
+    case "enrichment-retry": {
+      const anomalies: string[] = [];
+      await redispatchStalledEnrichments(anomalies);
+      return { cronName, anomalies };
+    }
     default: {
       // Config/code skew that the bindings-conformance test should have
       // caught in CI before it could reach a real schedule.
@@ -87,7 +93,8 @@ async function redispatchEach<TRow extends { id: string }>(
   anomalies: string[],
   rows: readonly TRow[],
   handlers: Readonly<{
-    message: (row: TRow) => Parameters<typeof env.IMPORTS_QUEUE.send>[0];
+    queue: Pick<Queue, "send">;
+    message: (row: TRow) => Parameters<Queue["send"]>[0];
     errorContext: (row: TRow) => Record<string, string>;
     describe: (count: number) => string;
   }>,
@@ -96,7 +103,7 @@ async function redispatchEach<TRow extends { id: string }>(
 
   for (const row of rows) {
     try {
-      await env.IMPORTS_QUEUE.send(handlers.message(row));
+      await handlers.queue.send(handlers.message(row));
     } catch (error) {
       captureException(error, handlers.errorContext(row));
     }
@@ -124,22 +131,46 @@ async function redispatchEach<TRow extends { id: string }>(
  */
 const IMPORT_STALL_GRACE_S = 15 * 60;
 
-async function redispatchStalledImports(anomalies: string[]): Promise<void> {
+/**
+ * Rows that have sat `pending` past a grace window — the reconciliation
+ * query (law 8c), written once for every table that carries the marker.
+ * The columns are passed rather than the table alone because each table
+ * names its status column differently, and a union of the two column
+ * types is what lets `eq` accept "pending" for both.
+ */
+async function stalledPending(
+  marker: {
+    table: typeof imports | typeof products;
+    id: typeof imports.id | typeof products.id;
+    status: typeof imports.status | typeof products.extractionStatus;
+    createdAt: typeof imports.createdAt | typeof products.createdAt;
+  },
+  graceSeconds: number,
+): Promise<{ id: string }[]> {
   const db = drizzle(env.DIALED_CORE);
-  // fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds
-  const staleBefore = Math.floor(Date.now() / 1000) - IMPORT_STALL_GRACE_S;
-  const stalled = await db
-    .select({ id: imports.id })
-    .from(imports)
+  const staleBefore = Math.floor(Date.now() / 1000) - graceSeconds;
+  return db
+    .select({ id: marker.id })
+    .from(marker.table)
     .where(
-      and(
-        eq(imports.status, "pending"),
-        lt(imports.createdAt, staleBefore),
-      // fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call
-      ),
+      and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)),
     )
     .limit(100);
+}
+
+async function redispatchStalledImports(anomalies: string[]): Promise<void> {
+  const stalled = await stalledPending(
+    {
+      table: imports,
+      id: imports.id,
+      status: imports.status,
+      createdAt: imports.createdAt,
+    },
+    IMPORT_STALL_GRACE_S,
+  );
+  // fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call
   await redispatchEach(anomalies, stalled, {
+    queue: env.IMPORTS_QUEUE,
     message: (row) => ({ type: "import", importId: row.id }),
     errorContext: (row) => ({
       surface: "import-redispatch",
@@ -171,6 +202,7 @@ async function redispatchStrandedRevocations(
     .from(stravaRevocations)
     .limit(100);
   await redispatchEach(anomalies, stranded, {
+    queue: env.IMPORTS_QUEUE,
     message: (row) => ({ type: "strava_revoke", revocationId: row.id }),
     errorContext: (row) => ({
       surface: "revocation-redispatch",
@@ -178,6 +210,45 @@ async function redispatchStrandedRevocations(
     }),
     describe: (count) =>
       `${String(count)} Strava revocation(s) awaited re-dispatch`,
+  });
+}
+
+/**
+ * Reconciliation for the enrichment path (law 8c), and the reason
+ * `requestEnrichment` may lose a queue send without losing the work.
+ *
+ * `products.extraction_status = 'pending'` is the durable "owes an
+ * extraction" marker; this re-drives it. The grace window is measured from
+ * `created_at`, which is the row's creation and not the moment it went
+ * pending — a product re-requested after a `failed` run is "stalled" on
+ * the next firing. That costs at most one duplicate message an hour, which
+ * the consumer answers from the snapshot it already has.
+ *
+ * Its own hourly cron rather than a line in the daily digest, so a dropped
+ * send costs a runner an hour and not a day.
+ */
+const ENRICHMENT_STALL_GRACE_S = 15 * 60;
+
+async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
+  const stalled = await stalledPending(
+    {
+      table: products,
+      id: products.id,
+      status: products.extractionStatus,
+      createdAt: products.createdAt,
+    },
+    ENRICHMENT_STALL_GRACE_S,
+  );
+  // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
+  await redispatchEach(anomalies, stalled, {
+    queue: env.ENRICHMENT_QUEUE,
+    message: (row) => ({ type: "enrich", productId: row.id }),
+    errorContext: (row) => ({
+      surface: "enrichment-redispatch",
+      productId: row.id,
+    }),
+    describe: (count) =>
+      `${String(count)} product(s) stalled pending enrichment and were re-dispatched`,
   });
 }
 

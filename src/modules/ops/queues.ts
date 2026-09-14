@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
+import { handleEnrichmentBatch, handleEnrichmentDlqBatch } from "../enrichment";
 import {
   handleImportsBatch,
   handleImportsDlqBatch,
@@ -27,9 +28,21 @@ export const consumedQueueNames: readonly string[] = queueRegistry.flatMap(
 );
 
 /**
- * Queue consumer entry. Phase 0 stubs (000 §10): lane 102 owns the
- * dialed-imports consumer + DLQ user-notification; lane 107 owns
- * dialed-enrichment. Redelivery-safe by construction: stubs only log.
+The enrichment consumer's dependencies, read from bindings here and nowhere
+inside the module — which is what keeps the module importable by a test.
+*/
+function enrichmentDeps() {
+  return {
+    db: drizzle(env.DIALED_CORE),
+    captureException,
+    proxyApiKey: env.FIRECRAWL_API_KEY,
+  };
+}
+
+/**
+ * Queue consumer entry (000 §10): lane 102 owns the dialed-imports consumer
+ * + DLQ user-notification; lane 107 owns dialed-enrichment. Every consumer
+ * acks or retries per message, so one bad message never blocks a batch.
  */
 export async function handleQueueBatch(
   batch: MessageBatch,
@@ -45,10 +58,7 @@ export async function handleQueueBatch(
       break;
     }
     case "dialed-enrichment": {
-      // Lane 107 replaces this stub with the extraction ladder consumer.
-      console.warn("[queue-stub] dialed-enrichment not implemented; acking", {
-        size: batch.messages.length,
-      });
+      await handleEnrichmentBatch(batch, enrichmentDeps());
       break;
     }
     case "dialed-imports-dlq": {
@@ -60,14 +70,7 @@ export async function handleQueueBatch(
       break;
     }
     case "dialed-enrichment-dlq": {
-      // Law 6: a dead-lettered job must land where a human sees it.
-      // Lane 107 adds the user-facing failure; Sentry covers system-side.
-      for (const message of batch.messages) {
-        captureException(new Error(`dead-lettered job on ${batch.queue}`), {
-          queue: batch.queue,
-          messageId: message.id,
-        });
-      }
+      await handleEnrichmentDlqBatch(batch, enrichmentDeps());
       break;
     }
     default: {

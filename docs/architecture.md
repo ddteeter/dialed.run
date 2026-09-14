@@ -220,10 +220,15 @@ fetch and nothing more) → snapshot raw HTML to R2 →
 extraction ladder: JSON-LD Product schema → Shopify `/products/<handle>.json`
 → OG tags → LLM rung (page text → `extractedProductSchema` via the
 `ExtractionModel` adapter). Best data wins per field; typed columns get the
-recommender-relevant core, `extracted` JSON keeps the rest, primary image is
-copied to R2. Failures mark `extraction_status='failed'` and never surface as
-user errors — user-entered fields are always the floor (law 5). Extraction is
-idempotent and re-runnable over stored snapshots (D-31).
+recommender-relevant core, `extracted` JSON keeps the rest and the
+precedence ledger, primary image is copied to R2. Failures mark
+`extraction_status='failed'` and never surface as user errors — user-entered
+fields are always the floor (law 5). Extraction is idempotent (a redelivery
+reuses a snapshot fetched inside the last hour) and re-runnable over stored
+snapshots (D-31). The enqueue is reconciliation, not a transaction: the row
+goes `pending` first, the send is a fast path, and the `enrichment-retry`
+cron (`30 * * * *`) re-dispatches anything still pending after fifteen
+minutes.
 
 ## Feed read paths (lane 104)
 
