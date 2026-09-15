@@ -12,6 +12,7 @@ import { drizzle } from "drizzle-orm/d1";
 import {
   blocks,
   domainDenylist,
+  entryPhotos,
   photoScreenings,
   reports,
   reviewQueue,
@@ -24,6 +25,10 @@ export { makeEntry, makeRun, makeUser, NOW } from "../feed/helpers";
 
 export async function resetSafetyTables(): Promise<void> {
   await deleteAllFrom(drizzle(env.DIALED_CORE), [
+    // entry_photos is NOT in feed/helpers' reset — no feed test had ever
+    // inserted one. Left out here, screening rows leaked between tests and
+    // a sweep that should have seen two photos saw three.
+    entryPhotos,
     reports,
     reviewQueue,
     blocks,

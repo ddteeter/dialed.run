@@ -13,6 +13,7 @@ import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
+import { classifierFromEnv, retryPendingScreenings } from "../safety";
 
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
@@ -57,6 +58,14 @@ export async function handleScheduled(
     case "enrichment-retry": {
       const anomalies: string[] = [];
       await redispatchStalledEnrichments(anomalies);
+      return { cronName, anomalies };
+    }
+    case "screening-retry": {
+      // Task 106 §1: re-drive photos still marked `pending` (law 8c).
+      // `pending` is the durable marker, so this is reconciliation and the
+      // path needs no queue.
+      const anomalies: string[] = [];
+      await retryPendingScreenings(classifierFromEnv(), anomalies);
       return { cronName, anomalies };
     }
     default: {

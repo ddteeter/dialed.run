@@ -72,3 +72,28 @@ export {
   isOwnEntry,
   publiclyVisibleEntry,
 } from "./visibility";
+
+export { classifierFromEnv } from "./classifier/from-env";
+
+export {
+  decide,
+  imageCategories,
+  MODERATION_MODEL,
+  thresholds,
+  type CategoryScores,
+  type ImageCategory,
+  type ModerationResult,
+} from "./classifier/moderation";
+
+export {
+  pendingEntryPhotos,
+  pendingGarmentPhotos,
+  screenPhoto,
+  type Classify,
+  type PendingPhoto,
+  type PhotoScope,
+  type PhotoToScreen,
+  type ScreenOutcome,
+} from "./screening";
+
+export { retryPendingScreenings, type RetryReport } from "./retry";
