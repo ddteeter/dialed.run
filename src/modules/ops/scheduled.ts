@@ -287,6 +287,7 @@ async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> 
 async function runDailyDigest(): Promise<string[]> {
   const anomalies: string[] = [];
   await checkWeatherBacklog(anomalies);
+  await checkExtractionYield(anomalies);
   await redispatchStrandedRevocations(anomalies);
   await redispatchStalledImports(anomalies);
   // Threshold checks fill in as their features land:
@@ -298,6 +299,56 @@ async function runDailyDigest(): Promise<string[]> {
     });
   }
   return anomalies;
+}
+
+/**
+ * Products enrichment finished without a composition.
+ *
+ * **The outcome metric, and the only honest one available.** Composition
+ * comes from a model reading a page, and there are three reasons it can
+ * come back empty: the page genuinely states none (Smartwool's base layer
+ * is client-rendered and says nothing in the HTML we fetch), the model was
+ * shown the page but not the part with the answer (the prompt budget is a
+ * cap, and Arc'teryx's Alpha SV sat past the old one), or the model read it
+ * and missed. The row cannot tell those apart — and none of them is an
+ * *error*, so nothing would otherwise be reported.
+ *
+ * What makes the count worth watching is its slope rather than its value.
+ * Some proportion of pages will always state nothing. A jump means
+ * something changed that nobody changed on purpose: a budget that stopped
+ * reaching the spec, a model that got worse, a platform that moved its
+ * markup.
+ *
+ * Reported as a share, because the absolute number grows with the
+ * catalogue and would read as a problem when it is just use — and only
+ * past a **deliberately loose** bound, because this digest surfaces
+ * anomalies and nothing else. A line that appears every day is a metric,
+ * and a metric in an alert channel is how an alert channel gets ignored.
+ *
+ * Half is not a tuned number and should not pretend to be: the true
+ * baseline is unknown until production has some, and on the eval corpus it
+ * would be about one page in twenty-two. What can be said without data is
+ * that *most* products having no composition means something is broken,
+ * because the same corpus says most pages state one. Tighten it when there
+ * is a real baseline to tighten against.
+ */
+const EMPTY_COMPOSITION_ALERT = 50;
+
+async function checkExtractionYield(anomalies: string[]): Promise<void> {
+  const db = drizzle(env.DIALED_CORE);
+  const done = await db
+    .select({ composition: products.fabricComposition })
+    .from(products)
+    .where(eq(products.extractionStatus, "done"))
+    .limit(1000);
+  if (done.length === 0) return;
+
+  const empty = done.filter((row) => row.composition === null).length;
+  const share = Math.round((empty / done.length) * 100);
+  if (share < EMPTY_COMPOSITION_ALERT) return;
+  anomalies.push(
+    `${String(empty)} of ${String(done.length)} enriched product(s) have no composition (${String(share)}%)`,
+  );
 }
 
 /**

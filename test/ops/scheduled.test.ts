@@ -484,3 +484,70 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     );
   });
 });
+
+async function enriched(composition: string | undefined): Promise<void> {
+  const id = await insertProduct("done", HOUR);
+  if (composition === undefined) return;
+  await coreDb()
+    .update(products)
+    .set({ fabricComposition: composition })
+    .where(eq(products.id, id));
+}
+
+describe("the extraction-yield check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("says nothing while most enriched products have a composition", async () => {
+    // The digest surfaces anomalies and nothing else. A line that appears
+    // every day is a metric, and a metric in an alert channel is how an
+    // alert channel gets ignored.
+    await enriched("100% merino wool");
+    await enriched("88% polyester, 12% elastane");
+    await enriched(undefined);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("speaks up when most of them do not", async () => {
+    // Some pages state no composition — one in twenty-two on the eval
+    // corpus. *Most* of them meaning it is the shape of a budget that
+    // stopped reaching the spec, or a model that got worse.
+    await enriched("100% merino wool");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 3 enriched product(s) have no composition (67%)",
+    ]);
+  });
+
+  it("speaks at exactly the threshold, not one past it", async () => {
+    // Half is the bound, and half is loud enough to say so: `<` and `<=`
+    // differ on exactly this input and on no other.
+    await enriched("100% merino wool");
+    await enriched("88% polyester");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 4 enriched product(s) have no composition (50%)",
+    ]);
+  });
+
+  it("says nothing at all before anything has been enriched", async () => {
+    // Nought of nought is not a hundred per cent.
+    await insertProduct("pending", HOUR);
+    const outcome = await handleScheduled(DIGEST);
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+});
