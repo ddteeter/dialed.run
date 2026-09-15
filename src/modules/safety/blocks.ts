@@ -21,7 +21,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { blocks, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere } from "../../lib/keyed-read";
+import { columnSetAmong } from "../../lib/keyed-read";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -166,15 +166,15 @@ export async function blockedAmong(
   blockerId: string,
   candidateIds: readonly string[],
 ): Promise<Set<string>> {
-  if (candidateIds.length === 0) return new Set();
-  const blocked = await columnWhere(
+  // The membership clause is `columnSetAmong`'s to build, which is what
+  // stops this returning every runner the blocker has ever blocked rather
+  // than the ones on the page being filtered.
+  return columnSetAmong(
     db(),
     blocks,
     blocks.blockedId,
-    and(
-      eq(blocks.blockerId, blockerId),
-      inArray(blocks.blockedId, [...candidateIds]),
-    ),
+    blocks.blockedId,
+    candidateIds,
+    eq(blocks.blockerId, blockerId),
   );
-  return new Set(blocked);
 }

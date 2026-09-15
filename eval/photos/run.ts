@@ -6,7 +6,7 @@ import { secret } from "../secrets";
 import { writeReport } from "../write-report";
 
 import { validatedCorpus } from "./corpus";
-import { classifyImage } from "./moderation";
+import { classifyImage } from "../../src/modules/safety/classifier/moderation";
 import { reportFor, type Scored } from "./report";
 
 /**
@@ -49,11 +49,11 @@ async function main(): Promise<void> {
       continue;
     }
     try {
-      const result = await classifyImage(
-        new Uint8Array(readFileSync(file)),
-        contentTypeOf(entry.file),
+      const result = await classifyImage({
+        bytes: new Uint8Array(readFileSync(file)),
+        contentType: contentTypeOf(entry.file),
         apiKey,
-      );
+      });
       scored.push({ entry, result });
       console.log(
         `  ok    ${entry.file}  sexual=${result.scores.sexual.toFixed(4)}${result.flagged ? "  FLAGGED" : ""}`,

@@ -1,6 +1,11 @@
 /**
  * The report the photo eval writes.
  *
+ * The request, the parse and the threshold rule all live in
+ * `src/modules/safety/classifier/moderation.ts`, which this imports — so a
+ * threshold read off this report is enforced by the same code that
+ * produced it, rather than by a second implementation that looks the same.
+ *
  * **There is no accuracy column, and that is not an omission.** Every photo
  * in the corpus is benign, so the only thing this can measure is the false
  * positive rate — which is exactly the number the threshold decision needs,
@@ -10,8 +15,8 @@
  * forgets that would read a clean table as "the classifier works".
  */
 import type { CorpusEntry } from "./corpus";
-import { imageCategories } from "./moderation";
-import type { ModerationResult } from "./moderation";
+import { imageCategories } from "../../src/modules/safety/classifier/moderation";
+import type { ModerationResult } from "../../src/modules/safety/classifier/moderation";
 
 export interface Scored {
   entry: CorpusEntry;

@@ -15,6 +15,15 @@ export {
 } from "./admin";
 
 export {
+  banStateOf,
+  bannedAmong,
+  banUser,
+  unbanUser,
+  type BanInput,
+  type BanState,
+} from "./bans";
+
+export {
   blockRunner,
   blockedAmong,
   blockedRunners,
