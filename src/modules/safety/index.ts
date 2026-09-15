@@ -46,7 +46,7 @@ export {
   type ReportSubjectType,
 } from "./contracts";
 
-export { denyDomain, domainOf, isDeniedDomain } from "./denylist";
+export { denyDomain, isDeniedDomain } from "./denylist";
 
 export {
   distinctReporterCount,
@@ -111,3 +111,9 @@ export {
   reviewDecisionInput,
   type FileReportValues,
 } from "./inputs";
+
+export {
+  clustersIn,
+  duplicateProducts,
+  type DuplicateCandidate,
+} from "./duplicates";

@@ -7,6 +7,7 @@ export { CoverageMark, VerdictMark } from "./Marks";
 export type { CoverageLevel, VerdictKind } from "./Marks";
 export { Mono } from "./Mono";
 export { Page } from "./Page";
+export { ProductLink } from "./ProductLink";
 export { Sheet } from "./Sheet";
 export { Skeleton } from "./Skeleton";
 export {

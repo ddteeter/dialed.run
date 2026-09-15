@@ -53,6 +53,7 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults } from "../products";
 import { ownedBy } from "../../lib/owned";
+import { isDeniedDomain } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
 type Layer = z.infer<typeof layerSchema>;
@@ -179,6 +180,31 @@ export async function getOwnedItem(
   return row;
 }
 
+/**
+ * Refuses a product link pointing at a denylisted domain (packet §3).
+ *
+ * Checked on the way in rather than filtered on the way out: a link that
+ * is already stored is one already rendered to someone, and a denylist
+ * that only hides things leaves the row there for the next reader of the
+ * raw data.
+ *
+ * The message is the runner's, not the operator's. It says the link was
+ * not accepted and stops there — naming why, or which list, would turn a
+ * moderation tool into a probe anyone can query.
+ */
+export class DeniedLinkError extends Error {
+  readonly isDeniedLink = true;
+  constructor() {
+    super("That link isn't allowed here. The rest of the piece is fine.");
+  }
+}
+
+async function assertLinkAllowed(garment: Garment): Promise<void> {
+  const url = garment.productUrl;
+  if (url === undefined) return;
+  if (await isDeniedDomain(url)) throw new DeniedLinkError();
+}
+
 export async function createItem(
   db: Db,
   userId: string,
@@ -186,6 +212,7 @@ export async function createItem(
   origin: ItemOrigin = "manual",
   idempotencyKey?: string,
 ): Promise<WardrobeItemRow> {
+  await assertLinkAllowed(garment);
   // Add-a-piece is the highest-traffic form in the product, and a
   // double-click, a browser POST replay and a retry over a flaky
   // connection are indistinguishable from someone genuinely adding two of
@@ -262,6 +289,7 @@ export async function updateItem(
   itemId: string,
   garment: Garment,
 ): Promise<WardrobeItemRow> {
+  await assertLinkAllowed(garment);
   return updateOwnedItem(db, userId, itemId, garmentRowValues(garment));
 }
 

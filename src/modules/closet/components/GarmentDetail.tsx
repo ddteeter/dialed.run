@@ -3,7 +3,7 @@ import type { ChangeEvent } from "react";
 import { useState } from "react";
 
 import { formatTempRange } from "../../../lib/thermal";
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, Mono, ProductLink } from "../../../ui";
 import { garmentLabel } from "../label";
 import type {
   EffectiveAttributes,
@@ -143,6 +143,10 @@ export function GarmentDetail({
             <Bracketed className="ml-2 text-xs">Retired</Bracketed>
           ) : undefined}
         </div>
+
+        {item.productUrl === null ? undefined : (
+          <ProductLink url={item.productUrl} label={label} />
+        )}
 
         <p className="text-sm text-night/70">
           {tempRange ? (

@@ -14,37 +14,11 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { domainDenylist } from "../../db/schema-core";
 import { env } from "../../env";
+import { domainOf } from "../../lib/domain";
 import { hasRowWhere } from "../../lib/keyed-read";
 
 function db() {
   return drizzle(env.DIALED_CORE);
-}
-
-/**
- * The host of a URL, lowercased and without a leading `www.`, or
- * `undefined` when the string is not a parseable https URL.
- *
- * **`www.` is stripped, and that is a judgement.** A denylist entry for
- * `example.com` should catch `www.example.com`, because a runner reading
- * the rendered domain cannot tell them apart and an operator adding one
- * entry means both. It does *not* strip other subdomains: `shop.example.com`
- * stays distinct, because those genuinely are different sites.
- *
- * Non-https returns undefined rather than throwing: 101 already rejected
- * those at save, so reaching here with one means a stored value predating
- * that rule, and a stored oddity should render as "no domain" rather than
- * take down the page.
- */
-export function domainOf(url: string): string | undefined {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return undefined;
-  }
-  if (parsed.protocol !== "https:") return undefined;
-  const host = parsed.hostname.toLowerCase();
-  return host.startsWith("www.") ? host.slice(4) : host;
 }
 
 /**
