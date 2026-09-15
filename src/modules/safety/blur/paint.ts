@@ -40,13 +40,40 @@ export function paintBlurred(
   const context = canvas.getContext("2d");
   // Null only when the canvas already has a context of another type, which
   // cannot happen here — but a missing context should leave the photo
-  // untouched rather than throw inside an upload.
+  // untouched rather than throw inside an upload. It is also what jsdom
+  // returns, which is why every decision below lives in `paintOnto` and
+  // this function is the three lines that cannot be tested without a
+  // real browser.
   if (!context) return;
+  paintOnto(context, image, imageWidth, imageHeight, regions);
+}
 
+/**
+ * Everything `paintBlurred` decides, against a context rather than a
+ * canvas.
+ *
+ * Split out because jsdom's `getContext("2d")` is null: with the drawing
+ * inline, not one line of the padding, clamping or ordering could be
+ * exercised by any test in either pool. A context is an interface a fake
+ * can satisfy; a canvas is not.
+ */
+export function paintOnto(
+  context: Pick<
+    CanvasRenderingContext2D,
+    "drawImage" | "canvas" | "imageSmoothingEnabled"
+  >,
+  image: CanvasImageSource,
+  imageWidth: number,
+  imageHeight: number,
+  regions: readonly BlurRegion[],
+): void {
   context.drawImage(image, 0, 0, imageWidth, imageHeight);
 
   for (const region of regions) {
     const shape = clamped(
+      // Detected boxes are padded; a tap is not. A runner tapping has
+      // already chosen the spot, and growing it would move the blur away
+      // from where they pointed.
       region.source === "detected" ? padded(region) : region,
       imageWidth,
       imageHeight,
@@ -64,7 +91,10 @@ export function paintBlurred(
  * interpolates and reintroduces a plausible face.
  */
 function pixelate(
-  context: CanvasRenderingContext2D,
+  context: Pick<
+    CanvasRenderingContext2D,
+    "drawImage" | "canvas" | "imageSmoothingEnabled"
+  >,
   shape: { x: number; y: number; width: number; height: number },
 ): void {
   const smallWidth = Math.max(1, Math.round(PIXEL_BLOCKS));

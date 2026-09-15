@@ -9,6 +9,7 @@
 
 export {
   AdminRequiredError,
+  adminUserIds,
   isAdmin,
   isAdminRequired,
   requireAdmin,
