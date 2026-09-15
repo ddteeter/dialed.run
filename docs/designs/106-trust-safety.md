@@ -60,7 +60,8 @@ model's own `flagged` boolean.
 ```
 modules/safety/            # new module — owns screening, reports, review, bans
   screening.ts             #   classify(bytes) -> {scores, decision}
-  classifier/              #   adapter: openai.ts | workers-ai.ts (one dir swap)
+  classifier/              #   adapter: openai.ts (vlm.ts is the eval's comparison)
+  blur/                    #   W3: lazy-loaded wasm detector + canvas tap-to-blur
   reports.ts  review.ts  bans.ts  denylist.ts  duplicates.ts
   components/              #   report sheet (W1), review rows, blocked list (W2)
   inputs.ts  functions.ts
@@ -86,21 +87,25 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 
 ## Contract touches
 
-- **Schema: 0015, additive only ⇒ HARD STOP.** New: `reports`, `review_queue`,
-  `domain_denylist`, `photo_screenings`. New columns: ban columns on
-  `user_profiles`; `screen_status` on `entry_photos`. **Already present, so
+- **Schema: 0015, additive only, on this branch** (Decision 2). New: `reports`,
+  `review_queue`, `domain_denylist`, `photo_screenings`, `blocks`. New columns:
+  ban columns on `user_profiles`; `screen_status` on `entry_photos`. **Already present, so
   less than the packet assumes**: `wardrobe_items.visibility` (placeholder,
   written by nobody) and `products.status` (`active`|`hidden`) both exist —
   this lane wires them, it does not add them. `0015` is free: `main` is at
   `0014` and neither open PR adds a migration (law 11 checked).
-- **New binding ⇒ HARD STOP.** One queue (`dialed-screening` + its DLQ) for
-  screening retry — `wrangler.jsonc` plus `modules/ops/queues.ts` so
-  `test/bindings-conformance.test.ts` covers it. Note the test covers *queues
-  and crons only*; a secret has nothing in `wrangler.jsonc` to conform to,
-  which is why option A adds no binding and option B adds `"ai"`.
-- **Screens**: W1 report (designed), W2 blocked runners (designed), W3 faces
-  blurred (designed — see Q3). Admin review + duplicates report have no
-  artboard ⇒ placeholder protocol, `docs/design-deltas.md` open queue, same PR.
+- **New binding ⇒ STILL A HARD STOP, and the only one left.** Decision 1
+  removed the classifier's binding, but screening retry is a queue
+  (`dialed-screening` + its DLQ) and law 3 forbids retrying in the request
+  handler. That needs `wrangler.jsonc` — human-managed — plus an entry in
+  `modules/ops/queues.ts` so `test/bindings-conformance.test.ts` covers it.
+  The test covers *queues and crons only*: a secret has nothing in
+  `wrangler.jsonc` to conform to, which is why `OPENAI_API_KEY` needs no edit.
+- **Screens**: W1 report, W2 blocked runners and W3 faces-blurred are all
+  designed and all in scope (Decisions 3 and 4). Admin review + the duplicates
+  report have no artboard ⇒ placeholder protocol, `docs/design-deltas.md` open
+  queue, same PR. W3's delivery differs from the artboard's assumed stack, so
+  it gets a design-deltas row of its own.
 - **Stacked on #71 and #72** at the owner's instruction. Merge kept both sides
   in `package.json`, `guardrails.config.json` and `docs/design-deltas.md`.
 
@@ -116,32 +121,55 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 - `products-hidden.test.ts` (int) — drops out of autocomplete; garment falls
   back to its own text fields.
 - `duplicates.test.ts` (unit) — near-identical normalized names grouped.
+- `blocks.test.ts` (int) — a block hides both directions across feed, search
+  and profile, and does **not** remove the blocked user's verdict from the
+  anonymous conditions aggregate (the carve-out W2's copy promises).
+- `blur.dom.test.tsx` (dom) — detected face blurred by default; tap adds one;
+  "No face found" when the detector returns none; upload still works when the
+  wasm fails to load (law 5).
 - `report-sheet.dom.test.tsx`, `blocked-list.dom.test.tsx`, review rows (dom).
 - `modules/safety` joins `stryker.conf.json`'s `mutate` array in this PR, with
   its own CI shard in `.github/workflows/mutation.yml`.
 
+## Decisions (owner, 2026-09-15)
+
+1. **Classifier: OpenAI `omni-moderation-latest`** (option A). So: an
+   `OPENAI_API_KEY` secret in `env.d.ts` + `wrangler secret put`, no `"ai"`
+   block, and `wrangler.jsonc` untouched *by the classifier*. The eval still
+   measures a VLM judge through 107's OpenRouter key as the comparison,
+   because "the purpose-built one is better" should be a measurement.
+2. **Migration 0015 lands on this branch**, not on `main` — a `main` migration
+   would be a third parent on a branch already carrying two. Additive only.
+3. **W3 faces-blurred: in-browser detection via WASM**, on by default. This is
+   the most expensive of the three answers and the only one that honours the
+   artboard, so §W3 below records how it stays inside the client-bundle rules.
+4. **Blocking (W2) is in scope**, with W1's "Block them as well" checkbox live.
+
+## W3: face blur on a stack the design didn't plan for
+
+The artboard's promise is *"detection runs on-device, so the unblurred frame
+never leaves the phone"*. On the web that means the model runs in the browser
+and only the blurred canvas is uploaded — the promise survives, the delivery
+changes. Three constraints this lane has to respect while doing it:
+
+- **The bundle.** A detector is hundreds of KB of wasm. It must never enter
+  the client entry chunk: dynamic `import()` at the moment the file picker
+  returns, never at module scope (CLAUDE.md's "construct on first use"), and
+  `npm run check:bundle` gains a marker for it so a regression is loud.
+- **Recall is not a promise.** The artboard is deliberate that copy says *"We
+  blurred one face"* and *"No face found"*, never "faces are blurred". The
+  manual tap-to-blur is not a nicety, it is what makes the honest wording
+  true, and it ships in the same PR.
+- **Degrade, don't fail** (law 5). If the wasm fails to load, the tap-to-blur
+  path still works and the upload still works. A detector outage must not
+  block someone's own logging any more than a classifier outage does.
+
 ## Open questions
 
-1. **Classifier choice** — A, B or C above. Everything else waits on it: it
-   decides whether `wrangler.jsonc` gains an `"ai"` block, and whether every
-   uploaded photo leaves Cloudflare.
-2. **Schema on `main` first, or on this branch?** The packet says main, but
-   this lane is now stacked on two unmerged PRs, so a `main` migration is a
-   third parent. Additive-only either way.
-3. **W3 faces-blurred is designed for a stack we don't have.** The artboard
-   specifies detection **on-device, at capture**, and its own feasibility note
-   says: *"Mobile web has no equivalent worth shipping. If a browser upload
-   path opens, it posts unblurred or not at all — decide that before the web
-   feed does."* dialed.run **is** the browser upload path. Owner's call, not a
-   reconciliation this lane can make.
-4. **Blocking (W2) is designed and not in the packet's scope list.** It is a
-   different mechanism from banning — mutual, quiet, per-user, with the
-   "still counts in anonymous conditions" carve-out the artboard spells out.
-   In or out?
-5. **The artboard's stance says "no automated takedowns"; the packet says 3
+1. **The artboard's stance says "no automated takedowns"; the packet says 3
    reports auto-hides.** W1's copy hides the entry *from the reporter's feed*
    straight away, which is narrower than a global hide. Which is the contract?
-6. **There is no admin.** The packet wants an "admin-only page", and the word
+2. **There is no admin.** The packet wants an "admin-only page", and the word
    appears nowhere in `src/`, `docs/contracts.md` or `docs/architecture.md` —
    there is no role, column or check to hang it on. Cheapest thing that is
    still honest for a solo operator: an `ADMIN_USER_IDS` secret, checked by a
