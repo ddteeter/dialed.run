@@ -44,7 +44,11 @@ export function wardrobeItem(
     origin: "manual",
     idempotencyKey: NOTHING,
     retired: false,
-    visibility: "public",
+    // "ok" is what closet/service.ts actually writes and what
+    // service-edges.test.ts asserts. The fixture said "public", a value no
+    // production path ever stores — harmless while the column was untyped
+    // text, caught the moment 106 gave it an enum.
+    visibility: "ok",
     createdAt: 1_755_000_000,
     ...overrides,
   };

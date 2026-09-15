@@ -89,7 +89,21 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 
 ## Contract touches
 
-- **Schema: 0015, additive only, on this branch** (Decision 2). New: `reports`,
+- **Schema: `0015_trust_and_safety_floor`, additive only, on this branch**
+  (Decision 2). Generated and read before trusting it, per CLAUDE.md: it is
+  all `CREATE TABLE` and `ALTER TABLE ADD COLUMN`, **no table rebuild**, so
+  the `display_name COLLATE NOCASE` hazard that a rebuild would trip is not
+  in play. Typing `wardrobe_items.visibility` emitted no SQL at all —
+  drizzle's text enum is type-level and carries no CHECK — which is how a
+  placeholder column gets narrowed without a rebuild.
+
+  One deploy consequence worth stating rather than discovering: because
+  `entry_photos.screen_status` is `NOT NULL DEFAULT 'pending'`, **every
+  photo that already exists becomes publicly invisible on deploy** until the
+  `screening-retry` sweep reaches it (within the hour). That is the correct
+  default — 'pending' means "closed for the public" by design — and
+  pre-launch it costs nothing. It would need a backfill if this shipped to a
+  live feed. New: `reports`,
   `review_queue`, `domain_denylist`, `photo_screenings`, `blocks`. New columns:
   ban columns on `user_profiles`; `screen_status` on `entry_photos`. **Already present, so
   less than the packet assumes**: `wardrobe_items.visibility` (placeholder,
