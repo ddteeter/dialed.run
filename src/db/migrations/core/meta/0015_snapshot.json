@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8e8c2cea-973f-4e97-946a-3a9aaf281a4f",
+  "id": "a9ce6e07-86ff-4eaf-8356-d16b1eb9eea6",
   "prevId": "dc7e7084-e404-4dce-9657-d7dcc0a6ea5d",
   "tables": {
     "blocks": {
@@ -496,6 +496,14 @@
           "autoincrement": false,
           "default": true
         },
+        "moderation_status": {
+          "name": "moderation_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ok'"
+        },
         "caption": {
           "name": "caption",
           "type": "text",
@@ -531,6 +539,7 @@
           "name": "entries_public_created",
           "columns": [
             "is_public",
+            "moderation_status",
             "created_at"
           ],
           "isUnique": false

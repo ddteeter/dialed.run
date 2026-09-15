@@ -293,13 +293,35 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     userId: text("user_id").notNull(),
     verdict: integer("verdict"),
     isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
+    // Task 106. Deliberately NOT `isPublic`: that column is the runner's own
+    // sharing choice, and a moderator writing to it would silently rewrite a
+    // preference the runner set. Two different facts, two columns — an entry
+    // hidden for review that the owner had shared must go back to shared when
+    // it is approved, which is only knowable if nothing overwrote it.
+    //
+    // 'ok' is the default and the overwhelmingly common value. Public reads
+    // require it; the owner's own reads ignore it, so a reported entry stays
+    // visible to its author with an "under review" badge.
+    moderationStatus: text("moderation_status", {
+      enum: ["ok", "hidden_pending_review", "removed"],
+    })
+      .notNull()
+      .default("ok"),
     caption: text("caption"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
     uniqueIndex("entries_run").on(t.runId),
     index("entries_user_created").on(t.userId, t.createdAt),
-    index("entries_public_created").on(t.isPublic, t.createdAt),
+    // moderationStatus joins the covering index because every public read
+    // now filters on it too. Left out, the feed query filters in memory
+    // after LIMIT — which CLAUDE.md's D1 discipline calls out by name as
+    // returning "the survivors of the first 200 rows".
+    index("entries_public_created").on(
+      t.isPublic,
+      t.moderationStatus,
+      t.createdAt,
+    ),
   ],
 );
 

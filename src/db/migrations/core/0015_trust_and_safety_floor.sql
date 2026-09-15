@@ -49,6 +49,9 @@ CREATE TABLE `review_queue` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `review_queue_subject` ON `review_queue` (`subject_type`,`subject_id`);--> statement-breakpoint
 CREATE INDEX `review_queue_status_created` ON `review_queue` (`status`,`created_at`);--> statement-breakpoint
+DROP INDEX `entries_public_created`;--> statement-breakpoint
+ALTER TABLE `outfit_entries` ADD `moderation_status` text DEFAULT 'ok' NOT NULL;--> statement-breakpoint
+CREATE INDEX `entries_public_created` ON `outfit_entries` (`is_public`,`moderation_status`,`created_at`);--> statement-breakpoint
 ALTER TABLE `entry_photos` ADD `screen_status` text DEFAULT 'pending' NOT NULL;--> statement-breakpoint
 CREATE INDEX `entry_photos_screen_status` ON `entry_photos` (`screen_status`,`id`);--> statement-breakpoint
 ALTER TABLE `user_profiles` ADD `banned_at` integer;--> statement-breakpoint
