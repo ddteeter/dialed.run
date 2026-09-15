@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import { verdictLabel } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
@@ -27,24 +28,38 @@ type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
  */
 export function EntryDetail({
   entry,
-  entryId,
   shouldPromptVerdict,
   recordPrompted,
   toggleUseful,
   units,
+  reportAffordance,
 }: Readonly<{
   entry: Entry;
   /**
   The viewer's own units — every number on this screen is theirs.
   */
   units: Units;
-  entryId: string;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
   toggleUseful: (input: {
     data: { entryId: string };
   }) => Promise<{ useful: boolean }>;
+  /**
+   * W1's report control, composed by the route.
+   *
+   * A node rather than a callback, because this module may not import
+   * `modules/safety` — dependency-cruiser forbids a cross-module deep
+   * import and the safety barrel reaches D1, which a component in the
+   * client bundle cannot. So this screen renders whatever it is handed
+   * and does not know what a report is.
+   */
+  reportAffordance?: ReactNode;
 }>) {
+  // `entry.id` rather than an `entryId` prop beside it. The component
+  // took both, which is two sources for one fact — and the kind a route
+  // can silently disagree with itself about, since one came from the URL
+  // params and the other from the loader.
+  const entryId = entry.id;
   const [useful, setUseful] = useState({
     count: entry.usefulCount,
     reacted: entry.viewerHasReacted,
@@ -113,6 +128,8 @@ export function EntryDetail({
       <p className="m-0 text-sm text-night/60">
         {entry.authorDisplayName ?? "A runner"}
       </p>
+
+      {reportAffordance}
 
       {entry.photoKeys.length === 0 ? undefined : (
         <div className="grid grid-cols-2 gap-2">

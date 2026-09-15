@@ -58,6 +58,13 @@ export interface ReportSubject {
    * name, say — and the copy then avoids inventing one.
    */
   authorName?: string | undefined;
+  /**
+   * The author's id. Unused by this sheet and used by
+   * `ReportAffordance`, which needs it to decide whether the viewer is
+   * looking at their own thing and whether there is anybody to block. It
+   * lives on the subject because that is what it is a fact about.
+   */
+  authorId?: string | undefined;
 }
 
 export function ReportSheet({

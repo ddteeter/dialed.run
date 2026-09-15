@@ -100,6 +100,7 @@ export {
 export { retryPendingScreenings, type RetryReport } from "./retry";
 
 export { BlockedRunners } from "./components/BlockedRunners";
+export { ReportAffordance } from "./components/ReportAffordance";
 export { ReportSheet, type ReportSubject } from "./components/ReportSheet";
 export { ReviewQueue } from "./components/ReviewQueue";
 

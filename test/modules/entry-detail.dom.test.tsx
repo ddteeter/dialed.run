@@ -90,7 +90,6 @@ function detail(overrides: Partial<Entry> = {}, shouldPrompt = false) {
   return (
     <EntryDetail units={{ temp: "f", distance: "mi" }}
       entry={entry(overrides)}
-      entryId="01ENTRY"
       shouldPromptVerdict={shouldPrompt}
       recordPrompted={nothing}
       toggleUseful={noReaction}
@@ -305,7 +304,6 @@ describe("EntryDetail: the useful reaction", () => {
     await renderWithRouter(
       <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry({ usefulCount: 4, viewerHasReacted: false })}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={nothing}
         toggleUseful={toggleUseful}
@@ -327,7 +325,6 @@ describe("EntryDetail: the useful reaction", () => {
     await renderWithRouter(
       <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry({ usefulCount: 4, viewerHasReacted: true })}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={nothing}
         toggleUseful={() => Promise.resolve({ useful: false })}
@@ -363,7 +360,6 @@ describe("EntryDetail: the useful reaction", () => {
     await renderWithRouter(
       <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={nothing}
         toggleUseful={() => pending.promise}
@@ -396,7 +392,6 @@ describe("EntryDetail: the verdict prompt", () => {
     await renderWithRouter(
       <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict
         recordPrompted={recordPrompted}
         toggleUseful={noReaction}
@@ -422,7 +417,6 @@ describe("EntryDetail: the verdict prompt", () => {
     await renderWithRouter(
       <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict
         recordPrompted={recordPrompted}
         toggleUseful={noReaction}
@@ -464,7 +458,6 @@ describe("EntryDetail: the verdict prompt", () => {
           </button>
           <EntryDetail units={{ temp: "f", distance: "mi" }}
             entry={entry()}
-            entryId="01ENTRY"
             shouldPromptVerdict={prompt}
             recordPrompted={recordPrompted}
             toggleUseful={noReaction}
@@ -490,7 +483,6 @@ describe("EntryDetail: the verdict prompt", () => {
     await renderWithRouter(
       <EntryDetail units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={recordPrompted}
         toggleUseful={noReaction}
