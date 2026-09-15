@@ -25,10 +25,14 @@ answer, because the packet's own worry is false positives on sports imagery):
 | | what it is | threshold tunable | cost | binding |
 | --- | --- | --- | --- | --- |
 | **A. OpenAI `omni-moderation-latest`** | purpose-built multimodal moderation classifier | **yes** — `category_scores` 0–1 per category | free, images ≤20 MB | a *secret*, not a wrangler binding |
-| **B. Workers AI VLM as judge** (`llava-1.5-7b`, `llama-3.2-11b-vision`, `moondream3.1`) | prompt a vision model to answer a safety question | no — a sentence, not a score | Workers AI neurons | `"ai"` block in `wrangler.jsonc` |
+| **B. VLM as judge** (`llava-1.5-7b`, `llama-3.2-11b-vision`, `moondream3.1`) | prompt a vision model to answer a safety question | no — a sentence, not a score | Workers AI neurons, or tokens via 107's OpenRouter key | `"ai"` block in `wrangler.jsonc` — **or none**, if it goes through the OpenRouter key 107 already added |
 | **C. Vendor** (Hive, Sightengine, Rekognition, Vision SafeSearch) | purpose-built, commercial | yes | paid, new account | secret |
 
-**Recommendation: A**, with B as the fallback the eval can promote.
+**Recommendation: A**, with B as the fallback the eval can promote. Note B does
+not have to mean Workers AI: 107 already ships an `OPENROUTER_API_KEY` and
+OpenRouter serves vision models, so a VLM judge can reach production with no
+new secret *and* no `wrangler.jsonc` edit. That makes B cheap to *try* — which
+is an argument for the eval measuring both, not for skipping A.
 
 Why A, in this lane's terms. It is the only one of the three that gives a
 *number per category*, and a number is what the packet's pre-launch eval exists
@@ -137,3 +141,11 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 5. **The artboard's stance says "no automated takedowns"; the packet says 3
    reports auto-hides.** W1's copy hides the entry *from the reporter's feed*
    straight away, which is narrower than a global hide. Which is the contract?
+6. **There is no admin.** The packet wants an "admin-only page", and the word
+   appears nowhere in `src/`, `docs/contracts.md` or `docs/architecture.md` —
+   there is no role, column or check to hang it on. Cheapest thing that is
+   still honest for a solo operator: an `ADMIN_USER_IDS` secret, checked by a
+   single gate in `modules/safety` beside `requireUserId` (one gate per
+   concern). A `user_profiles.is_admin` column is the alternative and costs a
+   migration. The digest half needs nothing new — `ops/scheduled.ts` already
+   reports anomalies to Sentry, so queue depth is a line in that.
