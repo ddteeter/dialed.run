@@ -32,6 +32,19 @@ export const reportReasons = [
 export type ReportReason = (typeof reportReasons)[number]["value"];
 
 /**
+ * The same table as a lookup, for the form primitives that want one.
+ *
+ * Derived rather than written out a second time — `ui/form`'s
+ * `optionLabels` is exactly the shape a hand-maintained copy would drift
+ * from, and `test/safety/contracts.test.ts` pins the derivation against
+ * `reportReasons` in both directions.
+ */
+export const reportReasonLabels: Readonly<Record<ReportReason, string>> =
+  Object.fromEntries(
+    reportReasons.map((reason) => [reason.value, reason.label]),
+  ) as Record<ReportReason, string>;
+
+/**
  * Derived from the table above rather than restated, so a reason added to
  * one is a reason in the other. `test/safety/contracts.test.ts` pins the
  * derivation against `reportReasons` in both directions.
@@ -41,6 +54,15 @@ export const reportReasonSchema = z.enum(
     ReportReason,
     ...ReportReason[],
   ],
+  {
+    // The sentence a runner reads when they submit without choosing.
+    // zod's default here is "Invalid option: expected one of
+    // \"explicit\"|\"harassment\"…", which leaks the stored values into a
+    // sheet whose whole point is that its words are the runner's, not the
+    // system's. Error copy lives in the schema (CLAUDE.md forms contract),
+    // so it lives here rather than in the component.
+    message: "Pick what's wrong with it.",
+  },
 );
 
 /**
