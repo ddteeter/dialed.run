@@ -33,6 +33,8 @@ flowchart LR
     CRON --> W
 
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
+    W -->|same fetch, when the shop\nrefuses a Worker: 11 of 14 do| PROXY[Firecrawl scrape API\nresidential egress, 1 credit/page]
+    PROXY --> SHOP
     W -->|LLM extraction rung\nadapter, D-32| LLM[GPT-5.6 Luna\n(presumptive; eval decides)]
 
     STRAVA[Strava webhook] -->|activity event\nreminder only| W
@@ -210,15 +212,23 @@ weather inline (degrade to `weather_pending` on failure — law 5).
 
 Pasted product URL → server function validates https + resolves/creates the
 product row (garment saves immediately, never blocked) → enqueue EnrichJob on
-`dialed-enrichment`. Consumer: bounded fetch of the page (10s timeout, size
-cap, https only, no private address space) → snapshot raw HTML to R2 →
+`dialed-enrichment`. Consumer: bounded fetch of the page (10s timeout, 6 MB
+cap, https only, no private address space) — direct from the Worker first,
+and through Firecrawl's proxy when the shop refuses a Worker, which 11 of 14
+sampled retailers do (`FIRECRAWL_API_KEY`; absent, the refusal is a failed
+fetch and nothing more) → snapshot raw HTML to R2 →
 extraction ladder: JSON-LD Product schema → Shopify `/products/<handle>.json`
 → OG tags → LLM rung (page text → `extractedProductSchema` via the
 `ExtractionModel` adapter). Best data wins per field; typed columns get the
-recommender-relevant core, `extracted` JSON keeps the rest, primary image is
-copied to R2. Failures mark `extraction_status='failed'` and never surface as
-user errors — user-entered fields are always the floor (law 5). Extraction is
-idempotent and re-runnable over stored snapshots (D-31).
+recommender-relevant core, `extracted` JSON keeps the rest and the
+precedence ledger, primary image is copied to R2. Failures mark
+`extraction_status='failed'` and never surface as user errors — user-entered
+fields are always the floor (law 5). Extraction is idempotent (a redelivery
+reuses a snapshot fetched inside the last hour) and re-runnable over stored
+snapshots (D-31). The enqueue is reconciliation, not a transaction: the row
+goes `pending` first, the send is a fast path, and the `enrichment-retry`
+cron (`30 * * * *`) re-dispatches anything still pending after fifteen
+minutes.
 
 ## Feed read paths (lane 104)
 

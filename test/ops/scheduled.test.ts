@@ -5,12 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cronCheckpoints,
   imports,
+  products,
   runs,
   stravaRevocations,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { handleScheduled } from "../../src/modules/ops";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../../src/modules/products";
 
 /**
  * The daily digest is a cron whose entire product is a list of things a
@@ -26,6 +31,7 @@ import { handleScheduled } from "../../src/modules/ops";
 
 const HOUR = 3600;
 const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
+const ENRICHMENT_RETRY = { cron: "30 * * * *" } as ScheduledController;
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -364,5 +370,184 @@ describe("everything the digest found, in one report", () => {
       { anomalies: outcome.anomalies.join("; ") },
       expect.objectContaining({ message: "daily digest anomalies" }),
     );
+  });
+});
+
+/**
+A product in the given extraction state, created `ageSeconds` ago.
+*/
+async function insertProduct(
+  status: typeof products.$inferInsert.extractionStatus,
+  ageSeconds: number,
+): Promise<string> {
+  const db = coreDb();
+  const brand = await createOrGetBrand(db, `Sweep ${newUlid()}`);
+  const product = await createOrGetProduct(db, {
+    brandId: brand.id,
+    name: `Tee ${newUlid()}`,
+    sourceUrl: "https://shop.example.com/p",
+    createdBy: newUlid(),
+  });
+  await db
+    .update(products)
+    .set({ extractionStatus: status, createdAt: nowSeconds() - ageSeconds })
+    .where(eq(products.id, product.id));
+  return product.id;
+}
+
+describe("stalled enrichments are re-dispatched on their own hourly sweep", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("re-enqueues a product that has sat pending past the grace window", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("pending", 20 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(outcome.cronName).toBe("enrichment-retry");
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+  });
+
+  it("leaves a product inside the grace window alone", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 5 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on a product at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 15 * 60 + 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-drives a failed product too, so an outage heals itself", async () => {
+    // **Composition comes only from the model now**, so a job that
+    // exhausted its retries while OpenRouter was unreachable dead-lettered
+    // and marked the product `failed` — and `requestEnrichment` only claims
+    // `failed` on a *new paste*, so nothing would look at it again. The row
+    // cannot tell "this page states no composition" from "the model was
+    // down", and the costs are asymmetric: re-fetching a page that has
+    // nothing is cheap, abandoning a product is forever.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("failed", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+  });
+
+  it("leaves alone the states that are not enrichment's to finish", async () => {
+    // `none` was never asked for, and `done` succeeded. Re-driving either
+    // would be work the system already did, or never owed.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    for (const status of ["none", "done"] as const) {
+      await insertProduct(status, HOUR);
+    }
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("still reports the backlog when the queue send itself fails", async () => {
+    vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
+      new Error("queue down"),
+    );
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertProduct("pending", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ surface: "enrichment-redispatch" }),
+      expect.objectContaining({ message: "queue down" }),
+    );
+  });
+});
+
+async function enriched(composition: string | undefined): Promise<void> {
+  const id = await insertProduct("done", HOUR);
+  if (composition === undefined) return;
+  await coreDb()
+    .update(products)
+    .set({ fabricComposition: composition })
+    .where(eq(products.id, id));
+}
+
+describe("the extraction-yield check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("says nothing while most enriched products have a composition", async () => {
+    // The digest surfaces anomalies and nothing else. A line that appears
+    // every day is a metric, and a metric in an alert channel is how an
+    // alert channel gets ignored.
+    await enriched("100% merino wool");
+    await enriched("88% polyester, 12% elastane");
+    await enriched(undefined);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("speaks up when most of them do not", async () => {
+    // Some pages state no composition — one in twenty-two on the eval
+    // corpus. *Most* of them meaning it is the shape of a budget that
+    // stopped reaching the spec, or a model that got worse.
+    await enriched("100% merino wool");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 3 enriched product(s) have no composition (67%)",
+    ]);
+  });
+
+  it("speaks at exactly the threshold, not one past it", async () => {
+    // Half is the bound, and half is loud enough to say so: `<` and `<=`
+    // differ on exactly this input and on no other.
+    await enriched("100% merino wool");
+    await enriched("88% polyester");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 4 enriched product(s) have no composition (50%)",
+    ]);
+  });
+
+  it("says nothing at all before anything has been enriched", async () => {
+    // Nought of nought is not a hundred per cent.
+    await insertProduct("pending", HOUR);
+    const outcome = await handleScheduled(DIGEST);
+    expect(outcome.anomalies).toStrictEqual([]);
   });
 });

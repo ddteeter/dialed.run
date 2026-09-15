@@ -4,6 +4,11 @@
  * barrel stays loadable in the vitest workers pool (no TanStack virtual
  * entries) — mirrors modules/auth's split.
  */
+export {
+  applyExtraction,
+  ExtractionConflictError,
+  type ApplyReport,
+} from "./apply-extraction";
 export type { BrandRow, ProductAttributeDefaults, ProductRow } from "./service";
 export {
   createOrGetBrand,

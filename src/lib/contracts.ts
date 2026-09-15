@@ -62,7 +62,10 @@ export const fabricSchema = z.enum([
  * the register.
  */
 const garmentBase = z.strictObject({
-  name: z.string().min(1, "Give it a name.").max(80, "Keep the name under 80 characters."),
+  name: z
+    .string()
+    .min(1, "Give it a name.")
+    .max(80, "Keep the name under 80 characters."),
   brand: z.string().max(60, "Keep the brand under 60 characters.").optional(),
   size: z.string().max(20, "Keep the size under 20 characters.").optional(),
   color: z.string().max(30, "Keep the color under 30 characters.").optional(),
@@ -359,7 +362,14 @@ Deterministic rungs (JSON-LD, Shopify JSON, OG) implement this per source.
 */
 export interface PageExtractor {
   readonly rung: "jsonld" | "shopify" | "og";
-  extract(url: URL, html: string): ExtractedProduct | null;
+  /**
+   * `undefined`, not `null`, for "this rung found nothing" — `unicorn/no-null`
+   * is repo policy and `src/` contains no `return null`, so the original
+   * signature could not be implemented without a suppression nobody may add.
+   * Changed by 107 when the first rung was written; no other lane implements
+   * or calls this.
+   */
+  extract(url: URL, html: string): ExtractedProduct | undefined;
 }
 
 /**

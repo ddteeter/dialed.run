@@ -1,9 +1,10 @@
-import { and, eq, lt, or } from "drizzle-orm";
+import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
   cronCheckpoints,
   imports,
+  products,
   runs,
   stravaRevocations,
 } from "../../db/schema-core";
@@ -52,6 +53,11 @@ export async function handleScheduled(
       await retryPendingWeather();
       return { cronName, anomalies: [] };
     }
+    case "enrichment-retry": {
+      const anomalies: string[] = [];
+      await redispatchStalledEnrichments(anomalies);
+      return { cronName, anomalies };
+    }
     default: {
       // Config/code skew that the bindings-conformance test should have
       // caught in CI before it could reach a real schedule.
@@ -87,7 +93,8 @@ async function redispatchEach<TRow extends { id: string }>(
   anomalies: string[],
   rows: readonly TRow[],
   handlers: Readonly<{
-    message: (row: TRow) => Parameters<typeof env.IMPORTS_QUEUE.send>[0];
+    queue: Pick<Queue, "send">;
+    message: (row: TRow) => Parameters<Queue["send"]>[0];
     errorContext: (row: TRow) => Record<string, string>;
     describe: (count: number) => string;
   }>,
@@ -96,7 +103,7 @@ async function redispatchEach<TRow extends { id: string }>(
 
   for (const row of rows) {
     try {
-      await env.IMPORTS_QUEUE.send(handlers.message(row));
+      await handlers.queue.send(handlers.message(row));
     } catch (error) {
       captureException(error, handlers.errorContext(row));
     }
@@ -124,22 +131,46 @@ async function redispatchEach<TRow extends { id: string }>(
  */
 const IMPORT_STALL_GRACE_S = 15 * 60;
 
-async function redispatchStalledImports(anomalies: string[]): Promise<void> {
+/**
+ * Rows that have sat `pending` past a grace window — the reconciliation
+ * query (law 8c), written once for every table that carries the marker.
+ * The columns are passed rather than the table alone because each table
+ * names its status column differently, and a union of the two column
+ * types is what lets `eq` accept "pending" for both.
+ */
+async function stalledPending(
+  marker: {
+    table: typeof imports | typeof products;
+    id: typeof imports.id | typeof products.id;
+    status: typeof imports.status | typeof products.extractionStatus;
+    createdAt: typeof imports.createdAt | typeof products.createdAt;
+  },
+  graceSeconds: number,
+): Promise<{ id: string }[]> {
   const db = drizzle(env.DIALED_CORE);
-  // fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds
-  const staleBefore = Math.floor(Date.now() / 1000) - IMPORT_STALL_GRACE_S;
-  const stalled = await db
-    .select({ id: imports.id })
-    .from(imports)
+  const staleBefore = Math.floor(Date.now() / 1000) - graceSeconds;
+  return db
+    .select({ id: marker.id })
+    .from(marker.table)
     .where(
-      and(
-        eq(imports.status, "pending"),
-        lt(imports.createdAt, staleBefore),
-      // fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call
-      ),
+      and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)),
     )
     .limit(100);
+}
+
+async function redispatchStalledImports(anomalies: string[]): Promise<void> {
+  const stalled = await stalledPending(
+    {
+      table: imports,
+      id: imports.id,
+      status: imports.status,
+      createdAt: imports.createdAt,
+    },
+    IMPORT_STALL_GRACE_S,
+  );
+  // fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call
   await redispatchEach(anomalies, stalled, {
+    queue: env.IMPORTS_QUEUE,
     message: (row) => ({ type: "import", importId: row.id }),
     errorContext: (row) => ({
       surface: "import-redispatch",
@@ -171,6 +202,7 @@ async function redispatchStrandedRevocations(
     .from(stravaRevocations)
     .limit(100);
   await redispatchEach(anomalies, stranded, {
+    queue: env.IMPORTS_QUEUE,
     message: (row) => ({ type: "strava_revoke", revocationId: row.id }),
     errorContext: (row) => ({
       surface: "revocation-redispatch",
@@ -182,6 +214,72 @@ async function redispatchStrandedRevocations(
 }
 
 /**
+ * Reconciliation for the enrichment path (law 8c), and the reason
+ * `requestEnrichment` may lose a queue send without losing the work.
+ *
+ * `products.extraction_status = 'pending'` is the durable "owes an
+ * extraction" marker; this re-drives it. The grace window is measured from
+ * `created_at`, which is the row's creation and not the moment it went
+ * pending — a product re-requested after a `failed` run is "stalled" on
+ * the next firing. That costs at most one duplicate message an hour, which
+ * the consumer answers from the snapshot it already has.
+ *
+ * Its own hourly cron rather than a line in the daily digest, so a dropped
+ * send costs a runner an hour and not a day.
+ */
+const ENRICHMENT_STALL_GRACE_S = 15 * 60;
+
+/**
+ * `failed` is re-driven too, which `pending` alone would not cover.
+ *
+ * **Because composition now comes only from the model** (owner,
+ * 2026-09-14), a job that exhausts its retries while OpenRouter is
+ * unreachable dead-letters and marks the product `failed` — and
+ * `requestEnrichment` only claims `none` and `failed` on a *new paste*, so
+ * nothing would ever look at it again. That is the right terminal state for
+ * "this page states no composition" and the wrong one for "the model was
+ * down for twenty minutes", and the row cannot tell us which it was.
+ *
+ * So both are re-driven, and the cost of getting it wrong is asymmetric: a
+ * page that genuinely has nothing is re-fetched occasionally and answers
+ * nothing again, where a product wrongly abandoned stays wrong forever.
+ * The consumer's snapshot reuse makes the re-drive nearly free within the
+ * hour, and `applyExtraction` is idempotent.
+ */
+const ENRICHMENT_UNFINISHED = ["pending", "failed"] as const;
+
+async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
+  // Its own query rather than `stalledPending`: that helper asks "which
+  // rows are still `pending`", and this now asks a different question over
+  // two states. Forcing both through one signature means typing the state
+  // list as the intersection of two tables' status enums, which is a worse
+  // lie than two queries.
+  const db = drizzle(env.DIALED_CORE);
+  const staleBefore = Math.floor(Date.now() / 1000) - ENRICHMENT_STALL_GRACE_S;
+  const stalled = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        inArray(products.extractionStatus, ENRICHMENT_UNFINISHED),
+        lt(products.createdAt, staleBefore),
+      ),
+    )
+    .limit(100);
+  // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
+  await redispatchEach(anomalies, stalled, {
+    queue: env.ENRICHMENT_QUEUE,
+    message: (row) => ({ type: "enrich", productId: row.id }),
+    errorContext: (row) => ({
+      surface: "enrichment-redispatch",
+      productId: row.id,
+    }),
+    describe: (count) =>
+      `${String(count)} product(s) unfinished by enrichment and were re-dispatched`,
+  });
+}
+
+/**
  * Exception-based alerting skeleton: checks run, thresholds compare, and
  * ONLY anomalies get surfaced. Notification transport (email) lands with
  * lane 102's notification plumbing; until then anomalies go to Sentry.
@@ -189,6 +287,7 @@ async function redispatchStrandedRevocations(
 async function runDailyDigest(): Promise<string[]> {
   const anomalies: string[] = [];
   await checkWeatherBacklog(anomalies);
+  await checkExtractionYield(anomalies);
   await redispatchStrandedRevocations(anomalies);
   await redispatchStalledImports(anomalies);
   // Threshold checks fill in as their features land:
@@ -200,6 +299,56 @@ async function runDailyDigest(): Promise<string[]> {
     });
   }
   return anomalies;
+}
+
+/**
+ * Products enrichment finished without a composition.
+ *
+ * **The outcome metric, and the only honest one available.** Composition
+ * comes from a model reading a page, and there are three reasons it can
+ * come back empty: the page genuinely states none (Smartwool's base layer
+ * is client-rendered and says nothing in the HTML we fetch), the model was
+ * shown the page but not the part with the answer (the prompt budget is a
+ * cap, and Arc'teryx's Alpha SV sat past the old one), or the model read it
+ * and missed. The row cannot tell those apart — and none of them is an
+ * *error*, so nothing would otherwise be reported.
+ *
+ * What makes the count worth watching is its slope rather than its value.
+ * Some proportion of pages will always state nothing. A jump means
+ * something changed that nobody changed on purpose: a budget that stopped
+ * reaching the spec, a model that got worse, a platform that moved its
+ * markup.
+ *
+ * Reported as a share, because the absolute number grows with the
+ * catalogue and would read as a problem when it is just use — and only
+ * past a **deliberately loose** bound, because this digest surfaces
+ * anomalies and nothing else. A line that appears every day is a metric,
+ * and a metric in an alert channel is how an alert channel gets ignored.
+ *
+ * Half is not a tuned number and should not pretend to be: the true
+ * baseline is unknown until production has some, and on the eval corpus it
+ * would be about one page in twenty-two. What can be said without data is
+ * that *most* products having no composition means something is broken,
+ * because the same corpus says most pages state one. Tighten it when there
+ * is a real baseline to tighten against.
+ */
+const EMPTY_COMPOSITION_ALERT = 50;
+
+async function checkExtractionYield(anomalies: string[]): Promise<void> {
+  const db = drizzle(env.DIALED_CORE);
+  const done = await db
+    .select({ composition: products.fabricComposition })
+    .from(products)
+    .where(eq(products.extractionStatus, "done"))
+    .limit(1000);
+  if (done.length === 0) return;
+
+  const empty = done.filter((row) => row.composition === null).length;
+  const share = Math.round((empty / done.length) * 100);
+  if (share < EMPTY_COMPOSITION_ALERT) return;
+  anomalies.push(
+    `${String(empty)} of ${String(done.length)} enriched product(s) have no composition (${String(share)}%)`,
+  );
 }
 
 /**

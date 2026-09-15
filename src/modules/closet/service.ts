@@ -41,6 +41,8 @@ import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
+import { enqueueEnrichment } from "../enrichment";
+import { captureException } from "../ops";
 import {
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
@@ -758,6 +760,13 @@ export async function withResolvedProduct(
     sourceUrl: garment.productUrl,
     createdBy,
   });
+  // The paste path (107): a product with a URL and no extraction yet gets
+  // one asked for. Here rather than in the server function for the same
+  // reason the type inheritance is — it runs wherever a garment is
+  // written, so it cannot be skipped. `enqueueEnrichment` never throws:
+  // enrichment must not be able to fail the save that asked for it (law 5),
+  // and the row it leaves behind is what the retry cron re-drives.
+  await enqueueEnrichment(db, product.id, captureException);
   const allowed: readonly string[] = garmentTypesFor(garment.category);
   // Equivalent mutant on the null check: `allowed.includes(null)` is already
   // false, so dropping it changes no answer. It is here because `includes`

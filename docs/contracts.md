@@ -139,8 +139,13 @@ weight             text          -- NULLABLE enum: light | mid | heavy
 fabric             text          -- NULLABLE enum (same as garments)
 wind_resistant     int           -- NULLABLE 0/1
 water_resistant    int           -- NULLABLE 0/1
-extracted          text          -- NULLABLE JSON: everything else the
-                                 -- extraction ladder found (D-31 "raw extras")
+extracted          text          -- NULLABLE JSON, written only by 107's
+                                 -- applyExtraction: { rung, found, written }.
+                                 -- `found` is everything the ladder found
+                                 -- (D-31 "raw extras"); `written` is what it
+                                 -- last put in each typed column, which is
+                                 -- how "never overwrite a human edit" is
+                                 -- decided without a per-column flag
 extraction_status  text          -- enum: none | pending | done | failed
 status             text          -- 'active' | 'hidden' (106 moderation —
                                  -- product names are UGC, D-26)
@@ -161,7 +166,8 @@ id          text PK
 product_id  text FK -> products
 url         text
 r2_key      text     -- raw fetched HTML under products/{productId}/
-rung        text     -- which ladder rung produced data: jsonld | shopify | og | llm | none
+rung        text     -- the deepest ladder rung that contributed, re-recorded
+                     -- on every reextract: jsonld | shopify | og | text | llm | none
 fetched_at  int
 ```
 
@@ -380,7 +386,14 @@ export type ExtractedProduct = z.infer<typeof extractedProductSchema>;
 /** Deterministic rungs (JSON-LD, Shopify JSON, OG) implement this per source. */
 export interface PageExtractor {
   readonly rung: "jsonld" | "shopify" | "og";
-  extract(url: URL, html: string): ExtractedProduct | null;
+  /**
+   * `undefined`, not `null`, for "this rung found nothing" — `unicorn/no-null`
+   * is repo policy and `src/` contains no `return null`, so the original
+   * signature could not be implemented without a suppression nobody may add.
+   * Changed by 107 when the first rung was written; no other lane implements
+   * or calls this.
+   */
+  extract(url: URL, html: string): ExtractedProduct | undefined;
 }
 
 /** LLM rung behind an adapter; eval decides the implementation (D-32). */
