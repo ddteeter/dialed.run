@@ -8,6 +8,7 @@ import {
   autoHideReporterThreshold,
   distinctReporterCount,
   fileReport,
+  isBlocked,
   isQueuedForReview,
   reportedSubjectIdsFor,
 } from "../../src/modules/safety";
@@ -183,6 +184,61 @@ describe("the reporter's own hide (W1)", () => {
     expect(await reportedSubjectIdsFor(me, "product")).toEqual([
       "some-product",
     ]);
+  });
+});
+
+describe("W1's block-with-report checkbox", () => {
+  beforeEach(resetSafetyTables);
+
+  it("blocks the reported runner in the same call", async () => {
+    const reporter = await makeUser();
+    const subject = await makeUser();
+
+    await fileReport({
+      reporterId: reporter,
+      subjectType: "profile",
+      subjectId: subject,
+      reason: "harassment",
+      alsoBlock: true,
+    });
+
+    // One call, not two. A reporter who ticked the box and lost a second
+    // request would be told the report worked while the block silently
+    // did not.
+    expect(await isBlocked(reporter, subject)).toBe(true);
+  });
+
+  it("does not block when the box was not ticked", async () => {
+    const reporter = await makeUser();
+    const subject = await makeUser();
+
+    await fileReport({
+      reporterId: reporter,
+      subjectType: "profile",
+      subjectId: subject,
+      reason: "harassment",
+    });
+
+    expect(await isBlocked(reporter, subject)).toBe(false);
+  });
+
+  it("ignores the request on a subject that is not a person", async () => {
+    const reporter = await makeUser();
+    const entryId = await reportableEntry();
+
+    await fileReport({
+      reporterId: reporter,
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "explicit",
+      alsoBlock: true,
+    });
+
+    // An entry id is not a user id. Blocking it would create a row naming
+    // a person who does not exist — and W1 only offers the checkbox where
+    // there is somebody to block, so this is the same rule on the write
+    // side.
+    expect(await isBlocked(reporter, entryId)).toBe(false);
   });
 });
 

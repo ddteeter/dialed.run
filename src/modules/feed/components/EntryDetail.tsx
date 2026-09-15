@@ -10,7 +10,7 @@ import {
 } from "../../../lib/measures";
 import { Bracketed, Mono } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
-import { ListSection } from "./ListSection";
+import { ListSection } from "../../../ui";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 

@@ -4,7 +4,7 @@ import { Bracketed, Mono, VerdictMark } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
 import { bandVerdict } from "../coverage";
 import type { ownProfile } from "../profiles";
-import { ListSection } from "./ListSection";
+import { ListSection } from "../../../ui";
 
 type Profile = Awaited<ReturnType<typeof ownProfile>>;
 

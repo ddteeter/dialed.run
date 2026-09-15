@@ -33,6 +33,8 @@ import { Route as RunsManualRouteImport } from './routes/runs/manual'
 import { Route as RunsNewRouteImport } from './routes/runs/new'
 import { Route as RunsStravaRouteImport } from './routes/runs/strava'
 import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
+import { Route as SafetyBlockedRouteImport } from './routes/safety/blocked'
+import { Route as SafetyReviewRouteImport } from './routes/safety/review'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
@@ -163,6 +165,16 @@ const RunsStravaCallbackRoute = RunsStravaCallbackRouteImport.update({
   path: '/runs/strava-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SafetyBlockedRoute = SafetyBlockedRouteImport.update({
+  id: '/safety/blocked',
+  path: '/safety/blocked',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SafetyReviewRoute = SafetyReviewRouteImport.update({
+  id: '/safety/review',
+  path: '/safety/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -229,6 +241,8 @@ export interface FileRoutesByFullPath {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/safety/blocked': typeof SafetyBlockedRoute
+  '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
@@ -264,6 +278,8 @@ export interface FileRoutesByTo {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/safety/blocked': typeof SafetyBlockedRoute
+  '/safety/review': typeof SafetyReviewRoute
   '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
   '/feed': typeof FeedIndexRoute
@@ -300,6 +316,8 @@ export interface FileRoutesById {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/safety/blocked': typeof SafetyBlockedRoute
+  '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
@@ -337,6 +355,8 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/safety/blocked'
+    | '/safety/review'
     | '/call/'
     | '/closet/'
     | '/feed/'
@@ -372,6 +392,8 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/safety/blocked'
+    | '/safety/review'
     | '/call'
     | '/closet'
     | '/feed'
@@ -407,6 +429,8 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/safety/blocked'
+    | '/safety/review'
     | '/call/'
     | '/closet/'
     | '/feed/'
@@ -443,6 +467,8 @@ export interface RootRouteChildren {
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  SafetyBlockedRoute: typeof SafetyBlockedRoute
+  SafetyReviewRoute: typeof SafetyReviewRoute
   CallIndexRoute: typeof CallIndexRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
   FeedIndexRoute: typeof FeedIndexRoute
@@ -629,6 +655,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsStravaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/safety/blocked': {
+      id: '/safety/blocked'
+      path: '/safety/blocked'
+      fullPath: '/safety/blocked'
+      preLoaderRoute: typeof SafetyBlockedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/safety/review': {
+      id: '/safety/review'
+      path: '/safety/review'
+      fullPath: '/safety/review'
+      preLoaderRoute: typeof SafetyReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -715,6 +755,8 @@ const rootRouteChildren: RootRouteChildren = {
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  SafetyBlockedRoute: SafetyBlockedRoute,
+  SafetyReviewRoute: SafetyReviewRoute,
   CallIndexRoute: CallIndexRoute,
   ClosetIndexRoute: ClosetIndexRoute,
   FeedIndexRoute: FeedIndexRoute,

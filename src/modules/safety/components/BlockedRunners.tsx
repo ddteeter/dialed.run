@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useState } from "react";
 
-import { Bracketed } from "../../../ui";
+import { Bracketed, ListSection } from "../../../ui";
 import type { BlockedRunner } from "../blocks";
 
 /**
@@ -63,33 +63,33 @@ export function BlockedRunners({
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-night/60">
-          <Bracketed>{String(visible.length)} blocked</Bracketed>
-        </h2>
-        {visible.length === 0 ? (
-          <p className="text-sm text-night/60">Nobody. That&apos;s normal.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {visible.map((runner) => (
-              <li
-                key={runner.userId}
-                className="flex items-center justify-between gap-3 text-sm"
+        <ListSection
+          title="blocked"
+          items={visible}
+          count
+          whenEmpty={
+            <p className="text-sm text-night/60">Nobody. That&apos;s normal.</p>
+          }
+        >
+          {(runner) => (
+            <li
+              key={runner.userId}
+              className="flex items-center justify-between gap-3 text-sm"
+            >
+              <span>{runner.displayName ?? "A runner"}</span>
+              <button
+                type="button"
+                className="text-xs font-semibold uppercase tracking-wide"
+                onClick={() => {
+                  setRemoved((ids) => [...ids, runner.userId]);
+                  void unblock({ data: { userId: runner.userId } });
+                }}
               >
-                <span>{runner.displayName ?? "A runner"}</span>
-                <button
-                  type="button"
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  onClick={() => {
-                    setRemoved((ids) => [...ids, runner.userId]);
-                    void unblock({ data: { userId: runner.userId } });
-                  }}
-                >
-                  Unblock
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                Unblock
+              </button>
+            </li>
+          )}
+        </ListSection>
         <p className="text-xs text-night/60">
           Nothing here is a list anyone else can see.
         </p>

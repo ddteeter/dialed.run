@@ -28,6 +28,7 @@ import {
   type ReportReason,
   type ReportSubjectType,
 } from "./contracts";
+import { blockRunner } from "./blocks";
 import { enqueueForReview } from "./review";
 
 function db() {
@@ -40,6 +41,14 @@ export interface FileReportInput {
   subjectId: string;
   reason: ReportReason;
   note?: string | undefined;
+  /**
+   * W1's "Block them as well". Handled here rather than by the caller, for
+   * two reasons: a route file may not branch (`server-functions-are-glue`
+   * forbids it, and a decision there is one no test can reach), and
+   * blocking-with-a-report is one intent that should not be able to
+   * half-happen.
+   */
+  alsoBlock?: boolean | undefined;
 }
 
 export interface FileReportResult {
@@ -85,6 +94,14 @@ export async function fileReport(
     // drops a second report of the same thing by the same person. That is
     // what makes the count below a count of people rather than of clicks.
     .onConflictDoNothing();
+
+  // Only a profile can be blocked — a report against an entry names the
+  // entry, and blocking its author would need a lookup the reporter never
+  // asked for. W1 offers the checkbox only where there is somebody to
+  // block, and this is the same rule on the write side.
+  if (input.alsoBlock === true && input.subjectType === "profile") {
+    await blockRunner(input.reporterId, input.subjectId);
+  }
 
   const reporterCount = await distinctReporterCount(
     input.subjectType,
