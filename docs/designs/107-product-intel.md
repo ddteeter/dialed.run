@@ -203,9 +203,9 @@ compare it with. What it answers now is the question D-32 asked first —
 | by | answered | found a composition | materials | named non-fibres |
 | --- | --- | --- | --- | --- |
 | deterministic | 22/22 | 0/22 | 0 | 0 |
-| `openai/gpt-5.6-luna` | 22/22 | **20/22** | 67 | 5 |
-| `qwen/qwen3.8-flash` | 15/22 | 15/22 | 45 | 3 |
-| `qwen/qwen3.8-27b` | 11/22 | 10/22 | 39 | 0 |
+| `openai/gpt-5.6-luna` | 22/22 | **21/22** | 71 | 6 |
+| `qwen/qwen3.8-flash` | 13/22 | 12/22 | 20 | 0 |
+| `qwen/qwen3.8-27b` | 11/22 | 10/22 | 37 | 0 |
 
 **Finding a composition and structuring it are separate columns**, and
 conflating them was the flaw the first two reports had: on SOAR's shorts
@@ -213,21 +213,31 @@ conflating them was the flaw the first two reports had: on SOAR's shorts
 a materials count scored it zero. Verbatim is the load-bearing half — it is
 what the column stores and what D-31 keeps for a better parser to re-read.
 
-**Luna's two misses are two different things, and neither is the model
-being bad at reading.**
+**Luna's one miss is a page that states no composition.** Smartwool's base
+layer crew has zero matches for `N% Merino` in 1.4 MB of HTML, scripts
+included: it is client-rendered. That is the first honest instance of the
+**200 with the content missing** case — the one `fetch-page.ts` reserves
+Browser Rendering for, and which an earlier version of this document
+wrongly claimed for SOAR.
 
-- **Smartwool's base layer crew** states no composition *anywhere in the
-  page we fetch*: zero matches for `N% Merino` in 1.4 MB of HTML, scripts
-  included. It is client-rendered. That is the first honest instance of the
-  **200 with the content missing** case — the one `fetch-page.ts` reserves
-  Browser Rendering for, and which an earlier version of this document
-  wrongly claimed for SOAR.
-- **Arc'teryx's Alpha SV** answered nothing in the run and a partial
-  answer (`GORE nylon face fabric`) when asked again a minute later. So the
-  model is **not perfectly stable** — an earlier five-run check on one page
-  found it identical every time, and that was one page.
+**Two claims this document made and had to withdraw**, both mine and both
+from reading a symptom as a cause:
 
-**A production bug the eval caught.** Asked about a page with no
+- *"The model is not perfectly stable."* Arc'teryx's Alpha SV answered
+  nothing once and a partial answer the next minute, and that looked like
+  variance. It was the prompt budget: the composition sits at character
+  25,646 and the cap was 24,000, so the model was being asked about a page
+  whose answer it had never seen, and varied between saying nothing and
+  guessing from a marketing banner. Shown the real content it answers
+  correctly and identically three runs running.
+- *"The model is not a superset of the deterministic pass."* Same cause, an
+  earlier form: three pages it "missed" were pages `pageTextFor` had
+  truncated.
+
+The lesson both times is the same and worth keeping: when a model looks
+wrong, check what it was shown before concluding anything about the model.
+
+**A production bug the eval caught.****A production bug the eval caught.** Asked about a page with no
 composition, a model answered `{"verbatim": "null"}` — the *string*. The
 schema accepts it, because a string is what the field wants, and it would
 have reached `products.fabric_composition`: a runner shown the word "null"
