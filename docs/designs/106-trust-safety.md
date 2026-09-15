@@ -202,21 +202,29 @@ changes. Three constraints this lane has to respect while doing it:
 Written down because this lane is large and a reviewer should not have to
 infer what is finished from a diff.
 
-**Landed.** Migration `0015`; `modules/safety` — reports with the
+**Landed.** Migration `0015`. `modules/safety`: reports with the
 distinct-reporter threshold, the review queue with claim-then-resolve,
-blocks, the link denylist, and the admin gate; `publiclyVisibleEntry()`
-wired into all five feed reads that show entries to strangers;
-`lib/sql-null.ts` lifted out of `closet/service.ts` and at 100% mutation
-score; `eval/photos/` ready to run.
+blocks, the link denylist, the admin gate, ban mechanics, the moderation
+classifier and its threshold rule, the screening path, and the
+`screening-retry` reconciliation sweep. `publiclyVisibleEntry()` wired
+into all five feed reads that show entries to strangers. Screening wired
+into both upload paths. `screening-retry` registered in `wrangler.jsonc`
+(owner's edit, authorised 2026-09-15) and `modules/ops/crons.ts`, covered
+by `bindings-conformance`. Review-queue depth in the daily digest.
+`lib/sql-null.ts` and `lib/keyed-read.ts`'s `columnSetAmong`, both at 100%.
+`eval/photos/` ready to run.
 
-**Waiting on the owner.** `wrangler.jsonc`'s `"15 * * * *"` (the cron), and
-`OPENAI_API_KEY` in `.dev.vars` (the eval). Neither is work this lane can
-do for itself.
+**Waiting on the owner.** `OPENAI_API_KEY` in `.dev.vars`, so the eval can
+run. Until then the app is correct and safe — every photo stays `pending`,
+owners see their own, the public sees none, and the first sweep after the
+key exists screens the backlog. What is missing is the *measurement*, and
+the packet makes that a launch gate.
 
-**Still to build.** The classifier adapter and the screening path; the
-`screening-retry` cron handler; ban mechanics; W1/W2/W3 screens and their
-routes; the admin review page and duplicates report; the digest's queue
-depth; the demo video; `modules/safety` joining `stryker.conf.json`.
+**Still to build.** W1 report sheet, W2 blocked-runners list, W3
+faces-blurred; their routes; the admin review page and the duplicates
+report (D-30); link hygiene rendering (`rel="ugc nofollow noopener"` plus
+the bare domain beside the link text); the demo video; `modules/safety`
+joining `stryker.conf.json`'s `mutate` array.
 
 ## Open questions
 
