@@ -183,6 +183,110 @@ describe("resolving a decision", () => {
   });
 });
 
+describe("what a decision writes", () => {
+  beforeEach(resetSafetyTables);
+
+  it("stamps the claiming reviewer on the row", async () => {
+    const { queueId } = await queuedEntry();
+    const reviewer = await makeUser();
+
+    await claimForReview(queueId, reviewer);
+
+    // Not just "reviewing": the row must name WHO, or a second tab
+    // cannot tell whether it is looking at its own claim.
+    const [row] = await core()
+      .select({
+        status: reviewQueue.status,
+        resolvedBy: reviewQueue.resolvedBy,
+      })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId))
+      .limit(1);
+    expect(row?.status).toBe("reviewing");
+    expect(row?.resolvedBy).toBe(reviewer);
+  });
+
+  it("stamps a resolution time, so a queue row records when it was settled", async () => {
+    const { queueId } = await queuedEntry();
+    const before = Math.floor(Date.now() / 1000);
+
+    await resolveReview(queueId, await makeUser(), "approve");
+
+    const [row] = await core()
+      .select({ resolvedAt: reviewQueue.resolvedAt })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId))
+      .limit(1);
+    expect(row?.resolvedAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("records the queue row's own creation time", async () => {
+    const before = Math.floor(Date.now() / 1000);
+    await queuedEntry();
+
+    const [queued] = await pendingReviewQueue();
+
+    // The queue is read oldest-first, so a wrong timestamp reorders a
+    // reviewer's worklist.
+    expect(queued?.createdAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("approving a product puts it back in autocomplete", async () => {
+    const productId = newUlid();
+    await core().insert(products).values({
+      id: productId,
+      brandId: newUlid(),
+      name: "Some Shoe",
+      normalizedName: "some shoe",
+      createdBy: await makeUser(),
+      createdAt: NOW,
+    });
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "product",
+        subjectId: productId,
+        reason: "spam",
+      });
+    }
+    const [queued] = await pendingReviewQueue();
+    if (!queued) throw new Error("nothing queued");
+
+    await resolveReview(queued.id, await makeUser(), "approve");
+
+    // The other half of the product path: removing hides it, and
+    // approving must put it back rather than leave it hidden forever.
+    const [row] = await core()
+      .select({ status: products.status })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1);
+    expect(row?.status).toBe("active");
+  });
+
+  it("leaves a reported profile's own rows alone", async () => {
+    // `subjectWritesFor` has no profile branch on purpose: removing a
+    // person is a ban, with its own path and its own notice. A resolve
+    // here must settle the queue row and touch nothing else.
+    const subject = await makeUser();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "profile",
+        subjectId: subject,
+        reason: "harassment",
+      });
+    }
+    const [queued] = await pendingReviewQueue();
+    if (!queued) throw new Error("nothing queued");
+
+    expect(await resolveReview(queued.id, await makeUser(), "remove")).toBe(
+      "resolved",
+    );
+    expect(await pendingReviewCount()).toBe(0);
+  });
+});
+
 describe("the queue itself", () => {
   beforeEach(resetSafetyTables);
 

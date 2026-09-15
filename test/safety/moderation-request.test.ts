@@ -99,6 +99,25 @@ describe("the request", () => {
     expect(body).not.toContain("://");
   });
 
+  it("encodes an image bigger than one chunk correctly", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(Response.json(CLEAN_RESPONSE));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    // Over 32768 bytes, so the base64 loop runs more than once. The
+    // chunking exists because spreading a multi-megabyte array into one
+    // String.fromCodePoint call overflows the stack — and a loop that
+    // stepped wrongly would silently corrupt or truncate the photo the
+    // classifier is asked about.
+    const big = new Uint8Array(70_000).fill(65);
+
+    await classifyImage({ bytes: big, contentType: "image/jpeg", apiKey: "k" });
+
+    const body = bodyOf(fetchSpy);
+    const encoded = /base64,([^"]+)/.exec(body)?.[1] ?? "";
+    expect(atob(encoded)).toHaveLength(big.length);
+    expect(atob(encoded)).toBe("A".repeat(70_000));
+  });
+
   it("carries a timeout, because law 4 says every outbound fetch does", async () => {
     const fetchSpy = vi.fn().mockResolvedValue(
       Response.json(CLEAN_RESPONSE),

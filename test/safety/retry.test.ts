@@ -98,6 +98,57 @@ describe("the screening-retry sweep", () => {
   });
 });
 
+describe("what the sweep hands the classifier", () => {
+  beforeEach(resetSafetyTables);
+
+  it("passes the stored content type through", async () => {
+    const seen: string[] = [];
+    const spy: Classify = (params) => {
+      seen.push(params.contentType);
+      return Promise.resolve({ flagged: false, scores: scores() });
+    };
+    await pendingPhoto();
+
+    await retryPendingScreenings(spy, []);
+
+    expect(seen).toEqual(["image/jpeg"]);
+  });
+
+  it("falls back to jpeg when R2 kept no content type", async () => {
+    const seen: string[] = [];
+    const spy: Classify = (params) => {
+      seen.push(params.contentType);
+      return Promise.resolve({ flagged: false, scores: scores() });
+    };
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId, isPublic: true });
+    const photoId = newUlid();
+    const photoKey = `entries/${userId}/${entryId}/${photoId}`;
+    await core()
+      .insert(entryPhotos)
+      .values({ id: photoId, entryId, photoKey, position: 0 });
+    // No httpMetadata at all — the object predates the upload path that
+    // sets one, or R2 dropped it. A classifier asked about "undefined"
+    // would reject the request outright.
+    await env.MEDIA.put(photoKey, new Uint8Array([1]));
+
+    await retryPendingScreenings(spy, []);
+
+    expect(seen).toEqual(["image/jpeg"]);
+  });
+
+  it("counts a flag separately from a pass", async () => {
+    await pendingPhoto();
+    await pendingPhoto();
+
+    // Two photos, one of each: a report that lumped them together would
+    // make the digest unable to say whether anything was hidden.
+    const first = await retryPendingScreenings(explicit, []);
+    expect(first).toMatchObject({ considered: 2, flagged: 2, passed: 0 });
+  });
+});
+
 describe("when there is no key configured", () => {
   beforeEach(resetSafetyTables);
 

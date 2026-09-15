@@ -42,6 +42,21 @@ describe("clamping to the image", () => {
     expect(clamped({ x: -50, y: 0, width: 10, height: 10 }, 100, 100)).toBeUndefined();
   });
 
+  it("gives back nothing for a region with no height left", () => {
+    // Overlaps horizontally but sits entirely above the image. The two
+    // halves of the guard are separate facts, and a single-axis test
+    // passes with either one missing.
+    expect(clamped({ x: 10, y: -80, width: 40, height: 60 }, 100, 100)).toBeUndefined();
+  });
+
+  it("gives back nothing for a region with no width left", () => {
+    expect(clamped({ x: -80, y: 10, width: 60, height: 40 }, 100, 100)).toBeUndefined();
+  });
+
+  it("gives back nothing for a region below or right of the image", () => {
+    expect(clamped({ x: 10, y: 200, width: 10, height: 10 }, 100, 100)).toBeUndefined();
+  });
+
   it("leaves a region already inside alone", () => {
     const inside = { x: 10, y: 10, width: 20, height: 20 };
     expect(clamped(inside, 100, 100)).toEqual(inside);
