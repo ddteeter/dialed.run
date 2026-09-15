@@ -20,6 +20,7 @@ import {
 import { env } from "../../env";
 import { fitWithin, withReleased } from "../../lib/photo-pipeline";
 import { getOwnedItem } from "./service";
+import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -87,6 +88,10 @@ export async function uploadItemPhoto(
   itemId: string,
   bytes: Uint8Array,
   contentType: string,
+  /**
+  Injectable so a test can make the upstream fail on demand.
+  */
+  classify?: Classify,
 ): Promise<PhotoUploadResult> {
   validatePhoto(contentType, bytes.byteLength);
   await getOwnedItem(db, userId, itemId);
@@ -125,11 +130,35 @@ export async function uploadItemPhoto(
 
   await db
     .update(wardrobeItems)
-    .set({ photoKey: keyPrefix })
+    // `visibility: "pending"` in the same write as the key. A garment with
+    // a photo and no screening state would read as `ok` — the pre-106
+    // default meaning "never screened" — and slip into public view
+    // unclassified. Setting it here rather than in the column default is
+    // deliberate: most wardrobe rows have no photo at all and should stay
+    // `ok` rather than queue for a sweep that has nothing to fetch.
+    .set({ photoKey: keyPrefix, visibility: "pending" })
     .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
+
+  // Same shape as the entry path: bounded, never throws, and a failure
+  // leaves the row `pending` for the screening-retry cron. The ORIGINAL
+  // bytes are classified rather than a derived size — a resize is our
+  // artefact, and screening something the runner never uploaded would
+  // make a verdict hard to explain.
+  await screenPhoto(
+    { scope: "garment", photoId: itemId, bytes, contentType },
+    classify ?? classifierFromEnv() ?? neverClassifies,
+  );
 
   return { photoKey: keyPrefix };
 }
+
+/**
+ * Stands in for an absent classifier. Rejecting rather than resolving to a
+ * verdict is the point: `screenPhoto` turns that into `deferred`, whereas
+ * a stub resolving to "pass" would publish unclassified photos.
+ */
+const neverClassifies: Classify = () =>
+  Promise.reject(new Error("no classifier configured"));
 
 /**
  * A photo upload's outcome, kept apart from the item save.

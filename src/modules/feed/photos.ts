@@ -20,6 +20,7 @@ import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 import { isEntryPubliclyVisible } from "../safety";
+import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -43,7 +44,18 @@ export interface UploadPhotoInput {
   idempotencyKey?: string | undefined;
 }
 
-export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
+/**
+ * The classifier, injectable so a test can make the upstream fail on
+ * demand. Production passes nothing and gets `classifierFromEnv()`.
+ */
+export interface UploadPhotoOptions {
+  classify?: Classify | undefined;
+}
+
+export async function uploadPhoto(
+  input: UploadPhotoInput,
+  { classify }: UploadPhotoOptions = {},
+): Promise<string> {
   if (!isAllowedPhotoType(input.contentType)) {
     throw new InvalidPhotoError("unsupported photo type");
   }
@@ -111,8 +123,37 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
     position: existing.length,
     idempotencyKey: input.idempotencyKey,
   });
+
+  // Screened inline rather than after responding, because the packet's
+  // common path is "pass -> visible immediately" and a photo that appears
+  // then vanishes for its own author is worse than one that takes a beat
+  // to upload. The call is bounded by law 4's timeout, and `screenPhoto`
+  // never throws: with no key, a slow upstream or a dead one, the row
+  // simply stays `pending` and the screening-retry cron owns it from
+  // there. So this can delay a save but can never fail one.
+  await screenPhoto(
+    {
+      scope: "entry",
+      photoId,
+      bytes: new Uint8Array(input.bytes),
+      contentType: input.contentType,
+    },
+    classify ?? classifierFromEnv() ?? neverClassifies,
+  );
+
   return key;
 }
+
+/**
+ * Stands in for an absent classifier so the screening path has one shape.
+ *
+ * Rejecting rather than resolving to a verdict is the point: there is no
+ * answer, and `screenPhoto` turning that into `deferred` is exactly right.
+ * A stub that resolved to "pass" would publish unclassified photos, which
+ * is the wrong-answer failure this lane keeps refusing.
+ */
+const neverClassifies: Classify = () =>
+  Promise.reject(new Error("no classifier configured"));
 
 /**
  * Visibility check for the GET route: a photo is servable to `viewerId`

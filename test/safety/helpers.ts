@@ -21,7 +21,7 @@ import { env } from "../../src/env";
 
 import { deleteAllFrom, resetTables as resetSharedTables } from "../feed/helpers";
 
-export { makeEntry, makeRun, makeUser, NOW } from "../feed/helpers";
+export { makeEntry, makeItem, makeRun, makeUser, NOW } from "../feed/helpers";
 
 export async function resetSafetyTables(): Promise<void> {
   await deleteAllFrom(drizzle(env.DIALED_CORE), [
