@@ -13,7 +13,11 @@ import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
-import { classifierFromEnv, retryPendingScreenings } from "../safety";
+import {
+  classifierFromEnv,
+  pendingReviewCount,
+  retryPendingScreenings,
+} from "../safety";
 
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
@@ -158,7 +162,7 @@ async function stalledPending(
   graceSeconds: number,
 ): Promise<{ id: string }[]> {
   const db = drizzle(env.DIALED_CORE);
-  const staleBefore = Math.floor(Date.now() / 1000) - graceSeconds;
+  const staleBefore = secondsAgo(graceSeconds);
   return db
     .select({ id: marker.id })
     .from(marker.table)
@@ -291,6 +295,38 @@ function failedAndOwed(): SQL | undefined {
   );
 }
 
+/**
+ * How much is waiting on a person (task 106 §2).
+ *
+ * Reported at ANY depth rather than past a threshold, and that is the
+ * difference between this and the other digest checks. The others watch
+ * for a system misbehaving, where a small number is noise; this one is a
+ * queue whose whole promise is "a person reads it within a day", and the
+ * failure mode is a queue nobody opened rather than a queue that grew.
+ * One waiting report is worth saying out loud; zero says nothing, so the
+ * digest stays quiet on the ordinary day.
+ */
+async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
+  const depth = await pendingReviewCount();
+  if (depth === 0) return;
+  anomalies.push(
+    `${String(depth)} item(s) awaiting moderation review`,
+  );
+}
+
+/**
+ * The epoch-second cutoff `n` seconds ago.
+ *
+ * Written out at three call sites, which is what made two of the digest's
+ * stale-window checks read as clones of each other. Naming it also makes
+ * the direction hard to get wrong: every caller wants "older than this",
+ * and a `+` where the `-` belongs would silently widen every window to
+ * include the future.
+ */
+function secondsAgo(seconds: number): number {
+  return Math.floor(Date.now() / 1000) - seconds;
+}
+
 async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
   // Two reads rather than one with an OR. The `pending` half is exactly
   // the question `stalledPending` already asks, and the `failed` half has
@@ -343,6 +379,7 @@ async function runDailyDigest(): Promise<string[]> {
   await checkAbandonedEnrichments(anomalies);
   await redispatchStrandedRevocations(anomalies);
   await redispatchStalledImports(anomalies);
+  await checkReviewQueueDepth(anomalies);
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)
   // - stale cron_checkpoints rows
@@ -439,7 +476,7 @@ async function checkAbandonedEnrichments(anomalies: string[]): Promise<void> {
  */
 async function checkWeatherBacklog(anomalies: string[]): Promise<void> {
   const db = drizzle(env.DIALED_CORE);
-  const staleBefore = Math.floor(Date.now() / 1000) - WEATHER_PENDING_STALE_SECONDS;
+  const staleBefore = secondsAgo(WEATHER_PENDING_STALE_SECONDS);
   const stuckPending = and(
     eq(runs.weatherStatus, "pending"),
     lt(runs.startedAt, staleBefore),

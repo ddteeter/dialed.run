@@ -6,6 +6,7 @@ import {
   cronCheckpoints,
   imports,
   products,
+  reviewQueue,
   runs,
   stravaRevocations,
 } from "../../src/db/schema-core";
@@ -675,3 +676,73 @@ describe("the extraction-yield check", () => {
     expect(outcome.anomalies).toStrictEqual([]);
   });
 });
+
+describe("the digest reports what is waiting on a person (106 §2)", () => {
+  beforeEach(async () => {
+    await coreDb().delete(reviewQueue);
+  });
+
+  it("says nothing on a day with an empty queue", async () => {
+    const result = await handleScheduled(DIGEST);
+
+    // A digest that speaks every day is one nobody reads. Zero waiting is
+    // the ordinary case and gets no line.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+
+  it("reports a single waiting item, not just a backlog", async () => {
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    // Deliberately unlike the other digest checks, which fire past a
+    // threshold. This queue's promise is "a person reads it within a day",
+    // so the failure is a queue nobody opened rather than one that grew —
+    // and a threshold would hide exactly that.
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("1 item(s) awaiting moderation review"),
+    );
+  });
+
+  it("counts the queue, not the reports behind it", async () => {
+    await queueItem();
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("2 item(s)"),
+    );
+  });
+
+  it("ignores decisions already made", async () => {
+    await queueItem("approved");
+    await queueItem("removed");
+
+    const result = await handleScheduled(DIGEST);
+
+    // Resolved rows stay in the table for the record; counting them would
+    // make the digest louder every day forever.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+});
+
+/**
+One row in front of a reviewer, in the given state.
+*/
+async function queueItem(
+  status: "pending" | "approved" | "removed" = "pending",
+): Promise<void> {
+  await coreDb().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType: "entry",
+    subjectId: newUlid(),
+    source: "reports",
+    status,
+    createdAt: nowSeconds(),
+  });
+}
