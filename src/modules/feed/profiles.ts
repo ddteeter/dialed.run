@@ -23,6 +23,7 @@ import { bandsAscending, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";
 import { unitsFor } from "./units";
 import { followerCount, followingCount } from "./follows";
+import { publiclyVisibleEntry } from "../safety";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -142,7 +143,7 @@ export async function otherProfile(userId: string): Promise<OtherProfile | undef
       caption: outfitEntries.caption,
     })
     .from(outfitEntries)
-    .where(and(eq(outfitEntries.userId, userId), eq(outfitEntries.isPublic, true)))
+    .where(and(eq(outfitEntries.userId, userId), publiclyVisibleEntry()))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(RECENT_LIMIT);
 

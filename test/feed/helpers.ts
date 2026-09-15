@@ -4,6 +4,8 @@
  * plain ULIDs as user ids without creating real auth users.
  */
 import { drizzle } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   entryTags,
@@ -136,23 +138,42 @@ export async function makeEntry(params: {
 }
 
 /**
+ * Deletes every row from each table, in order — the shared shape behind
+ * every lane's table reset (`resetTables` below, `test/safety/helpers.ts`'s
+ * `resetSafetyTables`). Sequential rather than `db.batch()`: these run once
+ * per test file in `beforeEach`, not on a request path, so the batching
+ * discipline that matters for production writes buys nothing here, and
+ * `batch`'s non-empty-tuple typing would only get in the way of a plain
+ * array a lane can freely add tables to.
+ */
+export async function deleteAllFrom(
+  database: DrizzleD1Database,
+  tables: readonly SQLiteTable[],
+): Promise<void> {
+  for (const table of tables) {
+    await database.delete(table);
+  }
+}
+
+/**
  * Storage persists across `it()` blocks within one test file (only the
  * whole file is isolated) — tests whose assertions depend on a global,
  * unscoped scan (consensus's "N of M" counts) need a clean slate rather
  * than relying on per-test-unique fixture data to avoid collisions.
  */
 export async function resetTables(): Promise<void> {
-  const core = coreDb();
-  await core.delete(outfitEntryItems);
-  await core.delete(entryTags);
-  await core.delete(notifications);
-  await core.delete(reactions);
-  await core.delete(outfitEntries);
-  await core.delete(runs);
-  await core.delete(wardrobeItems);
-  await core.delete(follows);
-  await core.delete(userProfiles);
-  await weatherDb().delete(weatherObservations);
+  await deleteAllFrom(coreDb(), [
+    outfitEntryItems,
+    entryTags,
+    notifications,
+    reactions,
+    outfitEntries,
+    runs,
+    wardrobeItems,
+    follows,
+    userProfiles,
+  ]);
+  await deleteAllFrom(weatherDb(), [weatherObservations]);
 }
 
 export async function makeObservation(params: {

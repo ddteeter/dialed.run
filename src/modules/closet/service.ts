@@ -35,6 +35,8 @@ import type {
   weightSchema,
 } from "../../lib/contracts";
 import { garmentSchema, uiGroupFor } from "../../lib/contracts";
+// Was private to this file until modules/safety needed the same helper.
+import { orSqlNull } from "../../lib/sql-null";
 import { garmentTypesFor } from "../../lib/garment-fields";
 import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
@@ -70,13 +72,6 @@ carried the `isNotFound` marker the router duck-types on. One type now,
 in `lib/errors.ts`.
 */
 export { NotFoundError } from "../../lib/errors";
-
-/**
- * Column value that clears a nullable column without the `null` literal.
- */
-function orSqlNull<T>(value: T | undefined): T | SQL {
-  return value ?? sql`NULL`;
-}
 
 /**
  * Writes a real SQL NULL for "not stated", which is distinct from false —

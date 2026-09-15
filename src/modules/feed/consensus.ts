@@ -4,7 +4,7 @@
  * `entries_public_created` covering index + ≤200 weather cache-key seeks.
  * `source='manual'` observations are excluded from the aggregate.
  */
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, gte, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -21,6 +21,7 @@ import { conditionsAt, observationsForEntries } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
+import { publiclyVisibleEntry } from "../safety";
 
 const SCAN_LIMIT = 200;
 const WINDOW_H = [72, 24 * 7] as const; // widen once before declaring empty
@@ -35,7 +36,11 @@ export function recentPublicEntriesStatement(
     .select()
     .from(outfitEntries)
     .where(
-      and(eq(outfitEntries.isPublic, true), gte(outfitEntries.createdAt, sinceEpochSeconds)),
+      // publiclyVisibleEntry(), not a bare isPublic: a removed or
+      // pending-review entry must not count toward the numbers everyone
+      // reads (packet: "hidden content must not count"). A missed clause
+      // here hides nothing visibly — it just quietly skews the aggregate.
+      and(publiclyVisibleEntry(), gte(outfitEntries.createdAt, sinceEpochSeconds)),
     )
     .orderBy(desc(outfitEntries.createdAt))
     .limit(limit);

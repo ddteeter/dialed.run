@@ -49,6 +49,17 @@ Key decisions embedded here:
 - **Two D1 databases**: `dialed-core` (users, closet, runs, feed) and
   `dialed-weather` (observations cache). Weather grows unbounded; isolating
   it protects the core DB from the 10 GB per-database cap.
+- **One rule decides public visibility** (106). `modules/safety` owns
+  `publiclyVisibleEntry()`, and `modules/feed` imports it rather than
+  writing `is_public = 1` at each of its five read sites. The arrow
+  therefore runs feed → safety, not the reverse: safety knows about entries,
+  and nothing in safety imports feed.
+- **Photo screening calls out to OpenAI's moderation endpoint**, not to
+  Workers AI — the catalogue has one image classifier (`resnet-50`,
+  ImageNet classes) and no content-safety model. It is a secret, so no new
+  binding; the retry is the `screening-retry` cron reconciling rows still
+  marked `pending`, because that marker already exists (law 8c) and a queue
+  would be the over-engineered version.
 - **Weather is an adapter** (`modules/weather/provider/`). Visual Crossing is
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
@@ -106,6 +117,8 @@ flowchart TD
     CLOSET -->|index.ts only| PROD
     FEED -->|index.ts only| PROD
     OPS[modules/ops] -->|index.ts only| WX
+    SAFE[modules/safety] --> DB
+    FEED -->|index.ts only| SAFE
     CLOSET -->|index.ts only| AUTH
     PROD -->|index.ts only| AUTH
 

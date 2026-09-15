@@ -197,6 +197,27 @@ changes. Three constraints this lane has to respect while doing it:
   path still works and the upload still works. A detector outage must not
   block someone's own logging any more than a classifier outage does.
 
+## Build status
+
+Written down because this lane is large and a reviewer should not have to
+infer what is finished from a diff.
+
+**Landed.** Migration `0015`; `modules/safety` — reports with the
+distinct-reporter threshold, the review queue with claim-then-resolve,
+blocks, the link denylist, and the admin gate; `publiclyVisibleEntry()`
+wired into all five feed reads that show entries to strangers;
+`lib/sql-null.ts` lifted out of `closet/service.ts` and at 100% mutation
+score; `eval/photos/` ready to run.
+
+**Waiting on the owner.** `wrangler.jsonc`'s `"15 * * * *"` (the cron), and
+`OPENAI_API_KEY` in `.dev.vars` (the eval). Neither is work this lane can
+do for itself.
+
+**Still to build.** The classifier adapter and the screening path; the
+`screening-retry` cron handler; ban mechanics; W1/W2/W3 screens and their
+routes; the admin review page and duplicates report; the digest's queue
+depth; the demo video; `modules/safety` joining `stryker.conf.json`.
+
 ## Open questions
 
 None outstanding. All six answered by the owner on 2026-09-15 and recorded

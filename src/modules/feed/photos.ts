@@ -19,6 +19,7 @@ import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
+import { isEntryPubliclyVisible } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -131,12 +132,18 @@ export async function isPhotoVisible(
     .limit(1);
   if (!photo) return false;
   const [entry] = await database
-    .select({ userId: outfitEntries.userId, isPublic: outfitEntries.isPublic })
+    .select({
+      userId: outfitEntries.userId,
+      isPublic: outfitEntries.isPublic,
+      moderationStatus: outfitEntries.moderationStatus,
+    })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, photo.entryId))
     .limit(1);
   if (!entry) return false;
-  return entry.isPublic || entry.userId === viewerId;
+  // The owner keeps seeing their own photo whatever is pending against
+  // it — fail open for the owner, closed for the public.
+  return isEntryPubliclyVisible(entry) || entry.userId === viewerId;
 }
 
 export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {

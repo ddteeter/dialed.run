@@ -1,12 +1,10 @@
-import { writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { CORPUS } from "./corpus";
 import { extractEveryWay, type ModelChoice, type PageExtractions } from "./extractions";
 import { fetchPage } from "./page-cache";
 import { reportFor } from "./report";
 import { secret } from "./secrets";
+import { writeReport } from "./write-report";
 
 /**
  * The extraction eval (D-32). `npm run eval`.
@@ -58,10 +56,13 @@ async function main(): Promise<void> {
     }
   }
 
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const out = path.join(here, "results.md");
-  writeFileSync(out, reportFor(pages), "utf8");
-  console.log(`\n${String(pages.length)} of ${String(CORPUS.length)} pages -> ${out}`);
+  writeReport({
+    scriptUrl: import.meta.url,
+    markdown: reportFor(pages),
+    covered: pages.length,
+    total: CORPUS.length,
+    noun: "pages",
+  });
 }
 
 await main();

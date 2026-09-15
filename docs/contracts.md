@@ -86,7 +86,10 @@ product_id       text     -- NULLABLE FK -> products; links this garment to a
 origin           text     -- enum: manual | taplist  (taplist rows are
                           -- [GENERIC] placeholders until upgraded — D-27)
 retired          int      -- 0/1
-visibility       text     -- 'ok' now; task 106 adds moderation states
+visibility       text     -- enum: ok | pending | pass | flagged |
+                          -- hidden_pending_review (106). 'ok' means never
+                          -- screened, which is NOT 'pass'. Same vocabulary
+                          -- as entry_photos.screen_status on purpose.
 created_at       int
 ```
 
@@ -246,8 +249,56 @@ imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'fail
                 failure_reason, run_id NULLABLE, created_at
 ```
 
-Task 106 adds: `reports`, `review_queue`, `domain_denylist`, ban columns —
-specified in its packet, migrated on main after 101/104 merge.
+Task 106 added (migration `0015_trust_and_safety_floor`):
+
+```
+reports:         id, reporter_id, subject_type ('entry'|'photo'|'profile'|
+                 'product'), subject_id, reason, note NULLABLE, created_at
+                 UNIQUE(reporter_id, subject_type, subject_id)
+                   -- NOT a dedupe convenience. "N reports from DISTINCT
+                   -- users" is only true under retries if a second report
+                   -- cannot become a second row; this is what makes
+                   -- COUNT(*) a count of people.
+review_queue:    id, subject_type, subject_id, source ('reports'|
+                 'classifier'), status ('pending'|'reviewing'|'approved'|
+                 'removed'), resolved_by NULLABLE, resolved_at NULLABLE,
+                 created_at; UNIQUE(subject_type, subject_id)
+                   -- one row per subject, not per report: three reports
+                   -- about one entry are one decision. `status` is the
+                   -- claim column (law 2).
+domain_denylist: domain PK (bare registrable host, lowercased, no 'www.'),
+                 added_by, reason NULLABLE, created_at. Seeded empty.
+photo_screenings: id, photo_scope ('entry'|'garment'), photo_id, model,
+                 scores (raw per-category JSON), decision ('pass'|'flag'),
+                 created_at -- kept so a threshold can be re-tuned against
+                 real scores without re-classifying anything.
+blocks:          blocker_id, blocked_id, created_at;
+                 UNIQUE(blocker_id, blocked_id) + INDEX(blocked_id)
+                   -- read from both ends: W2 promises blocking works in
+                   -- both directions. Deliberately NOT read by the
+                   -- consensus aggregate — a blocked runner's verdicts
+                   -- still count in numbers that name nobody.
+user_profiles:   + banned_at NULLABLE, ban_reason NULLABLE
+                   -- `banned_at IS NOT NULL` IS the ban: one fact, not a
+                   -- boolean and a date that can disagree.
+outfit_entries:  + moderation_status ('ok'|'hidden_pending_review'|'removed')
+                   -- SEPARATE from is_public, which is the runner's own
+                   -- sharing choice. A moderator writing is_public would
+                   -- silently rewrite a preference they set, and approving
+                   -- could never restore it correctly.
+entry_photos:    + screen_status ('pending'|'pass'|'flagged'|
+                 'hidden_pending_review'), default 'pending'
+                   -- the durable "not finished" marker that lets screening
+                   -- retry be a cron rather than a queue (law 8c).
+```
+
+**One rule for "visible to a stranger".** `is_public = 1 AND
+moderation_status = 'ok'`, expressed once as `publiclyVisibleEntry()` in
+`modules/safety` and imported by every read that shows entries to someone
+other than their author. Five call sites wrote the first half by hand
+before 106; a second condition would have made five copies of a rule, and
+the dangerous one is the consensus aggregate, where a missed clause hides
+nothing visibly and only skews the numbers.
 
 ### Covering indexes (minimum set; lanes add their own with EXPLAIN proof)
 

@@ -1,0 +1,97 @@
+/**
+ * Link hygiene for product URLs (packet §3).
+ *
+ * https-only is already enforced in 101, so this file owns the half that
+ * was not: the denylist check, and the bare domain the UI renders next to
+ * the link text so a runner can see where a link goes before following it.
+ *
+ * `rel="ugc nofollow noopener"` belongs to whichever component renders the
+ * anchor, not here — a function that returns a domain has no business
+ * knowing about HTML attributes.
+ */
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+
+import { domainDenylist } from "../../db/schema-core";
+import { env } from "../../env";
+import { hasRowWhere } from "../../lib/keyed-read";
+
+function db() {
+  return drizzle(env.DIALED_CORE);
+}
+
+/**
+ * The host of a URL, lowercased and without a leading `www.`, or
+ * `undefined` when the string is not a parseable https URL.
+ *
+ * **`www.` is stripped, and that is a judgement.** A denylist entry for
+ * `example.com` should catch `www.example.com`, because a runner reading
+ * the rendered domain cannot tell them apart and an operator adding one
+ * entry means both. It does *not* strip other subdomains: `shop.example.com`
+ * stays distinct, because those genuinely are different sites.
+ *
+ * Non-https returns undefined rather than throwing: 101 already rejected
+ * those at save, so reaching here with one means a stored value predating
+ * that rule, and a stored oddity should render as "no domain" rather than
+ * take down the page.
+ */
+export function domainOf(url: string): string | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== "https:") return undefined;
+  const host = parsed.hostname.toLowerCase();
+  return host.startsWith("www.") ? host.slice(4) : host;
+}
+
+/**
+ * Whether this URL's domain is denied. A URL we cannot parse is not
+ * denied — it is invalid, which is a different answer with a different
+ * message, and conflating them would tell a runner their perfectly good
+ * link was blocked.
+ */
+export async function isDeniedDomain(url: string): Promise<boolean> {
+  const domain = domainOf(url);
+  if (domain === undefined) return false;
+  return hasRowWhere(
+    db(),
+    domainDenylist,
+    domainDenylist.domain,
+    eq(domainDenylist.domain, domain),
+  );
+}
+
+/**
+ * Adds a domain to the denylist. Seeded empty (packet §3); the review flow
+ * is what fills it.
+ *
+ * The stored form is whatever `domainOf` produces, so a reviewer pasting a
+ * full URL and a reviewer typing a bare host both land on the same row.
+ */
+export async function denyDomain(
+  domainOrUrl: string,
+  addedBy: string,
+  reason?: string,
+): Promise<void> {
+  const domain = domainOf(domainOrUrl) ?? normalizeBareDomain(domainOrUrl);
+  await db()
+    .insert(domainDenylist)
+    .values({
+      domain,
+      addedBy,
+      reason,
+      createdAt: Math.floor(Date.now() / 1000),
+    })
+    .onConflictDoNothing();
+}
+
+/**
+ * A host typed without a scheme, in the same shape `domainOf` returns.
+ */
+function normalizeBareDomain(value: string): string {
+  const host = value.trim().toLowerCase();
+  return host.startsWith("www.") ? host.slice(4) : host;
+}

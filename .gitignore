@@ -33,3 +33,7 @@ demo.mp4
 *.demo.mp4
 playwright-report/
 eval/pages/
+# Photographs of people. The repo is public, and a corpus of running
+# photos in git is a worse problem than the one it solves — see
+# eval/photos/corpus.ts for the file names that belong here.
+eval/photos/corpus/

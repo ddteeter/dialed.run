@@ -22,6 +22,7 @@ import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import { followeeIdsOf } from "./follows";
+import { publiclyVisibleEntry } from "../safety";
 
 export interface FeedCursor {
   createdAt: number;
@@ -47,7 +48,7 @@ export function followingFeedStatement(
 ) {
   const scope = and(
     inArray(outfitEntries.userId, [...userIds]),
-    eq(outfitEntries.isPublic, true),
+    publiclyVisibleEntry(),
     cursor ? feedCursorPredicate(cursor) : undefined,
   );
   return database
