@@ -45,11 +45,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/enrichment/rungs/jsonld.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
-      "reason": "Unreachable mutant, proof at the site: the destructuring default on the matchAll loop never runs, because LD_BLOCK has exactly one capture group and no alternation that could skip it \u2014 a match always binds json to a string. noUncheckedIndexedAccess is what forces the default to exist at all, since TypeScript cannot know the group participated. Reported NoCoverage rather than Survived for that reason. It replaced two unreachable guards (an optional chain on .groups and the undefined check it forced), so this shape has one where the previous had two. Collecting blocks through a replaceAll callback removes it entirely by letting the parameter be annotated string, but using replaceAll as an iterator is a hack a reader would stumble over \u2014 and CLAUDE.md conditions the preference for restructuring on it leaving better code. Owner's call, 2026-09-13.",
-      "count": 1
-    },
-    {
       "key": "src/modules/enrichment/html.ts|mutation-suppress|// Stryker restore BlockStatement",
       "reason": "The closing half of the block pair below, not a second decision. A `next-line` directive does not attach to a line opening with `} catch`, so the equivalent catch in parseJson has to be bracketed by disable/restore \u2014 and the diff-auditor counts each comment as its own suppression. Restoring immediately after the try keeps the scope to those five lines rather than the rest of the file; dropping it would silence BlockStatement everywhere below. See the paired entry for the proof. Owner's call, 2026-09-13.",
       "count": 1
@@ -57,11 +52,6 @@
     {
       "key": "src/modules/enrichment/html.ts|mutation-suppress|// Stryker disable BlockStatement",
       "reason": "Equivalent mutant, proof at the site: emptying the catch in parseJson falls off the end of the function, which is undefined \u2014 the same value the explicit return produces. No caller can distinguish them, and that is by design rather than by accident: malformed JSON and \"no Product in this block\" must both skip to the next block, because a page shipping one broken script beside a good one has to still yield the good one (tested). Making it observable would mean inventing behaviour \u2014 recording a parse failure somewhere nothing reads \u2014 to satisfy a mutant rather than a requirement. Three restructurings were tried: inlining the try/catch with continue, returning a result wrapper, and moving the guard to the call site; the caller behaves identically in all three. A block disable/restore pair rather than next-line, because the mutated line opens with `} catch` and next-line does not attach to a line beginning with a closing brace. Owner's call, 2026-09-13.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/enrichment/composition.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
-      "reason": "Equivalent mutant, proof at the site: String.split with a capturing group always returns [before, capture, text, capture, text, \u2026], so after dropping the first element the list starts with a label and alternates \u2014 index 0 is always even and always assigns pendingLabel before any odd index reads it. No input can reach the seed, because the loop cannot begin on a section. Four restructurings were tried (index walk, at(index+1), filter-and-zip, push-then-fill) and each trades the seed for an undefined check that is unreachable for the same reason: TypeScript cannot express \"even length, alternating\", so something unobservable has to absorb that invariant. Owner's call, 2026-09-13.",
       "count": 1
     },
     {
@@ -432,11 +422,6 @@
     {
       "key": "src/routes/runs/manual.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds.",
       "count": 1
     },
     {
