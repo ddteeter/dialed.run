@@ -1,6 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { drizzle } from "drizzle-orm/d1";
 
-import { clustersIn } from "../../src/modules/safety/duplicates";
+import { brands, products as productsTable } from "../../src/db/schema-core";
+import { env } from "../../src/env";
+import { newUlid } from "../../src/lib/ids";
+import { normalizeIdentity } from "../../src/lib/normalize";
+import {
+  clustersIn,
+  duplicateProducts,
+} from "../../src/modules/safety/duplicates";
+
+import { NOW, resetSafetyTables } from "./helpers";
+
+function core() {
+  return drizzle(env.DIALED_CORE);
+}
 
 /**
  * The clustering rule, tested on the cases that decide whether an
@@ -81,5 +95,146 @@ describe("clusters do not overlap", () => {
     expect(clusters).toHaveLength(2);
     const everyName = clusters.flat();
     expect(new Set(everyName).size).toBe(everyName.length);
+  });
+});
+
+describe("the edges of the matching rule", () => {
+  it("does not treat a name as a duplicate of itself", () => {
+    // `areNearlyTheSame` refuses an exact match, which is what stops a
+    // single product clustering with its own row.
+    expect(clustersIn(["thermal tight", "thermal tight"])).toEqual([]);
+  });
+
+  it("ignores repeated spaces, which normalisation should have removed", () => {
+    // Defensive rather than expected: `normalizeIdentity` folds runs of
+    // whitespace, so a double space here means something upstream
+    // changed — and splitting naively would make an empty token that
+    // counts toward the length comparison.
+    expect(clustersIn(["thermal  tight", "thermal tights"])).toEqual([
+      ["thermal  tight", "thermal tights"],
+    ]);
+  });
+
+  it("requires the shared tokens to be in the same ORDER", () => {
+    // "tight thermal" is the same two words rearranged, which a set
+    // comparison would happily call a duplicate.
+    expect(clustersIn(["thermal tight", "tight thermal"])).toEqual([]);
+  });
+
+  it("requires the shorter name to be a PREFIX, not merely contained", () => {
+    // Shares two tokens and differs by one in length, but the extra word
+    // is at the front — so these start differently and are two products.
+    expect(clustersIn(["winter thermal tight", "thermal tight"])).toEqual([]);
+  });
+
+  it("accepts a two-character marker and refuses a three-character word", () => {
+    // The boundary is what separates "short 24" (a year) from "short
+    // long" (a different garment).
+    expect(clustersIn(["rapid lite short", "rapid lite short 24"])).toEqual([
+      ["rapid lite short", "rapid lite short 24"],
+    ]);
+    expect(clustersIn(["rapid lite short", "rapid lite short pro"])).toEqual([]);
+  });
+
+  it("accepts a two-character spelling difference and refuses a longer one", () => {
+    // "tight"/"tights" is one character; "tight"/"tightest" is three and
+    // is a different product name.
+    expect(clustersIn(["thermal tight", "thermal tights"])).toHaveLength(1);
+    expect(clustersIn(["thermal tight", "thermal tightest"])).toEqual([]);
+  });
+
+  it("refuses a difference that is not a prefix, however short", () => {
+    // "tight" and "light" are one character apart and completely
+    // different garments — the Levenshtein false pair this rule exists
+    // to avoid.
+    expect(clustersIn(["thermal tight", "thermal light"])).toEqual([]);
+  });
+
+  it("refuses two names that differ in two positions", () => {
+    expect(clustersIn(["thermal tight blue", "thermal tights red"])).toEqual([]);
+  });
+});
+
+async function brandWith(
+  name: string,
+  products: readonly string[],
+): Promise<string> {
+  const brandId = newUlid();
+  await core().insert(brands).values({
+    id: brandId,
+    name,
+    normalized: normalizeIdentity(name),
+  });
+  for (const productName of products) {
+    await core().insert(productsTable).values({
+      id: newUlid(),
+      brandId,
+      name: productName,
+      normalizedName: normalizeIdentity(productName),
+      createdBy: newUlid(),
+      createdAt: NOW,
+    });
+  }
+  return brandId;
+}
+
+describe("the report over real rows", () => {
+  beforeEach(resetSafetyTables);
+
+  it("finds nothing in a catalogue with no near-misses", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Rapid Short"]);
+    expect(await duplicateProducts()).toEqual([]);
+  });
+
+  it("reports a near-miss, with the brand named", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+
+    const found = await duplicateProducts();
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.brand).toBe("Janji");
+    expect(
+      found[0]?.products.map((p) => p.name).toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual(["Thermal Tight", "Thermal Tights"]);
+  });
+
+  it("does not pair the same name across two brands", async () => {
+    // Two products called "Thermal Tight" from different brands are two
+    // different products, and a report that pairs them is one an
+    // operator stops reading.
+    await brandWith("Janji", ["Thermal Tight"]);
+    await brandWith("Ciele", ["Thermal Tights"]);
+
+    expect(await duplicateProducts()).toEqual([]);
+  });
+
+  it("reports each brand's mess separately", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+    await brandWith("Ciele", ["Rapid Short", "Rapid Shorts"]);
+
+    const found = await duplicateProducts();
+
+    expect(found).toHaveLength(2);
+    expect(
+      found.map((row) => row.brand).toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual(["Ciele", "Janji"]);
+  });
+
+  it("carries the ids, so an operator can act on the rows later", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+
+    const [group] = await duplicateProducts();
+
+    // D-30 is explicit that there is no merge tooling in v1, but a report
+    // that named no rows would be one nobody could act on when there is.
+    expect(group?.products.every((p) => p.id.length > 0)).toBe(true);
+    expect(new Set(group?.products.map((p) => p.id)).size).toBe(2);
+  });
+
+  it("respects its limit, so one firing cannot read the catalogue", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+    // A limit of one cannot produce a pair, which is the observable
+    // difference between a bounded read and an unbounded one.
+    expect(await duplicateProducts(1)).toEqual([]);
   });
 });

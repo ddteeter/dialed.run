@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { detectFaces } from "../../src/modules/safety/blur/detect";
 import type { Detector } from "../../src/modules/safety/blur/detect";
@@ -134,5 +135,100 @@ describe("the browser's own Shape Detection API", () => {
 
     expect(outcome).toEqual({ status: "ran", faces: [{ x: 9, y: 9, width: 9, height: 9 }] });
     expect(native).not.toHaveBeenCalled();
+  });
+});
+
+/**
+Installs a browser detector that answers with exactly this.
+*/
+function nativeReturning(result: unknown): void {
+  Reflect.set(globalThis, "FaceDetector", function FaceDetector() {
+    return { detect: () => Promise.resolve(result) };
+  });
+}
+
+/**
+ * The `null` a real `boundingBox` can be. Parsed through zod rather than
+ * written, same idiom as the other fixtures.
+ */
+const NOTHING = z.null().parse(JSON.parse("null"));
+
+describe("reading boxes out of a browser API we do not control", () => {
+  it("treats a non-array result as no faces", async () => {
+    nativeReturning({ notAnArray: true });
+    // A shape change should cost a detection, not crash a photo upload.
+    expect(await detectFaces(SOURCE)).toEqual({ status: "ran", faces: [] });
+  });
+
+  it.each([
+    ["x", { x: "no", y: 1, width: 2, height: 2 }],
+    ["y", { x: 1, y: "no", width: 2, height: 2 }],
+    ["width", { x: 1, y: 1, width: "no", height: 2 }],
+    ["height", { x: 1, y: 1, width: 2, height: "no" }],
+  ])("drops a box whose %s is not a number", async (_label, box) => {
+    nativeReturning([{ boundingBox: box }]);
+    expect(await detectFaces(SOURCE)).toEqual({ status: "ran", faces: [] });
+  });
+
+  it.each([
+    ["width", { x: 1, y: 1, width: 0, height: 5 }],
+    ["height", { x: 1, y: 1, width: 5, height: 0 }],
+    ["a negative width", { x: 1, y: 1, width: -5, height: 5 }],
+  ])("drops a box with no %s to blur", async (_label, box) => {
+    // A zero-area region blurs nothing while making the copy claim a face
+    // was covered.
+    nativeReturning([{ boundingBox: box }]);
+    expect(await detectFaces(SOURCE)).toEqual({ status: "ran", faces: [] });
+  });
+
+  it.each([
+    ["a null boundingBox", { boundingBox: NOTHING }],
+    ["no boundingBox at all", { somethingElse: 1 }],
+    ["an entry that is not an object", "not an entry"],
+  ])("skips an entry with %s", async (_label, entry) => {
+    nativeReturning([entry]);
+    expect(await detectFaces(SOURCE)).toEqual({ status: "ran", faces: [] });
+  });
+
+  it("keeps the good boxes beside the bad ones", async () => {
+    nativeReturning([
+      { boundingBox: { x: 1, y: 1, width: 2, height: 2 } },
+      { boundingBox: { x: 9, y: 9, width: 0, height: 9 } },
+      { boundingBox: { x: 5, y: 5, width: 5, height: 5 } },
+    ]);
+
+    // One bad box must not cost the runner the other two blurs.
+    const outcome = await detectFaces(SOURCE);
+    expect(outcome).toEqual({
+      status: "ran",
+      faces: [
+        { x: 1, y: 1, width: 2, height: 2 },
+        { x: 5, y: 5, width: 5, height: 5 },
+      ],
+    });
+  });
+
+  it("accepts a box at the origin, which is a real position", async () => {
+    // Zero x/y is valid; only zero SIZE is not.
+    nativeReturning([{ boundingBox: { x: 0, y: 0, width: 4, height: 4 } }]);
+    expect(await detectFaces(SOURCE)).toEqual({
+      status: "ran",
+      faces: [{ x: 0, y: 0, width: 4, height: 4 }],
+    });
+  });
+});
+
+describe("loading the model at most once", () => {
+  it("caches the outcome, including a failure", async () => {
+    // No native detector here, so both calls fall through to the model
+    // loader — which cannot load 11 MB of WASM in this pool and fails.
+    // A browser that could not manage it once will not manage it on the
+    // second photo, and retrying per photo would be the worst version of
+    // this feature.
+    const first = await detectFaces(SOURCE);
+    const second = await detectFaces(SOURCE);
+
+    expect(first).toEqual({ status: "unavailable" });
+    expect(second).toEqual(first);
   });
 });

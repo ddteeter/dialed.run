@@ -11,9 +11,11 @@ import { drizzle } from "drizzle-orm/d1";
 
 import {
   blocks,
+  brands,
   domainDenylist,
   entryPhotos,
   photoScreenings,
+  products,
   reports,
   reviewQueue,
 } from "../../src/db/schema-core";
@@ -29,6 +31,12 @@ export async function resetSafetyTables(): Promise<void> {
     // inserted one. Left out here, screening rows leaked between tests and
     // a sweep that should have seen two photos saw three.
     entryPhotos,
+    // products before brands: the report joins them, and a leaked brand
+    // trips its UNIQUE(normalized) on the next test's insert. Neither was
+    // in any reset helper, for the same reason entry_photos was not — no
+    // earlier suite inserted one.
+    products,
+    brands,
     reports,
     reviewQueue,
     blocks,
