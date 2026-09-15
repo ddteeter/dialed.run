@@ -1,16 +1,38 @@
 import type { FabricComposition } from "../src/lib/contracts";
 import { knownFibres } from "../src/modules/enrichment/fibres";
-import type { PageExtractions } from "./extractions";
+import type { Candidate, PageExtractions } from "./extractions";
 
 /**
  * Turning a pile of extractions into something a person can act on.
  *
- * **No accuracy score, deliberately.** Scoring needs ground truth, and
- * there is none yet — inventing one by treating a model as the oracle
- * would measure how model-like the deterministic pass is, which is not the
- * goal. What this reports instead is *disagreement*, which is a fact, plus
- * the shape of each disagreement so a human can adjudicate it in minutes.
+ * **This used to score the deterministic pass against the models, and that
+ * question is closed** (owner, 2026-09-14): the ladder no longer produces a
+ * composition at all, so there is nothing left to compare it with. What the
+ * eval is for now is the question D-32 asked in the first place — *which
+ * model* — and the three things that decide it: how often one finds a
+ * composition, whether the models agree when they do, and what they name
+ * that is not a fibre.
+ *
+ * **Still no accuracy score.** That needs ground truth, and treating a
+ * model as the oracle would measure how model-like the other models are.
+ * Agreement is a fact; accuracy would be an assumption wearing a number.
  */
+
+/**
+ * **Finding a composition and structuring it are different capabilities**,
+ * and conflating them is the flaw the first two versions of this report
+ * had. On SOAR's shorts `gpt-5.6-luna` returned exactly the right verbatim
+ * — `Shell 88% PA 12% EL` — and no parsed parts, so a materials count
+ * scored it zero and read it as agreeing with a pass that found nothing at
+ * all.
+ *
+ * Verbatim is the load-bearing half: it is what `products.fabric_composition`
+ * stores and what D-31 keeps so a better parser can re-read it later. So it
+ * is counted first and separately.
+ */
+export function didFind(composition: FabricComposition | undefined): boolean {
+  return composition !== undefined && composition.verbatim.trim() !== "";
+}
 
 export function materialCount(composition: FabricComposition | undefined): number {
   return (composition?.parts ?? []).reduce(
@@ -34,148 +56,154 @@ function isKnownFibre(material: string): boolean {
 }
 
 /**
- * Every material named by anyone, that `fibres.ts` does not recognise.
+ * Every material this candidate named that `fibres.ts` does not recognise.
  *
- * **This is the verification half of the vocabulary**, and the only half
- * left in code. The list is a *hint* in the prompt now, not a gate in the
- * parser (2026-09-14): a model is told what a fibre is, and this reports
- * what it named anyway. Seeing `Coreloft™ 80` or `decoration` in this
- * column is how a person judges whether the hint is working — a gate could
- * only have thrown the answer away.
+ * **The verification half of the vocabulary**, and the only half left in
+ * code. The list is a *hint* in the prompt now rather than a gate in a
+ * parser: a model is told what a fibre is, and this reports what it named
+ * anyway. `Coreloft™ 80` and `decoration` appearing here is how a person
+ * judges whether the hint is working — a gate could only have thrown the
+ * answer away.
+ *
+ * Per candidate rather than per page, so it reads as a property of the
+ * model rather than of the shop.
  */
-export function unrecognised(page: PageExtractions): string[] {
+export function unrecognisedIn(candidate: Candidate): string[] {
   const words = new Set<string>();
-  for (const candidate of page.candidates) {
-    const parts = candidate.composition?.parts ?? [];
-    for (const part of parts) {
-      for (const { material } of part.materials) {
-        if (!isKnownFibre(material)) words.add(material.toLowerCase());
-      }
+  const parts = candidate.composition?.parts ?? [];
+  for (const part of parts) {
+    for (const { material } of part.materials) {
+      if (!isKnownFibre(material)) words.add(material.toLowerCase());
     }
   }
-  // Insertion order, not sorted: the candidates are visited in a fixed
-  // order, so this is already deterministic, and `toSorted` is not in this
-  // project's lib target while `sort` trips the no-mutation rule.
   return [...words];
 }
 
-export type Verdict =
-  | "agreed"
-  | "deterministic-found-nothing"
-  | "deterministic-found-less"
-  | "deterministic-found-more"
-  | "no-model-answer";
+interface ModelTally {
+  by: string;
+  answered: number;
+  found: number;
+  materials: number;
+  unrecognised: Set<string>;
+}
+
+function tally(pages: readonly PageExtractions[]): Map<string, ModelTally> {
+  const byModel = new Map<string, ModelTally>();
+  for (const page of pages) {
+    for (const candidate of page.candidates) {
+      const seen = byModel.get(candidate.by) ?? {
+        by: candidate.by,
+        answered: 0,
+        found: 0,
+        materials: 0,
+        unrecognised: new Set<string>(),
+      };
+      if (candidate.error === undefined) seen.answered += 1;
+      if (didFind(candidate.composition)) seen.found += 1;
+      seen.materials += materialCount(candidate.composition);
+      for (const word of unrecognisedIn(candidate)) seen.unrecognised.add(word);
+      byModel.set(candidate.by, seen);
+    }
+  }
+  // The map itself, not a copy of its values: converting trips one unicorn
+  // rule for spreading an iterator and the alternative trips another for
+  // `Array.from`, while `toArray()` is not in this project's lib target.
+  // The caller wants to iterate it once, which a map does natively.
+  return byModel;
+}
 
 /**
- * How the deterministic pass compares to the models.
+ * The pages where the models do not agree on whether there *is* a
+ * composition.
  *
- * **Against the models' *consensus*, not against the best of them**, and
- * the first version got this wrong in a way worth recording. It scored
- * against `Math.max(materials)` across the models, which rewards a model
- * for over-counting: on the Icebreaker page one model read the legal
- * disclaimer "Exclusive of decoration" as a second material, and that
- * inflated count marked a correct deterministic answer as a failure. A
- * metric that treats "found more" as "better" will always be gamed by the
- * least careful participant.
- *
- * The median is the consensus here — with two or three models it is the
- * middle answer, which needs a majority to move rather than one outlier.
- *
- * **Material count is the comparison, not string equality.** The verbatim
- * strings differ harmlessly all the time — one pass keeps the "Fabric:"
- * label the other drops — where a materials count that differs means one of
- * them is missing a *section* of the garment, which is the failure that
- * matters.
+ * The most useful disagreement there is, and the cheapest to adjudicate: a
+ * human opens the page and looks. Where they all found one, differences in
+ * wording are usually harmless; where one found nothing, somebody is wrong.
  */
-export function verdictFor(page: PageExtractions): Verdict {
-  const deterministic = page.candidates.find(
-    (candidate) => candidate.by === "deterministic",
-  );
+function isContested(page: PageExtractions): boolean {
   const answers = page.candidates.filter(
     (candidate) => candidate.by !== "deterministic" && candidate.error === undefined,
   );
-  if (answers.length === 0) return "no-model-answer";
-
-  const mine = materialCount(deterministic?.composition);
-  const theirs = median(answers.map((answer) => materialCount(answer.composition)));
-  if (mine === 0 && theirs > 0) return "deterministic-found-nothing";
-  if (mine < theirs) return "deterministic-found-less";
-  if (mine > theirs) return "deterministic-found-more";
-  return "agreed";
+  if (answers.length < 2) return false;
+  const found = answers.filter((answer) => didFind(answer.composition)).length;
+  return found > 0 && found < answers.length;
 }
-
-/**
-The middle value, or the lower of the two middles for an even count.
-*/
-function median(values: readonly number[]): number {
-  // Counted rather than sorted: `toSorted` is not in this project's lib
-  // target and `sort` trips the no-mutation rule, and the median of a
-  // handful of small integers is answerable by walking them.
-  let middle = 0;
-  for (const candidate of values) {
-    const below = values.filter((value) => value < candidate).length;
-    const atOrBelow = values.filter((value) => value <= candidate).length;
-    const half = (values.length - 1) / 2;
-    if (below <= half && half < atOrBelow) middle = candidate;
-  }
-  return middle;
-}
-
-const VERDICT_NOTE: Record<Verdict, string> = {
-  agreed: "same number of materials as the models' consensus",
-  "deterministic-found-nothing": "**found nothing** where the models found some",
-  "deterministic-found-less": "**found fewer materials** than the consensus",
-  "deterministic-found-more": "found more materials than the consensus",
-  "no-model-answer": "no model answered; nothing to compare against",
-};
 
 export function reportFor(pages: readonly PageExtractions[]): string {
   const lines: string[] = [
     "# Extraction eval (D-32)",
     "",
-    "Generated by `npm run eval`. Not a score — a disagreement report; see",
-    "`eval/report.ts` for why there is no accuracy column yet.",
+    "Generated by `npm run eval`. A model comparison, not a score — see",
+    "`eval/report.ts` for why there is no accuracy column.",
     "",
-    "## Summary",
+    `${String(pages.length)} pages.`,
     "",
-    "| verdict | pages |",
-    "| --- | --- |",
+    "## By extractor",
+    "",
+    "| by | answered | found a composition | materials | named non-fibres |",
+    "| --- | --- | --- | --- | --- |",
   ];
 
-  const verdicts = pages.map((page) => verdictFor(page));
-  for (const verdict of Object.keys(VERDICT_NOTE) as Verdict[]) {
-    const count = verdicts.filter((seen) => seen === verdict).length;
-    if (count > 0) lines.push(`| ${verdict} | ${String(count)} |`);
+  const total = pages.length;
+  for (const seen of tally(pages).values()) {
+    lines.push(
+      `| ${seen.by} | ${String(seen.answered)}/${String(total)} | ${String(seen.found)}/${String(total)} | ${String(seen.materials)} | ${String(seen.unrecognised.size)} |`,
+    );
+  }
+
+  const split = pages.filter((page) => isContested(page));
+  lines.push(
+    "",
+    "## Contested pages",
+    "",
+    split.length === 0
+      ? "_None: wherever one model found a composition, so did the others._"
+      : "One model found a composition and another did not. A person opening the page settles it.",
+    "",
+  );
+  for (const page of split) {
+    lines.push(`- ${page.brand} — ${page.category}: <${page.url}>`);
   }
 
   lines.push("", "## Per page", "");
-  for (const [index, page] of pages.entries()) {
-    lines.push(
-      `### ${page.brand} — ${page.category}`,
-      "",
-      `<${page.url}>`,
-      "",
-      `Deterministic rung: \`${page.rung}\`. Verdict: ${VERDICT_NOTE[verdicts[index] ?? "agreed"]}.`,
-      "",
-      "| by | materials | verbatim |",
-      "| --- | --- | --- |",
-    );
-    for (const candidate of page.candidates) {
-      const verbatim =
-        candidate.error === undefined
-          ? cell(candidate.composition?.verbatim)
-          : `_error: ${candidate.error.slice(0, 80)}_`;
-      lines.push(
-        `| ${candidate.by} | ${String(materialCount(candidate.composition))} | ${verbatim} |`,
-      );
-    }
-    const words = unrecognised(page);
-    if (words.length > 0) {
-      lines.push("", `Materials \`fibres.ts\` does not know: ${words.join(", ")}`);
-    }
-    lines.push("");
-  }
+  for (const page of pages) lines.push(...pageSection(page));
   return lines.join("\n");
+}
+
+/**
+One page's table, plus what anyone named that is not a fibre we know.
+*/
+function pageSection(page: PageExtractions): string[] {
+  const lines = [
+    `### ${page.brand} — ${page.category}`,
+    "",
+    `<${page.url}>`,
+    "",
+    `Declared rungs reached: \`${page.rung}\`.`,
+    "",
+    "| by | found | materials | verbatim |",
+    "| --- | --- | --- | --- |",
+  ];
+  const words = new Set<string>();
+  for (const candidate of page.candidates) {
+    lines.push(candidateRow(candidate));
+    for (const word of unrecognisedIn(candidate)) words.add(word);
+  }
+  if (words.size > 0) {
+    lines.push("", `Named, but not fibres we know: ${[...words].join(", ")}`);
+  }
+  lines.push("");
+  return lines;
+}
+
+function candidateRow(candidate: Candidate): string {
+  const verbatim =
+    candidate.error === undefined
+      ? cell(candidate.composition?.verbatim)
+      : `_error: ${candidate.error.slice(0, 80)}_`;
+  const found = didFind(candidate.composition) ? "yes" : "no";
+  const materials = String(materialCount(candidate.composition));
+  return `| ${candidate.by} | ${found} | ${materials} | ${verbatim} |`;
 }
 
 /**

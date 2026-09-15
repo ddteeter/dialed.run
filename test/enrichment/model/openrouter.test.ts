@@ -250,6 +250,36 @@ describe("createOpenRouterModel: the answer", () => {
     });
   });
 
+  it.each([["null"], ["none"], ["n/a"], ["na"], ["undefined"], [" None "]])(
+    "drops a composition whose verbatim is the word %s",
+    async (verbatim) => {
+      // **Observed, not imagined.** Asked about a page that states no
+      // composition, a model answered `{"verbatim": "null"}` — the string,
+      // not the JSON value. The schema accepts it, because a string is what
+      // the field wants, and it would reach
+      // `products.fabric_composition`: a runner shown the word "null" as
+      // their garment's fabric.
+      const content = JSON.stringify({
+        name: "Rover Tee",
+        fabricComposition: { verbatim },
+      });
+      const found = await modelWith(answering(content)).extract(PAGE_TEXT, HINT);
+      expect(found.fabricComposition).toBeUndefined();
+      // Only that field: the rest of the extraction is still good.
+      expect(found.name).toBe("Rover Tee");
+    },
+  );
+
+  it("keeps a composition a shop really wrote, whatever it says", async () => {
+    // The guard is for four exact words, not for anything short or odd. A
+    // shop writing something unusual meant it.
+    const content = JSON.stringify({
+      fabricComposition: { verbatim: "Nulltex 100% polyester" },
+    });
+    const found = await modelWith(answering(content)).extract(PAGE_TEXT, HINT);
+    expect(found.fabricComposition?.verbatim).toBe("Nulltex 100% polyester");
+  });
+
   it("keeps a false, which is a finding and not an absence", async () => {
     const content = JSON.stringify({ windResistant: false });
     const found = await modelWith(answering(content)).extract(PAGE_TEXT, HINT);
