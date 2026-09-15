@@ -76,7 +76,9 @@ Fail open for the owner / closed for the public is a **column, not a branch** �
 ignore it, every public read requires `pass`. A classifier outage therefore
 degrades to "nobody else sees it yet", never to a wrong verdict and never to a
 failed save (law 5, and lane 107's lesson: a wrong answer is worse than none).
-Retry is a queue, because law 3 forbids a retry loop in a request handler.
+Retry is the hourly `screening-retry` cron re-driving anything still
+`pending`, not a queue — law 3 forbids retrying inside the request handler,
+and law 8c prefers reconciliation wherever a durable marker already exists.
 
 The eval is `eval/photos/` — **a script, not a test**, same reasoning as
 107's: it costs money, it answers a judgement, `vitest.config.ts` collects
@@ -94,13 +96,20 @@ rather than guessed. Photos are gitignored, like 107's page cache.
   written by nobody) and `products.status` (`active`|`hidden`) both exist —
   this lane wires them, it does not add them. `0015` is free: `main` is at
   `0014` and neither open PR adds a migration (law 11 checked).
-- **New binding ⇒ STILL A HARD STOP, and the only one left.** Decision 1
-  removed the classifier's binding, but screening retry is a queue
-  (`dialed-screening` + its DLQ) and law 3 forbids retrying in the request
-  handler. That needs `wrangler.jsonc` — human-managed — plus an entry in
-  `modules/ops/queues.ts` so `test/bindings-conformance.test.ts` covers it.
-  The test covers *queues and crons only*: a secret has nothing in
-  `wrangler.jsonc` to conform to, which is why `OPENAI_API_KEY` needs no edit.
+- **New binding ⇒ STILL A HARD STOP, and the only one left — but smaller than
+  first written.** Decision 1 removed the classifier's binding. Screening retry
+  still needs one, and the first draft of this doc reached for a queue
+  (`dialed-screening` + a DLQ). That is over-engineering by law 8c's own test:
+  a queue is for when nothing durable says "not finished", and here
+  `screen_status='pending'` *is* that marker. `weather-retry` is the same
+  shape already in the tree — `runs.weather_status='pending'` re-driven by an
+  hourly cron — and 8c says reconciliation is "cheapest, and always preferred
+  when the marker exists". So: **one cron, not a queue.** The ask against
+  `wrangler.jsonc` is a single schedule string rather than a producer, a
+  consumer and a dead-letter queue, and `modules/ops/crons.ts` gains
+  `{ schedule: "15 * * * *", name: "screening-retry" }` so
+  `test/bindings-conformance.test.ts` covers it. Quarter past, since the
+  registry's comment keeps the hourly sweeps off each other's firings.
 - **Screens**: W1 report, W2 blocked runners and W3 faces-blurred are all
   designed and all in scope (Decisions 3 and 4). Admin review + the duplicates
   report have no artboard ⇒ placeholder protocol, `docs/design-deltas.md` open
@@ -113,7 +122,8 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 
 - `visibility-matrix.test.ts` (int) — pending/flagged/hidden/banned across both
   feed tabs, entry detail, profile, and the consensus aggregate.
-- `screening-failure.test.ts` (int) — owner sees, public doesn't, retry enqueued.
+- `screening-failure.test.ts` (int) — owner sees, public doesn't, the row
+  stays `pending`, and the next `screening-retry` firing clears it.
 - `report-threshold.test.ts` (int) — 3 *distinct* reporters auto-hide; 3 from
   one reporter do not.
 - `denylist.test.ts` (int) — denylisted domain rejected at save, message shown.
