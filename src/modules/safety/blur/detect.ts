@@ -66,16 +66,77 @@ function nativeDetector(): Detector | undefined {
 }
 
 /**
- * Where a bundled model would be loaded, behind a dynamic `import()` so
- * its bytes never enter the client entry chunk.
+ * Loads MediaPipe's face detector, behind a dynamic `import()` so none of
+ * it enters the client entry chunk.
  *
- * Returns `undefined` today. Written as a function rather than left out
- * so the wiring, the tests and the copy all already handle the case where
- * a detector exists — the remaining work is the dependency decision, not
- * the plumbing.
+ * **The cost, measured rather than remembered** (owner's call,
+ * 2026-09-15, on the corrected numbers): `vision_wasm_internal.wasm` is
+ * 11.21 MB raw, 2.26 MB brotli, 3.26 MB gzip, plus 224 KB of model and
+ * ~370 KB of glue — and ~11.9 MB once instantiated, which is the half a
+ * mid-range phone feels most. It is paid on the first photo upload where
+ * blur is on, cached by the browser after, and never paid at all by
+ * someone who has turned blur off (see `shouldBlurFaces`).
+ *
+ * **Served from our own origin, both files.** Not a CDN, and the model
+ * especially: fetching it from Google at the moment a runner uploads a
+ * photo would leak the one signal this whole feature exists to protect.
+ * `prebuild` stages the WASM out of node_modules; the model is committed
+ * beside it.
  */
+/**
+ * Memoised, so a runner uploading four photos instantiates one WASM module
+ * rather than four. Deliberately caches the FAILURE too: a browser that
+ * could not load 11 MB the first time will not manage it on the second,
+ * and retrying per photo would be the worst version of this feature.
+ *
+ * A Map rather than a mutable module-level binding, because a lint rule
+ * rejects assigning to one from inside a function — and because this makes
+ * the memo something a test can clear.
+ */
+const detectorMemo = new Map<string, Promise<Detector | undefined>>();
+
 function loadModelDetector(): Promise<Detector | undefined> {
-  return Promise.resolve(undefined);
+  const existing = detectorMemo.get("face");
+  if (existing !== undefined) return existing;
+  const pending = buildModelDetector();
+  detectorMemo.set("face", pending);
+  return pending;
+}
+
+async function buildModelDetector(): Promise<Detector | undefined> {
+  try {
+    const vision = await import("@mediapipe/tasks-vision");
+    const files = await vision.FilesetResolver.forVisionTasks(
+      "/mediapipe/wasm",
+    );
+    const detector = await vision.FaceDetector.createFromOptions(files, {
+      baseOptions: {
+        modelAssetPath: "/mediapipe/blaze_face_short_range.tflite",
+      },
+      runningMode: "IMAGE",
+    });
+    return (source) =>
+      Promise.resolve(
+        detector.detect(source).detections.flatMap((detection) => {
+          const box = detection.boundingBox;
+          return box === undefined
+            ? []
+            : [
+                {
+                  x: box.originX,
+                  y: box.originY,
+                  width: box.width,
+                  height: box.height,
+                },
+              ];
+        }),
+      );
+  } catch {
+    // Law 5 on the client. A model that will not load leaves the runner
+    // with tap-to-blur and copy that says we could not check — not an
+    // error about a feature they never asked for.
+    return undefined;
+  }
 }
 
 /**

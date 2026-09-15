@@ -37,3 +37,9 @@ eval/pages/
 # photos in git is a worse problem than the one it solves — see
 # eval/photos/corpus.ts for the file names that belong here.
 eval/photos/corpus/
+# MediaPipe's vision WASM: 11 MB, copied out of node_modules by
+# `prebuild` so it is served from our own origin without living in git.
+# The .tflite model beside it IS committed — it is 224 KB and not in any
+# npm package, and fetching it from Google on a photo upload would leak
+# the one signal this feature exists to protect.
+public/mediapipe/wasm/
