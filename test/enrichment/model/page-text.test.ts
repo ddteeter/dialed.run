@@ -42,12 +42,10 @@ describe("pageTextFor", () => {
     // over 100,000 characters, so it reached the model as 2,028 of its
     // 889,578 characters — and the model was then recorded as having
     // "found nothing" on a page nobody had shown it.
-    const filler = `<p>${"x".repeat(7000)}</p>`;
-    const text = pageTextFor(
-      `${filler}${filler}${filler}${filler}<p>100% merino wool</p>`,
-    );
+    const filler = `<p>${"x".repeat(7000)}</p>`.repeat(6);
+    const text = pageTextFor(`${filler}<p>100% merino wool</p>`);
     expect(text).toContain("100% merino wool");
-    expect(text.length).toBeLessThanOrEqual(24_000);
+    expect(text.length).toBeLessThanOrEqual(40_000);
   });
 
   it("drops a node too long to be prose, however much budget is left", () => {
@@ -69,20 +67,22 @@ describe("pageTextFor", () => {
     // `>` and `>=` differ on exactly this input and on no other. Two full
     // nodes plus their separators leave room for 7,998 more characters, so
     // the third node fits precisely.
-    const full = `<p>${"x".repeat(8000)}</p>`;
-    const exact = `<p>${"x".repeat(7998)}</p>`;
-    expect(pageTextFor(`${full}${full}${exact}`)).toHaveLength(24_000);
-    // One more character and it is refused, leaving the two that fit.
-    const over = `<p>${"x".repeat(7999)}</p>`;
-    expect(pageTextFor(`${full}${full}${over}`)).toHaveLength(16_001);
+    // Four full nodes plus their separators leave room for 7,996 more
+    // characters, so the fifth node fits precisely.
+    const full = `<p>${"x".repeat(8000)}</p>`.repeat(4);
+    const exact = `<p>${"x".repeat(7996)}</p>`;
+    expect(pageTextFor(`${full}${exact}`)).toHaveLength(40_000);
+    // One more character and it is refused, leaving the four that fit.
+    const over = `<p>${"x".repeat(7997)}</p>`;
+    expect(pageTextFor(`${full}${over}`)).toHaveLength(32_003);
   });
 
   it("stops adding once the total budget is spent", () => {
     // Three nodes that each fit on their own, and together do not.
-    const node = `<p>${"x".repeat(8000)}</p>`;
-    const text = pageTextFor(`${node}${node}${node}${node}`);
-    expect(text.length).toBeLessThanOrEqual(24_000);
-    expect(text.length).toBeGreaterThan(16_000);
+    const node = `<p>${"x".repeat(8000)}</p>`.repeat(6);
+    const text = pageTextFor(node);
+    expect(text.length).toBeLessThanOrEqual(40_000);
+    expect(text.length).toBeGreaterThan(32_000);
   });
 
   it("keeps a page that fits entirely", () => {

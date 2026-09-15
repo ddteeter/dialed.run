@@ -9,20 +9,32 @@ import { readableText, textNodes, withoutCode } from "../html";
  * is 600 kB to 2.5 MB of markup and perhaps 4 kB of words, and the words
  * are what a token bill is spent on.
  *
- * **The cap is characters, not tokens, and that is deliberate.** Counting
- * tokens means shipping a tokenizer for a model we have not chosen yet
- * (D-32), and the ratio is stable enough — roughly four characters a token
- * for English marketing copy — that a character budget is the same
- * decision with none of the dependency. 24,000 characters is about 6,000
- * tokens, comfortably inside every candidate model's window and about six
- * times the prose a real product page carries, so the cap almost never
- * fires and is a guard rather than a filter.
+ * **The cap is characters, not tokens, and that is deliberate.**
+ * Counting tokens means shipping a tokenizer for a model we have not chosen
+ * yet (D-32), and the ratio is stable enough — measured at 2.5 to 3.6
+ * characters a token across this corpus — that a character budget is the
+ * same decision with none of the dependency.
+ *
+ * **40,000 characters, and the number is measured rather than guessed.**
+ * It was 24,000 on the reasoning that a real product page carries about
+ * four thousand characters of prose and six times that is generous. That
+ * was wrong, and the way it was wrong is instructive: a modern product page
+ * carries *reviews*, and the corpus runs to 30,783 characters of prose with
+ * a median of 16,572. Arc'teryx's Alpha SV states its composition at
+ * character 25,646 — past the old cap, so the model was asked about a page
+ * whose answer it had never been shown, and answered either nothing or a
+ * guess drawn from a marketing banner.
+ *
+ * Raising it is close to free, because a budget only charges for what it
+ * sends: the mean prompt goes from 15,713 characters to 16,393, which is
+ * $0.65 to $0.67 per thousand products. 40,000 clears the largest page seen
+ * by 30%.
  *
  * Nodes are kept whole, in order. A composition arrives as one text node
- * (measured — that is why the composition pass works on nodes), so cutting
+ * (measured — that is why it is worth keeping them intact), so cutting
  * mid-node is the one way to turn a fact into a fragment.
  */
-const MAX_CHARS = 24_000;
+const MAX_CHARS = 40_000;
 
 /**
  * Longer than this, a "text node" is not prose.
