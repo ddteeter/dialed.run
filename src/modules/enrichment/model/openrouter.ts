@@ -217,5 +217,40 @@ async function askModel(
   if (!extracted.success) {
     throw new ModelUnavailableError("Model output did not match the contract");
   }
-  return extracted.data;
+  return withoutSaidNull(extracted.data);
+}
+
+/**
+ * A composition whose verbatim is the *word* "null", dropped.
+ *
+ * **Observed, not imagined**: asked for a page that states no composition,
+ * a model returned `{"verbatim": "null"}` — the string, not the JSON value.
+ * The schema accepts it, because a string is what the field wants, so it
+ * reached the eval as a page where a composition had been found. In
+ * production it would reach `products.fabric_composition`, and a runner
+ * would be shown the word "null" as their garment's fabric.
+ *
+ * `withoutNulls` cannot catch this: that one removes real JSON nulls, which
+ * is how the prompt asks for "not stated". This is the same intent spelled
+ * as prose by a model that did not follow it.
+ *
+ * Whitespace-trimmed and case-folded, and "none" and "n/a" join it, because
+ * they are the same mistake in the same place. Anything else is left alone
+ * — a shop could write something odd and mean it.
+ */
+const SAID_NULL = new Set(["null", "none", "n/a", "na", "undefined"]);
+
+function withoutSaidNull(found: ExtractedProduct): ExtractedProduct {
+  // Narrowed in two steps rather than one optional chain: `has(undefined)`
+  // on a `Set<string>` is already false, so a single combined guard has a
+  // branch no input can distinguish.
+  const composition = found.fabricComposition;
+  if (composition === undefined) return found;
+  if (!SAID_NULL.has(composition.verbatim.trim().toLowerCase())) return found;
+  // Rebuilt without the field rather than destructured around it: an
+  // unused binding is what the rest-spread form leaves behind, and the
+  // lint rule is right that it reads as a mistake.
+  const kept: ExtractedProduct = { ...found };
+  delete kept.fabricComposition;
+  return kept;
 }

@@ -187,7 +187,7 @@ field at all. It exists to tell `20% off today` from a composition in
 the field is, and the gate silently drops it. Worth measuring before
 changing.
 
-## Eval (D-32) — and the decision it produced
+## Eval (D-32) — a model comparison now
 
 `npm run eval` (`eval/`, not collected by vitest — it costs money, depends
 on twenty shops being up, and answers a judgement rather than a pass).
@@ -195,24 +195,44 @@ Corpus of 22 pages across 14 brands, chosen for spread rather than size:
 Shopify, Salesforce Commerce and hand-rolled storefronts; tops, bottoms,
 socks, gloves, headwear and technical outerwear.
 
-**Deterministic against the models' consensus:**
+**It stopped being deterministic-versus-model on 2026-09-14**, because the
+ladder no longer produces a composition and there is nothing left to
+compare it with. What it answers now is the question D-32 asked first —
+*which model* — on three axes:
 
-| | pages |
-| --- | --- |
-| same materials as the consensus | 18 |
-| deterministic found **fewer** | 3 |
-| deterministic found **more** | 1 |
+| by | answered | found a composition | materials | named non-fibres |
+| --- | --- | --- | --- | --- |
+| deterministic | 22/22 | 0/22 | 0 | 0 |
+| `openai/gpt-5.6-luna` | 22/22 | **20/22** | 67 | 5 |
+| `qwen/qwen3.8-flash` | 15/22 | 15/22 | 45 | 3 |
+| `qwen/qwen3.8-27b` | 11/22 | 10/22 | 39 | 0 |
 
-All three shortfalls are one bug — **the composition split across separate
-DOM nodes**, where the pass takes the first node that parses and stops.
-`rabbit`'s three labelled sections yield one; On's `Front:`/`Back:` yields
-the front. The answer looks complete because it is well-formed.
+**Finding a composition and structuring it are separate columns**, and
+conflating them was the flaw the first two reports had: on SOAR's shorts
+`gpt-5.6-luna` returned exactly the right verbatim and no parsed parts, so
+a materials count scored it zero. Verbatim is the load-bearing half — it is
+what the column stores and what D-31 keeps for a better parser to re-read.
 
-The single "found more" is Arc'teryx, where the deterministic pass and
-`gpt-5.6-luna` both say four and only `qwen3.8-27b` says eight — it counted
-`Coreloft™ 80`, `Arato™ 15` and `10D x 20D Ripstop` as materials. Those are
-fabric trade names, and they are the clearest evidence in the corpus that a
-model will invent fibres out of marketing copy.
+**Luna's two misses are two different things, and neither is the model
+being bad at reading.**
+
+- **Smartwool's base layer crew** states no composition *anywhere in the
+  page we fetch*: zero matches for `N% Merino` in 1.4 MB of HTML, scripts
+  included. It is client-rendered. That is the first honest instance of the
+  **200 with the content missing** case — the one `fetch-page.ts` reserves
+  Browser Rendering for, and which an earlier version of this document
+  wrongly claimed for SOAR.
+- **Arc'teryx's Alpha SV** answered nothing in the run and a partial
+  answer (`GORE nylon face fabric`) when asked again a minute later. So the
+  model is **not perfectly stable** — an earlier five-run check on one page
+  found it identical every time, and that was one page.
+
+**A production bug the eval caught.** Asked about a page with no
+composition, a model answered `{"verbatim": "null"}` — the *string*. The
+schema accepts it, because a string is what the field wants, and it would
+have reached `products.fabric_composition`: a runner shown the word "null"
+as their garment's fabric. `withoutSaidNull` drops that and four spellings
+of it.
 
 ### Three readings this eval got wrong before it got them right
 
