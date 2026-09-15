@@ -154,6 +154,15 @@ rather than guessed. Photos are gitignored, like 107's page cache.
    the most expensive of the three answers and the only one that honours the
    artboard, so §W3 below records how it stays inside the client-bundle rules.
 4. **Blocking (W2) is in scope**, with W1's "Block them as well" checkbox live.
+5. **Auto-hide is both halves.** Reporting hides the entry for the reporter
+   immediately — W1's promise that filing costs them nothing — *and* three
+   reports from distinct users flips it to `hidden_pending_review` globally.
+   Read against the artboard's "no automated takedowns": nothing is removed
+   or counted against anyone, it is queued for the person the stance promises.
+6. **Admin is an `ADMIN_USER_IDS` secret**, parsed in `src/env` and checked by
+   one gate in `modules/safety` beside `requireUserId` — one gate per concern,
+   no migration. Changing the list is a deploy, which for a solo operator is
+   the right trade.
 
 ## W3: face blur on a stack the design didn't plan for
 
@@ -176,14 +185,8 @@ changes. Three constraints this lane has to respect while doing it:
 
 ## Open questions
 
-1. **The artboard's stance says "no automated takedowns"; the packet says 3
-   reports auto-hides.** W1's copy hides the entry *from the reporter's feed*
-   straight away, which is narrower than a global hide. Which is the contract?
-2. **There is no admin.** The packet wants an "admin-only page", and the word
-   appears nowhere in `src/`, `docs/contracts.md` or `docs/architecture.md` —
-   there is no role, column or check to hang it on. Cheapest thing that is
-   still honest for a solo operator: an `ADMIN_USER_IDS` secret, checked by a
-   single gate in `modules/safety` beside `requireUserId` (one gate per
-   concern). A `user_profiles.is_admin` column is the alternative and costs a
-   migration. The digest half needs nothing new — `ops/scheduled.ts` already
-   reports anomalies to Sentry, so queue depth is a line in that.
+None outstanding. All six answered by the owner on 2026-09-15 and recorded
+above. One item is **blocked on the owner's own edit**: `wrangler.jsonc`
+`triggers.crons` needs `"15 * * * *"` added beside the three already there,
+which is a forbidden zone. `test/bindings-conformance.test.ts` fails red until
+it lands, and that is the intended behaviour, not a bug to work around.
