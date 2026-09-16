@@ -16,7 +16,7 @@
  *   is imported by the consensus path, and `blocks.test.ts` pins that from
  *   the outside so the carve-out cannot rot.
  */
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { blocks, userProfiles } from "../../db/schema-core";
@@ -128,32 +128,26 @@ export interface BlockedRunner {
 export async function blockedRunners(
   blockerId: string,
 ): Promise<BlockedRunner[]> {
+  // One joined read, not a read plus an `IN` over its results. The pair
+  // needed an `if (rows.length === 0)` in front of it, and that guard was
+  // a branch no test could see: drizzle turns an empty `inArray` into a
+  // predicate that matches nothing, so removing it changed no answer —
+  // only the number of round trips. A LEFT JOIN has neither problem, and
+  // it is left rather than inner because a blocked account may have no
+  // profile row and must still appear on the roster.
   const rows = await db()
-    .select({ blockedId: blocks.blockedId, createdAt: blocks.createdAt })
-    .from(blocks)
-    .where(eq(blocks.blockerId, blockerId));
-
-  if (rows.length === 0) return [];
-
-  const names = await db()
     .select({
-      userId: userProfiles.userId,
+      blockedId: blocks.blockedId,
+      createdAt: blocks.createdAt,
       displayName: userProfiles.displayName,
     })
-    .from(userProfiles)
-    .where(
-      inArray(
-        userProfiles.userId,
-        rows.map((row) => row.blockedId),
-      ),
-    );
-  const nameFor = new Map(
-    names.map((row) => [row.userId, row.displayName ?? undefined]),
-  );
+    .from(blocks)
+    .leftJoin(userProfiles, eq(userProfiles.userId, blocks.blockedId))
+    .where(eq(blocks.blockerId, blockerId));
 
   return rows.map((row) => ({
     userId: row.blockedId,
-    displayName: nameFor.get(row.blockedId) ?? undefined,
+    displayName: row.displayName ?? undefined,
     blockedAt: row.createdAt,
   }));
 }

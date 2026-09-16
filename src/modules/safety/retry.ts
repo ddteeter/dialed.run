@@ -68,10 +68,11 @@ export async function retryPendingScreenings(
   }
 
   for (const photo of pending) {
-    const outcome = await screenOne(photo, classify);
-    if (outcome === "pass") report.passed += 1;
-    else if (outcome === "flagged") report.flagged += 1;
-    else report.deferred += 1;
+    // Counted through a lookup rather than an if/else-if/else. The `else`
+    // swallowed every outcome that was not one of the first two, so the
+    // word "deferred" itself was never checked by anything — a sweep
+    // returning nonsense counted it as deferred and looked correct.
+    report[countedAs[await screenOne(photo, classify)]] += 1;
   }
 
   if (report.deferred > 0) {
@@ -81,6 +82,15 @@ export async function retryPendingScreenings(
   }
   return report;
 }
+
+/**
+Which tally each outcome lands in.
+*/
+const countedAs = {
+  pass: "passed",
+  flagged: "flagged",
+  deferred: "deferred",
+} as const;
 
 /**
  * Fetches the bytes and screens one photo.
@@ -103,10 +113,25 @@ async function screenOne(
       scope: photo.scope,
       photoId: photo.photoId,
       bytes,
-      // R2 keeps what was uploaded; the upload path already refused
-      // anything that is not one of the three allowed types.
-      contentType: object.httpMetadata?.contentType ?? "image/jpeg",
+      contentType: contentTypeOf(object),
     },
     classify,
   );
+}
+
+/**
+ * The content type R2 stored, or jpeg.
+ *
+ * R2 keeps what was uploaded and the upload path already refused anything
+ * that is not one of the three allowed types, so the fallback is for
+ * objects older than that path — or for an `httpMetadata` the runtime
+ * types as optional and in practice always supplies. Named rather than
+ * inlined because that second case is unreachable through `env.MEDIA` and
+ * so untestable there, while the rule itself is worth stating once: a
+ * classifier asked about "undefined" rejects the request outright.
+ */
+export function contentTypeOf(object: {
+  httpMetadata?: { contentType?: string };
+}): string {
+  return object.httpMetadata?.contentType ?? "image/jpeg";
 }

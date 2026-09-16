@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { entryPhotos, photoScreenings } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
+  pendingGarmentFrom,
   imageCategories,
   pendingEntryPhotos,
   screenPhoto,
@@ -101,6 +103,11 @@ describe("screening a photo", () => {
     // The raw scores are kept so a threshold can be re-tuned later against
     // real numbers without re-classifying anything.
     expect(JSON.parse(record?.scores ?? "{}")).toMatchObject({ sexual: 0.01 });
+    // In seconds, bounded both ways: a re-tune reads these rows by date,
+    // and a millisecond value is still "recent" to a one-sided check.
+    const now = Math.floor(Date.now() / 1000);
+    expect(record?.createdAt).toBeGreaterThanOrEqual(now - 5);
+    expect(record?.createdAt).toBeLessThanOrEqual(now + 5);
   });
 
   it("hides a photo that crosses a threshold", async () => {
@@ -229,5 +236,21 @@ describe("the pending sweep's reading list", () => {
     const [photo] = await pendingEntryPhotos();
     expect(photo?.photoKey).toMatch(/^entries\//);
     expect(photo?.scope).toBe("entry");
+  });
+});
+
+describe("a garment row with nothing to screen", () => {
+  it("is the one the sweep drops", () => {
+    // The garment sweep's WHERE already excludes a null photo_key, so
+    // this rule is unreachable through the query that uses it — which is
+    // exactly why it is a named function rather than a ternary inside
+    // the mapping. A closet is mostly garments without photos, and
+    // whichever side of this is wrong the sweep either screens nothing
+    // or tries to fetch an R2 object at key `null`.
+    const missing = z.null().parse(JSON.parse("null"));
+    expect(pendingGarmentFrom({ id: "g-1", photoKey: missing })).toEqual([]);
+    expect(
+      pendingGarmentFrom({ id: "g-1", photoKey: "garments/u/g" }),
+    ).toEqual([{ scope: "garment", photoId: "g-1", photoKey: "garments/u/g" }]);
   });
 });

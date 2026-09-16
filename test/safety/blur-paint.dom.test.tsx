@@ -129,6 +129,28 @@ describe("painting onto a real canvas", () => {
   });
 });
 
+describe("a canvas that will not give a context", () => {
+  it("leaves the photo alone rather than throwing inside an upload", async () => {
+    // Null only when the element already holds a context of another
+    // type. It cannot happen on the path W3 uses, but throwing here
+    // would fail the upload over the blur — the opposite of law 5, and
+    // on the one screen whose promise is that the photo never leaves
+    // unblurred.
+    const canvas = document.createElement("canvas");
+    const image = await sourceImage(100, 100);
+    Object.defineProperty(canvas, "getContext", {
+      configurable: true,
+      // Parsed rather than written: the lint rules reject a bare `null`
+      // literal, and this is the one value the code under test needs.
+      value: () => z.null().parse(JSON.parse("null")),
+    });
+
+    expect(() => {
+      paintBlurred(canvas, image, 100, 100, [tapped()]);
+    }).not.toThrow();
+  });
+});
+
 describe("turning the canvas into bytes", () => {
   it("produces a jpeg file under the original name", async () => {
     const canvas = document.createElement("canvas");
@@ -139,6 +161,28 @@ describe("turning the canvas into bytes", () => {
     expect(file?.name).toBe("run.jpg");
     expect(file?.type).toBe("image/jpeg");
     expect(file?.size).toBeGreaterThan(0);
+  });
+
+  it("asks for jpeg, which is what the entry photo path stores", async () => {
+    const canvas = document.createElement("canvas");
+    paintBlurred(canvas, await sourceImage(60, 60), 60, 60, []);
+    const asked: unknown[] = [];
+    const real = canvas.toBlob.bind(canvas);
+    Object.defineProperty(canvas, "toBlob", {
+      configurable: true,
+      value: (callback: BlobCallback, type?: string, quality?: number) => {
+        asked.push(type, quality);
+        real(callback, type, quality);
+      },
+    });
+
+    await blurredFile(canvas, "run.jpg");
+
+    // A PNG of a photo is several times the bytes for no gain, and the
+    // upload path caps size — so the default would turn "blur is on"
+    // into "the upload was rejected".
+    expect(asked[0]).toBe("image/jpeg");
+    expect(asked[1]).toBeCloseTo(0.92);
   });
 
   it("gives back nothing rather than the original when the canvas cannot", async () => {

@@ -98,6 +98,10 @@ describe("the gate", () => {
 describe("telling the two refusals apart", () => {
   it("recognises its own error", () => {
     expect(isAdminRequired(new AdminRequiredError())).toBe(true);
+    // And says which of the two refusals it is. `AuthRequiredError`
+    // means "sign in", which is an invitation; this one means "no", and
+    // a log that cannot tell them apart cannot explain a redirect loop.
+    expect(new AdminRequiredError().message).toBe("admin only");
   });
 
   it("does not claim an unrelated error", () => {

@@ -6,6 +6,7 @@ import { entryPhotos } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
+  contentTypeOf,
   imageCategories,
   retryPendingScreenings,
   type CategoryScores,
@@ -112,6 +113,18 @@ describe("what the sweep hands the classifier", () => {
     await retryPendingScreenings(spy, []);
 
     expect(seen).toEqual(["image/jpeg"]);
+  });
+
+  it("falls back to jpeg for an object with no metadata at all", () => {
+    // Through `env.MEDIA` an object always carries an `httpMetadata`
+    // object, empty or not, so this arm of the rule cannot be reached by
+    // storing something — which is why the rule is a function rather
+    // than an expression buried in the sweep.
+    expect(contentTypeOf({})).toBe("image/jpeg");
+    expect(contentTypeOf({ httpMetadata: {} })).toBe("image/jpeg");
+    expect(contentTypeOf({ httpMetadata: { contentType: "image/png" } })).toBe(
+      "image/png",
+    );
   });
 
   it("falls back to jpeg when R2 kept no content type", async () => {

@@ -89,8 +89,3 @@ export const reportSubjectTypeSchema = z.enum(reportSubjectTypes);
  */
 export const autoHideReporterThreshold = 3;
 
-/**
- * The label a subject carries while it waits for a person. The owner sees
- * this on their own entry; nobody else sees the entry at all.
- */
-export const underReviewLabel = "Under review";

@@ -41,6 +41,11 @@ describe("blocking", () => {
   it("refuses a self-block", async () => {
     const me = await makeUser();
     await expect(blockRunner(me, me)).rejects.toThrow(SelfBlockError);
+    // The sentence too: this one reaches a log rather than a screen, and
+    // "Error" tells whoever reads it nothing about what was attempted.
+    await expect(blockRunner(me, me)).rejects.toThrow(
+      /cannot block themselves/u,
+    );
   });
 
   it("is one-directional as stored, even though it hides both ways", async () => {
@@ -140,7 +145,11 @@ describe("the W2 roster", () => {
     expect(roster).toHaveLength(1);
     expect(roster[0]?.userId).toBe(them);
     expect(roster[0]?.displayName).toBe("j_holloway");
-    expect(roster[0]?.blockedAt).toBeGreaterThan(0);
+    // In seconds, bounded both ways — the roster is ordered by it, and a
+    // millisecond value sorts one block above every other forever.
+    const now = Math.floor(Date.now() / 1000);
+    expect(roster[0]?.blockedAt).toBeGreaterThanOrEqual(now - 5);
+    expect(roster[0]?.blockedAt).toBeLessThanOrEqual(now + 5);
   });
 
   it("does not list people who blocked ME", async () => {

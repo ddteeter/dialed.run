@@ -195,12 +195,27 @@ export async function pendingGarmentPhotos(
     )
     .orderBy(wardrobeItems.id)
     .limit(limit);
-  // The WHERE already excludes a null photo_key; this narrows the type
-  // rather than re-deciding, which is why it is a typeof and not a second
-  // filter with an opinion.
-  return rows.flatMap((row) =>
-    typeof row.photoKey === "string"
-      ? [{ scope: "garment" as const, photoId: row.id, photoKey: row.photoKey }]
-      : [],
-  );
+  // The WHERE already excludes a null photo_key; the mapping below
+  // narrows the type rather than re-deciding it.
+  return rows.flatMap((row) => pendingGarmentFrom(row));
+}
+
+/**
+ * One garment row as the sweep's reading list sees it, or nothing.
+ *
+ * Exported and returning a list rather than written inline as a ternary,
+ * because the empty half is unreachable through the query that calls it —
+ * `isNotNull` lives in the WHERE, since a closet is mostly garments
+ * without photos and scanning the marked ones instead of all of them is
+ * the difference D1 bills for. A named function can be asked the question
+ * directly; an unreachable branch inside a `.map` cannot be asked
+ * anything.
+ */
+export function pendingGarmentFrom(row: {
+  id: string;
+  photoKey: string | null;
+}): PendingPhoto[] {
+  return row.photoKey === null
+    ? []
+    : [{ scope: "garment", photoId: row.id, photoKey: row.photoKey }];
 }

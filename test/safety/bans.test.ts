@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { session, user } from "../../src/db/schema-auth";
+import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -85,6 +86,17 @@ describe("banning", () => {
     const state = await banStateOf(userId);
     expect(state).toEqual({ banned: true, reason: "spam" });
     expect(await sessionCountOf(userId)).toBe(0);
+
+    // The moment itself, in seconds. The notice quotes the reason back
+    // and any appeal reads this column; a millisecond value dates the
+    // ban to the year 57000 and still passes a one-sided check.
+    const now = Math.floor(Date.now() / 1000);
+    const [row] = await core()
+      .select({ bannedAt: userProfiles.bannedAt })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(row?.bannedAt).toBeGreaterThanOrEqual(now - 5);
+    expect(row?.bannedAt).toBeLessThanOrEqual(now + 5);
   });
 
   it("leaves other people's sessions alone", async () => {

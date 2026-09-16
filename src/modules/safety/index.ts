@@ -42,7 +42,6 @@ export {
   reportReasons,
   reportSubjectTypeSchema,
   reportSubjectTypes,
-  underReviewLabel,
   type ReportReason,
   type ReportSubjectType,
 } from "./contracts";
@@ -88,6 +87,7 @@ export {
 
 export {
   pendingEntryPhotos,
+  pendingGarmentFrom,
   pendingGarmentPhotos,
   screenPhoto,
   type Classify,
@@ -97,7 +97,11 @@ export {
   type ScreenOutcome,
 } from "./screening";
 
-export { retryPendingScreenings, type RetryReport } from "./retry";
+export {
+  contentTypeOf,
+  retryPendingScreenings,
+  type RetryReport,
+} from "./retry";
 
 export { BlockedRunners } from "./components/BlockedRunners";
 export { ReportAffordance } from "./components/ReportAffordance";

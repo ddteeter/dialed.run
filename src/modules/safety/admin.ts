@@ -20,8 +20,10 @@ import { env } from "../../env";
  * -in stranger a login page in an endless loop.
  */
 export class AdminRequiredError extends Error {
-  readonly isAdminRequired = true;
   constructor() {
+    // There was an `isAdminRequired = true` field here as well. Nothing
+    // read it — `isAdminRequired` below is an `instanceof` check — so it
+    // was a second way to ask a question only one way was ever asked.
     super("admin only");
   }
 }
