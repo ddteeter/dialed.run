@@ -288,6 +288,24 @@ and four unbounded timestamps that would have passed a millisecond
 value. Six branches were deleted rather than tested, each because no
 input could tell it from its opposite.
 
+**What a reported photo does, decided (owner, 2026-09-15).** Crossing the
+threshold writes `hidden_pending_review` — the classifier's own word for
+"not public, a person will look". Remove settles as `flagged`, which
+nothing else writes; `hidden_pending_review` would promise a second look
+that is not coming. **Approve writes `pending`, not `pass`**, and that is
+the half that matters: a photo can reach the queue never having been
+screened, so `pass` would publish bytes no classifier ever saw — fail
+open for the owner, closed for the public. `removed` would read better
+than `flagged`, but it is a schema change for a distinction
+`review_queue.resolved_by` and `photo_screenings` already record.
+
+**And it forced the review screen.** `ReviewQueue` showed a subject type
+and a ULID, so Approve was being pressed on an opaque identifier. The
+queue now carries what was alleged and how many distinct people alleged
+it. What it still does not carry is the subject itself — above all the
+image, which is hidden precisely because it was reported, and whose only
+reader is `feed/photos.ts`. That is D-63.
+
 **Still to build.** The demo video, and a re-record: W3's blur step is
 user-visible and rides on `e2e/verdict`'s journey rather than this
 lane's.
