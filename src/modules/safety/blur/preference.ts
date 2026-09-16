@@ -24,12 +24,17 @@ const OFF = "off";
  * Reads the stored choice. `true` unless this device has explicitly said
  * otherwise.
  */
-export function shouldBlurFaces(storage?: Storage  ): boolean {
-  const store = storage ?? safeStorage();
-  if (store === undefined) return true;
+export function shouldBlurFaces(storage?: Storage): boolean {
   try {
+    const store = storage ?? globalThis.localStorage;
     return store.getItem(KEY) !== OFF;
   } catch {
+    // Every way this can go wrong lands here and means the same thing:
+    // no stored refusal, so blur is on. A private window, cleared site
+    // data, blocked storage, and an environment with no localStorage at
+    // all (the Worker, during SSR) are four causes of one answer, and
+    // guarding them separately made three branches that no input could
+    // tell apart.
     return true;
   }
 }
@@ -38,37 +43,17 @@ export function shouldBlurFaces(storage?: Storage  ): boolean {
  * Records the choice, removing the key when blur is back on so the
  * default is expressed by absence rather than by a second stored value.
  */
-export function setBlurPreference(
-  isOn: boolean,
-  storage?: Storage  ,
-): void {
-  const store = storage ?? safeStorage();
-  if (store === undefined) return;
+export function setBlurPreference(isOn: boolean, storage?: Storage): void {
   try {
+    const store = storage ?? globalThis.localStorage;
     if (isOn) {
       store.removeItem(KEY);
       return;
     }
     store.setItem(KEY, OFF);
   } catch {
-    // A device that cannot remember the refusal will ask again next time,
-    // which is a smaller failure than an exception thrown out of a photo
-    // picker.
-  }
-}
-
-/**
- * `localStorage` where it exists and is reachable.
- *
- * Touching the property itself throws in some privacy modes, which is why
- * this is a function with a try rather than a module-scope constant — and
- * a module-scope read of a browser global is also exactly what CLAUDE.md's
- * client-bundle rule asks us not to write.
- */
-function safeStorage(): Storage | undefined {
-  try {
-    return globalThis.localStorage;
-  } catch {
-    return undefined;
+    // A device that cannot remember the refusal will ask again next
+    // time, which is a smaller failure than an exception thrown out of a
+    // photo picker.
   }
 }

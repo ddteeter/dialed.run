@@ -158,7 +158,10 @@ export function blurSummary(params: {
  * the system measured; a count inside prose is not one.
  */
 function countOf(count: number, noun: string): string {
-  const WORDS = ["no", "one", "two", "three", "four", "five"];
-  const word = WORDS[count] ?? String(count);
+  // Indexed from one, because every caller has already returned early on
+  // zero — "no face found" and "no spots blurred" are different sentences
+  // written elsewhere, so a "no" entry here was a slot no input reached.
+  const WORDS = ["one", "two", "three", "four", "five"];
+  const word = WORDS[count - 1] ?? String(count);
   return `${word} ${noun}${count === 1 ? "" : "s"}`;
 }

@@ -57,6 +57,27 @@ describe("clamping to the image", () => {
     expect(clamped({ x: 10, y: 200, width: 10, height: 10 }, 100, 100)).toBeUndefined();
   });
 
+  it.each([
+    ["zero width", { x: 50, y: 10, width: 0, height: 20 }],
+    ["zero height", { x: 10, y: 50, width: 20, height: 0 }],
+    ["a right edge exactly on the left one", { x: 100, y: 10, width: 10, height: 10 }],
+    ["a bottom edge exactly on the top one", { x: 10, y: 100, width: 10, height: 10 }],
+  ])("gives back nothing for a region with %s", (_label, region) => {
+    // The comparison is `<=`, not `<`. A region whose edges coincide has
+    // no area, and returning it would ask the canvas to blur a rectangle
+    // of zero pixels while the caller believed a face was covered.
+    expect(clamped(region, 100, 100)).toBeUndefined();
+  });
+
+  it("keeps a region one pixel wide, which does have area", () => {
+    expect(clamped({ x: 99, y: 10, width: 1, height: 20 }, 100, 100)).toEqual({
+      x: 99,
+      y: 10,
+      width: 1,
+      height: 20,
+    });
+  });
+
   it("leaves a region already inside alone", () => {
     const inside = { x: 10, y: 10, width: 20, height: 20 };
     expect(clamped(inside, 100, 100)).toEqual(inside);
@@ -130,10 +151,26 @@ describe("the sentence above the photo", () => {
     );
   });
 
-  it("counts more than one", () => {
-    expect(blurSummary({ detector: "ran", detected: 2, tapped: 0 })).toContain(
-      "two faces",
+  it.each([
+    [2, "two faces"],
+    [3, "three faces"],
+    [4, "four faces"],
+    [5, "five faces"],
+  ])("writes %i as a word, because this is prose", (detected, expected) => {
+    // Words for small numbers: bracket-notation mono is for values the
+    // system measured, and a count inside a sentence is not one.
+    expect(blurSummary({ detector: "ran", detected, tapped: 0 })).toContain(
+      expected,
     );
+  });
+
+  it("falls back to digits past the words it has", () => {
+    // Six faces in an outfit photo is not a case worth writing a word
+    // for, but it must still read as a sentence rather than as
+    // "undefined faces".
+    const summary = blurSummary({ detector: "ran", detected: 6, tapped: 0 });
+    expect(summary).toContain("6 faces");
+    expect(summary).not.toContain("undefined");
   });
 
   it("never claims a clean sweep it did not make", () => {
