@@ -43,6 +43,7 @@ import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
 import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
 import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
+import { Route as SafetyReviewPhotoSplatRouteImport } from './routes/safety/review-photo.$'
 import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
 
 const IndexRoute = IndexRouteImport.update({
@@ -215,6 +216,11 @@ const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
   path: '/runs/import/$importId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SafetyReviewPhotoSplatRoute = SafetyReviewPhotoSplatRouteImport.update({
+  id: '/safety/review-photo/$',
+  path: '/safety/review-photo/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
   id: '/closet/photo/$itemId/$size',
   path: '/closet/photo/$itemId/$size',
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesByTo {
@@ -293,6 +300,7 @@ export interface FileRoutesByTo {
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesById {
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRouteTypes {
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
+    | '/safety/review-photo/$'
     | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
+    | '/safety/review-photo/$'
     | '/closet/photo/$itemId/$size'
   id:
     | '__root__'
@@ -444,6 +455,7 @@ export interface FileRouteTypes {
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
+    | '/safety/review-photo/$'
     | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
 }
@@ -482,6 +494,7 @@ export interface RootRouteChildren {
   FeedUUserIdRoute: typeof FeedUUserIdRoute
   FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
+  SafetyReviewPhotoSplatRoute: typeof SafetyReviewPhotoSplatRoute
   ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
 
@@ -725,6 +738,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsImportImportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/safety/review-photo/$': {
+      id: '/safety/review-photo/$'
+      path: '/safety/review-photo/$'
+      fullPath: '/safety/review-photo/$'
+      preLoaderRoute: typeof SafetyReviewPhotoSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/closet/photo/$itemId/$size': {
       id: '/closet/photo/$itemId/$size'
       path: '/closet/photo/$itemId/$size'
@@ -770,6 +790,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedUUserIdRoute: FeedUUserIdRoute,
   FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
+  SafetyReviewPhotoSplatRoute: SafetyReviewPhotoSplatRoute,
   ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }
 export const routeTree = rootRouteImport

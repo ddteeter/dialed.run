@@ -19,7 +19,12 @@ import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
-import { isEntryPubliclyVisible, isPhotoPubliclyVisible } from "../safety";
+import { requireUserId } from "../auth";
+import {
+  isEntryPubliclyVisible,
+  isPhotoPubliclyVisible,
+  requireAdmin,
+} from "../safety";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
@@ -244,6 +249,36 @@ export async function photoResponse(
   // query.
   if (!key) return notFound();
   if (!(await isPhotoVisible(key, viewerId))) return notFound();
+  return bytesResponse(key);
+}
+
+/**
+ * The bytes of a photo a reviewer is being asked about.
+ *
+ * **A different rule, not a missing one.** The review queue shows photos
+ * that are hidden *because* they were reported, so `isPhotoVisible` would
+ * refuse every one of them — being unable to see the thing is what made
+ * the queue unusable. `requireAdmin` replaces the check rather than
+ * skipping it.
+ *
+ * It lives here rather than in `modules/safety` because photos live here,
+ * and because the arrow runs feed → safety: feed already imports safety's
+ * visibility rules, and safety imports nothing from feed
+ * (`docs/architecture.md`).
+ */
+export async function reviewerPhotoResponse(
+  key: string | undefined,
+): Promise<Response> {
+  requireAdmin(await requireUserId());
+  // Absent and blank in one check, the same way `photoResponse` does it.
+  if (!key) return notFound();
+  return bytesResponse(key);
+}
+
+/**
+The bytes and their headers, once, for both rules above.
+*/
+async function bytesResponse(key: string): Promise<Response> {
   const object = await getPhotoObject(key);
   if (object === null) return notFound();
 

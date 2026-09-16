@@ -8,6 +8,7 @@ import {
   outfitEntries,
   products,
   reviewQueue,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -542,6 +543,88 @@ describe("the queue itself", () => {
     expect(queued?.source).toBe("classifier");
     expect(queued?.reporterCount).toBe(0);
     expect(queued?.reasons).toEqual([]);
+  });
+
+  it("carries the photo a reported photo actually is", async () => {
+    await reportedPhoto();
+
+    const [queued] = await pendingReviewQueue();
+
+    // The subject that most needs looking at was the one the queue showed
+    // nothing for: a type and a ULID. A reviewer pressing Approve on that
+    // is approving an identifier.
+    expect(queued?.subject.photoKeys).toHaveLength(1);
+    expect(queued?.subject.photoKeys[0]).toMatch(/^entries\//u);
+  });
+
+  it("carries a reported entry's photos, in the order they were posted", async () => {
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    for (const position of [1, 0]) {
+      await core().insert(entryPhotos).values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${author}/${entryId}/${String(position)}`,
+        position,
+      });
+    }
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+      });
+    }
+
+    const [queued] = await pendingReviewQueue();
+
+    // Inserted out of order on purpose: a kit posted as two photos is one
+    // thing to judge, and judging it out of order is judging something
+    // else.
+    expect(queued?.subject.photoKeys).toEqual([
+      `entries/${author}/${entryId}/0`,
+      `entries/${author}/${entryId}/1`,
+    ]);
+  });
+
+  it("names a reported runner and a reported product", async () => {
+    const subject = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ displayName: "mark_t" })
+      .where(eq(userProfiles.userId, subject));
+    const productId = newUlid();
+    await core().insert(products).values({
+      id: productId,
+      brandId: newUlid(),
+      name: "Some Shoe",
+      normalizedName: "some shoe",
+      createdBy: await makeUser(),
+      createdAt: NOW,
+    });
+    for (const [subjectType, subjectId] of [
+      ["profile", subject],
+      ["product", productId],
+    ] as const) {
+      for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+        await fileReport({
+          reporterId: await makeUser(),
+          subjectType,
+          subjectId,
+          reason: "spam",
+        });
+      }
+    }
+
+    const queue = await pendingReviewQueue();
+
+    // Words are the whole content of these two, the way pixels are of a
+    // photo. "product · 01M2P5…" tells a reviewer nothing they can weigh.
+    const labels = queue.map((row) => row.subject.label);
+    expect(labels).toContain("mark_t");
+    expect(labels).toContain("Some Shoe");
   });
 
   it("returns the oldest decision first", async () => {

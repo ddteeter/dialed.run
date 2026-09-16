@@ -7,7 +7,7 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core/query-builders/update";
@@ -20,6 +20,7 @@ import {
   products,
   reports,
   reviewQueue,
+  userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere } from "../../lib/keyed-read";
@@ -84,6 +85,19 @@ export function enqueueForReview(
   );
 }
 
+/**
+ * What the reviewer is actually looking at.
+ *
+ * **A ULID is not a subject.** The queue carried a type and an id, so
+ * "Approve" was being pressed on an identifier — and for the one subject
+ * that matters most, a reported photo, there was nothing on screen at all.
+ * A `label` where words are the content and `photoKeys` where pixels are.
+ */
+export interface QueueSubject {
+  label?: string | undefined;
+  photoKeys: readonly string[];
+}
+
 export interface QueueRow {
   id: string;
   subjectType: ReportSubjectType;
@@ -101,6 +115,7 @@ export interface QueueRow {
    */
   reporterCount: number;
   reasons: readonly ReportReason[];
+  subject: QueueSubject;
 }
 
 /**
@@ -144,6 +159,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     .orderBy(asc(reviewQueue.createdAt))
     .limit(limit);
 
+  const subjects = await subjectsFor(rows);
   return rows.map((row) => ({
     id: row.id,
     subjectType: row.subjectType,
@@ -152,7 +168,75 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     createdAt: row.createdAt,
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
+    subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
+      photoKeys: [],
+    },
   }));
+}
+
+/**
+ * The content behind one page of queue rows, in one batch.
+ *
+ * Four reads rather than a chain: a reported photo is looked up by its own
+ * id and a reported entry by its entry id, so neither needs the other's
+ * row first. Names come from the two tables that have them. Nothing here
+ * walks from a photo to its entry to its author — that is a second round
+ * trip for a line of text, where the image is the thing being judged.
+ */
+async function subjectsFor(
+  rows: readonly { subjectType: ReportSubjectType; subjectId: string }[],
+): Promise<Map<string, QueueSubject>> {
+  const idsOf = (type: ReportSubjectType): string[] =>
+    rows.filter((row) => row.subjectType === type).map((row) => row.subjectId);
+  const database = db();
+  const photoIds = idsOf("photo");
+  const entryIds = idsOf("entry");
+  const profileIds = idsOf("profile");
+  const productIds = idsOf("product");
+
+  const [photoRows, entryPhotoRows, profileRows, productRows] =
+    await database.batch([
+      database
+        .select({ id: entryPhotos.id, photoKey: entryPhotos.photoKey })
+        .from(entryPhotos)
+        .where(inArray(entryPhotos.id, photoIds)),
+      database
+        .select({ entryId: entryPhotos.entryId, photoKey: entryPhotos.photoKey })
+        .from(entryPhotos)
+        .where(inArray(entryPhotos.entryId, entryIds))
+        .orderBy(asc(entryPhotos.position)),
+      database
+        .select({
+          userId: userProfiles.userId,
+          displayName: userProfiles.displayName,
+        })
+        .from(userProfiles)
+        .where(inArray(userProfiles.userId, profileIds)),
+      database
+        .select({ id: products.id, name: products.name })
+        .from(products)
+        .where(inArray(products.id, productIds)),
+    ]);
+
+  const found = new Map<string, QueueSubject>();
+  for (const row of photoRows) {
+    found.set(`photo:${row.id}`, { photoKeys: [row.photoKey] });
+  }
+  for (const row of entryPhotoRows) {
+    const key = `entry:${row.entryId}`;
+    const already = found.get(key)?.photoKeys ?? [];
+    found.set(key, { photoKeys: [...already, row.photoKey] });
+  }
+  for (const row of profileRows) {
+    found.set(`profile:${row.userId}`, {
+      label: row.displayName ?? undefined,
+      photoKeys: [],
+    });
+  }
+  for (const row of productRows) {
+    found.set(`product:${row.id}`, { label: row.name, photoKeys: [] });
+  }
+  return found;
 }
 
 /**
@@ -404,4 +488,5 @@ function onDecision<T extends string>(
 ): T {
   return decision === "approve" ? approved : removed;
 }
+
 

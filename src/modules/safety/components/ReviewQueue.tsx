@@ -24,6 +24,36 @@ import { useSettled } from "./use-settled";
  * cannot tell them apart treats both the same way.
  */
 /**
+ * The photos a reviewer is being asked about.
+ *
+ * **Served from `/safety/review-photo/`, not `/feed/photo/`.** Every photo
+ * in this queue is hidden precisely because it was reported, so the
+ * ordinary route refuses it — which for a while meant the one subject
+ * that most needs looking at was the one nothing showed.
+ *
+ * Nothing is rendered when there is none: a product name and a display
+ * name are the whole content of their own rows, and an empty frame on
+ * those reads as an image that failed to load.
+ */
+function ReportedPhotos({
+  keys,
+}: Readonly<{ keys: readonly string[] }>): JSX.Element | undefined {
+  if (keys.length === 0) return undefined;
+  return (
+    <span className="flex flex-wrap gap-2">
+      {keys.map((key) => (
+        <img
+          key={key}
+          src={`/safety/review-photo/${key}`}
+          alt="Reported photo"
+          className="h-32 w-auto border border-night/15"
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
  * What the reporters said, and how many of them said it.
  *
  * **This is the row's only content.** Everything else on it is an
@@ -100,8 +130,9 @@ export function ReviewQueue({
             className="flex flex-col gap-2 border border-night/15 p-3"
           >
             <span className="text-sm font-semibold">
-              {row.subjectType} · {row.subjectId}
+              {row.subjectType} · {row.subject.label ?? row.subjectId}
             </span>
+            <ReportedPhotos keys={row.subject.photoKeys} />
             <ReportedFor row={row} />
             <span className="text-xs text-night/60">
               <Bracketed>{row.source}</Bracketed>

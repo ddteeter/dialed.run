@@ -16,6 +16,7 @@ function row(overrides: Partial<QueueRow> = {}): QueueRow {
     createdAt: 1_755_000_000,
     reporterCount: 3,
     reasons: ["explicit"],
+    subject: { photoKeys: [] },
     ...overrides,
   };
 }

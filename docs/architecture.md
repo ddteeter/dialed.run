@@ -54,6 +54,14 @@ Key decisions embedded here:
   writing `is_public = 1` at each of its five read sites. The arrow
   therefore runs feed → safety, not the reverse: safety knows about entries,
   and nothing in safety imports feed.
+- **A photo has a second gate, and it is a different question** (106). The
+  entry rule answers "may this post be seen"; `isPhotoPubliclyVisible()`
+  answers "has this image been screened", and a photo needs both. They are
+  separate because a screening verdict is not a moderation decision: a
+  runner's public post can carry a photo the classifier has not passed, and
+  the post stays while the photo does not. Three reads consult it — the
+  photo route, entry detail and the feed list — and for a while none did,
+  which meant `screen_status` was written by four paths and read by none.
 - **Photo screening calls out to OpenAI's moderation endpoint**, not to
   Workers AI — the catalogue has one image classifier (`resnet-50`,
   ImageNet classes) and no content-safety model. It is a secret, so no new
