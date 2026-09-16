@@ -135,7 +135,6 @@ function form(
   return (
     <VerdictForm
       entry={entry(overrides.entry)}
-      entryId="01JENTRY000000000000000000"
       bandFloor={overrides.bandFloor}
       submitVerdict={overrides.submitVerdict ?? nothing}
       uploadPhoto={overrides.uploadPhoto ?? noUpload}

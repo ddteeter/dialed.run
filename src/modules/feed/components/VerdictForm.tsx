@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
@@ -45,17 +45,30 @@ const LABELS = {
  */
 export function VerdictForm({
   entry,
-  entryId,
   bandFloor,
   submitVerdict,
   uploadPhoto,
+  renderPhotoStep,
   itemBandWearStat,
 }: Readonly<{
   entry: Entry;
-  entryId: string;
   bandFloor: number | undefined;
   submitVerdict: (input: { data: Record<string, unknown> }) => Promise<unknown>;
   uploadPhoto: (input: { data: FormData }) => Promise<{ key: string }>;
+  /**
+   * W3's step between picking a photo and uploading it: the route hands
+   * in something that takes the picked file and calls back with the bytes
+   * to send. A render slot rather than a direct import, because this
+   * module may not reach `modules/safety` — dependency-cruiser forbids
+   * the deep import and the safety barrel reaches D1.
+   *
+   * Absent, a picked file is uploaded as-is, which is what every caller
+   * did before W3 existed.
+   */
+  renderPhotoStep?: (
+    file: File,
+    onReady: (ready: File) => void,
+  ) => ReactNode;
   itemBandWearStat: (input: {
     data: { itemId: string; bandFloorC: number };
   }) => Promise<{ worn: number; total: number }>;
@@ -77,7 +90,17 @@ export function VerdictForm({
   );
   const [noted, setNoted] = useState<string | undefined>();
   const [photoKeys, setPhotoKeys] = useState<string[]>(entry.photoKeys);
+  // `entry.id`, not an `entryId` prop beside it — the same duplication
+  // EntryDetail carried: two sources for one fact, one from the URL params
+  // and one from the loader, which a route can silently disagree with
+  // itself about.
+  const entryId = entry.id;
   const [photoError, setPhotoError] = useState<string | undefined>();
+  /**
+   * A picked file waiting on W3's blur step. One at a time: the step is a
+   * screen, and two of them at once is not a thing a runner can answer.
+   */
+  const [pending, setPending] = useState<File | undefined>();
   const [uploading, setUploading] = useState(false);
   const uploadInFlight = useRef(false);
 
@@ -87,6 +110,37 @@ export function VerdictForm({
   // disable` comment does not attach inside an expression container.
   // Stryker disable next-line StringLiteral
   const flagFor = (itemId: string) => flags[itemId] ?? "";
+
+  /**
+   * Uploads one file. Multipart: the browser streams it and nothing
+   * transcodes it — TanStack passes FormData to the server function
+   * untouched (its types special-case it for POST).
+   */
+  async function sendPhoto(file: File): Promise<void> {
+    const upload = new FormData();
+    upload.append("entryId", entryId);
+    upload.append("photo", file);
+    // One key per file, not per submission: each photo is its own create.
+    upload.append("idempotencyKey", newUlid());
+    const { key } = await uploadPhoto({ data: upload });
+    setPhotoKeys((previous) => [...previous, key]);
+  }
+
+  /**
+   * What the blur step handed back — the bytes that actually get sent.
+   */
+  async function handlePhotoReady(ready: File): Promise<void> {
+    setPending(undefined);
+    setUploading(true);
+    try {
+      await sendPhoto(ready);
+    } catch {
+      setPhotoError("Couldn't upload that photo. Try again.");
+    } finally {
+      setUploading(false);
+      uploadInFlight.current = false;
+    }
+  }
 
   async function handlePhotoSelect(event: ChangeEvent<HTMLInputElement>) {
     // The guard the `disabled` attribute used to be. A second selection
@@ -132,18 +186,16 @@ export function VerdictForm({
           setPhotoError("Photos must be JPEG, PNG, or WebP.");
           continue;
         }
-        // Multipart: the browser streams the file and nothing transcodes
-        // it. TanStack passes FormData through to the server function
-        // untouched (its types special-case it for POST).
-        const upload = new FormData();
-        upload.append("entryId", entryId);
-        upload.append("photo", file);
-        // One key per file, not per submission: each photo is its own
-        // create, and they are uploaded in a loop.
-        upload.append("idempotencyKey", newUlid());
-        const { key } = await uploadPhoto({ data: upload });
+        if (renderPhotoStep !== undefined) {
+          // W3: the picked file does not go anywhere until the blur step
+          // hands back the bytes to send. Queued rather than uploaded, and
+          // one at a time — the step is a screen, and two of them at once
+          // is not a thing a runner can answer.
+          setPending(file);
+          return;
+        }
+        await sendPhoto(file);
         count += 1;
-        setPhotoKeys((previous) => [...previous, key]);
       }
     } catch {
       setPhotoError("Couldn't upload that photo. Try again.");
@@ -335,6 +387,12 @@ export function VerdictForm({
               ) : undefined}
             </FormField>
           ) : undefined}
+
+          {pending === undefined
+            ? undefined
+            : renderPhotoStep?.(pending, (ready) => {
+                void handlePhotoReady(ready);
+              })}
         </div>
 
         <div className="flex flex-col gap-2">
