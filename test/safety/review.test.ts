@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { outfitEntries, products, reviewQueue } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  products,
+  reviewQueue,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -132,6 +137,21 @@ describe("resolving a decision", () => {
     expect(row?.resolvedAt).toBeGreaterThan(0);
   });
 
+  it("refuses to resolve an approved row a second time", async () => {
+    // The mirror of the removal case below, and not the same test: the
+    // "already resolved" guard names both settled statuses, and a guard
+    // that knew only about `removed` would let a second reviewer reverse
+    // an approval.
+    const { queueId } = await queuedEntry();
+    const reviewer = await makeUser();
+
+    expect(await resolveReview(queueId, reviewer, "approve")).toBe("resolved");
+
+    expect(await resolveReview(queueId, reviewer, "remove")).toBe(
+      "already_resolved",
+    );
+  });
+
   it("refuses to resolve the same row twice", async () => {
     const { queueId } = await queuedEntry();
     const reviewer = await makeUser();
@@ -213,11 +233,23 @@ describe("what a decision writes", () => {
     await resolveReview(queueId, await makeUser(), "approve");
 
     const [row] = await core()
-      .select({ resolvedAt: reviewQueue.resolvedAt })
+      .select({
+        status: reviewQueue.status,
+        resolvedAt: reviewQueue.resolvedAt,
+      })
       .from(reviewQueue)
       .where(eq(reviewQueue.id, queueId))
       .limit(1);
-    expect(row?.resolvedAt).toBeGreaterThanOrEqual(before);
+    // Bounded on both sides, because every column in this schema counts
+    // seconds: a millisecond value is still "greater than before" and
+    // would sort this row ahead of everything for the next thousand
+    // years.
+    expect(row?.resolvedAt).toBeGreaterThanOrEqual(before - 5);
+    expect(row?.resolvedAt).toBeLessThanOrEqual(before + 5);
+    // The approving half of the queue row's own status. The removing
+    // half is asserted above; without this one, a rule that wrote
+    // "removed" whatever the reviewer chose would pass.
+    expect(row?.status).toBe("approved");
   });
 
   it("records the queue row's own creation time", async () => {
@@ -227,8 +259,11 @@ describe("what a decision writes", () => {
     const [queued] = await pendingReviewQueue();
 
     // The queue is read oldest-first, so a wrong timestamp reorders a
-    // reviewer's worklist.
-    expect(queued?.createdAt).toBeGreaterThanOrEqual(before);
+    // reviewer's worklist — and in seconds, like every other time column
+    // here, or it reorders it just as badly by being a thousand times
+    // too large.
+    expect(queued?.createdAt).toBeGreaterThanOrEqual(before - 5);
+    expect(queued?.createdAt).toBeLessThanOrEqual(before + 5);
   });
 
   it("approving a product puts it back in autocomplete", async () => {
@@ -262,6 +297,47 @@ describe("what a decision writes", () => {
       .where(eq(products.id, productId))
       .limit(1);
     expect(row?.status).toBe("active");
+  });
+
+  it("settles a reported photo but does not yet touch it", async () => {
+    // **A tripwire on a known gap, not an endorsement of it.** Nothing in
+    // the UI files a photo report, but `reportInputSchema` accepts one,
+    // so a request can — and Remove currently settles the queue row and
+    // leaves the photo exactly as it was. What it *should* write is an
+    // owner decision (see `subjectWriters`), and the day it is made this
+    // assertion is what fails and asks to be updated.
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const photoId = newUlid();
+    await core().insert(entryPhotos).values({
+      id: photoId,
+      entryId,
+      photoKey: `entries/${author}/${entryId}/${photoId}`,
+      position: 0,
+    });
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      });
+    }
+    const [queued] = await pendingReviewQueue();
+    if (!queued) throw new Error("nothing queued");
+
+    expect(await resolveReview(queued.id, await makeUser(), "remove")).toBe(
+      "resolved",
+    );
+    expect(await pendingReviewCount()).toBe(0);
+
+    const [row] = await core()
+      .select({ status: entryPhotos.screenStatus })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId))
+      .limit(1);
+    expect(row?.status).toBe("pending");
   });
 
   it("leaves a reported profile's own rows alone", async () => {

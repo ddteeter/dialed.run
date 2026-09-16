@@ -8,6 +8,7 @@
  * fact rather than an assumption.
  */
 import { and, asc, eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -210,6 +211,12 @@ export async function resolveReview(
 
   // A read that decides what to write goes before the batch, not inside
   // it — a batch cannot branch on its own results.
+  // `as const` is load-bearing: it makes TypeScript read this literal as
+  // the non-empty tuple `db.batch()` asks for, where a plain array
+  // literal widens and does not fit. That is why there is no narrowing
+  // helper here any more — the one that was here threw on an empty array
+  // that could not happen, and an unreachable throw is a branch no test
+  // can reach.
   const writes = [
     db()
       .update(reviewQueue)
@@ -220,9 +227,9 @@ export async function resolveReview(
       })
       .where(eq(reviewQueue.id, queueId)),
     ...subjectWritesFor(row.subjectType, row.subjectId, decision),
-  ];
+  ] as const;
 
-  await db().batch(asBatch(writes));
+  await db().batch(writes);
   return "resolved";
 }
 
@@ -238,39 +245,51 @@ function subjectWritesFor(
   subjectId: string,
   decision: ReviewDecision,
 ) {
-  if (subjectType === "entry") {
-    return [
-      db()
-        .update(outfitEntries)
-        .set({
-          moderationStatus: decision === "approve" ? "ok" : "removed",
-        })
-        .where(eq(outfitEntries.id, subjectId)),
-    ];
-  }
-  if (subjectType === "product") {
-    // Hidden products drop out of autocomplete and linked garments fall
-    // back to their own text fields (packet §2) — the column 000 reserved
-    // for exactly this.
-    return [
-      db()
-        .update(products)
-        .set({ status: decision === "approve" ? "active" : "hidden" })
-        .where(eq(products.id, subjectId)),
-    ];
-  }
-  return [];
+  return subjectWriters[subjectType](subjectId, decision);
 }
 
 /**
- * `db.batch()` types its argument as a non-empty tuple, and the array built
- * above is statically a plain array. This is the one place that gap shows,
- * so it is narrowed once here rather than at each call.
+ * Keyed by subject type rather than written as a chain of `if`s.
+ *
+ * Two reasons, and the second is the one that matters. `Record<
+ * ReportSubjectType, …>` makes a new subject type a compile error here
+ * instead of a silent no-op. And the `profile` branch is unobservable
+ * from the outside — it writes nothing, so a test cannot tell a wrong
+ * branch from the right one, and the `if` that guarded it survived every
+ * mutation. A lookup has no branch to get wrong.
  */
-function asBatch<T>(writes: T[]): [T, ...T[]] {
-  const [first, ...rest] = writes;
-  if (first === undefined) {
-    throw new Error("a review always writes at least the queue row");
-  }
-  return [first, ...rest];
-}
+const subjectWriters: Record<
+  ReportSubjectType,
+  (subjectId: string, decision: ReviewDecision) => BatchItem<"sqlite">[]
+> = {
+  entry: (subjectId, decision) => [
+    db()
+      .update(outfitEntries)
+      .set({ moderationStatus: decision === "approve" ? "ok" : "removed" })
+      .where(eq(outfitEntries.id, subjectId)),
+  ],
+  // Hidden products drop out of autocomplete and linked garments fall
+  // back to their own text fields (packet §2) — the column 000 reserved
+  // for exactly this.
+  product: (subjectId, decision) => [
+    db()
+      .update(products)
+      .set({ status: decision === "approve" ? "active" : "hidden" })
+      .where(eq(products.id, subjectId)),
+  ],
+  // Deliberately nothing: removing a person is a ban, which has its own
+  // path and its own notice.
+  profile: () => [],
+  // **Not deliberate — unwired, and this Record is what made it
+  // visible.** The `if` chain this replaced fell through to `[]` for any
+  // type it did not name, so a reviewer pressing Remove on a reported
+  // photo settled the queue row and did nothing to the photo. No UI
+  // files one today, but `reportInputSchema` accepts `subjectType:
+  // "photo"`, so a request can. What Remove should write is a product
+  // call — `entry_photos.screen_status` has `flagged` and
+  // `hidden_pending_review`, both of which stop every public read, but
+  // `flagged` is the classifier's word and a person's decision is not
+  // the classifier's — so it is the owner's to make, not this file's.
+  photo: () => [],
+};
+
