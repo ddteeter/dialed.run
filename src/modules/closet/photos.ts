@@ -146,19 +146,11 @@ export async function uploadItemPhoto(
   // make a verdict hard to explain.
   await screenPhoto(
     { scope: "garment", photoId: itemId, bytes, contentType },
-    classify ?? classifierFromEnv() ?? neverClassifies,
+    classify ?? classifierFromEnv(),
   );
 
   return { photoKey: keyPrefix };
 }
-
-/**
- * Stands in for an absent classifier. Rejecting rather than resolving to a
- * verdict is the point: `screenPhoto` turns that into `deferred`, whereas
- * a stub resolving to "pass" would publish unclassified photos.
- */
-const neverClassifies: Classify = () =>
-  Promise.reject(new Error("no classifier configured"));
 
 /**
  * A photo upload's outcome, kept apart from the item save.

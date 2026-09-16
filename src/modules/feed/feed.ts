@@ -22,7 +22,7 @@ import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import { followeeIdsOf } from "./follows";
-import { publiclyVisibleEntry } from "../safety";
+import { publicPhotoStatus, publiclyVisibleEntry } from "../safety";
 
 export interface FeedCursor {
   createdAt: number;
@@ -89,6 +89,7 @@ export interface FeedPage {
 async function hydrateEntries(
   database: DrizzleD1Database,
   entryRows: (typeof outfitEntries.$inferSelect)[],
+  viewerId: string,
 ): Promise<FeedItem[]> {
   // Equivalent mutant: an empty page produces empty reads and an empty
   // map either way. What the return saves is six queries and a batch on
@@ -108,10 +109,21 @@ async function hydrateEntries(
     .select()
     .from(outfitEntryItems)
     .where(inArray(outfitEntryItems.entryId, entryIds));
+  // A photo the classifier has not passed is shown to its author and to
+  // nobody else, so the condition is per-entry rather than per-page: one
+  // feed mixes the viewer's own entries with everyone else's. In SQL,
+  // because a row a stranger may not see is a row D1 should not scan.
+  const ownEntryIds = entryRows
+    .filter((entry) => entry.userId === viewerId)
+    .map((entry) => entry.id);
+  const showable = or(
+    eq(entryPhotos.screenStatus, publicPhotoStatus),
+    inArray(entryPhotos.entryId, ownEntryIds),
+  );
   const photosQuery = database
     .select()
     .from(entryPhotos)
-    .where(inArray(entryPhotos.entryId, entryIds))
+    .where(and(inArray(entryPhotos.entryId, entryIds), showable))
     .orderBy(entryPhotos.entryId, entryPhotos.position);
   const tagsQuery = database
     .select()
@@ -186,7 +198,7 @@ export async function followingFeed(
   const userIds = [viewerId, ...followeeIds];
   const rows = await followingFeedStatement(database, userIds, cursor, limit + 1);
   const page = rows.slice(0, limit);
-  const items = await hydrateEntries(database, page);
+  const items = await hydrateEntries(database, page, viewerId);
   const last = page.at(-1);
   return {
     items,

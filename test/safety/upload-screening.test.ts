@@ -2,10 +2,18 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, outfitEntries, wardrobeItems } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  photoScreenings,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { uploadItemPhoto } from "../../src/modules/closet/photos";
-import { uploadPhoto } from "../../src/modules/feed/photos";
+import { getEntryDetail } from "../../src/modules/feed/entries";
+import { followingFeed } from "../../src/modules/feed/feed";
+import { follow } from "../../src/modules/feed/follows";
+import { photoResponse, uploadPhoto } from "../../src/modules/feed/photos";
 import {
   imageCategories,
   pendingEntryPhotos,
@@ -33,6 +41,17 @@ function scores(overrides: Partial<CategoryScores> = {}): CategoryScores {
     imageCategories.map((category) => [category, 0]),
   ) as CategoryScores;
   return { ...zeroes, ...overrides };
+}
+
+/**
+What the photo route answers a given viewer.
+*/
+async function statusFor(
+  key: string,
+  viewerId: string | undefined,
+): Promise<number> {
+  const response = await photoResponse(key, viewerId);
+  return response.status;
 }
 
 const clean: Classify = () =>
@@ -113,6 +132,61 @@ describe("uploading an entry photo", () => {
       .from(entryPhotos)
       .where(eq(entryPhotos.photoKey, key));
     expect(row?.status).toBe("hidden_pending_review");
+
+    // **The half this test used to leave out, and the reason the gate did
+    // not exist.** It asserted the column and stopped, so it passed for
+    // months while `isPhotoVisible` asked only about the ENTRY — and a
+    // photo the model called explicit was served to strangers with HTTP
+    // 200 on any public entry. A test named for a behaviour has to ask
+    // about the behaviour.
+    const stranger = await makeUser();
+    expect(await statusFor(key, stranger)).toBe(404);
+    expect(await statusFor(key, undefined)).toBe(404);
+    // And the owner still sees their own, which is the other half of the
+    // rule: fail open for the owner, closed for the public.
+    expect(await statusFor(key, userId)).toBe(200);
+  });
+
+  it("hides an unscreened photo too, which is what an outage leaves behind", async () => {
+    const entryId = await anEntry();
+    const userId = await userOf(entryId);
+
+    const key = await uploadPhoto(
+      {
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+      },
+      { classify: unavailable },
+    );
+
+    // `pending` is not a verdict, it is the absence of one — and with no
+    // OPENAI_API_KEY every photo in the app is in this state. Publishing
+    // it would make the classifier's outage indistinguishable from its
+    // approval.
+    const stranger = await makeUser();
+    expect(await statusFor(key, stranger)).toBe(404);
+    expect(await statusFor(key, userId)).toBe(200);
+  });
+
+  it("serves a photo the classifier passed", async () => {
+    const entryId = await anEntry();
+    const userId = await userOf(entryId);
+
+    const key = await uploadPhoto(
+      {
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+      },
+      { classify: clean },
+    );
+
+    // The other direction, without which "hidden" is satisfied by a route
+    // that hides everything.
+    expect(await statusFor(key, await makeUser())).toBe(200);
   });
 
   it("still saves the photo when the classifier is down", async () => {
@@ -164,6 +238,15 @@ describe("uploading a garment photo", () => {
       .from(wardrobeItems)
       .where(eq(wardrobeItems.id, itemId));
     expect(row?.visibility).toBe("pass");
+
+    // Recorded as a garment, not as an entry photo. The scope is what a
+    // re-tune reads these rows by, and what tells two ids apart — an
+    // item id and an entry-photo id are both ULIDs.
+    const [screening] = await core()
+      .select({ scope: photoScreenings.photoScope })
+      .from(photoScreenings)
+      .where(eq(photoScreenings.photoId, itemId));
+    expect(screening?.scope).toBe("garment");
   });
 
   it("leaves it pending when the classifier is down", async () => {
@@ -200,5 +283,80 @@ describe("uploading a garment photo", () => {
     // photo, and queueing those would give the sweep nothing to fetch.
     expect(row?.visibility).toBe("ok");
     expect(await pendingGarmentPhotos()).toEqual([]);
+  });
+});
+
+describe("what the screening verdict keeps off a stranger's screen", () => {
+  beforeEach(resetSafetyTables);
+
+  it("drops a flagged photo from the feed list but leaves the entry", async () => {
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    await uploadPhoto(
+      {
+        userId: author,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+      },
+      { classify: explicit },
+    );
+    const follower = await makeUser();
+    await follow(follower, author);
+
+    const seen = await followingFeed(follower);
+
+    // The entry is the runner's own post and stays; only the photo the
+    // classifier objected to goes. Dropping the entry would be moderating
+    // a kit over a picture, and leaving the photo in the list gives the
+    // page an `<img>` the photo route then refuses — a broken image
+    // rather than a post without a picture.
+    const item = seen.items.find((row) => row.entryId === entryId);
+    expect(item).toBeDefined();
+    expect(item?.photoKeys).toEqual([]);
+  });
+
+  it("leaves it in the author's own feed", async () => {
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    await uploadPhoto(
+      {
+        userId: author,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+      },
+      { classify: explicit },
+    );
+
+    const own = await followingFeed(author);
+
+    // Fail open for the owner. A runner whose photo is under review still
+    // sees their own post as they posted it.
+    const item = own.items.find((row) => row.entryId === entryId);
+    expect(item?.photoKeys).toHaveLength(1);
+  });
+
+  it("drops it from entry detail for a stranger and keeps it for the author", async () => {
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    await uploadPhoto(
+      {
+        userId: author,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+      },
+      { classify: explicit },
+    );
+
+    const asStranger = await getEntryDetail(entryId, await makeUser());
+    const asAuthor = await getEntryDetail(entryId, author);
+
+    expect(asStranger?.photoKeys).toEqual([]);
+    expect(asAuthor?.photoKeys).toHaveLength(1);
   });
 });

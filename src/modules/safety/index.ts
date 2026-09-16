@@ -71,6 +71,8 @@ export {
 
 export {
   isEntryPubliclyVisible,
+  isPhotoPubliclyVisible,
+  publicPhotoStatus,
   publiclyVisibleEntry,
 } from "./visibility";
 

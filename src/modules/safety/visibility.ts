@@ -57,3 +57,33 @@ export function isEntryPubliclyVisible(entry: {
   return entry.isPublic && entry.moderationStatus === "ok";
 }
 
+/**
+ * The one `screen_status` a photo may be public with.
+ *
+ * Named rather than written as a bare `"pass"` at each site, because
+ * three reads and one SQL predicate have to agree and a fourth reader
+ * with its own spelling is how a gate stops gating.
+ */
+export const publicPhotoStatus = "pass";
+
+/**
+ * Whether a photo may be shown to somebody who does not own it.
+ *
+ * **The classifier's verdict was written and never read.** `screenPhoto`
+ * has always recorded `pass` / `hidden_pending_review` on
+ * `entry_photos.screen_status`, and until this predicate existed nothing
+ * consulted it: `isPhotoVisible` asked only about the ENTRY, so a photo
+ * the model flagged as explicit was served to strangers with HTTP 200 on
+ * any public entry. The test that was supposed to catch it — "hides a
+ * flagged photo from everyone but its owner" — asserted the column value
+ * and never asked whether anyone could see it.
+ *
+ * Pending counts as not-public too, and deliberately: an unscreened photo
+ * is one nothing has looked at, which is the state the whole path exists
+ * to keep off the public feed until the sweep runs.
+ */
+export function isPhotoPubliclyVisible(photo: {
+  screenStatus: string;
+}): boolean {
+  return photo.screenStatus === publicPhotoStatus;
+}

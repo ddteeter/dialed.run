@@ -193,16 +193,13 @@ export async function getOwnedItem(
  * moderation tool into a probe anyone can query.
  */
 export class DeniedLinkError extends Error {
-  readonly isDeniedLink = true;
   constructor() {
     super("That link isn't allowed here. The rest of the piece is fine.");
   }
 }
 
 async function assertLinkAllowed(garment: Garment): Promise<void> {
-  const url = garment.productUrl;
-  if (url === undefined) return;
-  if (await isDeniedDomain(url)) throw new DeniedLinkError();
+  if (await isDeniedDomain(garment.productUrl)) throw new DeniedLinkError();
 }
 
 export async function createItem(

@@ -67,7 +67,8 @@ export type ScreenOutcome = "pass" | "flagged" | "deferred";
 /**
  * Screens one photo and records the verdict.
  *
- * Returns `deferred` when the classifier could not answer — the row stays
+ * Returns `deferred` when there is no classifier, or when it could not
+ * answer — the row stays
  * `pending`, the owner keeps seeing their photo, and the cron will try
  * again. **This never throws for a classifier failure**, because the
  * caller is a photo upload and the runner's save must not fail for a
@@ -75,14 +76,29 @@ export type ScreenOutcome = "pass" | "flagged" | "deferred";
  */
 export async function screenPhoto(
   photo: PhotoToScreen,
-  classify: Classify,
+  classify: Classify | undefined,
 ): Promise<ScreenOutcome> {
+  // **No classifier is a state, not a stand-in.** Both upload paths used
+  // to pass a fake that rejected with a message nothing read — two copies
+  // of one idea, and a mutant could empty the message without any test
+  // noticing. An absent classifier answers the same way a broken one
+  // does, and says so here once.
+  if (!classify) return "deferred";
+
+  // The call is made OUTSIDE the try and only the await is inside, and the
+  // narrowness is the point: a try around the call would also swallow the
+  // guard above going wrong, which made that guard a branch no test could
+  // distinguish — skipping it called `undefined(…)` in the same try and
+  // produced the same `deferred`. A classifier that throws synchronously
+  // rather than rejecting is a bug in this repo, not an upstream outage,
+  // and now surfaces as one.
+  const answer = classify({
+    bytes: photo.bytes,
+    contentType: photo.contentType,
+  });
   let result: { flagged: boolean; scores: CategoryScores };
   try {
-    result = await classify({
-      bytes: photo.bytes,
-      contentType: photo.contentType,
-    });
+    result = await answer;
   } catch {
     // Deliberately swallowed. The photo stays `pending`, which is both the
     // safe visibility and the marker the retry sweep reads — so there is

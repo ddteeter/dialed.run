@@ -53,3 +53,13 @@ describe("what is not a domain", () => {
     expect(domainOf("")).toBeUndefined();
   });
 });
+
+describe("a link that is not there", () => {
+  it("has no domain, the same as a link that will not parse", () => {
+    // `productUrl` is optional on every garment, so this is the ordinary
+    // case rather than an edge one — and answering it here is what keeps
+    // the callers from each carrying a guard nothing can reach.
+    const missing = undefined;
+    expect(domainOf(missing)).toBeUndefined();
+  });
+});

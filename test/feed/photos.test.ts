@@ -18,6 +18,12 @@ import {
   photoUploadFrom,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
+import {
+  imageCategories,
+  type CategoryScores,
+  type Classify,
+} from "../../src/modules/safety";
+
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
 
 const JPEG_BYTES = new Uint8Array([1, 2, 3]).buffer;
@@ -378,16 +384,35 @@ describe("photoUploadFrom", () => {
   });
 });
 
+/**
+ * A screened-clean photo, because these tests are about ENTRY visibility.
+ *
+ * The screening verdict is a second gate on the same route (a photo the
+ * classifier flagged is not public even on a public entry), so a fixture
+ * that left it unscreened would make every case below fail for the wrong
+ * reason. `test/safety/upload-screening.test.ts` owns the other gate.
+ */
+const CLEAN: Classify = () =>
+  Promise.resolve({
+    flagged: false,
+    scores: Object.fromEntries(
+      imageCategories.map((category) => [category, 0]),
+    ) as CategoryScores,
+  });
+
 async function ownedPhoto(isPublic = true) {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
   const entryId = await makeEntry({ userId, runId, isPublic });
-  const key = await uploadPhoto({
-    userId,
-    entryId,
-    contentType: "image/jpeg",
-    bytes: JPEG_BYTES,
-  });
+  const key = await uploadPhoto(
+    {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    },
+    { classify: CLEAN },
+  );
   return { userId, key };
 }
 

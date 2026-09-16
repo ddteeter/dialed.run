@@ -27,7 +27,13 @@ function db() {
  * message, and conflating them would tell a runner their perfectly good
  * link was blocked.
  */
-export async function isDeniedDomain(url: string): Promise<boolean> {
+export async function isDeniedDomain(
+  url: string | undefined,
+): Promise<boolean> {
+  // No guard for an absent url: `domainOf` answers `undefined` for one,
+  // which is the same answer it gives an unparseable string and leads to
+  // the same "not denied" below. A check here would be a branch nothing
+  // could distinguish.
   const domain = domainOf(url);
   if (domain === undefined) return false;
   return hasRowWhere(

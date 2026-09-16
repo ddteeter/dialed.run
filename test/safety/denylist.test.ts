@@ -78,6 +78,14 @@ describe("the denylist itself", () => {
     expect(await isDeniedDomain("https://spam.example.org/x")).toBe(false);
   });
 
+  it("treats a garment with no link at all as not denied", async () => {
+    await denyDomain("spam.example", await makeUser());
+    // The closet's save path asks this about every garment, most of which
+    // have no link. Answering here rather than guarding at the call site
+    // is what makes the rule testable.
+    expect(await isDeniedDomain(undefined)).toBe(false);
+  });
+
   it("treats an unparseable link as not denied, which is a different answer", async () => {
     await denyDomain("spam.example", await makeUser());
     // Invalid and denied are different facts with different messages;

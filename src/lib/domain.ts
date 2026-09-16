@@ -24,11 +24,23 @@
  * those at save, so reaching here with one means a stored value predating
  * that rule, and a stored oddity should render as "no domain" rather than
  * take down the page.
+ *
+ * **An absent URL is one of the answers, not a case for the caller.**
+ * `productUrl` is optional on every garment, so the callers were each
+ * guarding for it first — and that guard was a branch no test could
+ * reach, since an unparseable string and a missing one leave here by the
+ * same `catch` with the same `undefined`.
+ *
+ * Which is also why there is no `=== undefined` check here: it would be
+ * the same unreachable branch moved one level down. `String(undefined)`
+ * is `"undefined"`, which is not a URL, so the parse refuses it exactly
+ * as it refuses any other rubbish — one path, and the one the tests
+ * already cover.
  */
-export function domainOf(url: string): string | undefined {
+export function domainOf(url: string | undefined): string | undefined {
   let parsed: URL;
   try {
-    parsed = new URL(url);
+    parsed = new URL(String(url));
   } catch {
     return undefined;
   }

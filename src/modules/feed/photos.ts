@@ -19,7 +19,7 @@ import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
-import { isEntryPubliclyVisible } from "../safety";
+import { isEntryPubliclyVisible, isPhotoPubliclyVisible } from "../safety";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
@@ -138,22 +138,11 @@ export async function uploadPhoto(
       bytes: new Uint8Array(input.bytes),
       contentType: input.contentType,
     },
-    classify ?? classifierFromEnv() ?? neverClassifies,
+    classify ?? classifierFromEnv(),
   );
 
   return key;
 }
-
-/**
- * Stands in for an absent classifier so the screening path has one shape.
- *
- * Rejecting rather than resolving to a verdict is the point: there is no
- * answer, and `screenPhoto` turning that into `deferred` is exactly right.
- * A stub that resolved to "pass" would publish unclassified photos, which
- * is the wrong-answer failure this lane keeps refusing.
- */
-const neverClassifies: Classify = () =>
-  Promise.reject(new Error("no classifier configured"));
 
 /**
  * Visibility check for the GET route: a photo is servable to `viewerId`
@@ -167,7 +156,10 @@ export async function isPhotoVisible(
 ): Promise<boolean> {
   const database = db();
   const [photo] = await database
-    .select({ entryId: entryPhotos.entryId })
+    .select({
+      entryId: entryPhotos.entryId,
+      screenStatus: entryPhotos.screenStatus,
+    })
     .from(entryPhotos)
     .where(eq(entryPhotos.photoKey, photoKey))
     .limit(1);
@@ -184,7 +176,15 @@ export async function isPhotoVisible(
   if (!entry) return false;
   // The owner keeps seeing their own photo whatever is pending against
   // it — fail open for the owner, closed for the public.
-  return isEntryPubliclyVisible(entry) || entry.userId === viewerId;
+  //
+  // **Both halves, and the photo half used to be missing.** The entry
+  // being public is not enough: a photo the classifier flagged carries
+  // `hidden_pending_review` and was still served with HTTP 200, because
+  // nothing read the column `screenPhoto` writes.
+  return (
+    (isEntryPubliclyVisible(entry) && isPhotoPubliclyVisible(photo)) ||
+    entry.userId === viewerId
+  );
 }
 
 export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {

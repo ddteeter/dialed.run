@@ -150,6 +150,31 @@ describe("screening a photo", () => {
   });
 });
 
+describe("when there is no classifier at all", () => {
+  beforeEach(resetSafetyTables);
+
+  it("defers, exactly as a broken one does", async () => {
+    const photoId = await entryPhotoRow();
+
+    // No OPENAI_API_KEY is the state the app runs in until the owner
+    // adds one, and it must be the safe one: the photo stays pending, so
+    // its owner sees it and nobody else does, and the sweep screens it on
+    // the first firing after the key exists.
+    expect(
+      await screenPhoto(
+        {
+          scope: "entry",
+          photoId,
+          bytes: new Uint8Array([1]),
+          contentType: "image/jpeg",
+        },
+        undefined,
+      ),
+    ).toBe("deferred");
+    expect(await screenStatusOf(photoId)).toBe("pending");
+  });
+});
+
 describe("when the classifier is down", () => {
   beforeEach(resetSafetyTables);
 

@@ -29,6 +29,7 @@ import { env } from "../../env";
 import type { entryTags, itemFlagSchema } from "../../lib/contracts";
 import { ForbiddenError } from "../../lib/errors";
 import { forIds } from "../../lib/for-ids";
+import { publicPhotoStatus } from "../safety";
 import { requireOwned, requireOwner } from "../../lib/owned";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
@@ -508,10 +509,21 @@ export async function getEntryDetail(
   );
   const garmentsById = new Map(garments.map((g) => [g.id, g]));
 
+  // Screened photos only, unless the viewer is the author. In the WHERE
+  // rather than filtered after: a stranger must not be billed for rows
+  // they may not see, and an `<img>` pointing at a key the photo route
+  // will refuse renders as a broken image rather than as nothing.
   const photos = await database
     .select()
     .from(entryPhotos)
-    .where(eq(entryPhotos.entryId, entryId))
+    .where(
+      and(
+        eq(entryPhotos.entryId, entryId),
+        ...(entry.userId === viewerId
+          ? []
+          : [eq(entryPhotos.screenStatus, publicPhotoStatus)]),
+      ),
+    )
     .orderBy(entryPhotos.position);
 
   const tags = await database
