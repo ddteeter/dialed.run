@@ -276,11 +276,21 @@ owners see their own, the public sees none, and the first sweep after the
 key exists screens the backlog. What is missing is the *measurement*, and
 the packet makes that a launch gate.
 
-**Still to build.** W1 report sheet, W2 blocked-runners list, W3
-faces-blurred; their routes; the admin review page and the duplicates
+**Also landed since.** W1 report sheet, W2 blocked-runners list, W3
+faces-blurred and their routes; the admin review page and the duplicates
 report (D-30); link hygiene rendering (`rel="ugc nofollow noopener"` plus
-the bare domain beside the link text); the demo video; `modules/safety`
-joining `stryker.conf.json`'s `mutate` array.
+the bare domain); `modules/safety` in `stryker.conf.json`'s `mutate`
+array, and **at 100.00% across 699 mutants**. The paydown was not a
+matter of adding assertions: it found the `indexOf` bug in
+`duplicates.ts`, the unhandled `photo` subject type in `review.ts`
+(D-61), two dead exports, a false comment in `detect.ts`'s `boxesFrom`,
+and four unbounded timestamps that would have passed a millisecond
+value. Six branches were deleted rather than tested, each because no
+input could tell it from its opposite.
+
+**Still to build.** The demo video, and a re-record: W3's blur step is
+user-visible and rides on `e2e/verdict`'s journey rather than this
+lane's.
 
 ## Open questions
 

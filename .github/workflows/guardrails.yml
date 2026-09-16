@@ -32,6 +32,11 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      # The stryker analyzer runs at the `push`/`ci` rung, and stryker runs
+      # vitest — which boots all three projects, `browser` among them. No
+      # Chromium, no dry run, and the gate fails for a reason unrelated to
+      # the diff it was asked about.
+      - run: npx playwright install --with-deps chromium
       # `gate --mode=ci` runs verify PLUS the diff-auditor PLUS the sanction
       # budget. Bare `verify` runs none of the last two.
       #

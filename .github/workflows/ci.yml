@@ -36,6 +36,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # `npm test` runs three vitest projects and one of them, `browser`,
+      # drives a real Chromium through @vitest/browser-playwright — it is
+      # the only place blur/detect.ts's MediaPipe model actually loads.
+      # Without a browser here that project fails and the unit job goes
+      # red; the e2e job below has installed one all along.
+      - name: Install the browser the vitest browser project drives
+        run: npx playwright install --with-deps chromium
+
       - name: Lint
         run: npm run lint
 

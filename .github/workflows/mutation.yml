@@ -172,6 +172,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Stryker runs vitest, and vitest runs all three projects —
+      # including `browser`, which is where eight of blur/detect.ts's
+      # mutants are killed. A shard without a browser cannot kill them and
+      # would fail on `break: 100` for a reason that has nothing to do
+      # with the diff. Installed for every shard rather than only the
+      # safety one, because the matrix is derived from stryker.conf.json
+      # and a condition naming a scope here would be the hand-kept copy
+      # that file exists to avoid.
+      - name: Install the browser the vitest browser project drives
+        run: npx playwright install --with-deps chromium
+
       # Restore on PRs only. The run on `main` is deliberately cold: it is
       # the measurement everything else is calibrated against, and a warm
       # one would inherit whatever the last warm one assumed.
