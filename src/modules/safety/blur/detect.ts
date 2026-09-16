@@ -103,34 +103,55 @@ function loadModelDetector(): Promise<Detector | undefined> {
   return pending;
 }
 
+/**
+ * Where the WASM runtime and the model are served from.
+ *
+ * Exported and pinned by a test against what `public/` actually holds,
+ * because a wrong path here fails the way this feature fails worst:
+ * silently. The detector simply never loads, `detectFaces` reports
+ * `unavailable`, the copy honestly says we could not check, and nobody
+ * finds out that the reason is a renamed file.
+ */
+export const WASM_PATH = "/mediapipe/wasm";
+export const MODEL_PATH = "/mediapipe/blaze_face_short_range.tflite";
+
+/**
+ * MediaPipe's detections as this app's regions.
+ *
+ * Split out of the builder so it can be tested: everything around it
+ * needs 11 MB of WASM fetched over HTTP, which no test environment will
+ * do, but the mapping is arithmetic on an object and is where a mistake
+ * would actually show — blurring the wrong rectangle looks like a broken
+ * feature rather than a coordinate bug.
+ *
+ * A detection without a box is dropped rather than defaulted: a zero
+ * region blurs nothing while letting the copy claim a face was covered.
+ */
+export function regionsFromDetections(
+  detections: readonly {
+    boundingBox?:
+      | { originX: number; originY: number; width: number; height: number }
+      | undefined;
+  }[],
+): readonly Region[] {
+  return detections.flatMap((detection) => {
+    const box = detection.boundingBox;
+    return box === undefined
+      ? []
+      : [{ x: box.originX, y: box.originY, width: box.width, height: box.height }];
+  });
+}
+
 async function buildModelDetector(): Promise<Detector | undefined> {
   try {
     const vision = await import("@mediapipe/tasks-vision");
-    const files = await vision.FilesetResolver.forVisionTasks(
-      "/mediapipe/wasm",
-    );
+    const files = await vision.FilesetResolver.forVisionTasks(WASM_PATH);
     const detector = await vision.FaceDetector.createFromOptions(files, {
-      baseOptions: {
-        modelAssetPath: "/mediapipe/blaze_face_short_range.tflite",
-      },
+      baseOptions: { modelAssetPath: MODEL_PATH },
       runningMode: "IMAGE",
     });
     return (source) =>
-      Promise.resolve(
-        detector.detect(source).detections.flatMap((detection) => {
-          const box = detection.boundingBox;
-          return box === undefined
-            ? []
-            : [
-                {
-                  x: box.originX,
-                  y: box.originY,
-                  width: box.width,
-                  height: box.height,
-                },
-              ];
-        }),
-      );
+      Promise.resolve(regionsFromDetections(detector.detect(source).detections));
   } catch {
     // Law 5 on the client. A model that will not load leaves the runner
     // with tap-to-blur and copy that says we could not check — not an
@@ -147,12 +168,19 @@ async function buildModelDetector(): Promise<Detector | undefined> {
  * tap-to-blur and honest copy rather than an error about a feature they
  * did not ask for (law 5, on the client).
  */
+const absent: Detector = () =>
+  Promise.reject(new Error("no face detector on this device"));
+
 export async function detectFaces(
   source: ImageBitmap,
   detector?: Detector  ,
 ): Promise<DetectionOutcome> {
-  const detect = detector ?? nativeDetector() ?? (await loadModelDetector());
-  if (detect === undefined) return { status: "unavailable" };
+  // "No detector" is expressed as a detector that refuses, rather than as
+  // an `undefined` with a guard above the try. Both end in the same catch
+  // meaning the same thing, and two branches for one answer was a
+  // distinction no input could make.
+  const detect =
+    detector ?? nativeDetector() ?? (await loadModelDetector()) ?? absent;
   try {
     return { status: "ran", faces: await detect(source) };
   } catch {
@@ -167,6 +195,10 @@ export async function detectFaces(
  * control, and a shape change should cost us a detection rather than a
  * crash inside a photo upload.
  */
+function isPositive(value: unknown): value is number {
+  return typeof value === "number" && value > 0;
+}
+
 function boxesFrom(result: unknown): readonly Region[] {
   if (!Array.isArray(result)) return [];
   const regions: Region[] = [];
@@ -175,13 +207,15 @@ function boxesFrom(result: unknown): readonly Region[] {
       ?.boundingBox;
     if (typeof box !== "object" || box === null) continue;
     const { x, y, width, height } = box as Record<string, unknown>;
+    // No `typeof` on width and height: `> 0` is false for a string, for
+    // undefined and for NaN, so the extra checks could not change any
+    // answer. x and y keep theirs, because there is no comparison on them
+    // to do the same work.
     if (
       typeof x === "number" &&
       typeof y === "number" &&
-      typeof width === "number" &&
-      typeof height === "number" &&
-      width > 0 &&
-      height > 0
+      isPositive(width) &&
+      isPositive(height)
     ) {
       regions.push({ x, y, width, height });
     }

@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { detectFaces } from "../../src/modules/safety/blur/detect";
+import {
+  detectFaces,
+  MODEL_PATH,
+  regionsFromDetections,
+  WASM_PATH,
+} from "../../src/modules/safety/blur/detect";
 import type { Detector } from "../../src/modules/safety/blur/detect";
 
 /**
@@ -62,6 +67,24 @@ describe("with a detector", () => {
 });
 
 describe("the browser's own Shape Detection API", () => {
+  it("asks the browser detector for its fast mode", async () => {
+    let options: unknown;
+    Reflect.set(globalThis, "FaceDetector", function FaceDetector(
+      given: unknown,
+    ) {
+      options = given;
+      return { detect: () => Promise.resolve([]) };
+    });
+
+    await detectFaces(SOURCE);
+
+    // Fast mode trades a little recall for latency, which is the right
+    // trade on a photo upload — and the artboard already refuses to
+    // promise recall. Left unset, the detector takes its slow path on
+    // every picked photo.
+    expect(options).toEqual({ fastMode: true });
+  });
+
   it("is used when the browser has one", async () => {
     const detect = vi.fn().mockResolvedValue([
       { boundingBox: { x: 10, y: 20, width: 30, height: 40 } },
@@ -230,5 +253,75 @@ describe("loading the model at most once", () => {
 
     expect(first).toEqual({ status: "unavailable" });
     expect(second).toEqual(first);
+  });
+});
+
+describe("the assets the detector asks for", () => {
+  it("names a model file this app actually ships", () => {
+    // `import.meta.glob`, not readdir: these run in the workers pool,
+    // which has no real filesystem. Vite resolves it at build time, so it
+    // sees `public/` as it is on disk.
+    const shipped = Object.keys(
+      import.meta.glob("../../public/mediapipe/*.tflite", { query: "?raw" }),
+    ).map((path) => path.replace("../../public", ""));
+
+    // The failure this guards against is the worst kind this feature
+    // has: a renamed asset means the detector silently never loads,
+    // `unavailable` is reported, the copy honestly says we could not
+    // check, and nobody finds out why.
+    expect(shipped).toContain(MODEL_PATH);
+  });
+
+  it("points the runtime at a directory under the same prefix", () => {
+    // Both come from `public/mediapipe/`, which is what `prebuild` stages
+    // and what the model is committed beside. A path that wandered would
+    // 404 at the moment a runner picks a photo.
+    expect(WASM_PATH).toBe("/mediapipe/wasm");
+    expect(MODEL_PATH.startsWith("/mediapipe/")).toBe(true);
+  });
+
+  it("asks for them from our own origin, not a CDN", () => {
+    // Fetching the model from Google at the moment a runner uploads a
+    // photo would leak the one signal this feature exists to protect.
+    expect(WASM_PATH.startsWith("/")).toBe(true);
+    expect(MODEL_PATH.startsWith("/")).toBe(true);
+    expect(`${WASM_PATH}${MODEL_PATH}`).not.toContain("//");
+  });
+});
+
+describe("turning MediaPipe's detections into regions", () => {
+  it("maps origin and size across", () => {
+    expect(
+      regionsFromDetections([
+        { boundingBox: { originX: 10, originY: 20, width: 30, height: 40 } },
+      ]),
+    ).toEqual([{ x: 10, y: 20, width: 30, height: 40 }]);
+  });
+
+  it("keeps every detection, in order", () => {
+    const regions = regionsFromDetections([
+      { boundingBox: { originX: 1, originY: 1, width: 1, height: 1 } },
+      { boundingBox: { originX: 2, originY: 2, width: 2, height: 2 } },
+    ]);
+    expect(regions.map((region) => region.x)).toEqual([1, 2]);
+  });
+
+  it("drops a detection with no box rather than defaulting one", () => {
+    // A zero region blurs nothing while letting the copy claim a face was
+    // covered — the same failure the native-detector guard refuses.
+    expect(regionsFromDetections([{ boundingBox: undefined }])).toEqual([]);
+  });
+
+  it("keeps the good ones beside a box-less one", () => {
+    expect(
+      regionsFromDetections([
+        { boundingBox: undefined },
+        { boundingBox: { originX: 5, originY: 6, width: 7, height: 8 } },
+      ]),
+    ).toEqual([{ x: 5, y: 6, width: 7, height: 8 }]);
+  });
+
+  it("finds nothing in an empty result", () => {
+    expect(regionsFromDetections([])).toEqual([]);
   });
 });
