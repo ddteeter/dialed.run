@@ -15,6 +15,7 @@
  */
 import { and, eq, inArray } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -213,19 +214,39 @@ async function hidePendingReview(
     source: "reports",
   });
 
-  if (subjectType !== "entry") {
-    await db().batch([queueWrite]);
-    return;
-  }
+  await db().batch([queueWrite, ...hideWritesFor[subjectType](subjectId)]);
+}
 
-  await db().batch([
+/**
+ * What crossing the threshold hides, per subject type.
+ *
+ * Keyed rather than written as `if (subjectType !== "entry")`, which was
+ * a branch no test could tell from its opposite: running the entry update
+ * against a product id matches no row, so both sides of it looked
+ * identical from outside. A lookup has no branch to get wrong, and
+ * `Record<ReportSubjectType, …>` makes a new subject type a compile error
+ * here rather than a silent no-op.
+ */
+const hideWritesFor: Record<
+  ReportSubjectType,
+  (subjectId: string) => BatchItem<"sqlite">[]
+> = {
+  entry: (subjectId) => [
     db()
       .update(outfitEntries)
       .set({ moderationStatus: "hidden_pending_review" })
       .where(eq(outfitEntries.id, subjectId)),
-    queueWrite,
-  ]);
-}
+  ],
+  // The three that hide nothing, and each for its own reason. A profile
+  // is a ban decision, which is a person's call. A product's rows stay
+  // visible until a reviewer removes them, because hiding a shared
+  // canonical row on three reports would take every garment linked to it
+  // down with it. A photo is the gap `review.ts` names — unwired, and
+  // the owner's call.
+  profile: () => [],
+  product: () => [],
+  photo: () => [],
+};
 
 /**
  * Whether this subject is already waiting on a person — used by the review

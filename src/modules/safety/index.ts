@@ -71,7 +71,6 @@ export {
 
 export {
   isEntryPubliclyVisible,
-  isOwnEntry,
   publiclyVisibleEntry,
 } from "./visibility";
 

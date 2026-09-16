@@ -2,14 +2,16 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { outfitEntries } from "../../src/db/schema-core";
+import { outfitEntries, reports } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   autoHideReporterThreshold,
+  claimForReview,
   distinctReporterCount,
   fileReport,
   isBlocked,
   isQueuedForReview,
+  pendingReviewQueue,
   reportedSubjectIdsFor,
 } from "../../src/modules/safety";
 
@@ -64,6 +66,48 @@ describe("the distinct-reporter threshold", () => {
     ]);
     expect(results.map((r) => r.reporterCount)).toEqual([1, 2, 3]);
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+    expect(await isQueuedForReview("entry", entryId)).toBe(true);
+  });
+
+  it("stamps when a report was filed, in seconds", async () => {
+    const entryId = await reportableEntry();
+    const before = Math.floor(Date.now() / 1000);
+
+    await fileReport({
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "spam",
+    });
+
+    const [row] = await core()
+      .select({ createdAt: reports.createdAt })
+      .from(reports);
+    // Bounded both ways: the review queue and any later audit read this
+    // column as seconds, and a millisecond value passes every one-sided
+    // assertion while sorting a report ahead of everything forever.
+    expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
+    expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
+  });
+
+  it("is still queued once a reviewer has claimed it", async () => {
+    // "Waiting on a person" covers both pending and claimed. A check
+    // that named only `pending` would tell the report sheet a subject
+    // someone is actively deciding has never been queued, and invite a
+    // second queue row for it.
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      });
+    }
+    const [queued] = await pendingReviewQueue();
+    if (!queued) throw new Error("nothing queued");
+    expect(await claimForReview(queued.id, await makeUser())).toBe("claimed");
+
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
   });
 

@@ -7,6 +7,7 @@ import {
   MODERATION_MODEL,
   ModerationError,
 } from "../../src/modules/safety/classifier/moderation";
+import type { ModerationResult } from "../../src/modules/safety/classifier/moderation";
 
 /**
  * The call itself: what we send, what we accept back, and what we do when
@@ -77,7 +78,29 @@ describe("the request", () => {
 
     expect(urlOf(fetchSpy)).toBe("https://api.openai.com/v1/moderations");
     expect(headersOf(fetchSpy).authorization).toBe("Bearer sk-test");
-    expect(bodyOf(fetchSpy)).toContain(MODERATION_MODEL);
+    // The literal, not the constant: `toContain(MODERATION_MODEL)` is
+    // satisfied by any value the constant happens to hold, including an
+    // empty string. The model name is a contract with OpenAI.
+    expect(MODERATION_MODEL).toBe("omni-moderation-latest");
+    expect(bodyOf(fetchSpy)).toContain("omni-moderation-latest");
+  });
+
+  it("posts JSON, which is the only shape the endpoint reads", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(Response.json(CLEAN_RESPONSE));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await classifyImage({
+      bytes: BYTES,
+      contentType: "image/jpeg",
+      apiKey: "sk-test",
+    });
+
+    // A GET, or a body sent without the content type, reaches the same
+    // endpoint and fails there — an outage this app would report as "we
+    // could not check this photo" for every photo, forever.
+    expect(initOf(fetchSpy).method).toBe("POST");
+    expect(headersOf(fetchSpy)["content-type"]).toBe("application/json");
+    expect(bodyOf(fetchSpy)).toContain('"type":"image_url"');
   });
 
   it("sends the image as a data URL, not a link", async () => {
@@ -175,13 +198,34 @@ describe("the response", () => {
   });
 });
 
+/**
+One attempt against whatever `fetch` is currently stubbed to do.
+*/
+function classifyJpeg(): Promise<ModerationResult> {
+  return classifyImage({ bytes: BYTES, contentType: "image/jpeg", apiKey: "k" });
+}
+
 describe("when the far side misbehaves", () => {
-  it("throws on a non-2xx", async () => {
+  it("throws on a non-2xx, naming the status", async () => {
     vi.stubGlobal("fetch", respondWith({ error: "nope" }, 503));
 
+    // The status is the whole diagnostic. 401 (a bad key), 429 (rate
+    // limited) and 503 (their outage) want three different responses
+    // from whoever reads the log, and "moderation failed" separates
+    // none of them.
+    await expect(classifyJpeg()).rejects.toThrow(ModerationError);
+    await expect(classifyJpeg()).rejects.toThrow(/503/u);
+  });
+
+  it("throws rather than reading a result that is not there", async () => {
+    vi.stubGlobal("fetch", respondWith({ results: [] }));
+
+    // A well-formed response with nothing in it. Treating it as "not
+    // flagged" would publish a photo nobody screened — degradation that
+    // produces a WRONG answer rather than none.
     await expect(
       classifyImage({ bytes: BYTES, contentType: "image/jpeg", apiKey: "k" }),
-    ).rejects.toThrow(ModerationError);
+    ).rejects.toThrow(/no results/u);
   });
 
   it("throws rather than guessing when the body is the wrong shape", async () => {

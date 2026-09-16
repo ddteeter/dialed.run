@@ -42,6 +42,13 @@ export function publiclyVisibleEntry(): SQL | undefined {
  * Takes the two fields rather than a whole row so a caller cannot pass
  * something that merely looks like an entry, and so the `select` stays
  * narrow — D1 bills rows scanned, and both callers are on a hot path.
+ *
+ * **This is the public half only.** The owner sees their own entry
+ * whatever its moderation status — the "fail open for the owner" half of
+ * the packet's rule — so every call site pairs this with an ownership
+ * check rather than replacing it. There was an `isOwnEntry` here for
+ * that, exported and called by nobody: both call sites compare the two
+ * ids themselves, which is plainer than a function wrapping `===`.
  */
 export function isEntryPubliclyVisible(entry: {
   isPublic: boolean;
@@ -50,12 +57,3 @@ export function isEntryPubliclyVisible(entry: {
   return entry.isPublic && entry.moderationStatus === "ok";
 }
 
-/**
- * Whether the viewer is the author. The owner sees their own entry whatever
- * its moderation status — that is the "fail open for the owner" half of the
- * packet's rule, and it is why every call site pairs this with the check
- * above rather than replacing it.
- */
-export function isOwnEntry(entry: { userId: string }, viewerId: string): boolean {
-  return entry.userId === viewerId;
-}

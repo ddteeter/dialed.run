@@ -113,11 +113,13 @@ describe("blocking", () => {
 });
 
 describe("a review decision", () => {
-  it("takes a queue ULID and one of two decisions", () => {
+  it.each(["approve", "remove"])("takes a queue ULID and %s", (decision) => {
+    // Both, not one: the enum names two decisions and a test that only
+    // ever sends "remove" cannot tell whether "approve" is still in it.
     const queueId = newUlid();
-    expect(reviewDecisionInput.parse({ queueId, decision: "remove" })).toEqual({
+    expect(reviewDecisionInput.parse({ queueId, decision })).toEqual({
       queueId,
-      decision: "remove",
+      decision,
     });
   });
 
@@ -159,11 +161,17 @@ describe("banning", () => {
     ).toMatchObject({ reason: "harassment" });
   });
 
-  it("caps it", () => {
-    expect(
-      banUserInput.safeParse({ userId: "u-1", reason: "x".repeat(501) })
-        .success,
-    ).toBe(false);
+  it("caps it, in the reviewer's own words", () => {
+    const result = banUserInput.safeParse({
+      userId: "u-1",
+      reason: "x".repeat(501),
+    });
+    expect(result.success).toBe(false);
+    // Error copy lives in the schema, so the sentence is part of the
+    // contract rather than an implementation detail.
+    expect(result.error?.issues[0]?.message).toBe(
+      "Keep it under 500 characters.",
+    );
   });
 
   it("trims it, so whitespace is not a reason", () => {
@@ -202,13 +210,39 @@ describe("denying a domain", () => {
     expect(result.error?.issues[0]?.message).toBe("A domain has no spaces in it.");
   });
 
-  it("refuses one longer than any real domain", () => {
+  it("refuses one longer than any real domain, and says so", () => {
+    const result = denyDomainInput.safeParse({ domain: "x".repeat(254) });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "That is longer than any real domain.",
+    );
+  });
+
+  it("trims what was pasted, because a clipboard carries whitespace", () => {
+    // Untrimmed, the stored domain would be " spam.example" and would
+    // never match the host of a link anyone actually saved.
     expect(
-      denyDomainInput.safeParse({ domain: "x".repeat(254) }).success,
-    ).toBe(false);
+      denyDomainInput.parse({ domain: "  spam.example  " }).domain,
+    ).toBe("spam.example");
   });
 
   it("makes the reason optional", () => {
     expect(denyDomainInput.parse({ domain: "spam.example" }).reason).toBeUndefined();
+  });
+
+  it("trims the reason and caps it", () => {
+    // The same treatment the domain gets. Without the cap a reviewer can
+    // paste a page into a column the review UI renders inline; without
+    // the trim, "   " is a reason.
+    expect(
+      denyDomainInput.parse({ domain: "spam.example", reason: "  spam  " })
+        .reason,
+    ).toBe("spam");
+    expect(
+      denyDomainInput.safeParse({
+        domain: "spam.example",
+        reason: "x".repeat(501),
+      }).success,
+    ).toBe(false);
   });
 });

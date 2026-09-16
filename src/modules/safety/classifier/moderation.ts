@@ -74,7 +74,12 @@ const moderationResultSchema = z.object({
 });
 
 const moderationResponseSchema = z.object({
-  results: z.array(moderationResultSchema).min(1),
+  // No `.min(1)`: the guard in `classifyImage` already refuses an empty
+  // list, and it has to — `.min(1)` narrows nothing at the type level, so
+  // the element still needs checking. Two rules for one fact meant
+  // neither could be tested, because zod rejected the empty list before
+  // the guard could see it.
+  results: z.array(moderationResultSchema),
 });
 
 export interface ModerationResult {
@@ -176,9 +181,15 @@ function scoresFrom(raw: Record<string, number>): CategoryScores {
  */
 function base64Of(bytes: Uint8Array): string {
   const CHUNK = 0x80_00;
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += CHUNK) {
-    binary += String.fromCodePoint(...bytes.subarray(index, index + CHUNK));
-  }
-  return btoa(binary);
+  // Counted rather than walked with a `<` on the byte length: `<` and
+  // `<=` there produce the same string, because the extra pass takes an
+  // empty subarray, so the comparison was a mutant no input could
+  // distinguish. A chunk count has no such slack — one too few truncates
+  // the photo and one too many appends nothing.
+  const chunks = Array.from(
+    { length: Math.ceil(bytes.length / CHUNK) },
+    (_, index) =>
+      String.fromCodePoint(...bytes.subarray(index * CHUNK, (index + 1) * CHUNK)),
+  );
+  return btoa(chunks.join(""));
 }
