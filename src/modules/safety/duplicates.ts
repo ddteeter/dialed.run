@@ -53,43 +53,47 @@ export async function duplicateProducts(
     .orderBy(asc(products.brandId), asc(products.normalizedName))
     .limit(limit);
 
-  const byBrand = new Map<string, typeof rows>();
+  // The brand's name is carried on the group rather than read back off
+  // its first row later: every row in a group has it, so a `[0]` there
+  // needed a `?? ""` for a group that cannot be empty, and an
+  // unreachable fallback is a branch no test can ever reach.
+  const byBrand = new Map<string, { brand: string; rows: typeof rows }>();
   for (const row of rows) {
     const existing = byBrand.get(row.brandId);
-    if (existing === undefined) byBrand.set(row.brandId, [row]);
-    else existing.push(row);
+    if (existing === undefined) {
+      byBrand.set(row.brandId, { brand: row.brandName, rows: [row] });
+    } else existing.rows.push(row);
   }
 
   // No length guard on the cluster: `clustersIn` never returns one
   // shorter than two, so a check here would be a branch no input can
   // reach — dead code that reads like caution.
   const found: DuplicateCandidate[] = [];
-  for (const group of byBrand.values()) {
+  for (const { brand, rows: group } of byBrand.values()) {
     const names = group.map((row) => row.normalizedName);
     for (const cluster of clustersIn(names)) {
-      found.push(candidateFrom(group, cluster));
+      found.push(candidateFrom(brand, group, cluster));
     }
   }
   return found;
 }
 
 function candidateFrom(
-  group: readonly {
-    id: string;
-    name: string;
-    normalizedName: string;
-    brandName: string;
-  }[],
+  brand: string,
+  group: readonly { id: string; name: string; normalizedName: string }[],
   cluster: readonly string[],
 ): DuplicateCandidate {
-  const members = group.filter((row) => cluster.includes(row.normalizedName));
   return {
-    brand: members[0]?.brandName ?? "",
-    products: members.map((row) => ({
-      id: row.id,
-      name: row.name,
-      normalizedName: row.normalizedName,
-    })),
+    brand,
+    // Filtered to the cluster: a brand with four products and one
+    // near-miss pair must report the pair, not the catalogue.
+    products: group
+      .filter((row) => cluster.includes(row.normalizedName))
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        normalizedName: row.normalizedName,
+      })),
   };
 }
 
@@ -132,7 +136,6 @@ export function clustersIn(names: readonly string[]): string[][] {
  * cases is what keeps the report readable.
  */
 function areNearlyTheSame(left: string, right: string): boolean {
-  if (left === right) return false;
   const leftTokens = tokensOf(left);
   const rightTokens = tokensOf(right);
 
@@ -141,10 +144,33 @@ function areNearlyTheSame(left: string, right: string): boolean {
   // be two products as one.
   if (Math.min(leftTokens.length, rightTokens.length) < 2) return false;
 
-  if (leftTokens.length === rightTokens.length) {
-    return hasOneDifferingToken(leftTokens, rightTokens);
-  }
-  return hasOneExtraMarker(leftTokens, rightTokens);
+  // **One pass over aligned positions, not two rules.** This was a pair
+  // of functions — same-length names compared position by position, and
+  // different-length ones checked for a prefix — and splitting them cost
+  // two bugs. The same-length half found the odd token and then looked
+  // its VALUE up with `indexOf`, which is the first position holding that
+  // token and not the position that differed: "tight tight" against
+  // "tight light" compared position 0 with itself and called two
+  // different garments a duplicate. And the different-length half needed
+  // guards for positions that could not be missing.
+  //
+  // Padding the shorter list makes both the same question — where do
+  // these two names disagree, and is that one place a spelling or a
+  // tacked-on marker — and makes the padding reachable instead of
+  // defensive.
+  const differing = alignedTokens(leftTokens, rightTokens).filter(
+    ([one, other]) => one !== other,
+  );
+  const [pair, ...rest] = differing;
+  if (pair === undefined || rest.length > 0) return false;
+
+  // No special case for a padded position. `areSpellingsOfOneWord("",
+  // "24")` already answers exactly what a trailing-marker check would:
+  // the empty string is a prefix of everything, so the whole question
+  // becomes the length difference — the same `<= 2` that was written
+  // twice before, once per branch.
+  const [one, other] = pair;
+  return areSpellingsOfOneWord(one, other);
 }
 
 function tokensOf(name: string): string[] {
@@ -152,36 +178,22 @@ function tokensOf(name: string): string[] {
 }
 
 /**
- * Same shape, same order, and the single position that differs holds two
- * spellings of the same word.
+ * The two token lists side by side, the shorter padded with `""`.
+ *
+ * Padding can only ever fall at the tail, so a padded position IS the
+ * extra token — and a name with two extra tokens shows up as two
+ * disagreements, which is what makes an explicit length comparison
+ * unnecessary.
  */
-function hasOneDifferingToken(
+function alignedTokens(
   left: readonly string[],
   right: readonly string[],
-): boolean {
-  const differing = left.filter((token, index) => token !== right[index]);
-  if (differing.length !== 1) return false;
-  const index = left.indexOf(differing[0] ?? "");
-  return areSpellingsOfOneWord(left[index] ?? "", right[index] ?? "");
-}
-
-/**
- * One name is the other plus a trailing marker — a year, a version, a
- * "2". The shorter must be a prefix of the longer in order, or these are
- * two different names that happen to start alike.
- */
-function hasOneExtraMarker(
-  left: readonly string[],
-  right: readonly string[],
-): boolean {
-  if (Math.abs(left.length - right.length) !== 1) return false;
-  const [shorter, longer] = left.length < right.length ? [left, right] : [right, left];
-  const isPrefix = shorter.every((token, index) => token === longer[index]);
-  if (!isPrefix) return false;
-  const extra = longer.at(-1) ?? "";
-  // A marker, not a whole new word: "short 2" is the same short, "short
-  // winter" is a different garment.
-  return extra.length <= 2;
+): (readonly [string, string])[] {
+  const length = Math.max(left.length, right.length);
+  return Array.from(
+    { length },
+    (_, index) => [left[index] ?? "", right[index] ?? ""] as const,
+  );
 }
 
 /**
@@ -191,10 +203,19 @@ function hasOneExtraMarker(
  * Levenshtein at this threshold pairs "tight" with "light", which is two
  * different garments and exactly the kind of false pair that makes a
  * report get ignored.
+ *
+ * It is also what decides a trailing marker, because a padded position
+ * asks the same question with one side empty: "short 2" is the same
+ * short ("" against "2"), "short winter" is a different garment (""
+ * against "winter").
+ *
+ * Asked in both directions rather than by sorting the two by length,
+ * because which one is longer does not matter and the comparison that
+ * decided it was an equivalent mutant — `<` and `<=` pick differently
+ * only for equal-length strings, where neither can be a proper prefix of
+ * the other anyway.
  */
 function areSpellingsOfOneWord(left: string, right: string): boolean {
-  if (left === "" || right === "") return false;
-  const [shorter, longer] = left.length < right.length ? [left, right] : [right, left];
-  if (!longer.startsWith(shorter)) return false;
-  return longer.length - shorter.length <= 2;
+  if (!left.startsWith(right) && !right.startsWith(left)) return false;
+  return Math.abs(left.length - right.length) <= 2;
 }

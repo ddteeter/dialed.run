@@ -153,6 +153,51 @@ describe("the edges of the matching rule", () => {
   it("refuses two names that differ in two positions", () => {
     expect(clustersIn(["thermal tight blue", "thermal tights red"])).toEqual([]);
   });
+
+  it("compares the position that differs, not the first token spelled that way", () => {
+    // The rule found the odd token and then looked its VALUE up with
+    // `indexOf`, which is the first position holding that token rather
+    // than the position that differed: here it compared "tight" at
+    // position 0 with itself, decided the two names were spellings of
+    // one word, and paired two different garments.
+    expect(clustersIn(["tight tight", "tight light"])).toEqual([]);
+  });
+
+  it("refuses a one-word name even when the other is it plus a marker", () => {
+    // The two-token floor comes first. Without it "tight" and "tight 2"
+    // read as a marker pair, and a one-word name shares too little to be
+    // worth an operator's attention either way.
+    expect(clustersIn(["tight", "tight 2"])).toEqual([]);
+  });
+
+  it("accepts a two-character difference inside a token and refuses three", () => {
+    // The boundary itself, which "tight"/"tights" (one) and
+    // "tight"/"tightest" (three) leave untested: a model number written
+    // two ways is the case that lands exactly on it.
+    expect(clustersIn(["elite 10", "elite 1000"])).toHaveLength(1);
+    expect(clustersIn(["elite 10", "elite 10000"])).toEqual([]);
+  });
+
+  it("reads the two spellings in either order", () => {
+    // The prefix question is asked both ways round, and only ONE of the
+    // two runs for a given pair — the first short-circuits the second.
+    // Every other test here hides that, because `clustersIn` reaches
+    // each pair from both ends and a half-working rule still finds the
+    // cluster on the second pass. Three names, longest first, is what
+    // makes the halves visible: asking in one direction only, "elite
+    // 1000" collects nothing, and the mess arrives as two overlapping
+    // clusters instead of one.
+    expect(
+      clustersIn(["elite 1000", "elite 100", "elite 10"]),
+    ).toEqual([["elite 1000", "elite 100", "elite 10"]]);
+  });
+
+  it("is not a near-miss when two names hold the very same tokens", () => {
+    // Nothing disagrees, so there is no one place to judge. These are
+    // the same name rather than a near-miss, and `products_brand_name`
+    // already makes them impossible to store.
+    expect(clustersIn(["thermal  tight", "thermal tight"])).toEqual([]);
+  });
 });
 
 async function brandWith(
@@ -196,6 +241,19 @@ describe("the report over real rows", () => {
     expect(
       found[0]?.products.map((p) => p.name).toSorted((a, b) => a.localeCompare(b)),
     ).toEqual(["Thermal Tight", "Thermal Tights"]);
+  });
+
+  it("reports the pair, not the brand's whole catalogue", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights", "Rapid Short"]);
+
+    const found = await duplicateProducts();
+
+    // The candidate is filtered to the cluster. Handing back every row
+    // under the brand would tell an operator to look at products that
+    // are not duplicates of anything.
+    expect(found).toHaveLength(1);
+    expect(found[0]?.products).toHaveLength(2);
+    expect(found[0]?.products.map((p) => p.name)).not.toContain("Rapid Short");
   });
 
   it("does not pair the same name across two brands", async () => {
