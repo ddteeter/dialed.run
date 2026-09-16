@@ -165,3 +165,31 @@ function countOf(count: number, noun: string): string {
   const word = WORDS[count - 1] ?? String(count);
   return `${word} ${noun}${count === 1 ? "" : "s"}`;
 }
+
+/**
+ * The detector's answer as regions to blur.
+ *
+ * Pure, and here rather than inline in the component, because inline its
+ * wrong branch was a crash rather than a wrong answer: reading
+ * `outcome.faces` on an `unavailable` outcome throws inside a React
+ * effect, which a test can only observe as the runner losing the screen.
+ * Asked directly it is simply the wrong list.
+ */
+export function detectedRegions(outcome: DetectionAnswer): BlurRegion[] {
+  return outcome.status === "ran"
+    ? outcome.faces.map((face) => ({ ...face, source: "detected" }))
+    : [];
+}
+
+/**
+ * What a detector answered.
+ *
+ * Defined here, where the regions are, and imported by `detect.ts` as
+ * `DetectionOutcome` rather than declared twice. A union rather than a
+ * status plus an optional list: `faces` is not optional on an answer that
+ * ran, and writing it as though it were needs a `?? []` for a case the
+ * type already rules out.
+ */
+export type DetectionAnswer =
+  | { status: "ran"; faces: readonly Region[] }
+  | { status: "unavailable" };

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -171,6 +171,102 @@ describe("filing a report", () => {
       expect(screen.getByText("Pick what's wrong with it.")).toBeInTheDocument();
     });
     expect(fileReport).not.toHaveBeenCalled();
+  });
+
+  it("starts with an empty note, so nothing is sent that nobody typed", () => {
+    renderSheet();
+
+    // The note is free text on a sheet whose words are the runner's. A
+    // pre-filled one puts words in their mouth and files them.
+    expect(screen.getByLabelText(/Anything else/)).toHaveValue("");
+  });
+
+  it("sends a note when one was typed", async () => {
+    const user = userEvent.setup();
+    const { fileReport } = renderSheet();
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.type(screen.getByLabelText(/Anything else/), "they keep at it");
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalled();
+    });
+    const [call] = vi.mocked(fileReport).mock.calls;
+    expect(call?.[0].data.note).toBe("they keep at it");
+  });
+
+  it("sends no note at all rather than an empty one", async () => {
+    const user = userEvent.setup();
+    const { fileReport } = renderSheet();
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalled();
+    });
+    // `undefined`, not `""`. A missing note and an empty note are the
+    // same fact, and storing two spellings of it is how one gets missed
+    // by a reader later.
+    const [call] = vi.mocked(fileReport).mock.calls;
+    expect(call?.[0].data.note).toBeUndefined();
+  });
+
+  it("says the report was sent, in the artboard's words", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    // The forms contract puts the outcome in a status region. Silence
+    // after a send is indistinguishable from a send that failed.
+    await waitFor(() => {
+      expect(screen.getByText("Report sent.")).toBeInTheDocument();
+    });
+  });
+
+  it("names the fields in the summary the way the sheet labels them", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+
+    // Two errors at once — a missing reason and an over-long note — which
+    // is what brings the summary out. Without the labels it lists the
+    // schema's field names, so a reporter reads "note" and "reason"
+    // rather than the words above the inputs they just filled in.
+    await user.type(screen.getByLabelText(/Anything else/), "x".repeat(501));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Nothing saved")).toBeInTheDocument();
+    });
+    const summary = screen.getByText("Nothing saved").parentElement;
+    if (!summary) throw new Error("the summary has no container");
+    expect(within(summary).getByText(/What's wrong with it/)).toBeInTheDocument();
+    expect(within(summary).getByText(/Anything else/)).toBeInTheDocument();
+  });
+
+  it("keeps the browser out of it, so a failed report does not reload the page", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    let prevented: boolean | undefined;
+    document.addEventListener(
+      "submit",
+      (event) => {
+        prevented = event.defaultPrevented;
+      },
+      { once: true },
+    );
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    // A native submit navigates, which throws away the sheet, the status
+    // region and any error the server was about to report.
+    await waitFor(() => {
+      expect(prevented).toBe(true);
+    });
   });
 
   it("never disables the submit button", async () => {

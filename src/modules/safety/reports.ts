@@ -19,7 +19,12 @@ import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { drizzle } from "drizzle-orm/d1";
 
-import { outfitEntries, reports, reviewQueue } from "../../db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  reports,
+  reviewQueue,
+} from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
@@ -237,15 +242,25 @@ const hideWritesFor: Record<
       .set({ moderationStatus: "hidden_pending_review" })
       .where(eq(outfitEntries.id, subjectId)),
   ],
-  // The three that hide nothing, and each for its own reason. A profile
-  // is a ban decision, which is a person's call. A product's rows stay
-  // visible until a reviewer removes them, because hiding a shared
-  // canonical row on three reports would take every garment linked to it
-  // down with it. A photo is the gap `review.ts` names — unwired, and
-  // the owner's call.
+  // A photo hides the way the classifier hides one, and into the same
+  // state for the same reason: `hidden_pending_review` is exactly "not
+  // public, a person will look", which is what crossing the threshold
+  // means. Entry photos only — a garment photo carries the same subject
+  // type but lives in `wardrobe_items.visibility`, and a closet is
+  // private, so nobody but its owner can see one to report it.
+  photo: (subjectId) => [
+    db()
+      .update(entryPhotos)
+      .set({ screenStatus: "hidden_pending_review" })
+      .where(eq(entryPhotos.id, subjectId)),
+  ],
+  // The two that hide nothing, each for its own reason. A profile is a
+  // ban decision, which is a person's call with its own path and its own
+  // notice. A product's rows stay visible until a reviewer removes them,
+  // because hiding a shared canonical row on three reports would take
+  // every garment linked to it down with it.
   profile: () => [],
   product: () => [],
-  photo: () => [],
 };
 
 /**

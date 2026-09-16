@@ -1,8 +1,8 @@
 import type { JSX } from "react";
-import { useState } from "react";
 
 import { Bracketed, ListSection } from "../../../ui";
 import type { BlockedRunner } from "../blocks";
+import { useSettled } from "./use-settled";
 
 /**
  * W2 · BLOCKED RUNNERS.
@@ -31,11 +31,11 @@ export function BlockedRunners({
   blocked: readonly BlockedRunner[];
   unblock: (input: { data: { userId: string } }) => Promise<unknown>;
 }>): JSX.Element {
-  // Optimistic, and safe to be: `unblockRunner` is a delete that is
-  // idempotent, so the worst case of a failed request is a row that
-  // reappears on the next load rather than a lie that persists.
-  const [removed, setRemoved] = useState<readonly string[]>([]);
-  const visible = blocked.filter((runner) => !removed.includes(runner.userId));
+  // Optimistic; `useSettled` says why that is safe here.
+  const { remaining: visible, settle } = useSettled(
+    blocked,
+    (runner) => runner.userId,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,7 +81,7 @@ export function BlockedRunners({
                 type="button"
                 className="text-xs font-semibold uppercase tracking-wide"
                 onClick={() => {
-                  setRemoved((ids) => [...ids, runner.userId]);
+                  settle(runner.userId);
                   void unblock({ data: { userId: runner.userId } });
                 }}
               >

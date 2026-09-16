@@ -23,17 +23,19 @@
  * still works, and the copy says we could not check rather than claiming a
  * clean sweep we never made.
  */
-import type { Region } from "./regions";
+import type { DetectionAnswer, Region } from "./regions";
 
-export type DetectionOutcome =
-  | { status: "ran"; faces: readonly Region[] }
-  /**
-   * No detector on this browser. NOT the same as finding nothing, and
-   * kept distinct all the way to the copy: "no face found" after looking
-   * and after not looking are the same words describing very different
-   * states.
-   */
-  | { status: "unavailable" };
+/**
+ * What this module answers with.
+ *
+ * `unavailable` is NOT the same as finding nothing, and the distinction is
+ * kept all the way to the copy: "no face found" after looking and after
+ * not looking are the same words describing very different states.
+ *
+ * The shape itself lives in `./regions`, next to the mapping that reads
+ * it, so there is one definition rather than two that agree today.
+ */
+export type DetectionOutcome = DetectionAnswer;
 
 /**
  * The shape a model-backed detector must present. Whatever ships behind

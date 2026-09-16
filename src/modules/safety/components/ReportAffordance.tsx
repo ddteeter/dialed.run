@@ -39,8 +39,13 @@ export function ReportAffordance({
   // signed-out reporter has no identity for the distinct-reporter count
   // to be counted against, which is the rule the whole threshold rests on.
   if (viewerId === undefined) return undefined;
-  if (subject.authorId !== undefined && subject.authorId === viewerId) {
-    return undefined;
+  // No `authorId !== undefined` in front of this. `viewerId` is known
+  // defined by the line above, so an absent author can never equal it —
+  // the extra check was a condition no input could make false on its own.
+  if (subject.authorId === viewerId) return undefined;
+
+  function close(): void {
+    setIsOpen(false);
   }
 
   return (
@@ -56,9 +61,13 @@ export function ReportAffordance({
       </button>
       <ReportSheet
         open={isOpen}
-        onClose={() => {
-          setIsOpen(false);
-        }}
+        // One closer for both. `ReportSheet` calls `onFiled` and then
+        // `onClose` on success, and this component has nothing to do with
+        // the report once it has gone — so two handlers here were two
+        // spellings of "shut the sheet", the second of which nothing
+        // could observe. A screen that wants to refresh after a report
+        // takes that up with `ReportSheet` directly.
+        onClose={close}
         subject={subject}
         // A block needs somebody to block. An entry report names the
         // entry, not its author, so the checkbox is offered only where
@@ -66,9 +75,7 @@ export function ReportAffordance({
         // on the write side.
         canBlock={subject.type === "profile" && subject.authorId !== undefined}
         fileReport={fileReport}
-        onFiled={() => {
-          setIsOpen(false);
-        }}
+        onFiled={close}
       />
     </>
   );

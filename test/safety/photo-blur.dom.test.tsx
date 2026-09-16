@@ -1,10 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { PhotoBlur } from "../../src/modules/safety/components/PhotoBlur";
-import type { BlurPipeline } from "../../src/modules/safety/blur/pipeline";
+import type {
+  BlurPipeline,
+  LoadedImage,
+} from "../../src/modules/safety/blur/pipeline";
+import type { DetectionOutcome } from "../../src/modules/safety/blur/detect";
 import type { BlurRegion } from "../../src/modules/safety/blur/regions";
 
 /**
@@ -338,5 +342,235 @@ describe("when the canvas cannot produce a file", () => {
     // A fallback to `file` here would upload exactly the frame this
     // screen promises never leaves the device, and would do it silently.
     expect(onReady).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A second file, so the component sees the prop change.
+ */
+const OTHER = new File([new Uint8Array([4])], "other.jpg", {
+  type: "image/jpeg",
+});
+
+const ONE_FACE = { x: 1, y: 1, width: 10, height: 10 };
+
+describe("when the runner picks a second photo mid-check", () => {
+  it("does not apply the first photo's faces to the second", async () => {
+    // The case the cancellation flag is really for. An unmount cannot
+    // show it — React drops a setState on an unmounted tree silently —
+    // but a *changed* file leaves the component mounted and perfectly
+    // willing to accept the old photo's answer about the new photo.
+    const first = Promise.withResolvers<DetectionOutcome>();
+    let calls = 0;
+    const { pipeline } = fakePipeline({
+      detect: () => {
+        calls += 1;
+        return calls === 1
+          ? first.promise
+          : Promise.resolve({ status: "ran", faces: [] });
+      },
+    });
+    const view = render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(calls).toBe(1);
+    });
+
+    view.rerender(
+      <PhotoBlur
+        file={OTHER}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/No face found/)).toBeInTheDocument();
+    });
+    await act(async () => {
+      first.resolve({ status: "ran", faces: [ONE_FACE] });
+      await first.promise;
+    });
+
+    // Still "no face found" — the second photo's answer. Without the
+    // guard the copy claims a face was blurred on a photo whose detector
+    // found none, at coordinates from a different image.
+    await waitFor(() => {
+      expect(screen.getByText(/No face found/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/We blurred/)).not.toBeInTheDocument();
+  });
+
+  it("does not decode the first photo over the second", async () => {
+    // The earlier await. A load that resolves after the file changed
+    // would hand the canvas the wrong image while the copy describes the
+    // right one.
+    const first = Promise.withResolvers<LoadedImage>();
+    const firstImage = {} as ImageBitmap;
+    const secondImage = {} as ImageBitmap;
+    let calls = 0;
+    const { pipeline } = fakePipeline({
+      load: () => {
+        calls += 1;
+        return calls === 1
+          ? first.promise
+          : Promise.resolve({ image: secondImage, width: 20, height: 20 });
+      },
+    });
+    const drawn: CanvasImageSource[] = [];
+    const watching: BlurPipeline = {
+      ...pipeline,
+      paint: (_canvas, image) => {
+        drawn.push(image);
+      },
+    };
+    const view = render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={watching}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(calls).toBe(1);
+    });
+
+    view.rerender(
+      <PhotoBlur
+        file={OTHER}
+        onReady={vi.fn()}
+        pipeline={watching}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(drawn).toContain(secondImage);
+    });
+    await act(async () => {
+      first.resolve({ image: firstImage, width: 10, height: 10 });
+      await first.promise;
+    });
+
+    expect(drawn).not.toContain(firstImage);
+  });
+});
+
+describe("the first paint", () => {
+  it("carries no regions, so nothing is blurred that nothing found", async () => {
+    // The detector is held open, so what gets painted first is the
+    // starting list rather than its answer.
+    const held = Promise.withResolvers<DetectionOutcome>();
+    const { pipeline, painted } = fakePipeline({ detect: () => held.promise });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    // The photo is drawn through before the detector has said anything.
+    // A non-empty starting list would smear a rectangle over every photo
+    // in the app and credit it to a tap nobody made.
+    await waitFor(() => {
+      expect(painted.length).toBeGreaterThan(0);
+    });
+    expect(painted[0]).toEqual([]);
+    held.resolve({ status: "ran", faces: [] });
+  });
+});
+
+describe("when the caller swaps its callback", () => {
+  it("hands the bytes to the current one, not the one from first render", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { pipeline } = fakePipeline();
+    const view = render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={first}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(first).toHaveBeenCalled();
+    });
+
+    view.rerender(
+      <PhotoBlur
+        file={OTHER}
+        onReady={second}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    // A publisher that closed over the first render's callback would keep
+    // handing blurred bytes to a parent that has moved on — the verdict
+    // form would upload the previous photo.
+    await waitFor(() => {
+      expect(second).toHaveBeenCalled();
+    });
+  });
+});
+
+describe("before the photo has decoded", () => {
+  it("shows no canvas at all, so there is nothing to tap onto", async () => {
+    const held = Promise.withResolvers<LoadedImage>();
+    const { pipeline, painted } = fakePipeline({ load: () => held.promise });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    // A canvas on screen while the copy still says "checking" is a blank
+    // rectangle that accepts taps it cannot place — the coordinates map
+    // onto an image that does not exist yet.
+    expect(screen.getByText("Checking this photo…")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/Tap a spot to blur it/),
+    ).not.toBeInTheDocument();
+
+    held.resolve({ image: {} as ImageBitmap, width: 100, height: 100 });
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tap a spot to blur it/)).toBeInTheDocument();
+    });
+    expect(painted.length).toBeGreaterThan(0);
+  });
+});
+
+describe("the blur toggle itself", () => {
+  it("is a named, writable control, not a decoration", () => {
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    // `ToggleField` takes the form primitives' field props, and this
+    // toggle is not inside a form — so the props are supplied by hand and
+    // nothing else checks them. Without a name the control has no
+    // identity; marked readonly it reads to assistive tech as one a
+    // runner cannot change, which is the opposite of what it is.
+    const toggle = screen.getByRole("checkbox", { name: /Blur faces/ });
+    expect(toggle).toHaveAttribute("name", "blurFaces");
+    expect(toggle).not.toHaveAttribute("readonly");
   });
 });

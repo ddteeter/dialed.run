@@ -1,11 +1,16 @@
 import type { JSX } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ToggleField } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
-import { browserPipeline, type BlurPipeline } from "../blur/pipeline";
+import {
+  browserPipeline,
+  type BlurPipeline,
+  type LoadedImage,
+} from "../blur/pipeline";
 import {
   blurSummary,
+  detectedRegions,
   tapRegion,
   toImageCoordinates,
   type BlurRegion,
@@ -52,15 +57,33 @@ export function PhotoBlur({
   */
   storage?: Storage | undefined;
 }>): JSX.Element {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const loadedRef = useRef<{ image: ImageBitmap } | undefined>(undefined);
+  /**
+   * The canvas, held as state through a callback ref rather than in a
+   * `useRef`.
+   *
+   * A ref is never `null` by the time the paint effect runs, so the guard
+   * it needed was a branch no input could reach. As state it is genuinely
+   * absent until the element mounts — and it only mounts once there is a
+   * photo to draw — so the effect's dependency on it is real and the
+   * check is a fact rather than a formality.
+   */
+  const [canvas, setCanvas] = useState<HTMLCanvasElement>();
 
   const [isOn, setIsOn] = useState(() => shouldBlurFaces(storage));
   const [phase, setPhase] = useState<"checking" | "ran" | "unavailable">(
     "checking",
   );
   const [regions, setRegions] = useState<readonly BlurRegion[]>([]);
-  const [size, setSize] = useState<{ width: number; height: number }>();
+  /**
+   * The decoded image and its dimensions, in one piece of state.
+   *
+   * They used to be a ref for the image and separate state for the size,
+   * written one line apart and therefore always both present or both
+   * absent — which meant every reader carried two checks for one fact and
+   * neither of them could be wrong on its own. Three guards in this file
+   * were that shape.
+   */
+  const [loaded, setLoaded] = useState<LoadedImage>();
 
   /**
    * Repaints and hands the caller the bytes that should be uploaded.
@@ -70,28 +93,30 @@ export function PhotoBlur({
    * worst failure this component could have.
    */
   const publish = useCallback(
-    async (next: readonly BlurRegion[]) => {
-      const canvas = canvasRef.current;
-      const loaded = loadedRef.current;
-      if (!canvas || !loaded || !size) return;
-      pipeline.paint(canvas, loaded.image, size.width, size.height, next);
-      const blurred = await pipeline.toFile(canvas, file.name);
+    async (
+      next: readonly BlurRegion[],
+      image: LoadedImage,
+      target: HTMLCanvasElement,
+    ) => {
+      pipeline.paint(target, image.image, image.width, image.height, next);
+      const blurred = await pipeline.toFile(target, file.name);
       // No fallback to `file`. Handing back the original because the
       // canvas failed would upload exactly the frame this screen promises
       // never leaves the device, and would do it silently.
       if (blurred !== undefined) onReady(blurred);
     },
-    [file.name, onReady, pipeline, size],
+    [file.name, onReady, pipeline],
   );
 
   useEffect(() => {
-    // Read through a function, not as a variable or a property. Either of
-    // those gets narrowed to `false` by the first check and every check
-    // after it is then reported as dead code — exactly backwards, since
-    // the point is that the cleanup writes it later, after an await this
-    // narrowing does not account for.
-    const effect = { isCancelled: false };
-    const isStale = (): boolean => effect.isCancelled;
+    // An AbortController rather than a mutable flag object. The flag
+    // needed an initial `false` that nothing could observe — the cleanup
+    // writes the property whether or not it started there — and reading
+    // it through a function to dodge TypeScript's narrowing, which treats
+    // every check after the first as dead code. A signal has neither
+    // problem and says what it means.
+    const effect = new AbortController();
+    const isStale = (): boolean => effect.signal.aborted;
     async function run(): Promise<void> {
       if (!isOn) {
         // Blur off: the original is what gets uploaded, said plainly
@@ -100,32 +125,31 @@ export function PhotoBlur({
         onReady(file);
         return;
       }
-      const loaded = await pipeline.load(file);
+      const decoded = await pipeline.load(file);
       if (isStale()) return;
-      loadedRef.current = { image: loaded.image };
-      setSize({ width: loaded.width, height: loaded.height });
+      setLoaded(decoded);
 
-      const outcome = await pipeline.detect(loaded.image);
+      const outcome = await pipeline.detect(decoded.image);
       if (isStale()) return;
       setPhase(outcome.status);
-      setRegions(
-        outcome.status === "ran"
-          ? outcome.faces.map((face) => ({ ...face, source: "detected" }))
-          : [],
-      );
+      setRegions(detectedRegions(outcome));
     }
     void run();
     return () => {
-      effect.isCancelled = true;
+      effect.abort();
     };
   }, [file, isOn, onReady, pipeline]);
 
   // Painting follows the regions rather than happening inside the handler
   // that changed them, so a detection and a tap take the same path.
+  // One value for "there is a decoded photo and blur is on", rather than
+  // two conditions in the effect: the pair was two mutants where the fact
+  // is one.
+  const ready = isOn ? loaded : undefined;
   useEffect(() => {
-    if (!isOn || !size) return;
-    void publish(regions);
-  }, [isOn, publish, regions, size]);
+    if (!canvas || !ready) return;
+    void publish(regions, ready, canvas);
+  }, [canvas, publish, ready, regions]);
 
   const detected = regions.filter((r) => r.source === "detected").length;
   const tapped = regions.length - detected;
@@ -149,36 +173,44 @@ export function PhotoBlur({
       {isOn ? (
         <>
           <p aria-live="polite" className="text-sm">
+            {/* `phase` narrows to "ran" | "unavailable" here, which is
+                exactly what blurSummary wants. It used to be re-derived
+                with a `phase === "ran" ? "ran" : "unavailable"`, and that
+                ternary was a mutant no input could distinguish. */}
             {phase === "checking"
               ? "Checking this photo…"
-              : blurSummary({
-                  detector: phase === "ran" ? "ran" : "unavailable",
-                  detected,
-                  tapped,
-                })}
+              : blurSummary({ detector: phase, detected, tapped })}
           </p>
-          <canvas
-            ref={canvasRef}
-            aria-label="Outfit photo. Tap a spot to blur it."
-            className="h-auto w-full cursor-crosshair"
-            onClick={(event) => {
-              if (!size) return;
-              const point = toImageCoordinates(
-                event.clientX,
-                event.clientY,
-                event.currentTarget.getBoundingClientRect(),
-                size.width,
-                size.height,
-              );
-              setRegions((current) => [
-                ...current,
-                {
-                  ...tapRegion(point.x, point.y, size.width, size.height),
-                  source: "tapped",
-                },
-              ]);
-            }}
-          />
+          {/* Rendered only once there is a decoded photo. A canvas on
+              screen while the copy still says "checking" is a blank
+              rectangle that accepts taps it cannot place — and the guard
+              that used to catch that lived inside the handler, where a
+              throw is swallowed and no test can see it. */}
+          {ready === undefined ? undefined : (
+            <canvas
+              ref={(node) => {
+                setCanvas(node ?? undefined);
+              }}
+              aria-label="Outfit photo. Tap a spot to blur it."
+              className="h-auto w-full cursor-crosshair"
+              onClick={(event) => {
+                const point = toImageCoordinates(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget.getBoundingClientRect(),
+                  ready.width,
+                  ready.height,
+                );
+                setRegions((current) => [
+                  ...current,
+                  {
+                    ...tapRegion(point.x, point.y, ready.width, ready.height),
+                    source: "tapped",
+                  },
+                ]);
+              }}
+            />
+          )}
           <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
             Tap to blur
           </p>

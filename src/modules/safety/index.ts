@@ -61,6 +61,7 @@ export {
   claimForReview,
   pendingReviewCount,
   pendingReviewQueue,
+  reasonsFrom,
   resolveReview,
   type ClaimOutcome,
   type QueueRow,

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -25,6 +25,13 @@ function renderAffordance(overrides: Partial<Props> = {}) {
     />,
   );
   return { fileReport };
+}
+
+/**
+Whether the sheet's native <dialog> is currently open.
+*/
+function isSheetOpen(): boolean {
+  return document.querySelector("dialog")?.open ?? false;
 }
 
 describe("who is offered a report control", () => {
@@ -123,6 +130,56 @@ describe("opening and closing", () => {
       subjectType: "entry",
       subjectId: "e-1",
       reason: "spam",
+    });
+  });
+});
+
+describe("closing the sheet", () => {
+  it("shuts when the reporter backs out", async () => {
+    const user = userEvent.setup();
+    renderAffordance();
+    await user.click(screen.getByRole("button", { name: "Report" }));
+    expect(isSheetOpen()).toBe(true);
+
+    // `Sheet` is a native <dialog> and reports through its `close` event,
+    // which is what Escape and the backdrop both raise in a browser.
+    // happy-dom does not synthesise it from a key press, so the event
+    // itself is what this drives.
+    await act(async () => {
+      document.querySelector("dialog")?.close();
+      await Promise.resolve();
+    });
+
+    // A sheet that will not close traps the runner on a form they opened
+    // by accident.
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(false);
+    });
+
+    // And it opens again. The dialog closing is the browser's doing; what
+    // this proves is that the component heard about it — a handler that
+    // never ran leaves `isOpen` true, and pressing Report changes nothing
+    // because nothing changed.
+    await user.click(screen.getByRole("button", { name: "Report" }));
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(true);
+    });
+  });
+
+  it("shuts once the report has gone", async () => {
+    const user = userEvent.setup();
+    renderAffordance();
+    await user.click(screen.getByRole("button", { name: "Report" }));
+
+    await user.click(
+      screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    // A sheet left up over a report that already went reads as a failure
+    // and invites a second one.
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(false);
     });
   });
 });

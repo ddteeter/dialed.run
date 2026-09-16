@@ -7,18 +7,27 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core/query-builders/update";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { drizzle } from "drizzle-orm/d1";
 
-import { outfitEntries, products, reviewQueue } from "../../db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  products,
+  reports,
+  reviewQueue,
+} from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere } from "../../lib/keyed-read";
 import { orSqlNull } from "../../lib/sql-null";
 import { newUlid } from "../../lib/ids";
 
-import type { ReportSubjectType } from "./contracts";
+import { reportReasonSchema } from "./contracts";
+import type { ReportReason, ReportSubjectType } from "./contracts";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -81,6 +90,17 @@ export interface QueueRow {
   subjectId: string;
   source: "reports" | "classifier";
   createdAt: number;
+  /**
+   * How many distinct people reported this subject, and what they said was
+   * wrong with it.
+   *
+   * **Both are the review screen's whole content.** Without them a row is
+   * a subject type and a ULID, and a reviewer pressing Approve is
+   * approving an identifier. Zero and empty are the honest answer for a
+   * classifier-sourced row, which nobody reported.
+   */
+  reporterCount: number;
+  reasons: readonly ReportReason[];
 }
 
 /**
@@ -92,18 +112,71 @@ export interface QueueRow {
  * rows nobody looks at.
  */
 export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
-  return db()
+  // **One joined, grouped read rather than a second pass over the ids.**
+  // The reports are what the reviewer is being asked about, so they are
+  // not a detail to fetch afterwards — and fetching them afterwards needs
+  // an `if (rows.length === 0)` in front of the second query, which is a
+  // branch nothing can observe (see `blockedRunners`, which had one).
+  //
+  // LEFT, because a classifier-sourced row has no reports at all and must
+  // still appear. `group_concat` is SQLite's only way to bring a set back
+  // in one column; it is parsed rather than trusted on the way out.
+  const rows = await db()
     .select({
       id: reviewQueue.id,
       subjectType: reviewQueue.subjectType,
       subjectId: reviewQueue.subjectId,
       source: reviewQueue.source,
       createdAt: reviewQueue.createdAt,
+      reporterCount: sql<number>`count(distinct ${reports.reporterId})`,
+      reasons: sql<string | null>`group_concat(distinct ${reports.reason})`,
     })
     .from(reviewQueue)
+    .leftJoin(
+      reports,
+      and(
+        eq(reports.subjectType, reviewQueue.subjectType),
+        eq(reports.subjectId, reviewQueue.subjectId),
+      ),
+    )
     .where(eq(reviewQueue.status, "pending"))
+    .groupBy(reviewQueue.id)
     .orderBy(asc(reviewQueue.createdAt))
     .limit(limit);
+
+  return rows.map((row) => ({
+    id: row.id,
+    subjectType: row.subjectType,
+    subjectId: row.subjectId,
+    source: row.source,
+    createdAt: row.createdAt,
+    reporterCount: row.reporterCount,
+    reasons: reasonsFrom(row.reasons),
+  }));
+}
+
+/**
+ * `group_concat`'s comma-joined string as the reasons it stands for.
+ *
+ * Parsed, not split and trusted: this comes back out of SQLite as one
+ * opaque column, and a value that is not a reason this app knows about
+ * would otherwise reach a label lookup and render as nothing. Anything
+ * unrecognised is dropped rather than shown, because a reviewer reading a
+ * blank line cannot tell it from a reason with no words.
+ */
+export function reasonsFrom(concatenated: string | null): ReportReason[] {
+  // Null explicitly, rather than `?? ""` and letting the split produce a
+  // list of one empty string that the parse then drops. Both reach the
+  // same answer, which is what made the fallback untestable — and a row
+  // nobody reported is a real case, not a defensive one.
+  if (concatenated === null) return [];
+  // One rule, asked once. A `known` Set in front of a `.parse()` was two
+  // spellings of the same question, and the Set made the parse
+  // unreachable on the only input that could have thrown.
+  return concatenated.split(",").flatMap((value) => {
+    const parsed = reportReasonSchema.safeParse(value);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 /**
@@ -263,33 +336,72 @@ const subjectWriters: Record<
   (subjectId: string, decision: ReviewDecision) => BatchItem<"sqlite">[]
 > = {
   entry: (subjectId, decision) => [
-    db()
-      .update(outfitEntries)
-      .set({ moderationStatus: decision === "approve" ? "ok" : "removed" })
-      .where(eq(outfitEntries.id, subjectId)),
+    setOnSubject(outfitEntries, subjectId, {
+      moderationStatus: onDecision(decision, "ok", "removed"),
+    }),
   ],
   // Hidden products drop out of autocomplete and linked garments fall
   // back to their own text fields (packet §2) — the column 000 reserved
   // for exactly this.
   product: (subjectId, decision) => [
-    db()
-      .update(products)
-      .set({ status: decision === "approve" ? "active" : "hidden" })
-      .where(eq(products.id, subjectId)),
+    setOnSubject(products, subjectId, {
+      status: onDecision(decision, "active", "hidden"),
+    }),
   ],
   // Deliberately nothing: removing a person is a ban, which has its own
   // path and its own notice.
   profile: () => [],
-  // **Not deliberate — unwired, and this Record is what made it
-  // visible.** The `if` chain this replaced fell through to `[]` for any
-  // type it did not name, so a reviewer pressing Remove on a reported
-  // photo settled the queue row and did nothing to the photo. No UI
-  // files one today, but `reportInputSchema` accepts `subjectType:
-  // "photo"`, so a request can. What Remove should write is a product
-  // call — `entry_photos.screen_status` has `flagged` and
-  // `hidden_pending_review`, both of which stop every public read, but
-  // `flagged` is the classifier's word and a person's decision is not
-  // the classifier's — so it is the owner's to make, not this file's.
-  photo: () => [],
+  // Approve sends a photo back to `pending`, NOT to `pass`: it can reach
+  // this queue never having been screened, and `pass` would publish bytes
+  // no classifier saw. Remove settles as `flagged`, which nothing else
+  // writes. Entry photos only — a garment photo lives in
+  // `wardrobe_items.visibility` and a private closet has no strangers to
+  // report it. Owner's call, 2026-09-15; the reasoning is in
+  // docs/designs/106-trust-safety.md.
+  photo: (subjectId, decision) => [
+    setOnSubject(entryPhotos, subjectId, {
+      screenStatus: onDecision(decision, "pending", "flagged"),
+    }),
+  ],
 };
+
+/**
+ * One column set on the row a report named.
+ *
+ * Three writers above differ only in table, column and the pair of
+ * values, and repeating `update(…).set(…).where(eq(…))` around each made
+ * them one shape the clone detector was right to flag. Extracting the
+ * ternary alone did not fix it, because the skeleton itself was the
+ * repeat.
+ *
+ * `SQLiteUpdateSetSource<T>` is what keeps this honest: the values are
+ * still checked against the table's own columns, so a typo in a column
+ * name or a value outside an enum is a compile error here exactly as it
+ * was inline. A `Record<string, string>` would have removed the clone by
+ * removing the type safety.
+ */
+function setOnSubject<T extends SQLiteTable & { id: SQLiteColumn }>(
+  table: T,
+  subjectId: string,
+  values: SQLiteUpdateSetSource<T>,
+): BatchItem<"sqlite"> {
+  return db().update(table).set(values).where(eq(table.id, subjectId));
+}
+
+/**
+ * Which of two column values a decision means.
+ *
+ * Written once rather than three times, and that is what the three
+ * writers above have in common — a different table, a different column
+ * and a different pair of values each, but one rule for choosing between
+ * them. Repeating the ternary made the three read as one shape the clone
+ * detector was right to flag; naming it leaves each writer a line.
+ */
+function onDecision<T extends string>(
+  decision: ReviewDecision,
+  approved: T,
+  removed: T,
+): T {
+  return decision === "approve" ? approved : removed;
+}
 

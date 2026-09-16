@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   blurSummary,
   clamped,
+  detectedRegions,
   DETECTION_PADDING,
   padded,
   TAP_SIZE_RATIO,
@@ -205,5 +206,28 @@ describe("the sentence above the photo", () => {
     const both = blurSummary({ detector: "ran", detected: 1, tapped: 1 });
     expect(both).toContain("We blurred one face");
     expect(both).toContain("You blurred one more spot");
+  });
+});
+
+describe("the detector's answer as regions", () => {
+  it("marks what the model found as detected", () => {
+    expect(
+      detectedRegions({
+        status: "ran",
+        faces: [{ x: 1, y: 2, width: 3, height: 4 }],
+      }),
+    ).toEqual([{ x: 1, y: 2, width: 3, height: 4, source: "detected" }]);
+  });
+
+  it("gives back nothing when there was no detector", () => {
+    // The branch that used to live inside a React effect, where reading
+    // `faces` off an unavailable outcome threw and the runner lost the
+    // screen. Here it is simply the empty list, and the wrong answer is
+    // a failing assertion rather than a crash.
+    expect(detectedRegions({ status: "unavailable" })).toEqual([]);
+  });
+
+  it("gives back nothing when the detector ran and found none", () => {
+    expect(detectedRegions({ status: "ran", faces: [] })).toEqual([]);
   });
 });

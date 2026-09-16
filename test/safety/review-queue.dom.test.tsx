@@ -14,6 +14,8 @@ function row(overrides: Partial<QueueRow> = {}): QueueRow {
     subjectId: "e-1",
     source: "reports",
     createdAt: 1_755_000_000,
+    reporterCount: 3,
+    reasons: ["explicit"],
     ...overrides,
   };
 }
@@ -119,5 +121,51 @@ describe("deciding", () => {
     // would be inviting a reviewer to undo their own call by accident.
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
     expect(resolve).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("what a row tells the reviewer", () => {
+  it("says what was alleged, in the reporters' own words", () => {
+    renderQueue([
+      row({ reporterCount: 3, reasons: ["explicit", "harassment"] }),
+    ]);
+
+    // The row's whole content. Without it a reviewer is deciding about a
+    // subject type and a ULID, and Approve on an opaque id is not a
+    // judgement about anything.
+    expect(screen.getByText("[3 people]")).toBeInTheDocument();
+    // The whole line, separator included. Two reasons run together read
+    // as one sentence nobody wrote.
+    expect(
+      screen.getByText(
+        "Harassment aimed at someone · The photo shows someone inappropriately",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("counts one person as a person", () => {
+    renderQueue([row({ reporterCount: 1 })]);
+    expect(screen.getByText("[1 person]")).toBeInTheDocument();
+  });
+
+  it("says nobody reported a row the classifier raised", () => {
+    renderQueue([
+      row({ source: "classifier", reporterCount: 0, reasons: [] }),
+    ]);
+
+    // A classifier row has no people behind it. Rendering an empty reason
+    // list would read as a report with nothing written on it.
+    expect(screen.getByText("Nobody reported this.")).toBeInTheDocument();
+    expect(screen.getByText("[classifier]")).toBeInTheDocument();
+  });
+
+  it("reads the same set the same way whatever order it arrives in", () => {
+    renderQueue([row({ reasons: ["spam", "explicit"] })]);
+    const first = screen.getByText(/It's an ad/).textContent;
+    renderQueue([row({ reasons: ["explicit", "spam"] })]);
+
+    // A queue is scanned, not read, and two rows carrying the same set
+    // should look identical.
+    expect(screen.getAllByText(/It's an ad/)[1]?.textContent).toBe(first);
   });
 });

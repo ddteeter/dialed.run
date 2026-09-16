@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   entryPhotos,
@@ -14,8 +15,10 @@ import {
   autoHideReporterThreshold,
   claimForReview,
   fileReport,
+  pendingEntryPhotos,
   pendingReviewCount,
   pendingReviewQueue,
+  reasonsFrom,
   resolveReview,
 } from "../../src/modules/safety";
 
@@ -47,6 +50,59 @@ async function queuedEntry(): Promise<{ entryId: string; queueId: string }> {
   const [queued] = await pendingReviewQueue();
   if (!queued) throw new Error("nothing queued");
   return { entryId, queueId: queued.id };
+}
+
+/**
+ * An entry photo three distinct people have reported — the state all
+ * three photo tests below start from.
+ */
+async function reportedPhoto(): Promise<string> {
+  const author = await makeUser();
+  const runId = await makeRun({ userId: author });
+  const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+  const photoId = newUlid();
+  await core().insert(entryPhotos).values({
+    id: photoId,
+    entryId,
+    photoKey: `entries/${author}/${entryId}/${photoId}`,
+    position: 0,
+  });
+  for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+    await fileReport({
+      reporterId: await makeUser(),
+      subjectType: "photo",
+      subjectId: photoId,
+      reason: "explicit",
+    });
+  }
+  return photoId;
+}
+
+async function photoStatusOf(photoId: string): Promise<string> {
+  const [row] = await core()
+    .select({ status: entryPhotos.screenStatus })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, photoId))
+    .limit(1);
+  if (!row) throw new Error("photo vanished");
+  return row.status;
+}
+
+/**
+ * A queue row with no reports behind it, the way the screening path
+ * raises one.
+ */
+async function enqueueClassifierRow(): Promise<void> {
+  await core()
+    .insert(reviewQueue)
+    .values({
+      id: newUlid(),
+      subjectType: "photo",
+      subjectId: newUlid(),
+      source: "classifier",
+      status: "pending",
+      createdAt: Math.floor(Date.now() / 1000),
+    });
 }
 
 async function statusOf(entryId: string): Promise<string> {
@@ -299,49 +355,49 @@ describe("what a decision writes", () => {
     expect(row?.status).toBe("active");
   });
 
-  it("settles a reported photo but does not yet touch it", async () => {
-    // **A tripwire on a known gap, not an endorsement of it.** Nothing in
-    // the UI files a photo report, but `reportInputSchema` accepts one,
-    // so a request can — and Remove currently settles the queue row and
-    // leaves the photo exactly as it was. What it *should* write is an
-    // owner decision (see `subjectWriters`), and the day it is made this
-    // assertion is what fails and asks to be updated.
-    const author = await makeUser();
-    const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
-    const photoId = newUlid();
-    await core().insert(entryPhotos).values({
-      id: photoId,
-      entryId,
-      photoKey: `entries/${author}/${entryId}/${photoId}`,
-      position: 0,
-    });
-    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "photo",
-        subjectId: photoId,
-        reason: "explicit",
-      });
-    }
+  it("hides a reported photo when the threshold is crossed", async () => {
+    const photoId = await reportedPhoto();
+
+    // The same state a classifier flag produces, and for the same
+    // reason: not public, a person will look. Before this, three people
+    // could report a photo and it stayed up.
+    expect(await photoStatusOf(photoId)).toBe("hidden_pending_review");
+  });
+
+  it("settles a removed photo out of public view for good", async () => {
+    const photoId = await reportedPhoto();
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
 
     expect(await resolveReview(queued.id, await makeUser(), "remove")).toBe(
       "resolved",
     );
-    expect(await pendingReviewCount()).toBe(0);
 
-    const [row] = await core()
-      .select({ status: entryPhotos.screenStatus })
-      .from(entryPhotos)
-      .where(eq(entryPhotos.id, photoId))
-      .limit(1);
-    expect(row?.status).toBe("pending");
+    // `flagged`, not `hidden_pending_review`: the latter promises a
+    // person will look, and a person just did. Neither is `pass`, so the
+    // public sees neither.
+    expect(await photoStatusOf(photoId)).toBe("flagged");
+    expect(await pendingReviewCount()).toBe(0);
+  });
+
+  it("sends an approved photo back to be screened, not straight to the public", async () => {
+    const photoId = await reportedPhoto();
+    const [queued] = await pendingReviewQueue();
+    if (!queued) throw new Error("nothing queued");
+
+    await resolveReview(queued.id, await makeUser(), "approve");
+
+    // NOT `pass`. A photo can reach this queue having never been
+    // screened, and approving straight to `pass` would publish bytes no
+    // classifier ever saw — fail open for the owner, closed for the
+    // public. `pending` is what the retry sweep reads.
+    expect(await photoStatusOf(photoId)).toBe("pending");
+    const [stillPending] = await pendingEntryPhotos();
+    expect(stillPending?.photoId).toBe(photoId);
   });
 
   it("leaves a reported profile's own rows alone", async () => {
-    // `subjectWritesFor` has no profile branch on purpose: removing a
+    // `subjectWriters` has no profile branch on purpose: removing a
     // person is a ban, with its own path and its own notice. A resolve
     // here must settle the queue row and touch nothing else.
     const subject = await makeUser();
@@ -411,6 +467,83 @@ describe("the queue itself", () => {
     expect(row?.resolvedAt).toBeNull();
   });
 
+  it("carries what was alleged and how many people said it", async () => {
+    const { entryId } = await queuedEntry();
+    // A fourth reporter, with a different reason.
+    await fileReport({
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "spam",
+    });
+
+    const [queued] = await pendingReviewQueue();
+
+    // The reviewer's entire basis for a decision. Three people said the
+    // photo was explicit and a fourth said it was spam; a row that
+    // carried neither fact would be a subject type and a ULID.
+    expect(queued?.reporterCount).toBe(4);
+    expect(
+      [...(queued?.reasons ?? [])].toSorted((one, other) =>
+        one.localeCompare(other),
+      ),
+    ).toEqual(["explicit", "spam"]);
+  });
+
+  it("counts people, not reports, the way the threshold does", async () => {
+    const { entryId } = await queuedEntry();
+    const repeater = await makeUser();
+    await fileReport({
+      reporterId: repeater,
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "spam",
+    });
+    await fileReport({
+      reporterId: repeater,
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "spam",
+    });
+
+    // One person reporting twice is one person — the same rule that
+    // decides the auto-hide. A reviewer reading "5 people" about four
+    // would weigh it differently, which is the whole reason the count is
+    // on the row.
+    const queue = await pendingReviewQueue();
+    expect(queue[0]?.reporterCount).toBe(4);
+  });
+
+  it("does not attribute one subject's reports to another", async () => {
+    const first = await queuedEntry();
+    await queuedEntry();
+    await fileReport({
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: first.entryId,
+      reason: "not_theirs",
+    });
+
+    // The join is on subject type AND id. Getting it wrong pools every
+    // report in the table onto every row, which reads as unanimity.
+    const queue = await pendingReviewQueue();
+    expect(queue[0]?.reporterCount).toBe(4);
+    expect(queue[1]?.reporterCount).toBe(3);
+    expect(queue[1]?.reasons).not.toContain("not_theirs");
+  });
+
+  it("keeps a row nobody reported, and says nobody did", async () => {
+    // A classifier-sourced row has no reports at all. An inner join
+    // would drop it from the queue entirely — a photo the model hid that
+    // no person ever sees again.
+    await enqueueClassifierRow();
+
+    const [queued] = await pendingReviewQueue();
+    expect(queued?.source).toBe("classifier");
+    expect(queued?.reporterCount).toBe(0);
+    expect(queued?.reasons).toEqual([]);
+  });
+
   it("returns the oldest decision first", async () => {
     const first = await queuedEntry();
     const second = await queuedEntry();
@@ -421,5 +554,27 @@ describe("the queue itself", () => {
       second.entryId,
     ]);
     expect(queue.every((row) => row.source === "reports")).toBe(true);
+  });
+});
+
+describe("reading the reasons back out of one column", () => {
+  it("keeps the ones this app knows", () => {
+    expect(reasonsFrom("explicit,spam")).toEqual(["explicit", "spam"]);
+  });
+
+  it("gives back nothing for a subject nobody reported", () => {
+    // SQLite's `group_concat` over no rows is NULL, which is what a
+    // classifier-sourced row produces. Not an edge case — it is half
+    // the queue's sources.
+    const nothing = z.null().parse(JSON.parse("null"));
+    expect(reasonsFrom(nothing)).toEqual([]);
+  });
+
+  it("drops a value it does not recognise rather than rendering a blank", () => {
+    // The column comes back as one opaque string. A reason this app no
+    // longer knows about would reach a label lookup and render as
+    // nothing, and a reviewer cannot tell a blank line from a reason
+    // with no words.
+    expect(reasonsFrom("explicit,retired_reason,")).toEqual(["explicit"]);
   });
 });
