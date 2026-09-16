@@ -98,6 +98,12 @@ test("report a runner, block them, and take the block back", async ({
   await scene(page, "Blocking rides with the report, not a second request");
   await page.getByRole("checkbox", { name: `Block ${strangerName} as well` }).click();
   await page.getByRole("button", { name: "Send report" }).click();
+  // Wait for the report to land before navigating. Without this the goto
+  // below raced the server function: the block row was written, but after
+  // the blocked-runners page had already read an empty list — which is a
+  // flake that fails as "they were never blocked" and sends the reader
+  // looking at the wrong code.
+  await expect(page.getByText("Report sent.")).toBeVisible();
 
   await scene(page, "W2 · the explanation carries the screen, not the list");
   await page.goto("/safety/blocked");
