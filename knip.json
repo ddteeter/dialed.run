@@ -29,6 +29,7 @@
   "ignoreDependencies": [
     "@stryker-mutator/command-runner",
     "@tailwindcss/typography",
+    "@vitest/browser",
     "cloudflare",
     "tailwindcss"
   ]

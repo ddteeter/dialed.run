@@ -8,19 +8,20 @@
  * promise survives the move from a native app to the web; what changes is
  * what does the detecting.
  *
- * **There is deliberately no WASM model bundled yet.** The candidates
- * measured ~2.7 MB of runtime and weights on first photo upload
- * (MediaPipe's vision WASM plus the short-range face model), against a
- * repo that treats an 89 kB saving as a result worth recording. That is a
- * product decision with a number attached, and it is the owner's — so this
- * file is the shape it plugs into, and `loadModelDetector` is where it
- * goes. Until then:
+ * **Three rungs, tried in order**, because the cheap one is free and the
+ * expensive one is 11 MB:
  *
- * - where the browser has a native detector, detection runs and the photo
- *   is blurred on by default, as the artboard asks;
- * - everywhere else `unavailable` is reported honestly, tap-to-blur still
- *   works, and the copy says we could not check rather than claiming a
- *   clean sweep we never made.
+ * - a detector the caller passed in, which is what tests use;
+ * - the browser's own Shape Detection API where it exists — free, no
+ *   download, and exactly the artboard's behaviour on those browsers;
+ * - MediaPipe behind a dynamic `import()`, paid on the first photo upload
+ *   where blur is on and never paid by someone who turned blur off. The
+ *   measured cost is on `loadModelDetector` below (owner's call,
+ *   2026-09-15).
+ *
+ * When all three are gone, `unavailable` is reported honestly, tap-to-blur
+ * still works, and the copy says we could not check rather than claiming a
+ * clean sweep we never made.
  */
 import type { Region } from "./regions";
 
@@ -66,6 +67,17 @@ function nativeDetector(): Detector | undefined {
 }
 
 /**
+ * A holder object rather than a module-level `let`, because a lint rule
+ * rejects assigning to one from inside a function. It was a keyed `Map`
+ * first, and the key was the problem: `set("face", …)` runs exactly once
+ * per process, so under stryker's per-test coverage only whichever test
+ * ran first was recorded as reaching it, and the test that actually
+ * asserts the memo never covered the line it was written for. One `??=`
+ * executes on every call, so every test that loads the model covers it.
+ */
+const detectorMemo: { current?: Promise<Detector> } = {};
+
+/**
  * Loads MediaPipe's face detector, behind a dynamic `import()` so none of
  * it enters the client entry chunk.
  *
@@ -82,25 +94,18 @@ function nativeDetector(): Detector | undefined {
  * photo would leak the one signal this whole feature exists to protect.
  * `prebuild` stages the WASM out of node_modules; the model is committed
  * beside it.
- */
-/**
- * Memoised, so a runner uploading four photos instantiates one WASM module
- * rather than four. Deliberately caches the FAILURE too: a browser that
- * could not load 11 MB the first time will not manage it on the second,
- * and retrying per photo would be the worst version of this feature.
  *
- * A Map rather than a mutable module-level binding, because a lint rule
- * rejects assigning to one from inside a function — and because this makes
- * the memo something a test can clear.
+ * **Memoised**, so a runner uploading four photos instantiates one WASM
+ * module rather than four. Deliberately caches the FAILURE too: a browser
+ * that could not load 11 MB the first time will not manage it on the
+ * second, and retrying per photo would be the worst version of this
+ * feature. Exported for the browser project, which is the only place the
+ * model actually loads and so the only place two calls returning one
+ * detector means anything.
  */
-const detectorMemo = new Map<string, Promise<Detector | undefined>>();
-
-function loadModelDetector(): Promise<Detector | undefined> {
-  const existing = detectorMemo.get("face");
-  if (existing !== undefined) return existing;
-  const pending = buildModelDetector();
-  detectorMemo.set("face", pending);
-  return pending;
+export function loadModelDetector(): Promise<Detector> {
+  detectorMemo.current ??= buildModelDetector();
+  return detectorMemo.current;
 }
 
 /**
@@ -142,22 +147,29 @@ export function regionsFromDetections(
   });
 }
 
-async function buildModelDetector(): Promise<Detector | undefined> {
-  try {
-    const vision = await import("@mediapipe/tasks-vision");
-    const files = await vision.FilesetResolver.forVisionTasks(WASM_PATH);
-    const detector = await vision.FaceDetector.createFromOptions(files, {
-      baseOptions: { modelAssetPath: MODEL_PATH },
-      runningMode: "IMAGE",
-    });
-    return (source) =>
-      Promise.resolve(regionsFromDetections(detector.detect(source).detections));
-  } catch {
-    // Law 5 on the client. A model that will not load leaves the runner
-    // with tap-to-blur and copy that says we could not check — not an
-    // error about a feature they never asked for.
-    return undefined;
-  }
+/**
+ * **Rejects rather than resolving to `undefined` when the model will not
+ * load**, and that is the whole reason this function has no `try` of its
+ * own. `detectFaces` already catches everything and answers `unavailable`
+ * — law 5 on the client — so a second catch here was one more way to say
+ * the same thing, and the mutant that emptied it changed no answer any
+ * caller could observe. Deleting it deleted the mutant, and `absent`, the
+ * refusing detector that only existed to turn the `undefined` back into a
+ * rejection, went with it.
+ */
+async function buildModelDetector(): Promise<Detector> {
+  const vision = await import("@mediapipe/tasks-vision");
+  const files = await vision.FilesetResolver.forVisionTasks(WASM_PATH);
+  // No `runningMode`: MediaPipe's default is already IMAGE, and `detect()`
+  // below is the IMAGE-mode call — asking for VIDEO would make it throw.
+  // Passing "IMAGE" explicitly was a literal no test could observe (the
+  // mutant that emptied it detected the same faces), and an unobservable
+  // claim is worse than a default the browser test pins.
+  const detector = await vision.FaceDetector.createFromOptions(files, {
+    baseOptions: { modelAssetPath: MODEL_PATH },
+  });
+  return (source) =>
+    Promise.resolve(regionsFromDetections(detector.detect(source).detections));
 }
 
 /**
@@ -168,20 +180,16 @@ async function buildModelDetector(): Promise<Detector | undefined> {
  * tap-to-blur and honest copy rather than an error about a feature they
  * did not ask for (law 5, on the client).
  */
-const absent: Detector = () =>
-  Promise.reject(new Error("no face detector on this device"));
-
 export async function detectFaces(
   source: ImageBitmap,
-  detector?: Detector  ,
+  detector?: Detector,
 ): Promise<DetectionOutcome> {
-  // "No detector" is expressed as a detector that refuses, rather than as
-  // an `undefined` with a guard above the try. Both end in the same catch
-  // meaning the same thing, and two branches for one answer was a
-  // distinction no input could make.
-  const detect =
-    detector ?? nativeDetector() ?? (await loadModelDetector()) ?? absent;
   try {
+    // Choosing the rung is INSIDE the try, because failing to load the
+    // model and failing to run it are the same answer to a runner. Left
+    // outside, a rejected `loadModelDetector()` would throw out of a
+    // function whose docblock promises it never throws.
+    const detect = detector ?? nativeDetector() ?? (await loadModelDetector());
     return { status: "ran", faces: await detect(source) };
   } catch {
     return { status: "unavailable" };
@@ -207,10 +215,11 @@ function boxesFrom(result: unknown): readonly Region[] {
       ?.boundingBox;
     if (typeof box !== "object" || box === null) continue;
     const { x, y, width, height } = box as Record<string, unknown>;
-    // No `typeof` on width and height: `> 0` is false for a string, for
-    // undefined and for NaN, so the extra checks could not change any
-    // answer. x and y keep theirs, because there is no comparison on them
-    // to do the same work.
+    // width and height carry their `typeof` INSIDE `isPositive`, and it is
+    // load-bearing: an earlier comment here claimed `> 0` was false for a
+    // string, which is only true of a string that is not a number. `"5" >
+    // 0` is `true`, so a box reporting its width as text would have been
+    // accepted and then used as a number.
     if (
       typeof x === "number" &&
       typeof y === "number" &&

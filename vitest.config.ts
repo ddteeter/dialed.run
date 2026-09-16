@@ -1,9 +1,10 @@
 import { readD1Migrations } from "@cloudflare/vitest-pool-workers";
-import { defineConfig } from "vitest/config";
+import { playwright } from "@vitest/browser-playwright";
+import { defineConfig, defineProject } from "vitest/config";
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 
 /**
- * Two projects, because two kinds of test need two runtimes.
+ * Three projects, because three kinds of test need three runtimes.
  *
  * **`worker`** is everything that touches the platform — D1, R2, queues,
  * bindings — and runs in workerd via `@cloudflare/vitest-pool-workers`.
@@ -25,11 +26,28 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
  * built on the native `<dialog>` — so on jsdom the one primitive whose
  * every line was uncovered stayed uncoverable.
  *
- * A test opts into the DOM project by being named `*.dom.test.tsx`, so files migrate
- * one at a time rather than in a big bang, and the split is visible in the
- * filename rather than in this config.
+ * **`browser`** is a real Chromium, driven by playwright as a vitest
+ * provider. It exists for one thing happy-dom structurally cannot do: run
+ * code that fetches. `blur/detect.ts` loads 11 MB of MediaPipe WASM and a
+ * `.tflite` model over HTTP, and happy-dom refuses to execute a fetched
+ * script ("JavaScript file loading is disabled") while workerd has no DOM
+ * and neither has an origin to fetch from. Vitest serves `public/` off its
+ * own vite server, so `/mediapipe/wasm` resolves exactly as it does in
+ * production.
+ *
+ * **It is vitest, which is the whole point.** Playwright's own runner is
+ * invisible to stryker (`testRunner: "vitest"`), so an `e2e/` spec proves
+ * the model works and kills zero mutants; 8 of the 16 survivors in
+ * `detect.ts` live in code no non-browser test can reach. A vitest project
+ * is mutated like any other.
+ *
+ * A test opts into a project by its name: `*.dom.test.tsx` for happy-dom
+ * and `*.browser.test.ts` for Chromium, so files migrate one at a time
+ * rather than in a big bang, and the split is visible in the filename
+ * rather than in this config.
  */
 const DOM_TESTS = "test/**/*.dom.test.tsx";
+const BROWSER_TESTS = "test/**/*.browser.test.ts";
 
 export default defineConfig(async () => {
   const coreMigrations = await readD1Migrations("src/db/migrations/core");
@@ -57,7 +75,7 @@ export default defineConfig(async () => {
         return undefined;
       },
       projects: [
-        {
+        defineProject({
           plugins: [
             cloudflareTest({
               wrangler: { configPath: "./test/wrangler.test.jsonc" },
@@ -85,18 +103,33 @@ export default defineConfig(async () => {
           test: {
             name: "worker",
             include: ["test/**/*.test.{ts,tsx}"],
-            exclude: [DOM_TESTS],
+            exclude: [DOM_TESTS, BROWSER_TESTS],
             setupFiles: ["test/apply-migrations.ts"],
           },
-        },
-        {
+        }),
+        defineProject({
           test: {
             name: "ui",
             environment: "happy-dom",
             include: [DOM_TESTS],
             setupFiles: ["test/dom-setup.ts"],
           },
-        },
+        }),
+        defineProject({
+          test: {
+            name: "browser",
+            include: [BROWSER_TESTS],
+            browser: {
+              enabled: true,
+              headless: true,
+              // One instance. Firefox and WebKit would double the runtime
+              // to tell us about browsers that have no Shape Detection API
+              // either, and MediaPipe's WASM is the same bytes everywhere.
+              instances: [{ browser: "chromium" }],
+              provider: playwright(),
+            },
+          },
+        }),
       ],
     },
   };

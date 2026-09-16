@@ -151,6 +151,8 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 - `blur.dom.test.tsx` (dom) — detected face blurred by default; tap adds one;
   "No face found" when the detector returns none; upload still works when the
   wasm fails to load (law 5).
+- `blur-detect.browser.test.ts` (**browser**) — the real MediaPipe model, in a
+  real Chromium. See "A third vitest project" below.
 - `report-sheet.dom.test.tsx`, `blocked-list.dom.test.tsx`, review rows (dom).
 - `modules/safety` joins `stryker.conf.json`'s `mutate` array in this PR, with
   its own CI shard in `.github/workflows/mutation.yml`.
@@ -196,6 +198,60 @@ changes. Three constraints this lane has to respect while doing it:
 - **Degrade, don't fail** (law 5). If the wasm fails to load, the tap-to-blur
   path still works and the upload still works. A detector outage must not
   block someone's own logging any more than a classifier outage does.
+
+## A third vitest project, and why it is vitest and not Playwright
+
+**For most of this lane the 11 MB of WASM had never executed once**, and the
+suite was green the whole time: every test of `blur/detect.ts` injects a fake
+detector, which proves the plumbing and proves nothing about MediaPipe. Three
+things blocked running it — workerd has no DOM, happy-dom refuses to execute a
+fetched script (`"JavaScript file loading is disabled"`), and neither has an
+HTTP origin for `FilesetResolver.forVisionTasks` to fetch from.
+
+The obvious fix was a Playwright spec, and it is the wrong instrument for half
+the problem. **Stryker runs vitest** (`testRunner: "vitest"`), so `e2e/` is
+invisible to it: a spec there demonstrates the model and kills zero mutants,
+while 8 of `detect.ts`'s 16 survivors lived in code only a loaded model
+reaches. Measured, not assumed — `--mutate detect.ts` read 80.95% before any
+of this.
+
+So: a `browser` project in `vitest.config.ts`, real Chromium via
+`@vitest/browser-playwright`, vitest's own vite server serving `public/` so
+`/mediapipe/wasm` resolves exactly as in production. It is vitest, so stryker
+drives it like any other project — confirmed rather than hoped, since
+stryker signals the active mutant through `process.env` and the workers pool
+needed that forwarded as a binding to work at all. One browser test took
+`detect.ts` from 80.95% to 90.36%; the file is now at **100%**.
+
+Three of the eight closed by deleting code rather than by asserting it:
+
+- `buildModelDetector`'s own `try/catch` was a second way to say what
+  `detectFaces` already says (law 5, one answer: `unavailable`). Removing it
+  removed the equivalent mutant that emptied it — and `absent`, the refusing
+  detector that existed only to turn its `undefined` back into a rejection,
+  went with it.
+- `runningMode: "IMAGE"` is MediaPipe's default, and the mutant that emptied
+  the string detected the same faces. An unobservable claim is worse than a
+  default the browser test pins.
+- The memo was a keyed `Map`, and `set("face", …)` runs **once per process** —
+  so under per-test coverage only whichever test ran first was recorded as
+  reaching it, and the test written to assert the memo never covered the line.
+  A `??=` on a holder object executes on every call.
+
+One survivor was a real defect the comment beside it denied: `boxesFrom` said
+the `typeof` on width and height was redundant because `> 0` is false for a
+string. `"5" > 0` is `true`.
+
+**The fixture is drawn, not photographed.** A committed photo of a face would
+be a picture of a real person in a repo that exists to keep pictures of real
+people private. The model finds a canvas-drawn face at `{56, 69, 142x142}`,
+which is reviewable as code and cannot drift.
+
+**CI needs one line, in a forbidden zone.** `.github/workflows/ci.yml`'s unit
+job and `mutation.yml`'s shards both run without a browser; the e2e job
+already installs one (`ci.yml:63`). Both need
+`npx playwright install --with-deps chromium` after `npm ci`. Owner's, not
+mine.
 
 ## Build status
 

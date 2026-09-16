@@ -27,6 +27,11 @@ reports/stryker-incremental.json
 
 # playwright
 test-results/
+# Vitest browser mode writes one of these next to a failing test. They are
+# a debugging aid for the run that produced them and nothing else; stryker
+# turns them off for its own runs.
+test/**/__screenshots__/
+.vitest-attachments/
 # Transcoded demo recordings: uploaded to the PR by `gh pr comment
 # --attach`, which reads them from disk — they are never part of the repo.
 demo.mp4

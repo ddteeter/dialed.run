@@ -123,6 +123,22 @@ describe("the browser's own Shape Detection API", () => {
     });
   });
 
+  it("drops a box whose size is a string, however numeric it looks", async () => {
+    Reflect.set(globalThis, "FaceDetector", function FaceDetector() {
+      return {
+        detect: () =>
+          Promise.resolve([
+            { boundingBox: { x: 1, y: 1, width: "5", height: 5 } },
+          ]),
+      };
+    });
+
+    // `"5" > 0` is `true` in JavaScript, so the size checks cannot lean
+    // on the comparison alone — without the `typeof` this box is accepted
+    // and its width used as a number, which paints a region of NaN.
+    expect(await detectFaces(SOURCE)).toEqual({ status: "ran", faces: [] });
+  });
+
   it("drops a zero-sized box", async () => {
     Reflect.set(globalThis, "FaceDetector", function FaceDetector() {
       return {
