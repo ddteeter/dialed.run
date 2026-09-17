@@ -103,7 +103,14 @@ test("report a runner, block them, and take the block back", async ({
   // the blocked-runners page had already read an empty list — which is a
   // flake that fails as "they were never blocked" and sends the reader
   // looking at the wrong code.
-  await expect(page.getByText("Report sent.")).toBeVisible();
+  //
+  // The signal is the sheet closing, not its "Report sent." status. Both
+  // happen in the same tick — `onSuccess` fires `onFiled` and `onClose`
+  // together — so at recording speed the status is already inside a
+  // closed dialog by the time it is asked about, and reads as hidden
+  // rather than absent. Waiting on the dialog works at both speeds, and
+  // it is what a runner actually sees.
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
 
   await scene(page, "W2 · the explanation carries the screen, not the list");
   await page.goto("/safety/blocked");
