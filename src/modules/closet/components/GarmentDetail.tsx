@@ -144,9 +144,7 @@ export function GarmentDetail({
           ) : undefined}
         </div>
 
-        {item.productUrl === null ? undefined : (
-          <ProductLink url={item.productUrl} label={label} />
-        )}
+        <ProductLink url={item.productUrl} label={label} />
 
         <p className="text-sm text-night/70">
           {tempRange ? (

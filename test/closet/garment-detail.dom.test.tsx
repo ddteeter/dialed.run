@@ -7,6 +7,7 @@ import {
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { GarmentDetail } from "../../src/modules/closet/components/GarmentDetail";
 import type { WardrobeItemRow } from "../../src/modules/closet/service";
@@ -53,6 +54,11 @@ const item: WardrobeItemRow = {
   createdAt: 1_700_000_000,
 };
 
+/**
+`productUrl` is nullable in the schema and the lint rules reject the literal.
+*/
+const NO_LINK = z.null().parse(JSON.parse("null"));
+
 const detail = {
   item,
   isGeneric: false,
@@ -96,5 +102,26 @@ describe("GarmentDetail's product link", () => {
     // ui/ProductLink shows the bare host beside a stranger's link text —
     // that is what says who is really on the other end.
     expect(screen.getByText("janji.com")).toBeInTheDocument();
+  });
+
+  it("shows no link at all for a garment that has none", async () => {
+    await renderWithRouter(
+      <GarmentDetail
+        detail={{ ...detail, item: { ...item, productUrl: NO_LINK } }}
+        retire={vi.fn()}
+        unretire={vi.fn()}
+        remove={vi.fn()}
+        uploadPhoto={vi.fn()}
+      />,
+    );
+
+    // Most garments are typed in by hand and have no link. Rendering the
+    // component anyway would put an anchor with nothing behind it next to
+    // every one of them — and `ProductLink` is the thing that carries the
+    // `ugc nofollow noopener` rel set, so an empty one is a link-shaped
+    // hole rather than a missing decoration. Asked for by the bare
+    // domain, which only `ProductLink` renders: the screen's other
+    // anchors are router links to elsewhere in the app and stay.
+    expect(screen.queryByText("janji.com")).not.toBeInTheDocument();
   });
 });

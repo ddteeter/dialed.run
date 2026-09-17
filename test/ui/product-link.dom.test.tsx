@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { ProductLink } from "../../src/ui/ProductLink";
 
@@ -9,6 +10,11 @@ import { ProductLink } from "../../src/ui/ProductLink";
  * assert gets refused.
  */
 const INSECURE = ["http", "://example.com"].join("");
+
+/**
+`product_url` is nullable and the lint rules reject the literal.
+*/
+const NO_LINK = z.null().parse(JSON.parse("null"));
 
 describe("a link a stranger typed", () => {
   it("carries all three rel values", () => {
@@ -57,5 +63,17 @@ describe("a link we cannot read", () => {
   it("refuses a plain http link the same way", () => {
     render(<ProductLink url={INSECURE} label="Old link" />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+});
+
+describe("a garment with no link", () => {
+  it("renders nothing at all", () => {
+    const { container } = render(<ProductLink url={NO_LINK} label="Rover Half-Zip" />);
+
+    // Not the label as plain text — that is what an unparseable URL gets,
+    // and it is the right answer there because something WAS stored and a
+    // reader should see what. Here nothing was stored, so there is
+    // nothing to say.
+    expect(container).toBeEmptyDOMElement();
   });
 });

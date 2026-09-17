@@ -240,5 +240,13 @@ describe("the subject itself", () => {
     expect(
       screen.queryByRole("img", { name: "Reported photo" }),
     ).not.toBeInTheDocument();
+
+    // And no empty container either. The row is a flex column with a gap,
+    // so an element with nothing in it is not nothing — it is a blank
+    // band between the subject and the reasons, on every row that is a
+    // runner or a product rather than a photo.
+    const empties = [...screen.getByRole("listitem").querySelectorAll("span")]
+      .filter((node) => node.childElementCount === 0 && node.textContent === "");
+    expect(empties).toEqual([]);
   });
 });

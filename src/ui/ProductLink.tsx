@@ -32,12 +32,22 @@ export function ProductLink({
   url,
   label,
 }: Readonly<{
-  url: string;
+  /**
+   * `null` for a garment with no link, which is most of them.
+   *
+   * Taken here rather than guarded at the call site: there it was a
+   * ternary whose two branches no test could tell apart, because a
+   * component that renders nothing and a component that is not rendered
+   * look identical from outside. Asked of the component directly, they
+   * do not.
+   */
+  url: string | null;
   /**
   What the link says. A product name, typically — and it is UGC.
   */
   label: string;
-}>): JSX.Element {
+}>): JSX.Element | undefined {
+  if (url === null) return undefined;
   const domain = domainOf(url);
 
   if (domain === undefined) {

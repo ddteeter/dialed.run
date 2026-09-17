@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   cronCheckpoints,
+  entryPhotos,
   imports,
+  outfitEntries,
   products,
   reviewQueue,
   runs,
@@ -140,6 +142,46 @@ describe("the cron heartbeat", () => {
     } as ScheduledController);
 
     expect(outcome).toStrictEqual({ cronName: "weather-retry", anomalies: [] });
+  });
+
+  it("dispatches the screening-retry schedule to the screening sweep", async () => {
+    // The case label is the whole wiring: `wrangler.jsonc` fires a cron
+    // expression, `crons.ts` maps it to a name, and this switch turns the
+    // name into work. A wrong label here means the sweep silently never
+    // runs and every flagged photo stays pending forever — which looks
+    // exactly like a classifier that is simply slow.
+    // A photo waiting to be screened, so the sweep has something to say.
+    const userId = newUlid();
+    const runId = await insertRun({ userId });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+    await coreDb().insert(entryPhotos).values({
+      id: newUlid(),
+      entryId,
+      photoKey: `entries/${userId}/${entryId}/p`,
+      position: 0,
+    });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // **The name is not the assertion.** `cronName` comes from the
+    // registry lookup, not from the case label, so it reads
+    // "screening-retry" whether or not this switch does anything — which
+    // is what the sweep silently never running would look like. The
+    // anomaly is the proof that work happened.
+    expect(outcome.cronName).toBe("screening-retry");
+    expect(outcome.anomalies).toEqual([
+      expect.stringContaining("await screening"),
+    ]);
   });
 
   it("files a cron it does not recognise under `unknown`, and says so", async () => {
