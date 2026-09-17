@@ -543,6 +543,10 @@ describe("the queue itself", () => {
     expect(queued?.source).toBe("classifier");
     expect(queued?.reporterCount).toBe(0);
     expect(queued?.reasons).toEqual([]);
+    // Its subject id names no row — the classifier row here stands for a
+    // photo that has since been deleted. The row still has to render, so
+    // "nothing found" is an empty subject rather than a missing one.
+    expect(queued?.subject).toEqual({ photoKeys: [] });
   });
 
   it("carries the photo a reported photo actually is", async () => {
@@ -625,6 +629,42 @@ describe("the queue itself", () => {
     const labels = queue.map((row) => row.subject.label);
     expect(labels).toContain("mark_t");
     expect(labels).toContain("Some Shoe");
+    // And no photos: a name is the whole content of these rows, and a
+    // stray key would put an empty frame on one, which reads as an image
+    // that failed to load rather than as a row with no image.
+    expect(queue.every((row) => row.subject.photoKeys.length === 0)).toBe(true);
+  });
+
+  it("looks a subject up by its type, not by its id alone", async () => {
+    // A product whose id IS a runner's id. Nothing forbids it — user ids
+    // and product ids are different namespaces that happen to share a
+    // column type — and a lookup keyed on the id alone would label the
+    // reported runner with the product's name.
+    const subject = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ displayName: "mark_t" })
+      .where(eq(userProfiles.userId, subject));
+    await core().insert(products).values({
+      id: subject,
+      brandId: newUlid(),
+      name: "Some Shoe",
+      normalizedName: "some shoe",
+      createdBy: await makeUser(),
+      createdAt: NOW,
+    });
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "profile",
+        subjectId: subject,
+        reason: "harassment",
+      });
+    }
+
+    const [queued] = await pendingReviewQueue();
+
+    expect(queued?.subject.label).toBe("mark_t");
   });
 
   it("returns the oldest decision first", async () => {

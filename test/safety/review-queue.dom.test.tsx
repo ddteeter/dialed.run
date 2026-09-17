@@ -170,3 +170,75 @@ describe("what a row tells the reviewer", () => {
     expect(screen.getAllByText(/It's an ad/)[1]?.textContent).toBe(first);
   });
 });
+
+describe("the subject itself", () => {
+  it("shows the reported photo, from the route that will serve it", () => {
+    renderQueue([
+      row({
+        subjectType: "photo",
+        subject: { photoKeys: ["entries/u-1/e-1/p-1"] },
+      }),
+    ]);
+
+    // `/safety/review-photo/`, not `/feed/photo/`. Every photo in this
+    // queue is hidden precisely because somebody reported it, so the
+    // ordinary route refuses it — pointing at that one would give a
+    // reviewer a broken image on the subject that most needs looking at.
+    const photo = screen.getByRole("img", { name: "Reported photo" });
+    expect(photo).toHaveAttribute(
+      "src",
+      "/safety/review-photo/entries/u-1/e-1/p-1",
+    );
+  });
+
+  it("shows every photo of a reported entry", () => {
+    renderQueue([
+      row({
+        subjectType: "entry",
+        subject: { photoKeys: ["entries/u/e/a", "entries/u/e/b"] },
+      }),
+    ]);
+
+    // A kit posted as two photos is one thing to judge, and judging half
+    // of it is judging something else.
+    expect(screen.getAllByRole("img", { name: "Reported photo" })).toHaveLength(
+      2,
+    );
+  });
+
+  it("names a runner or a product instead of its id", () => {
+    renderQueue([
+      row({
+        subjectType: "product",
+        subjectId: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+        subject: { label: "Some Shoe", photoKeys: [] },
+      }),
+    ]);
+
+    // Words are the whole content of these rows the way pixels are of a
+    // photo. "product · 01HZZZ…" tells a reviewer nothing they can weigh.
+    expect(screen.getByText(/Some Shoe/)).toBeInTheDocument();
+    expect(screen.queryByText(/01HZZZ/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the id when there is nothing to name", () => {
+    renderQueue([
+      row({ subjectId: "e-404", subject: { photoKeys: [] } }),
+    ]);
+
+    // A subject whose row has been deleted since the report. The id is
+    // not useful, but it is honest — and it is what a reviewer would
+    // quote when asking what happened.
+    expect(screen.getByText(/e-404/)).toBeInTheDocument();
+  });
+
+  it("draws no frame at all when there is no photo", () => {
+    renderQueue([row({ subject: { label: "mark_t", photoKeys: [] } })]);
+
+    // An empty frame on a profile row reads as an image that failed to
+    // load, which is a different problem from the one being reviewed.
+    expect(
+      screen.queryByRole("img", { name: "Reported photo" }),
+    ).not.toBeInTheDocument();
+  });
+});

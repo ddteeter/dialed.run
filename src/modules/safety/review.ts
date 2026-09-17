@@ -186,24 +186,29 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
 async function subjectsFor(
   rows: readonly { subjectType: ReportSubjectType; subjectId: string }[],
 ): Promise<Map<string, QueueSubject>> {
-  const idsOf = (type: ReportSubjectType): string[] =>
-    rows.filter((row) => row.subjectType === type).map((row) => row.subjectId);
+  // **Every id is offered to every table, and the keys sort it out.** The
+  // four lookups used to be filtered by subject type first, which read as
+  // correctness and was not: what stops a product's row being read as a
+  // runner's is that `found` is keyed `type:id`, so a lookup that matched
+  // the wrong table lands under a key nothing asks for. With the filter
+  // gone that is the only thing holding it up, which is where it should
+  // have been all along — and the filter's own predicate was a branch no
+  // input could distinguish, because it never decided anything.
+  //
+  // The cost is a few extra index probes on a page of at most 100 rows.
+  const subjectIds = rows.map((row) => row.subjectId);
   const database = db();
-  const photoIds = idsOf("photo");
-  const entryIds = idsOf("entry");
-  const profileIds = idsOf("profile");
-  const productIds = idsOf("product");
 
   const [photoRows, entryPhotoRows, profileRows, productRows] =
     await database.batch([
       database
         .select({ id: entryPhotos.id, photoKey: entryPhotos.photoKey })
         .from(entryPhotos)
-        .where(inArray(entryPhotos.id, photoIds)),
+        .where(inArray(entryPhotos.id, subjectIds)),
       database
         .select({ entryId: entryPhotos.entryId, photoKey: entryPhotos.photoKey })
         .from(entryPhotos)
-        .where(inArray(entryPhotos.entryId, entryIds))
+        .where(inArray(entryPhotos.entryId, subjectIds))
         .orderBy(asc(entryPhotos.position)),
       database
         .select({
@@ -211,11 +216,11 @@ async function subjectsFor(
           displayName: userProfiles.displayName,
         })
         .from(userProfiles)
-        .where(inArray(userProfiles.userId, profileIds)),
+        .where(inArray(userProfiles.userId, subjectIds)),
       database
         .select({ id: products.id, name: products.name })
         .from(products)
-        .where(inArray(products.id, productIds)),
+        .where(inArray(products.id, subjectIds)),
     ]);
 
   const found = new Map<string, QueueSubject>();

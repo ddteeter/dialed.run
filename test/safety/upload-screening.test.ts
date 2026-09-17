@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   entryPhotos,
@@ -13,7 +13,11 @@ import { uploadItemPhoto } from "../../src/modules/closet/photos";
 import { getEntryDetail } from "../../src/modules/feed/entries";
 import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
-import { photoResponse, uploadPhoto } from "../../src/modules/feed/photos";
+import {
+  photoResponse,
+  reviewerPhotoResponse,
+  uploadPhoto,
+} from "../../src/modules/feed/photos";
 import {
   imageCategories,
   pendingEntryPhotos,
@@ -358,5 +362,82 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
 
     expect(asStranger?.photoKeys).toEqual([]);
     expect(asAuthor?.photoKeys).toHaveLength(1);
+  });
+});
+
+/**
+ * A flagged photo on a public entry: hidden from everyone by the
+ * ordinary rule, which is exactly the state a reviewer has to see it in.
+ */
+async function flaggedPhoto(): Promise<{ key: string; owner: string }> {
+  const entryId = await anEntry();
+  const owner = await userOf(entryId);
+  const key = await uploadPhoto(
+    {
+      userId: owner,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: new Uint8Array([1, 2, 3]).buffer,
+    },
+    { classify: explicit },
+  );
+  return { key, owner };
+}
+
+describe("the bytes behind a reported photo", () => {
+  beforeEach(resetSafetyTables);
+
+  const ADMINS = env.ADMIN_USER_IDS;
+  afterEach(() => {
+    if (ADMINS === undefined) Reflect.deleteProperty(env, "ADMIN_USER_IDS");
+    else Reflect.set(env, "ADMIN_USER_IDS", ADMINS);
+  });
+
+  it("serves it to an admin, which the ordinary route never would", async () => {
+    const { key, owner } = await flaggedPhoto();
+    const reviewer = await makeUser();
+    Reflect.set(env, "ADMIN_USER_IDS", reviewer);
+    const served = await reviewerPhotoResponse(key, reviewer);
+    expect(served.status).toBe(200);
+
+    // The point of the separate route: `photoResponse` refuses this photo
+    // to everyone but its owner, and being reported is what hid it. A
+    // review queue that cannot show the subject is not a review queue.
+    expect(await statusFor(key, reviewer)).toBe(404);
+    expect(await statusFor(key, owner)).toBe(200);
+  });
+
+  it("says not found to a signed-in stranger", async () => {
+    const { key } = await flaggedPhoto();
+    const stranger = await makeUser();
+    Reflect.set(env, "ADMIN_USER_IDS", await makeUser());
+
+    // 404 rather than 403: a 403 tells them the photo exists, which is
+    // most of what they wanted to know. And rather than a thrown
+    // AdminRequiredError, which on a media URL is a 500 saying the same
+    // thing louder.
+    const refused = await reviewerPhotoResponse(key, stranger);
+    expect(refused.status).toBe(404);
+  });
+
+  it("says not found to somebody signed out", async () => {
+    const { key } = await flaggedPhoto();
+    Reflect.set(env, "ADMIN_USER_IDS", await makeUser());
+
+    // `""` is what the route hands over for a signed-out viewer, and it is
+    // never in the admin list.
+    const refused = await reviewerPhotoResponse(key, "");
+    expect(refused.status).toBe(404);
+  });
+
+  it("says not found for a key that is not a photo", async () => {
+    const reviewer = await makeUser();
+    Reflect.set(env, "ADMIN_USER_IDS", reviewer);
+
+    // The splat is `""` for the bare route, and an empty key misses in R2
+    // the same way a key for a deleted photo does — so the route needs no
+    // guard of its own, and this is what says so.
+    const blank = await reviewerPhotoResponse("", reviewer);
+    expect(blank.status).toBe(404);
   });
 });

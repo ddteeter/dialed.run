@@ -19,11 +19,10 @@ import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
-import { requireUserId } from "../auth";
 import {
+  isAdmin,
   isEntryPubliclyVisible,
   isPhotoPubliclyVisible,
-  requireAdmin,
 } from "../safety";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
@@ -267,11 +266,27 @@ export async function photoResponse(
  * (`docs/architecture.md`).
  */
 export async function reviewerPhotoResponse(
-  key: string | undefined,
+  key: string,
+  viewerId: string,
 ): Promise<Response> {
-  requireAdmin(await requireUserId());
-  // Absent and blank in one check, the same way `photoResponse` does it.
-  if (!key) return notFound();
+  // Both are parameters, as they are for `photoResponse`, and for the same
+  // reason: a function that reads the session or the params itself cannot
+  // be called by a test.
+  //
+  // **The route hands both across already normalised**, and that is what
+  // keeps this to one rule. A bare URL gives an empty key, which misses in
+  // R2 and answers 404 on its own; a signed-out viewer gives an empty id,
+  // which is never in the admin list (`adminUserIds` drops empties). Both
+  // guards that used to sit here were conditions with no second outcome —
+  // `viewerId === undefined ||` in front of a membership test that already
+  // says no, and `if (!key)` in front of a lookup that already misses.
+  //
+  // **404, not 403, and not a thrown `AdminRequiredError`.** The rest of
+  // this route answers "you may not see this" as "there is nothing here",
+  // deliberately — a 403 tells a stranger the photo exists, which is most
+  // of what they wanted to know. A throw would also surface as a 500 on a
+  // media URL, which says the same thing louder.
+  if (!isAdmin(viewerId)) return notFound();
   return bytesResponse(key);
 }
 

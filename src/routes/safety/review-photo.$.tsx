@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { optionalUserId } from "../../modules/auth";
 import { reviewerPhotoResponse } from "../../modules/feed/photos";
 
 /**
@@ -15,7 +16,11 @@ import { reviewerPhotoResponse } from "../../modules/feed/photos";
 export const Route = createFileRoute("/safety/review-photo/$")({
   server: {
     handlers: {
-      GET: async ({ params }) => reviewerPhotoResponse(params._splat),
+      GET: async ({ params }) =>
+        reviewerPhotoResponse(
+          params._splat ?? "",
+          (await optionalUserId()) ?? "",
+        ),
     },
   },
 });
