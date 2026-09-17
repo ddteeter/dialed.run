@@ -43,6 +43,14 @@ const LABELS = {
  * from `lib/photo-constraints` rather than restated, because the server
  * enforces the same two facts and a second copy would drift.
  */
+/**
+ * A screen shown between picking a photo and uploading it — W3's blur.
+ *
+ * It is handed the picked file and a callback for the bytes that should
+ * actually be sent, which are not the same bytes.
+ */
+type PhotoStep = (file: File, onReady: (ready: File) => void) => ReactNode;
+
 export function VerdictForm({
   entry,
   bandFloor,
@@ -65,10 +73,7 @@ export function VerdictForm({
    * Absent, a picked file is uploaded as-is, which is what every caller
    * did before W3 existed.
    */
-  renderPhotoStep?: (
-    file: File,
-    onReady: (ready: File) => void,
-  ) => ReactNode;
+  renderPhotoStep?: PhotoStep;
   itemBandWearStat: (input: {
     data: { itemId: string; bandFloorC: number };
   }) => Promise<{ worn: number; total: number }>;
@@ -100,7 +105,20 @@ export function VerdictForm({
    * A picked file waiting on W3's blur step. One at a time: the step is a
    * screen, and two of them at once is not a thing a runner can answer.
    */
-  const [pending, setPending] = useState<File | undefined>();
+  /**
+   * The picked file and the step that will answer for it, together.
+   *
+   * **A pair rather than just the file, because the pair is the
+   * invariant.** Only the branch that has a step sets this, so a held
+   * file always has one — but TypeScript cannot see that across a state
+   * update, so the render needed a `?.` for a case no input could reach.
+   * Carrying the step makes the guarantee a type, and it also means the
+   * step a runner is looking at is the one that opened, even if the
+   * parent stops supplying one mid-way.
+   */
+  const [pending, setPending] = useState<
+    { file: File; step: PhotoStep } | undefined
+  >();
   const [uploading, setUploading] = useState(false);
   const uploadInFlight = useRef(false);
 
@@ -137,8 +155,10 @@ export function VerdictForm({
     } catch {
       setPhotoError("Couldn't upload that photo. Try again.");
     } finally {
+      // No `uploadInFlight` reset here: `handlePhotoSelect`'s own `finally`
+      // already released it on the way out to the step, so a second reset
+      // is a line that cannot change an answer.
       setUploading(false);
-      uploadInFlight.current = false;
     }
   }
 
@@ -186,12 +206,13 @@ export function VerdictForm({
           setPhotoError("Photos must be JPEG, PNG, or WebP.");
           continue;
         }
-        if (renderPhotoStep !== undefined) {
+        const step = renderPhotoStep;
+        if (step !== undefined) {
           // W3: the picked file does not go anywhere until the blur step
           // hands back the bytes to send. Queued rather than uploaded, and
           // one at a time — the step is a screen, and two of them at once
           // is not a thing a runner can answer.
-          setPending(file);
+          setPending({ file, step });
           return;
         }
         await sendPhoto(file);
@@ -390,7 +411,7 @@ export function VerdictForm({
 
           {pending === undefined
             ? undefined
-            : renderPhotoStep?.(pending, (ready) => {
+            : pending.step(pending.file, (ready) => {
                 void handlePhotoReady(ready);
               })}
         </div>

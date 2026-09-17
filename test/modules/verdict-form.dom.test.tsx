@@ -5,6 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
@@ -130,6 +131,7 @@ function form(
     itemBandWearStat?: (input: {
       data: { itemId: string; bandFloorC: number };
     }) => Promise<{ worn: number; total: number }>;
+    renderPhotoStep?: (file: File, onReady: (ready: File) => void) => ReactNode;
   } = {},
 ) {
   return (
@@ -139,6 +141,9 @@ function form(
       submitVerdict={overrides.submitVerdict ?? nothing}
       uploadPhoto={overrides.uploadPhoto ?? noUpload}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
+      {...(overrides.renderPhotoStep !== undefined && {
+        renderPhotoStep: overrides.renderPhotoStep,
+      })}
     />
   );
 }
@@ -984,5 +989,151 @@ describe("VerdictForm: the details that go missing silently", () => {
 
     stat.resolve({ worn: 3, total: 7 });
     expect(await screen.findByText(/Houdini is now 3 of 7/)).toBeVisible();
+  });
+});
+
+/**
+ * A step that records what it was handed and lets the test decide when the
+ * blurred bytes come back — which is the whole contract: the picked file
+ * waits, and something else says what gets uploaded.
+ */
+function recordingStep() {
+  const seen: File[] = [];
+  let release: ((ready: File) => void) | undefined;
+  const render = (file: File, onReady: (ready: File) => void) => {
+    seen.push(file);
+    release = onReady;
+    return <p>step for {file.name}</p>;
+  };
+  return { seen, render, hand: (ready: File) => release?.(ready) };
+}
+
+describe("the photo step W3 hangs off", () => {
+  it("holds the picked file instead of uploading it", async () => {
+    const user = userEvent.setup();
+    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
+    const step = recordingStep();
+    await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
+
+    await user.upload(fileInput(), jpeg());
+
+    // **The whole promise of W3.** If the picked file uploads while the
+    // blur step is on screen, the original frame has already left the
+    // device and the step is decoration.
+    expect(uploadPhoto).not.toHaveBeenCalled();
+    expect(step.seen.map((file) => file.name)).toEqual(["a.jpg"]);
+    expect(screen.getByText("step for a.jpg")).toBeVisible();
+  });
+
+  it("uploads the bytes the step hands back, not the ones picked", async () => {
+    const user = userEvent.setup();
+    const uploaded: string[] = [];
+    const uploadPhoto = vi.fn((input: { data: FormData }) => {
+      const part = input.data.get("photo");
+      uploaded.push(part instanceof File ? part.name : "not a file");
+      return Promise.resolve({ key: "k" });
+    });
+    const step = recordingStep();
+    await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
+    await user.upload(fileInput(), jpeg());
+
+    step.hand(new File([new Uint8Array([9])], "blurred.jpg", { type: "image/jpeg" }));
+
+    await waitFor(() => {
+      expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    });
+    expect(uploaded).toEqual(["blurred.jpg"]);
+  });
+
+  it("says it is uploading, then puts the step away", async () => {
+    const user = userEvent.setup();
+    const inFlight = Promise.withResolvers<{ key: string }>();
+    const step = recordingStep();
+    await renderWithRouter(
+      form({ uploadPhoto: () => inFlight.promise, renderPhotoStep: step.render }),
+    );
+    await user.upload(fileInput(), jpeg());
+
+    step.hand(jpeg("blurred.jpg"));
+
+    expect(await screen.findByText("Uploading…")).toBeVisible();
+    inFlight.resolve({ key: "k" });
+    // The step goes when its answer has been taken. Left up, it reads as
+    // a photo still waiting to be blurred — over one already uploaded.
+    await waitFor(() => {
+      expect(screen.queryByText(/^step for/)).not.toBeInTheDocument();
+    });
+    // And the form stops saying it is working. "Uploading…" that never
+    // clears is the same screen as an upload that never finished.
+    await waitFor(() => {
+      expect(screen.getByText("Add a photo")).toBeVisible();
+    });
+  });
+
+  it("reports a failure after the step the same way as one before it", async () => {
+    const user = userEvent.setup();
+    const step = recordingStep();
+    await renderWithRouter(
+      form({
+        uploadPhoto: () => Promise.reject(new Error("R2 unavailable")),
+        renderPhotoStep: step.render,
+      }),
+    );
+    await user.upload(fileInput(), jpeg());
+
+    step.hand(jpeg("blurred.jpg"));
+
+    // The blur step does not get its own error vocabulary: a failed
+    // upload is a failed upload, and the runner's next move is the same.
+    expect(
+      await screen.findByText("Couldn't upload that photo. Try again."),
+    ).toBeVisible();
+  });
+
+  it("lets a second photo through after the first has landed", async () => {
+    const user = userEvent.setup();
+    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
+    const step = recordingStep();
+    await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
+
+    await user.upload(fileInput(), jpeg("one.jpg"));
+    step.hand(jpeg("one-blurred.jpg"));
+    await waitFor(() => {
+      expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    });
+
+    await user.upload(fileInput(), jpeg("two.jpg"));
+    step.hand(jpeg("two-blurred.jpg"));
+
+    // The in-flight guard has to be released by the step's path too, or
+    // the first photo is the only one a runner can ever add.
+    await waitFor(() => {
+      expect(uploadPhoto).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("uploads straight away when no step is supplied", async () => {
+    const user = userEvent.setup();
+    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
+    await renderWithRouter(form({ uploadPhoto }));
+
+    await user.upload(fileInput(), jpeg());
+
+    // The garment path and anything else that has no blur step: the slot
+    // is optional and its absence must not swallow the upload.
+    await waitFor(() => {
+      expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("shows no step until a file has been picked", async () => {
+    const step = recordingStep();
+    await renderWithRouter(form({ renderPhotoStep: step.render }));
+
+    // Rendering it unconditionally would call the slot with nothing to
+    // show — which is how a blur screen appears over a form nobody has
+    // given a photo to.
+    expect(step.seen).toEqual([]);
+    expect(screen.queryByText(/^step for/)).not.toBeInTheDocument();
   });
 });
