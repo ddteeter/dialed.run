@@ -42,12 +42,16 @@ test("signup -> authenticated home -> sign out", async ({ page }) => {
 
   await scene(page, "Home knows who is signed in");
   await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
+  // The email is in the server-rendered HTML, so seeing it says nothing
+  // about whether React has attached yet — and "Sign out" is a bare
+  // `onClick` with no form behind it, so a click that lands before
+  // hydration is silently lost and the session simply stays. That is what
+  // CI showed three runs in a row: the link never arriving, at 5s and at
+  // 15s alike, on a runner ~18s slower than the one that last went green.
+  // The signup step above already waits on the stamp for the same reason.
+  await hydrated(page);
   await scene(page, "Signing out returns the logged-out shell");
   await page.getByRole("button", { name: "Sign out" }).click();
-  // The same budget as the two assertions above, for the same reason: the
-  // sign-out server function is first reached by this click, so on a cold
-  // dev server the wait includes Vite's on-demand compile. It failed once
-  // on CI at the 5s default with the link simply not there yet.
   await expect(page.getByRole("link", { name: "Log in" })).toBeVisible({
     timeout: 15_000,
   });
