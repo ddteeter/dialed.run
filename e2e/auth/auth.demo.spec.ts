@@ -44,5 +44,11 @@ test("signup -> authenticated home -> sign out", async ({ page }) => {
   await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
   await scene(page, "Signing out returns the logged-out shell");
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  // The same budget as the two assertions above, for the same reason: the
+  // sign-out server function is first reached by this click, so on a cold
+  // dev server the wait includes Vite's on-demand compile. It failed once
+  // on CI at the 5s default with the link simply not there yet.
+  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible({
+    timeout: 15_000,
+  });
 });
