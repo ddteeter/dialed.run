@@ -15,6 +15,23 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+9. **A band that was wrong both ways equally has no honest one-word
+   verdict.** §AB3 gives each band on the profile row one word —
+   *Under-dressed*, *Dialed*, *Over-dressed* — derived from whichever
+   verdict count wins (`bandVerdict`, `modules/feed/coverage.ts`). When
+   cold and warm are exactly tied the code picks *Under-dressed*, on the
+   reasoning that underdressing is the failure that ends a run early. The
+   owner's review of PR #71 pointed out the reasoning is one-sided:
+   overdressing in heat ends a run too, and the Call teaser's own
+   tie-break was made symmetric for that reason. A tie is not a direction,
+   it is inconsistency — the band is not understood yet, which is exactly
+   what the runner and later the call need to know. **The ask is a fourth
+   word for that state**, "Mixed" or whatever design prefers, and its
+   `VerdictMark` treatment: hue is verdict (pink cold, teal dialed, grey
+   warm, per D-48), so a fourth state needs a mark that is none of those.
+   Rare in practice, since it needs equal counts. Tracked as **D-60**;
+   nothing is blocked, the tie goes cold until design answers.
+
 8. **P2.5's payout counts owners, and a social-proof count may not.**
    §AC3's middle line reads *GAINED 412 runners own this piece*. Ownership
    is closet contents, and CLAUDE.md's product rules say a social-proof
