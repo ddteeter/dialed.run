@@ -10,17 +10,18 @@ import { drizzle } from "drizzle-orm/d1";
 import {
   outfitEntries,
   outfitEntryItems,
-  runs,
   userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
 import { forIds } from "../../lib/for-ids";
 import { garmentNamesByIds } from "./garment-names";
-import { bandFloorC, bandLabel } from "../../lib/temperature";
+import { bandLabel } from "../../lib/temperature";
 import { topByCount } from "../../lib/top-by-count";
-import { observationsForRuns } from "./conditions";
+import { observationsForEntries } from "./conditions";
+import { recentOwnEntries } from "./own-history";
+import { bandsAscending, tallyCoverage } from "./coverage";
+import type { CoverageBand } from "./coverage";
 import { unitsFor } from "./units";
-import { judgedFeelsLikeC } from "./judged-conditions";
 import { followerCount, followingCount } from "./follows";
 
 function db() {
@@ -28,15 +29,7 @@ function db() {
 }
 
 const RECENT_LIMIT = 20;
-const HISTORY_LIMIT = 200;
 
-interface CoverageBand {
-  bandFloorC: number;
-  label: string;
-  cold: number;
-  dialed: number;
-  warm: number;
-}
 
 export interface OwnProfile {
   userId: string;
@@ -51,25 +44,12 @@ export interface OwnProfile {
   recentEntries: { entryId: string; createdAt: number; verdict: number | null }[];
 }
 
-const BAND_STEP_C = 5;
 
 /**
  * Bands ascending by floor. The caller tracks the min/max floor it saw
  * while building `bands` so this never needs to iterate the map's keys to
  * sort them (no in-memory `.sort()`, per house lint rule).
  */
-function bandsAscending(
-  bands: ReadonlyMap<number, CoverageBand>,
-  range: { min: number; max: number } | undefined,
-): CoverageBand[] {
-  if (!range) return [];
-  const ordered: CoverageBand[] = [];
-  for (let floor = range.min; floor <= range.max; floor += BAND_STEP_C) {
-    const band = bands.get(floor);
-    if (band) ordered.push(band);
-  }
-  return ordered;
-}
 
 
 
@@ -81,59 +61,13 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     .where(eq(userProfiles.userId, userId))
     .limit(1);
 
-  const profileEntries = await database
-    .select({
-      id: outfitEntries.id,
-      runId: outfitEntries.runId,
-      verdict: outfitEntries.verdict,
-      createdAt: outfitEntries.createdAt,
-    })
-    .from(outfitEntries)
-    .where(eq(outfitEntries.userId, userId))
-    .orderBy(desc(outfitEntries.createdAt))
-    .limit(HISTORY_LIMIT);
-
-  const runIds = profileEntries.map((e) => e.runId);
-  const profileRuns = await forIds(runIds, () =>
-    database
-      .select({
-        id: runs.id,
-        lat: runs.lat,
-        lng: runs.lng,
-        startedAt: runs.startedAt,
-        durationS: runs.durationS,
-      })
-      .from(runs)
-      .where(inArray(runs.id, runIds)),
-  );
-  const observations = await observationsForRuns(profileRuns);
-  // The ladder is this person's own history, so it reads in their units.
+  const profileEntries = await recentOwnEntries(database, userId);
+  const observations = await observationsForEntries(database, profileEntries);
   const units = await unitsFor(database, userId);
 
-  const bands = new Map<number, CoverageBand>();
-  let bandRange: { min: number; max: number } | undefined;
-  for (const entry of profileEntries) {
-    if (entry.verdict === null) continue;
-    const observation = observations.get(entry.runId);
-    if (!observation) continue;
-    // The hour the verdict was actually about, not the one the run
-    // began in — a 4->12 run rated "way warm" belongs in the 10 band.
-    const floor = bandFloorC(judgedFeelsLikeC(observation, entry.verdict));
-    const band = bands.get(floor) ?? {
-      bandFloorC: floor,
-      label: bandLabel(floor, units.temp),
-      cold: 0,
-      dialed: 0,
-      warm: 0,
-    };
-    if (entry.verdict < 0) band.cold += 1;
-    else if (entry.verdict > 0) band.warm += 1;
-    else band.dialed += 1;
-    bands.set(floor, band);
-    bandRange = bandRange
-      ? { min: Math.min(bandRange.min, floor), max: Math.max(bandRange.max, floor) }
-      : { min: floor, max: floor };
-  }
+  const tally = tallyCoverage(profileEntries, observations, (floor) =>
+    bandLabel(floor, units.temp),
+  );
 
   const entryIds = profileEntries.map((e) => e.id);
   const itemRows = await forIds(entryIds, () =>
@@ -162,7 +96,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     followerCount: followers,
     followingCount: following,
     entryCount: profileEntries.length,
-    coverage: bandsAscending(bands, bandRange),
+    coverage: bandsAscending(tally),
     mostWornItems: topItemIds.map((itemId) => ({
       itemId,
       name: nameById.get(itemId) ?? "[removed item]",

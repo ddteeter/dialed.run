@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Page } from "../../src/ui/Page";
@@ -101,5 +101,20 @@ describe("Page", () => {
     );
 
     expect(screen.getByText("the list")).toBeInTheDocument();
+  });
+
+  it("stamps the hydration signal, because onboarding wears no Layout", async () => {
+    // O1, O3 and P3 render `Page` with no `Layout`, and they are the three
+    // screens that are *entirely* controlled forms — so without this the
+    // app's only "React has attached" signal was missing exactly where it
+    // matters most. The onboarding demo timed out on it, which is how this
+    // was found.
+    delete document.documentElement.dataset.hydrated;
+
+    render(<Page title="Settings">body</Page>);
+
+    await waitFor(() => {
+      expect(document.documentElement.dataset.hydrated).toBe("true");
+    });
   });
 });

@@ -10,7 +10,7 @@
  * this directory's name, are what other lanes grep to find the demo that
  * already owns a screen.
  */
-import { expect, test } from "../support/demo";
+import { expect, scene, test } from "../support/demo";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -25,12 +25,34 @@ test("signup -> authenticated home -> sign out", async ({ page }) => {
   await page.goto("/auth/signup");
   await hydrated(page);
 
+  await scene(page, "Signup · a name, an email, a password");
   await page.getByLabel("Name").fill("Smoke Test");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("a-long-enough-password");
   await page.getByRole("button", { name: "Sign up" }).click();
 
+  // A new account lands in onboarding now, not on `/` (D-52) — and the
+  // sign-out control lives on `/`. So the journey goes through the close
+  // screen and out of its own "Done for now" link, which is the route a
+  // real runner takes to reach the home page for the first time.
+  await scene(page, "A new account lands in onboarding, not home (D-52)");
+  await expect(page).toHaveURL(/\/onboarding\/calibrate/, { timeout: 15_000 });
+  await page.goto("/onboarding/done");
+  await page.getByRole("link", { name: "Done for now" }).click();
+
+  await scene(page, "Home knows who is signed in");
   await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
+  // The email is in the server-rendered HTML, so seeing it says nothing
+  // about whether React has attached yet — and "Sign out" is a bare
+  // `onClick` with no form behind it, so a click that lands before
+  // hydration is silently lost and the session simply stays. That is what
+  // CI showed three runs in a row: the link never arriving, at 5s and at
+  // 15s alike, on a runner ~18s slower than the one that last went green.
+  // The signup step above already waits on the stamp for the same reason.
+  await hydrated(page);
+  await scene(page, "Signing out returns the logged-out shell");
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible({
+    timeout: 15_000,
+  });
 });

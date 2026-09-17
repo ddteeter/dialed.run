@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @import "./ui/tokens.css";
 @import "./ui/motion.css";
+@import "./ui/ink.css";
 @plugin "@tailwindcss/typography";
 
 /*

@@ -10,10 +10,7 @@ import {
   garmentFieldSpec,
   garmentTypesFor,
 } from "../src/lib/garment-fields";
-import {
-  climateBands,
-  TAP_LISTS,
-} from "../src/modules/closet/tap-list-data";
+import { TAP_LIST } from "../src/modules/closet/tap-list-data";
 import { ICONS } from "../src/ui/icons";
 
 /**
@@ -131,8 +128,7 @@ describe("garmentFieldSpec", () => {
     // the reasoning that the row is one. That is the parser design rules
     // out — "L/S" sitting in free text is not a type, and reading it as one
     // files "Crew for cold L/S days" wrong, silently, forever.
-    const entries = climateBands.flatMap((band) => TAP_LISTS[band]);
-    for (const entry of entries) {
+    for (const entry of TAP_LIST) {
       expect(
         "type" in entry.garment ? entry.garment.type : undefined,
         `${entry.key} carries a type`,

@@ -105,8 +105,7 @@ describe("stryker.conf.json", () => {
       .filter((path) => !path.startsWith("!"));
 
     // Sets, because the order entries appear in is a sharding decision and
-    // not a fact about coverage — and `toSorted` is not in this project's
-    // lib.
+    // not a fact about coverage.
     expect(new Set(inScopes)).toStrictEqual(new Set(onDisk));
   });
 });

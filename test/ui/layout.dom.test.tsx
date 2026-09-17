@@ -96,9 +96,10 @@ describe("TabBar", () => {
       Feed: "/feed",
       Closet: "/closet",
       "+ Add": "/runs/new",
-      // Placeholder targets: lane 105 repoints Call at /call, and You gets
-      // its own lane later. Pinned so the repoint is a deliberate edit.
-      Call: "/",
+      // Call landed with lane 105 — this pin is what made the repoint a
+      // deliberate edit rather than a silent one. You is still a
+      // placeholder at lane 104's profile route until a `you/` lane exists.
+      Call: "/call",
       You: "/feed/me",
     });
   });

@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
+import { Page } from "../../../ui";
+
 /**
  * What the user sees after Strava sends them back.
  *
@@ -7,15 +9,20 @@ import { Link } from "@tanstack/react-router";
  * no button, no client state to get out of sync (design doc 102 §6). This
  * renders the answer, and it is a component rather than markup in the
  * route because the answer has two shapes and a route cannot be tested.
+ *
+ * **It wears `Page` because every screen must**, which is the rule
+ * `routes-stamp-hydration` now enforces (D-53). `Page` is what calls
+ * `useHydrated`, so a screen without one stamps no
+ * `html[data-hydrated="true"]` and every e2e wait on that attribute hangs
+ * — with the failure landing a long way from the cause. Wearing it also
+ * retired the hand-rolled `mx-auto flex w-full max-w-sm …` column that
+ * `Page` exists to have exactly one of.
  */
 export function StravaCallbackResult({
   result,
 }: Readonly<{ result: { ok: true } | { ok: false; reason: string } }>) {
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 px-6 py-16 text-center">
-      <h1 className="m-0 font-display text-2xl uppercase leading-none">
-        {result.ok ? "Connected" : "Not connected"}
-      </h1>
+    <Page width="narrow" title={result.ok ? "Connected" : "Not connected"}>
       <p className="text-night/70">
         {result.ok
           ? "Strava is connected. We'll remind you to log your kit after a run."
@@ -23,10 +30,10 @@ export function StravaCallbackResult({
       </p>
       <Link
         to="/runs/strava"
-        className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
+        className="self-start rounded-md bg-night px-4 py-2 font-semibold text-chalk"
       >
         Back to Strava settings
       </Link>
-    </div>
+    </Page>
   );
 }
