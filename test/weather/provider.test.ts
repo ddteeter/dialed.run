@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { ClimatePlace } from "../../src/lib/contracts";
 import {
   WeatherUnavailableError,
   createVisualCrossingProvider,
@@ -279,7 +280,39 @@ function statsFetch(): typeof fetch {
 });
 }
 
+const MINNEAPOLIS: ClimatePlace = {
+  kind: "coordinates",
+  lat: 44.98,
+  lng: -93.27,
+};
+const SYDNEY: ClimatePlace = { kind: "coordinates", lat: -33.87, lng: 151.21 };
+
 describe("visual crossing climate normals (105)", () => {
+  it("asks about a typed place by name, encoded for the path", async () => {
+    // D-59: the endpoint geocodes a label itself. The label is a runner's
+    // own text landing in a URL path, so a `/` or a `,` in it must not be
+    // read as structure — the encoded form is what leaves the adapter.
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+    await provider.climateNormals({ kind: "label", label: "Omaha, NE/US" });
+
+    const segments = requestedUrls(fetchImpl).map((url) =>
+      url.pathname.split("/").at(-2),
+    );
+    expect(segments).toStrictEqual(["Omaha%2C%20NE%2FUS", "Omaha%2C%20NE%2FUS"]);
+  });
+
+  it("asks about coordinates as lat,lng", async () => {
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+    await provider.climateNormals(MINNEAPOLIS);
+
+    const segments = requestedUrls(fetchImpl).map((url) =>
+      url.pathname.split("/").at(-2),
+    );
+    expect(segments).toStrictEqual(["44.98,-93.27", "44.98,-93.27"]);
+  });
+
 
   it("reads the mean of each triple, not the extreme", async () => {
     // `[min, mean, max]` — index 1. Taking index 0 would make every place
@@ -287,7 +320,7 @@ describe("visual crossing climate normals (105)", () => {
     // plausible-looking band.
     const provider = createVisualCrossingProvider("test-key", statsFetch());
 
-    expect(await provider.climateNormals(44.98, -93.27)).toStrictEqual({
+    expect(await provider.climateNormals(MINNEAPOLIS)).toStrictEqual({
       winterLowC: -12.1,
       summerHighC: 28.7,
     });
@@ -299,7 +332,7 @@ describe("visual crossing climate normals (105)", () => {
     // `normal` block even when `normal` is named in it.
     const fetchImpl = statsFetch();
     const provider = createVisualCrossingProvider("test-key", fetchImpl);
-    await provider.climateNormals(44.98, -93.27);
+    await provider.climateNormals(MINNEAPOLIS);
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     for (const url of requestedUrls(fetchImpl)) {
@@ -319,7 +352,7 @@ describe("visual crossing climate normals (105)", () => {
       fetchImpl,
       () => new Date("2031-09-16T12:00:00Z"),
     );
-    await provider.climateNormals(44.98, -93.27);
+    await provider.climateNormals(MINNEAPOLIS);
 
     const dates = requestedUrls(fetchImpl).map((url) =>
       url.pathname.split("/").at(-1),
@@ -330,7 +363,7 @@ describe("visual crossing climate normals (105)", () => {
   it("reads the year from the real clock when none is injected", async () => {
     const fetchImpl = statsFetch();
     const provider = createVisualCrossingProvider("test-key", fetchImpl);
-    await provider.climateNormals(44.98, -93.27);
+    await provider.climateNormals(MINNEAPOLIS);
 
     const year = String(new Date().getUTCFullYear());
     const dates = requestedUrls(fetchImpl).map((url) =>
@@ -354,7 +387,7 @@ describe("visual crossing climate normals (105)", () => {
     });
     const provider = createVisualCrossingProvider("test-key", fetchImpl);
 
-    expect(await provider.climateNormals(-33.87, 151.21)).toStrictEqual({
+    expect(await provider.climateNormals(SYDNEY)).toStrictEqual({
       winterLowC: -12.1,
       summerHighC: 28.7,
     });
@@ -366,7 +399,7 @@ describe("visual crossing climate normals (105)", () => {
       jsonFetch({ days: [{ datetime: "2027-01-15" }] }),
     );
 
-    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+    await expect(provider.climateNormals(MINNEAPOLIS)).rejects.toThrow(
       WeatherUnavailableError,
     );
   });
@@ -375,7 +408,7 @@ describe("visual crossing climate normals (105)", () => {
     const fetchImpl = statsFetch();
     const provider = createVisualCrossingProvider(undefined, fetchImpl);
 
-    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+    await expect(provider.climateNormals(MINNEAPOLIS)).rejects.toThrow(
       WeatherUnavailableError,
     );
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -390,7 +423,7 @@ describe("visual crossing climate normals (105)", () => {
     // The exact sentence, not just the class: the noun in it is what tells
     // a reader whether the observation read or the stats read broke, and
     // asserting only `toThrow(WeatherUnavailableError)` lets it go empty.
-    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+    await expect(provider.climateNormals(MINNEAPOLIS)).rejects.toThrow(
       "Visual Crossing stats responded 429",
     );
   });
@@ -412,7 +445,7 @@ describe("visual crossing climate normals (105)", () => {
     const fetchImpl = statsFetch();
     const provider = createVisualCrossingProvider("", fetchImpl);
 
-    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+    await expect(provider.climateNormals(MINNEAPOLIS)).rejects.toThrow(
       "VISUAL_CROSSING_API_KEY is not configured",
     );
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -427,7 +460,7 @@ describe("visual crossing climate normals (105)", () => {
       jsonFetch({ days: [] }),
     );
 
-    await expect(provider.climateNormals(44.98, -93.27)).rejects.toThrow(
+    await expect(provider.climateNormals(MINNEAPOLIS)).rejects.toThrow(
       "Visual Crossing stats response failed validation",
     );
   });

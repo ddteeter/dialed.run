@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
-import type { ClimateNormals } from "../../lib/contracts";
+import type { ClimateNormals, ClimatePlace } from "../../lib/contracts";
 import { TAP_LIST_FOLD, tapListFor } from "../closet";
 import type { TapListEntry } from "../closet";
 import { BAND_WITHOUT_LOCATION, resolveClimateBand } from "./climate";
@@ -40,24 +40,29 @@ export interface StarterList {
 export async function starterList(
   db: DrizzleD1Database,
   userId: string,
-  normalsFor: (lat: number, lng: number) => Promise<ClimateNormals>,
+  normalsFor: (place: ClimatePlace) => Promise<ClimateNormals>,
 ): Promise<StarterList> {
   const band = await bandFor(db, userId, normalsFor);
   return { entries: tapListFor(band), fold: TAP_LIST_FOLD };
 }
 
 /**
- * A runner with no coordinates gets the mild ordering, and never a lookup.
+ * The place the runner gave, in the order O1 can give it: coordinates when
+ * the browser was allowed to say, else the city they typed, else nothing.
  *
  * O1's location step is refusable, so "no lat/lng" is an ordinary outcome
- * rather than an error — the typed city is a label with nothing behind it.
- * Asking the provider about `null` would be a wasted record and a failure
- * to catch.
+ * rather than an error. It used to be the end of the road — the typed
+ * city was a label with nothing behind it, and a Minneapolis runner who
+ * refused the permission got the mild list. The provider resolves place
+ * names itself (D-59), so the label is now the second answer rather than
+ * no answer. A runner who gave neither gets the mild ordering and never a
+ * lookup: asking the provider about `null` would be a wasted record and a
+ * failure to catch.
  */
 async function bandFor(
   db: DrizzleD1Database,
   userId: string,
-  normalsFor: (lat: number, lng: number) => Promise<ClimateNormals>,
+  normalsFor: (place: ClimatePlace) => Promise<ClimateNormals>,
 ) {
   // A generic `firstRowWhere(db, table, columns, where)` in `lib/keyed-read`
   // is the obvious extraction and it does not typecheck. Drizzle infers the
@@ -72,23 +77,33 @@ async function bandFor(
   //
   // fallow-ignore-next-line code-duplication -- the query is the same read as feed/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since "no location" and "no unit preference" are different facts with different right answers
   const [row] = await db
-    .select({ lat: userProfiles.lat, lng: userProfiles.lng })
+    .select({
+      lat: userProfiles.lat,
+      lng: userProfiles.lng,
+      cityLabel: userProfiles.cityLabel,
+    })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
   if (row === undefined) return BAND_WITHOUT_LOCATION;
-  // `typeof`, not a comparison against `null`: both columns are nullable
-  // `real`s, so each arrives as `number | null`, and `unicorn/no-null`
-  // rules out writing the literal. Asking whether it *is* a number narrows
-  // it and reads as the question being asked — "do we have a coordinate" —
-  // rather than as a list of the ways we might not.
+  // `typeof`, not a comparison against `null`: the columns are nullable,
+  // so each arrives as `T | null`, and `unicorn/no-null` rules out writing
+  // the literal. Asking whether it *is* a number narrows it and reads as
+  // the question being asked — "do we have a coordinate" — rather than as
+  // a list of the ways we might not.
   //
   // Both halves are checked because `calibrationInput` takes `lat` and
   // `lng` independently, so a row with one and not the other is
   // expressible, and half a coordinate is not a place.
-  const { lat, lng } = row;
-  if (typeof lat !== "number" || typeof lng !== "number") {
-    return BAND_WITHOUT_LOCATION;
+  const { lat, lng, cityLabel } = row;
+  if (typeof lat === "number" && typeof lng === "number") {
+    return resolveClimateBand({ kind: "coordinates", lat, lng }, normalsFor);
   }
-  return resolveClimateBand(lat, lng, normalsFor);
+  // No emptiness check: `calibrationInput` trims and requires a character,
+  // so a stored label is never "", and a guard for it would be a branch no
+  // row can reach.
+  if (typeof cityLabel === "string") {
+    return resolveClimateBand({ kind: "label", label: cityLabel }, normalsFor);
+  }
+  return BAND_WITHOUT_LOCATION;
 }

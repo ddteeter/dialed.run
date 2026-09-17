@@ -34,7 +34,9 @@ describe("climateNormals", () => {
     vi.stubGlobal("fetch", fetchImpl);
 
     try {
-      expect(await climateNormals(44.98, -93.27)).toStrictEqual({
+      expect(
+        await climateNormals({ kind: "coordinates", lat: 44.98, lng: -93.27 }),
+      ).toStrictEqual({
         winterLowC: -12.1,
         summerHighC: 28.7,
       });

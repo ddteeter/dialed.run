@@ -31,7 +31,14 @@ honest ladder instead of a promise.
      reads normals and **falls back to latitude**, which is why the
      heuristic stays rather than being deleted (law 5: onboarding must not
      block on a third party).
-  Permission denied or no location → `mild`, and no provider call at all.
+  3. The owner asked why a runner who refuses geolocation cannot pick a
+     band (PR #71). The typed city was a label with nothing behind it, and
+     the provider turns out to geocode a place string itself — so
+     `ClimatePlace` is coordinates *or* a label, `starterList` asks about
+     whichever O1 left, and O1 stays one question (D-59). A label the
+     provider cannot place falls back to `mild`, never to a latitude
+     guessed from text.
+  Neither coordinates nor a city → `mild`, and no provider call at all.
   Since round 6 the band only *orders* the list, so a wrong band costs a
   scroll rather than a garment.
 - **Steps are routes, not a wizard component**: `/onboarding/calibrate`,

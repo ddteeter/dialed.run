@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import {
   weatherObservationSchema,
+  type ClimatePlace,
   type WeatherObservation,
   type WeatherProvider,
 } from "../../../lib/contracts";
@@ -121,20 +122,35 @@ function pickNearestHour(
  * the first probe concluded the field did not exist.
  */
 function timelineUrl(
-  lat: number,
-  lng: number,
+  location: string,
   date: string,
   include: "hours" | "stats",
   apiKey: string,
 ): URL {
   const url = new URL(
-    `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${String(lat)},${String(lng)}/${date}`,
+    `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${location}/${date}`,
   );
   url.searchParams.set("unitGroup", "metric");
   url.searchParams.set("include", include);
   url.searchParams.set("contentType", "json");
   url.searchParams.set("key", apiKey);
   return url;
+}
+
+/**
+ * The path segment the Timeline endpoint resolves a place from: `lat,lng`
+ * verbatim, or a typed label, which it geocodes upstream (verified
+ * 2026-09-16: `Omaha,NE` answers as 41.26, −95.94 with the same `normal`
+ * block as the coordinates do).
+ *
+ * The label is a runner's own text landing in a URL path, so it is
+ * encoded rather than trusted — a `/` in it would otherwise be read as a
+ * second segment and the date as a third.
+ */
+function locationPath(place: ClimatePlace): string {
+  return place.kind === "coordinates"
+    ? `${String(place.lat)},${String(place.lng)}`
+    : encodeURIComponent(place.label);
 }
 
 /**
@@ -191,7 +207,12 @@ async function fetchTimeline(
     );
   }
   const parsed = await timelineJson(
-    timelineUrl(lat, lng, at.toISOString().slice(0, 10), "hours", apiKey),
+    timelineUrl(
+      locationPath({ kind: "coordinates", lat, lng }),
+      at.toISOString().slice(0, 10),
+      "hours",
+      apiKey,
+    ),
     visualCrossingResponseSchema,
     "observation",
     fetchImpl,
@@ -241,14 +262,13 @@ function probeDate(now: Date, monthDay: string): string {
 }
 
 async function fetchNormalDay(
-  lat: number,
-  lng: number,
+  location: string,
   date: string,
   apiKey: string,
   fetchImpl: typeof fetch,
 ): Promise<{ lowC: number; highC: number }> {
   const parsed = await timelineJson(
-    timelineUrl(lat, lng, date, "stats", apiKey),
+    timelineUrl(location, date, "stats", apiKey),
     visualCrossingStatsSchema,
     "stats",
     fetchImpl,
@@ -268,7 +288,7 @@ export function createVisualCrossingProvider(
   now: () => Date = () => new Date(),
 ): WeatherProvider {
   return {
-    async climateNormals(lat, lng) {
+    async climateNormals(place) {
       if (apiKey === undefined || apiKey === "") {
         throw new WeatherUnavailableError(
           "VISUAL_CROSSING_API_KEY is not configured",
@@ -277,17 +297,16 @@ export function createVisualCrossingProvider(
       // Two records per call, and onboarding happens once per account.
       // Sequential rather than parallel: a failure on the first makes the
       // second pointless, and the caller degrades either way.
+      const location = locationPath(place);
       const today = now();
       const winter = await fetchNormalDay(
-        lat,
-        lng,
+        location,
         probeDate(today, WINTER_PROBE_DAY),
         apiKey,
         fetchImpl,
       );
       const summer = await fetchNormalDay(
-        lat,
-        lng,
+        location,
         probeDate(today, SUMMER_PROBE_DAY),
         apiKey,
         fetchImpl,

@@ -504,6 +504,17 @@ export interface ClimateNormals {
   summerHighC: number;
 }
 
+/**
+ * Where a runner runs, as O1 leaves it: coordinates when the browser was
+ * allowed to say, otherwise the label they typed. Either is enough for
+ * the provider to find the place (D-59) — a typed "Omaha, NE" resolves
+ * upstream, so refusing geolocation no longer costs the starter list its
+ * ordering. Never both: coordinates are the better answer when present.
+ */
+export type ClimatePlace =
+  | { kind: "coordinates"; lat: number; lng: number }
+  | { kind: "label"; label: string };
+
 export interface WeatherProvider {
   /**
   Historical/near-past conditions at a time+place (for imports).
@@ -512,7 +523,7 @@ export interface WeatherProvider {
   /**
   Seasonal normals at a place, for choosing a starter wardrobe (O3).
   */
-  climateNormals(lat: number, lng: number): Promise<ClimateNormals>;
+  climateNormals(place: ClimatePlace): Promise<ClimateNormals>;
   /**
   Forecast at a future time+place (for the call, post-MVP).
   */

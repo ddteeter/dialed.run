@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { ClimatePlace } from "../../src/lib/contracts";
+
 import { climateBands } from "../../src/modules/closet";
 import {
   BAND_WITHOUT_LOCATION,
@@ -121,9 +123,20 @@ describe("bandFromNormals", () => {
 });
 
 describe("resolveClimateBand", () => {
+  const phoenix: ClimatePlace = {
+    kind: "coordinates",
+    lat: 33.45,
+    lng: -112.07,
+  };
+  const seattle: ClimatePlace = {
+    kind: "coordinates",
+    lat: 47.61,
+    lng: -122.33,
+  };
+
   it("prefers what the weather says", async () => {
     // Phoenix: latitude says mild, normals say hot.
-    const band = await resolveClimateBand(33.45, -112.07, () =>
+    const band = await resolveClimateBand(phoenix, () =>
       Promise.resolve(NORMALS.phoenix),
     );
 
@@ -134,20 +147,43 @@ describe("resolveClimateBand", () => {
     // Onboarding must not block on a third party (law 5). Seattle's
     // fallback is *wrong* — latitude says cold, normals say mild — and
     // that is the accepted cost: a plausible list a tap can fix.
-    const band = await resolveClimateBand(47.61, -122.33, () =>
+    const band = await resolveClimateBand(seattle, () =>
       Promise.reject(new Error("provider down")),
     );
 
     expect(band).toBe("cold");
   });
 
-  it("asks the provider for the coordinates it was given", async () => {
-    const seen: [number, number][] = [];
-    await resolveClimateBand(44.98, -93.27, (lat, lng) => {
-      seen.push([lat, lng]);
-      return Promise.resolve(NORMALS.minneapolis);
+  it("answers a typed city from what the weather says", async () => {
+    // D-59: a refused permission plus a typed city used to mean the mild
+    // list. The label goes to the provider now, and Minneapolis is cold.
+    const band = await resolveClimateBand(
+      { kind: "label", label: "Minneapolis" },
+      () => Promise.resolve(NORMALS.minneapolis),
+    );
+
+    expect(band).toBe("cold");
+  });
+
+  it("falls back to the no-location band for a typed city it cannot place", async () => {
+    // A label has no latitude to fall back to, and parsing one out of the
+    // runner's text is not a fallback — it is a guess. `mild` is what a
+    // runner who gave no location gets, and it is the right answer here.
+    const band = await resolveClimateBand(
+      { kind: "label", label: "Minneapolis" },
+      () => Promise.reject(new Error("provider down")),
+    );
+
+    expect(band).toBe(BAND_WITHOUT_LOCATION);
+  });
+
+  it("asks the provider for the place it was given", async () => {
+    const seen: ClimatePlace[] = [];
+    await resolveClimateBand(phoenix, (place) => {
+      seen.push(place);
+      return Promise.resolve(NORMALS.phoenix);
     });
 
-    expect(seen).toStrictEqual([[44.98, -93.27]]);
+    expect(seen).toStrictEqual([phoenix]);
   });
 });

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import type { ClimateNormals } from "../../src/lib/contracts";
+import type { ClimateNormals, ClimatePlace } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import { TAP_LIST, TAP_LIST_FOLD } from "../../src/modules/closet";
 import { saveCalibration } from "../../src/modules/onboarding/profile";
@@ -83,10 +83,62 @@ describe("starterList", () => {
     expect(entries[0]?.key).toBe("tights");
   });
 
+  it("asks about the typed city when the browser was not allowed to say", async () => {
+    // D-59: a refused permission plus a typed "Minneapolis" used to mean
+    // the mild list, because the label was never used. It is the place
+    // now, and the provider resolves it — so this runner gets tights first.
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Minneapolis",
+    });
+    const normalsFor = vi.fn(() => Promise.resolve(COLD_NORMALS));
+
+    const { entries } = await starterList(coreDb(), userId, normalsFor);
+
+    const expected: ClimatePlace = { kind: "label", label: "Minneapolis" };
+    expect(normalsFor).toHaveBeenCalledWith(expected);
+    expect(entries[0]?.key).toBe("tights");
+  });
+
+  it("gives a typed city the provider cannot place the mild ordering", async () => {
+    // No latitude to fall back to, and no guessing one from the text.
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Minneapolis",
+    });
+
+    const { entries } = await starterList(coreDb(), userId, () =>
+      Promise.reject(new Error("provider down")),
+    );
+
+    expect(entries).toHaveLength(TAP_LIST.length);
+    expect(entries[0]?.key).toBe("tee");
+  });
+
+  it("prefers coordinates over the typed city when it has both", async () => {
+    // Coordinates are the better answer: a label is what someone typed,
+    // a coordinate is where they were.
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Minneapolis",
+      ...PHOENIX,
+    });
+    const normalsFor = vi.fn(() => Promise.resolve(HOT_NORMALS));
+
+    await starterList(coreDb(), userId, normalsFor);
+
+    const expected: ClimatePlace = { kind: "coordinates", ...PHOENIX };
+    expect(normalsFor).toHaveBeenCalledWith(expected);
+  });
+
   it("never asks the provider about a runner who shared no location", async () => {
-    // O1's location step is refusable, so "no coordinates" is an ordinary
-    // outcome. Asking about `null` would be a wasted record and a rejection
-    // to catch, and the mild ordering is the answer either way.
+    // O1's location step is refusable and the city is optional, so "no
+    // place at all" is an ordinary outcome. Asking about `null` would be a
+    // wasted record and a rejection to catch, and the mild ordering is the
+    // answer either way.
     const userId = newUlid();
     await saveCalibration(coreDb(), userId, { thermalLevel: 0 });
     const normalsFor = vi.fn(() => Promise.resolve(COLD_NORMALS));
@@ -136,6 +188,7 @@ describe("starterList", () => {
 
     await starterList(coreDb(), userId, normalsFor);
 
-    expect(normalsFor).toHaveBeenCalledWith(PHOENIX.lat, PHOENIX.lng);
+    const expected: ClimatePlace = { kind: "coordinates", ...PHOENIX };
+    expect(normalsFor).toHaveBeenCalledWith(expected);
   });
 });

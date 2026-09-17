@@ -13,12 +13,9 @@
  * is one extra record on the provider's bill and a starter list that is
  * plausible rather than right — not a blocked signup.
  */
-import type { ClimateNormals } from "../../lib/contracts";
+import type { ClimateNormals, ClimatePlace } from "../../lib/contracts";
 import { weatherProvider } from "./provider";
 
-export function climateNormals(
-  lat: number,
-  lng: number,
-): Promise<ClimateNormals> {
-  return weatherProvider().climateNormals(lat, lng);
+export function climateNormals(place: ClimatePlace): Promise<ClimateNormals> {
+  return weatherProvider().climateNormals(place);
 }

@@ -1,6 +1,6 @@
 import { climateBandSchema } from "../closet";
 import type { ClimateBand } from "../closet";
-import type { ClimateNormals } from "../../lib/contracts";
+import type { ClimateNormals, ClimatePlace } from "../../lib/contracts";
 
 /**
  * The band from where a place sits on the globe — **the fallback, not the
@@ -88,23 +88,29 @@ export function bandFromNormals(normals: ClimateNormals): ClimateBand {
 
 /**
  * The band for a place, preferring what the weather says and falling back
- * to where the place is.
+ * to whatever the place itself still tells us.
  *
  * The fallback is not decoration: onboarding must not block on a third
  * party (resilience law 5), and `climateBandFor` is wrong for four of the
- * five cities above — so a runner who hits a provider outage gets a
+ * six cities above — so a runner who hits a provider outage gets a
  * starter list that is plausible rather than right, and fixes it with a
  * tap. That is the correct trade, and the reason the latitude heuristic
  * stays rather than being deleted once normals landed.
+ *
+ * **A typed label has no latitude to fall back to** (D-59). When the
+ * provider cannot place "Minneapolis" — an outage, or a label it does not
+ * recognise — the answer is the one a runner with no location gets, not
+ * a guess parsed out of their text.
  */
 export async function resolveClimateBand(
-  lat: number,
-  lng: number,
-  normalsFor: (lat: number, lng: number) => Promise<ClimateNormals>,
+  place: ClimatePlace,
+  normalsFor: (place: ClimatePlace) => Promise<ClimateNormals>,
 ): Promise<ClimateBand> {
   try {
-    return bandFromNormals(await normalsFor(lat, lng));
+    return bandFromNormals(await normalsFor(place));
   } catch {
-    return climateBandFor(lat);
+    return place.kind === "coordinates"
+      ? climateBandFor(place.lat)
+      : BAND_WITHOUT_LOCATION;
   }
 }
