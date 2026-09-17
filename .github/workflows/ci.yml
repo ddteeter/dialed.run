@@ -69,6 +69,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # MediaPipe's WASM is gitignored and staged out of node_modules, and
+      # the `browser` vitest project fetches it over HTTP. `npm test` stages
+      # it through `pretest`; anything that reaches vitest by another road —
+      # stryker here, the dev server for e2e — has to ask for it, or the
+      # model 404s and every browser test fails as "unavailable".
+      - run: npm run stage:mediapipe
       - run: echo "BETTER_AUTH_SECRET=ci-only-secret" > .dev.vars
       - run: npx wrangler d1 migrations apply dialed-core --local
       - run: npx wrangler d1 migrations apply dialed-weather --local

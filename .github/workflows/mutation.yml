@@ -183,6 +183,13 @@ jobs:
       - name: Install the browser the vitest browser project drives
         run: npx playwright install --with-deps chromium
 
+      # MediaPipe's WASM is gitignored and staged out of node_modules, and
+      # the `browser` vitest project fetches it over HTTP. `npm test` stages
+      # it through `pretest`; anything that reaches vitest by another road —
+      # stryker here, the dev server for e2e — has to ask for it, or the
+      # model 404s and every browser test fails as "unavailable".
+      - run: npm run stage:mediapipe
+
       # Restore on PRs only. The run on `main` is deliberately cold: it is
       # the measurement everything else is calibrated against, and a warm
       # one would inherit whatever the last warm one assumed.
