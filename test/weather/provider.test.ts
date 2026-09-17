@@ -309,15 +309,34 @@ describe("visual crossing climate normals (105)", () => {
     }
   });
 
-  it("probes two dates, so a place gets both ends of its year", async () => {
+  it("probes mid-January and mid-July of the current year", async () => {
+    // The year is irrelevant to the `normal` block (measured: 2025, 2027
+    // and 2029 answer identically), so it is read from the clock rather
+    // than pinned — a pinned year reads as a time bomb even when it is not.
     const fetchImpl = statsFetch();
-    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      fetchImpl,
+      () => new Date("2031-09-16T12:00:00Z"),
+    );
     await provider.climateNormals(44.98, -93.27);
 
     const dates = requestedUrls(fetchImpl).map((url) =>
       url.pathname.split("/").at(-1),
     );
-    expect(dates).toStrictEqual(["2027-01-15", "2027-07-15"]);
+    expect(dates).toStrictEqual(["2031-01-15", "2031-07-15"]);
+  });
+
+  it("reads the year from the real clock when none is injected", async () => {
+    const fetchImpl = statsFetch();
+    const provider = createVisualCrossingProvider("test-key", fetchImpl);
+    await provider.climateNormals(44.98, -93.27);
+
+    const year = String(new Date().getUTCFullYear());
+    const dates = requestedUrls(fetchImpl).map((url) =>
+      url.pathname.split("/").at(-1),
+    );
+    expect(dates).toStrictEqual([`${year}-01-15`, `${year}-07-15`]);
   });
 
   it("takes the colder low and the warmer high whichever probe found them", async () => {

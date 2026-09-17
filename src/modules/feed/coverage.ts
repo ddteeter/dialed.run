@@ -132,10 +132,11 @@ function spanFloors(tally: CoverageTally): number[] {
  * "Dialed", "Over-dressed" — beside its run count, rather than three
  * competing dot runs. This is the derivation that produces it.
  *
- * **Ties go to the colder end**, the same rule and the same reason
- * `ladderFrom` picks its thinnest band that way: underdressing is the
- * failure that ends a run early, so a band a runner gets wrong in both
- * directions equally is worth naming as the direction that costs more.
+ * **Ties go to the colder end.** `ladderFrom` used to break its ties the
+ * same way and no longer does — it now asks for the more extreme band at
+ * either end, because overdressing in heat ends a run as surely as
+ * underdressing in cold. Whether a band's one-word *verdict* should be
+ * symmetric too is a word a user reads, so it is the owner's call: D-60.
  */
 export function bandVerdict(band: CoverageBand): VerdictKind {
   if (band.cold >= band.dialed && band.cold >= band.warm) return "cold";

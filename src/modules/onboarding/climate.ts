@@ -3,24 +3,26 @@ import type { ClimateBand } from "../closet";
 import type { ClimateNormals } from "../../lib/contracts";
 
 /**
- * Which starter list a person sees, from where they run.
+ * The band from where a place sits on the globe — **the fallback, not the
+ * plan.** `resolveClimateBand` below asks the weather provider for measured
+ * normals first and lands here only when that call fails, because
+ * onboarding must not block on a third party (resilience law 5). Latitude
+ * is the half that needs no data source, no network call and no upkeep,
+ * and it answers the packet's own worked example: Minneapolis (45.0) gets
+ * mittens and Phoenix (33.4) does not.
  *
- * **Latitude alone, deliberately.** The packet allows "rough climate band
- * from latitude/typical temps", and latitude is the half that needs no
- * data source, no network call and no upkeep. The case it has to get right
- * is the one the packet names — Minneapolis gets mittens, Phoenix does not
- * — and the boundaries below are chosen so it does: Minneapolis sits at
- * 45.0 and Phoenix at 33.4.
+ * What it gets wrong is everything latitude cannot see, which is why it is
+ * the fallback: a maritime climate at a cold latitude (Reykjavík is milder
+ * than its 64° suggests) and altitude anywhere (Denver is colder than its
+ * 39° suggests). Against measured normals it is wrong for four of the six
+ * cities in the table below. Since round 6 the band only *orders* the
+ * list, so a wrong band costs a scroll rather than a garment.
  *
- * What it gets wrong, knowingly: a maritime climate at a cold latitude
- * (Reykjavík is milder than its 64° suggests) and altitude anywhere
- * (Denver is colder than its 39° suggests). Both are a *starter list*
- * being slightly off, which the user fixes by tapping — not a wrong
- * recommendation, which is what the call epic must not ship. Replace this
- * with real climate normals when there is a reason to, not before.
- *
- * `Math.abs` because the southern hemisphere is symmetric: Wellington at
- * −41 is the same band as Toronto at +43.
+ * It works on every continent in the one sense that matters: a parallel
+ * is the same distance from the equator in Asia as in America, so the
+ * heuristic is exactly as rough everywhere. `Math.abs` because the
+ * southern hemisphere is symmetric — Wellington at −41 is the same band as
+ * Toronto at +43.
  */
 const COLD_FROM_DEGREES = 40;
 const MILD_FROM_DEGREES = 30;
@@ -50,12 +52,13 @@ export const BAND_WITHOUT_LOCATION: ClimateBand =
  * sits on the globe.
  *
  * **Thresholds are set against measured normals, not chosen for roundness.**
- * Visual Crossing's `include=stats`, probed 2026-09-11:
+ * Visual Crossing's `include=stats`, probed 2026-09-11 (Omaha 2026-09-16):
  *
  * | place       | winter mean low | summer mean high | band |
  * | ----------- | --------------: | ---------------: | ---- |
  * | Minneapolis |          −12.1  |            28.7  | cold |
  * | Denver      |           −8.0  |            31.0  | cold |
+ * | Omaha       |           −7.7  |            31.3  | cold |
  * | Reykjavík   |           −2.8  |            14.0  | mild |
  * | Seattle     |            1.3  |            24.1  | mild |
  * | Phoenix     |            6.5  |            42.0  | hot  |
@@ -66,8 +69,13 @@ export const BAND_WITHOUT_LOCATION: ClimateBand =
  * under it — deliberately, because Denver's winters are the thing its
  * wardrobe is built around.
  *
- * **Cold wins when a place is both**, which a continental desert can be.
- * You can run a hot day in a tee you already own; −20 needs equipment.
+ * **A continental climate is not collapsed to one number.** `ClimateNormals`
+ * carries both ends of the year on purpose: Omaha is −7.7 in January and
+ * 31.3 in July, and averaging those would call it mild — the one answer
+ * that is wrong for both halves of its year. The two questions are asked
+ * in order, and **cold wins when a place is both**: −8 needs equipment,
+ * while 31 needs a tee the runner already owns. The July rows are still in
+ * the list — the band orders, it never removes — just behind the fold.
  */
 const COLD_WINTER_LOW_C = -5;
 const HOT_SUMMER_HIGH_C = 32;

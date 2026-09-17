@@ -55,8 +55,20 @@ export function NameRowForm({
   nameGarment: (input: {
     data: { itemId: string } & NameIdentity;
   }) => Promise<NamedResult>;
+  /**
+   * Names, not ids, and keyed by name — on purpose. A `<datalist>` can
+   * only offer text to an `<input>`, and the runner may type a brand that
+   * is on no list at all, so what the form sends is the name either way
+   * and the server resolves it: `createOrGetBrand` and `resolveProduct`
+   * find-or-create the row on the *normalized* name, which is where the
+   * system-level ids are minted. The name is a safe React key because the
+   * same normalization is a UNIQUE index — two rows cannot share one.
+   */
   brandOptions: readonly string[];
   onBrandInput: (value: string) => void;
+  /**
+  Product names for the typed brand, on the same terms as `brandOptions`.
+  */
   modelOptions: readonly string[];
   onNamed: (result: NamedResult) => void;
 }>): JSX.Element {

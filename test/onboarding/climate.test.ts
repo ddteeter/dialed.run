@@ -70,6 +70,7 @@ describe("climateBandFor", () => {
 const NORMALS = {
   minneapolis: { winterLowC: -12.1, summerHighC: 28.7 },
   denver: { winterLowC: -8, summerHighC: 31 },
+  omaha: { winterLowC: -7.7, summerHighC: 31.3 },
   reykjavik: { winterLowC: -2.8, summerHighC: 14 },
   seattle: { winterLowC: 1.3, summerHighC: 24.1 },
   phoenix: { winterLowC: 6.5, summerHighC: 42 },
@@ -79,6 +80,9 @@ describe("bandFromNormals", () => {
   it("bands the five cities the way their wardrobes actually differ", () => {
     expect(bandFromNormals(NORMALS.minneapolis)).toBe("cold");
     expect(bandFromNormals(NORMALS.denver)).toBe("cold");
+    // Continental: cold in January and hot in July, and not averaged into
+    // mild — the colder end decides, and the July rows stay in the list.
+    expect(bandFromNormals(NORMALS.omaha)).toBe("cold");
     expect(bandFromNormals(NORMALS.reykjavik)).toBe("mild");
     expect(bandFromNormals(NORMALS.seattle)).toBe("mild");
     expect(bandFromNormals(NORMALS.phoenix)).toBe("hot");

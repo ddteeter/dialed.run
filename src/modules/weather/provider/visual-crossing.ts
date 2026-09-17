@@ -5,6 +5,13 @@
  * `AbortSignal.timeout` (CLAUDE.md resilience law 4). `observation` and
  * `forecast` share one Timeline query — the API serves both past and
  * future dates from the same endpoint shape.
+ *
+ * **No retries here, by law 3.** Every call is one attempt, and the retry
+ * lives where the state does: an observation that fails leaves the run's
+ * `weather_status` at `pending`, and the hourly `weather-retry` cron
+ * (`ops/crons.ts`) re-drives it; a normals read that fails degrades to the
+ * latitude heuristic, because a starter list only orders rows and is not
+ * worth a second ten-second wait on a signup.
  */
 import { z } from "zod";
 
@@ -209,17 +216,29 @@ async function fetchTimeline(
 }
 
 /**
- * Mid-January and mid-July, in a year far enough ahead that the provider
- * has no forecast for it and answers from statistics alone.
+ * Mid-January and mid-July of whatever year it is.
  *
- * The hemisphere is not switched: `normal` is a statistical period, and
- * asking for both dates gets the cold end and the warm end of the year
- * whichever side of the equator they fall on. Naming them "winter" and
- * "summer" is northern-hemisphere shorthand for the caller's benefit; the
- * maths only cares that one is the cold one.
+ * **The year is irrelevant to the answer, and that was measured rather
+ * than assumed** (2026-09-16). `normal` is a statistic over the provider's
+ * period keyed by day of year: 15 January answers Minneapolis
+ * `tempmin [-26.4, -12.1, 0.4]` whether the request says 2025 (history),
+ * 2027 or 2029, and a date inside the 15-day forecast window carries the
+ * block too. An earlier version pinned `2027` on the belief that only a
+ * date past the forecast horizon was answered from statistics — wrong,
+ * and it read as a time bomb for the day 2027 arrived. The year comes from
+ * the clock so nobody has to re-verify that; the day is what matters.
+ *
+ * The hemisphere is not switched: asking for both dates gets the cold end
+ * and the warm end of the year whichever side of the equator they fall
+ * on. Naming them "winter" and "summer" is northern-hemisphere shorthand
+ * for the caller's benefit; the maths only cares that one is the cold one.
  */
-const WINTER_PROBE = "2027-01-15";
-const SUMMER_PROBE = "2027-07-15";
+const WINTER_PROBE_DAY = "01-15";
+const SUMMER_PROBE_DAY = "07-15";
+
+function probeDate(now: Date, monthDay: string): string {
+  return `${String(now.getUTCFullYear())}-${monthDay}`;
+}
 
 async function fetchNormalDay(
   lat: number,
@@ -240,11 +259,13 @@ async function fetchNormalDay(
 
 /**
  * Builds the live adapter. `fetchImpl` is injectable so unit tests never
- * touch the network (default is the ambient global `fetch`).
+ * touch the network (default is the ambient global `fetch`), and `now` so
+ * a test can pin which year the normals probes ask for.
  */
 export function createVisualCrossingProvider(
   apiKey: string | undefined,
   fetchImpl: typeof fetch = fetch,
+  now: () => Date = () => new Date(),
 ): WeatherProvider {
   return {
     async climateNormals(lat, lng) {
@@ -256,17 +277,18 @@ export function createVisualCrossingProvider(
       // Two records per call, and onboarding happens once per account.
       // Sequential rather than parallel: a failure on the first makes the
       // second pointless, and the caller degrades either way.
+      const today = now();
       const winter = await fetchNormalDay(
         lat,
         lng,
-        WINTER_PROBE,
+        probeDate(today, WINTER_PROBE_DAY),
         apiKey,
         fetchImpl,
       );
       const summer = await fetchNormalDay(
         lat,
         lng,
-        SUMMER_PROBE,
+        probeDate(today, SUMMER_PROBE_DAY),
         apiKey,
         fetchImpl,
       );

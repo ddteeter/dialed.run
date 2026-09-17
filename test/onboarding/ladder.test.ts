@@ -113,11 +113,45 @@ describe("ladderFrom", () => {
     expect(ladder.thinnestBand?.bandFloorC).toBe(5);
   });
 
-  it("breaks a tie toward the colder band", () => {
-    // Underdressing is the failure that ends a run early.
+  it("breaks a tie toward the band farther from the middle of their range", () => {
+    // Overdressing in heat ends a run as surely as underdressing in cold,
+    // so a tie goes to whichever end is more extreme — here the warm one.
+    const warmEnd = ladderFrom([
+      band(-5, { dialed: 3 }),
+      band(0),
+      band(5, { dialed: 3 }),
+      band(10),
+    ]);
+    expect(warmEnd.thinnestBand?.bandFloorC).toBe(10);
+
+    // And the cold one when that is the farther end.
+    const coldEnd = ladderFrom([
+      band(-5),
+      band(0, { dialed: 3 }),
+      band(5),
+      band(10, { dialed: 3 }),
+    ]);
+    expect(coldEnd.thinnestBand?.bandFloorC).toBe(-5);
+  });
+
+  it("sends an equidistant tie to the colder band", () => {
+    // Both ends of the range, equally thin: the one remaining asymmetry,
+    // and a coin has to land somewhere.
     const ladder = ladderFrom([band(-5), band(10)]);
 
     expect(ladder.thinnestBand?.bandFloorC).toBe(-5);
+  });
+
+  it("never lets a tie beat a band with fewer verdicts", () => {
+    // Count first, extremity second: an extreme band that is already
+    // covered is not the ask.
+    const ladder = ladderFrom([
+      band(-5, { dialed: 4 }),
+      band(0, { dialed: 1 }),
+      band(5, { dialed: 4 }),
+    ]);
+
+    expect(ladder.thinnestBand?.bandFloorC).toBe(0);
   });
 
   it("totals across every band, not just the busiest", () => {

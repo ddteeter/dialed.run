@@ -56,17 +56,21 @@ export function verdictsIn(band: CoverageBand): number {
  * at the cold end of *their* year is a gap. Bands outside the range are
  * not gaps — they are weather they do not get.
  *
- * Ties go to the coldest, because underdressing is the failure that ends a
- * run early.
+ * **Ties go to the band farther from the middle of their range, at either
+ * end.** The first version sent ties to the coldest band on the grounds
+ * that underdressing is the failure that ends a run early — and the owner
+ * pointed out that overdressing in heat does the same. The extremes are
+ * where a wrong call costs most in both directions, so a tie is broken by
+ * distance from the middle of the runner's own range, and only a band
+ * equidistant from it goes cold.
  */
 export function ladderFrom(bands: readonly CoverageBand[]): Ladder {
+  const middleC = rangeMiddle(bands);
   let verdictTotal = 0;
   let thinnest: CoverageBand | undefined;
   for (const band of bands) {
     verdictTotal += verdictsIn(band);
-    // Strictly fewer, so a tie keeps the band already held — and the list
-    // arrives coldest-first, which is how ties land on the colder band.
-    if (thinnest === undefined || verdictsIn(band) < verdictsIn(thinnest)) {
+    if (thinnest === undefined || isThinner(band, thinnest, middleC)) {
       thinnest = band;
     }
   }
@@ -77,6 +81,37 @@ export function ladderFrom(bands: readonly CoverageBand[]): Ladder {
     verdictsUntilCall: Math.max(CALL_VERDICT_THRESHOLD - verdictTotal, 0),
     thinnestBand: thinnest,
   };
+}
+
+/**
+ * Whether `candidate` is a better ask than the band already `held`: fewer
+ * verdicts first, and on a tie the one farther from the middle of the
+ * range. Strict comparisons both times, so an exact tie keeps what is held
+ * — and the list arrives coldest-first, which is how an equidistant tie
+ * lands on the colder band.
+ */
+function isThinner(
+  candidate: CoverageBand,
+  held: CoverageBand,
+  middleC: number,
+): boolean {
+  const candidateCount = verdictsIn(candidate);
+  const heldCount = verdictsIn(held);
+  if (candidateCount < heldCount) return true;
+  if (candidateCount > heldCount) return false;
+  return (
+    Math.abs(candidate.bandFloorC - middleC) >
+    Math.abs(held.bandFloorC - middleC)
+  );
+}
+
+/**
+ * The midpoint of the coldest and warmest band floors. `NaN` for an empty
+ * list, which nothing reads: the loop that uses it never runs.
+ */
+function rangeMiddle(bands: readonly CoverageBand[]): number {
+  const floors = bands.map((band) => band.bandFloorC);
+  return (Math.min(...floors) + Math.max(...floors)) / 2;
 }
 
 function ladderState(verdictTotal: number): LadderState {
