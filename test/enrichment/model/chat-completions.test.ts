@@ -68,7 +68,7 @@ const messageSchema = z.object({ role: z.string(), content: z.string() });
 const requestSchema = z.object({
   model: z.string(),
   provider: providerSchema.optional(),
-  temperature: z.number(),
+  temperature: z.number().optional(),
   response_format: responseFormatSchema,
   messages: z.array(messageSchema),
 });
@@ -130,12 +130,15 @@ describe("createChatCompletionsModel: the request", () => {
     expect(format.json_schema.schema.required).not.toContain("extras");
   });
 
-  it("sends the page and its URL, and asks for nothing creative", async () => {
+  it("sends the page and its URL, and no sampling parameter", async () => {
     const fetchImpl = answering(FOUND);
     await modelWith(fetchImpl).extract(PAGE_TEXT, HINT);
 
     const { temperature, messages } = sentBody(fetchImpl);
-    expect(temperature).toBe(0);
+    // Not sent: OpenAI refuses any value but the default for this model
+    // (measured, `400 unsupported_value`), and OpenRouter had been dropping
+    // it silently — so it was never in effect anywhere.
+    expect(temperature).toBeUndefined();
     expect(messages[0]?.role).toBe("system");
     // The page is the *user* turn. Sent as anything else, a provider either
     // rejects it or folds it into the instructions, where page text becomes
