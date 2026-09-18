@@ -68,15 +68,27 @@ round (D-26…D-33).
     combinable means a palette, which means a tap on F — and F's whole
     argument is that identity is the only thing worth one.
 
-    **Round 5 already answered the same shape of question**, which is why
-    this is worth asking rather than assuming: *type is a property of the
-    product, not of the garment.* A colourway is a property of the product
-    too, enrichment already stores a product image and the shop's own copy,
-    and that route costs the runner no taps. Whether colour follows `type`
-    down that path is the thing to decide before anyone draws a swatch.
+    **Colour is not type, and the difference is the whole answer to where
+    it lives.** The first draft of this item reached for round 5's
+    precedent — *type is a property of the product, not of the garment* —
+    and proposed colour follow it down to `products`, deriving free from
+    enrichment. **The owner's read (2026-09-18) is that it does not, and the
+    reasoning holds:** a product has one type forever, but it comes in many
+    colourways and they come and go. `products.color` would be either a lie
+    (one of several) or a list that never says which one this runner owns. A
+    colourway belongs to the instance, which is exactly where the schema
+    already puts it.
+
+    So the cheap route is closed. Structured colour cannot be derived from
+    the product record; the runner has to say. That lands it back on F's one
+    tap, unresolved — and it is why the owner's half of this question is the
+    harder half, not the formality it first looked like.
 
     Nothing is blocked — Epic 200 is unscheduled (`post-mvp.md`) and the
     column is already there either way.
+
+    **Not in round 10** (sent 2026-09-18 before this was written). Queued for
+    round 11, alongside anything else that accumulates.
 
 10. **Round 9 contradicts itself about 9px, and the contract has already
     won.** `Accessibility Contract.dc.html` requires a 44×44 hit area
