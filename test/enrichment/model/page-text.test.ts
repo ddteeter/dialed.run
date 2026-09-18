@@ -26,6 +26,21 @@ describe("pageTextFor", () => {
     );
   });
 
+  it("keeps punctuation a page wrote as an entity", () => {
+    // Stripped to a space by the regex version, so the model was shown
+    // `Men s` and told to copy exactly. A reader sees the apostrophe.
+    expect(pageTextFor("<p>Men&#39;s Tee &mdash; 100% merino</p>")).toBe(
+      "Men's Tee — 100% merino",
+    );
+  });
+
+  it("does not show the model a comment, or an attribute that contains a bracket", () => {
+    // Both leaked as prose under naive tag splitting: a comment holding a
+    // `>` ended the "tag" early, and so did a JSON blob in a `data-` attribute.
+    const html = `<!-- a > b --><div data-p='{"a":">"}'>100% merino wool</div>`;
+    expect(pageTextFor(html)).toBe("100% merino wool");
+  });
+
   it("collapses whitespace, which is most of a formatted page", () => {
     expect(pageTextFor("<p>  100%   merino \n  wool  </p>")).toBe(
       "100% merino wool",

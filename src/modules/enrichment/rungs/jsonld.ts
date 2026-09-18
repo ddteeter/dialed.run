@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ExtractedProduct, PageExtractor } from "../../../lib/contracts";
 import { someExtracted, textAt } from "../extracted";
-import { parseJson, scriptBodies } from "../html";
+import { parseJson, readPage } from "../html";
 
 /**
  * The JSON-LD rung: schema.org `Product`, which is the closest a product page
@@ -18,11 +18,7 @@ import { parseJson, scriptBodies } from "../html";
  * per-field parsing drops the bad value and keeps the rest.
  */
 
-/**
-`<script type="application/ld+json">…</script>`, attributes in any order.
-*/
-const LD_BLOCK =
-  /<script[^>]{0,500}type=["']application\/ld\+json["'][^>]{0,500}>/giu;
+const LD_TYPE = "application/ld+json";
 
 /**
  * schema.org is permissive about shape: a value may be a string, an object
@@ -135,11 +131,10 @@ function productFrom(node: object): ExtractedProduct | undefined {
 export const jsonLdExtractor: PageExtractor = {
   rung: "jsonld",
   extract(_url, html) {
-    // Sliced to the closing tag rather than captured: a `([^<]*)` group
-    // stops at the first `<` inside the payload, so any block carrying
-    // markup in a description truncated and failed to parse. See ../html.
-    for (const json of scriptBodies(html, LD_BLOCK)) {
-      const node = findProduct(parseJson(json));
+    for (const { attribs, body } of readPage(html).scripts) {
+      // Case-folded: the type is a MIME string, and shops write it both ways.
+      if (attribs.type?.toLowerCase() !== LD_TYPE) continue;
+      const node = findProduct(parseJson(body));
       if (node === undefined) continue;
       const extracted = productFrom(node);
       if (extracted !== undefined) return extracted;

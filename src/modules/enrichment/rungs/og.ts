@@ -1,4 +1,5 @@
 import type { ExtractedProduct, PageExtractor } from "../../../lib/contracts";
+import { readPage } from "../html";
 
 /**
  * The Open Graph rung: the last deterministic one, and the least ambitious.
@@ -13,49 +14,32 @@ import type { ExtractedProduct, PageExtractor } from "../../../lib/contracts";
  * words — "20% off" would become a fibre called `off`. Telling a composition
  * from a discount is a semantic judgement, so prose belongs to the model
  * rung and this one stays with what is declared.
+ *
+ * **Read through the tokenizer, not a pattern** — see `../html.ts` for the
+ * measurement. `content=["']([^"']*)["']` stopped at the first apostrophe,
+ * so `Men's WoolTech Half Tights` reached the row as `Men` on nine of the
+ * 22 eval pages, and `Arc'teryx` as `Arc`. A meta tag's attributes come
+ * out of the tokenizer in any order, in either quote, decoded.
  */
 
-/**
- * Meta tags first, attributes second.
- *
- * The obvious shape is one pattern per attribute order — `property` before
- * `content` and the reverse — because themes emit both. That needs two
- * near-identical regexes, and it makes every "did the group participate"
- * check unreachable, since a match always binds both.
- *
- * Finding the tags and then asking each one for its attributes is shorter,
- * handles any attribute order for free, and makes those checks *real*: a
- * `<meta charset="utf-8">` genuinely has neither, and skipping it is
- * behaviour worth asserting rather than a branch nothing reaches.
- */
-const META_TAG = /<meta\b[^>]*>/giu;
-const PROPERTY = /property=["']([^"']*)["']/iu;
-const CONTENT = /content=["']([^"']*)["']/iu;
 const OG = "og:";
 
 /**
-Every og:* value on the page.
+Every og:* value on the page, first occurrence winning.
 */
 function openGraph(html: string): Map<string, string> {
   const tags = new Map<string, string>();
-  // `matchAll` rather than `match`, because `match` returns null for a page
-  // with no meta tags and the `?? []` that handles it is unkillable: the
-  // only way a mutant could change that default is by supplying a string,
-  // which the property guard below then skips anyway. `matchAll` yields
-  // nothing instead of null, and `match[0]` is typed `string`, so the whole
-  // branch stops existing.
-  for (const match of html.matchAll(META_TAG)) {
-    const tag = match[0];
-    // The whole property is captured and the `og:` prefix checked here,
-    // rather than baked into the pattern. That is what makes the filter
-    // real: a page carrying `property="title"` would otherwise land under
-    // the same key `og:title` uses and win, because first occurrence wins.
-    const property = PROPERTY.exec(tag)?.[1];
+  for (const attribs of readPage(html).metas) {
+    // The whole property is read and the `og:` prefix checked here, rather
+    // than matched loosely: a page carrying `property="title"` would
+    // otherwise land under the same key `og:title` uses and win, because
+    // first occurrence wins.
+    const property = attribs.property;
     if (!property?.startsWith(OG)) continue;
     const key = property.slice(OG.length);
     // A property with no content attribute is not a value, and neither is an
     // empty one — storing either would block a later tag that has one.
-    const value = CONTENT.exec(tag)?.[1] ?? "";
+    const value = attribs.content ?? "";
     if (value !== "" && !tags.has(key)) tags.set(key, value);
   }
   return tags;

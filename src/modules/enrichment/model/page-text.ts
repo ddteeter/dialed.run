@@ -1,13 +1,13 @@
-import { readableText, textNodes, withoutCode } from "../html";
+import { readableText, readPage } from "../html";
 
 /**
  * A page as prose, for a model to read.
  *
- * The same two steps the composition pass takes — scripts and styles out,
- * then text nodes — because the question is the same one: what would a
- * person reading this page see. What differs is the budget. A product page
- * is 600 kB to 2.5 MB of markup and perhaps 4 kB of words, and the words
- * are what a token bill is spent on.
+ * The tokenizer's text nodes — scripts and styles are not among them —
+ * because the question is what a person reading this page would see. What
+ * differs from the rungs is the budget. A product page is 600 kB to 2.5 MB
+ * of markup and perhaps 4 kB of words, and the words are what a token bill
+ * is spent on.
  *
  * **The cap is characters, not tokens, and that is deliberate.**
  * Counting tokens means shipping a tokenizer for a model we have not chosen
@@ -56,10 +56,9 @@ const MAX_NODE_CHARS = 8000;
 export function pageTextFor(html: string): string {
   const kept: string[] = [];
   let total = 0;
-  const nodes = textNodes(withoutCode(html));
-  for (const node of nodes) {
-    // Through `readableText`, the same decode the composition pass makes:
-    // a page arrives with `&amp;` in it, often double-encoded, and a prompt
+  for (const node of readPage(html).text) {
+    // Through `readableText`, which decodes to a fixed point: a page
+    // arrives with `&amp;` in it, often double-encoded, and a prompt
     // carrying `91% recycled polyester &amp;amp; 9% spandex` teaches the
     // model to copy that into `verbatim` — measured on the rabbit page,
     // which is exactly what it did.

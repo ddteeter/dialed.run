@@ -45,6 +45,22 @@ describe("the Shopify rung", () => {
     expect(shopifyExtractor.extract(PAGE, html)?.brand).toBe("Janji");
   });
 
+  it("does not take a script merely because it has an id", () => {
+    // Only `ProductJson…` is the product; a theme's other JSON islands
+    // carry ids too, and the analytics blob behind them is the real answer.
+    const html = `<html><script type="application/json" id="cart-data">${JSON.stringify(
+      { title: "Not the product", vendor: "Wrong" },
+    )}</script><script>var meta = {"product":{"vendor":"Janji"}};</script></html>`;
+    expect(shopifyExtractor.extract(PAGE, html)).toStrictEqual({ brand: "Janji" });
+  });
+
+  it("finds the analytics blob in a later script, not only the first", () => {
+    // Themes ship many scripts before ShopifyAnalytics; the first without
+    // a `var meta` must not end the search.
+    const html = `<html><script>var x = 1;</script><script>var meta = {"product":{"vendor":"Janji"}};</script></html>`;
+    expect(shopifyExtractor.extract(PAGE, html)?.brand).toBe("Janji");
+  });
+
   it("takes `type` when the JSON uses that name instead", () => {
     const html = withProductJson({ title: "Rover", type: "Tops" });
     expect(shopifyExtractor.extract(PAGE, html)?.categoryHint).toBe("Tops");

@@ -24,10 +24,33 @@ describe("the Open Graph rung", () => {
   });
 
   it("reads a tag with the attributes the other way round", () => {
-    // Plenty of themes emit content before property. One pattern allowing
-    // either order needs backtracking, so there are two patterns — and this
-    // is the case that proves the second one runs.
+    // Plenty of themes emit content before property.
     const html = `<meta content="Rover Half-Zip" property="og:title">`;
+    expect(openGraphExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
+  });
+
+  it("reads a name with an apostrophe in it, whole", () => {
+    // The bug the tokenizer replaced: `content=["']([^"']*)["']` stopped at
+    // the first apostrophe, and on nine of the 22 eval pages the name
+    // reached the row as `Men` or `M`. Every running-apparel catalogue is
+    // full of "Men's" and "Women's", so this was not an edge case.
+    const html = meta("og:title", "Men's WoolTech Half Tights");
+    expect(openGraphExtractor.extract(PAGE, html)?.name).toBe(
+      "Men's WoolTech Half Tights",
+    );
+  });
+
+  it("decodes an entity in the value, as a browser would", () => {
+    // `Arc&#39;teryx` is what the page carries; `Arc'teryx` is the brand.
+    const html = `${meta("og:title", "7&quot; Shorts")}${meta("og:site_name", "Arc&#39;teryx")}`;
+    expect(openGraphExtractor.extract(PAGE, html)).toStrictEqual({
+      name: '7" Shorts',
+      brand: "Arc'teryx",
+    });
+  });
+
+  it("does not read a tag that is commented out", () => {
+    const html = `<!-- ${meta("og:title", "Old name")} -->${meta("og:title", "Rover Half-Zip")}`;
     expect(openGraphExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
   });
 

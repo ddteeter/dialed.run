@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { PageExtractor } from "../../../lib/contracts";
 import { someExtracted, textAt } from "../extracted";
-import { parseJson, scriptBodies } from "../html";
+import { parseJson, readPage, type ScriptBlock } from "../html";
 
 /**
  * The Shopify rung: the platform's own product JSON, which most themes leave
@@ -24,23 +24,30 @@ import { parseJson, scriptBodies } from "../html";
 /**
 `<script type="application/json" id="ProductJson-…">` — the full product.
 */
-const PRODUCT_JSON_TAG =
-  /<script[^>]{0,500}id=["']ProductJson[^"']{0,200}["'][^>]{0,500}>/giu;
+const PRODUCT_JSON_ID = "ProductJson";
 
 /**
-`var meta = {…};` — ShopifyAnalytics, carrying rather less.
-*/
+ * `var meta = {…};` — ShopifyAnalytics, carrying rather less.
+ *
+ * Still a pattern, and rightly: this is JavaScript inside a script body,
+ * which no HTML tokenizer reads. The tokenizer's job ends at handing over
+ * the body.
+ */
 const ANALYTICS_META = /var\s+meta\s*=\s*(\{[^\n]*?\});/iu;
-
 
 /**
 The product object, wherever the theme put it.
 */
 const analyticsMeta = z.object({ product: z.unknown() });
 
+function isProductJson(script: ScriptBlock): boolean {
+  return script.attribs.id?.startsWith(PRODUCT_JSON_ID) ?? false;
+}
+
 function productFrom(html: string): unknown {
-  const [inline] = scriptBodies(html, PRODUCT_JSON_TAG);
-  if (inline !== undefined) return parseJson(inline);
+  const { scripts } = readPage(html);
+  const inline = scripts.find((script) => isProductJson(script));
+  if (inline !== undefined) return parseJson(inline.body);
 
   // The analytics path is a parse rather than three guards. Checking the blob
   // was found, then that it parsed, then that the result is a non-null
@@ -48,7 +55,9 @@ function productFrom(html: string): unknown {
   // `parseJson` already answers the others by failing. `String()` makes a
   // missing blob unparseable text, and zod makes "not an object" a failed
   // parse, so only the reachable case is written down.
-  const blob = ANALYTICS_META.exec(html)?.[1];
+  const blob = scripts
+    .map((script) => ANALYTICS_META.exec(script.body)?.[1])
+    .find((match) => match !== undefined);
   const meta = analyticsMeta.safeParse(parseJson(String(blob)));
   return meta.success ? meta.data.product : undefined;
 }

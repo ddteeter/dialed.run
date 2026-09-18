@@ -227,6 +227,25 @@ describe("the JSON-LD rung", () => {
     expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
   });
 
+  it("reads only ld+json blocks, however product-shaped another script is", () => {
+    // A theme's own JSON can carry `@type: Product` too; it is not a
+    // declaration and the rung must not read it as one.
+    const html = `<html><script type="application/json">${JSON.stringify({
+      "@type": "Product",
+      name: "Not declared",
+    })}</script></html>`;
+    expect(jsonLdExtractor.extract(PAGE, html)).toBeUndefined();
+  });
+
+  it("steps over a script with no type attribute at all", () => {
+    // Most scripts on a page have none. Reading the type off one must not
+    // throw, and the block behind it must still be found.
+    const html = `<html><script>var x = 1;</script>${pageWith(
+      JSON.stringify({ "@type": "Product", name: "Rover Half-Zip" }),
+    )}</html>`;
+    expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");
+  });
+
   it("reads a block whose JSON contains markup", () => {
     // The bug a capture group hid: `>([^<]*)</script>` stops at the first
     // `<` inside the payload, so a description carrying HTML truncated the
