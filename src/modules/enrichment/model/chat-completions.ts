@@ -187,9 +187,13 @@ async function askModel(
       ...(options.provider !== undefined && {
         provider: { order: [options.provider], allow_fallbacks: false },
       }),
-      // Nothing creative is wanted: the task is transcription, and the same
-      // page should give the same answer twice.
-      temperature: 0,
+      // No `temperature`, and it used to be 0. The first live call to OpenAI
+      // directly answered `400 unsupported_value: 'temperature' does not
+      // support 0 with this model. Only the default (1) value is supported`
+      // — through OpenRouter the field had been dropped silently, so the
+      // eval never ran at 0 either. The task is transcription and the
+      // structured schema is what holds the answer to the page; the sampling
+      // knob was never doing that work.
       response_format: {
         type: "json_schema",
         json_schema: {

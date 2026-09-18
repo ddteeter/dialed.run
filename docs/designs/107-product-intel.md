@@ -172,9 +172,13 @@ pages: on the rabbit page the model returned all three labelled fabric
 sections where the deterministic pass found one. It also showed the prompt
 needs decoded text — given `&amp;` it copied `&amp;` into `verbatim`,
 exactly as instructed — so `pageTextFor` decodes to a fixed point. **The
-direct OpenAI path is verified by the adapter's tests and not yet by a live
-call**: no `OPENAI_API_KEY` exists in `.dev.vars` or in the Worker, and
-setting one is the owner's (see the PR body).
+direct OpenAI path was then verified live** (2026-09-18, two cached eval
+pages), and the first call failed: OpenAI answers `400 unsupported_value`
+to `temperature: 0` for this model, a parameter OpenRouter had been
+dropping silently — so the eval never ran at 0 either. The field is no
+longer sent. With it gone the rabbit page returns all three labelled
+sections and the SOAR page reads `Shell 88% PA 12% EL`, in 3 to 5 seconds
+a page. The Worker secret is still the owner's to set.
 
 ## Retired — the vocabulary feedback loop
 
