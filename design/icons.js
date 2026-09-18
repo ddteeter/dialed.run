@@ -29,7 +29,7 @@
  */
 
 export const GROUPS = [
-  { id: 'nav', label: 'Navigation', note: 'Four glyphs for five tabs. The Call teaser borrows verdictPending until Epic 200 — see TAB_BAR.' },
+  { id: 'nav', label: 'Navigation', note: 'Five glyphs for five tabs. call landed with Epic 200 — brackets around a forecast reading.' },
   { id: 'garment', label: 'Garments', note: 'Closet categories. One glyph per category the taxonomy allows.' },
   { id: 'weather', label: 'Weather', note: 'Conditions shown on run cards and recommendations.' },
   { id: 'verdict', label: 'Verdicts', note: 'How the outfit actually felt. Bracketed — these are the brand moment.' },
@@ -44,6 +44,7 @@ export const ICONS = {
   closet: { group: 'nav', keywords: 'wardrobe gear collection hanger', d: 'M10 6a2 2 0 114 0c0 1.5-2 2-2 4M3 17l9-7 9 7v2H3z' },
   log: { group: 'nav', keywords: 'add run attach outfit center action', d: 'M6 3H3v18h3M18 3h3v18h-3M12 8v8M8 12h8' },
   profile: { group: 'nav', keywords: 'me account you person', d: 'M12 4a4 4 0 100 8 4 4 0 000-8zM4 21c0-4 3.6-6 8-6s8 2 8 6' },
+  call: { group: 'nav', keywords: 'the call recommendation forecast verdict tab epic 200', d: 'M6 3H3v18h3M18 3h3v18h-3M12 7v3M9 12.5a3 3 0 106 0 3 3 0 00-6 0M12 15.5v1.5' },
 
   // ── GARMENTS ──────────────────────────────────────────────────
   singlet: { group: 'garment', keywords: 'tank top sleeveless racing', d: 'M8 4h2a2 2 0 004 0h2c-1 2-1 4 1 6v10H7V10c2-2 2-4 1-6z' },
@@ -132,6 +133,11 @@ export const ICONS = {
   bracket: { group: 'system', keywords: 'logo brand mark wordmark app icon', d: 'M8 3H3v18h5M16 3h5v18h-5' },
   bracketLeft: { group: 'system', keywords: 'bracket half left frame motion reveal', d: 'M8 3H3v18h5' },
   bracketRight: { group: 'system', keywords: 'bracket half right frame motion reveal', d: 'M16 3h5v18h-5' },
+
+  // ── EPIC 200 · TRAVEL & HOME ──────────────────────────────────
+  trip: { group: 'system', keywords: 'travel trip away destination pack epic 200', d: 'M4 20V9l8-5 8 5v11M9 20v-6h6v6M2 20h20' },
+  home: { group: 'system', keywords: 'home base default location move epic 200', d: 'M3 11l9-7 9 7M5 9.5V20h14V9.5M10 20v-5h4v5' },
+  pack: { group: 'system', keywords: 'packing list bag luggage trip epic 200', d: 'M5 8h14v13H5zM9 8V5h6v3M5 13h14M12 11v4' },
 };
 
 /**
@@ -144,9 +150,9 @@ export const TAB_BAR = [
   { tab: '+Add', icon: 'log', note: 'Center action. Bracket pair around a plus — the same frame the verdicts wear.' },
   {
     tab: 'Call',
-    icon: 'verdictPending',
+    icon: 'call',
     note:
-      'Teaser until Epic 200. Borrowed on purpose: brackets with three dots is already the pack\'s idiom for "no verdict yet", which is exactly what an unopened surface is. Renders in mute ink with no active state and no badge. A dedicated glyph gets drawn when Call ships and we know what it does — a glyph now would ship a meaning we have not decided.',
+      'Epic 200. Brackets around a pin-and-reading — the Call is a forecast for a place, answered. Sixth bracketed glyph, by exception: it is the product\'s name. Before the epic lands, lanes keep verdictPending in mute ink; swapping to call is the epic\'s first visible commit.',
   },
   { tab: 'You', icon: 'profile', note: 'Label is You. Glyph name stays profile — code name, not copy.' },
 ];

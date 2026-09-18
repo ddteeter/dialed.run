@@ -32,7 +32,7 @@
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px; align-items: end;">
         <h1 style="grid-column: span 2; font-family: 'Archivo Black', Helvetica, sans-serif; font-size: clamp(48px, 8.5vw, 108px); line-height: 0.86; letter-spacing: -0.035em; margin: 0; text-transform: uppercase;">
-          Seventy-seven<br />
+          Eighty-one<br />
           <span style="color: #FF2D8A;">glyphs.</span> One<br />
           <span style="color: #00E0C6;">grid.</span>
         </h1>
@@ -56,7 +56,7 @@
         </div>
         <div style="background: #FF2D8A; color: #0B0B0E; padding: 22px; display: flex; flex-direction: column; gap: 8px;">
           <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">THE BRACKET RULE</span>
-          <p style="margin: 0; font-size: 15px; line-height: 1.5; font-weight: 600;">Only verdicts, <em style="font-style: normal; font-weight: 700;">useful</em>, <em style="font-style: normal; font-weight: 700;">log</em>, <em style="font-style: normal; font-weight: 700;">generic</em> and the mark carry brackets.</p>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; font-weight: 600;">Only verdicts, <em style="font-style: normal; font-weight: 700;">useful</em>, <em style="font-style: normal; font-weight: 700;">log</em>, <em style="font-style: normal; font-weight: 700;">call</em>, <em style="font-style: normal; font-weight: 700;">generic</em> and the mark carry brackets.</p>
         </div>
       </div>
 
@@ -119,7 +119,7 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
           <div style="background: #F5FF3D; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
             <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">THE CALL, CALLED</span>
-            <p style="margin: 0; font-size: 15px; line-height: 1.5;">No new glyph until Epic 200. A dedicated mark would ship a meaning we have not decided; borrowing <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">verdictPending</span> says the true thing — no verdict yet.</p>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">Epic 200 opened, so the glyph exists: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">call</span>, brackets around a pin-and-reading. v1 builds keep <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">verdictPending</span> in mute ink until the epic's tab shell ships. Three system glyphs joined it: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">trip</span>, <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">home</span>, <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">pack</span>.</p>
           </div>
           <div style="background: #F4F3EF; padding: 22px; display: flex; flex-direction: column; gap: 10px;">
             <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">DISCOVER MOVED</span>
@@ -217,8 +217,8 @@ class Component extends DCLogic {
       tab: t.tab,
       icon: t.icon,
       note: t.note,
-      borrowed: t.icon === 'verdictPending',
-      color: t.icon === 'verdictPending' ? '#8B8B93' : (t.tab === 'Feed' ? '#FF2D8A' : '#0B0B0E'),
+      borrowed: false,
+      color: t.tab === 'Feed' ? '#FF2D8A' : '#0B0B0E',
       node: this.glyph('bar-' + t.icon, d.ICONS[t.icon], 24)
     }));
 
