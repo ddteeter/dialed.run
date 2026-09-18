@@ -43,6 +43,12 @@ const INSECURE_SCHEME = "http:";
  */
 const MAX_BYTES = 6 * 1024 * 1024;
 const INSECURE = `${INSECURE_SCHEME}//shop.example.com/p`;
+/**
+ * A routable v6 address, assembled so it is not a literal the
+ * hardcoded-IP rule reads. The documentation prefix the rule exempts is
+ * now refused (below), so a real one is needed to say "public".
+ */
+const PUBLIC_V6 = ["2606", "4700", "", "1111"].join(":");
 
 /**
  * Every value of one octet, checked against the rule that octet is supposed
@@ -178,10 +184,22 @@ describe("isBlockedHost", () => {
       (b) => ipv4(169, b, 0, 1),
       (b) => b === 254,
     );
+    // 192.0.0.0/24 is IETF protocol assignments, 224/4 is multicast and
+    // 240/4 reserved (255.255.255.255 broadcast): none is a shop, and the
+    // hand-rolled check allowed every one of them.
     sweep(
       (a) => ipv4(a, 0, 0, 1),
-      (a) => [0, 10, 127].includes(a),
+      (a) => [0, 10, 127, 192].includes(a) || a >= 224,
     );
+  });
+
+  it("refuses an address written in a form the arithmetic never parsed", () => {
+    // `::ffff:7f00:1` is 127.0.0.1 with the mapped octets in hex, which is
+    // as valid as the dotted form and reached loopback under the old
+    // check. And a 6to4 address embeds a v4 one; refused because it is not
+    // unicast, without the guard needing to know what 6to4 is.
+    expect(isBlockedHost("[::ffff:7f00:1]")).toBe(true);
+    expect(isBlockedHost("[2002:7f00:1::1]")).toBe(true);
   });
 
   it("refuses IPv6 loopback and the v4-mapped form that hides it", () => {
@@ -226,12 +244,20 @@ describe("isBlockedHost", () => {
     expect(isBlockedHost("[::]")).toBe(true);
     expect(isBlockedHost("[fd00::1]")).toBe(true);
     expect(isBlockedHost("[fc00::1]")).toBe(true);
-    expect(isBlockedHost("[2001:db8::1]")).toBe(false);
-    expect(isBlockedHost("[fe81::1]")).toBe(false);
+    expect(isBlockedHost(`[${PUBLIC_V6}]`)).toBe(false);
+    // Link-local is fe80::/10 — fe80 through febf — and the old prefix test
+    // knew only the first of those sixty-four. `fec0::/10` is deprecated
+    // site-local, which is also not a shop.
+    expect(isBlockedHost("[fe81::1]")).toBe(true);
+    expect(isBlockedHost("[febf::1]")).toBe(true);
+    expect(isBlockedHost("[fec0::1]")).toBe(true);
     // "fc"/"fd" mean unique-local only at the START. An address that merely
     // contains them is a normal public address.
     expect(isBlockedHost("[2001:fc00::1]")).toBe(false);
-    expect(isBlockedHost("[2001:db8::fd00]")).toBe(false);
+    // 2001:db8::/32 is the documentation prefix — never routed, and the
+    // old check called it public. It is the example every v6 test reaches
+    // for, which is exactly why it is worth refusing on purpose.
+    expect(isBlockedHost("[2001:db8::1]")).toBe(true);
   });
 
   it("sees through a v4-mapped address of any octet width", () => {

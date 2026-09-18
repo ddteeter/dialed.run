@@ -1,3 +1,5 @@
+import ipaddr from "ipaddr.js";
+
 import { PageFetchError, readCapped } from "./bounds";
 import { scrapeThroughProxy } from "./firecrawl";
 
@@ -65,49 +67,29 @@ const MAX_REDIRECTS = 5;
 const REFUSALS = new Set([401, 403, 429, 503]);
 
 /**
-Literal IPv4 in the ranges that must never be reachable from a fetch.
-*/
-function isPrivateIpv4(host: string): boolean {
-  const parts = host.split(".");
-  if (parts.length !== 4) return false;
-  const octets = parts.map(Number);
-  if (octets.some((n) => !Number.isSafeInteger(n) || n < 0 || n > 255))
-    return false;
-  const [a = 0, b = 0] = octets;
-  return (
-    a === 0 || // "this network"
-    a === 10 || // private
-    a === 127 || // loopback
-    (a === 169 && b === 254) || // link-local, and AWS/GCP metadata
-    (a === 172 && b >= 16 && b <= 31) || // private
-    (a === 192 && b === 168) || // private
-    (a === 100 && b >= 64 && b <= 127) // CGNAT
-  );
-}
-
-/**
- * IPv6 loopback, unique-local and link-local, plus the v4-mapped forms —
- * `::ffff:127.0.0.1` reaches loopback while matching no v4 rule above.
+ * A literal address in a range that must never be reachable from a fetch.
+ *
+ * **ipaddr.js, not arithmetic** (PR #72 review). The hand-rolled version
+ * knew seven IPv4 ranges and three IPv6 prefixes, and the review asked
+ * whether a library should own this. It should: the library parses every
+ * form an address takes — `::ffff:7f00:1` is loopback written in hex, and
+ * `2130706433` is loopback written as one number — and classifies every
+ * range IANA reserves, where the hand-rolled list stopped at the ones its
+ * author remembered. Multicast, broadcast and the 240/4 reserved block were
+ * all reachable before, and each is now refused.
+ *
+ * `process` unwraps a v4-mapped v6 address to the v4 it carries, so one
+ * range check covers both. The rule is an allow-list: `unicast` is the only
+ * range a public shop can live in, and everything else — including ranges
+ * that embed a v4 address, like 6to4 — is refused without needing to be
+ * named. Refusing what it cannot classify is what makes a guard a guard.
  */
-const MAPPED_V4 = "::ffff:";
-
-function isPrivateIpv6(host: string): boolean {
-  // Prefixes rather than anchored regexes. Both say the same thing, but an
-  // anchor's only distinguishing input is a malformed host, so the rule is
-  // written as the string test it actually is. Brackets are stripped by the
-  // caller, which is also where a malformed pair is refused.
-  const inner = host.toLowerCase();
-  if (inner === "::1" || inner === "::") return true;
-  // `::ffff:127.0.0.1` reaches loopback while matching no v4 rule, and the
-  // v4 parser already rejects anything that is not four real octets.
-  if (inner.startsWith(MAPPED_V4)) {
-    return isPrivateIpv4(inner.slice(MAPPED_V4.length));
-  }
-  return (
-    inner.startsWith("fc") ||
-    inner.startsWith("fd") ||
-    inner.startsWith("fe80:")
-  );
+function isPrivateAddress(host: string): boolean {
+  // A hostname, not an address. Every literal form is valid here, and a
+  // name with dots in it is not; the parser is the authority on which is
+  // which.
+  if (!ipaddr.isValid(host)) return false;
+  return ipaddr.process(host).range() !== "unicast";
 }
 
 /**
@@ -116,29 +98,31 @@ function isPrivateIpv6(host: string): boolean {
  * **This cannot be complete, and pretending otherwise would be the bug.** A
  * public name that resolves to 127.0.0.1 (DNS rebinding) is invisible here —
  * Workers cannot resolve a name before fetching it, so there is no address to
- * check. What this stops is the whole literal-address class and the obvious
- * names; the platform's own refusal to route to internal space is the second
- * layer, and the 10s/2MB bounds are the third.
+ * check, and no library changes that: every SSRF filter on npm hooks Node's
+ * socket layer, which a Worker does not have. What this stops is the whole
+ * literal-address class and the obvious names; the platform's own refusal to
+ * route to internal space is the second layer, and the 10s/6MB bounds are
+ * the third.
  */
 export function isBlockedHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
   // Bracketed IPv6 first, and this is not a tidy-up: a v6 address contains
   // no dot, so the bare-name rule below would have called every public one
-  // private and refused it. Found by asserting 2001:db8:: is allowed.
+  // private and refused it. Found by asserting a public address is allowed.
   if (host.startsWith("[")) {
     // **Fails closed.** An unbalanced bracket is a host we cannot parse, and
     // a guard that shrugs at input it cannot parse is a guard you feed
     // unparseable input. Refusing it costs nothing — `URL.hostname` never
     // produces one.
     if (!host.endsWith("]")) return true;
-    return isPrivateIpv6(host.slice(1, -1));
+    return isPrivateAddress(host.slice(1, -1));
   }
   // An empty host has no dot either, so it needs no clause of its own — and
   // `metadata.google.internal` is caught by `.internal` below, which is why
   // neither is written out. Both were, and both were unreachable.
   if (!host.includes(".")) return true; // "localhost", bare names
   if (host.endsWith(".local") || host.endsWith(".internal")) return true;
-  return isPrivateIpv4(host) || isPrivateIpv6(host);
+  return isPrivateAddress(host);
 }
 
 /**
