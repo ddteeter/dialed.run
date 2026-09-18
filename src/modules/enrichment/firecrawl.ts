@@ -83,6 +83,16 @@ export async function scrapeThroughProxy(
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
     },
+    // `rawHtml` and nothing else, though the API offers more — `markdown`,
+    // `html` (cleaned), `links`, `summary`, and `json`, which is Firecrawl
+    // running its own model over the page against a schema. Deliberately
+    // not used (PR #72 review): the snapshot in R2 is the page as served,
+    // so `reextract` runs the same ladder over a page whichever door it
+    // came through, and a second model behind a second prompt on eleven of
+    // fourteen shops would be an extraction path the eval never measured.
+    // Markdown would trim the prompt, but only on proxied pages — two
+    // prompt shapes for one model is the drift the pinned provider exists
+    // to prevent. Raw bytes are the common denominator, and the cheapest.
     body: JSON.stringify({ url, formats: ["rawHtml"], proxy: "auto" }),
   });
   if (!response.ok) {

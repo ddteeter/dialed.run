@@ -3,16 +3,21 @@ import { fillBlanksFrom } from "../extracted";
 import { pageTextFor } from "./page-text";
 
 /**
- * The model rung: run it only where the deterministic rungs left a blank,
- * and learn from what it names.
+ * The model rung: the one source of composition, filling whatever the
+ * declared rungs left blank.
  *
- * **"Only where there is a blank" is the cost control and the quality
- * control at once.** A shop that publishes its composition in JSON-LD has
- * already answered better than a model can, so asking one is spending money
- * to get a worse answer with a chance of a wrong one. Measured over the
- * eight sampled pages, the deterministic ladder now finds a composition on
- * seven — so this fires on the eighth, and on whatever the next shop does
- * strangely.
+ * **It runs on every page, whenever a model is configured** — the consumer
+ * has no "only if a blank is left" gate any more, and this comment used to
+ * say it did (PR #72 review). The gate made sense while the deterministic
+ * ladder also produced compositions; when the last of those was retired
+ * (owner, 2026-09-14) the ladder could no longer fill the field, so the
+ * gate was a condition no page could make false and it went.
+ *
+ * What the model does *not* do is overwrite: `fillBlanksFrom` below is the
+ * ladder's own rule, so a name or an image the shop declared in JSON-LD
+ * stays, and the model's answer lands only where nothing did. That keeps
+ * the cheap declared facts cheap and reserves the inference for the one
+ * field nothing else can supply.
  */
 
 export interface ModelPassDeps {
