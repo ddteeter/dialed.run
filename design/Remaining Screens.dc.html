@@ -16,6 +16,8 @@
   body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
   a { color: #FF2D8A; text-decoration: none; }
   a:hover { color: #F5FF3D; }
+  @keyframes rs-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .rs-breathe { animation: none !important; } }
 </style>
 </helmet>
 
@@ -29,7 +31,7 @@
         <span style="color: #FF2D8A;">{{ brandWord }}.run</span>
       </div>
       <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 980px; text-transform: uppercase;">The rest of the app.</h1>
-      <p style="margin: 0; font-size: 15px; line-height: 1.5; max-width: 760px; color: #8B8B93;">Sections R through Z were added for the launch gate: the surfaces the lanes had been shipping as placeholders, plus the three unscheduled objects. Failure states in them follow the form contract — field errors marked in yellow at the field, whole-form failures outlined above the button.</p>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; max-width: 760px; color: #8B8B93;">Sections R through AF were added for the launch gate: the surfaces the lanes had been shipping as placeholders, the unscheduled objects, and the contracts the system needed. Operator surfaces live in <a href="Operator%20Screens.dc.html">Operator Screens</a>. Failure states in them follow the form contract — field errors marked in yellow at the field, whole-form failures outlined above the button.</p>
       <p style="margin: 0; font-size: 18px; line-height: 1.5; max-width: 760px; color: #DEDDD6; text-wrap: pretty;">Feed, add-a-garment, profiles, discovery, and the gear-gap surface. Screens marked <strong style="color: #F4F3EF;">V1</strong> are the first release; <strong style="color: #F4F3EF;">post-V1 target</strong> screens are the shape to build toward once the call and cohort math exist. Garments show "Brand Model" as plain text wherever they're named, and a <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px;">[GENERIC]</span> badge where they aren't — never logos, never links.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;">
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">E Feed</span>
@@ -46,6 +48,12 @@
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">X Desktop feed</span>
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">Y Shoes</span>
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">Z Where type comes from</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">AA O3 is one list</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">AB Hue means verdict</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">AC P2.5 Make them real</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">AD W3 on the web</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">AE Onboarding is full-bleed</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">AF Feedback with nowhere to land</span>
       </div>
     </div>
 
@@ -1075,13 +1083,13 @@
             <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; flex-direction: column; gap: 7px;">
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">FEASIBILITY · FOR THE LANES</span>
               <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">On-device face detection ships with both platforms and needs no new dependency or server round trip: detect, draw the blur into a new image, upload that. Where it gets soft is recall — profiles, sunglasses under a cap, distant mirror shots, several people in frame. That's why the manual tap exists and why no copy says "faces are blurred".</p>
-              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Mobile web has no equivalent worth shipping. If a browser upload path opens, it posts unblurred or not at all — decide that before the web feed does.</p>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Decided in round 8: the browser keeps the promise and changes the delivery — a WASM detector, on by default, the blurred canvas uploaded, the original never leaving the device. The two states the web adds are drawn in <a href="#AD">AD</a>.</p>
             </div>
           </div>
 
           <div data-screen-label="W3c Moderation stance" style="background: #24242B; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
             <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">THE STANCE</span>
-            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #DEDDD6;">A person reviews every report, within a day, and the reporter is never named. No automated takedowns, no strike counters, no public flags on entries. If the volume ever outgrows a person, that's a hiring problem, not a product one.</p>
+            <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #DEDDD6;">A person reviews every report, within a day, and the reporter is never named to the author. No automated takedowns, no strike counters, no public flags on entries. If the volume ever outgrows a person, that's a hiring problem, not a product one.</p>
           </div>
         </div>
       </div>
@@ -1321,7 +1329,7 @@
     </div>
 
     <!-- Z -->
-    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+    <div id="Z" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
       <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
         <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Z · Where type comes from</span>
         <span style="font-size: 16px; color: #8B8B93; max-width: 700px; line-height: 1.45;">Type is a property of the product, not of the garment. F never asks for it, nothing parses it out of a name, and a garment that has none is drawn as a garment that has none.</span>
@@ -1427,6 +1435,542 @@
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">WHY NOT ASK</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A second one-tap row is cheap to build and expensive every single time. F's whole argument is that identity is the only thing worth a tap, because identity is what pays the runner back. Charging a tap for a filter facet inverts that.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">WHY NOT PARSE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A parser is a feature that works until it doesn't, fails invisibly, and can't be corrected by the person looking at the wrong answer. Nullable and honest beats populated and wrong.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">STILL OPEN</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Whether a runner can override an inherited type when the product record is wrong. Probably yes, from garment detail, post-v1 — an edit, not a question at add time.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AA -->
+    <div id="AA" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">AA · O3 is one list</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">The climate band orders the list and sets where it folds. It never removes a row. Nothing arrives ticked in v1, because nothing has filled the closet yet.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="AA1 O3 on arrival" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AA1 · ON ARRIVAL · EVERYTHING UNTAPPED</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">COMMON IN YOUR CLIMATE · TAP TO ADD</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.03em; color: #4E4E44;">
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ TIGHTS</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ MERINO BASE</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ BEANIE</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ GLOVES</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ MITTENS</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ WIND SHELL</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ VEST</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ BUFF</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ 7" SHORTS</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ SHORT-SLEEVE TEE</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ ARM WARMERS</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ RAIN JACKET</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ 5" SHORTS</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px;">+ SINGLET</span>
+              </div>
+              <div style="border: 1px dashed #B9B8AE; border-radius: 100px; padding: 9px 14px; align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #6E6E64;">EVERYTHING ELSE · 10 MORE ▾</div>
+            </div>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">CLOSET: 0 PIECES</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">TAP WHAT YOU OWN</span>
+            </div>
+            <div style="background: #DCDBD2; color: #6E6E64; border-radius: 100px; padding: 15px; text-align: center; font-family: Archivo, sans-serif; font-size: 16px; font-weight: 700;">Next</div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Every row is an offer. A January row and a July row sit in the same list because a Minneapolis runner owns both — one band per person is a season, not a wardrobe.</p>
+        </div>
+
+        <div data-screen-label="AA2 O3 mid-tap" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AA2 · NINE TAPS IN</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">COMMON IN YOUR CLIMATE · TAP TO ADD</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.03em;">
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">TIGHTS ✓</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">MERINO BASE ✓</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">BEANIE ✓</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">GLOVES ✓</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px; color: #4E4E44;">+ MITTENS</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">WIND SHELL ✓</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px; color: #4E4E44;">+ VEST</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px; color: #4E4E44;">+ BUFF</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">7" SHORTS ✓</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">SHORT-SLEEVE TEE ✓</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px; color: #4E4E44;">+ ARM WARMERS</span>
+                <span style="border: 1px solid #DCDBD2; padding: 9px 12px; border-radius: 100px; color: #4E4E44;">+ RAIN JACKET</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">5" SHORTS ✓</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; padding: 9px 12px; border-radius: 100px;">SINGLET ✓</span>
+              </div>
+              <div style="border: 1px dashed #B9B8AE; border-radius: 100px; padding: 9px 14px; align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #6E6E64;">EVERYTHING ELSE · 10 MORE ▾</div>
+            </div>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">CLOSET: 9 PIECES</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #009F8C;">ENOUGH TO START</span>
+            </div>
+            <div style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px; text-align: center; font-family: Archivo, sans-serif; font-size: 16px; font-weight: 700;">Next</div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">A tick means <em>you tapped it just now</em> — it is a toggle, tap again to remove. The counter counts taps. "Enough to start" appears at six and is advice, not a gate; Next is live from the first tap.</p>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AA3 · WHAT THE BAND DOES</span>
+
+          <div data-screen-label="AA3 Band orders one list" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SAME 24 ROWS · TWO RUNNERS</span>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #4E4E44;">MINNEAPOLIS · COLD-WEIGHTED</span>
+                <div style="display: flex; gap: 3px; align-items: center;">
+                  <div style="width: 72%; height: 12px; background: #0B0B0E;"></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #6E6E64;">COLD ROWS FIRST</span>
+                </div>
+                <span style="font-size: 12px; line-height: 1.4; color: #6E6E64;">Mittens, base layers and tights sort to the top. Singlet still on the list, further down.</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #4E4E44;">PHOENIX · HOT-WEIGHTED</span>
+                <div style="display: flex; gap: 3px; align-items: center;">
+                  <div style="width: 34%; height: 12px; background: #0B0B0E;"></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #6E6E64;">HOT ROWS FIRST</span>
+                </div>
+                <span style="font-size: 12px; line-height: 1.4; color: #6E6E64;">Singlet and 5" shorts to the top; mittens fall behind the fold, not out of existence.</span>
+              </div>
+            </div>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.5; color: #4E4E44;">
+              <div style="display: flex; gap: 9px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #0B0B0E; flex: 0 0 74px;">ABOVE FOLD</span><span>14 rows, ranked by cohort frequency in your zone</span></div>
+              <div style="display: flex; gap: 9px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #0B0B0E; flex: 0 0 74px;">BELOW FOLD</span><span>The remaining 10, one tap away, same rows for everyone</span></div>
+            </div>
+          </div>
+
+          <div data-screen-label="AA4 Contract" style="background: #24242B; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 11px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">FOR LANE 105</span>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; line-height: 1.5; color: #DEDDD6;">
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">01</span><span>Replace <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">Record&lt;band, TapListEntry[]&gt;</code> with one <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">TAP_LIST: TapListEntry[]</code> of 24 rows.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">02</span><span>The band becomes a sort key on that list — <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">rank[band]</code> per entry. It is never a filter. No row is ever absent.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">03</span><span>Fold at 14. The disclosure label states the remainder count.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">04</span><span>Ticked state is local to this screen's session, derived from taps only — never seeded. With O2 cut, the screen opens at zero every time.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">05</span><span>When O2 returns, a photo-derived piece renders as a <em>ticked, non-toggling</em> row with a mono <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">FROM PHOTO</code> tag — a different thing from a tap, and it must look like one.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">06</span><span>Counter copy is <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">CLOSET: {n} PIECES</code>. The old "12 pieces" was a mock, not a target.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">THE ARTBOARD WAS RIGHT, HALFWAY</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">One list: correct, and the code drifted. Six rows pre-ticked: wrong, and the artboard drifted — those ticks were drawn when O2 came first and a photo pass had already filled the closet. O3 in both files now opens empty.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">WHY NOT THREE LISTS</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A disjoint five-row band can't describe anyone who runs year-round, and it makes the band a claim about the runner rather than a guess about their order. A wrong sort costs a scroll. A wrong filter costs the piece.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">ALSO UPDATED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">O3 in <a href="Onboarding.dc.html">Onboarding</a> now matches: no pre-ticks, tap-driven counter, disclosure row.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AB -->
+    <div id="AB" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">AB · Hue means verdict</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Pink, teal and grey mean cold, dialed and warm — everywhere, permanently. Coverage loses the hue and gets ink density instead, which is the channel it should have had.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AB1 · WHY VERDICT WINS</span>
+
+          <div data-screen-label="AB1 Two axes" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">VERDICT · A DIRECTION AROUND A CENTRE</span>
+              <div style="display: flex; gap: 14px;">
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                  <div style="display: flex; gap: 2px;"><div style="width: 13px; height: 26px; background: #C21A6B;"></div><div style="width: 13px; height: 26px; border: 1px solid #C9C8BE;"></div><div style="width: 13px; height: 26px; border: 1px solid #C9C8BE;"></div></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">COLD</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                  <div style="display: flex; gap: 2px;"><div style="width: 13px; height: 26px; border: 1px solid #C9C8BE;"></div><div style="width: 13px; height: 26px; background: #009F8C;"></div><div style="width: 13px; height: 26px; border: 1px solid #C9C8BE;"></div></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">DIALED</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                  <div style="display: flex; gap: 2px;"><div style="width: 13px; height: 26px; border: 1px solid #C9C8BE;"></div><div style="width: 13px; height: 26px; border: 1px solid #C9C8BE;"></div><div style="width: 13px; height: 26px; background: #4E4E44;"></div></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">WARM</span>
+                </div>
+              </div>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Three-slot mark: the <em>position</em> of the filled slot carries the meaning, hue repeats it. Cold left, dialed centre, warm right — under-, on-, over-dressed.</p>
+            </div>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">COVERAGE · AN AMOUNT FROM NONE TO ALL</span>
+              <div style="display: flex; gap: 14px;">
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                  <div style="width: 44px; height: 26px; background: #0B0B0E;"></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">COVERED</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                  <div style="width: 44px; height: 26px; border: 1px solid #0B0B0E; background-image: repeating-linear-gradient(135deg, #0B0B0E 0 3px, transparent 3px 7px);"></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">PARTIAL</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                  <div style="width: 44px; height: 26px; border: 1px solid #C9C8BE;"></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">UNKNOWN</span>
+                </div>
+              </div>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Solid, hatched, hairline. One monochrome axis for a quantity that only ever increases — and it survives greyscale, dim screens and colour-blind vision without a legend.</p>
+            </div>
+          </div>
+        </div>
+
+        <div data-screen-label="AB2 Coverage bar, redrawn" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AB2 · O6 + CALL TEASER · COVERAGE</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT YOU'VE COVERED</span>
+            <div style="display: flex; flex-direction: column; gap: 7px;">
+              <div style="display: flex; gap: 3px;">
+                <div style="flex: 1; height: 42px; border: 1px solid #C9C8BE; border-radius: 3px;"></div>
+                <div style="flex: 1; height: 42px; border: 1px solid #C9C8BE; border-radius: 3px;"></div>
+                <div style="flex: 1; height: 42px; background: #0B0B0E; border-radius: 3px;"></div>
+                <div style="flex: 1; height: 42px; background: #0B0B0E; border-radius: 3px;"></div>
+                <div style="flex: 1; height: 42px; background: #0B0B0E; border-radius: 3px;"></div>
+                <div style="flex: 1; height: 42px; border: 1px solid #0B0B0E; border-radius: 3px; background-image: repeating-linear-gradient(135deg, #0B0B0E 0 3px, transparent 3px 7px);"></div>
+                <div style="flex: 1; height: 42px; border: 1px solid #C9C8BE; border-radius: 3px;"></div>
+                <div style="flex: 1; height: 42px; border: 1px solid #C9C8BE; border-radius: 3px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #7A7A70;"><span>0°</span><span>20°</span><span>40°</span><span>60°</span><span>80°+</span></div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">
+              <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; background: #0B0B0E;"></span>COVERED 3</span>
+              <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border: 1px solid #0B0B0E; background-image: repeating-linear-gradient(135deg, #0B0B0E 0 2px, transparent 2px 5px);"></span>PARTIAL 1</span>
+              <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border: 1px solid #C9C8BE;"></span>UNKNOWN 4</span>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Ink is knowledge. Forty verdicts all at 50° leaves January hollow, and a hollow bar looks hollow. The counts are there so the reading never depends on the swatch.</p>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">This replaces the bracket-notation placeholder in the Call teaser. Lane 105 was right to ship text rather than borrow a colour.</p>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AB3 · PROFILE ROW · VERDICT</span>
+
+          <div data-screen-label="AB3 Profile verdict row" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">HOW YOU CALL IT, BY BAND</span>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44; flex: 0 0 54px;">0–20°</span>
+                <div style="display: flex; gap: 2px;"><div style="width: 15px; height: 22px; background: #C21A6B;"></div><div style="width: 15px; height: 22px; border: 1px solid #C9C8BE;"></div><div style="width: 15px; height: 22px; border: 1px solid #C9C8BE;"></div></div>
+                <span style="font-size: 14px; font-weight: 600;">Under-dressed</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70; margin-left: auto;">7 RUNS</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44; flex: 0 0 54px;">20–40°</span>
+                <div style="display: flex; gap: 2px;"><div style="width: 15px; height: 22px; border: 1px solid #C9C8BE;"></div><div style="width: 15px; height: 22px; background: #009F8C;"></div><div style="width: 15px; height: 22px; border: 1px solid #C9C8BE;"></div></div>
+                <span style="font-size: 14px; font-weight: 600;">Dialed</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70; margin-left: auto;">19 RUNS</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44; flex: 0 0 54px;">40–60°</span>
+                <div style="display: flex; gap: 2px;"><div style="width: 15px; height: 22px; border: 1px solid #C9C8BE;"></div><div style="width: 15px; height: 22px; border: 1px solid #C9C8BE;"></div><div style="width: 15px; height: 22px; background: #4E4E44;"></div></div>
+                <span style="font-size: 14px; font-weight: 600;">Over-dressed</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70; margin-left: auto;">12 RUNS</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Three redundant channels: slot position, hue, and a word. The shipped row had one — hue on identical dots, with warm at 30% ink, which is both indistinguishable and under-contrast. Position does the work; hue is the accelerator.</p>
+          </div>
+
+          <div data-screen-label="AB4 Contract" style="background: #24242B; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 11px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">FOR THE LANES</span>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; line-height: 1.5; color: #DEDDD6;">
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">01</span><span>Pink = cold, teal = dialed, grey = warm. No other meaning may claim these three together.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">02</span><span>Coverage is monochrome: solid / 135° hatch / hairline. It never takes a hue, on any surface.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">03</span><span>A verdict kind is never hue-alone — the three-slot mark ships with it. Same rule the Form Contract applies to errors.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">04</span><span><code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">text-night/30</code> is retired for warm. Full-strength <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">#4E4E44</code> on light, <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">#B9B8AE</code> on dark. Opacity never encodes meaning.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">05</span><span>Pink stays the primary action colour too. It reads as verdict only inside a verdict mark or a band row — ambiguity is resolved by the mark, not by the hue.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">THE TEST THAT DECIDED IT</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Which axis has a non-hue channel it actually wants? Coverage is ordinal — none to all — and density says that natively. Cold/dialed/warm is a direction around a centre, which density can't say at all. Coverage moves.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">AND THE VOLUME TEST</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Verdict hue appears in the feed, the Call, garment detail, run detail and the profile. Coverage appears on two screens. The word "dialed" is on the door — it keeps the teal.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">ALSO UPDATED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">O6's coverage bar and its caption in <a href="Onboarding.dc.html">Onboarding</a> are redrawn to density — the artboard no longer teaches the wrong legend.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AC -->
+    <div id="AC" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">AC · P2.5 · Make them real</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">The argument: a category can't remember. Every generic row is offered, ranked by the runner's own tagged runs, and naming one pays out on the same screen.</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="AC1 P2.5 on arrival" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AC1 · ON ARRIVAL · NOTHING NAMED</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:06</span><span>▮▮▮ 90%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 4px;"><div style="flex: 1; height: 3px; background: #FF2D8A;"></div><div style="flex: 1; height: 3px; background: #FF2D8A;"></div><div style="flex: 1; height: 3px; background: #FF2D8A;"></div><div style="flex: 1; height: 3px; background: #2A2A31;"></div></div>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.03em; line-height: 1.05;">Which ones do you<br />actually reach for?</span>
+              <span style="font-size: 14px; color: #8B8B93; line-height: 1.45;">Name those. A category can't remember — a product can.</span>
+            </div>
+
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOU WORE THESE ON THE RUNS YOU TAGGED</span>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="border: 1px solid #DCDBD2; border-radius: 12px; padding: 13px 15px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;"><span style="font-size: 15px;">Merino base layer</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">TOP · GENERIC · WORN ON 3 TAGGED RUNS</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600; flex: 0 0 auto;">NAME IT</span>
+                  </div>
+                  <div style="border: 1px solid #DCDBD2; border-radius: 12px; padding: 13px 15px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;"><span style="font-size: 15px;">Tights</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">BOTTOM · GENERIC · WORN ON 2 TAGGED RUNS</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600; flex: 0 0 auto;">NAME IT</span>
+                  </div>
+                  <div style="border: 1px solid #DCDBD2; border-radius: 12px; padding: 13px 15px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;"><span style="font-size: 15px;">Mittens</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">EXTREMITY · GENERIC · WORN ON 1 TAGGED RUN</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600; flex: 0 0 auto;">NAME IT</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">EVERYTHING ELSE IN YOUR CLOSET</span>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="border: 1px solid #DCDBD2; border-radius: 12px; padding: 12px 15px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 14px;">Wind shell</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">TOP · GENERIC</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #6E6E64; flex: 0 0 auto;">NAME IT</span>
+                  </div>
+                  <div style="border: 1px solid #DCDBD2; border-radius: 12px; padding: 12px 15px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 14px;">5" shorts</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">BOTTOM · GENERIC</span></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #6E6E64; flex: 0 0 auto;">NAME IT</span>
+                  </div>
+                  <div style="border: 1px dashed #B9B8AE; border-radius: 12px; padding: 11px 15px; align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #6E6E64;">5 MORE ▾</div>
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid #DCDBD2; padding-top: 14px; display: flex; flex-direction: column; gap: 12px; margin-top: auto;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">0 OF 10 NAMED</span>
+                <button style="background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 16px; font-family: Archivo, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Next</button>
+                <span style="align-self: center; font-size: 14px; color: #4E4E44; text-decoration: underline;">Skip for now</span>
+              </div>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Q1 — every generic row is offered. No badge claims to know a stranger's favourites; the <em>order</em> carries the suggestion, and it's built from evidence the runner supplied at O4, stated plainly. Same doctrine as <a href="#AA">AA</a>: rank, never filter.</p>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AC2 · NAMING ONE · TWO FIELDS</span>
+
+          <div data-screen-label="AC2a Inline naming" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THE ROW EXPANDS IN PLACE</span>
+            <div style="border: 2px solid #0B0B0E; border-radius: 12px; padding: 15px; background: #FFFFFF; display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Merino base layer</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">NAMING</span></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="border: 1px solid #0B0B0E; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 14px;">Smartwool</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #7A7A70;">BRAND</span></div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 14px; color: #9A9A90;">Model</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #9A9A90;">OPTIONAL</span></div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #4E4E44;">
+                    <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">INTRAKNIT 200</span>
+                    <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">CLASSIC 150</span>
+                    <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">MERINO 250</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 9px; align-items: center;">
+                <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 11px 20px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700;">Save</span>
+                <span style="font-size: 13px; color: #4E4E44;">Brand alone is enough.</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Q2 — two fields, one required. Brand resolves against the curated seed list; model is a suggestion chip row from that brand's known products, typed only if none fit. No photo: naming is an act of <em>identity</em>, and a photo says nothing about which product this is. Photos stay on garment detail, where they're about appearance.</p>
+          </div>
+
+          <div data-screen-label="AC2b No link field" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT P2.5 DOES NOT ASK</span>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="border: 1px dashed #B9B8AE; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 14px; color: #9A9A90;">brand.com/product…</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;">NOT IN V1</span></div>
+              <div style="border: 1px dashed #B9B8AE; border-radius: 9px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 14px; color: #9A9A90;">Add a photo</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #9A9A90;">NOT HERE</span></div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Q3 — agreed, no link field. A field that swallows a URL and shows nothing is a screen making a promise the build can't keep, on the one screen whose entire job is to be believed.</p>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 11px; display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #C21A6B; font-weight: 600;">FLAG · NOT YOURS TO FIX</span>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">O3's artboard still draws a paste field with <code style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">SPECS FOUND</code>, which has the same lane-107 dependency. It should come out of O3 for v1 too — raising it with lane 105 rather than silently redrawing it.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">AC3 · THE PAYOUT</span>
+
+          <div data-screen-label="AC3a Row, named" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THE MOMENT IT'S NAMED</span>
+            <div style="border: 1px solid #009F8C; border-radius: 12px; padding: 14px; background: #FFFFFF; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <span style="font-size: 15px; font-weight: 600;">Smartwool Intraknit 200</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: #009F8C;">LONG SLEEVE BASE · MATCHED</span>
+              </div>
+              <div style="border-top: 1px solid #DCDBD2; padding-top: 9px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.4; color: #4E4E44;">
+                <div style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #009F8C; flex: 0 0 46px;">GAINED</span><span>A type — now in the <strong>LONG SLEEVE</strong> filter</span></div>
+                <div style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #009F8C; flex: 0 0 46px;">GAINED</span><span><strong>412 runners</strong> have run in this</span></div>
+                <div style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70; flex: 0 0 46px;">KEPT</span><span>Your 3 tagged runs, and the range they earned</span></div>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Round 8 — the count is public entries, never closets, so the verb is <em>have run in</em>: an entry is a run, and "own" would leak what people never posted. Before any entry exists the line reads <em>You're the first to log this</em> — true, and not a zero.</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Q5 — the generic state is the <a href="#Z">Z</a> language verbatim: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">type ?? categoryLabel + " · GENERIC"</code>. Named, the subtitle becomes the product's type and turns teal. The three payout lines are the screen's argument made literal, and they appear <em>on save</em> — not as a promise up front.</p>
+          </div>
+
+          <div data-screen-label="AC3b No target, no gate" style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">COUNTER · NEVER A QUOTA</span>
+            <div style="display: flex; flex-direction: column; gap: 9px;">
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">0 OF 10 NAMED</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">NEXT IS LIVE</span></div>
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">2 OF 10 NAMED</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70;">NEXT IS LIVE</span></div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Q4 — no target, no gate, and no "enough to start" equivalent. O3 could say it because six taps is a real threshold for a first call; naming changes nothing about whether the app works today. It's a fraction, not a goal — and it's the same sentence the closet nudge already uses, so the runner meets one idea twice rather than two ideas once.</p>
+          </div>
+
+          <div data-screen-label="AC3c Contract" style="background: #24242B; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 11px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">FOR LANE 105</span>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; line-height: 1.5; color: #DEDDD6;">
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">01</span><span>Every generic garment is listed. Rows worn on an O4-tagged run sort first under their own heading; the rest follow, folded past five.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">02</span><span>With no tagged runs the first heading is absent — not empty. One flat list, closet order.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">03</span><span>Two fields: brand (required, seed-list autocomplete) and model (optional, chips from the brand's products). Reuses F's resolver; it is not F, and does not navigate.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">04</span><span>Brand-only resolves to a brand, not a product: no <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">product_id</code>, so no type and no social count. The row shows <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">SMARTWOOL · NO MODEL</code> and stays offered.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">05</span><span>No URL field, no photo field. Verdicts, wear counts and ranges survive naming untouched — it links a record, it never replaces one.</span></div>
+              <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #F5FF3D; flex: 0 0 auto;">06</span><span>Next always enabled. <em>Skip for now</em> as O3's underlined text; both land on P3. The closet nudge is the only follow-up — P2.5 never reappears.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">THE ARGUMENT</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A category is a genre; a product is a thing. "Merino base layer" can't hold a temp range, because no two of them are the same garment — every verdict you give it averages against strangers' different pieces. "Smartwool Intraknit 200" is one object, and 412 other runners are teaching it at the same time as you. Naming is how your piece joins a population.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WHY NOT A CARD STACK</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Three forced cards would get more pieces named and would be the wrong screen: it makes naming feel owed, on a step that is explicitly never blocking. A runner who names one because they wanted to is worth more than three extracted by a progress bar they can't leave.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WHY "WORN ON 3 TAGGED RUNS"</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">It's the only honest signal on hand, and it's the runner's own. Stating the evidence instead of badging a guess means a wrong order costs nothing — they scroll — and the app never claims to know them before it does.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">D-45</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">All strings here are placeholders for the copy pass. The two that carry the argument and should survive it: <em>"a category can't remember"</em>, and the on-save payout being stated as gains, never as thanks.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AD -->
+    <div id="AD" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">AD · W3 on the web</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Two states native capture never had: the wait while the detector loads, and the detector not loading. Both get a sentence. The wait gets the doctrine's one waiting device; the failure gets nothing that moves.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="AD1 Looking" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">AD1 · WHILE IT WORKS</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="border: 1px solid #DCDBD2; border-radius: 14px; background: #FFFFFF; overflow: hidden;">
+              <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #F4F3EF;">{{ breathe }}</div>
+              <div style="padding: 13px 15px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">Blur faces</span><span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">Happens in your browser, before upload.</span></div>
+                <div style="width: 48px; height: 28px; border-radius: 100px; background: #FF2D8A; display: flex; align-items: center; justify-content: flex-end; padding: 3px; flex: 0 0 auto;"><div style="width: 22px; height: 22px; border-radius: 100px; background: #0B0B0E;"></div></div>
+              </div>
+              <div style="padding: 13px 15px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <span style="font-size: 14px; font-weight: 600;">Looking for faces.</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #DCDBD2; color: #9A9A90; padding: 7px 11px; border-radius: 100px; flex: 0 0 auto;">TAP TO BLUR</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">No canvas until the photo has decoded <em>and</em> the detector has answered — the frame occupies its final height with the breathing brackets centred, so nothing jumps and nothing accepts a tap it can't place. Tap-to-blur is drawn disabled, not hidden, because it's about to matter.</p>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 11px; display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">WHY A DEVICE AT ALL</span>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">A 2.6&nbsp;MB model on a phone connection can take several seconds. A sentence that sits still for four seconds reads as frozen; the brackets breathing is how the product says "still working" without a spinner or a fake percentage. Same [900ms] linear loop as READING WEATHER. Reduced motion holds the brackets still at full opacity.</p>
+            </div>
+          </div>
+        </div>
+        <div data-screen-label="AD2 Could not look" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">AD2 · THE MODEL WON'T LOAD</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="border: 1px solid #DCDBD2; border-radius: 14px; background: #FFFFFF; overflow: hidden;">
+              <div style="height: 200px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); position: relative;">
+                <span style="position: absolute; bottom: 10px; left: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px; border-radius: 3px;">OUTFIT PHOTO · UNCHECKED</span>
+              </div>
+              <div style="padding: 13px 15px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">Blur faces</span><span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">Happens in your browser, before upload.</span></div>
+                <div style="width: 48px; height: 28px; border-radius: 100px; background: #FF2D8A; display: flex; align-items: center; justify-content: flex-end; padding: 3px; flex: 0 0 auto;"><div style="width: 22px; height: 22px; border-radius: 100px; background: #0B0B0E;"></div></div>
+              </div>
+              <div style="padding: 13px 15px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">We couldn't look for faces.</span><span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">Tap anything you want blurred before you post.</span></div>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #0B0B0E; padding: 7px 11px; border-radius: 100px; flex: 0 0 auto;">TAP TO BLUR</span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Not "No face found" — that sentence is a report of having looked. This one says we didn't get to. The photo is on screen because it decoded fine; only the detector is missing, and the runner has everything they need to finish the job by hand. Post stays live.</p>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 11px; display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">THE THREE SENTENCES, TOGETHER</span>
+              <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.45; color: #4E4E44;">
+                <span><strong>Looking for faces.</strong> — working</span>
+                <span><strong>We blurred one face.</strong> / <strong>No face found.</strong> — looked</span>
+                <span><strong>We couldn't look for faces.</strong> — didn't get to look</span>
+              </div>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Same subject, same verb, so the three states read as one sentence changing tense rather than three messages.</p>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">FOR THE LANES</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Frame height is fixed from the photo's aspect once decoded; the brackets sit in it. The label under the toggle is one <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">aria-live="polite"</span> region whose text moves through the three sentences — a screen reader hears the tense change too. The failure state fires on model-load error or a [8000ms] timeout, whichever first.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">SECOND PHOTO ONWARD</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The model is cached, so AD1 lasts as long as the decode. It still shows — a 300ms breath is fine, a flash of photo then blur is not.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AE -->
+    <div id="AE" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">AE · Onboarding is full-bleed</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Decision: O1, O3, P2.5 and P3 do not sit in the page column. Each card's Archivo Black headline <em>is</em> the h1. The page shell's heading comes off; the progress bar and headline belong to the card, as drawn.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="AE1 The four headings" style="flex: 0 0 380px; max-width: 380px; background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THE H1 OF EACH STEP · ALREADY ON THE ARTBOARDS</span>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="border: 1px solid #DCDBD2; border-radius: 10px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 14px; letter-spacing: -0.02em;">One question does most of the work.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70; flex: 0 0 auto;">O1</span></div>
+            <div style="border: 1px solid #DCDBD2; border-radius: 10px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 14px; letter-spacing: -0.02em;">Tap anything else you own.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70; flex: 0 0 auto;">O3</span></div>
+            <div style="border: 1px solid #DCDBD2; border-radius: 10px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 14px; letter-spacing: -0.02em;">Which ones do you actually reach for?</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70; flex: 0 0 auto;">P2.5</span></div>
+            <div style="border: 1px solid #DCDBD2; border-radius: 10px; padding: 11px 13px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 14px; letter-spacing: -0.02em;">Now go run.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7A7A70; flex: 0 0 auto;">P3</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">O3's headline is "Tap anything else you own" — with O2 cut, "else" is wrong. It becomes <strong>Tap what you own.</strong> and the mono caption below it becomes COMMON IN YOUR CLIMATE alone, so the two don't say the same thing twice. Onboarding is updated.</p>
+        </div>
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WHY FULL-BLEED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Onboarding is the one place the app has no chrome yet — no tab bar, no You, no back. A page shell puts a second heading above a card that already has one, and two headings on a screen with one question is noise. The card is the page.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">FOR THE LANES</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Render onboarding outside the standard shell, or with the shell's h1 suppressed and the card's headline marked up as <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">&lt;h1&gt;</span>. The progress bar is <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">aria-label="Step 3 of 4"</span>. On desktop the card centres at 420px on the ink ground; it doesn't stretch.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AF -->
+    <div id="AF" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">AF · Feedback with nowhere to land</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Decision: no toast, ever. The control that did the thing says what happened, in its own place, for a fixed hold. Where the result is a real state, it's not transient at all — it's shown.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div data-screen-label="AF1 Copy link" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">AF1 · COPY A SHARE LINK</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">BEFORE</span>
+              <div style="display: flex; gap: 8px;"><span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Copy link</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 11px 18px; font-size: 14px; color: #4E4E44;">Share…</span></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">FOR [2000MS] AFTER</span>
+              <div style="display: flex; gap: 8px;"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Copied</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 11px 18px; font-size: 14px; color: #4E4E44;">Share…</span></div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Same button, same width, label swaps to the past tense and fills ink. No check glyph, no colour change — the word is the confirmation. The swap is a [90ms] opacity cross-fade; the hold is a hold, not an animation; it reverts the same way. Reduced motion changes nothing here, since 90ms opacity is already the floor.</p>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 11px; display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">SCREEN READER</span>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">The button keeps its accessible name ("Copy link") so it stays findable. A sibling <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">role="status"</span> region receives "Link copied" and clears with the hold.</p>
+            </div>
+          </div>
+        </div>
+        <div data-screen-label="AF2 Autosave" style="flex: 0 0 380px; max-width: 380px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">AF2 · AUTOSAVE · NOT TRANSIENT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="border: 1px solid #DCDBD2; border-radius: 12px; background: #FFFFFF; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; font-size: 14px;">Felt about right until the hill, then too warm.</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>NOTE</span><span>SAVED 8:14</span></div>
+            </div>
+            <div style="border: 1px solid #DCDBD2; border-radius: 12px; background: #FFFFFF; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="border: 1px solid #DCDBD2; border-radius: 9px; padding: 11px 13px; font-size: 14px;">Felt about right until the hill, then too warm. Gloves off at 2k.</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>NOTE</span><span>EDITED · SAVING</span></div>
+              <div style="background: #F5FF3D; padding: 10px 12px; font-size: 13px; line-height: 1.45;">Couldn't save. Your edits are still here — we'll keep trying.</div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Saved-ness is a state the runner may need to trust later, so it isn't transient: a mono line under the field carries it permanently. Success never announces. Failure uses the Form Contract's band and words, stays until resolved, and is the only thing announced — <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">role="status"</span>, once.</p>
+          </div>
+        </div>
+        <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">THE RULE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Feedback lives where the action was. If the result is momentary (something left the device), the control says so for [2000ms] and reverts. If the result is a state (something is saved, blocked, named), the state is drawn and stays. Nothing floats, nothing stacks, nothing slides in from an edge.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">WHY NOT A TOAST</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A toast is a second place to look, and it invents a motion surface the doctrine doesn't have. The Form Contract already threw it out for failures; there's no reason success deserves what failure didn't.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #00E0C6;">FOR THE LANES</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">One hook: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">useConfirmedAction(label, doneLabel)</span> — swaps, holds [2000ms], reverts, writes the status region. A second click during the hold restarts it. The Desk's decided rows and P2.5's named rows are the state form of the same rule.</p></div>
         </div>
       </div>
     </div>
@@ -1573,7 +2117,7 @@
 
         <div style="flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">THE HONESTY TEST</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Gear gaps recommend <em>categories</em>, show the evidence that produced them, and include retirement suggestions. If affiliate revenue ever arrives, the "NOT PAID" chip flips to a disclosure rather than disappearing.</p></div>
-          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">NOW DESIGNED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Manual entry (R), notifications (S), Strava (T), settings and privacy (U), report · block · blur (W), the desktop feed (X), shoes as their own object (Y), and where a garment's type comes from (Z) are all below. Naming and the Call teaser live in <a href="V1%20Screens.dc.html">V1 Screens</a>; the letter V is skipped on purpose so no screen id reads as a release number.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">NOW DESIGNED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Manual entry (R), notifications (S), Strava (T), settings and privacy (U), report · block · blur (W), the desktop feed (X), shoes as their own object (Y), where a garment's type comes from (Z), O3's one list (AA), what pink, teal and grey mean (AB), P2.5 (AC), W3's two web states (AD), onboarding's column decision (AE), and transient feedback (AF) are all below. Naming and the Call teaser live in <a href="V1%20Screens.dc.html">V1 Screens</a>; the letter V is skipped on purpose so no screen id reads as a release number.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #FF2D8A;">DECIDED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Laundry state lands with the call epic, not v1 — it matters most when a recommendation has to say "that's in the wash." Nothing in the market handles it, so it stays a differentiator worth building properly.</p></div>
         </div>
       </div>
@@ -1585,7 +2129,14 @@
 <script type="text/x-dc" data-dc-script data-props="{&quot;brandWord&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;dialed&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Brand&quot;},&quot;showGearGaps&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Product decisions&quot;}}">
 class Component extends DCLogic {
   renderVals() {
+    const bracket = (d) => React.createElement('span', { style: { fontFamily: "'Archivo Black', sans-serif", fontSize: 26, lineHeight: 1, color: '#0B0B0E' } }, d);
+    const breathe = React.createElement('div', { className: 'rs-breathe', style: { display: 'flex', alignItems: 'center', gap: 6, animation: 'rs-breathe 900ms linear infinite' }, role: 'status', 'aria-label': 'Looking for faces' },
+      bracket('['),
+      React.createElement('span', { style: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, letterSpacing: '0.12em', color: '#0B0B0E' } }, 'LOOKING FOR FACES'),
+      bracket(']')
+    );
     return {
+      breathe,
       brandWord: this.props.brandWord ?? "dialed",
       showGearGaps: this.props.showGearGaps ?? true
     };
