@@ -106,14 +106,68 @@ round (D-26…D-33).
     silently avoids bad combinations needs the data; a Call that displays
     swatches does not need anything the reasoning did not already require.
 
-    **Which makes this an Epic 200 dependency rather than a nice-to-have**,
-    and gives it a deadline the epic's own schedule does not: every day we
-    collect free-text colour is a day of closet data the Call cannot use.
-    Retrofitting means mapping "Obsidian" to black across everyone's
-    wardrobe — mining free text for a structured fact, which is precisely
-    the parser round 5 rejected, and it fails silently and uncorrectably
-    when it is wrong. **If structured colour is coming, the cheapest moment
-    to start collecting it is before more closets fill up.**
+    **Which makes this an Epic 200 dependency rather than a nice-to-have,
+    with a launch deadline rather than an epic one.** An earlier draft of
+    this item said "every day we collect free-text colour is a day of closet
+    data the Call cannot use" — that was wrong, and checking it is the point:
+    **we are pre-launch.** Launch-gate item 1 (task 106) is still an open PR,
+    there are no public sign-ups, and no closets are filling. Nothing is
+    being lost today.
+
+    The deadline is **launch**, and it is still real. Once strangers have
+    closets, adding a structured colour field means either a backfill or a
+    dataset permanently split between runners who have it and runners who do
+    not. And backfill means mapping "Obsidian" to black across everyone's
+    wardrobe — mining free text for a structured fact, precisely the parser
+    round 5 rejected, failing silently and uncorrectably when wrong. So the
+    cheap moment is any time before sign-ups open; the expensive moment is
+    after.
+
+    ### The shape, proposed by the owner 2026-09-18: two levels
+
+    **Level 1 — a standard high-level colour name, one tap.** There is a
+    real standard to adopt rather than invent: the Berlin–Kay basic colour
+    terms, the eleven that recur across languages — black, white, red,
+    green, yellow, blue, brown, purple, pink, orange, grey. Kit reality adds
+    a couple the linguistics folds away (navy is not blue and beige is not
+    brown, to anyone buying clothes), and running adds one more: **hi-viz**,
+    which is the same exception named above and must sit outside whatever
+    clash rule design writes. **The list is user-facing copy, so design owns
+    the names** — the lexicon rule applies.
+
+    **Level 2 — an optional hex**, typed or picked from the garment photo.
+    The owner's argument for why it earns its place is the sharpest thing in
+    this item: *two pinks can look worse together than two clearly different
+    colours.* A name-level rule sees "pink + pink" and passes it, and the
+    near-miss is exactly what reads as a mistake rather than a choice.
+
+    That has a concrete consequence for the rule design asks for: **the Call
+    has to reason at two fidelities.** Name-level when that is all a runner
+    gave, and *perceptual* when a hex exists — which means colour distance
+    in a perceptual space (OKLab or CIELAB ΔE), not string comparison.
+    "Near-miss" is a band of distance; it cannot be expressed in names at
+    all.
+
+    **Picking from the photo is plausible but not free.** Client-side canvas
+    sampling is easy, and the photo path already does client-side WASM work
+    for face blur, so the infrastructure shape exists. But photo colour lies:
+    white balance, shadow and indoor light move a sampled hex a long way. A
+    picked value should be a suggestion the runner confirms, never a truth
+    written silently — "user-entered fields are always the floor" cuts both
+    ways.
+
+    **Schema shape: additive, three fields, each with its own job.** Keep
+    `color` (free text) — a colourway name like "Obsidian" is genuinely
+    worth displaying and is not the same fact as "black". Add a nullable
+    enum for level 1 and a nullable hex for level 2. Nothing is parsed,
+    nothing is backfilled, and per the schema protocol additive nullable
+    columns proceed without stopping.
+
+    **And this answers the tap objection above.** Level 1 is one tap from a
+    short swatch list; level 2 is opt-in and never required. F's doctrine —
+    identity is the only thing worth one tap — survives, because the default
+    cost stays one tap and the precision is there only for runners who want
+    it.
 
     Two things design should be asked alongside the hue question, because
     neither is obvious and both are domain-specific:
