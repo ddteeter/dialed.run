@@ -14,7 +14,6 @@ import { createItem, getOwnedItem } from "../../src/modules/closet/service";
 import { maxPhotoBytes } from "../../src/lib/photo-constraints";
 import {
   extensionFor,
-  fitWithin,
   getItemPhotoObject,
   isPhotoSize,
   photoSizes,
@@ -24,8 +23,8 @@ import {
   uploadItemPhoto,
   uploadPhotoFromForm,
   validatePhoto,
-  withReleased,
 } from "../../src/modules/closet/photos";
+import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
 
 function db() {
   return drizzle(env.DIALED_CORE);

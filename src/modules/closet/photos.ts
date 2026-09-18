@@ -18,6 +18,7 @@ import {
   maxPhotoBytes,
 } from "../../lib/photo-constraints";
 import { env } from "../../env";
+import { fitWithin, withReleased } from "../../lib/photo-pipeline";
 import { getOwnedItem } from "./service";
 
 type Db = ReturnType<typeof drizzle>;
@@ -69,45 +70,6 @@ export function validatePhoto(contentType: string, byteLength: number): void {
   }
   if (byteLength > maxPhotoBytes) {
     throw new PhotoValidationError("Photo must be 10 MB or smaller.");
-  }
-}
-
-export function fitWithin(
-  width: number,
-  height: number,
-  max: number,
-): { width: number; height: number } {
-  // Equivalent mutants on both `<=`: they differ from `<` only when a side
-  // equals `max`, and that side is then the longest, so `scale` is exactly
-  // 1 and the arithmetic below is the identity. What the guard really
-  // prevents is scaling *up* — an image smaller than the box on both sides.
-  // Stryker disable next-line EqualityOperator
-  if (width <= max && height <= max) return { width, height };
-  const scale = max / Math.max(width, height);
-  return {
-    width: Math.max(1, Math.round(width * scale)),
-    height: Math.max(1, Math.round(height * scale)),
-  };
-}
-
-/**
- * Runs `use`, then hands the WASM image's memory back — whether `use`
- * returned or threw.
- *
- * One helper rather than two `try/finally` blocks, because a release is
- * the kind of thing that is invisible when it stops happening: nothing in
- * a test can see a leak, and nothing in production sees it either until an
- * isolate runs out of memory mid-upload. Written down once, it can at
- * least be asserted once.
- */
-export async function withReleased<Image extends { free: () => void }, Result>(
-  image: Image,
-  use: (image: Image) => Promise<Result>,
-): Promise<Result> {
-  try {
-    return await use(image);
-  } finally {
-    image.free();
   }
 }
 

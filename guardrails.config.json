@@ -45,6 +45,16 @@
       "count": 1
     },
     {
+      "key": "src/modules/enrichment/html.ts|mutation-suppress|// Stryker restore BlockStatement",
+      "reason": "The closing half of the block pair below, not a second decision. A `next-line` directive does not attach to a line opening with `} catch`, so the equivalent catch in parseJson has to be bracketed by disable/restore \u2014 and the diff-auditor counts each comment as its own suppression. Restoring immediately after the try keeps the scope to those five lines rather than the rest of the file; dropping it would silence BlockStatement everywhere below. See the paired entry for the proof. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/enrichment/html.ts|mutation-suppress|// Stryker disable BlockStatement",
+      "reason": "Equivalent mutant, proof at the site: emptying the catch in parseJson falls off the end of the function, which is undefined \u2014 the same value the explicit return produces. No caller can distinguish them, and that is by design rather than by accident: malformed JSON and \"no Product in this block\" must both skip to the next block, because a page shipping one broken script beside a good one has to still yield the good one (tested). Making it observable would mean inventing behaviour \u2014 recording a parse failure somewhere nothing reads \u2014 to satisfy a mutant rather than a requirement. Three restructurings were tried: inlining the try/catch with continue, returning a result wrapper, and moving the guard to the call site; the caller behaves identically in all three. A block disable/restore pair rather than next-line, because the mutated line opens with `} catch` and next-line does not attach to a line beginning with a closing brace. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
       "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
       "reason": "Equivalent mutant, proof at the site: a heavy OUTER layer has no lower bound (nothing goes over it), so estimateTempRange drops this floor before returning and no input can distinguish -4 from +4. Hoisted to a named constant because a Stryker directive cannot attach inside an object literal.",
       "count": 1
@@ -117,11 +127,6 @@
     {
       "key": "src/modules/auth/create-auth.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, with the evidence recorded at the site: a wrong *recognised* drizzle provider fails loudly (built with \"mysql\", signing up gives \"Failed to create user\"), but an unrecognised one falls back to no dialect-specific handling, which is what D1 through drizzle wants anyway. So \"\" and \"sqlite\" cannot be told apart from outside, while the mistake that matters can.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
-      "reason": "Equivalent mutants on both `<=` in `fitWithin`: they differ from `<` only when a side equals `max`, and that side is then the longest, so the scale factor is exactly 1 and the arithmetic below is the identity. What the guard really prevents is scaling *up* an image smaller than the box on both sides, which a test does assert.",
       "count": 1
     },
     {
@@ -415,13 +420,13 @@
       "count": 1
     },
     {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds.",
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
       "count": 1
     },
     {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
+      "reason": "The enrichment sweep is the third stalled-marker reconciliation beside imports and Strava revocations, and the third caller of redispatchEach. The loop body and the stalled-row query (stalledPending) are both extracted; what remains at each site is the 13-line call naming a queue, a message shape, a Sentry context and a sentence, which fallow's identifier matching reads as a clone of the imports call. This is the well-factored-pair case CLAUDE.md records: extraction leaves call sites that are skeletally identical, and the price of the flip is a suppression per caller. Three other shapes were tried (a query helper alone, sweeps as data run by one function, a call-site helper) and each moved the clone rather than removed it. Owner's call, 2026-09-13.",
       "count": 1
     },
     {

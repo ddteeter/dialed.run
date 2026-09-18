@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { env } from "../../src/env";
@@ -47,6 +47,10 @@ function db() {
   return drizzle(env.DIALED_CORE);
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("withResolvedProduct", () => {
   it("links a garment that names both a brand and a product", async () => {
     const userId = newUlid();
@@ -58,6 +62,52 @@ describe("withResolvedProduct", () => {
     expect(resolved.productId).toBeDefined();
     expect(resolved.name).toBe("Rover Half-Zip");
   });
+  it("asks for enrichment when the garment carries a product URL", async () => {
+    // The paste path (107). It runs here rather than in the server
+    // function so it cannot be skipped: every garment write goes through
+    // this, and a URL nobody enriched is a product page nobody ever reads.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    const resolved = await withResolvedProduct(
+      db(),
+      {
+        category: "top",
+        name: `Linked Tee ${newUlid()}`,
+        brand: "Linked Brand",
+        productUrl: "https://shop.example.com/products/tee",
+      },
+      newUlid(),
+    );
+
+    expect(send).toHaveBeenCalledWith({
+      type: "enrich",
+      productId: resolved.productId,
+    });
+    const [row] = await db()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, resolved.productId ?? ""));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("asks for nothing when the garment has no product URL", async () => {
+    // Nothing to fetch, so nothing to queue — and a job for a product with
+    // no URL would only fail.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    await withResolvedProduct(
+      db(),
+      {
+        category: "top",
+        name: `Unlinked Tee ${newUlid()}`,
+        brand: "Unlinked Brand",
+      },
+      newUlid(),
+    );
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
 
   it("leaves a garment with no brand generic", async () => {
     // A generic piece is the whole point of the tap list and of D-27's

@@ -15,6 +15,20 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+10. **Dead-lettered work has nowhere a human looks.** Raised on PR #72 as
+   "DLQ handling UIs on the desk" — and there is no desk: no admin surface
+   is drawn or built anywhere. Today a job that exhausts its retries lands
+   on its row (`products.extraction_status = 'failed'`, `runs`'
+   `weather_status`, an import's status), in Sentry, and as a line in the
+   daily digest, which is a Sentry event that a person reads or does not.
+   **The ask is a screen**: the things the system gave up on, one row
+   each, with what it was trying to do, why it stopped, and a retry — for
+   enrichment that is "re-fetch this page" and "re-run extraction over the
+   stored snapshot" (`reextract`), which exist as functions and have no
+   button. Admin-only, so it also needs the first notion of an admin in
+   the product, which is a question for the owner before it is one for
+   design. Nothing is blocked; the digest carries the count meanwhile.
+
 9. **A band that was wrong both ways equally has no honest one-word
    verdict.** §AB3 gives each band on the profile row one word —
    *Under-dressed*, *Dialed*, *Over-dressed* — derived from whichever
@@ -52,6 +66,37 @@ round (D-26…D-33).
    same lane-107 dependency §AC2b ruled out for P2.5. `TapListForm` never
    built one, so the build is right and the artboard is stale. Tracked as
    **D-55** so nobody "fixes" the code to match the drawing.
+
+6. **Enriched product data has no surface, and item 1 assumed it would have
+   one.** Lane 107 has landed, so this stops being hypothetical: a pasted
+   product URL now fills `products.fabric_composition` (verbatim as the shop
+   wrote it), `fabric_parts` (the labelled breakdown — D-34's multi-part
+   shape, and real: Arc'teryx states four components, On states two panels,
+   rabbit three), plus `weight`, `fabric`, `wind_resistant`,
+   `water_resistant`, `category_hint` and a product image in R2.
+
+   **Of those, only the last group is rendered anywhere**, and only
+   indirectly: a garment inherits them as defaults where its own columns are
+   null, and `GarmentDetail` shows them. **`fabric_composition` and
+   `fabric_parts` are drawn by nothing at all.**
+
+   Item 1 files composition display under the Call epic, "if composition
+   surfaces there". The owner's read (2026-09-14) is that the Call is one
+   use and probably not the only one — a fabric breakdown is the kind of
+   thing a runner reads on a garment detail, compares in a closet list, or
+   filters by, none of which are Call screens and none of which are drawn.
+
+   What is wanted is the decision rather than a screen: **where, if
+   anywhere, does a runner see what their kit is made of** — and if the
+   answer is "the garment detail", what a multi-part composition looks like
+   there when a jacket has four labelled components and a tee has one line.
+   Until that is answered the data accumulates unread, which is cheap and
+   fine (it is stored for retroactive re-extraction anyway, D-31) but should
+   be a choice rather than an oversight.
+
+   No placeholder was built. There is no undesigned surface to hold to the
+   protocol here — the data simply has no consumer, which is a different
+   thing from a screen drawn without an artboard.
 
 5. **Onboarding's steps are inside the app's page column, and the
    artboards draw them full-bleed.** O1, O3 and P3 are each a card with
