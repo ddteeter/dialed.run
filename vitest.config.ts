@@ -102,6 +102,25 @@ export default defineConfig(async () => {
           assetsInclude: ["**/*.bin"],
           test: {
             name: "worker",
+            // Vitest's default is 5s, and that is a budget for a quiet
+            // machine. The slowest harness these tests must survive is
+            // stryker's: its vitest runner forces `maxWorkers: 1` and
+            // `maxConcurrency: 1`, so the whole suite runs serially in one
+            // thread, and the dry run it does before any mutant measured
+            // 1221 tests in 2m08s — 31.8s of net test time against 96.5s of
+            // harness overhead. At 5s the image tests (real encode/decode,
+            // the heaviest thing the suite does) sit near the line and one
+            // crosses it on almost every run: four consecutive dry runs
+            // failed with exactly one `Test timed out in 5000ms`, on a
+            // DIFFERENT test each time, each of which passes in about a
+            // second on its own. A varying victim is the environment, not
+            // the test. 20s is the value `test/closet/photos.test.ts` had
+            // already reached for inline on one case; this makes it the
+            // rule rather than that one file's private workaround. It
+            // weakens no assertion — every test still runs and still has to
+            // pass — it only moves the deadline at which we call the
+            // harness wedged.
+            testTimeout: 20_000,
             include: ["test/**/*.test.{ts,tsx}"],
             exclude: [DOM_TESTS, BROWSER_TESTS],
             setupFiles: ["test/apply-migrations.ts"],
@@ -110,6 +129,7 @@ export default defineConfig(async () => {
         defineProject({
           test: {
             name: "ui",
+            testTimeout: 20_000,
             environment: "happy-dom",
             include: [DOM_TESTS],
             setupFiles: ["test/dom-setup.ts"],
@@ -118,6 +138,7 @@ export default defineConfig(async () => {
         defineProject({
           test: {
             name: "browser",
+            testTimeout: 20_000,
             include: [BROWSER_TESTS],
             browser: {
               enabled: true,
