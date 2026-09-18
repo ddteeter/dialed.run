@@ -434,7 +434,7 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
 
   it("re-drives a failed product too, so an outage heals itself", async () => {
     // **Composition comes only from the model now**, so a job that
-    // exhausted its retries while OpenRouter was unreachable dead-lettered
+    // exhausted its retries while OpenAI was unreachable dead-lettered
     // and marked the product `failed` — and `requestEnrichment` only claims
     // `failed` on a *new paste*, so nothing would look at it again. The row
     // cannot tell "this page states no composition" from "the model was
@@ -449,6 +449,90 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     expect(outcome.anomalies).toStrictEqual([
       "1 product(s) unfinished by enrichment and were re-dispatched",
     ]);
+    // And claimed: the consumer treats only `pending` as work, so a
+    // re-dispatch that left the row `failed` was a message it acked and
+    // ignored. The flip is what makes the re-drive real (PR #72 review).
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("claims the row even when the send then fails, so the next sweep owns it", async () => {
+    vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
+      new Error("queue down"),
+    );
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const productId = await insertProduct("failed", HOUR);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("leaves a failed product inside the grace window alone, like a pending one", async () => {
+    // The consumer may still be on it: a job that failed a minute ago is
+    // being retried by the queue, and a sweep that flipped it back to
+    // pending would race that retry.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 5 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on a failed product at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 15 * 60 + 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops re-driving a failed product after its first day", async () => {
+    // Unbounded, a page that 404s — or 403s even through the proxy, at a
+    // credit a try — is re-fetched every hour for the life of the row.
+    // Past a day it is abandoned, which the digest reports instead.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("failed", 25 * HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("failed");
+  });
+
+  it("re-drives a failed product right up to the day, not one second past it", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 24 * HOUR - 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps re-driving a pending product past the day, because pending is a claim", async () => {
+    // `pending` means the row owes an extraction and nothing has said
+    // otherwise; only `failed` has a verdict to stop on.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 3 * 24 * HOUR);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it("leaves alone the states that are not enrichment's to finish", async () => {
@@ -493,6 +577,46 @@ async function enriched(composition: string | undefined): Promise<void> {
     .set({ fabricComposition: composition })
     .where(eq(products.id, id));
 }
+
+describe("the abandoned-enrichment check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("reports a failed product the sweep has stopped re-driving", async () => {
+    // Law 6: a terminal failure lands somewhere a human sees. Until there
+    // is an admin surface for dead-lettered work, this line is it.
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertProduct("failed", 25 * HOUR);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) abandoned by enrichment: failed, and past the sweep's day of retries",
+    ]);
+  });
+
+  it("says nothing about a failed product the sweep still owns", async () => {
+    await insertProduct("failed", 2 * HOUR);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("says nothing about an old product that finished", async () => {
+    const id = await insertProduct("done", 3 * 24 * HOUR);
+    // With a composition, so the yield check has nothing to say either.
+    await coreDb()
+      .update(products)
+      .set({ fabricComposition: "100% merino wool" })
+      .where(eq(products.id, id));
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+});
 
 describe("the extraction-yield check", () => {
   beforeEach(async () => {

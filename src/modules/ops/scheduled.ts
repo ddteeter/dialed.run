@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt, or } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -9,6 +9,7 @@ import {
   stravaRevocations,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
@@ -230,10 +231,11 @@ async function redispatchStrandedRevocations(
 const ENRICHMENT_STALL_GRACE_S = 15 * 60;
 
 /**
- * `failed` is re-driven too, which `pending` alone would not cover.
+ * `failed` is re-driven too, which `pending` alone would not cover — but
+ * only for the product's first day.
  *
  * **Because composition now comes only from the model** (owner,
- * 2026-09-14), a job that exhausts its retries while OpenRouter is
+ * 2026-09-14), a job that exhausts its retries while OpenAI is
  * unreachable dead-letters and marks the product `failed` — and
  * `requestEnrichment` only claims `none` and `failed` on a *new paste*, so
  * nothing would ever look at it again. That is the right terminal state for
@@ -241,31 +243,72 @@ const ENRICHMENT_STALL_GRACE_S = 15 * 60;
  * down for twenty minutes", and the row cannot tell us which it was.
  *
  * So both are re-driven, and the cost of getting it wrong is asymmetric: a
- * page that genuinely has nothing is re-fetched occasionally and answers
+ * page that genuinely has nothing is re-fetched a few times and answers
  * nothing again, where a product wrongly abandoned stays wrong forever.
- * The consumer's snapshot reuse makes the re-drive nearly free within the
- * hour, and `applyExtraction` is idempotent.
+ *
+ * **A few times, not forever** (PR #72 review). Unbounded, a page that
+ * 404s — or 403s even through the proxy, at a credit a try — is re-fetched
+ * every hour for the life of the row, and a Sentry event with it. A day
+ * of hourly retries outlasts any model outage worth waiting out; past it
+ * the row is *abandoned*, which the daily digest reports (law 6), and a
+ * fresh paste of the same URL is what claims it again.
+ *
+ * **And the re-drive is a claim, not just a send.** The consumer treats
+ * only `pending` as work, so re-dispatching a `failed` row without
+ * flipping it was a message the consumer acked and ignored — the anomaly
+ * line said "re-dispatched" and nothing happened. Flipped in SQL before the
+ * send (law 2): a send that then fails leaves the row `pending`, which the
+ * next sweep picks up on its own.
  */
-const ENRICHMENT_UNFINISHED = ["pending", "failed"] as const;
+const ENRICHMENT_RETRY_WINDOW_S = 24 * 60 * 60;
+
+/**
+The instant (epoch seconds) before which a `failed` product is abandoned.
+*/
+function abandonedBefore(): number {
+  return Math.floor(Date.now() / 1000) - ENRICHMENT_RETRY_WINDOW_S;
+}
+
+/**
+ * `failed` past the grace window and inside the product's first day: the
+ * rows the sweep still owes a retry.
+ */
+function failedAndOwed(): SQL | undefined {
+  const staleBefore = Math.floor(Date.now() / 1000) - ENRICHMENT_STALL_GRACE_S;
+  return and(
+    eq(products.extractionStatus, "failed"),
+    lt(products.createdAt, staleBefore),
+    gt(products.createdAt, abandonedBefore()),
+  );
+}
 
 async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
-  // Its own query rather than `stalledPending`: that helper asks "which
-  // rows are still `pending`", and this now asks a different question over
-  // two states. Forcing both through one signature means typing the state
-  // list as the intersection of two tables' status enums, which is a worse
-  // lie than two queries.
+  // Two reads rather than one with an OR. The `pending` half is exactly
+  // the question `stalledPending` already asks, and the `failed` half has
+  // a bound it does not — so each is asked of the helper that fits, and
+  // the failed half goes unlimited, since a day's failed pastes is small
+  // where a stuck-pending backlog is not.
   const db = drizzle(env.DIALED_CORE);
-  const staleBefore = Math.floor(Date.now() / 1000) - ENRICHMENT_STALL_GRACE_S;
-  const stalled = await db
-    .select({ id: products.id })
-    .from(products)
+  const pending = await stalledPending(
+    {
+      table: products,
+      id: products.id,
+      status: products.extractionStatus,
+      createdAt: products.createdAt,
+    },
+    ENRICHMENT_STALL_GRACE_S,
+  );
+  const failedIds = await columnWhere(db, products, products.id, failedAndOwed());
+  // The claim (law 2), before the send: the consumer treats only `pending`
+  // as work. Re-checked against the status rather than trusting the read,
+  // so a row that finished in between is not un-finished.
+  await db
+    .update(products)
+    .set({ extractionStatus: "pending" })
     .where(
-      and(
-        inArray(products.extractionStatus, ENRICHMENT_UNFINISHED),
-        lt(products.createdAt, staleBefore),
-      ),
-    )
-    .limit(100);
+      and(inArray(products.id, failedIds), eq(products.extractionStatus, "failed")),
+    );
+  const stalled = [...pending, ...failedIds.map((id) => ({ id }))];
   // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
   await redispatchEach(anomalies, stalled, {
     queue: env.ENRICHMENT_QUEUE,
@@ -288,6 +331,7 @@ async function runDailyDigest(): Promise<string[]> {
   const anomalies: string[] = [];
   await checkWeatherBacklog(anomalies);
   await checkExtractionYield(anomalies);
+  await checkAbandonedEnrichments(anomalies);
   await redispatchStrandedRevocations(anomalies);
   await redispatchStalledImports(anomalies);
   // Threshold checks fill in as their features land:
@@ -348,6 +392,32 @@ async function checkExtractionYield(anomalies: string[]): Promise<void> {
   if (share < EMPTY_COMPOSITION_ALERT) return;
   anomalies.push(
     `${String(empty)} of ${String(done.length)} enriched product(s) have no composition (${String(share)}%)`,
+  );
+}
+
+/**
+ * Products enrichment gave up on: `failed`, and past the day the hourly
+ * sweep spends re-driving them (law 6 — a terminal failure lands somewhere
+ * a human sees). Until there is an admin surface for dead-lettered work,
+ * this line and the Sentry event behind it are that somewhere.
+ */
+async function checkAbandonedEnrichments(anomalies: string[]): Promise<void> {
+  // `columnWhere` rather than the select chain the weather check writes
+  // out: the ids are what the covering index carries, and the two checks
+  // are different backlogs that should not read as one clone.
+  const failedPastTheWindow = and(
+    eq(products.extractionStatus, "failed"),
+    lt(products.createdAt, abandonedBefore()),
+  );
+  const abandoned = await columnWhere(
+    drizzle(env.DIALED_CORE),
+    products,
+    products.id,
+    failedPastTheWindow,
+  );
+  if (abandoned.length === 0) return;
+  anomalies.push(
+    `${String(abandoned.length)} product(s) abandoned by enrichment: failed, and past the sweep's day of retries`,
   );
 }
 
