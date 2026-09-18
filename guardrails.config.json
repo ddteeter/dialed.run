@@ -130,11 +130,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
-      "reason": "Equivalent mutants on both `<=` in `fitWithin`: they differ from `<` only when a side equals `max`, and that side is then the longest, so the scale factor is exactly 1 and the arithmetic below is the identity. What the guard really prevents is scaling *up* an image smaller than the box on both sides, which a test does assert.",
-      "count": 1
-    },
-    {
       "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: R2 treats `etagDoesNotMatch: undefined` as no condition at all, so both arms of the conditional-request branch answer the same for a caller that sent no usable If-None-Match. The branch is there to say so out loud.",
       "count": 1

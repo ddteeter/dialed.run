@@ -65,8 +65,8 @@ export interface EnrichmentDeps {
   */
   proxyApiKey?: string | undefined;
   /**
-  The LLM rung, built by the caller from `OPENROUTER_API_KEY` and the
-  owner's model choice (D-32). Absent means the ladder stops at `text`.
+  The LLM rung, built by the caller from `OPENAI_API_KEY` and the owner's
+  model choice (D-32). Absent means the declared rungs are the answer.
   */
   model?: ExtractionModel | undefined;
 }
@@ -107,7 +107,7 @@ async function latestSnapshot(db: Db, productId: string, since: number) {
  * answers it.
  *
  * A later run finding a *different* image therefore does not replace the
- * stored one. That is deliberate and recorded (D-59): refreshing a product
+ * stored one. That is deliberate and recorded (D-61): refreshing a product
  * image needs a rule about the old object and anything holding its URL, and
  * inventing one here would be guessing.
  *

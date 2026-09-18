@@ -14,6 +14,7 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
+import samplePhotoBytes from "../fixtures/sample-photo.bin";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
 /**
@@ -24,7 +25,8 @@ import { batchOf, fakeMessage } from "../queue-fakes";
  */
 
 const IMAGE_URL = "https://cdn.example.com/products/tee.jpg";
-const IMAGE_BYTES = new Uint8Array([9, 8, 7]);
+// A real image, because the consumer decodes and re-encodes what it copies.
+const IMAGE_BYTES = new Uint8Array(samplePhotoBytes);
 
 const PAGE_WITH_IMAGE = `<html><head>
 <meta property="og:image" content="${IMAGE_URL}">
@@ -571,15 +573,17 @@ describe("handleEnrichmentBatch: the primary image", () => {
     expect(row.imageKey).toMatch(
       new RegExp(String.raw`^products/${productId}/image-\d+$`, "u"),
     );
+    // A re-encode of the image rather than the bytes served — `image.ts`
+    // pins the pixels; here it is enough that a picture landed.
     const stored = await env.MEDIA.get(row.imageKey ?? "");
-    expect(new Uint8Array(await (stored?.arrayBuffer() ?? new ArrayBuffer(0))))
-      .toStrictEqual(IMAGE_BYTES);
+    expect(stored?.httpMetadata?.contentType).toBe("image/webp");
+    expect(stored?.size ?? 0).toBeGreaterThan(0);
   });
 
   it("copies it once: a later fetch of the same product re-reads the page and not the image", async () => {
     // Fill-only-what-is-blank, and here that is right — nobody edits an R2
     // key, so the only question is whether we have already paid for this
-    // image (D-59). Driven through a *second real fetch*: the snapshot is
+    // image (D-61). Driven through a *second real fetch*: the snapshot is
     // aged past the reuse window, so the page is fetched again and the
     // image is the only thing that must not be.
     const productId = await pendingProduct();
