@@ -15,6 +15,20 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+10. **Dead-lettered work has nowhere a human looks.** Raised on PR #72 as
+   "DLQ handling UIs on the desk" — and there is no desk: no admin surface
+   is drawn or built anywhere. Today a job that exhausts its retries lands
+   on its row (`products.extraction_status = 'failed'`, `runs`'
+   `weather_status`, an import's status), in Sentry, and as a line in the
+   daily digest, which is a Sentry event that a person reads or does not.
+   **The ask is a screen**: the things the system gave up on, one row
+   each, with what it was trying to do, why it stopped, and a retry — for
+   enrichment that is "re-fetch this page" and "re-run extraction over the
+   stored snapshot" (`reextract`), which exist as functions and have no
+   button. Admin-only, so it also needs the first notion of an admin in
+   the product, which is a question for the owner before it is one for
+   design. Nothing is blocked; the digest carries the count meanwhile.
+
 9. **A band that was wrong both ways equally has no honest one-word
    verdict.** §AB3 gives each band on the profile row one word —
    *Under-dressed*, *Dialed*, *Over-dressed* — derived from whichever

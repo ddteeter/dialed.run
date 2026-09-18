@@ -28,7 +28,8 @@ improves. Invisible: results arrive as pre-filled, editable fields.
 - `snapshot.ts` — HTML to `MEDIA` before parsing, then the row. R2 first:
   nothing spans R2 and D1 (law 8c), and an orphaned object is recoverable
   where a row pointing at no object is not.
-- `html.ts` — script payloads, sliced to `</script>` rather than captured.
+- `html.ts` — the page through htmlparser2: scripts with their attributes,
+  meta tags, and the prose between them. One pass, three lists, no DOM.
 - `rungs/{jsonld,shopify,og}.ts` — each a `PageExtractor`.
 - `fibres.ts` — the fibre vocabulary, which is prompt content rather than
   a parser gate. There is no composition parser: `composition.ts` was
@@ -37,7 +38,8 @@ improves. Invisible: results arrive as pre-filled, editable fields.
   field**. It does not produce a composition at all.
 - `request.ts` — `requestEnrichment`: flips the row to `pending`, then sends.
 - `consume.ts` — the consumer, its DLQ handler, and `reextract`.
-- `model/openrouter.ts` — the LLM rung (not yet).
+- `model/chat-completions.ts` — the LLM rung: one adapter, OpenAI directly
+  in production and OpenRouter in the eval.
 
 ## Contract touches
 
@@ -47,7 +49,7 @@ improves. Invisible: results arrive as pre-filled, editable fields.
   `0015_fibre_candidates`, numbered past everything on main and in the one
   open PR (law 11).
 - **Bindings/queues/crons: none.** `ENRICHMENT_QUEUE`, both consumers and
-  `MEDIA` are already bound. `OPENROUTER_API_KEY` is a secret, not a binding.
+  `MEDIA` are already bound. `OPENAI_API_KEY` is a secret, not a binding.
 - `PageExtractor.extract` returns `| undefined`, not `| null`: the Phase 0
   signature could not be implemented under `unicorn/no-null`.
 - New routes: none. Screens: none. Design-delta items: none.
@@ -121,19 +123,35 @@ number that should climb.
 - Write-back: skips an edited field, skips a **cleared** one, fills a
   never-set one. (workers pool)
 
-## The model rung, and why the provider is pinned
+## The model rung: one adapter, two endpoints
 
-`model/openrouter.ts` implements `ExtractionModel`. Three things it does
-that are not obvious, each measured rather than assumed:
+`model/chat-completions.ts` implements `ExtractionModel` over the
+chat-completions wire format. Three things it does that are not obvious,
+each measured rather than assumed:
 
-**The provider is pinned and fallbacks are off.** Structured output is a
-property of the *endpoint*, not the model — and the endpoint listing proves
-it: `openai/gpt-5.6-luna` is served by seven endpoints and the **Amazon
-Bedrock** one reports `structured_outputs: false` while OpenAI's and
-Azure's report true. Unpinned, a request can be routed to an endpoint that
-ignores `response_format` and answers with prose. That is not an error; it
-is a successful completion nobody can parse, and it would show up weeks
-later as an accuracy drop with no failing request behind it.
+**Production goes to OpenAI directly; the eval goes through OpenRouter.**
+The packet asked for OpenRouter so one key could cover every model the
+eval compares, and the eval keeps that. The PR #72 review asked why
+production should, once the choice is a single OpenAI model — and it should
+not: the router was a second party that can be down, a margin on every
+call, and a routing layer whose only job was to be told not to route. The
+request body is the same on both (OpenRouter is OpenAI-compatible by
+design), so it is one adapter with an `endpoint` and an optional
+`provider`, not two adapters. Production reads `OPENAI_API_KEY` and names
+the model as OpenAI does, `gpt-5.6-luna`; the eval reads
+`OPENROUTER_API_KEY` from `.dev.vars` and names it `openai/gpt-5.6-luna`.
+
+**Through the router the provider is pinned and fallbacks are off.**
+Structured output is a property of the *endpoint*, not the model — and the
+endpoint listing proves it: `openai/gpt-5.6-luna` is served by seven
+endpoints and the **Amazon Bedrock** one reports `structured_outputs:
+false` while OpenAI's and Azure's report true. Unpinned, a request can be
+routed to an endpoint that ignores `response_format` and answers with
+prose. That is not an error; it is a successful completion nobody can
+parse, and it would show up weeks later as an accuracy drop with no failing
+request behind it. Against OpenAI directly there is one endpoint and the
+field is not sent, because OpenAI refuses request arguments it does not
+know.
 
 **The JSON Schema is derived from the contract** (`model/json-schema.ts`),
 because a hand-written copy is a rival truth: a field added to
@@ -149,11 +167,14 @@ refuses outright (measured: `400 invalid_json_schema`), and it is the field
 the deterministic rungs keep raw evidence in — a model inventing entries for
 it would be writing fiction into the one column kept for provenance.
 
-Verified end to end against the live API, two real pages: on the rabbit
-page the model returned all three labelled fabric sections where the
-deterministic pass found one. It also showed the prompt needs decoded text —
-given `&amp;` it copied `&amp;` into `verbatim`, exactly as instructed — so
-`pageTextFor` runs the same entity decode the composition pass does.
+Verified end to end against the live API through OpenRouter, two real
+pages: on the rabbit page the model returned all three labelled fabric
+sections where the deterministic pass found one. It also showed the prompt
+needs decoded text — given `&amp;` it copied `&amp;` into `verbatim`,
+exactly as instructed — so `pageTextFor` decodes to a fixed point. **The
+direct OpenAI path is verified by the adapter's tests and not yet by a live
+call**: no `OPENAI_API_KEY` exists in `.dev.vars` or in the Worker, and
+setting one is the owner's (see the PR body).
 
 ## Retired — the vocabulary feedback loop
 
@@ -415,7 +436,7 @@ The primary image is copied to R2 (`image_key`) after the write-back, and
 only while the column is null: nobody hand-edits an R2 key, so the ledger
 `applyExtraction` needs has nothing to protect here, and the only question
 is whether we have already paid for this image. A later run finding a
-*different* image does not replace it — D-59, because that needs a rule for
+*different* image does not replace it — D-61, because that needs a rule for
 the old object and for anything holding its URL. A failed image fetch never
 fails the job: a product whose picture 404s still has a composition.
 
@@ -424,7 +445,8 @@ calls `enqueueEnrichment` (owner's go-ahead, 2026-09-13), where the
 bindings stop so `request.ts` stays importable without them. It cannot
 throw — enrichment must not be able to fail the save that asked for it.
 
-**Not yet:** the model rung and its eval, and the `fibre_candidates` table.
+**Since:** the model rung and its eval landed; `fibre_candidates` was added
+and retired (below).
 
 ## Closed — the fetch fallback, and it is cheaper than the estimate
 
@@ -485,3 +507,57 @@ nodes, and `fibres.ts` has no abbreviations, so the deterministic pass could
 not see a fibre there either. So there is **no** measured instance of the
 200-with-nothing-in-it case; `fetch-page.ts` still reserves Browser
 Rendering for it, on zero evidence rather than one.
+
+## Answered in the PR #72 review (2026-09-17)
+
+Eleven comments, each answered with a change where one was possible. The
+reasoning is at each code site; this is the map.
+
+- **"Regexes good enough?"** — measured, and no. Over the 22 eval pages the
+  Open Graph pattern cut a name at its first apostrophe on nine (`Men's
+  WoolTech Half Tights` → `Men`, `Arc'teryx` → `Arc`), the entity strip
+  turned `Men&#39;s` into `Men s`, and a comment or an attribute holding
+  `>` leaked into the prose. JSON-LD masked most of it by winning the field
+  first. `html.ts` is now htmlparser2 — chosen over the platform's
+  `HTMLRewriter` because the eval runs the same ladder under Node — and
+  every one of those cases is a test. Cost: 50 ms for the whole ladder plus
+  page text on the largest page (1.91 MB), with each rung parsing on its
+  own so the `PageExtractor` contract stays `extract(url, html)`.
+- **"Libs for the fetch complexity?"** — for the address classification,
+  yes: `ipaddr.js` parses every form an address takes and knows every range
+  IANA reserves, where the arithmetic knew seven. Multicast, broadcast,
+  240/4, 192.0.0.0/24, 2001:db8::/32 and the whole of fe80::/10 (the old
+  prefix test knew `fe80:` and not `fe81`–`febf`) are now refused. For the
+  rest, no: every SSRF filter on npm hooks Node's socket layer, and a
+  Worker has none; the manual-redirect loop stays.
+- **"Does Firecrawl return structured data?"** — it can (`markdown`,
+  `json` with its own model, `summary`). Deliberately `rawHtml` only, and
+  the reason is now at the request: the snapshot is the page as served, so
+  `reextract` runs one ladder whichever door fetched, and a second model
+  behind a second prompt on eleven of fourteen shops would be a path the
+  eval never measured.
+- **"Swap to OpenAI native?"** — done, above.
+- **"Didn't we get rid of deterministic rungs?"** — the comment was stale;
+  the rungs stay for name, brand and image, and the model runs on every
+  page. Rewritten at `model/rung.ts`.
+- **"DLQ handling UIs on the desk?"** — there is no desk: no admin surface
+  is drawn or built anywhere in `design/` or `docs/`. Today a dead-lettered
+  job lands on the row (`failed`), in Sentry, and — new — in the daily
+  digest once the sweep stops re-driving it. Two defects were found under
+  the question: the hourly sweep re-dispatched `failed` rows the consumer
+  then ignored (only `pending` is work), and had it worked it would have
+  re-fetched a permanently broken page every hour forever, at a proxy
+  credit a try. The sweep now claims (`failed` → `pending`) before it
+  sends, and re-drives a `failed` row only for the product's first day;
+  past that the row is abandoned and the digest says so (law 6). The desk
+  itself is design-deltas open-queue item 10.
+- **"Use the image later? Legal risk?"** — the R2 copy is not served by
+  anything yet (`photoResponse` accepts entry-photo keys only), so the
+  question is ahead of the surface. It is a product-and-rights decision
+  and it is the owner's: D-67.
+- **"Sanitise the images?"** — yes, and now the same way a runner's photo
+  is: decoded and re-encoded to WebP through photon, bounded to the
+  closet's `full` edge, so metadata, appended payloads and a lying type
+  header do not survive into an object we will serve. A body the decoder
+  rejects is refused with its header ignored.
+
