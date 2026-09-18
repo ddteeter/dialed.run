@@ -30,6 +30,169 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+11. **Does the Call consider how a kit looks together, and if so, what does
+    hue mean then?** Raised by the owner 2026-09-18, for Epic 200.
+
+    The ask is whether a recommended outfit should account for **colour
+    combination** — not just whether the layers are warm enough, but whether
+    they go together.
+
+    **Framed as quality, not fashion** (owner, 2026-09-18), and the framing
+    is the point: *"it would feel stupid for the Call to recommend someone
+    wear two pieces of kit that really don't work together colour-wise …
+    a lot of people would read a bad combo as an algorithm problem."*
+    That is a credibility bug, not a style feature. "Never a fashion app"
+    does not license visibly broken output, and the Call is the one surface
+    whose entire job is to be believed — the same argument round 7 used to
+    kill O3's paste field.
+
+    So it is a **constraint, not an objective**: the Call does not optimise
+    for looking good, it avoids combinations a runner would read as the
+    algorithm malfunctioning. That distinction keeps the whole thing inside
+    the current brand position, and it is what design should be asked
+    about.
+
+    **Check the premise first, because half of it is already built.**
+    `wardrobe_items.color` exists (`schema-core.ts`), `garmentBase` carries
+    `color: z.string().max(30).optional()` (`lib/contracts.ts`), and
+    `GarmentForm` collects it behind a "Color" label today. It round-trips
+    through `form-schema`, `form-mapping` and `service`. **No migration is
+    needed to start collecting colour — we have been collecting it since the
+    closet lane shipped.** What no component does is *render* it: it is
+    written and never read, the same shape as `fabric_composition` in item 6.
+
+    So the real questions are two, and only the first is design's:
+
+    **For design — the hue problem.** §AB fixed hue as verdict, permanently:
+    pink cold, teal dialed, grey warm, and coverage was *moved off* hue onto
+    ink density specifically because hue was overloaded. The Brand Brief adds
+    "never three accents in one viewport". A screen that draws a runner's
+    actual garment colours puts arbitrary hue on a surface where hue already
+    means something, and the Call's payoff — brackets open, layers arrive in
+    dressing order — is exactly where that collision would land. **If the
+    answer is that the Call reasons about colour but never shows it, say so
+    plainly** and the question closes cheaply; that is a real option and
+    possibly the right one, since the Call's job is an answer rather than a
+    lookbook.
+
+    **For the owner — whether colour becomes structured**, which is a schema
+    and product call and does not belong in this file. Free text cannot be
+    combined: "black", "black/grey", "Obsidian" and "BLK" are one colour
+    typed four ways, and mining them is precisely the parser round 5 rejected
+    ("no parser; free text is never mined for a type"). Making colour
+    combinable means a palette, which means a tap on F — and F's whole
+    argument is that identity is the only thing worth one.
+
+    **Colour is not type, and the difference is the whole answer to where
+    it lives.** The first draft of this item reached for round 5's
+    precedent — *type is a property of the product, not of the garment* —
+    and proposed colour follow it down to `products`, deriving free from
+    enrichment. **The owner's read (2026-09-18) is that it does not, and the
+    reasoning holds:** a product has one type forever, but it comes in many
+    colourways and they come and go. `products.color` would be either a lie
+    (one of several) or a list that never says which one this runner owns. A
+    colourway belongs to the instance, which is exactly where the schema
+    already puts it.
+
+    So the cheap route is closed. Structured colour cannot be derived from
+    the product record; the runner has to say. That lands it back on F's one
+    tap, unresolved — and it is why the owner's half of this question is the
+    harder half, not the formality it first looked like.
+
+    **And the quality framing inverts which half is optional.** This item
+    first called "reasons about colour but never shows it" the cheap answer.
+    It is not: reasoning is exactly the half that needs structured colour,
+    and *showing* is the part that can be dropped for free. A Call that
+    silently avoids bad combinations needs the data; a Call that displays
+    swatches does not need anything the reasoning did not already require.
+
+    **Which makes this an Epic 200 dependency rather than a nice-to-have,
+    with a launch deadline rather than an epic one.** An earlier draft of
+    this item said "every day we collect free-text colour is a day of closet
+    data the Call cannot use" — that was wrong, and checking it is the point:
+    **we are pre-launch.** Launch-gate item 1 (task 106) is still an open PR,
+    there are no public sign-ups, and no closets are filling. Nothing is
+    being lost today.
+
+    The deadline is **launch**, and it is still real. Once strangers have
+    closets, adding a structured colour field means either a backfill or a
+    dataset permanently split between runners who have it and runners who do
+    not. And backfill means mapping "Obsidian" to black across everyone's
+    wardrobe — mining free text for a structured fact, precisely the parser
+    round 5 rejected, failing silently and uncorrectably when wrong. So the
+    cheap moment is any time before sign-ups open; the expensive moment is
+    after.
+
+    ### The shape, proposed by the owner 2026-09-18: two levels
+
+    **Level 1 — a standard high-level colour name, one tap.** There is a
+    real standard to adopt rather than invent: the Berlin–Kay basic colour
+    terms, the eleven that recur across languages — black, white, red,
+    green, yellow, blue, brown, purple, pink, orange, grey. Kit reality adds
+    a couple the linguistics folds away (navy is not blue and beige is not
+    brown, to anyone buying clothes), and running adds one more: **hi-viz**,
+    which is the same exception named above and must sit outside whatever
+    clash rule design writes. **The list is user-facing copy, so design owns
+    the names** — the lexicon rule applies.
+
+    **Level 2 — an optional hex**, typed or picked from the garment photo.
+    The owner's argument for why it earns its place is the sharpest thing in
+    this item: *two pinks can look worse together than two clearly different
+    colours.* A name-level rule sees "pink + pink" and passes it, and the
+    near-miss is exactly what reads as a mistake rather than a choice.
+
+    That has a concrete consequence for the rule design asks for: **the Call
+    has to reason at two fidelities.** Name-level when that is all a runner
+    gave, and *perceptual* when a hex exists — which means colour distance
+    in a perceptual space (OKLab or CIELAB ΔE), not string comparison.
+    "Near-miss" is a band of distance; it cannot be expressed in names at
+    all.
+
+    **Picking from the photo is plausible but not free.** Client-side canvas
+    sampling is easy, and the photo path already does client-side WASM work
+    for face blur, so the infrastructure shape exists. But photo colour lies:
+    white balance, shadow and indoor light move a sampled hex a long way. A
+    picked value should be a suggestion the runner confirms, never a truth
+    written silently — "user-entered fields are always the floor" cuts both
+    ways.
+
+    **Schema shape: additive, three fields, each with its own job.** Keep
+    `color` (free text) — a colourway name like "Obsidian" is genuinely
+    worth displaying and is not the same fact as "black". Add a nullable
+    enum for level 1 and a nullable hex for level 2. Nothing is parsed,
+    nothing is backfilled, and per the schema protocol additive nullable
+    columns proceed without stopping.
+
+    **And this answers the tap objection above.** Level 1 is one tap from a
+    short swatch list; level 2 is opt-in and never required. F's doctrine —
+    identity is the only thing worth one tap — survives, because the default
+    cost stays one tap and the precision is there only for runners who want
+    it.
+
+    Two things design should be asked alongside the hue question, because
+    neither is obvious and both are domain-specific:
+
+    - **What rule?** "Don't clash" is culturally loaded and not universal.
+      Neutrals-always-fine? Avoid two saturated non-neutrals? Something
+      else? The Call needs a rule it can apply, not a sensibility.
+    - **Hi-viz is the exception that will break a naive rule.** Runners wear
+      deliberately loud colours for visibility, and this product literally
+      names a token `--hi-viz` after it. A generic clash rule would suppress
+      exactly the combinations a runner chose on purpose. Whatever the rule
+      is, safety colour has to be outside it.
+
+    The owner also raised an opt-out — *"maybe some people don't care, that
+    could be a preference for them"* — which would fit the existing
+    preference patterns (units, share default, thermal level). Recorded as
+    an option, not a decision; a preference for something most runners
+    probably want by default may be over-engineering.
+
+    Nothing is blocked — Epic 200 is unscheduled (`post-mvp.md`) and the
+    column is already there either way.
+
+    **Not in round 10** (sent 2026-09-18 before this was written). Queued for
+    round 11, alongside anything else that accumulates.
+
 10. **Round 9 contradicts itself about 9px, and the contract has already
     won.** `Accessibility Contract.dc.html` requires a 44×44 hit area
     "including 9px mono chips — pad the target, not the glyph", while

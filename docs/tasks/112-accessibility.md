@@ -1,4 +1,4 @@
-# Task 112 — The accessibility contract (sequential, after the token lane)
+# Task 112 — The accessibility contract (sequential on main; adoption lane 3 of 4)
 
 ## Goal
 
@@ -105,11 +105,15 @@ contract collects existing decisions, and several are already satisfied.
 - Everything under `src/ui/**/*.tsx` and `src/modules/**/*.tsx` is already in
   the mutation ratchet at 100%. New markup needs assertions that *observe*
   it, not tests that merely execute it.
-- **Open question for the owner:** an automated checker (`axe-core` /
-  `jest-axe`) would cover 4, 5, 6 and 10 far better than hand-written
-  assertions, but it is a new dev dependency and the stack is fixed. Worth a
-  yes/no before the lane starts — if no, the assertions above are the
-  fallback and the contrast check is manual.
+- **`axe-core` / `jest-axe` are approved** (owner, 2026-09-17) as a dev
+  dependency. Use them for requirements 4, 5, 6 and 10, where a checker is
+  simply better than hand-written assertions. Two cautions: axe cannot see a
+  44×44 *hit area* (it checks target size only where the role implies it, so
+  keep an explicit assertion), and an axe pass is not the contract — nothing
+  in axe knows that opacity may not encode meaning or that success is silent
+  unless the runner acted. **Automate what it covers; assert the rest.**
+- Adding the dependency means `package.json` changes, so the push gate will
+  mutate every changed file. Land it in its own first commit.
 
 ## Done criteria
 
