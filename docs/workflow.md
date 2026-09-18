@@ -68,6 +68,32 @@ seams) → 105 + 107 after 101 merges.
 Task 090 (validation study) is independent of everything — run it whenever,
 ideally early; its output feeds the call epic, not v1.
 
+## Adoption lanes (sequential on main, after the v1 lanes)
+
+Four contracts landed after the v1 lanes were written, and none of them was
+adopted by the lanes that shipped under them. They are **sequential, on
+main, one at a time** — not a fan-out. Every one rewrites `src/ui/` and most
+of `src/modules/*/components/`, and unlike the schema there is no protocol
+for component contention: four worktrees here would conflict on nearly every
+file.
+
+| # | lane | why it sits here |
+| --- | --- | --- |
+| 1 | **113** design system port | Everything downstream takes its numbers from `tokens.js` and T1. Writing raw px before this means rewriting it after. |
+| 2 | **114** motion adoption | Travel distances are spacing steps. |
+| 3 | **112** accessibility | The focus outline, 44px targets and 8px gaps are token values — and its reduced-motion requirement is vacuous until 114 gives it something that moves. |
+| 4 | **115** desktop | Consumes all three: `BREAKPOINT`/`MEASURE` from 113, the tab-switch treatment from 114, focus order from 112. Also the only one that crosses every lane's routes, so it runs alone. |
+
+**Why they are lanes at all.** `docs/design-deltas.md` carried motion
+adoption as something lanes would pick up *"opportunistically, audited at the
+launch gate"*. Six lanes shipped and none did: of the doctrine's 12 surfaces,
+one is implemented. The same would have happened to the token contract —
+93 arbitrary values and 17 `Mono` bypasses accumulated the same way. A
+cross-cutting contract with no packet does not get adopted.
+
+Tasks 110 (The Desk) and 111 (dark theme) are separate and unscheduled;
+neither blocks this sequence.
+
 ## Your review checkpoints (per D-22)
 
 1. **Design docs, batched async** (~10 min/lane, phone-friendly by
