@@ -1,30 +1,32 @@
 import type { ExtractionModel } from "../../../lib/contracts";
 import { env } from "../../../env";
-import { createOpenRouterModel } from "./openrouter";
+import {
+  createChatCompletionsModel,
+  OPENAI_ENDPOINT,
+} from "./chat-completions";
 
 /**
  * The model rung with this Worker's secret, or nothing.
  *
  * Nothing is the default and a supported state, not a degraded one: with no
- * `OPENROUTER_API_KEY` the ladder stops at `text`, which already answers
- * seven of the eight sampled pages. Law 5 — a missing optional upstream
+ * `OPENAI_API_KEY` the ladder stops at the declared rungs and the product
+ * has a name and an image but no composition, which is a state the app
+ * renders and a person can correct. Law 5 — a missing optional upstream
  * must never fail the work that would have used it.
  *
- * **The model and its provider are constants here, and that is where the
- * owner's eval decision lands** (D-32). They are not secrets and not
- * per-request, so a binding would be ceremony; they are a choice with
- * accuracy and cost behind it, so they are written where the choice is
- * reviewable rather than read from an environment nobody diffs.
+ * **The model is a constant here, and that is where the owner's eval
+ * decision lands** (D-32). It is not a secret and not per-request, so a
+ * binding would be ceremony; it is a choice with accuracy and cost behind
+ * it, so it is written where the choice is reviewable rather than read from
+ * an environment nobody diffs.
+ *
+ * **Straight to OpenAI, not through OpenRouter** (PR #72 review). The eval
+ * needed one key across several vendors' models and still has it; the
+ * production choice is one OpenAI model, so the router was a hop with
+ * nothing left to route. The id is OpenAI's own — no `openai/` prefix, which
+ * is OpenRouter's namespace.
  */
-const MODEL = "openai/gpt-5.6-luna";
-
-/**
- * Pinned because structured output is a property of the *endpoint*: of the
- * seven serving this model, Amazon Bedrock's reports
- * `structured_outputs: false` while OpenAI's and Azure's report true. See
- * `openrouter.ts`.
- */
-const PROVIDER = "OpenAI";
+const MODEL = "gpt-5.6-luna";
 
 /**
  * The decision, with the key handed in rather than read.
@@ -43,13 +45,13 @@ export function extractionModelFor(
   // undefined — `modules/ops/sentry.ts` records the same trap for the DSN,
   // where an empty value made the reporter throw on construction.
   if (apiKey === undefined || apiKey === "") return undefined;
-  return createOpenRouterModel(apiKey, {
+  return createChatCompletionsModel(apiKey, {
+    endpoint: OPENAI_ENDPOINT,
     model: MODEL,
-    provider: PROVIDER,
     fetchImpl,
   });
 }
 
 export function extractionModelFromEnv(): ExtractionModel | undefined {
-  return extractionModelFor(env.OPENROUTER_API_KEY);
+  return extractionModelFor(env.OPENAI_API_KEY);
 }

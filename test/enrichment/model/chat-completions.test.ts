@@ -5,9 +5,11 @@ import { garmentCategories } from "../../../src/lib/contracts";
 import { knownFibres } from "../../../src/modules/enrichment/fibres";
 
 import {
-  createOpenRouterModel,
+  createChatCompletionsModel,
   ModelUnavailableError,
-} from "../../../src/modules/enrichment/model/openrouter";
+  OPENAI_ENDPOINT,
+  OPENROUTER_ENDPOINT,
+} from "../../../src/modules/enrichment/model/chat-completions";
 
 /**
  * The LLM rung as a network boundary. A model is a non-deterministic
@@ -19,7 +21,11 @@ import {
  */
 
 const KEY = "or-test-key";
-const OPTIONS = { model: "test/model", provider: "TestProvider" };
+const OPTIONS = {
+  endpoint: OPENROUTER_ENDPOINT,
+  model: "test/model",
+  provider: "TestProvider",
+};
 const PAGE_TEXT = "Rover Tee\n100% merino wool";
 const HINT = { url: "https://shop.example.com/products/tee" };
 
@@ -35,7 +41,7 @@ function raw(body: string, status = 200) {
 }
 
 function modelWith(fetchImpl: typeof fetch) {
-  return createOpenRouterModel(KEY, { ...OPTIONS, fetchImpl });
+  return createChatCompletionsModel(KEY, { ...OPTIONS, fetchImpl });
 }
 
 /**
@@ -61,7 +67,7 @@ const responseFormatSchema = z.object({
 const messageSchema = z.object({ role: z.string(), content: z.string() });
 const requestSchema = z.object({
   model: z.string(),
-  provider: providerSchema,
+  provider: providerSchema.optional(),
   temperature: z.number(),
   response_format: responseFormatSchema,
   messages: z.array(messageSchema),
@@ -95,7 +101,7 @@ const FOUND = `{
   }`;
 
 
-describe("createOpenRouterModel: the request", () => {
+describe("createChatCompletionsModel: the request", () => {
   it("asks the pinned provider, with fallbacks off", async () => {
     // Structured output is per *endpoint*, not per model: measured, seven
     // endpoints serve `openai/gpt-5.6-luna` and the Amazon Bedrock one does
@@ -148,9 +154,33 @@ describe("createOpenRouterModel: the request", () => {
     expect(headers.get("content-type")).toBe("application/json");
     expect(init?.method).toBe("POST");
     expect(init?.signal).toBeInstanceOf(AbortSignal);
+    // The literal, not the constant: a mutated constant would agree with
+    // itself.
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(
       "https://openrouter.ai/api/v1/chat/completions",
     );
+    expect(OPENROUTER_ENDPOINT).toBe(fetchImpl.mock.calls[0]?.[0]);
+  });
+
+  it("sends no provider field when none is pinned, because OpenAI refuses unknown ones", async () => {
+    // The production shape (PR #72 review): straight to OpenAI, where
+    // there is one endpoint to pin and the router's field is an
+    // "unrecognized request argument". The eval keeps the pin because it
+    // keeps the router.
+    const fetchImpl = answering(FOUND);
+    await createChatCompletionsModel(KEY, {
+      endpoint: OPENAI_ENDPOINT,
+      model: "gpt-test",
+      fetchImpl,
+    }).extract(PAGE_TEXT, HINT);
+
+    const body = sentBody(fetchImpl);
+    expect(body.provider).toBeUndefined();
+    expect(body.model).toBe("gpt-test");
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      "https://api.openai.com/v1/chat/completions",
+    );
+    expect(OPENAI_ENDPOINT).toBe(fetchImpl.mock.calls[0]?.[0]);
   });
 
   it("falls back to a real default timeout, never to no timeout at all", async () => {
@@ -234,7 +264,7 @@ describe("createOpenRouterModel: the request", () => {
   });
 });
 
-describe("createOpenRouterModel: the answer", () => {
+describe("createChatCompletionsModel: the answer", () => {
   it("parses what the model found, dropping the nulls it used for 'not stated'", async () => {
     const found = await modelWith(answering(FOUND)).extract(PAGE_TEXT, HINT);
 
@@ -310,7 +340,7 @@ The fetch itself failing, rather than the model refusing.
 const networkDown: typeof fetch = () =>
   Promise.reject(new TypeError("network down"));
 
-describe("createOpenRouterModel: every way it can fail", () => {
+describe("createChatCompletionsModel: every way it can fail", () => {
   it("reports the provider's own complaint, not just the status", async () => {
     // The first 400 said "'propertyNames' is not permitted", which is the
     // difference between a fix and a week of guessing. A status alone is

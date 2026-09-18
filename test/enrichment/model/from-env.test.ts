@@ -30,10 +30,9 @@ describe("extractionModelFor", () => {
   });
 });
 
-const providerSchema = z.object({ order: z.array(z.string()) });
 const requestSchema = z.object({
   model: z.string(),
-  provider: providerSchema,
+  provider: z.unknown().optional(),
 });
 
 function sentBody(fetchImpl: ReturnType<typeof answering>) {
@@ -53,21 +52,23 @@ function answering() {
 }
 
 describe("the choice the eval makes (D-32)", () => {
-  it("names the model and pins its provider", async () => {
-    // The owner's decision lives here as two constants rather than in an
-    // environment nobody diffs: they are not secrets and not per-request,
-    // and they carry accuracy and cost behind them.
+  it("names the model, and asks OpenAI for it directly", async () => {
+    // The owner's decision lives here as a constant rather than in an
+    // environment nobody diffs: it is not a secret and not per-request,
+    // and it carries accuracy and cost behind it. Straight to OpenAI (PR
+    // #72 review), so the id is OpenAI's own and there is no router
+    // provider to pin.
     const fetchImpl = answering();
-    await extractionModelFor("or-key", fetchImpl)?.extract("100% merino", {
+    await extractionModelFor("sk-key", fetchImpl)?.extract("100% merino", {
       url: "https://shop.example.com/p",
     });
 
     const body = sentBody(fetchImpl);
-    expect(body.model).toBe("openai/gpt-5.6-luna");
-    // Pinned because structured output is a property of the *endpoint*: of
-    // the seven serving this model, Amazon Bedrock's reports
-    // `structured_outputs: false`.
-    expect(body.provider.order).toStrictEqual(["OpenAI"]);
+    expect(body.model).toBe("gpt-5.6-luna");
+    expect(body.provider).toBeUndefined();
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      "https://api.openai.com/v1/chat/completions",
+    );
   });
 });
 

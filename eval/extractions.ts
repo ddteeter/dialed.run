@@ -1,6 +1,9 @@
 import type { ExtractedProduct, FabricComposition } from "../src/lib/contracts";
 import { runLadder } from "../src/modules/enrichment/ladder";
-import { createOpenRouterModel } from "../src/modules/enrichment/model/openrouter";
+import {
+  createChatCompletionsModel,
+  OPENROUTER_ENDPOINT,
+} from "../src/modules/enrichment/model/chat-completions";
 import { pageTextFor } from "../src/modules/enrichment/model/page-text";
 
 /**
@@ -81,7 +84,11 @@ async function askOne(
   text: string,
   url: string,
 ): Promise<Candidate> {
-  const model = createOpenRouterModel(apiKey, {
+  // Through OpenRouter, where production goes to OpenAI directly: the
+  // eval compares several vendors' models on one key, which is the one
+  // thing the router is still for.
+  const model = createChatCompletionsModel(apiKey, {
+    endpoint: OPENROUTER_ENDPOINT,
     model: choice.id,
     provider: choice.provider,
     // Generous on purpose — see `OpenRouterOptions.timeoutMs`. The eval

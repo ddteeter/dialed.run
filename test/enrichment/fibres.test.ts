@@ -11,7 +11,7 @@ import { knownFibres } from "../../src/modules/enrichment/fibres";
  * The list now goes into the model's prompt as a hint — "a material is a
  * fibre, such as …" — so what matters about it is that it stays readable
  * and editable by a person, and that it is really reaching the prompt. The
- * second of those is asserted in `model/openrouter.test.ts`, where the
+ * second of those is asserted in `model/chat-completions.test.ts`, where the
  * request is.
  */
 

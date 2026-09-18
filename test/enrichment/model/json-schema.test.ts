@@ -107,7 +107,7 @@ describe("toStrictSchema", () => {
 });
 
 /**
-What the model is asked for: the contract minus `extras`. See `openrouter.ts`.
+What the model is asked for: the contract minus `extras`. See `chat-completions.ts`.
 */
 const ASKED_FOR = extractedProductSchema.omit({ extras: true });
 
