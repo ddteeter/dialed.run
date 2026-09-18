@@ -27,7 +27,11 @@ round (D-26…D-33).
    stored snapshot" (`reextract`), which exist as functions and have no
    button. Admin-only, so it also needs the first notion of an admin in
    the product, which is a question for the owner before it is one for
-   design. Nothing is blocked; the digest carries the count meanwhile.
+   design. **Round 8 answered half of it**: there IS an admin surface now —
+   The Desk (`Operator Screens.dc.html`, item 11), whose Today page already
+   carries the counts. What it does not draw is the dead-letter list
+   itself, so the ask stands and now has a place to live.
+   Nothing is blocked; the digest carries the count meanwhile.
 
 9. **A band that was wrong both ways equally has no honest one-word
    verdict.** §AB3 gives each band on the profile row one word —
@@ -45,27 +49,6 @@ round (D-26…D-33).
    warm, per D-48), so a fourth state needs a mark that is none of those.
    Rare in practice, since it needs equal counts. Tracked as **D-60**;
    nothing is blocked, the tie goes cold until design answers.
-
-8. **P2.5's payout counts owners, and a social-proof count may not.**
-   §AC3's middle line reads *GAINED 412 runners own this piece*. Ownership
-   is closet contents, and CLAUDE.md's product rules say a social-proof
-   count derives **only from public entries, never closet contents** — a
-   count drawn from closets leaks that someone owns a piece they never
-   posted about, which is the thing that rule exists to prevent. So the
-   line as drawn cannot be built, and the owner's call (2026-09-12) is to
-   derive it from public entries instead; it is also the cheaper query.
-   **The wording is design's, not ours**: "own" is what the artboard says,
-   and "have logged this" is a guess at what it should say instead. Nothing
-   is blocked — the count has no read behind it either way (D-54), and the
-   named row says what actually happened until one exists.
-
-7. **O3's artboard still draws a paste field, and the code correctly does
-   not.** Design raised this against lane 105 in round 7 rather than
-   silently redrawing it: `Onboarding.dc.html`'s O3 shows a
-   `brand.com/product…` field with a `SPECS FOUND` result, which has the
-   same lane-107 dependency §AC2b ruled out for P2.5. `TapListForm` never
-   built one, so the build is right and the artboard is stale. Tracked as
-   **D-55** so nobody "fixes" the code to match the drawing.
 
 6. **Enriched product data has no surface, and item 1 assumed it would have
    one.** Lane 107 has landed, so this stops being hypothetical: a pasted
@@ -98,19 +81,6 @@ round (D-26…D-33).
    protocol here — the data simply has no consumer, which is a different
    thing from a screen drawn without an artboard.
 
-5. **Onboarding's steps are inside the app's page column, and the
-   artboards draw them full-bleed.** O1, O3 and P3 are each a card with
-   their own internal structure and no app heading; `src/routes/onboarding/*`
-   renders them inside `ui/Page`, which adds an `<h1>` above each. A heading
-   is not optional — a screen with none is an accessibility failure — so the
-   three are design's own copy where it exists ("One question does most of
-   the work", O1) and new where it does not ("Start your closet" for O3,
-   chosen to avoid repeating that screen's own "TAP WHAT YOU OWN" caption).
-   **The question for design is whether these steps should sit in the page
-   column at all**, or be full-bleed like the artboards, in which case the
-   heading moves inside the card and the copy is design's to write. Raised
-   by lane 105 while building; nothing is blocked either way.
-
 1. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
    Epic 200 opens, incl. multi-part fabric display on garment/product
    detail (D-34) if composition surfaces there. The Call tab's own glyph
@@ -123,20 +93,6 @@ round (D-26…D-33).
    motion-strip and the demo project's reduced-motion emulation were removed,
    because demo videos are a primary review surface and must show the
    doctrine's real behaviour.
-3. **Transient feedback for actions with no landing place** — narrowed by
-   round 4, not closed. The Form Contract settles it *inside a form*: a
-   failure band sits above the submit button and stays, because "a toast
-   takes the retry with it when it leaves", and success gets no toast and no
-   green check at all. S2 removes the other case we had — notifications
-   clear their unread dot when the screen opens, so there is no per-row
-   "marked read" to confirm.
-   What is still unanswered is an action with no screen to land on: copying
-   a share link, an autosave. Wanted before the first one ships, not after:
-   what it looks like, where it appears, how long it stays, how it behaves
-   under the doctrine, and how a screen reader is told. The default answer
-   may well be "design the action so the state change is visible instead" —
-   that is the position round 4 took twice — but that has to be a decision,
-   not a gap.
 4. **Does a garment carry a type?** **Answered: yes**, by the owner on
    2026-09-07. `garmentSchema` now carries an optional per-category `type`,
    named for the pack's glyphs so a garment's icon *is* its type. The
@@ -154,6 +110,74 @@ round (D-26…D-33).
    The rule: if the answer is a drawing, it comes here. If the answer is a
    schema or a product call, it goes to the owner and lives in
    `docs/deferred.md`.
+
+## Answered in round 8 (imported 2026-09-16)
+
+Round 8 cleared six items and delivered two things nobody asked for. The
+answers live in the artboards from here; what follows is what changed and
+what it costs us.
+
+11. **The operator surfaces have an artboard, and it made a decision we
+    could not.** `Operator Screens.dc.html` is new: **The Desk**, one route
+    at `/desk` behind the existing admin check, with its own shell, always
+    dark whatever the operator's own theme ("it's a tool, not the product"),
+    hi-viz as its only accent, desktop-first, and **never linked from the
+    runner app**. The reasoning is the part lane 106 could not supply on its
+    own: *"four surfaces reached by four memorised URLs is four places for
+    one to be forgotten, and the daily digest needs somewhere to link."*
+
+    It also **re-cut the four surfaces into three destinations** — Today,
+    Review, Duplicates, Runners — because banning is not a destination but
+    something you do to a runner, and the digest is not one either: it *is*
+    Today, and the email is Today sent to you. That is a better
+    decomposition than the one this file asked about.
+
+    **Built as `docs/tasks/110-the-desk.md`, after 106.** 106 satisfies the
+    launch gate with plain-but-correct screens; the Desk is the designed
+    version and three surfaces that were mechanics with no screen at all.
+    Two things in D1 are behaviour changes rather than drawings, and the
+    packet says so: decided rows that stay struck-through with **Undo**
+    (against `resolveReview`'s refusal of a second decision), and **who
+    reported behind a fold, where opening the fold is logged** — which needs
+    an audit table that does not exist.
+
+13. **W3's two web states are drawn** as `Remaining Screens` §AD, and the
+    loading beat gets the brackets-breathe device rather than a spinner —
+    the option this file suggested, and the doctrine's NEVER list forbids
+    the alternative. The artboard's FEASIBILITY note now reads *"Decided in
+    round 8: the browser keeps the promise and changes the delivery"* rather
+    than the native-only framing lane 106 had to work around.
+
+12. ~~106's admin surfaces have no artboard~~ — see item 11. Superseded
+    rather than answered: the question was "draw these four", and the answer
+    was "these are three, and here is the section they live in".
+
+8.  **P2.5's ownership count** — answered in the artboards.
+
+7.  **O3's paste field is gone.** `Onboarding.dc.html` now carries the note
+    in so many words: *"The paste-a-product-link field that used to sit here
+    is gone: it needed enrichment, which doesn't exist in v1. The build never
+    had it; the artboard now agrees."* Closes D-55, which existed so nobody
+    would "fix" the code to match the drawing. O3 is also re-cut as one list
+    ordered by climate band (§AA), and coverage is ink rather than hue (§AB).
+
+5.  **Onboarding's column question** — answered as §AE.
+
+3.  **Transient feedback with nowhere to land** — answered as §AF.
+
+**And two nobody asked for.** `Theme.dc.html` plus dark variants of every
+artboard. The app has no dark mode, and this did not arrive through the queue
+— so it gets a lane of its own rather than leaking into whichever surface a
+future lane touches next: `docs/tasks/111-dark-theme.md`, unscheduled, with
+"is a dark theme in v1 at all?" as its first open question. **D-36** (the
+form primitives' unwritten ink surface) closes with it.
+
+    **Items 12 and 13 were renumbered on the merge**, from 9 and 10: lanes
+    105 and 107 took those numbers for the band-verdict and dead-letter
+    items while this lane was using them. Two lanes numbering one shared
+    list from separate worktrees is the collision the schema protocol
+    prevents for migrations, and this file has no such protocol. Worth one
+    if the queue keeps taking entries from more than one lane at a time.
 
 ## Answered in round 7 (imported 2026-09-12)
 

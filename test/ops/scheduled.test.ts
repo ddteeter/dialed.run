@@ -179,9 +179,13 @@ describe("the cron heartbeat", () => {
     // is what the sweep silently never running would look like. The
     // anomaly is the proof that work happened.
     expect(outcome.cronName).toBe("screening-retry");
-    expect(outcome.anomalies).toEqual([
-      expect.stringContaining("await screening"),
-    ]);
+    // Matched loosely on purpose. Which sentence comes back depends on
+    // whether a classifier key is configured — "photos await screening;
+    // OPENAI_API_KEY is not set" without one, "still pending after a
+    // screening sweep" with one that cannot answer — and both prove the
+    // same thing here: the sweep ran. The exact wording is pinned in
+    // `test/safety/retry.test.ts`, which owns it.
+    expect(outcome.anomalies).toEqual([expect.stringContaining("screening")]);
   });
 
   it("files a cron it does not recognise under `unknown`, and says so", async () => {
