@@ -37,6 +37,21 @@ round (D-26…D-33).
     combination** — not just whether the layers are warm enough, but whether
     they go together.
 
+    **Framed as quality, not fashion** (owner, 2026-09-18), and the framing
+    is the point: *"it would feel stupid for the Call to recommend someone
+    wear two pieces of kit that really don't work together colour-wise …
+    a lot of people would read a bad combo as an algorithm problem."*
+    That is a credibility bug, not a style feature. "Never a fashion app"
+    does not license visibly broken output, and the Call is the one surface
+    whose entire job is to be believed — the same argument round 7 used to
+    kill O3's paste field.
+
+    So it is a **constraint, not an objective**: the Call does not optimise
+    for looking good, it avoids combinations a runner would read as the
+    algorithm malfunctioning. That distinction keeps the whole thing inside
+    the current brand position, and it is what design should be asked
+    about.
+
     **Check the premise first, because half of it is already built.**
     `wardrobe_items.color` exists (`schema-core.ts`), `garmentBase` carries
     `color: z.string().max(30).optional()` (`lib/contracts.ts`), and
@@ -83,6 +98,40 @@ round (D-26…D-33).
     the product record; the runner has to say. That lands it back on F's one
     tap, unresolved — and it is why the owner's half of this question is the
     harder half, not the formality it first looked like.
+
+    **And the quality framing inverts which half is optional.** This item
+    first called "reasons about colour but never shows it" the cheap answer.
+    It is not: reasoning is exactly the half that needs structured colour,
+    and *showing* is the part that can be dropped for free. A Call that
+    silently avoids bad combinations needs the data; a Call that displays
+    swatches does not need anything the reasoning did not already require.
+
+    **Which makes this an Epic 200 dependency rather than a nice-to-have**,
+    and gives it a deadline the epic's own schedule does not: every day we
+    collect free-text colour is a day of closet data the Call cannot use.
+    Retrofitting means mapping "Obsidian" to black across everyone's
+    wardrobe — mining free text for a structured fact, which is precisely
+    the parser round 5 rejected, and it fails silently and uncorrectably
+    when it is wrong. **If structured colour is coming, the cheapest moment
+    to start collecting it is before more closets fill up.**
+
+    Two things design should be asked alongside the hue question, because
+    neither is obvious and both are domain-specific:
+
+    - **What rule?** "Don't clash" is culturally loaded and not universal.
+      Neutrals-always-fine? Avoid two saturated non-neutrals? Something
+      else? The Call needs a rule it can apply, not a sensibility.
+    - **Hi-viz is the exception that will break a naive rule.** Runners wear
+      deliberately loud colours for visibility, and this product literally
+      names a token `--hi-viz` after it. A generic clash rule would suppress
+      exactly the combinations a runner chose on purpose. Whatever the rule
+      is, safety colour has to be outside it.
+
+    The owner also raised an opt-out — *"maybe some people don't care, that
+    could be a preference for them"* — which would fit the existing
+    preference patterns (units, share default, thermal level). Recorded as
+    an option, not a decision; a preference for something most runners
+    probably want by default may be over-engineering.
 
     Nothing is blocked — Epic 200 is unscheduled (`post-mvp.md`) and the
     column is already there either way.
