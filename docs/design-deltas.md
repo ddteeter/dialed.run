@@ -30,6 +30,54 @@ round (D-26…D-33).
 
 ## Open queue (nothing blocks v1 lanes)
 
+11. **Does the Call consider how a kit looks together, and if so, what does
+    hue mean then?** Raised by the owner 2026-09-18, for Epic 200.
+
+    The ask is whether a recommended outfit should account for **colour
+    combination** — not just whether the layers are warm enough, but whether
+    they go together.
+
+    **Check the premise first, because half of it is already built.**
+    `wardrobe_items.color` exists (`schema-core.ts`), `garmentBase` carries
+    `color: z.string().max(30).optional()` (`lib/contracts.ts`), and
+    `GarmentForm` collects it behind a "Color" label today. It round-trips
+    through `form-schema`, `form-mapping` and `service`. **No migration is
+    needed to start collecting colour — we have been collecting it since the
+    closet lane shipped.** What no component does is *render* it: it is
+    written and never read, the same shape as `fabric_composition` in item 6.
+
+    So the real questions are two, and only the first is design's:
+
+    **For design — the hue problem.** §AB fixed hue as verdict, permanently:
+    pink cold, teal dialed, grey warm, and coverage was *moved off* hue onto
+    ink density specifically because hue was overloaded. The Brand Brief adds
+    "never three accents in one viewport". A screen that draws a runner's
+    actual garment colours puts arbitrary hue on a surface where hue already
+    means something, and the Call's payoff — brackets open, layers arrive in
+    dressing order — is exactly where that collision would land. **If the
+    answer is that the Call reasons about colour but never shows it, say so
+    plainly** and the question closes cheaply; that is a real option and
+    possibly the right one, since the Call's job is an answer rather than a
+    lookbook.
+
+    **For the owner — whether colour becomes structured**, which is a schema
+    and product call and does not belong in this file. Free text cannot be
+    combined: "black", "black/grey", "Obsidian" and "BLK" are one colour
+    typed four ways, and mining them is precisely the parser round 5 rejected
+    ("no parser; free text is never mined for a type"). Making colour
+    combinable means a palette, which means a tap on F — and F's whole
+    argument is that identity is the only thing worth one.
+
+    **Round 5 already answered the same shape of question**, which is why
+    this is worth asking rather than assuming: *type is a property of the
+    product, not of the garment.* A colourway is a property of the product
+    too, enrichment already stores a product image and the shop's own copy,
+    and that route costs the runner no taps. Whether colour follows `type`
+    down that path is the thing to decide before anyone draws a swatch.
+
+    Nothing is blocked — Epic 200 is unscheduled (`post-mvp.md`) and the
+    column is already there either way.
+
 10. **Round 9 contradicts itself about 9px, and the contract has already
     won.** `Accessibility Contract.dc.html` requires a 44×44 hit area
     "including 9px mono chips — pad the target, not the glyph", while
