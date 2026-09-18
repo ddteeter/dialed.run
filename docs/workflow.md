@@ -83,6 +83,14 @@ file.
 | 2 | **114** motion adoption | Travel distances are spacing steps. |
 | 3 | **112** accessibility | The focus outline, 44px targets and 8px gaps are token values — and its reduced-motion requirement is vacuous until 114 gives it something that moves. |
 | 4 | **115** desktop | Consumes all three: `BREAKPOINT`/`MEASURE` from 113, the tab-switch treatment from 114, focus order from 112. Also the only one that crosses every lane's routes, so it runs alone. |
+| 5 | **116** composition reconciliation | The other half of "does the UI match the design". 112–115 make every *value* enforceable; nothing checks *composition* — and rounds 6–8 changed it on already-built screens while the repo could not see the drawings. Last, because 113–115 move every screen and 115 adds a second composition at width. |
+
+**The split they inherit.** `CLAUDE.md` §Design truth divides the bundle:
+contracts are truth for values, artboards are truth for composition. Lanes
+113–115 make the values enforceable once, by lint rule and pin test, so no
+human ever reviews a font size again. **116 is the composition half**, and it
+is review rather than enforcement because no rule can check whether a screen
+contains the right things in the right order.
 
 **Why they are lanes at all.** `docs/design-deltas.md` carried motion
 adoption as something lanes would pick up *"opportunistically, audited at the
