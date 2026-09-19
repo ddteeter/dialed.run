@@ -468,13 +468,16 @@ export function classifyPerformance(
   // gives `NaN` seconds, and `NaN > anything` is already false. It is here
   // so the line reads as arithmetic rather than as a comparison against a
   // missing value.
-  // Stryker disable next-line ConditionalExpression
+  // Block pair, not `next-line`: prettier wraps this condition across
+  // three lines and the directive only ever covered the `if (`.
+  // Stryker disable ConditionalExpression
   if (
     lastWornAt !== undefined &&
     nowSeconds - lastWornAt > RETIRE_CANDIDATE_S
   ) {
     buckets.push("retire_candidate");
   }
+  // Stryker restore ConditionalExpression
   return buckets;
 }
 

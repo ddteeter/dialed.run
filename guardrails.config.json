@@ -103,11 +103,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
-      "reason": "Unreachable, proof at the site: the insert either wrote the row or conflicted with one already present, so the read that follows always finds something. The guard exists to narrow `ObservationRow | undefined` for the caller.",
-      "count": 1
-    },
-    {
       "key": "src/modules/ops/health.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: the probe key is arbitrary. The check asks R2 whether an object exists, and a miss is a successful round trip \u2014 which is the whole point. Any string, empty included, proves the same reachability, so no assertion can tell them apart.",
       "count": 1
@@ -150,7 +145,7 @@
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Seven equivalent guards, each with its proof at the site: a never-worn item gives NaN seconds and `NaN > threshold` is already false; deleting `undefined` from a Map removes nothing; an empty `inArray` matches nothing (twice \u2014 the id list and the product-defaults lookup); `allowed.includes(null)` is already false; `Map#get` of a null key answers undefined; and filtering nulls out of an `IN` list changes no match. Every one exists because the operation below it takes a value the type system will not let be null, and every one saves a query or says an intent that the runtime would otherwise leave implicit.",
-      "count": 6
+      "count": 5
     },
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
@@ -565,6 +560,26 @@
     {
       "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker restore ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
       "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker restore ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable ConditionalExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker restore ConditionalExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
       "count": 1
     }
   ]

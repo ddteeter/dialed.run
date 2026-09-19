@@ -120,11 +120,15 @@ async function upsertObservation(
   // finds something. The guard exists to narrow `ObservationRow |
   // undefined` for the caller, and no test can enter it — which is why the
   // mutants on this line are suppressed rather than chased.
-  // Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
+  // Block pair, not `next-line`: prettier wraps the throw onto its own
+  // lines, so the StringLiteral and CallExpression mutants sit outside
+  // what a single-line directive covers.
+  // Stryker disable ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
   if (!row)
     throw new Error(
       `observation upsert produced no row at ${JSON.stringify(key)}`,
     );
+  // Stryker restore ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
   return row;
 }
 
