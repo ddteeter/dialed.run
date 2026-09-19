@@ -4,13 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   cronCheckpoints,
+  entryPhotos,
   imports,
+  outfitEntries,
   products,
+  reports,
+  reviewQueue,
   runs,
   stravaRevocations,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import {
   createOrGetBrand,
@@ -35,10 +40,6 @@ const ENRICHMENT_RETRY = { cron: "30 * * * *" } as ScheduledController;
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
-}
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 async function insertImport(
@@ -87,6 +88,15 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   await db.delete(imports);
   await db.delete(stravaRevocations);
   await db.delete(runs);
+  // The moderation tables belong on this list too: the digest counts the
+  // review queue's depth, so a row left behind by one test appears as
+  // "2 item(s) awaiting moderation review" in the next one's anomalies —
+  // which fails every assertion in the file that expects a quiet digest,
+  // and points at the digest rather than at the leak.
+  await db.delete(reviewQueue);
+  await db.delete(reports);
+  await db.delete(entryPhotos);
+  await db.delete(outfitEntries);
 }
 
 beforeEach(async () => {
@@ -139,6 +149,126 @@ describe("the cron heartbeat", () => {
     } as ScheduledController);
 
     expect(outcome).toStrictEqual({ cronName: "weather-retry", anomalies: [] });
+  });
+
+  it("dispatches the screening-retry schedule to the screening sweep", async () => {
+    // The case label is the whole wiring: `wrangler.jsonc` fires a cron
+    // expression, `crons.ts` maps it to a name, and this switch turns the
+    // name into work. A wrong label here means the sweep silently never
+    // runs and every flagged photo stays pending forever — which looks
+    // exactly like a classifier that is simply slow.
+    // A photo waiting to be screened, so the sweep has something to say.
+    const userId = newUlid();
+    const runId = await insertRun({ userId });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+    await coreDb()
+      .insert(entryPhotos)
+      .values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/p`,
+        position: 0,
+      });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // **The name is not the assertion.** `cronName` comes from the
+    // registry lookup, not from the case label, so it reads
+    // "screening-retry" whether or not this switch does anything — which
+    // is what the sweep silently never running would look like. The
+    // anomaly is the proof that work happened.
+    expect(outcome.cronName).toBe("screening-retry");
+    // Matched loosely on purpose. Which sentence comes back depends on
+    // whether a classifier key is configured — "photos await screening;
+    // OPENAI_API_KEY is not set" without one, "still pending after a
+    // screening sweep" with one that cannot answer — and both prove the
+    // same thing here: the sweep ran. The exact wording is pinned in
+    // `test/safety/retry.test.ts`, which owns it.
+    expect(outcome.anomalies).toEqual([expect.stringContaining("screening")]);
+  });
+
+  it("says so when the sweep finds reports that were never acted on", async () => {
+    // The gap this covers is a crash between `fileReport`'s insert and its
+    // hide. Reproduced by writing the reports directly, which is what that
+    // half-finished state looks like on disk.
+    const author = newUlid();
+    const runId = await insertRun({ userId: author });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId: author,
+      runId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+    for (let n = 0; n < 3; n += 1) {
+      await coreDb().insert(reports).values({
+        id: newUlid(),
+        reporterId: newUlid(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        createdAt: nowSeconds(),
+      });
+    }
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // The digest is the only place a solo operator would ever learn this
+    // happened, so the line has to be there and has to say what it was.
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("had not been hidden"),
+    );
+    const [row] = await coreDb()
+      .select({ status: outfitEntries.moderationStatus })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(row?.status).toBe("hidden_pending_review");
+  });
+
+  it("says so when it takes a stale review claim back", async () => {
+    // A claim stamped long enough ago that its lease has run out. Written
+    // directly because the only other way to reach this state is to wait
+    // half an hour.
+    const queueId = newUlid();
+    await coreDb()
+      .insert(reviewQueue)
+      .values({
+        id: queueId,
+        subjectType: "entry",
+        subjectId: newUlid(),
+        source: "reports",
+        status: "reviewing",
+        resolvedBy: newUlid(),
+        claimedAt: nowSeconds() - 3600,
+        createdAt: nowSeconds() - 3600,
+      });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("went stale"),
+    );
+    const [row] = await coreDb()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    expect(row?.status).toBe("pending");
   });
 
   it("files a cron it does not recognise under `unknown`, and says so", async () => {
@@ -227,7 +357,12 @@ describe("stalled imports are re-dispatched, and reported", () => {
     // system already did.
     const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
     const old = nowSeconds() - HOUR;
-    for (const status of ["processing", "done", "failed", "duplicate"] as const) {
+    for (const status of [
+      "processing",
+      "done",
+      "failed",
+      "duplicate",
+    ] as const) {
       await insertImport({ status, createdAt: old });
     }
 
@@ -675,3 +810,73 @@ describe("the extraction-yield check", () => {
     expect(outcome.anomalies).toStrictEqual([]);
   });
 });
+
+describe("the digest reports what is waiting on a person (106 §2)", () => {
+  beforeEach(async () => {
+    await coreDb().delete(reviewQueue);
+  });
+
+  it("says nothing on a day with an empty queue", async () => {
+    const result = await handleScheduled(DIGEST);
+
+    // A digest that speaks every day is one nobody reads. Zero waiting is
+    // the ordinary case and gets no line.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+
+  it("reports a single waiting item, not just a backlog", async () => {
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    // Deliberately unlike the other digest checks, which fire past a
+    // threshold. This queue's promise is "a person reads it within a day",
+    // so the failure is a queue nobody opened rather than one that grew —
+    // and a threshold would hide exactly that.
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("1 item(s) awaiting moderation review"),
+    );
+  });
+
+  it("counts the queue, not the reports behind it", async () => {
+    await queueItem();
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("2 item(s)"),
+    );
+  });
+
+  it("ignores decisions already made", async () => {
+    await queueItem("approved");
+    await queueItem("removed");
+
+    const result = await handleScheduled(DIGEST);
+
+    // Resolved rows stay in the table for the record; counting them would
+    // make the digest louder every day forever.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+});
+
+/**
+One row in front of a reviewer, in the given state.
+*/
+async function queueItem(
+  status: "pending" | "approved" | "removed" = "pending",
+): Promise<void> {
+  await coreDb().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType: "entry",
+    subjectId: newUlid(),
+    source: "reports",
+    status,
+    createdAt: nowSeconds(),
+  });
+}

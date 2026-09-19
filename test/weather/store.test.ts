@@ -10,6 +10,7 @@ import {
   upsertRealObservation,
 } from "../../src/modules/weather/store";
 
+import { nowSeconds } from "../../src/lib/now";
 const OBSERVATION = {
   tempC: 5,
   feelsLikeC: 2.2,
@@ -89,25 +90,25 @@ describe("what a stored observation records about itself", () => {
    * in the year 57000 is never stale.
    */
   it("stamps fetched_at in epoch seconds, not milliseconds", async () => {
-    const nowSeconds = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     const key = cacheKeyFor(38.5, -85.5, new Date("2026-05-01T09:00:00Z"));
 
     await upsertRealObservation(key, OBSERVATION, newUlid());
 
     const row = await findObservationRow(key);
-    expect(row?.fetchedAt).toBeGreaterThanOrEqual(nowSeconds - 5);
-    expect(row?.fetchedAt).toBeLessThanOrEqual(nowSeconds + 5);
+    expect(row?.fetchedAt).toBeGreaterThanOrEqual(now - 5);
+    expect(row?.fetchedAt).toBeLessThanOrEqual(now + 5);
   });
 
   it("stamps a manual row the same way", async () => {
-    const nowSeconds = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     const key = cacheKeyFor(38.6, -85.6, new Date("2026-05-01T09:00:00Z"));
 
     await upsertManualObservation(key, 12, newUlid());
 
     const row = await findObservationRow(key);
-    expect(row?.fetchedAt).toBeGreaterThanOrEqual(nowSeconds - 5);
-    expect(row?.fetchedAt).toBeLessThanOrEqual(nowSeconds + 5);
+    expect(row?.fetchedAt).toBeGreaterThanOrEqual(now - 5);
+    expect(row?.fetchedAt).toBeLessThanOrEqual(now + 5);
   });
 
   it("fills a manual row's unmeasured fields with neutral sentinels", async () => {

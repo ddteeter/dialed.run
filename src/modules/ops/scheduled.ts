@@ -13,7 +13,15 @@ import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
 import { captureException } from "./sentry";
+import {
+  classifierFromEnv,
+  pendingReviewCount,
+  reconcileUnhiddenReports,
+  releaseStaleClaims,
+  retryPendingScreenings,
+} from "../safety";
 
+import { nowSeconds } from "../../lib/now";
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
 /**
@@ -38,10 +46,10 @@ export async function handleScheduled(
   const cronName = cronNameFor(controller.cron) ?? "unknown";
   await db
     .insert(cronCheckpoints)
-    .values({ cronName, lastRunAt: Math.floor(Date.now() / 1000) })
+    .values({ cronName, lastRunAt: nowSeconds() })
     .onConflictDoUpdate({
       target: cronCheckpoints.cronName,
-      set: { lastRunAt: Math.floor(Date.now() / 1000) },
+      set: { lastRunAt: nowSeconds() },
     });
 
   switch (cronName) {
@@ -59,6 +67,35 @@ export async function handleScheduled(
       await redispatchStalledEnrichments(anomalies);
       return { cronName, anomalies };
     }
+    case "screening-retry": {
+      // Task 106 §1: re-drive photos still marked `pending` (law 8c).
+      // `pending` is the durable marker, so this is reconciliation and the
+      // path needs no queue.
+      const anomalies: string[] = [];
+      await retryPendingScreenings(classifierFromEnv(), anomalies);
+      // Two more reconciliations share this firing, both raised on PR #73
+      // and both the same shape as the screening retry: a durable marker
+      // exists, so something has to re-read it.
+      //
+      // The hide that `fileReport` does in a third statement, if the
+      // worker died before reaching it — the reports are written, the
+      // entry is still visible, and nothing else would ever notice.
+      const reconciled = await reconcileUnhiddenReports();
+      if (reconciled.hidden > 0) {
+        anomalies.push(
+          `${String(reconciled.hidden)} reported subjects were over the threshold and had not been hidden`,
+        );
+      }
+      // And review claims whose reviewer never came back, which otherwise
+      // hold a subject out of the queue permanently.
+      const released = await releaseStaleClaims();
+      if (released.released > 0) {
+        anomalies.push(
+          `${String(released.released)} review claims went stale and were returned to the queue`,
+        );
+      }
+      return { cronName, anomalies };
+    }
     default: {
       // Config/code skew that the bindings-conformance test should have
       // caught in CI before it could reach a real schedule.
@@ -69,7 +106,6 @@ export async function handleScheduled(
     }
   }
 }
-
 
 /**
  * Re-dispatch a batch of rows to the imports queue, one message each.
@@ -149,13 +185,11 @@ async function stalledPending(
   graceSeconds: number,
 ): Promise<{ id: string }[]> {
   const db = drizzle(env.DIALED_CORE);
-  const staleBefore = Math.floor(Date.now() / 1000) - graceSeconds;
+  const staleBefore = secondsAgo(graceSeconds);
   return db
     .select({ id: marker.id })
     .from(marker.table)
-    .where(
-      and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)),
-    )
+    .where(and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)))
     .limit(100);
 }
 
@@ -266,7 +300,7 @@ const ENRICHMENT_RETRY_WINDOW_S = 24 * 60 * 60;
 The instant (epoch seconds) before which a `failed` product is abandoned.
 */
 function abandonedBefore(): number {
-  return Math.floor(Date.now() / 1000) - ENRICHMENT_RETRY_WINDOW_S;
+  return nowSeconds() - ENRICHMENT_RETRY_WINDOW_S;
 }
 
 /**
@@ -274,7 +308,7 @@ function abandonedBefore(): number {
  * rows the sweep still owes a retry.
  */
 function failedAndOwed(): SQL | undefined {
-  const staleBefore = Math.floor(Date.now() / 1000) - ENRICHMENT_STALL_GRACE_S;
+  const staleBefore = nowSeconds() - ENRICHMENT_STALL_GRACE_S;
   return and(
     eq(products.extractionStatus, "failed"),
     lt(products.createdAt, staleBefore),
@@ -282,7 +316,39 @@ function failedAndOwed(): SQL | undefined {
   );
 }
 
-async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
+/**
+ * How much is waiting on a person (task 106 §2).
+ *
+ * Reported at ANY depth rather than past a threshold, and that is the
+ * difference between this and the other digest checks. The others watch
+ * for a system misbehaving, where a small number is noise; this one is a
+ * queue whose whole promise is "a person reads it within a day", and the
+ * failure mode is a queue nobody opened rather than a queue that grew.
+ * One waiting report is worth saying out loud; zero says nothing, so the
+ * digest stays quiet on the ordinary day.
+ */
+async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
+  const depth = await pendingReviewCount();
+  if (depth === 0) return;
+  anomalies.push(`${String(depth)} item(s) awaiting moderation review`);
+}
+
+/**
+ * The epoch-second cutoff `n` seconds ago.
+ *
+ * Written out at three call sites, which is what made two of the digest's
+ * stale-window checks read as clones of each other. Naming it also makes
+ * the direction hard to get wrong: every caller wants "older than this",
+ * and a `+` where the `-` belongs would silently widen every window to
+ * include the future.
+ */
+function secondsAgo(seconds: number): number {
+  return nowSeconds() - seconds;
+}
+
+async function redispatchStalledEnrichments(
+  anomalies: string[],
+): Promise<void> {
   // Two reads rather than one with an OR. The `pending` half is exactly
   // the question `stalledPending` already asks, and the `failed` half has
   // a bound it does not — so each is asked of the helper that fits, and
@@ -298,7 +364,12 @@ async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> 
     },
     ENRICHMENT_STALL_GRACE_S,
   );
-  const failedIds = await columnWhere(db, products, products.id, failedAndOwed());
+  const failedIds = await columnWhere(
+    db,
+    products,
+    products.id,
+    failedAndOwed(),
+  );
   // The claim (law 2), before the send: the consumer treats only `pending`
   // as work. Re-checked against the status rather than trusting the read,
   // so a row that finished in between is not un-finished.
@@ -306,7 +377,10 @@ async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> 
     .update(products)
     .set({ extractionStatus: "pending" })
     .where(
-      and(inArray(products.id, failedIds), eq(products.extractionStatus, "failed")),
+      and(
+        inArray(products.id, failedIds),
+        eq(products.extractionStatus, "failed"),
+      ),
     );
   const stalled = [...pending, ...failedIds.map((id) => ({ id }))];
   // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
@@ -334,6 +408,7 @@ async function runDailyDigest(): Promise<string[]> {
   await checkAbandonedEnrichments(anomalies);
   await redispatchStrandedRevocations(anomalies);
   await redispatchStalledImports(anomalies);
+  await checkReviewQueueDepth(anomalies);
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)
   // - stale cron_checkpoints rows
@@ -430,7 +505,7 @@ async function checkAbandonedEnrichments(anomalies: string[]): Promise<void> {
  */
 async function checkWeatherBacklog(anomalies: string[]): Promise<void> {
   const db = drizzle(env.DIALED_CORE);
-  const staleBefore = Math.floor(Date.now() / 1000) - WEATHER_PENDING_STALE_SECONDS;
+  const staleBefore = secondsAgo(WEATHER_PENDING_STALE_SECONDS);
   const stuckPending = and(
     eq(runs.weatherStatus, "pending"),
     lt(runs.startedAt, staleBefore),
@@ -440,6 +515,8 @@ async function checkWeatherBacklog(anomalies: string[]): Promise<void> {
     .from(runs)
     .where(or(eq(runs.weatherStatus, "failed"), stuckPending));
   if (stuck.length > 0) {
-    anomalies.push(`weather backlog: ${String(stuck.length)} run(s) failed/stuck pending`);
+    anomalies.push(
+      `weather backlog: ${String(stuck.length)} run(s) failed/stuck pending`,
+    );
   }
 }

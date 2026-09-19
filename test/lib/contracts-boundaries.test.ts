@@ -74,8 +74,12 @@ function expectRange(
   schema: z.ZodType<number>,
   { min, max }: { min: number; max: number },
 ): void {
-  expect(schema.safeParse(min).success, `${String(min)} is in range`).toBe(true);
-  expect(schema.safeParse(max).success, `${String(max)} is in range`).toBe(true);
+  expect(schema.safeParse(min).success, `${String(min)} is in range`).toBe(
+    true,
+  );
+  expect(schema.safeParse(max).success, `${String(max)} is in range`).toBe(
+    true,
+  );
   expect(schema.safeParse(min - 1).success).toBe(false);
   expect(schema.safeParse(max + 1).success).toBe(false);
 }

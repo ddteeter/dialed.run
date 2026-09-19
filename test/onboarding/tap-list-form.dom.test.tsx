@@ -66,7 +66,8 @@ function renderForm(
 
 const counter = () => screen.getByText(/^Closet:/);
 const next = () => screen.getByRole("button", { name: "Next" });
-const disclosure = () => screen.getByRole("button", { name: /Everything else/ });
+const disclosure = () =>
+  screen.getByRole("button", { name: /Everything else/ });
 
 describe("TapListForm", () => {
   it("opens at zero, with nothing ticked", () => {
@@ -89,12 +90,16 @@ describe("TapListForm", () => {
     // same row.
     renderForm();
 
-    expect(screen.getByRole("checkbox", { name: "Running tights" })).toBeVisible();
+    expect(
+      screen.getByRole("checkbox", { name: "Running tights" }),
+    ).toBeVisible();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("checkbox", { name: "Running tights" }));
 
-    expect(screen.getByRole("checkbox", { name: "Running tights" })).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Running tights" }),
+    ).toBeChecked();
   });
 
   it("folds where it is told and states the real remainder", () => {
@@ -103,7 +108,9 @@ describe("TapListForm", () => {
     // 24-row table and of nothing else.
     renderForm();
 
-    expect(screen.getByRole("checkbox", { name: "Running gloves" })).toBeVisible();
+    expect(
+      screen.getByRole("checkbox", { name: "Running gloves" }),
+    ).toBeVisible();
     expect(screen.queryByRole("checkbox", { name: "Singlet" })).toBeNull();
     expect(disclosure()).toHaveTextContent("Everything else · 2 more");
     expect(disclosure()).toHaveAttribute("aria-expanded", "false");
@@ -126,7 +133,9 @@ describe("TapListForm", () => {
   it("shows no disclosure when nothing is hidden", () => {
     renderForm({ fold: ENTRIES.length });
 
-    expect(screen.queryByRole("button", { name: /Everything else/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Everything else/ }),
+    ).toBeNull();
     expect(screen.getAllByRole("checkbox")).toHaveLength(ENTRIES.length);
   });
 
@@ -139,9 +148,9 @@ describe("TapListForm", () => {
 
     await user.click(disclosure());
 
-    expect(screen.getAllByRole("checkbox").map((box) => box.getAttribute("name"))).toEqual(
-      ENTRIES.map(() => "keys"),
-    );
+    expect(
+      screen.getAllByRole("checkbox").map((box) => box.getAttribute("name")),
+    ).toEqual(ENTRIES.map(() => "keys"));
     for (const row of ENTRIES) {
       expect(
         screen.getByRole("checkbox", { name: row.garment.name }),
@@ -187,7 +196,9 @@ describe("TapListForm", () => {
     renderForm({ entries: six, fold: six.length });
 
     for (const row of six.slice(0, 5)) {
-      await user.click(screen.getByRole("checkbox", { name: row.garment.name }));
+      await user.click(
+        screen.getByRole("checkbox", { name: row.garment.name }),
+      );
     }
     expect(screen.getByText("Tap what you own")).toBeVisible();
     expect(screen.queryByText("Enough to start")).toBeNull();
@@ -234,7 +245,9 @@ describe("TapListForm", () => {
     await user.click(next());
 
     expect(save).not.toHaveBeenCalled();
-    expect(screen.getByText("Tap what you own, or skip for now.")).toBeVisible();
+    expect(
+      screen.getByText("Tap what you own, or skip for now."),
+    ).toBeVisible();
   });
 
   it("clears that sentence on the tap it asked for", async () => {
@@ -244,9 +257,7 @@ describe("TapListForm", () => {
     await user.click(next());
     await user.click(screen.getByRole("checkbox", { name: "Beanie" }));
 
-    expect(
-      screen.queryByText("Tap what you own, or skip for now."),
-    ).toBeNull();
+    expect(screen.queryByText("Tap what you own, or skip for now.")).toBeNull();
   });
 
   it("skips without writing anything", async () => {

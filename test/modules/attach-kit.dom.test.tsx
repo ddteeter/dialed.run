@@ -92,7 +92,9 @@ const conditions = {
   span: { minTempC: 10, maxTempC: 10, minFeelsLikeC: 8, maxFeelsLikeC: 8 },
 };
 
-function candidate(overrides: Partial<PrefillCandidate> = {}): PrefillCandidate {
+function candidate(
+  overrides: Partial<PrefillCandidate> = {},
+): PrefillCandidate {
   return {
     entryId: "01PREV",
     itemIds: ["01A", "01B"],
@@ -133,7 +135,8 @@ function attach(
   } = {},
 ) {
   return (
-    <AttachKit units={{ temp: "f", distance: "mi" }}
+    <AttachKit
+      units={{ temp: "f", distance: "mi" }}
       runId="01RUN"
       prefillFor={overrides.prefillFor ?? (() => Promise.resolve(undefined))}
       pickerGroupsFor={overrides.pickerGroupsFor ?? (() => Promise.resolve([]))}
@@ -186,8 +189,12 @@ describe("AttachKit: before the picker opens", () => {
       attach({ prefillFor: neverSettles }),
     );
 
-    expect(screen.getByRole("heading", { name: "Attach the kit" })).toBeVisible();
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { name: "Attach the kit" }),
+    ).toBeVisible();
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("asks for a prefill at the coordinates it was given", async () => {
@@ -221,13 +228,16 @@ describe("AttachKit: before the picker opens", () => {
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const { router } = await renderWithRouter(
       attach({
-        prefillFor: () => Promise.resolve(candidate({ itemIds: ["01A", "01B"] })),
+        prefillFor: () =>
+          Promise.resolve(candidate({ itemIds: ["01A", "01B"] })),
         attachKit,
       }),
     );
 
     await screen.findByRole("button", { name: "That’s it" });
-    await userEvent.setup().click(screen.getByRole("button", { name: "That’s it" }));
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "That’s it" }));
 
     await waitFor(() => {
       expect(attachKit).toHaveBeenCalledWith({
@@ -276,9 +286,7 @@ describe("AttachKit: before the picker opens", () => {
     // "choose your kit" first and replacing it a beat later would be a
     // flash of the wrong screen.
     withLocation({ latitude: 1, longitude: 2 });
-    await renderWithRouter(
-      attach({ prefillFor: neverSettles }),
-    );
+    await renderWithRouter(attach({ prefillFor: neverSettles }));
 
     expect(
       screen.queryByRole("button", { name: "Choose your kit" }),
@@ -472,7 +480,10 @@ describe("AttachKit: the picker", () => {
     ]);
     await screen.findByText("Tops");
 
-    await user.type(screen.getByPlaceholderText("Search your closet"), "merino");
+    await user.type(
+      screen.getByPlaceholderText("Search your closet"),
+      "merino",
+    );
 
     expect(screen.getByLabelText(/Merino base/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Houdini/)).toBeNull();
@@ -525,7 +536,9 @@ describe("AttachKit: the picker", () => {
     expect(screen.getByRole("button", { name: "Attach 1 item" })).toBeEnabled();
 
     await user.click(screen.getByLabelText(/Tights/));
-    expect(screen.getByRole("button", { name: "Attach 2 items" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Attach 2 items" }),
+    ).toBeVisible();
   });
 
   it("takes a selection back when it is tapped again", async () => {
@@ -535,7 +548,9 @@ describe("AttachKit: the picker", () => {
     await user.click(screen.getByLabelText(/Houdini/));
     await user.click(screen.getByLabelText(/Houdini/));
 
-    expect(screen.getByRole("button", { name: /Attach 0 items/ })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /Attach 0 items/ }),
+    ).toBeDisabled();
   });
 
   it("attaches what was chosen", async () => {
@@ -592,7 +607,9 @@ describe("AttachKit: the picker", () => {
       await screen.findByRole("button", { name: "Choose your kit" }),
     );
 
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
   });
 });
 
@@ -608,7 +625,9 @@ describe("AttachKit: when it cannot save", () => {
     );
     await user.click(await screen.findByRole("button", { name: "That’s it" }));
 
-    expect(await screen.findByText("Couldn't save that. Try again.")).toBeVisible();
+    expect(
+      await screen.findByText("Couldn't save that. Try again."),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "That’s it" })).toBeVisible();
   });
 
@@ -633,7 +652,9 @@ describe("AttachKit: when it cannot save", () => {
     const button = await screen.findByRole("button", { name: "That’s it" });
 
     await user.click(button);
-    expect(await screen.findByText("Couldn't save that. Try again.")).toBeVisible();
+    expect(
+      await screen.findByText("Couldn't save that. Try again."),
+    ).toBeVisible();
 
     await user.click(button);
     await waitFor(() => {

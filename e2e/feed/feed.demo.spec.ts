@@ -30,6 +30,7 @@ import { expect, scene, test } from "../support/demo";
 // this video opens on the feed rather than on a signup form.
 test.use({ storageState: storageStateFor("feed") });
 import { withLocalDb } from "../support/local-db";
+import { nowSeconds } from "../../src/lib/now";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -55,7 +56,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   const endObservationId = newUlid();
 
   // Three hours back, so a two-hour run is entirely in the past.
-  const startedAt = Math.floor(Date.now() / 1000) - 3 * 3600;
+  const startedAt = nowSeconds() - 3 * 3600;
   const latR = 45.52;
   const lngR = -122.68;
   const hourBucket = Math.floor(startedAt / 3600);

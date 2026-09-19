@@ -77,7 +77,10 @@ describe("StravaConnect: not yet connected", () => {
     // And a link, for the case where the redirect is blocked.
     expect(
       await screen.findByRole("link", { name: "Continue to Strava" }),
-    ).toHaveAttribute("href", "https://www.strava.com/oauth/authorize?state=01");
+    ).toHaveAttribute(
+      "href",
+      "https://www.strava.com/oauth/authorize?state=01",
+    );
   });
 
   it("says so when the server has no URL to give", async () => {
@@ -88,7 +91,9 @@ describe("StravaConnect: not yet connected", () => {
 
     await user.click(screen.getByRole("button", { name: "Connect Strava" }));
 
-    expect(await screen.findByText("Strava isn't configured yet.")).toBeVisible();
+    expect(
+      await screen.findByText("Strava isn't configured yet."),
+    ).toBeVisible();
     expect(location.assign).not.toHaveBeenCalled();
     expect(screen.queryByRole("link")).toBeNull();
   });
@@ -100,7 +105,9 @@ describe("StravaConnect: not yet connected", () => {
     await user.click(screen.getByRole("button", { name: "Connect Strava" }));
 
     expect(await screen.findByText(RETRY_GENERIC)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Connect Strava" })).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Connect Strava" }),
+    ).not.toBeDisabled();
   });
 
   it("locks the button while it fetches", async () => {
@@ -142,7 +149,9 @@ describe("StravaConnect: not yet connected", () => {
     const button = screen.getByRole("button", { name: "Connect Strava" });
 
     await user.click(button);
-    expect(await screen.findByText("Strava isn't configured yet.")).toBeVisible();
+    expect(
+      await screen.findByText("Strava isn't configured yet."),
+    ).toBeVisible();
 
     await user.click(button);
     await waitFor(() => {
@@ -165,7 +174,9 @@ describe("StravaConnect: connected", () => {
 
     expect(screen.getByText(/Strava is connected/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Disconnect" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Reconnect Strava" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Reconnect Strava" }),
+    ).toBeNull();
   });
 
   it("disconnects and reloads, so the screen comes back from the server", async () => {
@@ -283,7 +294,9 @@ describe("StravaConnect: broken", () => {
     );
 
     expect(screen.getByText("Strava needs to be reconnected.")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Reconnect Strava" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Reconnect Strava" }),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Disconnect" })).toBeVisible();
   });
 
@@ -301,7 +314,9 @@ describe("StravaConnect: broken", () => {
     await user.click(screen.getByRole("button", { name: "Reconnect Strava" }));
 
     await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith("https://strava.test/authorize");
+      expect(location.assign).toHaveBeenCalledWith(
+        "https://strava.test/authorize",
+      );
     });
   });
 });

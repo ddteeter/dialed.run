@@ -17,9 +17,7 @@ import { unitsFor } from "./units";
  * shared (`tallyCoverage`), which is the part that could drift; only the
  * reads differ, and they differ because the screens need different things.
  */
-export async function coverageLadder(
-  userId: string,
-): Promise<CoverageBand[]> {
+export async function coverageLadder(userId: string): Promise<CoverageBand[]> {
   const database = drizzle(env.DIALED_CORE);
   const entries = await recentOwnEntries(database, userId);
   // Equivalent mutant: with no entries the walk answers an empty ladder

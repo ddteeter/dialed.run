@@ -43,10 +43,7 @@ export interface ConsumerDeps {
   without restating an R2 bucket.
   */
   importBucket: Pick<R2Bucket, "get">;
-  captureException: (
-    error: unknown,
-    context: Record<string, string>,
-  ) => void;
+  captureException: (error: unknown, context: Record<string, string>) => void;
   /**
   Pending(102↔103): wire to weather.attachObservation once that module
   merges; degrades to a no-op (weather stays 'pending') until then.
@@ -61,10 +58,7 @@ export interface ConsumerDeps {
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
 
-async function didClaimImport(
-  db: CoreDb,
-  importId: string,
-): Promise<boolean> {
+async function didClaimImport(db: CoreDb, importId: string): Promise<boolean> {
   return await didClaim(
     db,
     imports,
@@ -267,9 +261,12 @@ async function processRevokeJob(
   job: RevokeJob,
 ): Promise<void> {
   if (deps.stravaApi === undefined) {
-    deps.captureException(new Error("strava revoke job with no api configured"), {
-      surface: "strava-revoke",
-    });
+    deps.captureException(
+      new Error("strava revoke job with no api configured"),
+      {
+        surface: "strava-revoke",
+      },
+    );
     return; // no credentials: retrying will not help
   }
 

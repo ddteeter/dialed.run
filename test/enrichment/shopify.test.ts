@@ -51,7 +51,9 @@ describe("the Shopify rung", () => {
     const html = `<html><script type="application/json" id="cart-data">${JSON.stringify(
       { title: "Not the product", vendor: "Wrong" },
     )}</script><script>var meta = {"product":{"vendor":"Janji"}};</script></html>`;
-    expect(shopifyExtractor.extract(PAGE, html)).toStrictEqual({ brand: "Janji" });
+    expect(shopifyExtractor.extract(PAGE, html)).toStrictEqual({
+      brand: "Janji",
+    });
   });
 
   it("finds the analytics blob in a later script, not only the first", () => {
@@ -121,7 +123,6 @@ describe("the Shopify rung", () => {
     expect(shopifyExtractor.rung).toBe("shopify");
   });
 
-
   it.each([
     ['id="ProductJson"', "no suffix on the id"],
     ['id="ProductJson-12345" data-section="main"', "attributes after the id"],
@@ -146,5 +147,4 @@ describe("the Shopify rung", () => {
       )?.brand,
     ).toBe("Janji");
   });
-
 });

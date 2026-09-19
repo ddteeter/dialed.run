@@ -36,7 +36,9 @@ const nothing = () => Promise.resolve();
 
 describe("SessionActions", () => {
   it("offers a signed-out visitor both ways in", async () => {
-    await renderWithRouter(<SessionActions email={undefined} signOut={nothing} />);
+    await renderWithRouter(
+      <SessionActions email={undefined} signOut={nothing} />,
+    );
 
     expect(screen.getByRole("link", { name: "Sign up" })).toHaveAttribute(
       "href",
@@ -92,7 +94,9 @@ describe("StravaCallbackResult", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Not connected" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Not connected" }),
+    ).toBeVisible();
     expect(screen.getByText("Strava connection was cancelled.")).toBeVisible();
   });
 

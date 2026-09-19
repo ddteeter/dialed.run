@@ -46,7 +46,10 @@ const parserSources: Record<string, string> = import.meta.glob(
 );
 
 const clientReachable: Record<string, string> = import.meta.glob(
-  ["../../src/modules/runs/inputs.ts", "../../src/modules/runs/upload-limits.ts"],
+  [
+    "../../src/modules/runs/inputs.ts",
+    "../../src/modules/runs/upload-limits.ts",
+  ],
   { query: "?raw", import: "default", eager: true },
 );
 
@@ -79,7 +82,9 @@ describe("the client bundle carries no server-only code", () => {
           `${shortPath(key)} has a sqliteTable() without /*#__PURE__*/ — it will ship to the browser`,
         ).toBeDefined();
       }
-      expect(declared, `${shortPath(key)} declares no tables`).toBeGreaterThan(0);
+      expect(declared, `${shortPath(key)} declares no tables`).toBeGreaterThan(
+        0,
+      );
     }
   });
 

@@ -75,24 +75,134 @@ function entry(
  * states the real remainder.
  */
 export const TAP_LIST: readonly TapListEntry[] = [
-  entry("tights", { category: "bottom", name: "Running tights", layer: "base", weight: "mid" }, { cold: 1, mild: 9, hot: 17 }),
-  entry("merino-base", { category: "top", name: "Merino base layer", layer: "base", weight: "mid" }, { cold: 2, mild: 10, hot: 18 }),
-  entry("beanie", { category: "headwear", name: "Beanie", weight: "mid" }, { cold: 3, mild: 12, hot: 16 }),
-  entry("gloves", { category: "gloves", name: "Running gloves", weight: "mid" }, { cold: 4, mild: 11, hot: 15 }),
-  entry("mittens", { category: "gloves", name: "Mittens", weight: "heavy" }, { cold: 5, mild: 15, hot: 19 }),
-  entry("wind-shell", { category: "top", name: "Wind shell", layer: "outer", weight: "light", windResistant: true }, { cold: 6, mild: 5, hot: 13 }),
-  entry("vest", { category: "top", name: "Running vest", layer: "mid", weight: "light", windResistant: true }, { cold: 7, mild: 6, hot: 14 }),
-  entry("buff", { category: "neckwear", name: "Buff", weight: "light" }, { cold: 8, mild: 13, hot: 12 }),
-  entry("shorts-7", { category: "bottom", name: '7" shorts', layer: "base", weight: "light" }, { cold: 9, mild: 2, hot: 3 }),
-  entry("tee", { category: "top", name: "Short sleeve tee", layer: "base", weight: "light" }, { cold: 10, mild: 1, hot: 2 }),
-  entry("arm-warmers", { category: "accessory", name: "Arm warmers" }, { cold: 11, mild: 8, hot: 11 }),
-  entry("rain-jacket", { category: "top", name: "Rain jacket", layer: "outer", weight: "light", waterResistant: true }, { cold: 12, mild: 7, hot: 10 }),
-  entry("shorts-5", { category: "bottom", name: '5" shorts', layer: "base", weight: "light" }, { cold: 13, mild: 3, hot: 1 }),
-  entry("singlet", { category: "top", name: "Singlet", layer: "base", weight: "light" }, { cold: 14, mild: 4, hot: 4 }),
-  entry("quarter-zip", { category: "top", name: "Long sleeve quarter-zip", layer: "mid", weight: "mid" }, { cold: 15, mild: 14, hot: 20 }),
-  entry("socks", { category: "socks", name: "Running socks", weight: "mid" }, { cold: 16, mild: 16, hot: 6 }),
-  entry("cap", { category: "headwear", name: "Running cap", weight: "light" }, { cold: 17, mild: 17, hot: 5 }),
-  entry("sunglasses", { category: "accessory", name: "Sunglasses" }, { cold: 18, mild: 18, hot: 7 }),
+  entry(
+    "tights",
+    {
+      category: "bottom",
+      name: "Running tights",
+      layer: "base",
+      weight: "mid",
+    },
+    { cold: 1, mild: 9, hot: 17 },
+  ),
+  entry(
+    "merino-base",
+    {
+      category: "top",
+      name: "Merino base layer",
+      layer: "base",
+      weight: "mid",
+    },
+    { cold: 2, mild: 10, hot: 18 },
+  ),
+  entry(
+    "beanie",
+    { category: "headwear", name: "Beanie", weight: "mid" },
+    { cold: 3, mild: 12, hot: 16 },
+  ),
+  entry(
+    "gloves",
+    { category: "gloves", name: "Running gloves", weight: "mid" },
+    { cold: 4, mild: 11, hot: 15 },
+  ),
+  entry(
+    "mittens",
+    { category: "gloves", name: "Mittens", weight: "heavy" },
+    { cold: 5, mild: 15, hot: 19 },
+  ),
+  entry(
+    "wind-shell",
+    {
+      category: "top",
+      name: "Wind shell",
+      layer: "outer",
+      weight: "light",
+      windResistant: true,
+    },
+    { cold: 6, mild: 5, hot: 13 },
+  ),
+  entry(
+    "vest",
+    {
+      category: "top",
+      name: "Running vest",
+      layer: "mid",
+      weight: "light",
+      windResistant: true,
+    },
+    { cold: 7, mild: 6, hot: 14 },
+  ),
+  entry(
+    "buff",
+    { category: "neckwear", name: "Buff", weight: "light" },
+    { cold: 8, mild: 13, hot: 12 },
+  ),
+  entry(
+    "shorts-7",
+    { category: "bottom", name: '7" shorts', layer: "base", weight: "light" },
+    { cold: 9, mild: 2, hot: 3 },
+  ),
+  entry(
+    "tee",
+    {
+      category: "top",
+      name: "Short sleeve tee",
+      layer: "base",
+      weight: "light",
+    },
+    { cold: 10, mild: 1, hot: 2 },
+  ),
+  entry(
+    "arm-warmers",
+    { category: "accessory", name: "Arm warmers" },
+    { cold: 11, mild: 8, hot: 11 },
+  ),
+  entry(
+    "rain-jacket",
+    {
+      category: "top",
+      name: "Rain jacket",
+      layer: "outer",
+      weight: "light",
+      waterResistant: true,
+    },
+    { cold: 12, mild: 7, hot: 10 },
+  ),
+  entry(
+    "shorts-5",
+    { category: "bottom", name: '5" shorts', layer: "base", weight: "light" },
+    { cold: 13, mild: 3, hot: 1 },
+  ),
+  entry(
+    "singlet",
+    { category: "top", name: "Singlet", layer: "base", weight: "light" },
+    { cold: 14, mild: 4, hot: 4 },
+  ),
+  entry(
+    "quarter-zip",
+    {
+      category: "top",
+      name: "Long sleeve quarter-zip",
+      layer: "mid",
+      weight: "mid",
+    },
+    { cold: 15, mild: 14, hot: 20 },
+  ),
+  entry(
+    "socks",
+    { category: "socks", name: "Running socks", weight: "mid" },
+    { cold: 16, mild: 16, hot: 6 },
+  ),
+  entry(
+    "cap",
+    { category: "headwear", name: "Running cap", weight: "light" },
+    { cold: 17, mild: 17, hot: 5 },
+  ),
+  entry(
+    "sunglasses",
+    { category: "accessory", name: "Sunglasses" },
+    { cold: 18, mild: 18, hot: 7 },
+  ),
 ];
 
 /**

@@ -277,7 +277,11 @@ export async function applyExtraction(
       : eq(products.extracted, row.extracted);
   const updated = await db
     .update(products)
-    .set({ ...patch, extracted: JSON.stringify(next), extractionStatus: "done" })
+    .set({
+      ...patch,
+      extracted: JSON.stringify(next),
+      extractionStatus: "done",
+    })
     .where(and(eq(products.id, productId), guard))
     .returning({ id: products.id });
   if (updated.length === 0) throw new ExtractionConflictError(productId);

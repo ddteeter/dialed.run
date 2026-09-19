@@ -11,7 +11,11 @@ import { fileURLToPath } from "node:url";
  * goes straight into an `authorization` header.
  */
 
-const DEV_VARS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".dev.vars");
+const DEV_VARS = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  ".dev.vars",
+);
 
 export function secret(name: string): string {
   if (!existsSync(DEV_VARS)) {

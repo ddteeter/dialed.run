@@ -172,7 +172,9 @@ describe("starterList", () => {
     // a test for one of them leaves the other free to be deleted.
     for (const half of [{ lat: 44.98 }, { lng: -93.27 }]) {
       const userId = newUlid();
-      await coreDb().insert(userProfiles).values({ userId, ...half });
+      await coreDb()
+        .insert(userProfiles)
+        .values({ userId, ...half });
       const normalsFor = vi.fn(() => Promise.resolve(COLD_NORMALS));
 
       const { entries } = await starterList(coreDb(), userId, normalsFor);

@@ -66,10 +66,12 @@ describe("productDraftSchema", () => {
     expect(
       productDraftSchema.safeParse({ brand: "Janji", name: "Rover" }).success,
     ).toBe(true);
-    expect(productDraftSchema.safeParse({ brand: "", name: "Rover" }).success).toBe(
+    expect(
+      productDraftSchema.safeParse({ brand: "", name: "Rover" }).success,
+    ).toBe(false);
+    expect(productDraftSchema.safeParse({ brand: "Janji" }).success).toBe(
       false,
     );
-    expect(productDraftSchema.safeParse({ brand: "Janji" }).success).toBe(false);
     expect(
       productDraftSchema.safeParse({
         brand: "Janji",
@@ -102,17 +104,20 @@ describe("fabric composition", () => {
     // emits when it found a heading and no content.
     expect(fabricPartSchema.safeParse({ materials: [] }).success).toBe(false);
     expect(
-      fabricPartSchema.safeParse({ materials: [{ material: "nylon" }] }).success,
+      fabricPartSchema.safeParse({ materials: [{ material: "nylon" }] })
+        .success,
     ).toBe(true);
   });
 
   it("always keeps the verbatim string", () => {
     // D-34: `verbatim` is what was published, kept exactly. Parsed parts
     // are the interpretation and are optional; the source text is not.
-    expect(fabricCompositionSchema.safeParse({ verbatim: "100% merino" }).success).toBe(
-      true,
+    expect(
+      fabricCompositionSchema.safeParse({ verbatim: "100% merino" }).success,
+    ).toBe(true);
+    expect(fabricCompositionSchema.safeParse({ parts: [] }).success).toBe(
+      false,
     );
-    expect(fabricCompositionSchema.safeParse({ parts: [] }).success).toBe(false);
   });
 });
 
@@ -131,8 +136,8 @@ describe("extractedProductSchema", () => {
     expect(extractedProductSchema.safeParse({ weight: "medium" }).success).toBe(
       false,
     );
-    expect(extractedProductSchema.safeParse({ windResistant: "yes" }).success).toBe(
-      false,
-    );
+    expect(
+      extractedProductSchema.safeParse({ windResistant: "yes" }).success,
+    ).toBe(false);
   });
 });

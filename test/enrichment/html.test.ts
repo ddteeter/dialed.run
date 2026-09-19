@@ -66,7 +66,9 @@ describe("readPage: scripts", () => {
   });
 
   it("keeps a script's text out of the prose", () => {
-    const { text } = readPage("<p>before</p><script>var x = 1;</script><p>after</p>");
+    const { text } = readPage(
+      "<p>before</p><script>var x = 1;</script><p>after</p>",
+    );
     expect(text).toStrictEqual(["before", "after"]);
   });
 });
@@ -166,7 +168,9 @@ describe("readPage: text", () => {
   });
 
   it("returns the whole string when there are no tags at all", () => {
-    expect(readPage("100% merino wool").text).toStrictEqual(["100% merino wool"]);
+    expect(readPage("100% merino wool").text).toStrictEqual([
+      "100% merino wool",
+    ]);
   });
 
   it("returns nothing for an empty document", () => {

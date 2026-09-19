@@ -45,9 +45,27 @@ describe("conditions across a run", () => {
       durationS: 2 * HOUR,
     });
     // Warming through the run: 2 -> 8 -> 14.
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 2, feelsLikeC: 2 });
-    await makeObservation({ lat, lng, startedAt: NOW + HOUR, tempC: 8, feelsLikeC: 8 });
-    await makeObservation({ lat, lng, startedAt: NOW + 2 * HOUR, tempC: 14, feelsLikeC: 14 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 2,
+      feelsLikeC: 2,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + HOUR,
+      tempC: 8,
+      feelsLikeC: 8,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + 2 * HOUR,
+      tempC: 14,
+      feelsLikeC: 14,
+    });
 
     const observations = await observationsForRuns([
       { id: runId, lat, lng, startedAt: NOW, durationS: 2 * HOUR },
@@ -69,8 +87,20 @@ describe("conditions across a run", () => {
     const user = await makeUser();
     const lat = 31;
     const lng = 31;
-    const runId = await makeRun({ userId: user, lat, lng, startedAt: NOW, durationS: 600 });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 5, feelsLikeC: 3 });
+    const runId = await makeRun({
+      userId: user,
+      lat,
+      lng,
+      startedAt: NOW,
+      durationS: 600,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 3,
+    });
 
     const observations = await observationsForRuns([
       { id: runId, lat, lng, startedAt: NOW, durationS: 600 },
@@ -98,8 +128,20 @@ describe("conditions across a run", () => {
       startedAt: NOW,
       durationS: 2 * HOUR,
     });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 2, feelsLikeC: 2 });
-    await makeObservation({ lat, lng, startedAt: NOW + HOUR, tempC: 8, feelsLikeC: 8 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 2,
+      feelsLikeC: 2,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + HOUR,
+      tempC: 8,
+      feelsLikeC: 8,
+    });
 
     const observations = await observationsForRuns([
       { id: runId, lat, lng, startedAt: NOW, durationS: 2 * HOUR },
@@ -121,7 +163,13 @@ describe("conditions across a run", () => {
       startedAt: NOW,
       durationS: 2 * HOUR,
     });
-    await makeObservation({ lat, lng, startedAt: NOW + HOUR, tempC: 8, feelsLikeC: 8 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + HOUR,
+      tempC: 8,
+      feelsLikeC: 8,
+    });
 
     const observations = await observationsForRuns([
       { id: runId, lat, lng, startedAt: NOW, durationS: 2 * HOUR },
@@ -146,9 +194,27 @@ describe("the coverage ladder bands a run at the hour it was judged", () => {
       startedAt: NOW,
       durationS: 2 * HOUR,
     });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 2, feelsLikeC: 2 });
-    await makeObservation({ lat, lng, startedAt: NOW + HOUR, tempC: 8, feelsLikeC: 8 });
-    await makeObservation({ lat, lng, startedAt: NOW + 2 * HOUR, tempC: 14, feelsLikeC: 14 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 2,
+      feelsLikeC: 2,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + HOUR,
+      tempC: 8,
+      feelsLikeC: 8,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + 2 * HOUR,
+      tempC: 14,
+      feelsLikeC: 14,
+    });
     await makeEntry({
       userId: user,
       runId,
@@ -182,9 +248,27 @@ describe("consensus matches an entry at the hour its runner judged by", () => {
       startedAt: NOW,
       durationS: 2 * HOUR,
     });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 2, feelsLikeC: 2 });
-    await makeObservation({ lat, lng, startedAt: NOW + HOUR, tempC: 8, feelsLikeC: 8 });
-    await makeObservation({ lat, lng, startedAt: NOW + 2 * HOUR, tempC: 14, feelsLikeC: 14 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 2,
+      feelsLikeC: 2,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + HOUR,
+      tempC: 8,
+      feelsLikeC: 8,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + 2 * HOUR,
+      tempC: 14,
+      feelsLikeC: 14,
+    });
     await makeEntry({
       userId: author,
       runId,
@@ -217,9 +301,27 @@ describe("consensus matches an entry at the hour its runner judged by", () => {
       startedAt: NOW,
       durationS: 2 * HOUR,
     });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 2, feelsLikeC: 2 });
-    await makeObservation({ lat, lng, startedAt: NOW + HOUR, tempC: 8, feelsLikeC: 8 });
-    await makeObservation({ lat, lng, startedAt: NOW + 2 * HOUR, tempC: 14, feelsLikeC: 14 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 2,
+      feelsLikeC: 2,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + HOUR,
+      tempC: 8,
+      feelsLikeC: 8,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW + 2 * HOUR,
+      tempC: 14,
+      feelsLikeC: 14,
+    });
     await makeEntry({
       userId: author,
       runId,

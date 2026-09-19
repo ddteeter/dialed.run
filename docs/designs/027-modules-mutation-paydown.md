@@ -39,7 +39,7 @@ Three source changes came out of the survivors rather than the tests:
   written out twice (derive, don't mirror).
 - `observationsForRuns` drops location-less runs with a `flatMap` instead
   of a type-guard `filter`, which is what makes the drop observable:
-  `cacheKeyFor` *rounds*, so a null coordinate keys to `0,0` rather than
+  `cacheKeyFor` _rounds_, so a null coordinate keys to `0,0` rather than
   throwing. Skipping the check hands a run the weather at Null Island.
 
 Four mutants are genuinely equivalent and carry a `// Stryker disable`
@@ -62,7 +62,7 @@ Unit/integration, all in `test/weather/`:
 - attach: run-not-found, already-resolved via `manual`, indoor-only,
   latitude-only and longitude-only runs, provider failure → `pending`,
   cached-manual → `manual`, and the warn each degradation emits
-- attach: hour *N* gets hour *N*'s temperature (not just its bucket), and
+- attach: hour _N_ gets hour _N_'s temperature (not just its bucket), and
   only the starting hour carries the run id
 - retry cron: exact `{claimed, attached, failed}`, the five-hour boundary
   at the second, and the exhaustion warning firing only when it should
@@ -96,7 +96,7 @@ Both open questions above have answers now.
 
 **The `functions.ts` question resolved into a rule, not a workaround.** The
 class is not "files named `functions.ts`" — it is "files that cannot be
-imported in the workers pool", which is a thing a test can *determine*
+imported in the workers pool", which is a thing a test can _determine_
 rather than a list a human maintains.
 `test/architecture/server-functions-are-glue.test.ts` imports every module
 file, records which throw, and requires each of those to be glue: it may

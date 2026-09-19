@@ -131,7 +131,9 @@ describe("copyProductImage", () => {
     expect(failure.message).toMatch(/could not be decoded/u);
     // The decoder's own complaint rides along, for the report.
     expect(failure.cause).toBeDefined();
-    expect(await env.MEDIA.get(productImageKey(productId, FETCHED_AT))).toBeNull();
+    expect(
+      await env.MEDIA.get(productImageKey(productId, FETCHED_AT)),
+    ).toBeNull();
   });
 
   it("asks for the types it can store", async () => {
@@ -232,7 +234,9 @@ describe("copyProductImage", () => {
         FETCHED_AT,
       ),
     ).rejects.toThrow(/exceeded/u);
-    expect(await env.MEDIA.get(productImageKey(productId, FETCHED_AT))).toBeNull();
+    expect(
+      await env.MEDIA.get(productImageKey(productId, FETCHED_AT)),
+    ).toBeNull();
   });
 
   it("accepts an image of exactly the cap", async () => {

@@ -1,6 +1,9 @@
 import { and, eq, inArray, type Column, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
-import type { SQLiteTable, SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
+import type {
+  SQLiteTable,
+  SQLiteUpdateSetSource,
+} from "drizzle-orm/sqlite-core";
 
 type Db = ReturnType<typeof drizzle>;
 

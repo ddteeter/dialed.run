@@ -27,7 +27,7 @@ flowchart LR
 
 - **E1**: fetch followee ids (covering index), then one keyset-paginated
   query `user_id IN (self+followees) AND is_public=1 ORDER BY created_at
-  DESC, id DESC` — per-user index seeks on `entries_user_created`; EXPLAIN in
+DESC, id DESC` — per-user index seeks on `entries_user_created`; EXPLAIN in
   PR body + an index-coverage test.
 - **E2-lite**: public entries ≤72h via `entries_public_created`, capped at
   200 rows; runs by PK; observations by cache key (chunked OR over the unique

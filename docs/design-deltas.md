@@ -16,149 +16,173 @@ round (D-26…D-33).
 ## Open queue (nothing blocks v1 lanes)
 
 10. **Dead-lettered work has nowhere a human looks.** Raised on PR #72 as
-   "DLQ handling UIs on the desk" — and there is no desk: no admin surface
-   is drawn or built anywhere. Today a job that exhausts its retries lands
-   on its row (`products.extraction_status = 'failed'`, `runs`'
-   `weather_status`, an import's status), in Sentry, and as a line in the
-   daily digest, which is a Sentry event that a person reads or does not.
-   **The ask is a screen**: the things the system gave up on, one row
-   each, with what it was trying to do, why it stopped, and a retry — for
-   enrichment that is "re-fetch this page" and "re-run extraction over the
-   stored snapshot" (`reextract`), which exist as functions and have no
-   button. Admin-only, so it also needs the first notion of an admin in
-   the product, which is a question for the owner before it is one for
-   design. Nothing is blocked; the digest carries the count meanwhile.
+    "DLQ handling UIs on the desk" — and there is no desk: no admin surface
+    is drawn or built anywhere. Today a job that exhausts its retries lands
+    on its row (`products.extraction_status = 'failed'`, `runs`'
+    `weather_status`, an import's status), in Sentry, and as a line in the
+    daily digest, which is a Sentry event that a person reads or does not.
+    **The ask is a screen**: the things the system gave up on, one row
+    each, with what it was trying to do, why it stopped, and a retry — for
+    enrichment that is "re-fetch this page" and "re-run extraction over the
+    stored snapshot" (`reextract`), which exist as functions and have no
+    button. Admin-only, so it also needs the first notion of an admin in
+    the product, which is a question for the owner before it is one for
+    design. **Round 8 answered half of it**: there IS an admin surface now —
+    The Desk (`Operator Screens.dc.html`, item 11), whose Today page already
+    carries the counts. What it does not draw is the dead-letter list
+    itself, so the ask stands and now has a place to live.
+    Nothing is blocked; the digest carries the count meanwhile.
 
-9. **A band that was wrong both ways equally has no honest one-word
-   verdict.** §AB3 gives each band on the profile row one word —
-   *Under-dressed*, *Dialed*, *Over-dressed* — derived from whichever
-   verdict count wins (`bandVerdict`, `modules/feed/coverage.ts`). When
-   cold and warm are exactly tied the code picks *Under-dressed*, on the
-   reasoning that underdressing is the failure that ends a run early. The
-   owner's review of PR #71 pointed out the reasoning is one-sided:
-   overdressing in heat ends a run too, and the Call teaser's own
-   tie-break was made symmetric for that reason. A tie is not a direction,
-   it is inconsistency — the band is not understood yet, which is exactly
-   what the runner and later the call need to know. **The ask is a fourth
-   word for that state**, "Mixed" or whatever design prefers, and its
-   `VerdictMark` treatment: hue is verdict (pink cold, teal dialed, grey
-   warm, per D-48), so a fourth state needs a mark that is none of those.
-   Rare in practice, since it needs equal counts. Tracked as **D-60**;
-   nothing is blocked, the tie goes cold until design answers.
+11. **A band that was wrong both ways equally has no honest one-word
+    verdict.** §AB3 gives each band on the profile row one word —
+    _Under-dressed_, _Dialed_, _Over-dressed_ — derived from whichever
+    verdict count wins (`bandVerdict`, `modules/feed/coverage.ts`). When
+    cold and warm are exactly tied the code picks _Under-dressed_, on the
+    reasoning that underdressing is the failure that ends a run early. The
+    owner's review of PR #71 pointed out the reasoning is one-sided:
+    overdressing in heat ends a run too, and the Call teaser's own
+    tie-break was made symmetric for that reason. A tie is not a direction,
+    it is inconsistency — the band is not understood yet, which is exactly
+    what the runner and later the call need to know. **The ask is a fourth
+    word for that state**, "Mixed" or whatever design prefers, and its
+    `VerdictMark` treatment: hue is verdict (pink cold, teal dialed, grey
+    warm, per D-48), so a fourth state needs a mark that is none of those.
+    Rare in practice, since it needs equal counts. Tracked as **D-60**;
+    nothing is blocked, the tie goes cold until design answers.
 
-8. **P2.5's payout counts owners, and a social-proof count may not.**
-   §AC3's middle line reads *GAINED 412 runners own this piece*. Ownership
-   is closet contents, and CLAUDE.md's product rules say a social-proof
-   count derives **only from public entries, never closet contents** — a
-   count drawn from closets leaks that someone owns a piece they never
-   posted about, which is the thing that rule exists to prevent. So the
-   line as drawn cannot be built, and the owner's call (2026-09-12) is to
-   derive it from public entries instead; it is also the cheaper query.
-   **The wording is design's, not ours**: "own" is what the artboard says,
-   and "have logged this" is a guess at what it should say instead. Nothing
-   is blocked — the count has no read behind it either way (D-54), and the
-   named row says what actually happened until one exists.
+12. **Enriched product data has no surface, and item 1 assumed it would have
+    one.** Lane 107 has landed, so this stops being hypothetical: a pasted
+    product URL now fills `products.fabric_composition` (verbatim as the shop
+    wrote it), `fabric_parts` (the labelled breakdown — D-34's multi-part
+    shape, and real: Arc'teryx states four components, On states two panels,
+    rabbit three), plus `weight`, `fabric`, `wind_resistant`,
+    `water_resistant`, `category_hint` and a product image in R2.
 
-7. **O3's artboard still draws a paste field, and the code correctly does
-   not.** Design raised this against lane 105 in round 7 rather than
-   silently redrawing it: `Onboarding.dc.html`'s O3 shows a
-   `brand.com/product…` field with a `SPECS FOUND` result, which has the
-   same lane-107 dependency §AC2b ruled out for P2.5. `TapListForm` never
-   built one, so the build is right and the artboard is stale. Tracked as
-   **D-55** so nobody "fixes" the code to match the drawing.
+    **Of those, only the last group is rendered anywhere**, and only
+    indirectly: a garment inherits them as defaults where its own columns are
+    null, and `GarmentDetail` shows them. **`fabric_composition` and
+    `fabric_parts` are drawn by nothing at all.**
 
-6. **Enriched product data has no surface, and item 1 assumed it would have
-   one.** Lane 107 has landed, so this stops being hypothetical: a pasted
-   product URL now fills `products.fabric_composition` (verbatim as the shop
-   wrote it), `fabric_parts` (the labelled breakdown — D-34's multi-part
-   shape, and real: Arc'teryx states four components, On states two panels,
-   rabbit three), plus `weight`, `fabric`, `wind_resistant`,
-   `water_resistant`, `category_hint` and a product image in R2.
+    Item 1 files composition display under the Call epic, "if composition
+    surfaces there". The owner's read (2026-09-14) is that the Call is one
+    use and probably not the only one — a fabric breakdown is the kind of
+    thing a runner reads on a garment detail, compares in a closet list, or
+    filters by, none of which are Call screens and none of which are drawn.
 
-   **Of those, only the last group is rendered anywhere**, and only
-   indirectly: a garment inherits them as defaults where its own columns are
-   null, and `GarmentDetail` shows them. **`fabric_composition` and
-   `fabric_parts` are drawn by nothing at all.**
+    What is wanted is the decision rather than a screen: **where, if
+    anywhere, does a runner see what their kit is made of** — and if the
+    answer is "the garment detail", what a multi-part composition looks like
+    there when a jacket has four labelled components and a tee has one line.
+    Until that is answered the data accumulates unread, which is cheap and
+    fine (it is stored for retroactive re-extraction anyway, D-31) but should
+    be a choice rather than an oversight.
 
-   Item 1 files composition display under the Call epic, "if composition
-   surfaces there". The owner's read (2026-09-14) is that the Call is one
-   use and probably not the only one — a fabric breakdown is the kind of
-   thing a runner reads on a garment detail, compares in a closet list, or
-   filters by, none of which are Call screens and none of which are drawn.
+    No placeholder was built. There is no undesigned surface to hold to the
+    protocol here — the data simply has no consumer, which is a different
+    thing from a screen drawn without an artboard.
 
-   What is wanted is the decision rather than a screen: **where, if
-   anywhere, does a runner see what their kit is made of** — and if the
-   answer is "the garment detail", what a multi-part composition looks like
-   there when a jacket has four labelled components and a tee has one line.
-   Until that is answered the data accumulates unread, which is cheap and
-   fine (it is stored for retroactive re-extraction anyway, D-31) but should
-   be a choice rather than an oversight.
+13. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
+    Epic 200 opens, incl. multi-part fabric display on garment/product
+    detail (D-34) if composition surfaces there. The Call tab's own glyph
+    is deliberately deferred to the same moment (see round 4, item 7).
+14. **Motion Doctrine adoption.** Not a design ask — an implementation debt.
+    Shipped v1 surfaces predate the doctrine and animate either not at all or
+    ad hoc; lanes adopt the per-surface map opportunistically, audited at the
+    launch gate (workflow.md checklist #5).
+    RESOLVED 2026-09-06 for demos: they record full motion — the fixture's
+    motion-strip and the demo project's reduced-motion emulation were removed,
+    because demo videos are a primary review surface and must show the
+    doctrine's real behaviour.
+15. **Does a garment carry a type?** **Answered: yes**, by the owner on
+    2026-09-07. `garmentSchema` now carries an optional per-category `type`,
+    named for the pack's glyphs so a garment's icon _is_ its type. The
+    tap-list sets one on every row.
 
-   No placeholder was built. There is no undesigned surface to hold to the
-   protocol here — the data simply has no consumer, which is a different
-   thing from a screen drawn without an artboard.
+    Kept here because it is the one place a reader would look for it, and
+    because it is worth recording what design's role in it was: **none, and
+    that was the point.** It arrived filed as a question for design with
+    three options, two of which were impossible. P2's tap-list is already a
+    list of types and the pack already draws one glyph each, so design had
+    answered twice before being asked; the disagreement was between our
+    contract and both of them. Asking for category-level glyphs would have
+    put the same icon on all sixteen rows of P2.
 
-5. **Onboarding's steps are inside the app's page column, and the
-   artboards draw them full-bleed.** O1, O3 and P3 are each a card with
-   their own internal structure and no app heading; `src/routes/onboarding/*`
-   renders them inside `ui/Page`, which adds an `<h1>` above each. A heading
-   is not optional — a screen with none is an accessibility failure — so the
-   three are design's own copy where it exists ("One question does most of
-   the work", O1) and new where it does not ("Start your closet" for O3,
-   chosen to avoid repeating that screen's own "TAP WHAT YOU OWN" caption).
-   **The question for design is whether these steps should sit in the page
-   column at all**, or be full-bleed like the artboards, in which case the
-   heading moves inside the card and the copy is design's to write. Raised
-   by lane 105 while building; nothing is blocked either way.
+    The rule: if the answer is a drawing, it comes here. If the answer is a
+    schema or a product call, it goes to the owner and lives in
+    `docs/deferred.md`.
 
-1. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
-   Epic 200 opens, incl. multi-part fabric display on garment/product
-   detail (D-34) if composition surfaces there. The Call tab's own glyph
-   is deliberately deferred to the same moment (see round 4, item 7).
-2. **Motion Doctrine adoption.** Not a design ask — an implementation debt.
-   Shipped v1 surfaces predate the doctrine and animate either not at all or
-   ad hoc; lanes adopt the per-surface map opportunistically, audited at the
-   launch gate (workflow.md checklist #5).
-   RESOLVED 2026-09-06 for demos: they record full motion — the fixture's
-   motion-strip and the demo project's reduced-motion emulation were removed,
-   because demo videos are a primary review surface and must show the
-   doctrine's real behaviour.
-3. **Transient feedback for actions with no landing place** — narrowed by
-   round 4, not closed. The Form Contract settles it *inside a form*: a
-   failure band sits above the submit button and stays, because "a toast
-   takes the retry with it when it leaves", and success gets no toast and no
-   green check at all. S2 removes the other case we had — notifications
-   clear their unread dot when the screen opens, so there is no per-row
-   "marked read" to confirm.
-   What is still unanswered is an action with no screen to land on: copying
-   a share link, an autosave. Wanted before the first one ships, not after:
-   what it looks like, where it appears, how long it stays, how it behaves
-   under the doctrine, and how a screen reader is told. The default answer
-   may well be "design the action so the state change is visible instead" —
-   that is the position round 4 took twice — but that has to be a decision,
-   not a gap.
-4. **Does a garment carry a type?** **Answered: yes**, by the owner on
-   2026-09-07. `garmentSchema` now carries an optional per-category `type`,
-   named for the pack's glyphs so a garment's icon *is* its type. The
-   tap-list sets one on every row.
+## Answered in round 8 (imported 2026-09-16)
 
-   Kept here because it is the one place a reader would look for it, and
-   because it is worth recording what design's role in it was: **none, and
-   that was the point.** It arrived filed as a question for design with
-   three options, two of which were impossible. P2's tap-list is already a
-   list of types and the pack already draws one glyph each, so design had
-   answered twice before being asked; the disagreement was between our
-   contract and both of them. Asking for category-level glyphs would have
-   put the same icon on all sixteen rows of P2.
+Round 8 cleared six items and delivered two things nobody asked for. The
+answers live in the artboards from here; what follows is what changed and
+what it costs us.
 
-   The rule: if the answer is a drawing, it comes here. If the answer is a
-   schema or a product call, it goes to the owner and lives in
-   `docs/deferred.md`.
+11. **The operator surfaces have an artboard, and it made a decision we
+    could not.** `Operator Screens.dc.html` is new: **The Desk**, one route
+    at `/desk` behind the existing admin check, with its own shell, always
+    dark whatever the operator's own theme ("it's a tool, not the product"),
+    hi-viz as its only accent, desktop-first, and **never linked from the
+    runner app**. The reasoning is the part lane 106 could not supply on its
+    own: _"four surfaces reached by four memorised URLs is four places for
+    one to be forgotten, and the daily digest needs somewhere to link."_
+
+    It also **re-cut the four surfaces into three destinations** — Today,
+    Review, Duplicates, Runners — because banning is not a destination but
+    something you do to a runner, and the digest is not one either: it _is_
+    Today, and the email is Today sent to you. That is a better
+    decomposition than the one this file asked about.
+
+    **Built as `docs/tasks/110-the-desk.md`, after 106.** 106 satisfies the
+    launch gate with plain-but-correct screens; the Desk is the designed
+    version and three surfaces that were mechanics with no screen at all.
+    Two things in D1 are behaviour changes rather than drawings, and the
+    packet says so: decided rows that stay struck-through with **Undo**
+    (against `resolveReview`'s refusal of a second decision), and **who
+    reported behind a fold, where opening the fold is logged** — which needs
+    an audit table that does not exist.
+
+12. **W3's two web states are drawn** as `Remaining Screens` §AD, and the
+    loading beat gets the brackets-breathe device rather than a spinner —
+    the option this file suggested, and the doctrine's NEVER list forbids
+    the alternative. The artboard's FEASIBILITY note now reads _"Decided in
+    round 8: the browser keeps the promise and changes the delivery"_ rather
+    than the native-only framing lane 106 had to work around.
+
+13. ~~106's admin surfaces have no artboard~~ — see item 11. Superseded
+    rather than answered: the question was "draw these four", and the answer
+    was "these are three, and here is the section they live in".
+
+14. **P2.5's ownership count** — answered in the artboards.
+
+15. **O3's paste field is gone.** `Onboarding.dc.html` now carries the note
+    in so many words: _"The paste-a-product-link field that used to sit here
+    is gone: it needed enrichment, which doesn't exist in v1. The build never
+    had it; the artboard now agrees."_ Closes D-55, which existed so nobody
+    would "fix" the code to match the drawing. O3 is also re-cut as one list
+    ordered by climate band (§AA), and coverage is ink rather than hue (§AB).
+
+16. **Onboarding's column question** — answered as §AE.
+
+17. **Transient feedback with nowhere to land** — answered as §AF.
+
+**And two nobody asked for.** `Theme.dc.html` plus dark variants of every
+artboard. The app has no dark mode, and this did not arrive through the queue
+— so it gets a lane of its own rather than leaking into whichever surface a
+future lane touches next: `docs/tasks/111-dark-theme.md`, unscheduled, with
+"is a dark theme in v1 at all?" as its first open question. **D-36** (the
+form primitives' unwritten ink surface) closes with it.
+
+    **Items 12 and 13 were renumbered on the merge**, from 9 and 10: lanes
+    105 and 107 took those numbers for the band-verdict and dead-letter
+    items while this lane was using them. Two lanes numbering one shared
+    list from separate worktrees is the collision the schema protocol
+    prevents for migrations, and this file has no such protocol. Worth one
+    if the queue keeps taking entries from more than one lane at a time.
 
 ## Answered in round 7 (imported 2026-09-12)
 
 **P2.5 — §AC · Make them real**, answering all six questions lane 105 asked.
-The argument design settled on: *a category can't remember.* "Merino base
+The argument design settled on: _a category can't remember._ "Merino base
 layer" cannot hold a temperature range, because no two of them are the same
 garment; a named product is one object, and naming is how a runner's piece
 joins a population.
@@ -166,14 +190,14 @@ joins a population.
 - **Q1 — every generic row is offered, ranked never filtered**, the same
   doctrine as §AA. Rows worn on an O4-tagged run sort first under their own
   heading; the rest follow, folded past five. No badge claims to know a
-  stranger's favourites — *the order* carries the suggestion.
+  stranger's favourites — _the order_ carries the suggestion.
 - **Q2 — two fields, one required.** Brand (seed-list autocomplete) and
   model (optional, suggestions from that brand's products). **No photo:**
   naming is an act of identity, and a photo says nothing about which
   product this is.
-- **Q3 — no link field**, agreeing with the recommendation. *"A field that
+- **Q3 — no link field**, agreeing with the recommendation. _"A field that
   swallows a URL and shows nothing is a screen making a promise the build
-  can't keep, on the one screen whose entire job is to be believed."*
+  can't keep, on the one screen whose entire job is to be believed."_
 - **Q4 — no target, no gate**, and no "enough to start" equivalent. O3 can
   say it because six taps is a real threshold for a first call; naming
   changes nothing about whether the app works today.
@@ -188,8 +212,8 @@ joins a population.
   exist (`products.type` → lane 107; an owner count → no such read; tagged
   runs → O4). The named row states what happened and stops.
 - **The ranked heading is inert.** Rule 01 sorts by O4-tagged runs and O4
-  is out of scope, so rule 02's fallback — *"the first heading is absent —
-  not empty. One flat list, closet order"* — is what every v1 runner sees.
+  is out of scope, so rule 02's fallback — _"the first heading is absent —
+  not empty. One flat list, closet order"_ — is what every v1 runner sees.
 
 **Design also flagged one back at us, and the build was already right:**
 O3's artboard still draws a paste field with `SPECS FOUND`, same lane-107
@@ -222,8 +246,8 @@ one `TAP_LIST: TapListEntry[]` of 24 rows, and give each entry a
 
 **6 — hue means verdict; coverage becomes ink density.** Pink/teal/grey are
 cold/dialed/warm **permanently**. Coverage goes monochrome — solid, 135°
-hatch, hairline — because coverage is *ordinal* (none → all) and density
-says that natively, while cold/dialed/warm is a *direction around a centre*
+hatch, hairline — because coverage is _ordinal_ (none → all) and density
+says that natively, while cold/dialed/warm is a _direction around a centre_
 that density cannot express.
 
 Verdict also stops being hue-alone: a three-slot mark whose filled slot's
@@ -276,15 +300,15 @@ detail, post-v1 — an edit, not a question at add time.
 Kept as a record of what moved, and where the answer now lives. Implementation
 debt these created is tracked in `docs/deferred.md`, not here.
 
-| Was | Answer |
-| --- | --- |
-| **106-era design**: report flow, blocked-runners list, faces-blurred option | `Remaining Screens` W1/W2/W3. Faces blurred **at capture, on by default**. |
-| **Desktop feed** — unscheduled, and recurring as an argument | Screen X, 1440 wide, post-v1. Two columns: the phone's feed at a reading measure, plus tomorrow's answer, today's consensus and the verdict backlog. Logging on desktop opens the same flow in a centred phone-width panel rather than a second wide form. |
-| **Shoe mileage as its own object** — unscheduled | Screens Y1/Y2 (shoe detail, and shoes in the closet). |
-| **Lane 102's placeholder surfaces** — manual run entry, notifications bell + list, Strava connect/disconnect, import status | R1/R2 (prefilled + failure states), S1/S2 (list, and bell/badge/empty), T1/T2/T3 (not connected, importing, connected & disconnect). |
-| **Settings/privacy screen** (You tab) | U1/U2. |
-| **Icon Pack nav drift** — four nav glyphs for five tabs, no `call` glyph | `icons.js` now exports `TAB_BAR`, ported to `ui/icons.tsx` and pinned by `test/ui/icons.test.tsx`. Call borrows `verdictPending`: brackets around three dots is already the pack's idiom for "no verdict yet", which is what an unopened surface is. A dedicated glyph would ship a meaning we have not decided, so it waits for Epic 200. `discover` moved nav → social; it is a browse surface, not a v1 tab. |
-| **No form-validation strategy** (`docs/deferred.md` D-17) | `Form Contract.dc.html`, the new §Forms & failure in `product.md`, and a reference `design/src/ui/FormField.tsx`. Field failure and form failure are different events with different marks; per-field vs summary is decided by count so every lane lands in the same place; errors are marked, not reddened; nothing animates. |
+| Was                                                                                                                         | Answer                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **106-era design**: report flow, blocked-runners list, faces-blurred option                                                 | `Remaining Screens` W1/W2/W3. Faces blurred **at capture, on by default**.                                                                                                                                                                                                                                                                                                                                      |
+| **Desktop feed** — unscheduled, and recurring as an argument                                                                | Screen X, 1440 wide, post-v1. Two columns: the phone's feed at a reading measure, plus tomorrow's answer, today's consensus and the verdict backlog. Logging on desktop opens the same flow in a centred phone-width panel rather than a second wide form.                                                                                                                                                      |
+| **Shoe mileage as its own object** — unscheduled                                                                            | Screens Y1/Y2 (shoe detail, and shoes in the closet).                                                                                                                                                                                                                                                                                                                                                           |
+| **Lane 102's placeholder surfaces** — manual run entry, notifications bell + list, Strava connect/disconnect, import status | R1/R2 (prefilled + failure states), S1/S2 (list, and bell/badge/empty), T1/T2/T3 (not connected, importing, connected & disconnect).                                                                                                                                                                                                                                                                            |
+| **Settings/privacy screen** (You tab)                                                                                       | U1/U2.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Icon Pack nav drift** — four nav glyphs for five tabs, no `call` glyph                                                    | `icons.js` now exports `TAB_BAR`, ported to `ui/icons.tsx` and pinned by `test/ui/icons.test.tsx`. Call borrows `verdictPending`: brackets around three dots is already the pack's idiom for "no verdict yet", which is what an unopened surface is. A dedicated glyph would ship a meaning we have not decided, so it waits for Epic 200. `discover` moved nav → social; it is a browse surface, not a v1 tab. |
+| **No form-validation strategy** (`docs/deferred.md` D-17)                                                                   | `Form Contract.dc.html`, the new §Forms & failure in `product.md`, and a reference `design/src/ui/FormField.tsx`. Field failure and form failure are different events with different marks; per-field vs summary is decided by count so every lane lands in the same place; errors are marked, not reddened; nothing animates.                                                                                  |
 
 ## Resolved design↔contract nit (no upstream change needed)
 

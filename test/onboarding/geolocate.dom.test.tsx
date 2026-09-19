@@ -38,7 +38,10 @@ describe("geolocate", () => {
     // Not a rejection. A denied permission is an answer, and onboarding
     // carries on with the typed city — which it cannot do if this throws.
     withGeolocation((_onSuccess, onError) => {
-      onError?.({ code: 1, message: "User denied" } as GeolocationPositionError);
+      onError?.({
+        code: 1,
+        message: "User denied",
+      } as GeolocationPositionError);
     });
 
     await expect(geolocate()).resolves.toBeUndefined();

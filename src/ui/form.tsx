@@ -70,7 +70,8 @@ export function FormStatus({ children }: Readonly<{ children?: string }>) {
 export function FieldMessage({
   name,
   error,
-}: Readonly<{ name: string; error: string | undefined }>): JSX.Element | undefined {
+}: Readonly<{ name: string; error: string | undefined }>):
+  JSX.Element | undefined {
   if (error === undefined) return undefined;
   return (
     <span

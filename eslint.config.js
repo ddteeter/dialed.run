@@ -16,7 +16,34 @@ import tseslint from "typescript-eslint";
 /**
 Phase 0 house rules (000 §2 typed URLs; CLAUDE.md parse-don't-cast).
 */
+/**
+ * The seconds-timestamp rule, kept separate from `baseRestrictions` only so
+ * `src/lib/now.ts` — the one file that may do the division — can compose
+ * the others without it. Filtering an array by message text would have
+ * worked until someone reworded the message.
+ */
+const nowSecondsRestriction = {
+  // Every timestamp column in src/db/schema*.ts stores whole unix
+  // seconds, and `Math.floor(Date.now() / 1000)` had been written out 62
+  // times across 36 files before `nowSeconds()` existed. That is a rival
+  // truth of the cheapest kind: nothing makes two copies disagree
+  // loudly, and the one that drifts — millis into a seconds column, a
+  // `round` where the others `floor` — writes a value read back as a
+  // date in the year 56000 rather than as an error. The repo already
+  // carries a test named "stamps last_run_at in epoch seconds, not
+  // milliseconds" because that exact thing was worth guarding once.
+  //
+  // Matches any division of `Date.now()`, not just the `floor` idiom, so
+  // the near-misses are caught too. `src/lib/now.ts` is exempted below —
+  // it is the one place the division belongs.
+  selector:
+    "BinaryExpression[operator='/'] > CallExpression[callee.object.name='Date'][callee.property.name='now']",
+  message:
+    "Use nowSeconds() from lib/now — dividing Date.now() by hand is how milliseconds reach a seconds column.",
+};
+
 const baseRestrictions = [
+  nowSecondsRestriction,
   {
     selector: String.raw`JSXAttribute[name.name=/^(href|action)$/] Literal[value=/^\u002F/]`,
     message:
@@ -77,7 +104,7 @@ const crossLaneRestrictions = [
       "Uppercase with a CSS class (or <Bracketed>), not in the string — the literal becomes the accessible name.",
   },
   {
-    selector: 'JSXExpressionContainer > Literal[value=/^[A-Z][A-Z ]{4,}$/]',
+    selector: "JSXExpressionContainer > Literal[value=/^[A-Z][A-Z ]{4,}$/]",
     message:
       "Uppercase with a CSS class (or <Bracketed>), not in the string — the literal becomes the accessible name.",
   },
@@ -94,6 +121,14 @@ export default tseslint.config(
       // OOMs the eslint process rather than failing cleanly. Gitignored,
       // but flat config does not read .gitignore.
       ".stryker-tmp/",
+      // `stage:mediapipe` copies four files out of node_modules so the
+      // browser can fetch them from our own origin, and two are minified
+      // dependency glue: ~2,900 errors between them, which buries every
+      // real finding in the run. Gitignored, but flat config does not read
+      // .gitignore — the same trap as `.stryker-tmp/` above. CI was green
+      // only by step ordering (lint runs before the `pretest`/`prebuild`
+      // that stage), so anyone who ran the suite first saw the wall.
+      "public/mediapipe/wasm/",
       "src/routeTree.gen.ts",
       "worker-configuration.d.ts",
       "design/",
@@ -132,6 +167,23 @@ export default tseslint.config(
       "no-restricted-syntax": [
         "error",
         ...baseRestrictions,
+        ...crossLaneRestrictions,
+      ],
+    },
+  },
+  {
+    // The one file allowed to divide `Date.now()`, because it is the
+    // function everything else is required to call. Re-stated rather than
+    // filtered: `no-restricted-syntax` is REPLACED by a later block (see
+    // the note at the top), so this has to name every selector that should
+    // still apply here.
+    files: ["src/lib/now.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...baseRestrictions.filter(
+          (restriction) => restriction !== nowSecondsRestriction,
+        ),
         ...crossLaneRestrictions,
       ],
     },

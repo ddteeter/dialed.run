@@ -227,7 +227,9 @@ async function askModel(
   // is exactly what that helper already exists to say (`html.ts`).
   const envelope = completionSchema.safeParse(parseJson(body));
   if (!envelope.success) {
-    throw new ModelUnavailableError("Model response did not match its contract");
+    throw new ModelUnavailableError(
+      "Model response did not match its contract",
+    );
   }
   // Checked rather than defaulted. `.min(1)` on the schema would make the
   // index safe and this line unreachable — a default nothing can observe —

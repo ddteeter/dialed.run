@@ -4,7 +4,7 @@
  * `entries_public_created` covering index + ≤200 weather cache-key seeks.
  * `source='manual'` observations are excluded from the aggregate.
  */
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, gte, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -21,6 +21,7 @@ import { conditionsAt, observationsForEntries } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
+import { publiclyVisibleEntry } from "../safety";
 
 const SCAN_LIMIT = 200;
 const WINDOW_H = [72, 24 * 7] as const; // widen once before declaring empty
@@ -35,7 +36,14 @@ export function recentPublicEntriesStatement(
     .select()
     .from(outfitEntries)
     .where(
-      and(eq(outfitEntries.isPublic, true), gte(outfitEntries.createdAt, sinceEpochSeconds)),
+      // publiclyVisibleEntry(), not a bare isPublic: a removed or
+      // pending-review entry must not count toward the numbers everyone
+      // reads (packet: "hidden content must not count"). A missed clause
+      // here hides nothing visibly — it just quietly skews the aggregate.
+      and(
+        publiclyVisibleEntry(),
+        gte(outfitEntries.createdAt, sinceEpochSeconds),
+      ),
     )
     .orderBy(desc(outfitEntries.createdAt))
     .limit(limit);
@@ -67,7 +75,8 @@ function isWithinConsensusWindow(
   deltaC: number,
 ): boolean {
   if (observation.source === "manual") return false;
-  if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm)) return false;
+  if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm))
+    return false;
   return (
     Math.abs(judgedFeelsLikeC(observation, verdict) - viewer.feelsLikeC) <=
     deltaC
@@ -80,7 +89,10 @@ async function qualifyingEntryIdsInWindow(
   sinceEpochSeconds: number,
   deltaC: number,
 ): Promise<string[]> {
-  const entries = await recentPublicEntriesStatement(database, sinceEpochSeconds);
+  const entries = await recentPublicEntriesStatement(
+    database,
+    sinceEpochSeconds,
+  );
   // Equivalent mutant: no entries means no observations and nothing to
   // filter, so the empty list comes out either way. The return saves the
   // cross-database walk.
@@ -114,7 +126,12 @@ export async function yourConditionsConsensus(
     // because an index signature cannot promise that.
     // Stryker disable next-line LogicalOperator,UnaryOperator
     const deltaC = FEELS_LIKE_DELTA_C[pass] ?? FEELS_LIKE_DELTA_C.at(-1) ?? 3;
-    const qualifyingEntryIds = await qualifyingEntryIdsInWindow(database, viewer, since, deltaC);
+    const qualifyingEntryIds = await qualifyingEntryIdsInWindow(
+      database,
+      viewer,
+      since,
+      deltaC,
+    );
     // Widen before declaring empty. There was an `isLastPass` check here
     // as well, so the final pass returned its own empty result rather than
     // falling through; mutation testing showed the two paths produce the

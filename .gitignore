@@ -27,9 +27,24 @@ reports/stryker-incremental.json
 
 # playwright
 test-results/
+# Vitest browser mode writes one of these next to a failing test. They are
+# a debugging aid for the run that produced them and nothing else; stryker
+# turns them off for its own runs.
+test/**/__screenshots__/
+.vitest-attachments/
 # Transcoded demo recordings: uploaded to the PR by `gh pr comment
 # --attach`, which reads them from disk — they are never part of the repo.
 demo.mp4
 *.demo.mp4
 playwright-report/
 eval/pages/
+# Photographs of people. The repo is public, and a corpus of running
+# photos in git is a worse problem than the one it solves — see
+# eval/photos/corpus.ts for the file names that belong here.
+eval/photos/corpus/
+# MediaPipe's vision WASM: 11 MB, copied out of node_modules by
+# `prebuild` so it is served from our own origin without living in git.
+# The .tflite model beside it IS committed — it is 224 KB and not in any
+# npm package, and fetching it from Google on a photo upload would leak
+# the one signal this feature exists to protect.
+public/mediapipe/wasm/

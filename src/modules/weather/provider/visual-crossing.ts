@@ -174,9 +174,12 @@ async function timelineJson<TSchema extends z.ZodType>(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
-    throw new WeatherUnavailableError(`Visual Crossing ${what} request failed`, {
-      cause: error,
-    });
+    throw new WeatherUnavailableError(
+      `Visual Crossing ${what} request failed`,
+      {
+        cause: error,
+      },
+    );
   }
   if (!response.ok) {
     throw new WeatherUnavailableError(

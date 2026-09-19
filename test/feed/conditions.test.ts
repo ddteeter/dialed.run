@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
 
-import { follows as followsTable, userProfiles as userProfilesTable } from "../../src/db/schema-core";
+import {
+  follows as followsTable,
+  userProfiles as userProfilesTable,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -23,6 +26,7 @@ import {
   NOW,
 } from "./helpers";
 
+import { nowSeconds } from "../../src/lib/now";
 /**
  * The entry → run → observation walk, which exists because `DIALED_CORE`
  * and `DIALED_WEATHER` are separate databases and D1 cannot join them
@@ -112,7 +116,13 @@ describe("observationsForRuns", () => {
     const observations = await observationsForRuns([
       { id: "no-lat", lat: missing, lng: -73.33, startedAt: NOW, durationS: 0 },
       { id: "no-lng", lat: 43.33, lng: missing, startedAt: NOW, durationS: 0 },
-      { id: "neither", lat: missing, lng: missing, startedAt: NOW, durationS: 0 },
+      {
+        id: "neither",
+        lat: missing,
+        lng: missing,
+        startedAt: NOW,
+        durationS: 0,
+      },
     ]);
 
     expect(observations.size).toBe(0);
@@ -203,7 +213,13 @@ describe("observationsForRuns", () => {
 
     const observations = await observationsForRuns([
       { id: early, lat: 46.11, lng: -93.27, startedAt: NOW, durationS: 0 },
-      { id: late, lat: 46.11, lng: -93.27, startedAt: NOW + HOUR, durationS: 0 },
+      {
+        id: late,
+        lat: 46.11,
+        lng: -93.27,
+        startedAt: NOW + HOUR,
+        durationS: 0,
+      },
     ]);
 
     expect(observations.get(early)?.tempC).toBe(2);
@@ -316,7 +332,9 @@ describe("currentConditions", () => {
       precipMm: 2,
     });
 
-    expect(await currentConditions(52.11, -93.27, NOW)).toStrictEqual(pointConditions({ tempC: 6, feelsLikeC: 4, precipMm: 2, windKph: 10 }));
+    expect(await currentConditions(52.11, -93.27, NOW)).toStrictEqual(
+      pointConditions({ tempC: 6, feelsLikeC: 4, precipMm: 2, windKph: 10 }),
+    );
   });
 });
 
@@ -370,7 +388,7 @@ describe("follow", () => {
   it("stamps the follow in epoch seconds", async () => {
     const follower = await makeUser();
     const followee = await makeUser();
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     await follow(follower, followee);
 

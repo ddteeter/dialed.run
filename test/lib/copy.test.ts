@@ -30,11 +30,14 @@ describe("shared user-facing copy", () => {
     expect(text.split(" ").length).toBeLessThan(10);
   });
 
-  it.each(entries)("%s is sentence case and ends in a period", (_name, text) => {
-    expect(text).toMatch(/[.?]$/);
-    expect(text).not.toMatch(/!/);
-    expect(text[0]).toBe(text[0]?.toUpperCase());
-  });
+  it.each(entries)(
+    "%s is sentence case and ends in a period",
+    (_name, text) => {
+      expect(text).toMatch(/[.?]$/);
+      expect(text).not.toMatch(/!/);
+      expect(text[0]).toBe(text[0]?.toUpperCase());
+    },
+  );
 
   it.each(entries)("%s avoids the banned words", (_name, text) => {
     // "please", "invalid", "error", "oops" — and never "like", which is

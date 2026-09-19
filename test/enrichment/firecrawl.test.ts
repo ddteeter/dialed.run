@@ -13,10 +13,7 @@ import { scrapeThroughProxy } from "../../src/modules/enrichment/firecrawl";
 const URL_UNDER_TEST = "https://shop.example.com/products/tee";
 const KEY = "fc-test-key";
 
-function envelope(
-  rawHtml: string,
-  metadata?: Record<string, unknown>,
-): string {
+function envelope(rawHtml: string, metadata?: Record<string, unknown>): string {
   return JSON.stringify({
     success: true,
     data: { rawHtml, metadata: metadata ?? { statusCode: 200 } },
@@ -97,7 +94,10 @@ describe("scrapeThroughProxy", () => {
   });
 
   it("reports the proxy's error when it says the scrape failed", async () => {
-    const body = JSON.stringify({ success: false, error: "Insufficient credits" });
+    const body = JSON.stringify({
+      success: false,
+      error: "Insufficient credits",
+    });
     await expect(
       scrapeThroughProxy(URL_UNDER_TEST, KEY, answers(body)),
     ).rejects.toThrow(/Proxy failed: Insufficient credits/u);

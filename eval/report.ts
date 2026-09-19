@@ -34,7 +34,9 @@ export function didFind(composition: FabricComposition | undefined): boolean {
   return composition !== undefined && composition.verbatim.trim() !== "";
 }
 
-export function materialCount(composition: FabricComposition | undefined): number {
+export function materialCount(
+  composition: FabricComposition | undefined,
+): number {
   return (composition?.parts ?? []).reduce(
     (total, part) => total + part.materials.length,
     0,
@@ -122,7 +124,8 @@ function tally(pages: readonly PageExtractions[]): Map<string, ModelTally> {
  */
 function isContested(page: PageExtractions): boolean {
   const answers = page.candidates.filter(
-    (candidate) => candidate.by !== "deterministic" && candidate.error === undefined,
+    (candidate) =>
+      candidate.by !== "deterministic" && candidate.error === undefined,
   );
   if (answers.length < 2) return false;
   const found = answers.filter((answer) => didFind(answer.composition)).length;
@@ -213,6 +216,9 @@ function cell(verbatim: string | undefined): string {
   if (verbatim === undefined) return "_nothing_";
   // Split and rejoin rather than replace: the replacement is a literal
   // backslash-pipe, and `$` sequences in a replacement string are special.
-  const flat = verbatim.replaceAll(/\s+/gu, " ").split("|").join(String.raw`\|`);
+  const flat = verbatim
+    .replaceAll(/\s+/gu, " ")
+    .split("|")
+    .join(String.raw`\|`);
   return flat.length > 160 ? `${flat.slice(0, 160)}…` : flat;
 }

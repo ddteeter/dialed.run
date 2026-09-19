@@ -112,7 +112,9 @@ describe("exchangeCode", () => {
         jsonResponse({ message: "no" }, status),
       );
 
-      const error = await rejectionFrom(createStravaApi(CONFIG).exchangeCode("code"));
+      const error = await rejectionFrom(
+        createStravaApi(CONFIG).exchangeCode("code"),
+      );
 
       expect(isTerminalStravaError(error), String(status)).toBe(true);
       expect(messageOf(error)).toContain(String(status));
@@ -127,7 +129,9 @@ describe("exchangeCode", () => {
         jsonResponse({ message: "later" }, status),
       );
 
-      const error = await rejectionFrom(createStravaApi(CONFIG).exchangeCode("code"));
+      const error = await rejectionFrom(
+        createStravaApi(CONFIG).exchangeCode("code"),
+      );
 
       expect(error).toBeInstanceOf(StravaApiError);
       expect(isTerminalStravaError(error), String(status)).toBe(false);
@@ -141,7 +145,9 @@ describe("exchangeCode", () => {
       jsonResponse({ access_token: "access" }),
     );
 
-    const error = await rejectionFrom(createStravaApi(CONFIG).exchangeCode("code"));
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).exchangeCode("code"),
+    );
 
     expect(error).toBeInstanceOf(StravaApiError);
     expect(isTerminalStravaError(error)).toBe(false);
@@ -192,7 +198,9 @@ describe("refreshToken", () => {
       jsonResponse({ message: "no" }, 401),
     );
 
-    const error = await rejectionFrom(createStravaApi(CONFIG).refreshToken("old"));
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).refreshToken("old"),
+    );
 
     expect(isTerminalStravaError(error)).toBe(true);
   });
@@ -203,7 +211,9 @@ describe("refreshToken", () => {
     // absent property is not something it can classify.
     vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({}));
 
-    const error = await rejectionFrom(createStravaApi(CONFIG).refreshToken("old"));
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).refreshToken("old"),
+    );
 
     expect(error).toBeInstanceOf(StravaApiError);
     expect(isTerminalStravaError(error)).toBe(false);
@@ -237,7 +247,9 @@ describe("deauthorize", () => {
       new Response("", { status: 401 }),
     );
 
-    const error = await rejectionFrom(createStravaApi(CONFIG).deauthorize("token"));
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).deauthorize("token"),
+    );
 
     expect(error).toBeInstanceOf(StravaApiError);
     expect(isTerminalStravaError(error)).toBe(false);

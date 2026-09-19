@@ -11,7 +11,10 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { GarmentDetail } from "../../src/modules/closet/components/GarmentDetail";
-import type { getItemDetail, WardrobeItemRow } from "../../src/modules/closet/service";
+import type {
+  getItemDetail,
+  WardrobeItemRow,
+} from "../../src/modules/closet/service";
 import { itemView, wardrobeItem } from "./closet-fixtures";
 
 type Detail = Awaited<ReturnType<typeof getItemDetail>> & {
@@ -56,7 +59,11 @@ async function renderWithRouter(element: ReactElement) {
 function detail(overrides: Partial<Detail> = {}): Detail {
   return {
     ...itemView({
-      item: wardrobeItem({ id: "01ITEM", name: "Harrier", brand: "Tracksmith" }),
+      item: wardrobeItem({
+        id: "01ITEM",
+        name: "Harrier",
+        brand: "Tracksmith",
+      }),
       isGeneric: false,
     }),
     productDefaults: undefined,
@@ -96,10 +103,9 @@ describe("GarmentDetail: what it says about the piece", () => {
     expect(
       screen.getByRole("heading", { name: "Tracksmith Harrier" }),
     ).toBeVisible();
-    expect(screen.getByRole("img", { name: "Tracksmith Harrier" })).toHaveAttribute(
-      "src",
-      "/closet/photo/01ITEM/card",
-    );
+    expect(
+      screen.getByRole("img", { name: "Tracksmith Harrier" }),
+    ).toHaveAttribute("src", "/closet/photo/01ITEM/card");
   });
 
   it("shows no photo at all when there is none", async () => {
@@ -110,7 +116,11 @@ describe("GarmentDetail: what it says about the piece", () => {
   it("tags a generic piece, and a retired one", async () => {
     await renderWithRouter(
       garment({
-        item: wardrobeItem({ id: "01ITEM", name: "Long sleeve top", retired: true }),
+        item: wardrobeItem({
+          id: "01ITEM",
+          name: "Long sleeve top",
+          retired: true,
+        }),
         isGeneric: true,
       }),
     );
@@ -393,8 +403,6 @@ function jpeg(name = "a.jpg"): File {
 }
 
 describe("GarmentDetail: the photo upload", () => {
-
-
   it("sends the item id alongside the photo", async () => {
     const user = userEvent.setup();
     const uploadPhoto = vi.fn<

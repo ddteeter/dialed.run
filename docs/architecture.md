@@ -49,6 +49,25 @@ Key decisions embedded here:
 - **Two D1 databases**: `dialed-core` (users, closet, runs, feed) and
   `dialed-weather` (observations cache). Weather grows unbounded; isolating
   it protects the core DB from the 10 GB per-database cap.
+- **One rule decides public visibility** (106). `modules/safety` owns
+  `publiclyVisibleEntry()`, and `modules/feed` imports it rather than
+  writing `is_public = 1` at each of its five read sites. The arrow
+  therefore runs feed → safety, not the reverse: safety knows about entries,
+  and nothing in safety imports feed.
+- **A photo has a second gate, and it is a different question** (106). The
+  entry rule answers "may this post be seen"; `isPhotoPubliclyVisible()`
+  answers "has this image been screened", and a photo needs both. They are
+  separate because a screening verdict is not a moderation decision: a
+  runner's public post can carry a photo the classifier has not passed, and
+  the post stays while the photo does not. Three reads consult it — the
+  photo route, entry detail and the feed list — and for a while none did,
+  which meant `screen_status` was written by four paths and read by none.
+- **Photo screening calls out to OpenAI's moderation endpoint**, not to
+  Workers AI — the catalogue has one image classifier (`resnet-50`,
+  ImageNet classes) and no content-safety model. It is a secret, so no new
+  binding; the retry is the `screening-retry` cron reconciling rows still
+  marked `pending`, because that marker already exists (law 8c) and a queue
+  would be the over-engineered version.
 - **Weather is an adapter** (`modules/weather/provider/`). Visual Crossing is
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
@@ -106,6 +125,8 @@ flowchart TD
     CLOSET -->|index.ts only| PROD
     FEED -->|index.ts only| PROD
     OPS[modules/ops] -->|index.ts only| WX
+    SAFE[modules/safety] --> DB
+    FEED -->|index.ts only| SAFE
     CLOSET -->|index.ts only| AUTH
     PROD -->|index.ts only| AUTH
 
@@ -153,12 +174,12 @@ credential and no bearer-token path.
 Four entry points, all in `modules/auth`, differing only in what they do when
 there is no session:
 
-| call | for | on no session |
-|---|---|---|
-| `requireUserId()` | server functions | throws `AuthRequiredError` |
-| `requireSession()` | route loaders | redirects to `/auth/login` |
-| `sessionFromRequest(request)` | raw `server.handlers` routes | returns `null`, caller decides |
-| `getSession()` | anything rendering signed-out state | returns `null` |
+| call                          | for                                 | on no session                  |
+| ----------------------------- | ----------------------------------- | ------------------------------ |
+| `requireUserId()`             | server functions                    | throws `AuthRequiredError`     |
+| `requireSession()`            | route loaders                       | redirects to `/auth/login`     |
+| `sessionFromRequest(request)` | raw `server.handlers` routes        | returns `null`, caller decides |
+| `getSession()`                | anything rendering signed-out state | returns `null`                 |
 
 `sessionFromRequest` exists because a raw handler has a `Request` rather than
 TanStack's server context, so it cannot read headers the way the other two do.
@@ -247,6 +268,44 @@ per-UI-group wear counts ("15/18 wore long sleeve"). Bounded scan window +
 in-Worker aggregation is fine at launch scale; the packet requires EXPLAIN
 output and a row-scan cap. Manual-source observations are excluded. Stranger
 cards and follow CTAs are the full-E2 epic, post-MVP.
+
+## Composing across modules
+
+One module needs a control another module owns. Feed's entry detail needs
+W1's report button; the button opens a sheet with a reason list, its own
+copy, and a server function behind it, and all of that belongs to
+`modules/safety`.
+
+**Feed may not import it, and the rule is load-bearing rather than tidy.**
+`modules/safety`'s barrel reaches D1, and `EntryDetail` is in the client
+bundle — so the import would put the drizzle schema in the browser, which
+tsc, eslint, dependency-cruiser and the test suite are all blind to (see
+§Module dependency graph, and CLAUDE.md for the two times it happened).
+
+**The seam is a `ReactNode` prop, composed by the route.**
+
+```
+routes/feed/entry.$entryId.tsx     imports BOTH modules — it is a route,
+  │                                 it is not in the client bundle's
+  │                                 import graph the same way, and wiring
+  │                                 is the only thing it is allowed to do
+  ├── modules/safety   → <ReportAffordance … />
+  └── modules/feed     → <EntryDetail reportAffordance={…} />
+                              │
+                              └── renders the node. Does not know what a
+                                  report is, cannot reach D1, stays
+                                  testable in the ui project.
+```
+
+**Not a callback.** The thing feed must not import is not the _function_ —
+it is the sheet and its copy, which a callback would still have to render
+from inside feed. A node moves the whole subtree across; a callback moves
+only the verb.
+
+Raised as a question on PR #73 ("do we need to adjust the rules?"), and
+written down here because the answer is no but nothing recorded it — the
+next lane that needs a cross-module control should find this rather than
+re-derive it.
 
 ## Rungs of verification
 

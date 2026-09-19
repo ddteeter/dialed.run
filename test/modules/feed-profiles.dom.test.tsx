@@ -385,7 +385,12 @@ describe("OtherProfile", () => {
               verdict: 0,
               caption: "Perfect morning",
             },
-            { entryId: "01B", createdAt: 1_755_000_001, verdict: NOTHING, caption: NOTHING },
+            {
+              entryId: "01B",
+              createdAt: 1_755_000_001,
+              verdict: NOTHING,
+              caption: NOTHING,
+            },
           ],
         })}
         isFollowing={false}
@@ -473,9 +478,7 @@ describe("RunnerSearch", () => {
   it("says nothing at rest — not that there are no runners", async () => {
     // The empty state is not the resting state: an empty box would accuse
     // the user of having no friends before they typed.
-    await renderWithRouter(
-      <RunnerSearch search={() => Promise.resolve([])} />,
-    );
+    await renderWithRouter(<RunnerSearch search={() => Promise.resolve([])} />);
     expect(screen.queryByText("No runners found.")).toBeNull();
   });
 
@@ -490,7 +493,8 @@ describe("RunnerSearch", () => {
     // `searched` flips only once an answer is back: showing "no runners
     // found" against an in-flight query is a wrong answer, briefly.
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ userId: string; displayName: string }[]>();
+    const pending =
+      Promise.withResolvers<{ userId: string; displayName: string }[]>();
     await renderWithRouter(<RunnerSearch search={() => pending.promise} />);
 
     await user.type(screen.getByLabelText("Search by name"), "d");
@@ -532,9 +536,7 @@ describe("RunnerSearch", () => {
 
   it("says no runners found once a search has actually happened", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(
-      <RunnerSearch search={() => Promise.resolve([])} />,
-    );
+    await renderWithRouter(<RunnerSearch search={() => Promise.resolve([])} />);
 
     await user.type(screen.getByLabelText("Search by name"), "zzz");
 

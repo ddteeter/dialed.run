@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { follows } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { nowSeconds } from "../../lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -24,7 +25,7 @@ export async function follow(
     .values({
       followerId,
       followeeId,
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
 }
@@ -36,7 +37,10 @@ export async function unfollow(
   await db()
     .delete(follows)
     .where(
-      and(eq(follows.followerId, followerId), eq(follows.followeeId, followeeId)),
+      and(
+        eq(follows.followerId, followerId),
+        eq(follows.followeeId, followeeId),
+      ),
     );
 }
 

@@ -33,6 +33,8 @@ import { Route as RunsManualRouteImport } from './routes/runs/manual'
 import { Route as RunsNewRouteImport } from './routes/runs/new'
 import { Route as RunsStravaRouteImport } from './routes/runs/strava'
 import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
+import { Route as SafetyBlockedRouteImport } from './routes/safety/blocked'
+import { Route as SafetyReviewRouteImport } from './routes/safety/review'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
@@ -41,6 +43,7 @@ import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
 import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
 import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
+import { Route as SafetyReviewPhotoSplatRouteImport } from './routes/safety/review-photo.$'
 import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
 
 const IndexRoute = IndexRouteImport.update({
@@ -163,6 +166,16 @@ const RunsStravaCallbackRoute = RunsStravaCallbackRouteImport.update({
   path: '/runs/strava-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SafetyBlockedRoute = SafetyBlockedRouteImport.update({
+  id: '/safety/blocked',
+  path: '/safety/blocked',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SafetyReviewRoute = SafetyReviewRouteImport.update({
+  id: '/safety/review',
+  path: '/safety/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -203,6 +216,11 @@ const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
   path: '/runs/import/$importId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SafetyReviewPhotoSplatRoute = SafetyReviewPhotoSplatRouteImport.update({
+  id: '/safety/review-photo/$',
+  path: '/safety/review-photo/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
   id: '/closet/photo/$itemId/$size',
   path: '/closet/photo/$itemId/$size',
@@ -229,6 +247,8 @@ export interface FileRoutesByFullPath {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/safety/blocked': typeof SafetyBlockedRoute
+  '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
@@ -242,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesByTo {
@@ -264,6 +285,8 @@ export interface FileRoutesByTo {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/safety/blocked': typeof SafetyBlockedRoute
+  '/safety/review': typeof SafetyReviewRoute
   '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
   '/feed': typeof FeedIndexRoute
@@ -277,6 +300,7 @@ export interface FileRoutesByTo {
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesById {
@@ -300,6 +324,8 @@ export interface FileRoutesById {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/safety/blocked': typeof SafetyBlockedRoute
+  '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/feed/': typeof FeedIndexRoute
@@ -313,6 +339,7 @@ export interface FileRoutesById {
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
+  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRouteTypes {
@@ -337,6 +364,8 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/safety/blocked'
+    | '/safety/review'
     | '/call/'
     | '/closet/'
     | '/feed/'
@@ -350,6 +379,7 @@ export interface FileRouteTypes {
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
+    | '/safety/review-photo/$'
     | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -372,6 +402,8 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/safety/blocked'
+    | '/safety/review'
     | '/call'
     | '/closet'
     | '/feed'
@@ -385,6 +417,7 @@ export interface FileRouteTypes {
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
+    | '/safety/review-photo/$'
     | '/closet/photo/$itemId/$size'
   id:
     | '__root__'
@@ -407,6 +440,8 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/safety/blocked'
+    | '/safety/review'
     | '/call/'
     | '/closet/'
     | '/feed/'
@@ -420,6 +455,7 @@ export interface FileRouteTypes {
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
     | '/runs/import/$importId'
+    | '/safety/review-photo/$'
     | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
 }
@@ -443,6 +479,8 @@ export interface RootRouteChildren {
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  SafetyBlockedRoute: typeof SafetyBlockedRoute
+  SafetyReviewRoute: typeof SafetyReviewRoute
   CallIndexRoute: typeof CallIndexRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
   FeedIndexRoute: typeof FeedIndexRoute
@@ -456,6 +494,7 @@ export interface RootRouteChildren {
   FeedUUserIdRoute: typeof FeedUUserIdRoute
   FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
+  SafetyReviewPhotoSplatRoute: typeof SafetyReviewPhotoSplatRoute
   ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
 
@@ -629,6 +668,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsStravaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/safety/blocked': {
+      id: '/safety/blocked'
+      path: '/safety/blocked'
+      fullPath: '/safety/blocked'
+      preLoaderRoute: typeof SafetyBlockedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/safety/review': {
+      id: '/safety/review'
+      path: '/safety/review'
+      fullPath: '/safety/review'
+      preLoaderRoute: typeof SafetyReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -685,6 +738,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsImportImportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/safety/review-photo/$': {
+      id: '/safety/review-photo/$'
+      path: '/safety/review-photo/$'
+      fullPath: '/safety/review-photo/$'
+      preLoaderRoute: typeof SafetyReviewPhotoSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/closet/photo/$itemId/$size': {
       id: '/closet/photo/$itemId/$size'
       path: '/closet/photo/$itemId/$size'
@@ -715,6 +775,8 @@ const rootRouteChildren: RootRouteChildren = {
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  SafetyBlockedRoute: SafetyBlockedRoute,
+  SafetyReviewRoute: SafetyReviewRoute,
   CallIndexRoute: CallIndexRoute,
   ClosetIndexRoute: ClosetIndexRoute,
   FeedIndexRoute: FeedIndexRoute,
@@ -728,6 +790,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedUUserIdRoute: FeedUUserIdRoute,
   FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
+  SafetyReviewPhotoSplatRoute: SafetyReviewPhotoSplatRoute,
   ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }
 export const routeTree = rootRouteImport
