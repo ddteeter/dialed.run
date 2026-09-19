@@ -30,13 +30,11 @@ function ClosetPage() {
   const { listing } = Route.useLoaderData();
   return (
     <Layout>
-      <div className="flex items-center justify-between px-4 pt-6 sm:px-6">
-        <h1 className="font-display text-2xl uppercase tracking-[-0.01em]">
-          The Closet
-        </h1>
+      <div className="flex items-center justify-between px-4 pt-6 wide:px-6">
+        <h1 className="font-display text-title uppercase">The Closet</h1>
         <Link
           to="/closet/new"
-          className="rounded-md bg-night px-3 py-1.5 text-sm font-semibold text-chalk"
+          className="rounded-pill bg-ink px-3 py-2 text-body font-semibold text-ground"
         >
           Add
         </Link>

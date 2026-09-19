@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
+import { Mono } from "../../../ui";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -41,31 +42,29 @@ const PROMISES: readonly string[] = [
  */
 export function NowGoRun(): JSX.Element {
   return (
-    <div className="overflow-hidden rounded-3xl bg-hi-viz text-night">
+    <div className="overflow-hidden rounded-sheet bg-failure text-ink">
       <div className="flex flex-col gap-3 px-5 pb-6 pt-4">
         <Steps />
-        <h1 className="m-0 font-display text-4xl uppercase leading-[0.95] tracking-[-0.04em]">
-          Now go run.
-        </h1>
+        <h1 className="m-0 font-display text-display uppercase">Now go run.</h1>
       </div>
 
-      <div className="flex flex-col gap-5 bg-night px-5 py-6 text-chalk">
-        <p className="m-0 text-[17px] leading-relaxed">
+      <div className="flex flex-col gap-5 bg-ink px-5 py-6 text-ground">
+        <p className="m-0 text-lead">
           Next time you finish a run, upload it and tell us what you wore.
           That&rsquo;s the whole loop.
         </p>
 
         <div className="flex flex-col gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-hi-viz">
+          <Mono step="xs" className="text-hi-viz">
             What happens as you log
-          </span>
-          <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
+          </Mono>
+          <ol className="m-0 flex list-none flex-col gap-3 p-0">
             {PROMISES.map((promise, index) => (
               <li key={promise} className="flex items-start gap-3">
-                <span className="pt-0.5 font-mono text-[11px] text-pink">
+                <Mono step="sm" className="pt-1 text-cold-text">
                   {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="text-sm leading-snug">{promise}</span>
+                </Mono>
+                <span className="text-body">{promise}</span>
               </li>
             ))}
           </ol>
@@ -73,16 +72,16 @@ export function NowGoRun(): JSX.Element {
 
         <StravaOffer />
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           <Link
             to="/runs/new"
-            className="rounded-full bg-pink px-4 py-4 text-center font-display text-base uppercase text-night"
+            className="rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-ink"
           >
             I have a run to upload
           </Link>
           <Link
             to="/"
-            className="rounded-full border border-chalk/30 px-4 py-3.5 text-center text-[15px] font-semibold text-chalk"
+            className="rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ground"
           >
             Done for now
           </Link>
@@ -104,7 +103,7 @@ function Steps(): JSX.Element {
   return (
     <div aria-hidden="true" className="flex gap-1">
       {[0, 1, 2, 3].map((step) => (
-        <div key={step} className="h-[3px] flex-1 bg-night" />
+        <div key={step} className="h-1 flex-1 bg-ink" />
       ))}
     </div>
   );
@@ -121,22 +120,22 @@ function Steps(): JSX.Element {
  */
 function StravaOffer(): JSX.Element {
   return (
-    <div className="flex flex-col gap-2.5 rounded-2xl border border-chalk/15 p-4">
+    <div className="flex flex-col gap-3 rounded-sheet border border-hairline p-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[15px] font-semibold">Connect Strava</span>
-          <span className="text-xs text-chalk/60">
+        <div className="flex flex-col gap-1">
+          <span className="text-body font-semibold">Connect Strava</span>
+          <span className="text-micro text-muted">
             So we can remind you. Optional.
           </span>
         </div>
         <Link
           to="/runs/strava"
-          className="shrink-0 rounded-full border border-chalk/30 px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.06em]"
+          className="shrink-0 rounded-pill border border-hairline px-4 py-2"
         >
-          Connect
+          <Mono step="xs">Connect</Mono>
         </Link>
       </div>
-      <p className="m-0 text-xs leading-snug text-chalk/60">
+      <p className="m-0 text-micro text-muted">
         We read that a run happened. Nothing else.
       </p>
     </div>

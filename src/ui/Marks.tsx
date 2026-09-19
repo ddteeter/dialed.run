@@ -38,7 +38,7 @@ export function CoverageMark({
     <span
       aria-hidden="true"
       data-coverage={level}
-      className={`inline-block h-3 w-8 shrink-0 rounded-[2px] ${COVERAGE_FILL[level]}`}
+      className={`inline-block h-3 w-8 shrink-0 rounded-none ${COVERAGE_FILL[level]}`}
     />
   );
 }
@@ -57,12 +57,12 @@ export type VerdictKind = "cold" | "dialed" | "warm";
 const SLOTS: readonly VerdictKind[] = ["cold", "dialed", "warm"];
 
 const VERDICT_INK: Readonly<Record<VerdictKind, string>> = {
-  cold: "bg-pink",
+  cold: "bg-action",
   dialed: "bg-teal",
   // Full-strength ink, not `text-night/30`: opacity never encodes meaning
   // (§AB rule 04), and the tint it replaced was both indistinguishable
   // from its neighbours and under-contrast.
-  warm: "bg-night/70",
+  warm: "bg-quiet",
 };
 
 /**
@@ -86,8 +86,8 @@ export function VerdictMark({
       {SLOTS.map((slot) => (
         <span
           key={slot}
-          className={`inline-block h-2 w-2 rounded-full ${
-            slot === kind ? VERDICT_INK[kind] : "bg-night/15"
+          className={`inline-block h-2 w-2 rounded-pill ${
+            slot === kind ? VERDICT_INK[kind] : "bg-hairline-2"
           }`}
         />
       ))}

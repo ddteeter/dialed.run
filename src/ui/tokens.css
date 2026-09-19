@@ -1,9 +1,24 @@
 /**
- * dialed.run brand tokens — docs/product.md §Brand application.
- * The five colors and three families are the whole palette; do not add
- * accents here without a product-doc change.
+ * dialed.run values — the runtime half of the two design contracts.
+ *
+ * `design/tokens.js` owns type, spacing, radius, breakpoints and measures;
+ * `design/Theme.dc.html`'s T1 table owns colour. CLAUDE.md §Design truth:
+ * where a contract and an artboard disagree, the contract wins and the
+ * board is never going to catch up. **Never measure a board to get a
+ * number** — every value below is copied from one of those two files, and
+ * `test/ui/tokens.test.ts` fails when a copy drifts.
+ *
+ * This file declares the raw values. `src/styles.css` maps them onto
+ * Tailwind's theme so `text-body` / `bg-panel` / `rounded-card` are the
+ * only way to spell them in a component.
  */
 :root {
+  /* ------------------------------------------------------------------
+   * The palette — docs/product.md §Brand application. Five colours, and
+   * T1's roles resolve to four of them. Nothing addresses these directly
+   * any more: they are the ground truth a role points at, not a utility.
+   * ------------------------------------------------------------------ */
+
   /* brand, CTAs, "dialed" state */
   --course-pink: #ff2d8a;
   /* the app telling you something (call epic; sparingly in v1) */
@@ -15,15 +30,96 @@
   /* surfaces, cards, reading */
   --chalk: #f4f3ef;
 
-  /* Archivo 400/600/800 — interface */
+  /* ------------------------------------------------------------------
+   * T1 · the pairs — light column. Task 111 adds the dark column here and
+   * nowhere else: every role below is already named, so 111 changes
+   * values rather than call sites.
+   *
+   * The three greys are the reason this table exists. T1's own note on
+   * `--quiet` reads "Full strength, never opacity", and `ink.css` had
+   * already retired `text-night/30` for the same reason (§AB rule 04):
+   * opacity never encodes meaning, and a tint of ink on ink is invisible
+   * the moment the ground flips.
+   * ------------------------------------------------------------------ */
+
+  /* The screen. Paper and ink trade places. */
+  --ground: var(--chalk);
+  /* Primary text, filled buttons, coverage "covered". Always ground's opposite. */
+  --ink: var(--night-run);
+  /* Cards and rows that sit on the ground. One step, never more. */
+  --panel: #ffffff;
+  /* Recessed blocks: explanations, quiet notes. */
+  --tint: #edece3;
+  /* Dividers, unfilled slots, resting borders. */
+  --hairline: #dcdbd2;
+  /* Empty verdict slots, empty coverage bands. */
+  --hairline-2: #c9c8be;
+  /* Mono captions, secondary metadata. */
+  --muted: #7a7a70;
+  /* Secondary prose — and the warm-verdict grey, per §AB. */
+  --quiet: #4e4e44;
+  /* Input placeholders and disabled labels. */
+  --placeholder: #9a9a90;
+  /* Where a photo will be. Hatch is one step darker. */
+  --photo: #e3e2d8;
+  /* Dialed verdict, matched state. Teal as a *surface* stays --split-teal. */
+  --dialed-text: #009f8c;
+  /* Cold verdict as text, inline action links. Pink as a surface is --action. */
+  --cold-text: #c21a6b;
+  /* Hi-viz at low strength behind unread rows. Hi-viz itself never dims. */
+  --unread: #fff9dc;
+  /* Does not change with the ground. Text on it is always ink. */
+  --action: var(--course-pink);
+  /* Does not change with the ground. Text on it is always ink. */
+  --failure: var(--hi-viz);
+
+  /* ------------------------------------------------------------------
+   * FAMILY — tokens.js. Three families, each with one job: Archivo Black
+   * says it, Archivo explains it, Plex Mono measured it. They never trade
+   * jobs and never share a size.
+   * ------------------------------------------------------------------ */
+
+  /* Archivo 400/600/700 — interface */
   --font-family-interface: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  /* Archivo Black — display (uppercase, ≤5 words) */
+  /* Archivo Black — display (one cut) */
   --font-family-display:
     "Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
   /* IBM Plex Mono 400/500 — every measured value */
   --font-family-mono:
     "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  /* chalk/ink light-first; no dark theme in v1 */
+  /* Light-first; T1's dark column is task 111. */
   color-scheme: light;
+}
+
+/**
+ * T2 rule 04 — the inverted block.
+ *
+ * "The ink header block on a paper screen becomes a paper header block on
+ * an ink screen. That's the brand's contrast move, not a bug." A block
+ * that inverts the ground inverts every ground-relative role with it, so
+ * the roles are redefined here rather than each element reaching for a
+ * different token: `text-muted` inside this means "muted against ink".
+ *
+ * These are T1's dark-column values, which is not the same job as task
+ * 111. 111 puts `data-theme` on the *root* and flips the whole app; this
+ * flips one block on a screen whose ground has not changed, and both
+ * artboard sets draw it. 111 will reuse these values; it does not own them.
+ *
+ * `color-scheme` is deliberately not set: this is a block, not a document,
+ * and native controls inside it still sit on the page's own ground.
+ */
+[data-ground="ink"] {
+  --ground: var(--night-run);
+  --ink: var(--chalk);
+  --panel: #16161b;
+  --tint: #1c1c22;
+  --hairline: #2a2a31;
+  --hairline-2: #3a3a42;
+  --muted: #8b8b93;
+  --quiet: #b9b8ae;
+  --placeholder: #6e6e74;
+  --photo: #24242b;
+  --dialed-text: var(--split-teal);
+  --cold-text: var(--course-pink);
 }

@@ -14,6 +14,7 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  Mono,
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
@@ -282,15 +283,15 @@ export function VerdictForm({
 
   if (noted !== undefined) {
     return (
-      <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 px-5 pt-16 text-center">
-        <Bracketed className="text-teal">Noted</Bracketed>
+      <div className="mx-auto flex w-full max-w-column flex-col items-center gap-4 px-5 pt-16 text-center">
+        <Bracketed className="text-dialed-text">Noted</Bracketed>
         <p>{noted}</p>
         <button
           type="button"
           onClick={() => {
             void navigate({ to: "/feed/entry/$entryId", params: { entryId } });
           }}
-          className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+          className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
         >
           Done
         </button>
@@ -302,13 +303,13 @@ export function VerdictForm({
     <form
       ref={form.formRef}
       noValidate
-      className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6"
+      className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6"
       onSubmit={(event) => {
         event.preventDefault();
         void form.submit(payload());
       }}
     >
-      <h1 className="font-display text-2xl uppercase leading-none">Verdict</h1>
+      <h1 className="font-display text-title uppercase">Verdict</h1>
       <FormStatus>{form.status}</FormStatus>
       <FormErrorSummary
         rows={form.summaryRows}
@@ -330,8 +331,8 @@ export function VerdictForm({
               }}
               className={
                 verdict === choice.value
-                  ? "rounded-md bg-night px-4 py-3 text-left font-semibold text-chalk"
-                  : "rounded-md border border-night/20 px-4 py-3 text-left"
+                  ? "rounded-card bg-ink px-4 py-3 text-left font-semibold text-ground"
+                  : "rounded-card border border-hairline px-4 py-3 text-left"
               }
             >
               {choice.label}
@@ -342,11 +343,13 @@ export function VerdictForm({
 
       {entry.items.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">Per-item notes</h2>
+          <h2>
+            <Mono step="xs">Per-item notes</Mono>
+          </h2>
           {entry.items.map((item) => (
             <div
               key={item.itemId}
-              className="flex items-center justify-between text-sm"
+              className="flex items-center justify-between text-body"
             >
               <span>{item.name}</span>
               <select
@@ -358,7 +361,7 @@ export function VerdictForm({
                       "too_much" | "not_enough" | "",
                   }));
                 }}
-                className="rounded-md border border-night/20 px-2 py-1"
+                className="rounded-field border border-hairline px-2 py-1"
               >
                 <option value="">No flag</option>
                 <option value="too_much">Too much</option>
@@ -370,7 +373,9 @@ export function VerdictForm({
       ) : undefined}
 
       <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase">Photos</h2>
+        <h2>
+          <Mono step="xs">Photos</Mono>
+        </h2>
         {photoKeys.length > 0 ? (
           <div className="grid grid-cols-4 gap-2">
             {photoKeys.map((key) => (
@@ -378,7 +383,7 @@ export function VerdictForm({
                 key={key}
                 src={`/feed/photo/${key}`}
                 alt=""
-                className="aspect-square w-full rounded-lg object-cover"
+                className="aspect-square w-full rounded-field object-cover"
               />
             ))}
           </div>
@@ -409,7 +414,7 @@ export function VerdictForm({
                 onChange={(event) => {
                   void handlePhotoSelect(event);
                 }}
-                className="text-sm"
+                className="text-body"
               />
             ) : undefined}
           </FormField>
@@ -423,7 +428,9 @@ export function VerdictForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase">Tags</h2>
+        <h2>
+          <Mono step="xs">Tags</Mono>
+        </h2>
         <div className="flex flex-wrap gap-2">
           {entryTags.map((tag) => (
             <button
@@ -434,8 +441,8 @@ export function VerdictForm({
               }}
               className={
                 tags.has(tag)
-                  ? "rounded-full bg-night px-3 py-1 text-xs text-chalk"
-                  : "rounded-full border border-night/20 px-3 py-1 text-xs"
+                  ? "rounded-pill bg-ink px-3 py-1 text-micro text-ground"
+                  : "rounded-pill border border-hairline px-3 py-1 text-micro"
               }
             >
               {tag.replaceAll("_", " ")}
@@ -444,7 +451,7 @@ export function VerdictForm({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-body">
         <input
           type="checkbox"
           checked={isPublic}

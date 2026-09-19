@@ -8,20 +8,20 @@ in round 3 and was ported cleanly; it is almost entirely unused.
 ## Why it is a lane now
 
 `docs/design-deltas.md` open-queue item 2 has said since 2026-09-06 that this
-is *"not a design ask — an implementation debt"*, to be adopted
-*"opportunistically"* and audited at the launch gate. Six lanes shipped under
+is _"not a design ask — an implementation debt"_, to be adopted
+_"opportunistically"_ and audited at the launch gate. Six lanes shipped under
 that instruction and none adopted any of it. Measured:
 
 - The doctrine defines **12 surfaces** (`SURFACES` in `design/motion.js`).
 - `src/ui/motion.css` ports every variable — `--dur-instant/quick/move/
-  reveal/breathe`, `--ease-snap/exit/align`, `--travel-element`. **The port is
+reveal/breathe`, `--ease-snap/exit/align`, `--travel-element`. **The port is
   complete and correct.**
 - **Two files in the app consume motion**: `use-form-submit.ts` and
   `Skeleton.tsx`. Two files contain any `transition`, `animate-` or
   `@keyframes` at all: `motion.css` and `Skeleton.tsx`.
 
 One correction to the delta's own wording, because it changes the work: it
-says surfaces animate *"not at all or ad hoc."* **There is no ad hoc** — zero
+says surfaces animate _"not at all or ad hoc."_ **There is no ad hoc** — zero
 raw ms values, zero cubic-beziers anywhere in `src`. Nothing needs unpicking.
 The moves are simply absent, so this lane is additive.
 
@@ -38,7 +38,7 @@ The moves are simply absent, so this lane is additive.
 1. **Pending / loading** — brackets breathe, 1 → 0.35 opacity, 900ms loop.
    `Skeleton.tsx`. Confirm it holds still at full opacity under reduced
    motion rather than stopping at an arbitrary frame.
-2. **Offline / error** — *"nothing. Deliberately static."* Satisfied by doing
+2. **Offline / error** — _"nothing. Deliberately static."_ Satisfied by doing
    nothing. Add a test that fails if someone animates a failure path later;
    the Form Contract already says nothing in the failure path animates.
 
@@ -48,22 +48,22 @@ Each entry is `surface → move, duration, easing` straight from `SURFACES`.
 **Do not paraphrase the map; read it.**
 
 3. **Tab switch** — no content transition; the active indicator slides under
-   the label. `instant`, `snap`. Explicitly *not* a crossfade: *"a crossfade
-   would add 200ms to the most-used gesture in the app."*
+   the label. `instant`, `snap`. Explicitly _not_ a crossfade: _"a crossfade
+   would add 200ms to the most-used gesture in the app."_
 4. **Log flow step** — step slides in from the trailing edge, previous slides
    out. `move`, `snap`. Direction carries which way you are travelling, so
    Back must reverse it.
 5. **Verdict commit** — brackets close onto the chosen verdict, then the row
-   locks. `reveal`, `align`. *"The single most important input in the
-   product. The bracket closing is the receipt."* Get this one right.
+   locks. `reveal`, `align`. _"The single most important input in the
+   product. The bracket closing is the receipt."_ Get this one right.
 6. **Sheet / drawer** — travels from its own edge; exits on `ease-exit` at
    `quick`. Leaving is faster than arriving. `src/ui/Sheet.tsx` does not move
    today.
 7. **Closet filter** — items reflow to new positions. **No fade, no
-   re-enter** — *"the garments did not go anywhere."*
+   re-enter** — _"the garments did not go anywhere."_
 8. **Row press** — background flips to ink. `instant`, `snap`. **No scale** —
-   *"scale-on-press is a spring in disguise and it makes crisp type
-   shimmer."*
+   _"scale-on-press is a spring in disguise and it makes crisp type
+   shimmer."_
 9. **Toast / banner** — enters from the top edge, holds, accelerates away.
    `quick`, `snap`.
 10. **Numbers & temps** — mono digits roll vertically, never crossfade.
@@ -89,13 +89,13 @@ Each entry is `surface → move, duration, easing` straight from `SURFACES`.
 
 - **Recommendation reveal** — the dressing-order stagger. That is the Call
   epic's payoff and there is no Call in v1.
-- Any surface not in the map. *"If a surface isn't on this list, it doesn't
-  animate yet. Ask before inventing one."*
+- Any surface not in the map. _"If a surface isn't on this list, it doesn't
+  animate yet. Ask before inventing one."_
 - Desktop's top-bar behaviour (task 115).
 
 ## Test expectations
 
-- jsdom cannot observe an animation running. Assert what is *declarative*:
+- jsdom cannot observe an animation running. Assert what is _declarative_:
   the element carries the transition, the duration resolves to the right
   variable, the reduced-motion path collapses. Do not write a test that
   passes because a class string exists — that is the vacuous-assertion trap

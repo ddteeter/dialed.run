@@ -217,7 +217,7 @@ function LocateButton({
     <div className="flex flex-col gap-1">
       <button
         type="button"
-        className="self-start rounded-md border border-night/20 px-3 py-2 text-sm font-semibold"
+        className="self-start rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
         onClick={() => {
           void locate().then((at) => {
             setAsked(true);
@@ -228,10 +228,10 @@ function LocateButton({
         Use my location
       </button>
       {located ? (
-        <span className="text-xs text-night/50">Got it.</span>
+        <span className="text-micro text-muted">Got it.</span>
       ) : undefined}
       {asked && !located ? (
-        <span className="text-xs text-night/50">
+        <span className="text-micro text-muted">
           No location — the city above is enough.
         </span>
       ) : undefined}

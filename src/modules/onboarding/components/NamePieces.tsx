@@ -82,7 +82,7 @@ export function NamePieces({
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="m-0 text-[15px] leading-relaxed text-night/70">
+      <p className="m-0 text-body text-quiet">
         Name those. A category can&rsquo;t remember &mdash; a product can.
       </p>
 
@@ -119,11 +119,11 @@ export function NamePieces({
         }}
       />
 
-      <div className="border-t border-night/15 pt-3">
+      <div className="border-t border-hairline pt-3">
         {/* A fraction, never a goal — and the same sentence shape the
             closet nudge already uses, so a runner meets one idea twice
             rather than two ideas once. */}
-        <Mono className="text-night/50">
+        <Mono className="text-muted">
           {namedCount} of {offer.totalCount} named
         </Mono>
       </div>
@@ -144,18 +144,18 @@ function NextAndSkip({
   onDone,
 }: Readonly<{ onDone: () => void }>): JSX.Element {
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3">
       <button
         type="button"
         onClick={onDone}
-        className="grid min-h-[52px] cursor-pointer place-items-center rounded-[10px] border-none bg-pink px-6 py-4 font-display text-base uppercase tracking-[-0.01em] text-night"
+        className="grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
       >
         Next
       </button>
       <button
         type="button"
         onClick={onDone}
-        className="cursor-pointer self-center border-none bg-transparent p-0 text-sm underline underline-offset-[3px]"
+        className="cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
       >
         Skip for now
       </button>
@@ -200,19 +200,21 @@ function PieceRow({
   const isFinished = result?.isNamed === true;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-night/15 bg-chalk px-[14px] py-[12px]">
+    <div className="flex flex-col gap-3 rounded-field border border-hairline bg-ground px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-semibold">{label}</span>
-          <Mono className="text-[10px] text-night/50">{subtitle}</Mono>
+        <div className="flex flex-col gap-1">
+          <span className="text-body font-semibold">{label}</span>
+          <Mono step="xs" className="text-muted">
+            {subtitle}
+          </Mono>
         </div>
         {isNaming || isFinished ? undefined : (
           <button
             type="button"
             onClick={onStartNaming}
-            className="shrink-0 cursor-pointer rounded-full border border-night/20 bg-transparent px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.06em]"
+            className="shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-2"
           >
-            Name it
+            <Mono step="xs">Name it</Mono>
           </button>
         )}
       </div>

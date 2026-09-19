@@ -77,13 +77,13 @@ of `src/modules/*/components/`, and unlike the schema there is no protocol
 for component contention: four worktrees here would conflict on nearly every
 file.
 
-| # | lane | why it sits here |
-| --- | --- | --- |
-| 1 | **113** design system port **+ §AG/§AH** | Everything downstream takes its numbers from `tokens.js` and T1. Writing raw px before this means rewriting it after. Round 10/11's two v1 slices — composition on garment detail, colour collection on F — fold in here (owner, 2026-09-18) because §AH edits `GarmentForm` and `garmentBase`, which Part A already rewrites. **Part A lands first and completely; then Part B.** |
-| 2 | **114** motion adoption | Travel distances are spacing steps. |
-| 3 | **112** accessibility | The focus outline, 44px targets and 8px gaps are token values — and its reduced-motion requirement is vacuous until 114 gives it something that moves. |
-| 4 | **115** desktop | Consumes all three: `BREAKPOINT`/`MEASURE` from 113, the tab-switch treatment from 114, focus order from 112. Also the only one that crosses every lane's routes, so it runs alone. |
-| 5 | **116** composition reconciliation | The other half of "does the UI match the design". 112–115 make every *value* enforceable; nothing checks *composition* — and rounds 6–8 changed it on already-built screens while the repo could not see the drawings. Last, because 113–115 move every screen and 115 adds a second composition at width. |
+| #   | lane                                     | why it sits here                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **113** design system port **+ §AG/§AH** | Everything downstream takes its numbers from `tokens.js` and T1. Writing raw px before this means rewriting it after. Round 10/11's two v1 slices — composition on garment detail, colour collection on F — fold in here (owner, 2026-09-18) because §AH edits `GarmentForm` and `garmentBase`, which Part A already rewrites. **Part A lands first and completely; then Part B.** |
+| 2   | **114** motion adoption                  | Travel distances are spacing steps.                                                                                                                                                                                                                                                                                                                                                |
+| 3   | **112** accessibility                    | The focus outline, 44px targets and 8px gaps are token values — and its reduced-motion requirement is vacuous until 114 gives it something that moves.                                                                                                                                                                                                                             |
+| 4   | **115** desktop                          | Consumes all three: `BREAKPOINT`/`MEASURE` from 113, the tab-switch treatment from 114, focus order from 112. Also the only one that crosses every lane's routes, so it runs alone.                                                                                                                                                                                                |
+| 5   | **116** composition reconciliation       | The other half of "does the UI match the design". 112–115 make every _value_ enforceable; nothing checks _composition_ — and rounds 6–8 changed it on already-built screens while the repo could not see the drawings. Last, because 113–115 move every screen and 115 adds a second composition at width.                                                                         |
 
 **The split they inherit.** `CLAUDE.md` §Design truth divides the bundle:
 contracts are truth for values, artboards are truth for composition. Lanes
@@ -93,8 +93,8 @@ is review rather than enforcement because no rule can check whether a screen
 contains the right things in the right order.
 
 **Why they are lanes at all.** `docs/design-deltas.md` carried motion
-adoption as something lanes would pick up *"opportunistically, audited at the
-launch gate"*. Six lanes shipped and none did: of the doctrine's 12 surfaces,
+adoption as something lanes would pick up _"opportunistically, audited at the
+launch gate"_. Six lanes shipped and none did: of the doctrine's 12 surfaces,
 one is implemented. The same would have happened to the token contract —
 93 arbitrary values and 17 `Mono` bypasses accumulated the same way. A
 cross-cutting contract with no packet does not get adopted.

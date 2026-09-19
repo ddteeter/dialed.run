@@ -27,14 +27,14 @@ lanes implemented them from those prose summaries.
 
 Six surfaces changed that way:
 
-| section | what moved |
-| --- | --- |
-| §AA | O3 recut to one flat 24-row list, ranked not filtered, nothing pre-ticked |
-| §AB | coverage → ink density; verdict → three-slot position mark; `text-night/30` retired |
-| §AC | P2.5 rebuilt — inline naming, two fields, no link field, no gate |
-| §AD | W3's two web states, brackets-breathe instead of a spinner |
-| §AE | onboarding's column decision |
-| §AF | transient feedback — copy link, autosave |
+| section | what moved                                                                          |
+| ------- | ----------------------------------------------------------------------------------- |
+| §AA     | O3 recut to one flat 24-row list, ranked not filtered, nothing pre-ticked           |
+| §AB     | coverage → ink density; verdict → three-slot position mark; `text-night/30` retired |
+| §AC     | P2.5 rebuilt — inline naming, two fields, no link field, no gate                    |
+| §AD     | W3's two web states, brackets-breathe instead of a spinner                          |
+| §AE     | onboarding's column decision                                                        |
+| §AF     | transient feedback — copy link, autosave                                            |
 
 **One of these was spot-checked and was correct.** `src/ui/Marks.tsx` cites
 §AB, ships the solid/hatch/hairline encoding and retires the opacity channel
@@ -87,7 +87,7 @@ be the session that wrote the code.**
    `data-screen-label` — 96 of them in the light boards. Open the `.dc.html`
    from `file://` in the same Chromium the e2e suite uses and screenshot
    `[data-screen-label="…"]`. Note the labelled container holds a caption
-   *plus* the screen card; you want the card.
+   _plus_ the screen card; you want the card.
 3. **The implementation side is a Playwright capture** at `MEASURE.panel`
    (390) and, after 115, at `desk` for the screens that have a wide layout.
    The demo specs already navigate most of these — reuse their fixtures

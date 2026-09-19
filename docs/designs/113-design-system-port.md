@@ -16,7 +16,7 @@ the raw T1 hexes in `src/ui/tokens.css`. No parallel system, no new layer.
 
 - **Type.** Seven `--text-<step>` triples (size + `--line-height` +
   `--letter-spacing`) and four `--text-mono-<step>`. One utility carries all
-  three, so tokens.js law 1 — *tracking is a function of size* — becomes
+  three, so tokens.js law 1 — _tracking is a function of size_ — becomes
   unexpressible-otherwise instead of review-enforced.
 - **`Mono` takes a `step`** (`xs|sm|md|lg`), default `sm` (11px/0.06em) —
   what 12 of the 17 bypasses and every current call site want. The step map
@@ -32,7 +32,7 @@ the raw T1 hexes in `src/ui/tokens.css`. No parallel system, no new layer.
 - **Tailwind's default `--text-*`/`--radius-*` namespaces are cleared.** See
   the open question; this is what sets the lane's size.
 
-Part B follows Part A's *merge*, not its commit. §AG is display-only on
+Part B follows Part A's _merge_, not its commit. §AG is display-only on
 garment detail. §AH adds a nullable enum + hex named `hi_viz`, so the safety
 flag cannot collide with the existing moderation `visibility` column.
 
@@ -51,7 +51,7 @@ flag cannot collide with the existing moderation `visibility` column.
 
 - `test/ui/tokens.test.ts` (unit) — the pin test, modelled on
   `icons.test.tsx`: parse `design/tokens.js?raw`, assert the parse found
-  7/4/9/6/2/3 entries *before* asserting values, then match each against the
+  7/4/9/6/2/3 entries _before_ asserting values, then match each against the
   `@theme` block read from `src/styles.css?raw`.
 - `test/ui/mono.dom.test.tsx` (jsdom) — each step's class triple; `xs`/`sm`
   uppercase and `md`/`lg` not; default `sm`.
@@ -67,7 +67,7 @@ flag cannot collide with the existing moderation `visibility` column.
    names it. On `main`: `text-sm` (14px) ×86 and `text-base` (16px) ×9,
    which COLLAPSE sends to `TYPE.body`/`small`; `text-3xl`/`4xl` ×5 →
    `display`; `rounded-md` (6px) ×39, a radius no token has; and 149
-   opacity colours against T1's *"full strength, never opacity"*. Stopping
+   opacity colours against T1's _"full strength, never opacity"_. Stopping
    at the packet's letter satisfies "zero arbitrary values" while 86
    elements still render at a size no token names — so the default
    namespaces are cleared and `text-sm` stops existing, rather than being

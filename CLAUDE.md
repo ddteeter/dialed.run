@@ -293,9 +293,9 @@ equal standing (owner's call, 2026-09-17):
   copy, which states exist.
 
 Where they disagree, **the contract wins and the drawing is never going to
-catch up.** Round 10's `tokens.js` says so in its own PRECEDENCE block: *"the
+catch up.** Round 10's `tokens.js` says so in its own PRECEDENCE block: _"the
 artboards will NOT be redrawn to this scale — a size on a board that isn't
-here is a COLLAPSE entry, not a token, and not drift."* The boards carry 397
+here is a COLLAPSE entry, not a token, and not drift."_ The boards carry 397
 font sizes outside the seven-step scale and always will. Measuring a drawing to get a number is how the codebase acquired
 93 hardcoded values, 17 `Mono` bypasses and 10 rival letter-spacings in the
 first place.

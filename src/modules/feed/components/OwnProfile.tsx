@@ -50,40 +50,39 @@ const THERMAL_BLURBS: Record<number, string> = {
  */
 export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl uppercase leading-none">
+        <h1 className="font-display text-title uppercase">
           {profile.displayName ?? "You"}
         </h1>
         {profile.cityLabel === undefined ? undefined : (
-          <p className="m-0 text-sm text-night/60">{profile.cityLabel}</p>
+          <p className="m-0 text-small text-quiet">{profile.cityLabel}</p>
         )}
         {profile.thermalLevel === undefined ? undefined : (
-          <p className="m-0 text-sm text-night/60">
+          <p className="m-0 text-small text-quiet">
             {THERMAL_BLURBS[profile.thermalLevel] ?? "Runs average"}
           </p>
         )}
       </div>
 
       <div className="flex gap-6">
-        <Mono className="text-sm">
-          {String(profile.followerCount)} followers
-        </Mono>
-        <Mono className="text-sm">
-          {String(profile.followingCount)} following
-        </Mono>
-        <Mono className="text-sm">{String(profile.entryCount)} entries</Mono>
+        <Mono step="md">{String(profile.followerCount)} followers</Mono>
+        <Mono step="md">{String(profile.followingCount)} following</Mono>
+        <Mono step="md">{String(profile.entryCount)} entries</Mono>
       </div>
 
       <ListSection title="How you call it, by band" items={profile.coverage}>
         {(band) => (
-          <li key={band.bandFloorC} className="flex items-center gap-3 text-sm">
-            <Bracketed className="w-24 shrink-0 text-night/40">
+          <li
+            key={band.bandFloorC}
+            className="flex items-center gap-3 text-body"
+          >
+            <Bracketed className="w-24 shrink-0 text-muted">
               {band.label}
             </Bracketed>
             <VerdictMark kind={bandVerdict(band)} />
             <span className="flex-1">{VERDICT_WORD[bandVerdict(band)]}</span>
-            <Mono className="text-xs text-night/50">
+            <Mono className="text-muted">
               {String(band.cold + band.dialed + band.warm)} runs
             </Mono>
           </li>
@@ -94,10 +93,10 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
         {(item) => (
           <li
             key={item.itemId}
-            className="flex items-center justify-between text-sm"
+            className="flex items-center justify-between text-body"
           >
             <span>{item.name}</span>
-            <Mono className="text-night/40">[{String(item.wearCount)}]</Mono>
+            <Mono className="text-muted">[{String(item.wearCount)}]</Mono>
           </li>
         )}
       </ListSection>
@@ -108,7 +107,7 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
             <Link
               to="/feed/entry/$entryId"
               params={{ entryId: entry.entryId }}
-              className="text-sm font-semibold text-night no-underline"
+              className="text-body font-semibold text-ink no-underline"
             >
               {entry.verdict === null ? "No verdict yet" : "Entry"}
             </Link>

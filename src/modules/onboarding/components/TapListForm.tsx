@@ -38,9 +38,9 @@ const ENOUGH_TO_START = 6;
  * cannot quietly reintroduce a coloured tick.
  */
 const CHIP_ON =
-  "relative flex items-center gap-1.5 rounded-full bg-night px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-chalk has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
+  "relative flex items-center rounded-pill bg-ink px-3 py-2 text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 const CHIP_OFF =
-  "relative flex items-center gap-1.5 rounded-full border border-night/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-night/70 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
+  "relative flex items-center rounded-pill border border-hairline px-3 py-2 text-quiet has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 
 /**
  * Screen O3 — "tap what you own", the one list.
@@ -136,8 +136,8 @@ export function TapListForm({
       <FormStatus>{form.status}</FormStatus>
 
       <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-        <legend className="mb-2 p-0 font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
-          Common in your climate · tap to add
+        <legend className="mb-2 p-0 text-muted">
+          <Mono step="sm">Common in your climate · tap to add</Mono>
         </legend>
         <div className="flex flex-wrap gap-2">
           {shown.map((entry) => (
@@ -162,13 +162,13 @@ export function TapListForm({
         <FieldMessage name="keys" error={form.fieldErrors.keys} />
       </fieldset>
 
-      <div className="flex items-center justify-between border-t border-night/15 pt-3">
+      <div className="flex items-center justify-between border-t border-hairline pt-3">
         {/* A count is a measured value, so it is mono — and the words are
             written in normal case because `Mono` uppercases in CSS, which
             keeps the accessible name readable. "1 pieces" is design's copy
             verbatim (rule 6); the whole-UI copy pass owns the plural. */}
         <Mono>Closet: {ticked.size} pieces</Mono>
-        <Mono className="text-night/50">
+        <Mono className="text-muted">
           {ticked.size >= ENOUGH_TO_START
             ? "Enough to start"
             : "Tap what you own"}
@@ -184,7 +184,7 @@ export function TapListForm({
       <button
         type="button"
         onClick={onSkip}
-        className="cursor-pointer self-center border-none bg-transparent p-0 text-sm underline underline-offset-[3px]"
+        className="cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
       >
         Skip for now
       </button>
@@ -234,8 +234,10 @@ function TapChip({
         checked={isOn}
         onChange={onToggle}
       />
-      <span aria-hidden="true">{isOn ? "✓" : "+"}</span>
-      {label}
+      <Mono step="sm" className="flex items-center gap-2">
+        <span aria-hidden="true">{isOn ? "✓" : "+"}</span>
+        {label}
+      </Mono>
     </label>
   );
 }

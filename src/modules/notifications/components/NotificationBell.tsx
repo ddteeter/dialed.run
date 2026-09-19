@@ -28,9 +28,7 @@ export function NotificationBell({
       className="flex items-center gap-1 no-underline"
     >
       <Icon name="bell" size={20} />
-      {unreadCount > 0 && (
-        <Bracketed className="text-xs">{unreadCount}</Bracketed>
-      )}
+      {unreadCount > 0 && <Bracketed>{unreadCount}</Bracketed>}
     </Link>
   );
 }

@@ -23,14 +23,14 @@ export function StravaCallbackResult({
 }: Readonly<{ result: { ok: true } | { ok: false; reason: string } }>) {
   return (
     <Page width="narrow" title={result.ok ? "Connected" : "Not connected"}>
-      <p className="text-night/70">
+      <p className="text-quiet">
         {result.ok
           ? "Strava is connected. We'll remind you to log your kit after a run."
           : result.reason}
       </p>
       <Link
         to="/runs/strava"
-        className="self-start rounded-md bg-night px-4 py-2 font-semibold text-chalk"
+        className="self-start rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
       >
         Back to Strava settings
       </Link>

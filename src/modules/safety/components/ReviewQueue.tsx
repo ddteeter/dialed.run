@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { Bracketed, ListSection } from "../../../ui";
+import { Bracketed, ListSection, Mono } from "../../../ui";
 import { reportReasonLabels } from "../contracts";
 import type { ReportReason } from "../contracts";
 import type { QueueRow } from "../review";
@@ -46,7 +46,7 @@ function ReportedPhotos({
           key={key}
           src={`/safety/review-photo/${key}`}
           alt="Reported photo"
-          className="h-32 w-auto border border-night/15"
+          className="h-32 w-auto border border-hairline"
         />
       ))}
     </span>
@@ -68,7 +68,7 @@ function ReportedPhotos({
  */
 function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   return (
-    <span className="flex flex-col gap-1 text-xs">
+    <span className="flex flex-col gap-1 text-micro">
       <Bracketed>
         {row.reporterCount === 1
           ? "1 person"
@@ -88,7 +88,7 @@ function ListOfReasons({
     .map((reason) => reportReasonLabels[reason])
     .toSorted((one, other) => one.localeCompare(other));
   return (
-    <span className="text-night/60">
+    <span className="text-quiet">
       {labels.length === 0 ? "Nobody reported this." : labels.join(" · ")}
     </span>
   );
@@ -119,7 +119,7 @@ export function ReviewQueue({
         items={waiting}
         count
         whenEmpty={
-          <p className="text-sm text-night/60">
+          <p className="text-small text-quiet">
             Nothing waiting. The daily digest says so too.
           </p>
         }
@@ -127,34 +127,32 @@ export function ReviewQueue({
         {(row) => (
           <li
             key={row.id}
-            className="flex flex-col gap-2 border border-night/15 p-3"
+            className="flex flex-col gap-2 border border-hairline p-3"
           >
-            <span className="text-sm font-semibold">
+            <span className="text-body font-semibold">
               {row.subjectType} · {row.subject.label ?? row.subjectId}
             </span>
             <ReportedPhotos keys={row.subject.photoKeys} />
             <ReportedFor row={row} />
-            <span className="text-xs text-night/60">
+            <span className="text-micro text-quiet">
               <Bracketed>{row.source}</Bracketed>
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                className="text-xs font-semibold uppercase tracking-wide"
                 onClick={() => {
                   decide(row.id, "approve");
                 }}
               >
-                Approve
+                <Mono step="xs">Approve</Mono>
               </button>
               <button
                 type="button"
-                className="text-xs font-semibold uppercase tracking-wide"
                 onClick={() => {
                   decide(row.id, "remove");
                 }}
               >
-                Remove
+                <Mono step="xs">Remove</Mono>
               </button>
             </div>
           </li>

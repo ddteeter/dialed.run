@@ -29,12 +29,12 @@ export function GoogleButton() {
         onClick={() => {
           void start();
         }}
-        className="rounded-md border border-night/20 bg-white px-4 py-2 font-semibold"
+        className="rounded-pill border border-hairline bg-panel px-4 py-2 font-semibold"
       >
         Continue with Google
       </button>
       {error === undefined ? undefined : (
-        <p className="text-sm font-semibold text-pink">{error}</p>
+        <p className="text-small font-semibold text-cold-text">{error}</p>
       )}
     </div>
   );

@@ -29,10 +29,53 @@ describe("Mono", () => {
   });
 
   it("keeps its own classes when the caller adds one", () => {
-    render(<Mono className="text-pink">4:52</Mono>);
+    render(<Mono className="text-cold-text">4:52</Mono>);
     const value = screen.getByText("4:52");
     expect(value).toHaveClass("font-mono");
-    expect(value).toHaveClass("text-pink");
+    expect(value).toHaveClass("text-cold-text");
+  });
+
+  it("reaches each rung of the ramp, and only through the step", () => {
+    // The ramp is four steps and four trackings (tokens.js MONO). One
+    // hardcoded treatment is what sent 17 call sites off to write their
+    // own `font-mono text-[11px] tracking-[0.1em]`, so a step has to be
+    // addressable — and the size utility is what carries the tracking,
+    // which is why there is no second class here to get wrong.
+    for (const [step, size] of [
+      ["xs", "text-mono-xs"],
+      ["sm", "text-mono-sm"],
+      ["md", "text-mono-md"],
+      ["lg", "text-mono-lg"],
+    ] as const) {
+      const { unmount } = render(<Mono step={step}>4:52</Mono>);
+      expect(screen.getByText("4:52")).toHaveClass(size);
+      unmount();
+    }
+  });
+
+  it("shouts at xs and sm, and stays mixed case at md and lg", () => {
+    // MONO's own rule: "Uppercase is allowed at xs and sm only." md and lg
+    // sit inside prose and in the data strip, where a shouted value would
+    // be the loudest thing on the screen.
+    for (const step of ["xs", "sm"] as const) {
+      const { unmount } = render(<Mono step={step}>dialed</Mono>);
+      expect(screen.getByText("dialed")).toHaveClass("uppercase");
+      unmount();
+    }
+    for (const step of ["md", "lg"] as const) {
+      const { unmount } = render(<Mono step={step}>dialed</Mono>);
+      expect(screen.getByText("dialed")).not.toHaveClass("uppercase");
+      unmount();
+    }
+  });
+
+  it("defaults to sm, which is what the call sites asked for", () => {
+    // Not an arbitrary default: `sm` is the step 10 of the 17 bypasses
+    // spelled out at 11px, and it is the one that keeps `Bracketed`
+    // uppercase — which Bracketed's own contract depends on.
+    render(<Mono>4:52</Mono>);
+    expect(screen.getByText("4:52")).toHaveClass("text-mono-sm");
+    expect(screen.getByText("4:52")).toHaveClass("uppercase");
   });
 });
 
@@ -57,15 +100,22 @@ describe("Bracketed", () => {
     expect(span).toHaveClass("font-mono");
   });
 
+  it("carries the step through to the ramp", () => {
+    // Without this, `<Bracketed step="lg">` would render at `sm` and the
+    // data strip would be 11px with nothing failing.
+    render(<Bracketed step="lg">38–46°</Bracketed>);
+    expect(screen.getByText(/38–46°/)).toHaveClass("text-mono-lg");
+  });
+
   it("keeps the uppercase when the caller adds a class of their own", () => {
     // The two arms of the same decision: a caller-supplied class must not
     // displace the one this component exists to apply.
     const { container } = render(
-      <Bracketed className="text-pink">Indoor</Bracketed>,
+      <Bracketed className="text-cold-text">Indoor</Bracketed>,
     );
     const span = container.firstElementChild;
     expect(span).toHaveClass("uppercase");
-    expect(span).toHaveClass("text-pink");
+    expect(span).toHaveClass("text-cold-text");
   });
 });
 
@@ -78,15 +128,15 @@ describe("Wordmark", () => {
     // itself is already lowercase and cannot be shouted by a caller.
     expect(lockup).toHaveClass("lowercase");
     expect(screen.getAllByText("[")).toHaveLength(1);
-    expect(screen.getByText("[")).toHaveClass("text-pink");
-    expect(screen.getByText("]")).toHaveClass("text-pink");
+    expect(screen.getByText("[")).toHaveClass("text-cold-text");
+    expect(screen.getByText("]")).toHaveClass("text-cold-text");
   });
 
   it("keeps the lockup classes when the caller adds one", () => {
-    const { container } = render(<Wordmark className="text-2xl" />);
+    const { container } = render(<Wordmark className="text-title" />);
     const lockup = container.firstElementChild;
     expect(lockup).toHaveClass("lowercase");
-    expect(lockup).toHaveClass("text-2xl");
+    expect(lockup).toHaveClass("text-title");
   });
 });
 

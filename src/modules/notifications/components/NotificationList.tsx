@@ -79,7 +79,7 @@ export function NotificationList({
         onClick={() => {
           void onMarkAllRead();
         }}
-        className="self-start rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
+        className="self-start rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
       >
         Mark all read
       </button>
@@ -91,18 +91,18 @@ export function NotificationList({
         retryRef={retryRef}
       />
       {notifications.length === 0 ? (
-        <p className="text-night/70">Nothing yet.</p>
+        <p className="text-quiet">Nothing yet.</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {notifications.map((notification) => (
             <li
               key={notification.id}
-              className={`rounded-md border border-night/15 px-4 py-3 ${
-                notification.read ? "bg-white" : "bg-hi-viz/20"
+              className={`rounded-card border border-hairline px-4 py-3 ${
+                notification.read ? "bg-panel" : "bg-unread"
               }`}
             >
-              <p className="m-0 text-night">{notification.body}</p>
-              <Mono className="text-xs text-night/50">
+              <p className="m-0 text-ink">{notification.body}</p>
+              <Mono className="text-muted">
                 {new Date(notification.createdAt * 1000).toLocaleString()}
               </Mono>
             </li>

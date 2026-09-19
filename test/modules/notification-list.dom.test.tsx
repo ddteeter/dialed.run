@@ -106,9 +106,9 @@ describe("NotificationList", () => {
     );
 
     const [unread, read] = screen.getAllByRole("listitem");
-    expect(unread).toHaveClass("bg-hi-viz/20");
-    expect(read).toHaveClass("bg-white");
-    expect(read).not.toHaveClass("bg-hi-viz/20");
+    expect(unread).toHaveClass("bg-unread");
+    expect(read).toHaveClass("bg-panel");
+    expect(read).not.toHaveClass("bg-unread");
   });
 
   it("clears them all and reloads the screen", async () => {

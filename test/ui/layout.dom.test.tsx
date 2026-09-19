@@ -89,9 +89,14 @@ describe("TabBar", () => {
     // Same rationale as Bracketed: the tabs are shouted in CSS and their
     // text nodes stay in normal case, so a reader announces "Feed" rather
     // than spelling it out.
+    // The treatment moved inside the link, onto `Mono`: one `step="sm"`
+    // now carries family, size, line-height, tracking and case together,
+    // which is what stopped the tab bar spelling its own 11px/0.08em.
     for (const link of screen.getAllByRole("link")) {
-      expect(link).toHaveClass("uppercase");
-      expect(link).toHaveClass("font-mono");
+      const label = link.firstElementChild;
+      expect(label).toHaveClass("font-mono");
+      expect(label).toHaveClass("text-mono-sm");
+      expect(label).toHaveClass("uppercase");
     }
 
     expect(destinations).toStrictEqual({

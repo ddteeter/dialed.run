@@ -321,7 +321,10 @@ describe("AttachKit: the picker", () => {
   it("lists each group with its match count", async () => {
     await openPicker([group({ matchCount: 1 })]);
 
-    const legend = await screen.findByText(/Tops/);
+    // `closest`, because the label is a <Mono> span inside the legend now
+    // — matching on the span would assert half the sentence.
+    const label = await screen.findByText(/Tops/);
+    const legend = label.closest("legend");
     // The space between the label and the count is a deliberate `{" "}`.
     expect(legend).toHaveTextContent("Tops [1 of 1]");
     expect(screen.getByLabelText(/Houdini/)).toBeInTheDocument();

@@ -103,35 +103,33 @@ export function EntryDetail({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
       {shouldPromptVerdict ? (
         <Link
           to="/feed/verdict/$entryId"
           params={{ entryId }}
-          className="flex items-center justify-between rounded-xl border border-teal bg-teal/10 px-4 py-3 text-sm font-semibold text-night no-underline"
+          className="flex items-center justify-between rounded-card border border-dialed-text bg-teal/10 px-4 py-3 text-body font-semibold text-ink no-underline"
         >
           You didn&rsquo;t log a verdict for this run. Add one?
         </Link>
       ) : undefined}
 
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl uppercase leading-none">
-          {entry.runTitle}
-        </h1>
+        <h1 className="font-display text-title uppercase">{entry.runTitle}</h1>
         {entry.verdict === undefined ? undefined : (
-          <Bracketed className="text-teal">
+          <Bracketed className="text-dialed-text">
             {verdictLabel(entry.verdict) ?? "Dialed"}
           </Bracketed>
         )}
       </div>
 
       <div className="flex items-center gap-4">
-        <Mono className="text-sm text-night/60">
+        <Mono step="md" className="text-quiet">
           {formatDistance(entry.distanceM, units.distance)} ·{" "}
           {formatDuration(entry.durationS)}
         </Mono>
         {entry.conditions === undefined ? undefined : (
-          <Mono className="text-sm text-teal">
+          <Mono step="md" className="text-dialed-text">
             {formatTempRange(
               entry.conditions.span.minTempC,
               entry.conditions.span.maxTempC,
@@ -142,7 +140,7 @@ export function EntryDetail({
         )}
       </div>
 
-      <p className="m-0 text-sm text-night/60">
+      <p className="m-0 text-small text-quiet">
         {entry.authorDisplayName ?? "A runner"}
       </p>
 
@@ -155,28 +153,28 @@ export function EntryDetail({
               key={key}
               src={`/feed/photo/${key}`}
               alt=""
-              className="aspect-square w-full rounded-lg object-cover"
+              className="aspect-square w-full rounded-field object-cover"
             />
           ))}
         </div>
       )}
 
       {entry.caption === undefined ? undefined : (
-        <p className="m-0 text-base">{entry.caption}</p>
+        <p className="m-0 text-body">{entry.caption}</p>
       )}
 
       <ListSection title="Kit" items={entry.items}>
         {(item) => (
           <li
             key={item.itemId}
-            className="flex items-center justify-between text-sm"
+            className="flex items-center justify-between text-body"
           >
             <span>
               {item.brand === undefined ? "" : `${item.brand} `}
               {item.name}
             </span>
             {item.flag === undefined ? undefined : (
-              <Bracketed className="text-xs text-night/40">
+              <Bracketed className="text-muted">
                 {item.flag.replaceAll("_", " ")}
               </Bracketed>
             )}
@@ -187,7 +185,7 @@ export function EntryDetail({
       {entry.tags.length === 0 ? undefined : (
         <div className="flex flex-wrap gap-2">
           {entry.tags.map((tag) => (
-            <Bracketed key={tag} className="text-xs text-night/40">
+            <Bracketed key={tag} className="text-micro text-muted">
               {tag.replaceAll("_", " ")}
             </Bracketed>
           ))}
@@ -202,14 +200,14 @@ export function EntryDetail({
         }}
         className={
           useful.reacted
-            ? "self-start rounded-full bg-teal px-4 py-2 text-sm font-semibold text-night disabled:opacity-40"
-            : "self-start rounded-full border border-night/20 px-4 py-2 text-sm font-semibold disabled:opacity-40"
+            ? "self-start rounded-pill bg-teal px-4 py-2 text-body font-semibold text-ink disabled:opacity-40"
+            : "self-start rounded-pill border border-hairline px-4 py-2 text-body font-semibold disabled:opacity-40"
         }
       >
         Useful <Mono className="ml-1">[{String(useful.count)}]</Mono>
       </button>
 
-      <Link to="/feed" className="text-sm font-semibold text-pink">
+      <Link to="/feed" className="text-body font-semibold text-cold-text">
         Back to feed
       </Link>
     </div>

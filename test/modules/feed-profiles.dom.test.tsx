@@ -296,7 +296,7 @@ describe("OtherProfile", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Follow" })).toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
   });
 
@@ -311,7 +311,7 @@ describe("OtherProfile", () => {
     );
     const following = screen.getByRole("button", { name: "Following" });
     expect(following).toHaveClass("border");
-    expect(following).not.toHaveClass("bg-night");
+    expect(following).not.toHaveClass("bg-ink");
   });
 
   it("dates each entry from its epoch-second timestamp", async () => {

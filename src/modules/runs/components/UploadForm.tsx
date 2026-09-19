@@ -43,11 +43,11 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-md border border-dashed border-night/30 bg-white px-6 py-10 text-center">
-        <span className="font-semibold text-night">
+      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed border-hairline-2 bg-panel px-6 py-10 text-center">
+        <span className="font-semibold text-ink">
           Drop a .FIT, .gpx, or .tcx file
         </span>
-        <span className="text-xs text-night/50">up to 25 MB</span>
+        <span className="text-micro text-muted">up to 25 MB</span>
         <input
           type="file"
           accept=".fit,.gpx,.tcx"
@@ -59,7 +59,7 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
         />
       </label>
       {error === undefined ? undefined : (
-        <p className="text-sm font-semibold text-pink">{error}</p>
+        <p className="text-small font-semibold text-cold-text">{error}</p>
       )}
     </div>
   );

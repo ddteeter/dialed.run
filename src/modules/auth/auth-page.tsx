@@ -6,6 +6,7 @@ import {
   FormFailureBand,
   FormStatus,
   Layout,
+  Mono,
   SubmitButton,
   Wordmark,
 } from "../../ui";
@@ -51,11 +52,9 @@ export function AuthPage({
 }>): JSX.Element {
   return (
     <Layout>
-      <div className="mx-auto flex max-w-sm flex-col gap-6 px-6 py-12">
-        <Wordmark className="text-2xl" />
-        <h1 className="font-display text-3xl uppercase leading-none">
-          {heading}
-        </h1>
+      <div className="mx-auto flex max-w-panel flex-col gap-6 px-6 py-12">
+        <Wordmark className="text-title" />
+        <h1 className="font-display text-display uppercase">{heading}</h1>
         {/* noValidate: the browser's own bubbles are a second, unstyled
             error system that fires before ours and says "Please fill in
             this field" — banned copy, and it would pre-empt the schema. */}
@@ -86,9 +85,11 @@ export function AuthPage({
             pending={form.pending}
           />
         </form>
-        <p className="text-center text-xs uppercase text-night/40">or</p>
+        <p className="text-center text-muted">
+          <Mono step="xs">or</Mono>
+        </p>
         <GoogleButton />
-        <p className="text-sm">{footer}</p>
+        <p className="text-small">{footer}</p>
       </div>
     </Layout>
   );
@@ -109,7 +110,7 @@ export function AuthCrossLink({
   return (
     <>
       {prompt}{" "}
-      <Link to={to} className="font-semibold text-pink">
+      <Link to={to} className="font-semibold text-cold-text">
         {label}
       </Link>
     </>

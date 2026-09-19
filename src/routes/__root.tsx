@@ -43,7 +43,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className="bg-chalk font-sans text-night antialiased">
+      <body className="bg-ground font-sans text-ink antialiased">
         {children}
         <Devtools />
         <Scripts />

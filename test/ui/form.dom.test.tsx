@@ -171,7 +171,7 @@ describe("the submit button is never disabled", () => {
     expect(button).toHaveFocus();
     // Pink is action, and the submit button is the action. The cursor is
     // the visual half of aria-disabled: it must stop inviting a click.
-    expect(button).toHaveClass("bg-pink");
+    expect(button).toHaveClass("bg-action");
     expect(button).toHaveClass("cursor-default");
     expect(button).not.toHaveClass("cursor-pointer");
 
@@ -396,8 +396,12 @@ describe("the details that go missing silently", () => {
     );
     // Not just "no text" — no *element*. An empty <span> renders nothing
     // and still takes a line's worth of gap in a flex column, which is how
-    // a field with no hint ends up taller than its neighbours.
-    expect(container.querySelectorAll("span")).toHaveLength(0);
+    // a field with no hint ends up taller than its neighbours. So the
+    // assertion is on the column's own children — the label and the box,
+    // and neither a hint nor a message — rather than on a span count,
+    // which the label's own <Mono> now makes non-zero either way.
+    expect(container.firstElementChild?.children).toHaveLength(2);
+    expect(container.querySelector("#solo-message")).toBeNull();
     expect(container.firstElementChild).toHaveTextContent(/^Solo$/);
   });
 
@@ -1257,7 +1261,7 @@ describe("ChoiceList", () => {
 
     const message = screen.getByText("Pick one to carry on.");
     expect(message).toBeVisible();
-    expect(message).toHaveClass("bg-hi-viz");
+    expect(message).toHaveClass("bg-failure");
     expect(message).toHaveAttribute("id", "thermal-message");
   });
 

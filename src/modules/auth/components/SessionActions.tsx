@@ -18,23 +18,23 @@ export function SessionActions({
     <div className="flex items-center gap-4">
       <Link
         to="/auth/signup"
-        className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
+        className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
       >
         Sign up
       </Link>
-      <Link to="/auth/login" className="font-semibold text-pink">
+      <Link to="/auth/login" className="font-semibold text-cold-text">
         Log in
       </Link>
     </div>
   ) : (
     <div className="flex items-center gap-4">
-      <Mono className="text-xs">{email}</Mono>
+      <Mono>{email}</Mono>
       <button
         type="button"
         onClick={() => {
           void signOut();
         }}
-        className="font-semibold text-pink"
+        className="font-semibold text-cold-text"
       >
         Sign out
       </button>

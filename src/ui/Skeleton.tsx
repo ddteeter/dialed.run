@@ -7,7 +7,7 @@ export function Skeleton({ className }: Readonly<{ className: string }>) {
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse rounded-md bg-night/10 ${className}`}
+      className={`animate-pulse rounded-tight bg-hairline ${className}`}
     />
   );
 }

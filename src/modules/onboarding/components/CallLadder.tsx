@@ -42,14 +42,14 @@ export function CallLadder({
             {ladder.bands.map(({ band, coverage }) => (
               <li
                 key={band.bandFloorC}
-                className="flex items-center justify-between gap-3 text-sm"
+                className="flex items-center justify-between gap-3 text-body"
               >
-                <Bracketed className="w-24 shrink-0 text-night/40">
+                <Bracketed className="w-24 shrink-0 text-muted">
                   {band.label}
                 </Bracketed>
                 <CoverageMark level={coverage} />
-                <Mono className="text-xs text-night/50">{coverage}</Mono>
-                <Mono className="text-xs text-night/40">
+                <Mono className="text-muted">{coverage}</Mono>
+                <Mono className="text-muted">
                   {String(band.cold + band.dialed + band.warm)}
                 </Mono>
               </li>
@@ -73,21 +73,21 @@ export function CallLadder({
 function LadderHeadline({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
   if (ladder.verdictTotal === 0) {
     return (
-      <p className="m-0 text-base">
+      <p className="m-0 text-body">
         Logging now, calling later. Rate a run and this fills in.
       </p>
     );
   }
   if (ladder.verdictsUntilCall === 0) {
     return (
-      <p className="m-0 text-base">
+      <p className="m-0 text-body">
         The call is coming in an update — your data&rsquo;s ready.
       </p>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="m-0 text-base">
+      <p className="m-0 text-body">
         <Mono>{String(ladder.verdictsUntilCall)}</Mono> verdicts until your
         first call.
       </p>
@@ -109,11 +109,11 @@ function CoverageLegend({
 }: Readonly<{ levels: readonly CoverageLevel[] }>): JSX.Element {
   const order: readonly CoverageLevel[] = ["covered", "partial", "unknown"];
   return (
-    <ul className="m-0 flex list-none flex-wrap gap-4 border-t border-night/15 p-0 pt-3">
+    <ul className="m-0 flex list-none flex-wrap gap-4 border-t border-hairline p-0 pt-3">
       {order.map((level) => (
         <li key={level} className="flex items-center gap-2">
           <CoverageMark level={level} />
-          <Mono className="text-[11px] text-night/50">
+          <Mono className="text-muted">
             {level} {levels.filter((row) => row === level).length}
           </Mono>
         </li>
@@ -141,9 +141,9 @@ export function ThinnestAsk({
 }: Readonly<{ band: Ladder["thinnestBand"] }>): JSX.Element | undefined {
   if (band === undefined) return undefined;
   return (
-    <p className="m-0 text-sm text-night/60">
+    <p className="m-0 text-small text-quiet">
       Thinnest so far:{" "}
-      <Bracketed className="text-night/50">{band.label}</Bracketed>
+      <Bracketed className="text-muted">{band.label}</Bracketed>
     </p>
   );
 }

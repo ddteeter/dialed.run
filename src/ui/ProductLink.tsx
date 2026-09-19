@@ -62,11 +62,13 @@ export function ProductLink({
         href={url}
         rel="ugc nofollow noopener"
         target="_blank"
-        className="underline underline-offset-[3px]"
+        className="underline underline-offset-4"
       >
         {label}
       </a>
-      <Mono className="text-[13px] text-night/60">{domain}</Mono>
+      <Mono step="md" className="text-quiet">
+        {domain}
+      </Mono>
     </span>
   );
 }

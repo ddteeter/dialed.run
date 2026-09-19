@@ -65,7 +65,7 @@ export function StravaConnect({
 
   if (!configured) {
     return (
-      <p className="text-sm text-night/50">
+      <p className="text-small text-muted">
         Strava reminders aren&rsquo;t set up for this deployment yet.
       </p>
     );
@@ -80,15 +80,15 @@ export function StravaConnect({
           onClick={() => {
             void loadAuthorizeUrl();
           }}
-          className="rounded-md bg-night px-4 py-2 font-semibold text-chalk disabled:opacity-50"
+          className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-50"
         >
           Connect Strava
         </button>
         {error === undefined ? undefined : (
-          <p className="text-sm font-semibold text-pink">{error}</p>
+          <p className="text-small font-semibold text-cold-text">{error}</p>
         )}
         {authorizeUrl === undefined ? undefined : (
-          <a href={authorizeUrl} className="text-sm text-night/50 underline">
+          <a href={authorizeUrl} className="text-body text-muted underline">
             Continue to Strava
           </a>
         )}
@@ -98,7 +98,7 @@ export function StravaConnect({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-semibold text-night">
+      <p className="font-semibold text-ink">
         {status === "ok"
           ? "Strava is connected. We'll remind you to log your kit after a run."
           : "Strava needs to be reconnected."}
@@ -110,7 +110,7 @@ export function StravaConnect({
           onClick={() => {
             void loadAuthorizeUrl();
           }}
-          className="rounded-md bg-night px-4 py-2 font-semibold text-chalk disabled:opacity-50"
+          className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-50"
         >
           Reconnect Strava
         </button>
@@ -121,12 +121,12 @@ export function StravaConnect({
         onClick={() => {
           void onDisconnect();
         }}
-        className="rounded-md border border-night/20 px-4 py-2 font-semibold text-night disabled:opacity-50"
+        className="rounded-pill border border-hairline px-4 py-2 font-semibold text-ink disabled:opacity-50"
       >
         Disconnect
       </button>
       {error === undefined ? undefined : (
-        <p className="text-sm font-semibold text-pink">{error}</p>
+        <p className="text-small font-semibold text-cold-text">{error}</p>
       )}
     </div>
   );

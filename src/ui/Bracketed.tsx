@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Mono } from "./Mono";
+import { Mono, type MonoStep } from "./Mono";
 
 /**
  * Bracket notation for bounded, measured values: [38–46°], [8 OF 9],
@@ -16,16 +16,24 @@ import { Mono } from "./Mono";
  * the brand's uppercase display (docs/product.md §Brand) is unchanged
  * visually. Callers that pass SHOUTING strings get the same pixels and a
  * worse announcement, so don't.
+ *
+ * `step` reaches the mono ramp for the same reason `Mono` has it, with one
+ * extra constraint: only `xs` and `sm` are uppercase, so a bracketed value
+ * at `md` or `lg` renders the caller's own casing. That is right for the
+ * data strip — `[38–46°]` at `lg` has no letters to shout — and wrong for
+ * a word, which is why the default stays `sm`.
  */
 export function Bracketed({
+  step,
   children,
   className,
 }: Readonly<{
+  step?: MonoStep | undefined;
   children: ReactNode;
   className?: string | undefined;
 }>) {
   return (
-    <Mono className={className}>
+    <Mono step={step} className={className}>
       {"["}
       {children}
       {"]"}

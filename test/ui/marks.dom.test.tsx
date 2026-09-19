@@ -19,7 +19,7 @@ import { CoverageMark, VerdictMark } from "../../src/ui/Marks";
 function filledIndex(kind: "cold" | "dialed" | "warm") {
   const { container } = render(<VerdictMark kind={kind} />);
   const slots = [...(container.firstElementChild?.children ?? [])];
-  return slots.findIndex((slot) => !slot.className.includes("bg-night/15"));
+  return slots.findIndex((slot) => !slot.className.includes("bg-hairline-2"));
 }
 
 describe("CoverageMark", () => {
@@ -83,13 +83,17 @@ describe("VerdictMark", () => {
     const slots = [...(container.firstElementChild?.children ?? [])];
 
     expect(
-      slots.filter((slot) => !slot.className.includes("bg-night/15")),
+      slots.filter((slot) => !slot.className.includes("bg-hairline-2")),
     ).toHaveLength(1);
   });
 
   it("gives warm full-strength ink, never 30% opacity", () => {
     // §AB rule 04: `text-night/30` is retired. The tint it replaced was
-    // indistinguishable from its neighbours *and* under-contrast.
+    // indistinguishable from its neighbours *and* under-contrast. T1 names
+    // the colour it became: --quiet, "the warm-verdict grey, per AB. Full
+    // strength, never opacity". T1 names
+    // the colour it became: --quiet, "the warm-verdict grey, per AB. Full
+    // strength, never opacity".
     //
     // **Asserted positively as well as negatively.** "Does not contain
     // /30" is satisfied by a warm slot with no ink class at all — an
@@ -97,7 +101,7 @@ describe("VerdictMark", () => {
     const { container } = render(<VerdictMark kind="warm" />);
     const slots = [...(container.firstElementChild?.children ?? [])];
 
-    expect(slots[2]?.className).toContain("bg-night/70");
+    expect(slots[2]?.className).toContain("bg-quiet");
     expect(container.getHTML()).not.toContain("/30");
   });
 
@@ -106,7 +110,8 @@ describe("VerdictMark", () => {
     const { container: cold } = render(<VerdictMark kind="cold" />);
     const { container: dialed } = render(<VerdictMark kind="dialed" />);
 
-    expect(cold.getHTML()).toContain("bg-pink");
+    // T1 spells the pink surface --action; the hex is unchanged.
+    expect(cold.getHTML()).toContain("bg-action");
     expect(dialed.getHTML()).toContain("bg-teal");
   });
 });

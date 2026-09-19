@@ -134,18 +134,16 @@ export function AttachKit({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
-      <h1 className="font-display text-2xl uppercase leading-none">
-        Attach the kit
-      </h1>
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
+      <h1 className="font-display text-title uppercase">Attach the kit</h1>
 
       {!showPicker && prefill === undefined ? (
         <Skeleton className="h-32 w-full" />
       ) : undefined}
 
       {!showPicker && prefill && prefill !== "none" ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-night/10 p-4">
-          <Bracketed className="text-xs text-teal">
+        <div className="flex flex-col gap-3 rounded-card border border-hairline p-4">
+          <Bracketed className="text-dialed-text">
             Most likely · from{" "}
             {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
             {Math.round(prefill.feelsLikeDeltaC)}° off
@@ -155,7 +153,7 @@ export function AttachKit({
             onClick={() => {
               void submit(prefill.itemIds);
             }}
-            className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+            className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
           >
             That&rsquo;s it
           </button>
@@ -164,7 +162,7 @@ export function AttachKit({
             onClick={() => {
               setShowPicker(true);
             }}
-            className="text-sm font-semibold text-pink"
+            className="text-body font-semibold text-cold-text"
           >
             Choose different items
           </button>
@@ -177,7 +175,7 @@ export function AttachKit({
           onClick={() => {
             setShowPicker(true);
           }}
-          className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+          className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
         >
           Choose your kit
         </button>
@@ -197,7 +195,7 @@ export function AttachKit({
       ) : undefined}
 
       {error === undefined ? undefined : (
-        <p className="text-sm font-semibold text-pink">{error}</p>
+        <p className="text-small font-semibold text-cold-text">{error}</p>
       )}
     </div>
   );
@@ -246,7 +244,7 @@ function Picker({
         onChange={(event) => {
           setQuery(event.target.value);
         }}
-        className="rounded-md border border-night/20 bg-white px-3 py-2"
+        className="rounded-field border border-hairline bg-panel px-3 py-2"
       />
       {groups.map((group) => {
         const visible = group.items.filter((item) =>
@@ -255,14 +253,17 @@ function Picker({
         if (visible.length === 0) return;
         return (
           <fieldset key={group.group} className="flex flex-col gap-2">
-            <legend className="font-semibold uppercase text-sm">
-              {uiGroupLabels[group.group]}{" "}
-              <Mono className="text-night/40">
+            <legend>
+              <Mono step="xs">{uiGroupLabels[group.group]}</Mono>{" "}
+              <Mono className="text-muted">
                 [{String(group.matchCount)} of {String(group.items.length)}]
               </Mono>
             </legend>
             {visible.map((item) => (
-              <label key={item.id} className="flex items-center gap-2 text-sm">
+              <label
+                key={item.id}
+                className="flex items-center gap-2 text-body"
+              >
                 <input
                   type="checkbox"
                   checked={selected.has(item.id)}
@@ -275,12 +276,12 @@ function Picker({
                   {item.name}
                 </span>
                 {item.untested ? (
-                  <Bracketed className="text-night/40">untested</Bracketed>
+                  <Bracketed className="text-muted">untested</Bracketed>
                 ) : undefined}
               </label>
             ))}
             {group.hiddenByFilterCount > 0 ? (
-              <Mono className="text-xs text-night/40">
+              <Mono className="text-muted">
                 {String(group.hiddenByFilterCount)} hidden by conditions
               </Mono>
             ) : undefined}
@@ -291,7 +292,7 @@ function Picker({
         type="button"
         onClick={onSubmit}
         disabled={selected.size === 0}
-        className="rounded-md bg-night px-4 py-3 font-semibold text-chalk disabled:opacity-40"
+        className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground disabled:opacity-40"
       >
         Attach {String(selected.size)} {selected.size === 1 ? "item" : "items"}
       </button>

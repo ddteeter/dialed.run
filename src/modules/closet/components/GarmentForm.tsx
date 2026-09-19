@@ -212,7 +212,7 @@ export function GarmentForm({
       />
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="font-display text-lg uppercase">What is it?</legend>
+        <legend className="font-display text-heading">What is it?</legend>
         <FormField
           name="brand"
           label={LABELS.brand}
@@ -228,7 +228,7 @@ export function GarmentForm({
               update("brand", event.target.value);
               onBrandInput?.(event.target.value);
             }}
-            className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
+            className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
           />
         </FormField>
         <datalist id="garment-brand-options">
@@ -269,7 +269,7 @@ export function GarmentForm({
           onChange={(event) => {
             update("category", event.target.value as Category);
           }}
-          className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
+          className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
         >
           {garmentCategoriesInOrder.map((category) => (
             <option key={category} value={category}>
@@ -279,7 +279,7 @@ export function GarmentForm({
         </select>
       </FormField>
 
-      <fieldset className="flex flex-col gap-3 border-t border-night/10 pt-4">
+      <fieldset className="flex flex-col gap-3 border-t border-hairline pt-4">
         <legend className="sr-only">Attributes</legend>
         {
           // fallow-ignore-next-line code-duplication -- three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField
@@ -351,9 +351,9 @@ export function GarmentForm({
       </fieldset>
 
       {estimate ? (
-        <p className="text-sm text-night/70">
+        <p className="text-small text-quiet">
           Estimated{" "}
-          <Bracketed className="text-teal">
+          <Bracketed className="text-dialed-text">
             {formatTempRange(estimate)}
           </Bracketed>
         </p>
@@ -391,7 +391,7 @@ export function GarmentForm({
         type="url"
       />
       {values.productUrl === "" ? undefined : (
-        <p className="text-xs text-night/40">
+        <p className="text-micro text-muted">
           <Mono>Enrichment pending — lane 107</Mono>
         </p>
       )}

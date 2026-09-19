@@ -116,7 +116,7 @@ describe("Feed: the following tab", () => {
       "/feed/search",
     );
     expect(screen.getByRole("button", { name: "Following" })).toHaveClass(
-      "border-pink",
+      "border-cold-text",
     );
   });
 
@@ -402,16 +402,16 @@ describe("Feed: your conditions", () => {
 
     const following = screen.getByRole("button", { name: "Following" });
     const conditions = screen.getByRole("button", { name: "Your conditions" });
-    expect(following).toHaveClass("border-pink");
-    expect(conditions).toHaveClass("text-night/50");
+    expect(following).toHaveClass("border-cold-text");
+    expect(conditions).toHaveClass("text-muted");
 
     await user.click(conditions);
 
     expect(screen.getByRole("button", { name: "Your conditions" })).toHaveClass(
-      "border-pink",
+      "border-cold-text",
     );
     expect(screen.getByRole("button", { name: "Following" })).toHaveClass(
-      "text-night/50",
+      "text-muted",
     );
   });
 
