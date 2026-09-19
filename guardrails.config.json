@@ -213,11 +213,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Equivalent mutant: every entry's author is in the batch that fetched them, so the lookup always hits. The optional chain is here because `Map#get` is typed as possibly missing.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/prefill.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the loop below would find no best and answer undefined anyway. The return saves two queries on every attach by a runner with no history.",
       "count": 1
@@ -225,11 +220,6 @@
     {
       "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: a `LIKE` never matches NULL, so the predicate cannot drop a row. It is here because the column is nullable and the result type promises a name.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,MethodExpression",
-      "reason": "Equivalent mutants, both on the same idea: a `LIKE` never matches NULL, so the filter cannot drop a row and the raw rows already have the shape returned. A compiler-driven guard, not a runtime one.",
       "count": 1
     },
     {
@@ -260,11 +250,6 @@
     {
       "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
       "reason": "Equivalent mutant: the undefined checks are the same fact said twice \u2014 the loop only visits indexes that exist, so neither element can be missing. They are here because `noUncheckedIndexedAccess` types every array access as possibly absent.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
-      "reason": "Unreachable: the length check above already refused anything under two points. It is here because indexing an array is typed as possibly absent, and the message names that impossibility.",
       "count": 1
     },
     {
@@ -550,6 +535,36 @@
     {
       "key": "src/ui/form.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable OptionalChaining",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker restore OptionalChaining",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable ConditionalExpression,MethodExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker restore ConditionalExpression,MethodExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker restore ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
       "count": 1
     }
   ]

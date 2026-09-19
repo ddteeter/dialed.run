@@ -175,9 +175,13 @@ async function hydrateEntries(
       // Equivalent mutant on the optional chain: every entry's author is
       // in the batch that fetched them, so the lookup always hits. It is
       // here because `Map#get` is typed as possibly missing.
-      // Stryker disable next-line OptionalChaining
+      // Block pair rather than `next-line`: prettier wraps this property
+      // onto a second line and the `?.` lives there, so `next-line` was
+      // pointing at the key and covering nothing.
+      // Stryker disable OptionalChaining
       authorDisplayName:
         authorsById.get(entry.userId)?.displayName ?? undefined,
+      // Stryker restore OptionalChaining
       runId: entry.runId,
       runTitle: run?.title ?? "Run",
       distanceM: run?.distanceM ?? 0,

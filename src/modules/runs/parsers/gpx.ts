@@ -108,9 +108,13 @@ export const gpxSource: RunSource = {
     // Unreachable: the length check above already refused anything under
     // two points. It is here because indexing an array is typed as
     // possibly absent, and the message names that impossibility.
-    // Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
+    // Block pair rather than `next-line`: prettier moves the `throw` onto
+    // its own line, so the StringLiteral and CallExpression mutants sit
+    // outside what `next-line` covers.
+    // Stryker disable ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
     if (first === undefined || last === undefined)
       throw new RunParseError("gpx: track point list was unexpectedly empty");
+    // Stryker restore ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
 
     const durationS = Math.round(
       (last.time.getTime() - first.time.getTime()) / 1000,

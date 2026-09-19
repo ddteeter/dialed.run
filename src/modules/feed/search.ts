@@ -37,10 +37,16 @@ export async function searchByDisplayName(
   // the shape below. It is here because the column is nullable and the
   // result type promises a name — a compiler-driven guard, not a runtime
   // one.
-  // Stryker disable next-line ConditionalExpression,MethodExpression
+  // Block pair, not `next-line`: prettier wraps this expression across
+  // three lines, and a `next-line` directive only ever covered the first
+  // of them. Raised by the repo-wide format pass on PR #73 — the
+  // directive was still there, still looked right, and had quietly
+  // stopped covering the `.filter`.
+  // Stryker disable ConditionalExpression,MethodExpression
   return rows
     .filter(isNamed)
     .map((r) => ({ userId: r.userId, displayName: r.displayName }));
+  // Stryker restore ConditionalExpression,MethodExpression
 }
 
 function isNamed(row: {
