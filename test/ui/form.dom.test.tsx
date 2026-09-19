@@ -305,11 +305,18 @@ describe("the mark, the message and the hint", () => {
     expect(box).not.toBeNull();
     expect(box()).not.toHaveAttribute("data-invalid");
     // Weight is the signal: a 1px rule at rest, 2px ink when marked, and
-    // the padding drops by 1px so the box does not grow. Asserted because
-    // "marked, not reddened" is the rule most easily lost in a port, and
-    // because pink is action in this palette and never failure.
+    // the box does not grow. Asserted because "marked, not reddened" is the
+    // rule most easily lost in a port, and because pink is action in this
+    // palette and never failure.
+    //
+    // The second pixel is an inset ring rather than a heavier border: a
+    // ring is a box-shadow and takes no space, so the padding stays on the
+    // 4px grid on both sides instead of being compensated by 1px, which
+    // SPACE has no step for.
     expect(box()).toHaveClass("border");
-    expect(box()).not.toHaveClass("border-2");
+    expect(box()).toHaveClass("border-hairline");
+    expect(box()).not.toHaveClass("inset-ring-1");
+    expect(box()).toHaveClass("px-4", "py-3");
 
     await user.type(screen.getByLabelText("Brand"), "Patagonia");
     await user.click(screen.getByRole("button", { name: /save/i }));
@@ -317,7 +324,9 @@ describe("the mark, the message and the hint", () => {
     await waitFor(() => {
       expect(box()).toHaveAttribute("data-invalid", "true");
     });
-    expect(box()).toHaveClass("border-2");
+    expect(box()).toHaveClass("inset-ring-1", "inset-ring-ink", "border-ink");
+    // The padding is the same on both sides, which is the no-growth half.
+    expect(box()).toHaveClass("px-4", "py-3");
     expect(screen.getByText("Give it a name.")).toBeVisible();
   });
 

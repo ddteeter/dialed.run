@@ -35,8 +35,13 @@ describe("a field error is marked, not reddened", () => {
         <input name="title" />
       </FormField>,
     );
-    expect(marked).toContain("border-2");
-    expect(clean).not.toContain("border-2");
+    // Border + inset ring, which is 2px of ink that takes no space — so the
+    // padding is the same on both sides rather than compensated by 1px.
+    expect(marked).toContain("inset-ring-1");
+    expect(marked).toContain("inset-ring-ink");
+    expect(marked).toContain("border-ink");
+    expect(clean).not.toContain("inset-ring");
+    expect(clean).toContain("border-hairline");
     expect(marked).toContain('data-invalid="true"');
   });
 

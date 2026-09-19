@@ -103,13 +103,20 @@ export function FormField({
       <label htmlFor={name} className="text-muted">
         <Mono step="sm">{label}</Mono>
       </label>
-      {/* Weight is the signal: 1px rule -> 2px ink. The padding drops by
-          1px so the box does not grow when it gains the heavier border. */}
+      {/* Weight is the signal: 1px rule -> 2px ink, and the box does not
+          grow when it gains the heavier one.
+
+          That used to be a 1px padding compensation — `px-[13px] py-[11px]`
+          against `px-[14px] py-[12px]` — which the 4px grid cannot express:
+          SPACE is "a 4px step, nothing else. 1px and 2px exist only as
+          border widths." So the second pixel is an inset ring instead. A
+          ring is a box-shadow, so it occupies no space at all and there is
+          nothing left to compensate for. */}
       <div
         data-invalid={isInvalid ? "true" : undefined}
         className={
           isInvalid
-            ? "flex min-h-12 items-center rounded-field border-2 border-ink bg-ground px-4 py-3"
+            ? "flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
             : "flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
         }
       >
