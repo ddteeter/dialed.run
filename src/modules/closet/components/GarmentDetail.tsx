@@ -5,6 +5,7 @@ import { useState } from "react";
 import { formatTempRange } from "../../../lib/thermal";
 import { Bracketed, Mono, ProductLink } from "../../../ui";
 import { garmentLabel } from "../label";
+import { CompositionBlock } from "./Composition";
 import type {
   EffectiveAttributes,
   WardrobeItemRow,
@@ -64,8 +65,15 @@ export function GarmentDetail({
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [uploading, setUploading] = useState(false);
 
-  const { item, tempRange, performance, pairedItems, effective, isGeneric } =
-    detail;
+  const {
+    item,
+    tempRange,
+    performance,
+    pairedItems,
+    effective,
+    isGeneric,
+    composition,
+  } = detail;
   // Same name for the heading and the photo's accessible name.
   const label = garmentLabel({
     name: item.name,
@@ -160,6 +168,20 @@ export function GarmentDetail({
           {attributeChips(effective).join(" · ")}
         </p>
       ) : undefined}
+
+      {/* §AG: below the range, and on this screen only. `brand` is the
+          garment's own, which is what the runner sees on the label in
+          their hand; a piece with no brand gets no "as labelled by" line
+          rather than an invented one. */}
+      {composition === undefined ? undefined : (
+        <CompositionBlock
+          composition={{
+            verbatim: composition.verbatim,
+            parts: composition.parts,
+            brand: item.brand ?? undefined,
+          }}
+        />
+      )}
 
       <p className="text-small text-quiet">
         <Mono>

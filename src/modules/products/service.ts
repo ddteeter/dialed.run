@@ -10,6 +10,8 @@ import { and, eq, inArray, like } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { brands, products } from "../../db/schema-core";
+import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
+import { firstRowWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
 import { nowSeconds } from "../../lib/now";
@@ -289,6 +291,67 @@ export async function getProductAttributeDefaults(
 ): Promise<ProductAttributeDefaults | undefined> {
   const defaults = await getProductAttributeDefaultsBulk(db, [productId]);
   return defaults.get(productId);
+}
+
+/**
+ * What a product is made of, for garment detail and nowhere else.
+ *
+ * Deliberately **not** folded into `ProductAttributeDefaults`: that shape
+ * is read in bulk for the closet grid, and §AG's whole point is that
+ * composition does not appear there. Widening the bulk read would ship the
+ * text to a screen forbidden to render it, one careless `.map` away from
+ * the spec sheet design refused.
+ */
+export interface ProductComposition {
+  /**
+   * As published, character for character.
+   */
+  readonly verbatim: string | undefined;
+  /**
+   * In the brand's order, never re-sorted by percentage.
+   */
+  readonly parts: readonly FabricPart[];
+}
+
+/**
+ * `firstRowWhere` rather than a two-column projection, which is the trade
+ * its own docstring already argues: there is no covering index to answer a
+ * primary-key lookup from, and one row by primary key is one row read
+ * whichever way it is written. What the projection bought was a smaller
+ * payload; what it cost was an eleventh copy of a shape `src/modules`
+ * already holds twenty of.
+ */
+export async function getProductComposition(
+  db: Db,
+  productId: string,
+): Promise<ProductComposition | undefined> {
+  const row = await firstRowWhere(db, products, eq(products.id, productId));
+  if (row === undefined) return;
+  return {
+    verbatim: row.fabricComposition ?? undefined,
+    parts: parseParts(row.fabricParts),
+  };
+}
+
+/**
+ * The column is `text`, so this is a trust boundary even though we wrote
+ * it: a row from an older deploy, or one edited by hand against the local
+ * D1, is `unknown` until the schema says otherwise.
+ *
+ * A row that fails to parse reads as "no parts" rather than throwing.
+ * Composition is reading material beside a garment; a malformed cache of
+ * someone else's hang tag must not be what stops the screen rendering.
+ * `verbatim` is a separate column and still shows.
+ */
+function parseParts(raw: string | null): readonly FabricPart[] {
+  if (raw === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const result = fabricPartsSchema.safeParse(parsed);
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
 }
 
 /**

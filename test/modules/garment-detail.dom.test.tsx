@@ -67,6 +67,7 @@ function detail(overrides: Partial<Detail> = {}): Detail {
       isGeneric: false,
     }),
     productDefaults: undefined,
+    composition: undefined,
     pairedItems: [],
     ...overrides,
   };

@@ -48,10 +48,11 @@ import { captureException } from "../ops";
 import {
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
+  getProductComposition,
   createOrGetBrand,
   resolveProduct,
 } from "../products";
-import type { ProductAttributeDefaults } from "../products";
+import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/owned";
 import { isDeniedDomain } from "../safety";
 import { nowSeconds } from "../../lib/now";
@@ -758,6 +759,12 @@ export async function listItems(
 
 export interface ItemDetail extends ClosetItemView {
   productDefaults: ProductAttributeDefaults | undefined;
+  /**
+   * Design round 10 §AG. Read here and not in `listItems`, because the
+   * block is garment-detail only and a list that holds the text is one
+   * `.map` from rendering it.
+   */
+  composition: ProductComposition | undefined;
 }
 
 export async function getItemDetail(
@@ -766,7 +773,7 @@ export async function getItemDetail(
   itemId: string,
 ): Promise<ItemDetail> {
   const item = await getOwnedItem(db, userId, itemId);
-  const [productDefaults, performanceByItem] = await Promise.all([
+  const [productDefaults, composition, performanceByItem] = await Promise.all([
     // Equivalent mutant: looking a null product up answers undefined
     // anyway. The check says the intent — an unlinked item has no defaults
     // — and saves the query.
@@ -774,6 +781,12 @@ export async function getItemDetail(
     item.productId === null
       ? Promise.resolve(undefined)
       : getProductAttributeDefaults(db, item.productId),
+    // Same shape, same reason: a generic piece has no product, so it has
+    // nobody's label to quote.
+    // Stryker disable next-line ConditionalExpression
+    item.productId === null
+      ? Promise.resolve(undefined)
+      : getProductComposition(db, item.productId),
     computeUserPerformance(db, userId),
   ]);
   const view = toItemView(
@@ -781,7 +794,7 @@ export async function getItemDetail(
     productDefaults,
     performanceByItem.get(item.id),
   );
-  return { ...view, productDefaults };
+  return { ...view, productDefaults, composition };
 }
 
 /**

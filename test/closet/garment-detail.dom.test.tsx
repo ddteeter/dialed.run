@@ -72,6 +72,7 @@ const detail = {
   tempRange: { lowC: 5, highC: 15 },
   performance: undefined,
   productDefaults: undefined,
+  composition: undefined,
   pairedItems: [],
 };
 

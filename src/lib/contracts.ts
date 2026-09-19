@@ -362,6 +362,17 @@ export const fabricCompositionSchema = z.object({
 export type FabricComposition = z.infer<typeof fabricCompositionSchema>;
 
 /**
+ * What `products.fabric_parts` holds, on the way back out.
+ *
+ * The column is `text`, so a read is a trust boundary like any other even
+ * though the write was ours: a row written by an older deploy, or by hand
+ * against the local D1, is `unknown` until this says otherwise.
+ * `JSON.parse(x) as FabricPart[]` is the violation CLAUDE.md names.
+ */
+export const fabricPartsSchema = z.array(fabricPartSchema);
+export type FabricPart = z.infer<typeof fabricPartSchema>;
+
+/**
 What the extraction ladder emits; every field independently optional.
 */
 export const extractedProductSchema = z.object({
