@@ -47,9 +47,9 @@ describe("filePartFrom", () => {
     // A text field under the right name is the near-miss worth pinning:
     // `get` returns it happily, and only the `instanceof File` check
     // separates it from an upload.
-    expect(filePartFrom(form({ file: "just text" }), "file", 100)).toStrictEqual(
-      { ok: false, problem: "missing" },
-    );
+    expect(
+      filePartFrom(form({ file: "just text" }), "file", 100),
+    ).toStrictEqual({ ok: false, problem: "missing" });
   });
 
   it("refuses a file over the cap, by its declared size", () => {

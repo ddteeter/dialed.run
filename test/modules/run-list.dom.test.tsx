@@ -101,9 +101,7 @@ describe("RunList", () => {
   ] as const)("says %s runs are %s", async (status, badge) => {
     // Every arm of the switch, including the default: a status this list
     // does not recognise still has to render something a person can read.
-    await renderWithRouter(
-      <RunList runs={[run({ weatherStatus: status })]} />,
-    );
+    await renderWithRouter(<RunList runs={[run({ weatherStatus: status })]} />);
     expect(screen.getByRole("link", { name: /Evening run/ })).toHaveTextContent(
       `[${badge}]`,
     );

@@ -31,7 +31,10 @@ describe("thermalScale", () => {
   it("reads cold-first, because positive means runs cold", () => {
     // The direction people get backwards. "Always freezing" is +2: someone
     // who needs *more* than the table says.
-    expect(thermalScale[0]).toMatchObject({ value: 2, label: "Always freezing" });
+    expect(thermalScale[0]).toMatchObject({
+      value: 2,
+      label: "Always freezing",
+    });
     expect(thermalScale.at(-1)).toMatchObject({ value: -2 });
   });
 
@@ -44,8 +47,12 @@ describe("thermalScale", () => {
   });
 
   it("gives every answer its own token and its own words", () => {
-    expect(new Set(thermalScale.map((e) => e.token)).size).toBe(thermalScale.length);
-    expect(new Set(thermalScale.map((e) => e.label)).size).toBe(thermalScale.length);
+    expect(new Set(thermalScale.map((e) => e.token)).size).toBe(
+      thermalScale.length,
+    );
+    expect(new Set(thermalScale.map((e) => e.label)).size).toBe(
+      thermalScale.length,
+    );
   });
 });
 
@@ -57,8 +64,9 @@ describe("thermalOffset", () => {
   it("matches the artboard, in Fahrenheit", () => {
     // O1 draws +8°, +4°, 0°, −4°, −8°. Those are the numbers a runner sees,
     // so they are what this pins — not the °C the app stores.
-    expect(thermalScale.map((entry) => thermalOffset(entry.value, "f")))
-      .toStrictEqual([8, 4, 0, -4, -8]);
+    expect(
+      thermalScale.map((entry) => thermalOffset(entry.value, "f")),
+    ).toStrictEqual([8, 4, 0, -4, -8]);
   });
 
   it("converts a difference, never an absolute temperature", () => {

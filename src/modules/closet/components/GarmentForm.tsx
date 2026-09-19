@@ -31,7 +31,6 @@ import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
 
 type Category = (typeof garmentCategories)[number];
 
-
 /**
  * Display names only. The *values* come from the schema's own enums below,
  * so an option can never exist that the contract would reject — a

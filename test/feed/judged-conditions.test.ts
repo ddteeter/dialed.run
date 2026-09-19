@@ -68,8 +68,10 @@ describe("judgedFeelsLikeC", () => {
     // inverting (CLAUDE.md, derive don't mirror).
     for (const { value, token } of verdictScale) {
       const judged = judgedFeelsLikeC(SPANNING, value);
-      if (token.includes("cold")) expect(judged).toBe(SPANNING.span.minFeelsLikeC);
-      else if (token.includes("warm")) expect(judged).toBe(SPANNING.span.maxFeelsLikeC);
+      if (token.includes("cold"))
+        expect(judged).toBe(SPANNING.span.minFeelsLikeC);
+      else if (token.includes("warm"))
+        expect(judged).toBe(SPANNING.span.maxFeelsLikeC);
       else expect(judged).toBe(SPANNING.feelsLikeC);
     }
   });

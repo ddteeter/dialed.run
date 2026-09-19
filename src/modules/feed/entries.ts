@@ -29,6 +29,7 @@ import { env } from "../../env";
 import type { entryTags, itemFlagSchema } from "../../lib/contracts";
 import { ForbiddenError } from "../../lib/errors";
 import { forIds } from "../../lib/for-ids";
+import { publicPhotoStatus } from "../safety";
 import { requireOwned, requireOwner } from "../../lib/owned";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
@@ -36,6 +37,7 @@ import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { hasReacted, usefulCount } from "./reactions";
+import { nowSeconds } from "../../lib/now";
 
 type EntryTag = (typeof entryTags)[number];
 type ItemFlag = z.infer<typeof itemFlagSchema>;
@@ -142,7 +144,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     // default is not a place to read a product decision from.
     // Stryker disable next-line LogicalOperator
     isPublic: profile?.shareDefault ?? true,
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: nowSeconds(),
   });
   if (input.itemIds.length === 0) {
     await insertEntry;
@@ -176,10 +178,14 @@ export interface SubmitVerdictInput {
 async function assertOwnsEntry(
   entryId: string,
   userId: string,
-// fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
+  // fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
 ): Promise<{ id: string; userId: string; runId: string }> {
   const [entry] = await db()
-    .select({ id: outfitEntries.id, userId: outfitEntries.userId, runId: outfitEntries.runId })
+    .select({
+      id: outfitEntries.id,
+      userId: outfitEntries.userId,
+      runId: outfitEntries.runId,
+    })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId))
     .limit(1);
@@ -240,9 +246,7 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
       ? [
           database
             .insert(entryTagsTable)
-            .values(
-              input.tags.map((tag) => ({ entryId: input.entryId, tag })),
-            ),
+            .values(input.tags.map((tag) => ({ entryId: input.entryId, tag }))),
         ]
       : []),
     ...applicableFlags.map((itemFlag) =>
@@ -277,7 +281,9 @@ interface OwnEntryRow {
   verdict: number | null;
 }
 
-function hasVerdict(entry: OwnEntryRow): entry is OwnEntryRow & { verdict: number } {
+function hasVerdict(
+  entry: OwnEntryRow,
+): entry is OwnEntryRow & { verdict: number } {
   // Equivalent mutant: the query above filters `isNotNull(verdict)`, so
   // nothing reaching here has a null one. The guard is what narrows the
   // type for the counter below.
@@ -295,7 +301,13 @@ export async function verdictBandCounts(
   targetBandFloorC: number,
   excludeEntryId?: string,
 ): Promise<Record<number, number>> {
-  const counts: Record<number, number> = { "-2": 0, "-1": 0, "0": 0, "1": 0, "2": 0 };
+  const counts: Record<number, number> = {
+    "-2": 0,
+    "-1": 0,
+    "0": 0,
+    "1": 0,
+    "2": 0,
+  };
   // Both filters belong in the WHERE clause, and not only to save a scan:
   // filtering after LIMIT 200 returns "the verdicted rows among the first
   // 200", not "the first 200 verdicted rows". A user whose 200 most recent
@@ -330,7 +342,10 @@ export async function verdictBandCounts(
   for (const entry of verdicted) {
     const observation = observations.get(entry.runId);
     if (!observation) continue;
-    if (bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) !== targetBandFloorC)
+    if (
+      bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) !==
+      targetBandFloorC
+    )
       continue;
     counts[entry.verdict] = (counts[entry.verdict] ?? 0) + 1;
   }
@@ -435,7 +450,7 @@ export async function recordVerdictPrompted(
       kind: "verdict_prompt",
       subjectId: entryId,
       body: "You didn't log a verdict for this run.",
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
 }
@@ -504,14 +519,28 @@ export async function getEntryDetail(
     .where(eq(outfitEntryItems.entryId, entryId));
   const itemIds = entryItemRows.map((row) => row.itemId);
   const garments = await forIds(itemIds, () =>
-    database.select().from(wardrobeItems).where(inArray(wardrobeItems.id, itemIds)),
+    database
+      .select()
+      .from(wardrobeItems)
+      .where(inArray(wardrobeItems.id, itemIds)),
   );
   const garmentsById = new Map(garments.map((g) => [g.id, g]));
 
+  // Screened photos only, unless the viewer is the author. In the WHERE
+  // rather than filtered after: a stranger must not be billed for rows
+  // they may not see, and an `<img>` pointing at a key the photo route
+  // will refuse renders as a broken image rather than as nothing.
   const photos = await database
     .select()
     .from(entryPhotos)
-    .where(eq(entryPhotos.entryId, entryId))
+    .where(
+      and(
+        eq(entryPhotos.entryId, entryId),
+        ...(entry.userId === viewerId
+          ? []
+          : [eq(entryPhotos.screenStatus, publicPhotoStatus)]),
+      ),
+    )
     .orderBy(entryPhotos.position);
 
   const tags = await database
@@ -557,8 +586,8 @@ export async function getEntryDetail(
         brand: garment?.brand ?? undefined,
         category: garment?.category ?? "accessory",
         layer: garment?.layer ?? undefined,
-        flag: isOwner ? row.flag ?? undefined : undefined,
-        note: isOwner ? row.note ?? undefined : undefined,
+        flag: isOwner ? (row.flag ?? undefined) : undefined,
+        note: isOwner ? (row.note ?? undefined) : undefined,
       };
     }),
     photoKeys: photos.map((p) => p.photoKey),
@@ -592,4 +621,3 @@ export async function entryDetailForViewer(
   ]);
   return { ...entry, usefulCount: useful, viewerHasReacted };
 }
-

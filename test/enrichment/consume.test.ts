@@ -249,15 +249,20 @@ describe("handleEnrichmentBatch: the happy path", () => {
     const productId = await pendingProduct();
     const fetchImpl = serving(PAGE);
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    await env.MEDIA.put(`products/${productId}/snapshot-${String(dayAgo)}.html`, PAGE);
-    await db().insert(productSnapshots).values({
-      id: newUlid(),
-      productId,
-      url: URL_UNDER_TEST,
-      r2Key: `products/${productId}/snapshot-${String(dayAgo)}.html`,
-      rung: "text",
-      fetchedAt: dayAgo,
-    });
+    await env.MEDIA.put(
+      `products/${productId}/snapshot-${String(dayAgo)}.html`,
+      PAGE,
+    );
+    await db()
+      .insert(productSnapshots)
+      .values({
+        id: newUlid(),
+        productId,
+        url: URL_UNDER_TEST,
+        r2Key: `products/${productId}/snapshot-${String(dayAgo)}.html`,
+        rung: "text",
+        fetchedAt: dayAgo,
+      });
 
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
@@ -272,14 +277,16 @@ describe("handleEnrichmentBatch: the happy path", () => {
     const productId = await pendingProduct();
     const fetchImpl = serving(PAGE);
     const now = Date.now();
-    await db().insert(productSnapshots).values({
-      id: newUlid(),
-      productId,
-      url: URL_UNDER_TEST,
-      r2Key: `products/${productId}/snapshot-${String(now)}.html`,
-      rung: "text",
-      fetchedAt: now,
-    });
+    await db()
+      .insert(productSnapshots)
+      .values({
+        id: newUlid(),
+        productId,
+        url: URL_UNDER_TEST,
+        r2Key: `products/${productId}/snapshot-${String(now)}.html`,
+        rung: "text",
+        fetchedAt: now,
+      });
 
     const message = jobFor(productId);
     await handleEnrichmentBatch(
@@ -544,14 +551,16 @@ describe("reextract", () => {
 
   it("does nothing when the snapshot's object is gone", async () => {
     const productId = await pendingProduct();
-    await db().insert(productSnapshots).values({
-      id: newUlid(),
-      productId,
-      url: URL_UNDER_TEST,
-      r2Key: `products/${productId}/snapshot-0.html`,
-      rung: "text",
-      fetchedAt: 1,
-    });
+    await db()
+      .insert(productSnapshots)
+      .values({
+        id: newUlid(),
+        productId,
+        url: URL_UNDER_TEST,
+        r2Key: `products/${productId}/snapshot-0.html`,
+        rung: "text",
+        fetchedAt: 1,
+      });
     const deps = depsWith(serving(PAGE));
     expect(await reextract(deps, productId)).toBeUndefined();
   });
@@ -669,10 +678,13 @@ describe("handleEnrichmentBatch: the model rung", () => {
     const productId = await pendingProduct();
     const model = modelAnswering("100% Primeflex");
 
-    await handleEnrichmentBatch(batchOf("dialed-enrichment", [jobFor(productId)]), {
-      ...depsWith(serving(OPAQUE)),
-      model,
-    });
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      {
+        ...depsWith(serving(OPAQUE)),
+        model,
+      },
+    );
 
     expect(model.extract).toHaveBeenCalledTimes(1);
     const row = await rowOf(productId);
@@ -687,10 +699,13 @@ describe("handleEnrichmentBatch: the model rung", () => {
     const productId = await pendingProduct();
     const model = { extract: vi.fn(() => Promise.resolve({})) };
 
-    await handleEnrichmentBatch(batchOf("dialed-enrichment", [jobFor(productId)]), {
-      ...depsWith(serving(OPAQUE)),
-      model,
-    });
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      {
+        ...depsWith(serving(OPAQUE)),
+        model,
+      },
+    );
 
     expect(model.extract).toHaveBeenCalledTimes(1);
     const [snapshot] = await snapshotsOf(productId);
@@ -723,7 +738,9 @@ describe("handleEnrichmentBatch: the model rung", () => {
     // queue's retry is the mechanism (law 3), and `pending` is what the
     // hourly sweep re-drives.
     const productId = await pendingProduct();
-    const model = { extract: vi.fn(() => Promise.reject(new Error("upstream"))) };
+    const model = {
+      extract: vi.fn(() => Promise.reject(new Error("upstream"))),
+    };
     const deps = { ...depsWith(serving(OPAQUE)), model };
     const message = jobFor(productId);
 

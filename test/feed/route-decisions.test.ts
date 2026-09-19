@@ -26,7 +26,9 @@ describe("shouldAskForVerdict", () => {
     // The prompt showing at all spends the budget (packet A3), so a second
     // open gets nothing even though the entry still has no verdict.
     expect(
-      await shouldAskForVerdict(entry, "01AUTHOR", () => Promise.resolve(false)),
+      await shouldAskForVerdict(entry, "01AUTHOR", () =>
+        Promise.resolve(false),
+      ),
     ).toBe(false);
   });
 

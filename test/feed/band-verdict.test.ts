@@ -13,7 +13,14 @@ import type { CoverageBand } from "../../src/modules/feed/coverage";
  * both directions is worth naming as the direction that costs more.
  */
 function band(counts: Partial<CoverageBand>): CoverageBand {
-  return { bandFloorC: 0, label: "0–5°", cold: 0, dialed: 0, warm: 0, ...counts };
+  return {
+    bandFloorC: 0,
+    label: "0–5°",
+    cold: 0,
+    dialed: 0,
+    warm: 0,
+    ...counts,
+  };
 }
 
 describe("bandVerdict", () => {

@@ -36,7 +36,8 @@ function answering(content: string) {
 }
 
 function raw(body: string, status = 200) {
-  const impl: typeof fetch = () => Promise.resolve(new Response(body, { status }));
+  const impl: typeof fetch = () =>
+    Promise.resolve(new Response(body, { status }));
   return vi.fn(impl);
 }
 
@@ -99,7 +100,6 @@ const FOUND = `{
     "waterResistant": null,
     "imageUrl": null
   }`;
-
 
 describe("createChatCompletionsModel: the request", () => {
   it("asks the pinned provider, with fallbacks off", async () => {
@@ -260,7 +260,9 @@ describe("createChatCompletionsModel: the request", () => {
     await modelWith(fetchImpl).extract(PAGE_TEXT, HINT);
     const system = sentBody(fetchImpl).messages[0]?.content ?? "";
 
-    expect(system).toContain(`categoryHint must be one of: ${garmentCategories.join(", ")}.`);
+    expect(system).toContain(
+      `categoryHint must be one of: ${garmentCategories.join(", ")}.`,
+    );
     for (const category of garmentCategories) {
       expect(system, category).toContain(category);
     }
@@ -296,7 +298,10 @@ describe("createChatCompletionsModel: the answer", () => {
         name: "Rover Tee",
         fabricComposition: { verbatim },
       });
-      const found = await modelWith(answering(content)).extract(PAGE_TEXT, HINT);
+      const found = await modelWith(answering(content)).extract(
+        PAGE_TEXT,
+        HINT,
+      );
       expect(found.fabricComposition).toBeUndefined();
       // Only that field: the rest of the extraction is still good.
       expect(found.name).toBe("Rover Tee");
@@ -335,7 +340,8 @@ async function refuses(fetchImpl: typeof fetch): Promise<unknown> {
 /**
 An envelope with no choices in it — a completion that completed nothing.
 */
-const noChoices: typeof fetch = () => Promise.resolve(Response.json({ choices: [] }));
+const noChoices: typeof fetch = () =>
+  Promise.resolve(Response.json({ choices: [] }));
 
 /**
 The fetch itself failing, rather than the model refusing.
@@ -395,7 +401,9 @@ describe("createChatCompletionsModel: every way it can fail", () => {
   it("fails on JSON the contract rejects", async () => {
     // A model that answers the right shape with the wrong values — here a
     // weight outside the enum — is not a usable extraction.
-    const error = await refuses(answering(JSON.stringify({ weight: "chunky" })));
+    const error = await refuses(
+      answering(JSON.stringify({ weight: "chunky" })),
+    );
     expect(String(error)).toContain("output did not match the contract");
   });
 

@@ -1,4 +1,8 @@
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -92,8 +96,8 @@ function ImportStatusInner({
   if (hasStalledImport(importRow.status, budgetSpent ? POLL_BUDGET_MS : 0)) {
     return (
       <p className="text-sm text-night/70">
-        This is taking longer than usual. We&rsquo;ll keep working on it —
-        check back shortly.
+        This is taking longer than usual. We&rsquo;ll keep working on it — check
+        back shortly.
       </p>
     );
   }

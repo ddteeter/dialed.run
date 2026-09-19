@@ -1,3 +1,4 @@
+import { and, inArray } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -26,7 +27,10 @@ export async function columnWhere<TColumn extends SQLiteColumn>(
   column: TColumn,
   where: SQL | undefined,
 ): Promise<TColumn["_"]["data"][]> {
-  const rows = await database.select({ value: column }).from(table).where(where);
+  const rows = await database
+    .select({ value: column })
+    .from(table)
+    .where(where);
   return rows.map((row) => row.value);
 }
 
@@ -103,4 +107,46 @@ export async function firstRowWhere<TTable extends SQLiteTable>(
 ): Promise<TTable["$inferSelect"] | undefined> {
   const [row] = await database.select().from(table).where(where).limit(1);
   return row;
+}
+
+/**
+ * The candidates-filtered-to-membership shape: which of these ids are in
+ * this table, subject to a further predicate.
+ *
+ * **The `inArray` is built here, and that is the whole reason this takes a
+ * column instead of a finished `where`.** The first version took the
+ * predicate whole and used `candidateIds` only for an empty-list guard —
+ * which meant a caller could pass a `where` that forgot the membership
+ * clause, and get back every row in the table instead of the ones asked
+ * about. That is not hypothetical: it happened to `blockedAmong` while
+ * this helper was being written, and nothing failed, because "a superset
+ * of the right answer" passes any test that only checks the expected ids
+ * are present. Making the clause impossible to omit is worth the extra
+ * parameter.
+ *
+ * **There is deliberately no empty-candidates short-circuit.** One was
+ * written, and mutation testing showed it unobservable: an empty `inArray`
+ * matches nothing, so every caller gets the same empty Set either way and
+ * no input distinguishes the two. What a guard would buy is skipping the
+ * query on a page with nobody on it. `src/modules/feed/conditions.ts`
+ * keeps exactly that guard under an owner-approved grant, so the trade is
+ * a live question rather than a settled one — but a guard no test can
+ * reach does not belong in a file held at 100%, and adding one back is a
+ * grant plus a comment rather than a silent line.
+ */
+export async function columnSetAmong<TColumn extends SQLiteColumn>(
+  database: DrizzleD1Database,
+  table: SQLiteTable,
+  column: TColumn,
+  membershipColumn: SQLiteColumn,
+  candidateIds: readonly string[],
+  extraWhere: SQL,
+): Promise<Set<TColumn["_"]["data"]>> {
+  const matches = await columnWhere(
+    database,
+    table,
+    column,
+    and(inArray(membershipColumn, [...candidateIds]), extraWhere),
+  );
+  return new Set(matches);
 }

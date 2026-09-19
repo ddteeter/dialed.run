@@ -271,7 +271,11 @@ async function processEnrichJob(
   deps: EnrichmentDeps,
   productId: string,
 ): Promise<void> {
-  const row = await firstRowWhere(deps.db, products, eq(products.id, productId));
+  const row = await firstRowWhere(
+    deps.db,
+    products,
+    eq(products.id, productId),
+  );
   if (row?.extractionStatus !== "pending") return;
 
   try {

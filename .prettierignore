@@ -5,3 +5,15 @@ worker-configuration.d.ts
 package-lock.json
 design/
 .guardrails/
+# Read-only import archive, same as design/ (CLAUDE.md).
+plan/
+# drizzle-kit owns these: it regenerates the snapshots and the journal on
+# every `db:generate`, in its own formatting. Reformatting them here buys
+# nothing and guarantees churn — the next generate writes them back.
+src/db/migrations/
+# Verbatim copies of a dependency's files, staged out of node_modules by
+# `npm run stage:mediapipe` and gitignored. Same reason they are in the
+# eslint ignore list: they are not ours to format.
+public/mediapipe/wasm/
+# A full copy of the project per stryker run.
+.stryker-tmp/

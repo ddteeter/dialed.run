@@ -4,7 +4,10 @@ import { z } from "zod";
 
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { createOrGetBrand, createOrGetProduct } from "../../src/modules/products/service";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../../src/modules/products/service";
 import {
   outfitEntries,
   outfitEntryItems,
@@ -26,6 +29,7 @@ import {
   withResolvedProduct,
 } from "../../src/modules/closet/service";
 
+import { nowSeconds } from "../../src/lib/now";
 /**
  * The closet service's remaining edges: product resolution on save, the
  * stored-versus-estimated temperature range, and the reads that answer with
@@ -107,7 +111,6 @@ describe("withResolvedProduct", () => {
 
     expect(send).not.toHaveBeenCalled();
   });
-
 
   it("leaves a garment with no brand generic", async () => {
     // A generic piece is the whole point of the tap list and of D-27's
@@ -396,7 +399,7 @@ describe("what createItem writes down", () => {
   it("stamps created_at in seconds and starts an item visible", async () => {
     // `visibility` gates whether an item can appear anywhere social; a
     // blank one is a value no reader knows how to interpret.
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
     const item = await createItem(
       db(),
       newUlid(),
@@ -554,9 +557,9 @@ describe("an item belongs to exactly one runner", () => {
       "manual",
     );
 
-    await expect(
-      getOwnedItem(client, newUlid(), item.id),
-    ).rejects.toThrow(/not found/i);
+    await expect(getOwnedItem(client, newUlid(), item.id)).rejects.toThrow(
+      /not found/i,
+    );
   });
 });
 
@@ -725,7 +728,7 @@ describe("computeUserPerformance reads the clock in seconds", () => {
       { category: "top", name: "Forgotten shirt" },
       "manual",
     );
-    const aYearAgo = Math.floor(Date.now() / 1000) - 365 * 86_400;
+    const aYearAgo = nowSeconds() - 365 * 86_400;
     await logEntryFor(userId, item.id, aYearAgo);
 
     const performance = await computeUserPerformance(client, userId);
@@ -808,7 +811,7 @@ describe("a run logged today is not a retire candidate", () => {
       { category: "top", name: "Worn today" },
       "manual",
     );
-    await logEntryFor(userId, item.id, Math.floor(Date.now() / 1000));
+    await logEntryFor(userId, item.id, nowSeconds());
 
     const performance = await computeUserPerformance(client, userId);
 

@@ -2,7 +2,7 @@
 
 Run this before opening a PR, after `npm run verify && npm test` are green.
 
-(For comments *received* on a PR, see CLAUDE.md §"Review comments are change
+(For comments _received_ on a PR, see CLAUDE.md §"Review comments are change
 requests" — the default response to a review comment is a commit, not a
 reply.)
 
@@ -72,7 +72,7 @@ entity. If two or more writes must be all-or-nothing, they belong in one
 ## 5a. Can this form be submitted twice?
 
 If your change adds a server function that creates a row from a form, it
-needs an idempotency key (CLAUDE.md law 8b). Ask it of every *existing*
+needs an idempotency key (CLAUDE.md law 8b). Ask it of every _existing_
 create path you touch, too — the audit is not done, and a form without one
 produces duplicate rows on exactly the flaky connections where a user is
 most likely to retry.
@@ -84,7 +84,7 @@ consumer and cron handlers as though they run twice concurrently on the same
 row. Idempotency lives in the database — `UNIQUE`, `INSERT OR IGNORE`, a
 status-claim `UPDATE` you check the row count of — never in a variable.
 
-And: could a message enqueued by the *previous* deploy still be in flight? If
+And: could a message enqueued by the _previous_ deploy still be in flight? If
 your change alters the message shape, it must still parse the old one.
 
 ## 6. Does a failure here reach a human?

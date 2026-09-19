@@ -76,7 +76,9 @@ describe("toStrictSchema", () => {
   });
 
   it("reaches a nested object, not just the top level", () => {
-    const nested = z.object({ outer: z.object({ inner: z.string().optional() }) });
+    const nested = z.object({
+      outer: z.object({ inner: z.string().optional() }),
+    });
     const strict = strictly(nested);
     const outer = propertyOf(strict, "outer");
     expect(requiredOf(outer)).toStrictEqual(["inner"]);

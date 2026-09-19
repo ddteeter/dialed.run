@@ -23,13 +23,13 @@ import { bandsAscending, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";
 import { unitsFor } from "./units";
 import { followerCount, followingCount } from "./follows";
+import { publiclyVisibleEntry } from "../safety";
 
 function db() {
   return drizzle(env.DIALED_CORE);
 }
 
 const RECENT_LIMIT = 20;
-
 
 export interface OwnProfile {
   userId: string;
@@ -41,17 +41,18 @@ export interface OwnProfile {
   entryCount: number;
   coverage: CoverageBand[];
   mostWornItems: { itemId: string; name: string; wearCount: number }[];
-  recentEntries: { entryId: string; createdAt: number; verdict: number | null }[];
+  recentEntries: {
+    entryId: string;
+    createdAt: number;
+    verdict: number | null;
+  }[];
 }
-
 
 /**
  * Bands ascending by floor. The caller tracks the min/max floor it saw
  * while building `bands` so this never needs to iterate the map's keys to
  * sort them (no in-memory `.sort()`, per house lint rule).
  */
-
-
 
 export async function ownProfile(userId: string): Promise<OwnProfile> {
   const database = db();
@@ -125,7 +126,9 @@ export interface OtherProfile {
 /**
 H v1: public info + recent PUBLIC entries only — no aggregates.
 */
-export async function otherProfile(userId: string): Promise<OtherProfile | undefined> {
+export async function otherProfile(
+  userId: string,
+): Promise<OtherProfile | undefined> {
   const database = db();
   const [profile] = await database
     .select()
@@ -142,7 +145,7 @@ export async function otherProfile(userId: string): Promise<OtherProfile | undef
       caption: outfitEntries.caption,
     })
     .from(outfitEntries)
-    .where(and(eq(outfitEntries.userId, userId), eq(outfitEntries.isPublic, true)))
+    .where(and(eq(outfitEntries.userId, userId), publiclyVisibleEntry()))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(RECENT_LIMIT);
 

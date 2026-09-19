@@ -77,14 +77,21 @@ describe("garmentFormSchema", () => {
     ["brand", "b".repeat(61), "Keep the brand under 60 characters."],
     ["size", "s".repeat(21), "Keep the size under 20 characters."],
     ["color", "c".repeat(31), "Keep the color under 30 characters."],
-    ["productUrl", urlWithScheme("http"), "Product links need to start with https://"],
-  ])("says what is wrong with %s in the contract's voice", (field, value, message) => {
-    const result = garmentFormSchema.safeParse({ ...VALID, [field]: value });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues).toHaveLength(1);
-    expect(result.error?.issues[0]?.path).toEqual([field]);
-    expect(result.error?.issues[0]?.message).toBe(message);
-  });
+    [
+      "productUrl",
+      urlWithScheme("http"),
+      "Product links need to start with https://",
+    ],
+  ])(
+    "says what is wrong with %s in the contract's voice",
+    (field, value, message) => {
+      const result = garmentFormSchema.safeParse({ ...VALID, [field]: value });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toHaveLength(1);
+      expect(result.error?.issues[0]?.path).toEqual([field]);
+      expect(result.error?.issues[0]?.message).toBe(message);
+    },
+  );
 
   it("keeps each field's issue on its own field when several fail at once", () => {
     // Two-plus errors is a different render path in the contract — a

@@ -3,7 +3,7 @@
 ## Problem
 
 Runs enter dialed three ways: manual entry, async FIT/GPX/TCX upload, and
-Strava *reminders* (notification only — no activity data stored, D-14/D-33).
+Strava _reminders_ (notification only — no activity data stored, D-14/D-33).
 This lane delivers run CRUD, the import queue consumer + DLQ, the parsers,
 the notifications bell, and the Strava connect/webhook seam.
 
@@ -54,7 +54,7 @@ the row outright.
 - New routes: `runs/index`, `runs/new` (A1), `runs/manual`, `runs/$runId`,
   `runs/import.$importId`, `runs/notifications`, `runs/strava`,
   `runs/strava-callback`, plus pre-authorized `api/strava.ts`.
-- New bindings/queues/crons: **none**. New optional *secrets* declared in
+- New bindings/queues/crons: **none**. New optional _secrets_ declared in
   `src/env/env.d.ts` (pattern set by GOOGLE_*): `STRAVA_CLIENT_ID/SECRET`,
   `STRAVA_WEBHOOK_VERIFY_TOKEN` — human sets via `wrangler secret`.
 - Screens: A1 (+ deltas #2 manual entry, #3 notifications, #6 Strava).
@@ -95,7 +95,7 @@ oauth and webhook seams in separate files — no behavior change.)
 - Tooling flag (not a design question, but worth a human look): the
   guardrails commit-gate's `skipped-test` signature
   (`f(?:it|describe)` in `chunk-RO3Q5HUB.mjs`) false-positives on the bare
-  *code* identifier `fit` — not just Jasmine's focused `fit(...)` — because
+  _code_ identifier `fit` — not just Jasmine's focused `fit(...)` — because
   it matches on raw diff text outside of strings/comments. Hit it once in
   `parsers/index.ts`'s `sourcesByExtension` map; worked around by quoting
   the key (`["fit"]:`) rather than suppressing. Domain vocabulary like a

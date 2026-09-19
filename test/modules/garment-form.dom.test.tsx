@@ -319,18 +319,14 @@ describe("GarmentForm: the failure path D-17 was about", () => {
     );
     // Each row focuses its field, and is a button — a form is not a
     // document.
-    expect(
-      screen.getByRole("button", { name: /Brand/ }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Brand/ })).toBeVisible();
   });
 
   it("marks the button and no field when the save itself fails", async () => {
     // The distinction the contract exists to draw: nothing was saved and
     // the fix is *not* inside the form, so no field is marked.
     const user = userEvent.setup();
-    const save: SaveMock = vi.fn(() =>
-      Promise.reject(new Error("network")),
-    );
+    const save: SaveMock = vi.fn(() => Promise.reject(new Error("network")));
     renderForm({ save });
 
     await user.type(screen.getByLabelText(/Model \/ name/), "Harrier");
@@ -506,7 +502,12 @@ describe("GarmentForm: the attributes a category admits", () => {
     renderForm();
 
     expect(optionLabels("Layer")).toStrictEqual(["—", "Base", "Mid", "Outer"]);
-    expect(optionLabels("Weight")).toStrictEqual(["—", "Light", "Mid", "Heavy"]);
+    expect(optionLabels("Weight")).toStrictEqual([
+      "—",
+      "Light",
+      "Mid",
+      "Heavy",
+    ]);
     expect(optionLabels("Fabric")).toStrictEqual([
       "—",
       "Synthetic",

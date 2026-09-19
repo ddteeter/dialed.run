@@ -24,6 +24,7 @@ import {
   stravaCallbackOutcome,
 } from "../../src/modules/runs/strava/oauth";
 
+import { nowSeconds } from "../../src/lib/now";
 /**
  * What a maintainer would see in Sentry.
  *
@@ -71,7 +72,7 @@ function fakeRevokeQueue(): {
 }
 
 function nowS(): number {
-  return Math.floor(Date.now() / 1000);
+  return nowSeconds();
 }
 
 interface FakeApiCalls {
@@ -117,7 +118,11 @@ function fakeApi(
         throw new Error("refresh failed");
       }
       if (overrides.refreshToken) return overrides.refreshToken();
-      return { accessToken: "access-2", refreshToken: "refresh-2", expiresAt: nowS() + 3600 };
+      return {
+        accessToken: "access-2",
+        refreshToken: "refresh-2",
+        expiresAt: nowS() + 3600,
+      };
     },
     deauthorize(accessToken: string) {
       deauthorizeCalls.push(accessToken);
@@ -615,7 +620,6 @@ async function connectionThatHasBeenFailing(overrides: {
 }
 
 describe("refreshStravaToken: who hears about a broken connection", () => {
-
   it("tells the user when Strava says the grant is dead", async () => {
     // A terminal failure is per-user and true, so the user is told — once,
     // on the ok -> broken transition.
@@ -678,7 +682,11 @@ describe("refreshStravaToken: who hears about a broken connection", () => {
 
     let result;
     const reports = await reportsDuring(async () => {
-      result = await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
+      result = await refreshStravaToken(
+        db,
+        fakeApi({ refreshFails: true }),
+        userId,
+      );
     });
 
     expect(result).toBe("broken");
@@ -750,11 +758,19 @@ describe("refreshStravaToken: who hears about a broken connection", () => {
     await reportsDuring(async () => {
       // Three days of failures to the second has had its window.
       expect(
-        await refreshStravaToken(db, fakeApi({ refreshFails: true }), atTheLimit),
+        await refreshStravaToken(
+          db,
+          fakeApi({ refreshFails: true }),
+          atTheLimit,
+        ),
       ).toBe("broken");
       // A second short of it has not, however many times it has failed.
       expect(
-        await refreshStravaToken(db, fakeApi({ refreshFails: true }), justInside),
+        await refreshStravaToken(
+          db,
+          fakeApi({ refreshFails: true }),
+          justInside,
+        ),
       ).toBe("degraded");
     });
 
@@ -775,7 +791,11 @@ describe("refreshStravaToken: who hears about a broken connection", () => {
     });
 
     expect(
-      await refreshStravaToken(db, fakeApi({ refreshFails: true }), manyButRecent),
+      await refreshStravaToken(
+        db,
+        fakeApi({ refreshFails: true }),
+        manyButRecent,
+      ),
     ).toBe("degraded");
     expect(
       await refreshStravaToken(db, fakeApi({ refreshFails: true }), oldButFew),
@@ -858,7 +878,10 @@ describe("stravaCallbackOutcome (the CSRF guard, D-41)", () => {
   });
 
   it.each([
-    ["no cookie to compare against", { expectedState: undefined, state, code: "c" }],
+    [
+      "no cookie to compare against",
+      { expectedState: undefined, state, code: "c" },
+    ],
     ["no state on the callback", { expectedState: state, code: "c" }],
     ["no code to exchange", { expectedState: state, state }],
     // The one a naive `state !== expectedState` would let through:
@@ -890,7 +913,10 @@ describe("stravaCallbackOutcome (the CSRF guard, D-41)", () => {
     // A declined connection arrives with no code and no state, so the
     // order of these two checks is what the user reads.
     expect(
-      stravaCallbackOutcome({ expectedState: undefined, error: "access_denied" }),
+      stravaCallbackOutcome({
+        expectedState: undefined,
+        error: "access_denied",
+      }),
     ).toMatchObject({ reason: "Strava connection was cancelled." });
   });
 });

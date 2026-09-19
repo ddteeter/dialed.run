@@ -127,7 +127,12 @@ function snapshotsByPrefix(
 }
 
 describe.each([
-  { name: "core", journal: coreJournal, snapshots: coreSnapshots, sql: coreSql },
+  {
+    name: "core",
+    journal: coreJournal,
+    snapshots: coreSnapshots,
+    sql: coreSql,
+  },
   {
     name: "weather",
     journal: weatherJournal,
@@ -149,9 +154,9 @@ describe.each([
     // those two from disagreeing after a renumber.
     const entries = parseJournal(journal, name);
     for (const entry of entries) {
-      expect(entry.tag.startsWith(`${String(entry.idx).padStart(4, "0")}_`)).toBe(
-        true,
-      );
+      expect(
+        entry.tag.startsWith(`${String(entry.idx).padStart(4, "0")}_`),
+      ).toBe(true);
     }
   });
 

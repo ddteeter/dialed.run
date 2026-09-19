@@ -34,9 +34,6 @@ import { cacheKeyFor, matchesKey, runHourKeys } from "../weather";
  * an argument so the cron can pass a non-request binding. */
 type CoreDb = DrizzleD1Database;
 
-
-
-
 export { pointSpan } from "./conditions-shape";
 export type { Conditions, ConditionsSpan } from "./conditions-shape";
 
@@ -48,7 +45,6 @@ One observation cache cell, as a Map key.
 function cellKey(latR: number, lngR: number, hourBucket: number): string {
   return `${String(latR)}|${String(lngR)}|${String(hourBucket)}`;
 }
-
 
 interface Locatable {
   id: string;

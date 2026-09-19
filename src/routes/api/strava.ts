@@ -33,7 +33,11 @@ export const Route = createFileRoute("/api/strava")({
         } catch {
           body = undefined;
         }
-        await handleStravaWebhookEvent(env.IMPORTS_QUEUE, captureException, body);
+        await handleStravaWebhookEvent(
+          env.IMPORTS_QUEUE,
+          captureException,
+          body,
+        );
         return new Response(undefined, { status: 200 });
       },
     },

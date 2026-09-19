@@ -28,6 +28,15 @@ declare namespace Cloudflare {
      * PR #72 review; the eval still reads `OPENROUTER_API_KEY` from
      * `.dev.vars`, because it compares several vendors' models. See
      * `modules/enrichment/model/from-env.ts`. */
+    /** Admin user ids (106), comma-separated. Absent or empty means NO
+     * admins, which fails closed: the review queue becomes unreachable
+     * rather than open to everyone. See `modules/safety/admin.ts`. */
+    ADMIN_USER_IDS?: string;
+    /** OpenAI key (106) — the photo screening classifier
+     * (`omni-moderation-latest`). Absent: a photo stays `pending`, so its
+     * owner sees it and the public does not, and the screening-retry cron
+     * re-drives it once the key exists (law 5). See
+     * `modules/safety/classifier/`. */
     OPENAI_API_KEY?: string;
   }
 }

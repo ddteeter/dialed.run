@@ -31,7 +31,9 @@ describe("normalizeIdentity", () => {
 
   it("dedup collisions land on the same normalized key", () => {
     const variants = ["Janji", " janji ", "JANJI", "Janji™"];
-    const normalized = new Set(variants.map((value) => normalizeIdentity(value)));
+    const normalized = new Set(
+      variants.map((value) => normalizeIdentity(value)),
+    );
     expect(normalized.size).toBe(1);
   });
 

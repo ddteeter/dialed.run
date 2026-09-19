@@ -69,7 +69,9 @@ export function parseXmlDocument(bytes: ArrayBuffer, kind: string): unknown {
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch (error) {
-    throw new RunParseError(`${kind}: bytes are not valid UTF-8`, { cause: error });
+    throw new RunParseError(`${kind}: bytes are not valid UTF-8`, {
+      cause: error,
+    });
   }
   try {
     return xmlParser().parse(text);

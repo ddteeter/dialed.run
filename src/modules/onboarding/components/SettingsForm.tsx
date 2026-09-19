@@ -2,10 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { useState } from "react";
 
-import {
-  thermalOffsetLabel,
-  thermalScale,
-} from "../../../lib/contracts";
+import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
   FormErrorSummary,

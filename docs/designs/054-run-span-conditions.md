@@ -8,7 +8,7 @@ verdict covers the whole run, so a "way warm" on that run teaches the call
 epic that 4°C means overdressed.
 
 **Half of D-5 is already done and the register is stale.** `db1e0c6` made
-`attach.ts` resolve *every* hour a run spans (capped at 6), so the
+`attach.ts` resolve _every_ hour a run spans (capped at 6), so the
 observations exist in `DIALED_WEATHER` today. It deliberately stopped
 before deciding which value represents a run, because that is a product
 call. This lane is that decision plus the read side. **It is not a schema
@@ -17,11 +17,11 @@ so a run's span is derivable from `started_at + duration_s`.
 
 ## Approach
 
-**Owner's calls (2026-09-11):** a run is judged at its *worst hour relative
-to its verdict*, and *displays as a range*.
+**Owner's calls (2026-09-11):** a run is judged at its _worst hour relative
+to its verdict_, and _displays as a range_.
 
 - `feed/conditions.ts` — `Conditions` gains `span: { minFeelsLikeC,
-  maxFeelsLikeC, minTempC, maxTempC }`. `tempC`/`feelsLikeC` keep meaning
+maxFeelsLikeC, minTempC, maxTempC }`. `tempC`/`feelsLikeC` keep meaning
   **the starting hour**, so nothing that reads them today moves.
   `observationsForRuns` reads every hour key the run spans instead of one,
   which is why `Locatable` gains `durationS`.
@@ -76,5 +76,5 @@ to its verdict*, and *displays as a range*.
   the ladder of exactly its success cases.
 - `prefill.ts` matches a candidate entry on `feelsLikeC`. It is left on the
   starting hour in this lane: prefill answers "what did I wear last time it
-  felt like this *when I set out*", which is the point a person is at when
+  felt like this _when I set out_", which is the point a person is at when
   they open the app. Flagged rather than assumed — say so if it should move.

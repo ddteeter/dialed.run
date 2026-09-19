@@ -8,7 +8,11 @@ import {
   defaultStreamHandler,
 } from "@tanstack/react-start/server";
 
-import { captureException, handleQueueBatch, handleScheduled } from "./modules/ops";
+import {
+  captureException,
+  handleQueueBatch,
+  handleScheduled,
+} from "./modules/ops";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 

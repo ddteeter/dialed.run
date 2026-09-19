@@ -1,12 +1,13 @@
-import { writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { CORPUS } from "./corpus";
-import { extractEveryWay, type ModelChoice, type PageExtractions } from "./extractions";
+import {
+  extractEveryWay,
+  type ModelChoice,
+  type PageExtractions,
+} from "./extractions";
 import { fetchPage } from "./page-cache";
 import { reportFor } from "./report";
 import { secret } from "./secrets";
+import { writeReport } from "./write-report";
 
 /**
  * The extraction eval (D-32). `npm run eval`.
@@ -46,9 +47,7 @@ async function main(): Promise<void> {
   for (const entry of CORPUS) {
     try {
       const html = await fetchPage(entry.url, firecrawl);
-      pages.push(
-        await extractEveryWay({ ...entry, html }, MODELS, openrouter),
-      );
+      pages.push(await extractEveryWay({ ...entry, html }, MODELS, openrouter));
       console.log(`  ok    ${entry.brand} — ${entry.category}`);
     } catch (error: unknown) {
       // A shop that is down is not a reason to lose the other nineteen
@@ -58,10 +57,13 @@ async function main(): Promise<void> {
     }
   }
 
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const out = path.join(here, "results.md");
-  writeFileSync(out, reportFor(pages), "utf8");
-  console.log(`\n${String(pages.length)} of ${String(CORPUS.length)} pages -> ${out}`);
+  writeReport({
+    scriptUrl: import.meta.url,
+    markdown: reportFor(pages),
+    covered: pages.length,
+    total: CORPUS.length,
+    noun: "pages",
+  });
 }
 
 await main();

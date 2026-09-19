@@ -127,7 +127,10 @@ describe("calibrationInput", () => {
 
   it("refuses an empty city with the sentence the form shows", () => {
     // Error copy lives in the schema, not the component.
-    const parsed = calibrationInput.safeParse({ thermalLevel: 0, cityLabel: "  " });
+    const parsed = calibrationInput.safeParse({
+      thermalLevel: 0,
+      cityLabel: "  ",
+    });
 
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0]?.message).toBe(

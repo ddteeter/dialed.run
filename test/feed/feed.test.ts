@@ -2,7 +2,10 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
-import { followingFeed, followingFeedStatement } from "../../src/modules/feed/feed";
+import {
+  followingFeed,
+  followingFeedStatement,
+} from "../../src/modules/feed/feed";
 import { follow, followeeIdsOf } from "../../src/modules/feed/follows";
 import { makeEntry, makeRun, makeUser, NOW } from "./helpers";
 
@@ -17,13 +20,21 @@ describe("following feed (E1)", () => {
     const followeeRun = await makeRun({ userId: followee });
     const strangerRun = await makeRun({ userId: stranger });
 
-    const ownEntry = await makeEntry({ userId: viewer, runId: ownRun, createdAt: NOW });
+    const ownEntry = await makeEntry({
+      userId: viewer,
+      runId: ownRun,
+      createdAt: NOW,
+    });
     const followeeEntry = await makeEntry({
       userId: followee,
       runId: followeeRun,
       createdAt: NOW + 1,
     });
-    await makeEntry({ userId: stranger, runId: strangerRun, createdAt: NOW + 2 });
+    await makeEntry({
+      userId: stranger,
+      runId: strangerRun,
+      createdAt: NOW + 2,
+    });
 
     const page = await followingFeed(viewer);
     const entryIds = page.items.map((item) => item.entryId);
@@ -39,9 +50,21 @@ describe("following feed (E1)", () => {
     const middleRun = await makeRun({ userId: viewer });
     const newestRun = await makeRun({ userId: viewer });
     const laterRun = await makeRun({ userId: viewer });
-    const older = await makeEntry({ userId: viewer, runId: olderRun, createdAt: NOW });
-    const middle = await makeEntry({ userId: viewer, runId: middleRun, createdAt: NOW + 10 });
-    const newest = await makeEntry({ userId: viewer, runId: newestRun, createdAt: NOW + 20 });
+    const older = await makeEntry({
+      userId: viewer,
+      runId: olderRun,
+      createdAt: NOW,
+    });
+    const middle = await makeEntry({
+      userId: viewer,
+      runId: middleRun,
+      createdAt: NOW + 10,
+    });
+    const newest = await makeEntry({
+      userId: viewer,
+      runId: newestRun,
+      createdAt: NOW + 20,
+    });
 
     const firstPage = await followingFeed(viewer, undefined, 2);
     expect(firstPage.items.map((i) => i.entryId)).toEqual([newest, middle]);
@@ -49,7 +72,11 @@ describe("following feed (E1)", () => {
 
     // Insert a brand-new entry "between" pages — the cursor is keyed off
     // the last row already seen, so it must not reappear or shift the rest.
-    const insertedLater = await makeEntry({ userId: viewer, runId: laterRun, createdAt: NOW + 30 });
+    const insertedLater = await makeEntry({
+      userId: viewer,
+      runId: laterRun,
+      createdAt: NOW + 30,
+    });
 
     const secondPage = await followingFeed(viewer, firstPage.nextCursor, 2);
     expect(secondPage.items.map((i) => i.entryId)).toEqual([older]);
@@ -65,7 +92,11 @@ describe("following feed (E1)", () => {
 
     const database = drizzle(env.DIALED_CORE);
     const followeeIds = await followeeIdsOf(viewer);
-    const entriesStatement = followingFeedStatement(database, [viewer, ...followeeIds], undefined);
+    const entriesStatement = followingFeedStatement(
+      database,
+      [viewer, ...followeeIds],
+      undefined,
+    );
     const { sql, params } = entriesStatement.toSQL();
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
@@ -80,7 +111,9 @@ describe("following feed (E1)", () => {
     )
       .bind(viewer)
       .all<{ detail: string }>();
-    const followsDetails = followsPlan.results.map((row) => row.detail).join("\n");
+    const followsDetails = followsPlan.results
+      .map((row) => row.detail)
+      .join("\n");
     expect(followsDetails).not.toMatch(/SCAN\s+follows/i);
   });
 });

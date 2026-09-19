@@ -9,7 +9,8 @@ import { pageTextFor } from "../../../src/modules/enrichment/model/page-text";
 
 describe("pageTextFor", () => {
   it("keeps the prose and drops the markup around it", () => {
-    const html = "<html><body><h1>Rover Tee</h1><p>100% merino wool</p></body></html>";
+    const html =
+      "<html><body><h1>Rover Tee</h1><p>100% merino wool</p></body></html>";
     expect(pageTextFor(html)).toBe("Rover Tee\n100% merino wool");
   });
 

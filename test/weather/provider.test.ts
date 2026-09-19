@@ -174,7 +174,10 @@ describe("the adapter says why it is unavailable", () => {
   });
 
   it("reports the status code it got back", async () => {
-    const error = await failureFrom({ message: "rate limited" }, { status: 429 });
+    const error = await failureFrom(
+      { message: "rate limited" },
+      { status: 429 },
+    );
     expect(error.message).toMatch(/429/);
   });
 
@@ -277,7 +280,7 @@ function statsFetch(): typeof fetch {
     const body = bodies[call];
     call += 1;
     return Promise.resolve(Response.json(body));
-});
+  });
 }
 
 const MINNEAPOLIS: ClimatePlace = {
@@ -299,7 +302,10 @@ describe("visual crossing climate normals (105)", () => {
     const segments = requestedUrls(fetchImpl).map((url) =>
       url.pathname.split("/").at(-2),
     );
-    expect(segments).toStrictEqual(["Omaha%2C%20NE%2FUS", "Omaha%2C%20NE%2FUS"]);
+    expect(segments).toStrictEqual([
+      "Omaha%2C%20NE%2FUS",
+      "Omaha%2C%20NE%2FUS",
+    ]);
   });
 
   it("asks about coordinates as lat,lng", async () => {
@@ -312,7 +318,6 @@ describe("visual crossing climate normals (105)", () => {
     );
     expect(segments).toStrictEqual(["44.98,-93.27", "44.98,-93.27"]);
   });
-
 
   it("reads the mean of each triple, not the extreme", async () => {
     // `[min, mean, max]` — index 1. Taking index 0 would make every place
