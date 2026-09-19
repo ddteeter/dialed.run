@@ -269,6 +269,44 @@ in-Worker aggregation is fine at launch scale; the packet requires EXPLAIN
 output and a row-scan cap. Manual-source observations are excluded. Stranger
 cards and follow CTAs are the full-E2 epic, post-MVP.
 
+## Composing across modules
+
+One module needs a control another module owns. Feed's entry detail needs
+W1's report button; the button opens a sheet with a reason list, its own
+copy, and a server function behind it, and all of that belongs to
+`modules/safety`.
+
+**Feed may not import it, and the rule is load-bearing rather than tidy.**
+`modules/safety`'s barrel reaches D1, and `EntryDetail` is in the client
+bundle — so the import would put the drizzle schema in the browser, which
+tsc, eslint, dependency-cruiser and the test suite are all blind to (see
+§Module dependency graph, and CLAUDE.md for the two times it happened).
+
+**The seam is a `ReactNode` prop, composed by the route.**
+
+```
+routes/feed/entry.$entryId.tsx     imports BOTH modules — it is a route,
+  │                                 it is not in the client bundle's
+  │                                 import graph the same way, and wiring
+  │                                 is the only thing it is allowed to do
+  ├── modules/safety   → <ReportAffordance … />
+  └── modules/feed     → <EntryDetail reportAffordance={…} />
+                              │
+                              └── renders the node. Does not know what a
+                                  report is, cannot reach D1, stays
+                                  testable in the ui project.
+```
+
+**Not a callback.** The thing feed must not import is not the *function* —
+it is the sheet and its copy, which a callback would still have to render
+from inside feed. A node moves the whole subtree across; a callback moves
+only the verb.
+
+Raised as a question on PR #73 ("do we need to adjust the rules?"), and
+written down here because the answer is no but nothing recorded it — the
+next lane that needs a cross-module control should find this rather than
+re-derive it.
+
 ## Rungs of verification
 
 | Rung                       | Runs                          | Tools                                                                  |

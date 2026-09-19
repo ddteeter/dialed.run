@@ -22,6 +22,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { blocks, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnSetAmong } from "../../lib/keyed-read";
+import { nowSeconds } from "../../lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -48,7 +49,7 @@ export async function blockRunner(
     .values({
       blockerId,
       blockedId,
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
 }

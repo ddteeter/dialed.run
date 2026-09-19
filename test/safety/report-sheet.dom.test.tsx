@@ -100,8 +100,16 @@ describe("what the sheet promises", () => {
 
   it("avoids inventing a name when the subject has no author", () => {
     renderSheet({ subject: anonymousSubject, canBlock: false });
-    // "them", not an empty gap where a handle would be.
-    expect(screen.getByText(/them is never told/)).toBeInTheDocument();
+    // A pronoun, not an empty gap where a handle would be.
+    //
+    // This assertion used to read `/them is never told/` and passed,
+    // which is how the sentence actually rendered — the test pinned the
+    // bug rather than the promise. Asserting the rendered string is not
+    // the same as asserting it reads as English, and a regex is happy
+    // either way. Raised on PR #73.
+    expect(
+      screen.getByText(/They are never told who reported it\./),
+    ).toBeInTheDocument();
   });
 });
 
@@ -279,5 +287,64 @@ describe("filing a report", () => {
     // The forms contract: `disabled` drops focus and stops announcing, so
     // the guard is aria-disabled plus a handler-level double-submit check.
     expect(button).not.toBeDisabled();
+  });
+});
+
+describe("naming the author when there is one", () => {
+  it("uses the handle and the singular verb", () => {
+    // The other half of the fallback: a name is singular ("mark_t is"),
+    // the pronoun is not ("They are"), so one string could never serve
+    // both and the sentence needs its own.
+    renderSheet();
+    expect(
+      screen.getByText(/mark_t is never told who reported it\./),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the block offer needs somebody to name", () => {
+  it("withholds it when the caller allows blocking but names nobody", () => {
+    // `canBlock` and `authorName` have always had to agree, and nothing
+    // made them: a caller passing one without the other rendered
+    // "Block  as well", with a gap where the handle goes. The component
+    // now refuses the state rather than filling the gap with a word.
+    renderSheet({ subject: anonymousSubject, canBlock: true });
+
+    expect(
+      screen.queryByRole("checkbox", { name: /^Block/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("still offers it, named, when there is an author", () => {
+    renderSheet();
+    expect(
+      screen.getByRole("checkbox", { name: "Block mark_t as well" }),
+    ).toBeInTheDocument();
+  });
+
+  it("sends no block field at all when there is nobody to block", async () => {
+    // `undefined`, not `false`. The two behave identically on the server
+    // today — `fileReport` tests `alsoBlock === true` — so nothing would
+    // have noticed the difference, which is exactly why it is worth
+    // pinning: a product report carrying `alsoBlock: false` is a claim
+    // about blocking on a subject that cannot be blocked, and the next
+    // person to read that field should not have to work out that it was
+    // noise.
+    const user = userEvent.setup();
+    const { fileReport } = renderSheet({
+      subject: anonymousSubject,
+      canBlock: true,
+    });
+
+    await user.click(
+      screen.getByRole("radio", { name: "Harassment aimed at someone" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalledTimes(1);
+    });
+    const [call] = vi.mocked(fileReport).mock.calls;
+    expect(call?.[0].data.alsoBlock).toBeUndefined();
   });
 });

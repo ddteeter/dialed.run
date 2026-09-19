@@ -16,6 +16,8 @@ import { captureException } from "./sentry";
 import {
   classifierFromEnv,
   pendingReviewCount,
+  reconcileUnhiddenReports,
+  releaseStaleClaims,
   retryPendingScreenings,
 } from "../safety";
 
@@ -70,6 +72,27 @@ export async function handleScheduled(
       // path needs no queue.
       const anomalies: string[] = [];
       await retryPendingScreenings(classifierFromEnv(), anomalies);
+      // Two more reconciliations share this firing, both raised on PR #73
+      // and both the same shape as the screening retry: a durable marker
+      // exists, so something has to re-read it.
+      //
+      // The hide that `fileReport` does in a third statement, if the
+      // worker died before reaching it — the reports are written, the
+      // entry is still visible, and nothing else would ever notice.
+      const reconciled = await reconcileUnhiddenReports();
+      if (reconciled.hidden > 0) {
+        anomalies.push(
+          `${String(reconciled.hidden)} reported subjects were over the threshold and had not been hidden`,
+        );
+      }
+      // And review claims whose reviewer never came back, which otherwise
+      // hold a subject out of the queue permanently.
+      const released = await releaseStaleClaims();
+      if (released.released > 0) {
+        anomalies.push(
+          `${String(released.released)} review claims went stale and were returned to the queue`,
+        );
+      }
       return { cronName, anomalies };
     }
     default: {

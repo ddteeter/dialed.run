@@ -22,6 +22,7 @@ import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnSetAmong, firstRowWhere } from "../../lib/keyed-read";
 import { orSqlNull } from "../../lib/sql-null";
+import { nowSeconds } from "../../lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -46,7 +47,7 @@ export interface BanInput {
  * see an error about the thing they wanted to happen.
  */
 export async function banUser(input: BanInput): Promise<void> {
-  const bannedAt = Math.floor(Date.now() / 1000);
+  const bannedAt = nowSeconds();
   await db().batch([
     db()
       .update(userProfiles)

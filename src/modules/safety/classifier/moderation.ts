@@ -68,6 +68,31 @@ export const thresholds: CategoryScores = {
   "self-harm/instructions": 0.8,
 };
 
+/**
+ * The floor of the middle band: high enough to be worth a person's eye,
+ * too low to hide a runner's photo over.
+ *
+ * **Why a band at all** (owner's call on PR #73). Two thresholds and one
+ * gap between them: under the floor is published and nobody is troubled,
+ * over `thresholds` is hidden and queued, and in between the photo *stays
+ * visible* and a reviewer looks at it anyway. The middle band buys
+ * calibration without charging a runner for our uncertainty — which is the
+ * whole reason `thresholds` above sits as high as it does. A reviewer
+ * agreeing or disagreeing with a borderline score is exactly the signal
+ * `npm run eval:photos` cannot produce, because the eval only ever sees
+ * photos we chose.
+ *
+ * Half of each category's threshold, uniformly, and that is a starting
+ * point rather than a result — the same standing as `thresholds` and
+ * subject to the same measurement. Derived rather than written out so the
+ * two cannot drift into an order that makes no sense (a floor above its own
+ * threshold would put every flagged photo in the review band and hide
+ * nothing); `test/safety/moderation.test.ts` pins that ordering.
+ */
+export const reviewFloors: CategoryScores = Object.fromEntries(
+  imageCategories.map((category) => [category, thresholds[category] / 2]),
+) as CategoryScores;
+
 const moderationResultSchema = z.object({
   flagged: z.boolean(),
   category_scores: z.record(z.string(), z.number()),
@@ -99,11 +124,20 @@ export interface ModerationResult {
  * boolean is stored beside them so the eval can report what trusting it
  * would have cost.
  */
-export function decide(scores: CategoryScores): "pass" | "flag" {
+export type ScreenDecision = "pass" | "review" | "flag";
+
+export function decide(scores: CategoryScores): ScreenDecision {
   const isCrossed = imageCategories.some(
     (category) => scores[category] >= thresholds[category],
   );
-  return isCrossed ? "flag" : "pass";
+  if (isCrossed) return "flag";
+  // The middle band. Checked only after the block test, so a score over
+  // its threshold is never merely "reviewed" — `flag` is the stronger
+  // answer and wins wherever both are true.
+  const isBorderline = imageCategories.some(
+    (category) => scores[category] >= reviewFloors[category],
+  );
+  return isBorderline ? "review" : "pass";
 }
 
 /**

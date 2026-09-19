@@ -3,13 +3,20 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { entryPhotos, photoScreenings } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  photoScreenings,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   pendingGarmentFrom,
   imageCategories,
+  isQueuedForReview,
   pendingEntryPhotos,
+  pendingReviewQueue,
+  reviewFloors,
   screenPhoto,
   thresholds,
   type CategoryScores,
@@ -37,6 +44,24 @@ function answering(result: {
   scores: CategoryScores;
 }): Classify {
   return () => Promise.resolve(result);
+}
+
+/**
+ * A classifier answering with a score that lands in the review band.
+ *
+ * Named because the literal it replaces nests four calls deep, which the
+ * lint rules reject and which is genuinely harder to read than the thing
+ * it describes.
+ */
+function borderline(overrides: Partial<CategoryScores>): Classify {
+  return answering({ flagged: false, scores: scores(overrides) });
+}
+
+/**
+A classifier answering with a score over the block threshold.
+*/
+function flagging(overrides: Partial<CategoryScores>): Classify {
+  return answering({ flagged: true, scores: scores(overrides) });
 }
 
 /**
@@ -277,5 +302,96 @@ describe("a garment row with nothing to screen", () => {
     expect(
       pendingGarmentFrom({ id: "g-1", photoKey: "garments/u/g" }),
     ).toEqual([{ scope: "garment", photoId: "g-1", photoKey: "garments/u/g" }]);
+  });
+});
+
+describe("what the classifier puts in front of a person (D-65)", () => {
+  it("queues a flagged photo instead of hiding it silently", async () => {
+    // The bug this closes: `review_queue.source` has carried a
+    // `"classifier"` variant since the table existed and nothing wrote
+    // one, so a photo the model hid was hidden with nobody told — a
+    // column written by one path and read by none, which is the same
+    // shape as the `screen_status` bug this lane already fixed.
+    const photoId = await entryPhotoRow();
+
+    expect(
+      await screenPhoto(
+        { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+        flagging({ sexual: 1 }),
+      ),
+    ).toBe("flagged");
+
+    expect(await isQueuedForReview("photo", photoId)).toBe(true);
+    const [queued] = await pendingReviewQueue();
+    expect(queued?.source).toBe("classifier");
+  });
+
+  it("queues a borderline photo and leaves it visible", async () => {
+    // The middle band's whole point: the runner is not charged for our
+    // uncertainty. A reviewer looks at a photo that is already live.
+    const photoId = await entryPhotoRow();
+
+    expect(
+      await screenPhoto(
+        { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+        borderline({ sexual: reviewFloors.sexual }),
+      ),
+    ).toBe("review");
+
+    expect(await isQueuedForReview("photo", photoId)).toBe(true);
+    const [row] = await core()
+      .select({ status: entryPhotos.screenStatus })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId));
+    expect(row?.status).toBe("pass");
+  });
+
+  it("queues nothing for a photo that passes", async () => {
+    const photoId = await entryPhotoRow();
+    await screenPhoto(
+      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+      answering({ flagged: false, scores: scores() }),
+    );
+    expect(await isQueuedForReview("photo", photoId)).toBe(false);
+  });
+
+  it("records which band the decision was, not just pass or flag", async () => {
+    // The stored score is what a threshold gets re-tuned against later,
+    // and a `review` collapsed into `pass` on write would erase exactly
+    // the rows worth re-reading.
+    const photoId = await entryPhotoRow();
+    await screenPhoto(
+      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+      borderline({ violence: reviewFloors.violence }),
+    );
+    const [screening] = await core()
+      .select({ decision: photoScreenings.decision })
+      .from(photoScreenings)
+      .where(eq(photoScreenings.photoId, photoId));
+    expect(screening?.decision).toBe("review");
+  });
+
+  it("does not queue a garment photo, which nobody but its owner can see", async () => {
+    // A closet is private. Queueing one would put a private photo in front
+    // of an operator to settle a question nobody asked — see D-69.
+    const userId = await makeUser();
+    const itemId = newUlid();
+    await core().insert(wardrobeItems).values({
+      id: itemId,
+      userId,
+      category: "top",
+      type: "tee",
+      name: "Tee",
+      photoKey: `items/${userId}/${itemId}/original`,
+      origin: "manual",
+      createdAt: 1,
+    });
+
+    await screenPhoto(
+      { scope: "garment", photoId: itemId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+      flagging({ sexual: 1 }),
+    );
+
+    expect(await isQueuedForReview("photo", itemId)).toBe(false);
   });
 });

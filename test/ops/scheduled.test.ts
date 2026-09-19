@@ -8,12 +8,14 @@ import {
   imports,
   outfitEntries,
   products,
+  reports,
   reviewQueue,
   runs,
   stravaRevocations,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import {
   createOrGetBrand,
@@ -38,10 +40,6 @@ const ENRICHMENT_RETRY = { cron: "30 * * * *" } as ScheduledController;
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
-}
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 async function insertImport(
@@ -90,6 +88,15 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   await db.delete(imports);
   await db.delete(stravaRevocations);
   await db.delete(runs);
+  // The moderation tables belong on this list too: the digest counts the
+  // review queue's depth, so a row left behind by one test appears as
+  // "2 item(s) awaiting moderation review" in the next one's anomalies —
+  // which fails every assertion in the file that expects a quiet digest,
+  // and points at the digest rather than at the leak.
+  await db.delete(reviewQueue);
+  await db.delete(reports);
+  await db.delete(entryPhotos);
+  await db.delete(outfitEntries);
 }
 
 beforeEach(async () => {
@@ -186,6 +193,78 @@ describe("the cron heartbeat", () => {
     // same thing here: the sweep ran. The exact wording is pinned in
     // `test/safety/retry.test.ts`, which owns it.
     expect(outcome.anomalies).toEqual([expect.stringContaining("screening")]);
+  });
+
+  it("says so when the sweep finds reports that were never acted on", async () => {
+    // The gap this covers is a crash between `fileReport`'s insert and its
+    // hide. Reproduced by writing the reports directly, which is what that
+    // half-finished state looks like on disk.
+    const author = newUlid();
+    const runId = await insertRun({ userId: author });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId: author,
+      runId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+    for (let n = 0; n < 3; n += 1) {
+      await coreDb().insert(reports).values({
+        id: newUlid(),
+        reporterId: newUlid(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        createdAt: nowSeconds(),
+      });
+    }
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // The digest is the only place a solo operator would ever learn this
+    // happened, so the line has to be there and has to say what it was.
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("had not been hidden"),
+    );
+    const [row] = await coreDb()
+      .select({ status: outfitEntries.moderationStatus })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(row?.status).toBe("hidden_pending_review");
+  });
+
+  it("says so when it takes a stale review claim back", async () => {
+    // A claim stamped long enough ago that its lease has run out. Written
+    // directly because the only other way to reach this state is to wait
+    // half an hour.
+    const queueId = newUlid();
+    await coreDb().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "entry",
+      subjectId: newUlid(),
+      source: "reports",
+      status: "reviewing",
+      resolvedBy: newUlid(),
+      claimedAt: nowSeconds() - 3600,
+      createdAt: nowSeconds() - 3600,
+    });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("went stale"),
+    );
+    const [row] = await coreDb()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    expect(row?.status).toBe("pending");
   });
 
   it("files a cron it does not recognise under `unknown`, and says so", async () => {

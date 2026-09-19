@@ -14,6 +14,7 @@
 import { env } from "../../env";
 
 import type { Classify } from "./screening";
+import type { ScreenOutcome } from "./screening";
 import {
   pendingEntryPhotos,
   pendingGarmentPhotos,
@@ -88,6 +89,11 @@ Which tally each outcome lands in.
 */
 const countedAs = {
   pass: "passed",
+  // The middle band is a pass as far as the runner is concerned — the
+  // photo is live — so it is counted with the passes rather than given a
+  // tally of its own. What makes it visible to an operator is the review
+  // queue row it wrote, which is where the decision actually lives.
+  review: "passed",
   flagged: "flagged",
   deferred: "deferred",
 } as const;
@@ -104,7 +110,7 @@ const countedAs = {
 async function screenOne(
   photo: PendingPhoto,
   classify: Classify,
-): Promise<"pass" | "flagged" | "deferred"> {
+): Promise<ScreenOutcome> {
   const object = await env.MEDIA.get(photo.photoKey);
   if (!object) return "deferred";
   const bytes = new Uint8Array(await object.arrayBuffer());

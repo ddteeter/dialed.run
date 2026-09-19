@@ -114,10 +114,31 @@ export function ReportSheet({
     labels: { reason: "What's wrong with it", note: "Anything else" },
   });
 
-  // "them" rather than a name when there is nobody to name. The artboard
-  // writes the handle inline; keeping the fallback in one place stops the
-  // copy reading "Block  as well" on a subject that has no author.
-  const them = subject.authorName ?? "them";
+  // **The block offer needs a name, so it is gated on having one.**
+  //
+  // `canBlock` and `authorName` are two props that have always had to
+  // agree — the caller turns blocking off for a subject with no author —
+  // and nothing made them. A caller passing `canBlock` without a name
+  // rendered "Block  as well", with the gap where the handle goes. The
+  // old guard against that was `authorName ?? "them"`, which is a fallback
+  // for a state the component can simply refuse to be in: ask for the
+  // name, and let its absence be the answer.
+  //
+  // That also removed a string no test could reach. Once the sentence
+  // below stopped using `them` (see `neverTold`), the fallback's only
+  // remaining reader was this label — which never renders without a name —
+  // so the mutation gate correctly reported `"them"` as unobservable.
+  const blockableName = canBlock ? subject.authorName : undefined;
+
+  // The sentence gets its own string, because the wording changes the verb
+  // as well as the word: a name is singular ("Alex is never told"), the
+  // pronoun is not ("They are never told"). One string could never have
+  // served both, which is how "them is never told" shipped. Raised on
+  // PR #73.
+  const neverTold =
+    subject.authorName === undefined
+      ? "They are never told who reported it."
+      : `${subject.authorName} is never told who reported it.`;
 
   return (
     <Sheet open={open} onClose={onClose} label="Report this entry">
@@ -132,7 +153,7 @@ export function ReportSheet({
             subjectId: subject.id,
             reason,
             note: note === "" ? undefined : note,
-            alsoBlock: canBlock ? alsoBlock : undefined,
+            alsoBlock: blockableName === undefined ? undefined : alsoBlock,
           });
         }}
       >
@@ -146,6 +167,12 @@ export function ReportSheet({
         <h2 className="text-lg font-semibold">Report this entry</h2>
         <p className="text-xs text-night/60">{subject.label}</p>
 
+        {/* Yes, this is valid TSX, and it is not a trick. A JSX element
+            takes explicit type arguments exactly as a call does
+            (TypeScript 2.9+), so `ChoiceList<ReportReason>` says which
+            union this list is over. Without it inference widens `value`
+            and `onChange` to `string` and the compiler stops catching a
+            reason that is not one. Asked on PR #73. */}
         <ChoiceList<ReportReason>
           name="reason"
           legend="What's wrong with it"
@@ -174,8 +201,7 @@ export function ReportSheet({
           </h3>
           <p>
             A person reads it within a day. The entry is hidden from your feed
-            straight away, whatever we decide. {them} is never told who
-            reported it.
+            straight away, whatever we decide. {neverTold}
           </p>
         </section>
 
@@ -191,15 +217,15 @@ export function ReportSheet({
           pending={form.pending}
         />
 
-        {canBlock ? (
+        {blockableName === undefined ? undefined : (
           <ToggleField
             name="alsoBlock"
-            label={`Block ${them} as well`}
+            label={`Block ${blockableName} as well`}
             isOn={alsoBlock}
             onChange={setAlsoBlock}
             field={form.field}
           />
-        ) : undefined}
+        )}
       </form>
     </Sheet>
   );

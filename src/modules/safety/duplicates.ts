@@ -11,6 +11,27 @@
  * impossible, so everything reported here is a NEAR miss the create-if-
  * missing key could not catch: a stray word, a plural, a model number
  * written two ways.
+ *
+ * **Why not Soundex, or a phonetic algorithm generally** (asked on PR #73).
+ * Soundex, Metaphone and their descendants answer "do these two words
+ * SOUND alike", which is a different question from the one this report
+ * asks. The near-misses here are typed, not heard — somebody pasted a
+ * product name from a shop page and somebody else typed it from a label —
+ * so the differences are plurals, hyphens, a dropped "Men's", and model
+ * numbers. Phonetic codes are actively bad at the last of those: they
+ * discard digits entirely, so "Rover 2" and "Rover 7" collapse to one key
+ * and the report starts pairing two genuinely different products, which
+ * is the one failure that makes an operator stop reading it. They are
+ * also tuned for English surnames, and brand names are neither.
+ *
+ * The family that does fit is edit distance — Levenshtein, Damerau, or a
+ * token-set ratio over them — and what `areSpellingsOfOneWord` does below
+ * is a narrow, cheap member of it: align the token lists and allow one
+ * token to be a prefix of its partner. Narrow because it runs inside a D1
+ * worker over a brand's whole product list, and a full pairwise edit
+ * distance is quadratic in a place where rows scanned are billed. If the
+ * report starts missing real duplicates, the next step is a proper edit
+ * distance with a length-bucketed candidate set, not a phonetic key.
  */
 import { asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";

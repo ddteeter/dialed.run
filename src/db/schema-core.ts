@@ -591,12 +591,21 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
       .default("pending"),
     resolvedBy: text("resolved_by"),
     resolvedAt: integer("resolved_at"),
+    // When a reviewer claimed it, and the only thing that can ever release
+    // the claim. `status='reviewing'` is a lock held by a browser tab, and
+    // a tab that is closed, crashed or simply walked away from used to
+    // hold it forever: the row left the queue, no one was looking at it,
+    // and nothing anywhere said so. Null unless claimed. Raised on PR #73.
+    claimedAt: integer("claimed_at"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
     // One open decision per subject; a second trigger updates rather than
     // stacking a duplicate in front of the reviewer.
     uniqueIndex("review_queue_subject").on(t.subjectType, t.subjectId),
+    // The stale-claim sweep's only query: rows still `reviewing`, oldest
+    // claim first.
+    index("review_queue_claimed").on(t.status, t.claimedAt),
     // The queue page and the digest's depth count both read
     // "pending, oldest first" — a covering index for the only query.
     index("review_queue_status_created").on(t.status, t.createdAt),
@@ -633,7 +642,14 @@ export const photoScreenings = /*#__PURE__*/ sqliteTable(
     photoId: text("photo_id").notNull(),
     model: text("model").notNull(),
     scores: text("scores").notNull(),
-    decision: text("decision", { enum: ["pass", "flag"] }).notNull(),
+    // Three bands, not two (PR #73). `review` is the middle one: the photo
+    // stays visible and a person is asked to look anyway, so a borderline
+    // score buys calibration instead of costing a runner their photo.
+    // Widening a drizzle text enum is a TypeScript change only — the column
+    // is plain `text` with no CHECK, so there is no migration in it.
+    decision: text("decision", {
+      enum: ["pass", "review", "flag"],
+    }).notNull(),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("photo_screenings_photo").on(t.photoScope, t.photoId)],

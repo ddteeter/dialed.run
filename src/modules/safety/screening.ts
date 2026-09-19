@@ -27,12 +27,15 @@ import { drizzle } from "drizzle-orm/d1";
 import { entryPhotos, photoScreenings, wardrobeItems } from "../../db/schema-core";
 import { env } from "../../env";
 import { newUlid } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 
 import {
   decide,
   MODERATION_MODEL,
   type CategoryScores,
+  type ScreenDecision,
 } from "./classifier/moderation";
+import { enqueueForReview } from "./review";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -62,7 +65,7 @@ export type Classify = (params: {
   contentType: string;
 }) => Promise<{ flagged: boolean; scores: CategoryScores }>;
 
-export type ScreenOutcome = "pass" | "flagged" | "deferred";
+export type ScreenOutcome = "pass" | "review" | "flagged" | "deferred";
 
 /**
  * Screens one photo and records the verdict.
@@ -107,12 +110,14 @@ export async function screenPhoto(
   }
 
   const decision = decide(result.scores);
-  const now = Math.floor(Date.now() / 1000);
+  const now = nowSeconds();
 
-  // One batch: the verdict and the visibility it implies are one fact. A
-  // gap between them leaves a photo screened-but-still-pending (harmless,
-  // the sweep redoes it) or visible-but-unrecorded (not harmless, because
-  // nothing would remember why).
+  // One batch: the verdict, the visibility it implies, and the row that
+  // puts it in front of a person are one fact. A gap between them leaves a
+  // photo screened-but-still-pending (harmless, the sweep redoes it),
+  // visible-but-unrecorded (not harmless, because nothing would remember
+  // why), or — the one this lane shipped and had to come back for —
+  // hidden with nobody told.
   await db().batch([
     db()
       .insert(photoScreenings)
@@ -128,10 +133,50 @@ export async function screenPhoto(
         createdAt: now,
       }),
     visibilityWrite(photo.scope, photo.photoId, decision),
+    ...queueWritesFor(photo, decision),
   ]);
 
-  return decision === "pass" ? "pass" : "flagged";
+  return outcomeOf[decision];
 }
+
+/**
+ * What the reviewer is asked to look at, which is not the same set as what
+ * gets hidden.
+ *
+ * **`flag` and `review` both queue; only `flag` hides.** That was D-65:
+ * `review_queue.source` has carried a `"classifier"` variant since this
+ * table existed and nothing ever wrote one, so a photo the model hid was
+ * hidden with no one told — the same write-only shape as the `screen_status`
+ * bug this lane already fixed, one table over. Queueing both bands is what
+ * makes the middle band worth having: a reviewer disagreeing with a
+ * borderline score is the only calibration signal that comes from real
+ * photos rather than from ones we picked for the eval.
+ *
+ * **Entry photos only.** A garment photo lives in a closet, which nobody
+ * but its owner can see, so queueing one would put a private photo in front
+ * of an operator to settle a question nobody asked. It still hides on
+ * `flag`, and stays hidden until the owner replaces it — see D-69.
+ */
+function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
+  if (decision === "pass") return [];
+  if (photo.scope !== "entry") return [];
+  return [
+    enqueueForReview(db(), {
+      subjectType: "photo",
+      subjectId: photo.photoId,
+      source: "classifier",
+    }),
+  ];
+}
+
+/**
+Which outcome each decision reports to the caller.
+*/
+const outcomeOf: Record<ScreenDecision, ScreenOutcome> = {
+  pass: "pass",
+  review: "review",
+  flag: "flagged",
+};
 
 /**
  * The visibility half of the verdict, for whichever table owns the photo.
@@ -144,9 +189,12 @@ export async function screenPhoto(
 function visibilityWrite(
   scope: PhotoScope,
   photoId: string,
-  decision: "pass" | "flag",
+  decision: ScreenDecision,
 ) {
-  const status = decision === "pass" ? "pass" : "hidden_pending_review";
+  // `review` publishes. That is the band's whole point: the runner is not
+  // charged for our uncertainty, and the reviewer looks at a photo that is
+  // already live rather than at one being held for them.
+  const status = decision === "flag" ? "hidden_pending_review" : "pass";
   if (scope === "entry") {
     return db()
       .update(entryPhotos)

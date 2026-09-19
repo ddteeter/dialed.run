@@ -52,19 +52,24 @@ export {
   distinctReporterCount,
   fileReport,
   isQueuedForReview,
+  reconcileUnhiddenReports,
   reportedSubjectIdsFor,
   type FileReportInput,
   type FileReportResult,
+  type ReconcileReport,
 } from "./reports";
 
 export {
   claimForReview,
+  claimLeaseSeconds,
   pendingReviewCount,
   pendingReviewQueue,
   reasonsFrom,
+  releaseStaleClaims,
   resolveReview,
   type ClaimOutcome,
   type QueueRow,
+  type ReleaseReport,
   type ResolveOutcome,
   type ReviewDecision,
 } from "./review";
@@ -82,10 +87,12 @@ export {
   decide,
   imageCategories,
   MODERATION_MODEL,
+  reviewFloors,
   thresholds,
   type CategoryScores,
   type ImageCategory,
   type ModerationResult,
+  type ScreenDecision,
 } from "./classifier/moderation";
 
 export {

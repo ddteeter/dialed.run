@@ -16,6 +16,7 @@ import { domainDenylist } from "../../db/schema-core";
 import { env } from "../../env";
 import { domainOf } from "../../lib/domain";
 import { hasRowWhere } from "../../lib/keyed-read";
+import { nowSeconds } from "../../lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -63,7 +64,7 @@ export async function denyDomain(
       domain,
       addedBy,
       reason,
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
 }

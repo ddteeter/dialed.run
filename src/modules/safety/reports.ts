@@ -13,7 +13,7 @@
  *   is removed and nothing is counted against anyone — the artboard's "no
  *   automated takedowns" stance holds, because a person still decides.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, countDistinct, eq, gte, inArray, isNull } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
@@ -28,6 +28,7 @@ import {
 import { env } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 
 import {
   autoHideReporterThreshold,
@@ -94,7 +95,7 @@ export async function fileReport(
       // NULL for an absent nullable column, so `?? null` would only be
       // ceremony. (On an UPDATE it would matter — see lib/sql-null.)
       note: input.note,
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     // The UNIQUE index is on (reporter, subjectType, subjectId), so this
     // drops a second report of the same thing by the same person. That is
@@ -120,6 +121,75 @@ export async function fileReport(
 
   await hidePendingReview(input.subjectType, input.subjectId);
   return { reporterCount, hiddenPendingReview: true };
+}
+
+export interface ReconcileReport {
+  /**
+  Subjects found over the threshold with no decision recorded.
+  */
+  found: number;
+  /**
+  Of those, the ones this sweep hid and queued.
+  */
+  hidden: number;
+}
+
+/**
+ * Hides anything that crossed the report threshold and never got hidden
+ * (law 8c, the reconciliation half).
+ *
+ * **The hole this closes.** `fileReport` inserts the report, counts the
+ * reporters, and only then hides — three statements with two gaps, and D1
+ * has no transaction spanning them. A worker that dies in either gap
+ * leaves the third report durably written and the entry still visible,
+ * with nothing to re-drive it: the count is derived, so nothing anywhere
+ * is wearing a "not finished" marker. Raised on PR #73, and correct — the
+ * window is small and the consequence is the one thing this lane exists to
+ * prevent.
+ *
+ * **The marker is the queue row, not a new column.** `hidePendingReview`
+ * writes the queue row and the hide in a single batch, so a subject with a
+ * queue row is a subject whose hide landed. Using its absence as the
+ * signal also gets the case that matters most right for free: a subject a
+ * reviewer has already *approved* keeps its row, so this never re-hides
+ * something a person deliberately let stand.
+ *
+ * Bounded, like every other sweep here: this runs hourly beside the
+ * screening retry, and a backlog that cannot be cleared in one firing is
+ * cleared over several.
+ */
+export async function reconcileUnhiddenReports(
+  limit = 50,
+): Promise<ReconcileReport> {
+  const database = db();
+  const over = await database
+    .select({
+      subjectType: reports.subjectType,
+      subjectId: reports.subjectId,
+      reporters: countDistinct(reports.reporterId),
+    })
+    .from(reports)
+    .leftJoin(
+      reviewQueue,
+      and(
+        eq(reviewQueue.subjectType, reports.subjectType),
+        eq(reviewQueue.subjectId, reports.subjectId),
+      ),
+    )
+    // Only subjects nothing has decided on. Filtered in SQL rather than
+    // after the fact, so D1 is not billed for scanning every settled
+    // subject this app will ever accumulate.
+    .where(isNull(reviewQueue.id))
+    .groupBy(reports.subjectType, reports.subjectId)
+    .having(gte(countDistinct(reports.reporterId), autoHideReporterThreshold))
+    .limit(limit);
+
+  const outcome: ReconcileReport = { found: over.length, hidden: 0 };
+  for (const row of over) {
+    await hidePendingReview(row.subjectType, row.subjectId);
+    outcome.hidden += 1;
+  }
+  return outcome;
 }
 
 /**

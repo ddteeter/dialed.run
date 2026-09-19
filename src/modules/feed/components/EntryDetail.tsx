@@ -52,6 +52,24 @@ export function EntryDetail({
    * import and the safety barrel reaches D1, which a component in the
    * client bundle cannot. So this screen renders whatever it is handed
    * and does not know what a report is.
+   *
+   * **Asked on PR #73: is this a problem, and should the rules bend?**
+   * No, on the evidence. A callback would not help — the thing feed must
+   * not import is not the *function*, it is the sheet, its reason list and
+   * its copy, all of which live in `modules/safety/components` and all of
+   * which a callback would still have to render from here. The node IS
+   * the seam, and it is the one the architecture already prescribes:
+   * routes wire, components take props. The rule is also load-bearing
+   * rather than tidy — the safety barrel reaches D1, and a component
+   * importing it puts the drizzle schema in the client bundle, which is
+   * invisible to tsc, eslint, dependency-cruiser and the test suite alike
+   * (CLAUDE.md §Architecture records two live instances, one of which did
+   * not even fail the build).
+   *
+   * What would be worth changing is not the rule but its discoverability:
+   * this is the first cross-lane composition seam in the app, and the next
+   * lane that needs one will re-derive it from scratch. Written up in
+   * `docs/architecture.md` §"Composing across modules" for that reason.
    */
   reportAffordance?: ReactNode;
 }>) {

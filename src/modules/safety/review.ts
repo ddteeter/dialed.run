@@ -7,7 +7,7 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core/query-builders/update";
@@ -26,6 +26,7 @@ import { env } from "../../env";
 import { columnWhere } from "../../lib/keyed-read";
 import { orSqlNull } from "../../lib/sql-null";
 import { newUlid } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 
 import { reportReasonSchema } from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
@@ -63,7 +64,7 @@ export function enqueueForReview(
         subjectId: input.subjectId,
         source: input.source,
         status: "pending",
-        createdAt: Math.floor(Date.now() / 1000),
+        createdAt: nowSeconds(),
       })
       // UNIQUE(subject_type, subject_id): a subject already queued stays one
       // decision. Re-opening a resolved row is deliberate — a subject
@@ -80,6 +81,7 @@ export function enqueueForReview(
           // silently keep the old values (see lib/sql-null).
           resolvedBy: orSqlNull(undefined),
           resolvedAt: orSqlNull(undefined),
+          claimedAt: orSqlNull(undefined),
         },
       })
   );
@@ -196,6 +198,17 @@ async function subjectsFor(
   // input could distinguish, because it never decided anything.
   //
   // The cost is a few extra index probes on a page of at most 100 rows.
+  // **Four selects in one batch rather than one UNION**, asked on PR #73.
+  // Drizzle does expose `union`/`unionAll` for SQLite, so the tool is
+  // there; it is the wrong shape for this. A UNION requires every arm to
+  // have the same column list, and these four do not describe the same
+  // thing — a photo's key, an entry's photos in posted order, a runner's
+  // display name, a product's brand and name. Forcing them into one row
+  // shape means padding each arm with nulls for the other three's columns
+  // and adding a discriminator column to tell them apart again, so the
+  // types get worse (every field nullable) and the code gets longer at
+  // both ends. `db.batch()` already makes this one round trip, which is
+  // the only thing a UNION would have bought.
   const subjectIds = rows.map((row) => row.subjectId);
   const database = db();
 
@@ -292,6 +305,12 @@ export type ClaimOutcome = "claimed" | "already_taken";
  * With one operator this looks like ceremony. It is not: the review page is
  * a browser tab, tabs get duplicated, and "approve" on a stale tab must not
  * undo a "remove" from the fresh one.
+ *
+ * **The claim expires.** It is a lock held by a browser tab, and a tab can
+ * be closed, crash, or simply be walked away from — so `claimedAt` stamps
+ * it and `releaseStaleClaims` hands it back. Without that a single
+ * abandoned tab silently removed a row from the queue forever, which is
+ * law 6's silent permanent failure wearing a very ordinary hat.
  */
 export async function claimForReview(
   queueId: string,
@@ -299,10 +318,67 @@ export async function claimForReview(
 ): Promise<ClaimOutcome> {
   const claimed = await db()
     .update(reviewQueue)
-    .set({ status: "reviewing", resolvedBy: reviewerId })
+    .set({
+      status: "reviewing",
+      resolvedBy: reviewerId,
+      // The claim's expiry clock. Without it the claim had no end: see
+      // `releaseStaleClaims`.
+      claimedAt: nowSeconds(),
+    })
     .where(and(eq(reviewQueue.id, queueId), eq(reviewQueue.status, "pending")))
     .returning({ id: reviewQueue.id });
   return claimed.length > 0 ? "claimed" : "already_taken";
+}
+
+/**
+ * How long a reviewer may hold a row before the queue takes it back.
+ *
+ * Thirty minutes: long enough that nobody loses a row they are actually
+ * reading — a reviewer deciding on one photo is working in seconds, not
+ * hours — and short enough that a closed tab costs one sweep rather than a
+ * permanent disappearance. It is a lease, not a deadline: a reviewer still
+ * holding the tab simply re-claims.
+ */
+export const claimLeaseSeconds = 30 * 60;
+
+export interface ReleaseReport {
+  released: number;
+}
+
+/**
+ * Hands back rows whose reviewer never came back (law 2's other half).
+ *
+ * Claiming is the easy half and the one that was built; releasing is the
+ * half that decides whether the queue is honest. A row stuck in
+ * `reviewing` is invisible to `pendingReviewQueue` and counts for nothing
+ * in the digest's depth, so an abandoned tab does not merely delay a
+ * decision — it removes the subject from the only two places anyone would
+ * ever notice it was waiting. Raised on PR #73.
+ *
+ * `resolvedBy` is cleared with the status: leaving the old reviewer's id
+ * on a row that is pending again would read as "someone looked at this",
+ * which is the exact thing that was not true.
+ */
+export async function releaseStaleClaims(
+  now: number = nowSeconds(),
+): Promise<ReleaseReport> {
+  const released = await db()
+    .update(reviewQueue)
+    .set({
+      status: "pending",
+      resolvedBy: orSqlNull(undefined),
+      claimedAt: orSqlNull(undefined),
+    })
+    .where(
+      and(
+        eq(reviewQueue.status, "reviewing"),
+        // `lt`, not `lte`: a row claimed exactly on the boundary has held
+        // the lease for precisely its length and not longer.
+        lt(reviewQueue.claimedAt, now - claimLeaseSeconds),
+      ),
+    )
+    .returning({ id: reviewQueue.id });
+  return { released: released.length };
 }
 
 export type ReviewDecision = "approve" | "remove";
@@ -385,7 +461,10 @@ export async function resolveReview(
       .set({
         status: decision === "approve" ? "approved" : "removed",
         resolvedBy: reviewerId,
-        resolvedAt: Math.floor(Date.now() / 1000),
+        resolvedAt: nowSeconds(),
+        // Settled rows carry no claim. Left set, a resolved row would still
+        // look claimed to anything reading the lease.
+        claimedAt: orSqlNull(undefined),
       })
       .where(eq(reviewQueue.id, queueId)),
     ...subjectWritesFor(row.subjectType, row.subjectId, decision),

@@ -23,6 +23,13 @@ import type { CorpusEntry } from "./corpus-entry";
  * Twenty entries, per the packet. Names are descriptive rather than
  * sequential so a gap in the corpus is visible as a missing idea, not a
  * missing number.
+ *
+ * **These are photos to gather, not photos that were tested.** The files
+ * they name do not exist: `eval/photos/corpus/` is gitignored and empty,
+ * and this eval has never been run against the model. Each `expected`
+ * below is an argued claim about where a boundary should fall, not an
+ * observation. Asked on PR #73; see `eval/photos/README.md` for the full
+ * state and for what it would take to change it.
  */
 export const CORPUS: readonly CorpusEntry[] = [
   // Controls: no person in frame. These should score near zero, and if they
