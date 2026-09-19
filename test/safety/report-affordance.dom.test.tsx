@@ -97,10 +97,26 @@ describe("whether the block is offered alongside", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("does not offer it on a subject with nobody to block", async () => {
+  it("does not offer it on a profile we can name but cannot identify", async () => {
+    // **Named, and still not blockable.** Blocking needs the author's id;
+    // a display name is not one. The subject carries the two as separate
+    // optional props, so "we know what to call them" and "we know who
+    // they are" can disagree, and only the second authorises a block.
+    //
+    // The name is what makes this test bite. Without it the sheet
+    // withholds the checkbox anyway — it needs a name for the label —
+    // so an affordance that had dropped the `authorId` check entirely
+    // would still look correct here. That is not hypothetical: this test
+    // used to pass a subject with neither field, and the mutation gate
+    // caught it the moment the sheet started gating on the name too.
     const user = userEvent.setup();
     renderAffordance({
-      subject: { type: "profile", id: "p-1", label: "A runner" },
+      subject: {
+        type: "profile",
+        id: "p-1",
+        label: "A runner",
+        authorName: "a_runner",
+      },
     });
 
     await user.click(screen.getByRole("button", { name: "Report" }));
