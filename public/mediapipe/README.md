@@ -15,10 +15,13 @@ the face; the blurring itself is ours (`src/modules/safety/blur/`).
   the `blaze_face_short_range` face-detector asset, downloaded once and
   committed under the name `src/modules/safety/blur/detect.ts` loads it by
   (`MODEL_PATH`).
-- **Licence**: MediaPipe and its published models are Apache 2.0. **The
-  licence text is not vendored beside this file**, which is the one loose
-  end here — see D-70. Nothing blocks on it pre-launch; it is a five-minute
-  job that wants doing before the repo is pointed at from anywhere public.
+- **Licence**: **Apache License, Version 2.0**, stated on Google's own
+  model card for this model under "LICENSED UNDER". The full text is in
+  `LICENSE` beside this file and the attribution is in `NOTICE`, which is
+  what Apache 2.0 §4 asks of anyone redistributing the work. The card also
+  gives the model's size as 224 KB, matching this file, and the weights'
+  internal strings name `facedetector_front_blaze_2019_10_17_v0` — so the
+  provenance is checkable rather than asserted.
 - **Why it is committed rather than staged**: it is not in the npm package.
   `@mediapipe/tasks-vision` ships the WASM runtime and no weights — the
   published examples fetch the model from that Google bucket at page load.
@@ -36,5 +39,10 @@ hand. Gitignored because it is a verbatim copy of a dependency's files and
 carries a dependency's version with it; committing it would mean a 11 MB
 diff every time `@mediapipe/tasks-vision` moves.
 
-If a test fails with the model "unavailable", this directory is empty:
-run `npm run stage:mediapipe`.
+If a test fails with the model "unavailable", `wasm/` is empty: run
+`npm run stage:mediapipe`.
+
+Nothing here is modified from what Google published. If the model is ever
+swapped for another, `NOTICE` has to be re-checked against the new model's
+card — the licence travels with the specific model, not with MediaPipe in
+general.

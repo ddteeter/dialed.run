@@ -10,3 +10,15 @@ BETTER_AUTH_SECRET=generate-a-long-random-string
 # run the model eval, not to run the app: a missing key degrades the
 # ladder to its deterministic rungs (law 5), it does not fail a save.
 # OPENROUTER_API_KEY=
+# Photo screening (106). The classifier that decides whether a photo is
+# safe for strangers to see. Without it every uploaded photo stays
+# `pending`: its owner sees it, nobody else does, and the hourly
+# `screening-retry` sweep screens the backlog once the key exists. So a
+# missing key degrades visibility, it never fails an upload (law 5).
+# OPENAI_API_KEY=
+# Who can reach the review queue at /safety/review (106) and, later, The
+# Desk. A comma-separated list of user ids; unset or empty means NOBODY is
+# an admin, which fails closed. There is no `vars` block in
+# wrangler.jsonc, so this file is the only place it can be set locally —
+# which is also why the admin surfaces have no demo video yet (D-72).
+# ADMIN_USER_IDS=
