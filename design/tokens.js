@@ -23,6 +23,13 @@
  * media-query width into a screen. Colours come from T1 variables — a raw hex
  * is a review failure; a raw `0.08em` is the same failure.
  * If you need a value that isn't here, you need a different step, not a new one.
+ *
+ * PRECEDENCE (round 10)
+ * Composition comes from the artboards; values come from this file and T1.
+ * The artboards will NOT be redrawn to this scale — a size on a board that
+ * isn't here is a COLLAPSE entry, not a token, and not drift. Hit areas are
+ * padded to 44px around the glyph (Accessibility Contract 03); the glyph
+ * itself never drops below MONO.xs.
  */
 
 export const FAMILY = {
@@ -81,7 +88,7 @@ export const COLLAPSE = {
   type: {
     '30px display': 'TYPE.display', '34px+ display': 'TYPE.display (clamp only on brand/marketing pages, never in-app)',
     '21px text': 'TYPE.lead',  '16px text': 'TYPE.body',  '14px text': 'TYPE.body for controls and rows, TYPE.small for helper prose',
-    '12px mono': 'MONO.sm',    '9px mono': 'MONO.xs (the T3 theme segment was drawn at 9px; that is a board error)',
+    '12px mono': 'MONO.sm',    '9px mono': 'MONO.xs. The boards carry 9px in ~96 places (theme segment, payout labels, NOT-IN-V1 tags). Build them at 10px, padded to a 44px target.',
     '22px+ mono heroes': 'MONO.lg',
   },
   tracking: {

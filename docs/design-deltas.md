@@ -7,11 +7,15 @@ lives in the design bundle from then on.
 
 **The contracts outrank the artboards** (owner's call, 2026-09-17). Where
 `design/tokens.js` or `Theme.dc.html`'s T1 table disagrees with a drawing,
-the contract wins — **and the drawing is not going to catch up.** Round 9's
-light boards carry 397 font sizes the seven-step scale does not contain —
-163 at 14px, 96 at 9px — and `tokens.js`'s COLLAPSE table calls them "a
-design correction we are asking for, not a value we are keeping". A lane
-reading the board would build 14px; the contract says 15px.
+the contract wins — **and as of round 10 the drawing is not going to catch
+up.** `tokens.js`'s PRECEDENCE block says so outright: _"the artboards will
+NOT be redrawn to this scale — a size on a board that isn't here is a
+COLLAPSE entry, not a token, and not drift."_
+
+That last word is the one to internalise. The boards carry 397 font sizes
+the seven-step scale does not contain — 163 at 14px, 96 at 9px — **and that
+gap is permanent by design, not a backlog.** A lane reading the board would
+build 14px; the contract says 15px; nobody is coming to make them agree.
 
 So: **the artboards are the truth for composition** — what a screen
 contains, where it sits, the hierarchy, the copy, which states exist. **The
@@ -47,59 +51,11 @@ round (D-26…D-33).
     itself, so the ask stands and now has a place to live.
     Nothing is blocked; the digest carries the count meanwhile.
 
-11. **A band that was wrong both ways equally has no honest one-word
-    verdict.** §AB3 gives each band on the profile row one word —
-    _Under-dressed_, _Dialed_, _Over-dressed_ — derived from whichever
-    verdict count wins (`bandVerdict`, `modules/feed/coverage.ts`). When
-    cold and warm are exactly tied the code picks _Under-dressed_, on the
-    reasoning that underdressing is the failure that ends a run early. The
-    owner's review of PR #71 pointed out the reasoning is one-sided:
-    overdressing in heat ends a run too, and the Call teaser's own
-    tie-break was made symmetric for that reason. A tie is not a direction,
-    it is inconsistency — the band is not understood yet, which is exactly
-    what the runner and later the call need to know. **The ask is a fourth
-    word for that state**, "Mixed" or whatever design prefers, and its
-    `VerdictMark` treatment: hue is verdict (pink cold, teal dialed, grey
-    warm, per D-48), so a fourth state needs a mark that is none of those.
-    Rare in practice, since it needs equal counts. Tracked as **D-60**;
-    nothing is blocked, the tie goes cold until design answers.
-
-12. **Enriched product data has no surface, and item 1 assumed it would have
-    one.** Lane 107 has landed, so this stops being hypothetical: a pasted
-    product URL now fills `products.fabric_composition` (verbatim as the shop
-    wrote it), `fabric_parts` (the labelled breakdown — D-34's multi-part
-    shape, and real: Arc'teryx states four components, On states two panels,
-    rabbit three), plus `weight`, `fabric`, `wind_resistant`,
-    `water_resistant`, `category_hint` and a product image in R2.
-
-    **Of those, only the last group is rendered anywhere**, and only
-    indirectly: a garment inherits them as defaults where its own columns are
-    null, and `GarmentDetail` shows them. **`fabric_composition` and
-    `fabric_parts` are drawn by nothing at all.**
-
-    Item 1 files composition display under the Call epic, "if composition
-    surfaces there". The owner's read (2026-09-14) is that the Call is one
-    use and probably not the only one — a fabric breakdown is the kind of
-    thing a runner reads on a garment detail, compares in a closet list, or
-    filters by, none of which are Call screens and none of which are drawn.
-
-    What is wanted is the decision rather than a screen: **where, if
-    anywhere, does a runner see what their kit is made of** — and if the
-    answer is "the garment detail", what a multi-part composition looks like
-    there when a jacket has four labelled components and a tee has one line.
-    Until that is answered the data accumulates unread, which is cheap and
-    fine (it is stored for retroactive re-extraction anyway, D-31) but should
-    be a choice rather than an oversight.
-
-    No placeholder was built. There is no undesigned surface to hold to the
-    protocol here — the data simply has no consumer, which is a different
-    thing from a screen drawn without an artboard.
-
-13. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
+11. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
     Epic 200 opens, incl. multi-part fabric display on garment/product
     detail (D-34) if composition surfaces there. The Call tab's own glyph
     is deliberately deferred to the same moment (see round 4, item 7).
-14. **Motion Doctrine adoption.** Not a design ask — an implementation debt.
+12. **Motion Doctrine adoption.** Not a design ask — an implementation debt.
     Shipped v1 surfaces predate the doctrine and animate either not at all or
     ad hoc; lanes adopt the per-surface map opportunistically, audited at the
     launch gate (workflow.md checklist #5).
@@ -107,7 +63,7 @@ round (D-26…D-33).
     motion-strip and the demo project's reduced-motion emulation were removed,
     because demo videos are a primary review surface and must show the
     doctrine's real behaviour.
-15. **Does a garment carry a type?** **Answered: yes**, by the owner on
+13. **Does a garment carry a type?** **Answered: yes**, by the owner on
     2026-09-07. `garmentSchema` now carries an optional per-category `type`,
     named for the pack's glyphs so a garment's icon _is_ its type. The
     tap-list sets one on every row.
@@ -125,179 +81,103 @@ round (D-26…D-33).
     schema or a product call, it goes to the owner and lives in
     `docs/deferred.md`.
 
-16. **Round 9 contradicts itself about 9px, and the contract has already
-    won.** `Accessibility Contract.dc.html` requires a 44×44 hit area
-    "including 9px mono chips — pad the target, not the glyph", while
-    `tokens.js` law 3 says "nothing below MONO.xs (10px) exists anywhere, on
-    any ground, at any width" and COLLAPSE calls 9px "a board error".
-    Precedence resolves it for us — they are 10px chips, padded to 44 — so
-    **nothing is blocked and no lane should wait.** The ask is only that the
-    next revision agree with itself, so the contradiction does not get
-    rediscovered. The hit-area rule itself is right and we are building to
-    it.
+## Answered in rounds 10–11 (imported 2026-09-18)
 
-17. **Does the Call consider how a kit looks together, and if so, what does
-    hue mean then?** Raised by the owner 2026-09-18, for Epic 200.
+Both rounds came back together and cleared **four queue items, the P2.5
+wording, and the process question**. The answers live in the artboards and
+`tokens.js` from here.
 
-    The ask is whether a recommended outfit should account for **colour
-    combination** — not just whether the layers are warm enough, but whether
-    they go together.
+**Items are named, not numbered, below — deliberately.** Prettier normalises
+ordered lists, so removing an item renumbers every one after it: closing
+four items in this commit shifted the queue from 10/13/14/15 to 10/11/12/13.
+An item number is a position, never an identifier. Cite items by name. The answers live in the artboards and `tokens.js` from
+here; what follows is what changed.
 
-    **Framed as quality, not fashion** (owner, 2026-09-18), and the framing
-    is the point: _"it would feel stupid for the Call to recommend someone
-    wear two pieces of kit that really don't work together colour-wise …
-    a lot of people would read a bad combo as an algorithm problem."_
-    That is a credibility bug, not a style feature. "Never a fashion app"
-    does not license visibly broken output, and the Call is the one surface
-    whose entire job is to be believed — the same argument round 7 used to
-    kill O3's paste field.
+**The precedence question got a plain answer, in `tokens.js` itself.** A new
+PRECEDENCE block states it: _"Composition comes from the artboards; values
+come from this file and T1. The artboards will NOT be redrawn to this scale
+— a size on a board that isn't here is a COLLAPSE entry, not a token, and
+not drift."_ So the 397 off-scale sizes are permanent and deliberate. **Stop
+treating a board/contract difference as drift** — it is the system working
+as designed.
 
-    So it is a **constraint, not an objective**: the Call does not optimise
-    for looking good, it avoids combinations a runner would read as the
-    algorithm malfunctioning. That distinction keeps the whole thing inside
-    the current brand position, and it is what design should be asked
-    about.
+**The 9px self-contradiction is fixed at the source.** The Accessibility Contract now
+reads "including MONO.xs chips (10px, the type floor — nothing is drawn
+smaller)", and COLLAPSE gained the detail: the boards carry 9px in ~96
+places, and all of them build at 10px padded to a 44px target.
 
-    **Check the premise first, because half of it is already built.**
-    `wardrobe_items.color` exists (`schema-core.ts`), `garmentBase` carries
-    `color: z.string().max(30).optional()` (`lib/contracts.ts`), and
-    `GarmentForm` collects it behind a "Color" label today. It round-trips
-    through `form-schema`, `form-mapping` and `service`. **No migration is
-    needed to start collecting colour — we have been collecting it since the
-    closet lane shipped.** What no component does is _render_ it: it is
-    written and never read, the same shape as `fabric_composition` in item 6.
+**The tied band — D-60 — is answered as `Split`.** A cold/warm tie fills _both_
+outer slots in `--ink`, the knowledge colour, with the centre empty and no
+hue at all. Any tie that includes dialed is Dialed. The reasoning is the one
+the owner asked for: _"a tie is not a direction"_, so it never defaults to
+Under-dressed. Note the mark does not take a fourth hue — hue stays verdict,
+and "not a direction" is said in ink.
 
-    So the real questions are two, and only the first is design's:
+**P2.5's payout wording is `412 runners have run in this`.**
+Design's own phrasing, and better than the "have logged this" this file
+guessed at: it derives from public entries by construction, so the wording
+and the privacy rule agree without anyone having to remember why.
 
-    **For design — the hue problem.** §AB fixed hue as verdict, permanently:
-    pink cold, teal dialed, grey warm, and coverage was _moved off_ hue onto
-    ink density specifically because hue was overloaded. The Brand Brief adds
-    "never three accents in one viewport". A screen that draws a runner's
-    actual garment colours puts arbitrary hue on a surface where hue already
-    means something, and the Call's payoff — brackets open, layers arrive in
-    dressing order — is exactly where that collision would land. **If the
-    answer is that the Call reasons about colour but never shows it, say so
-    plainly** and the question closes cheaply; that is a real option and
-    possibly the right one, since the Call's job is an answer rather than a
-    lookbook.
+**Composition — D-34 — is §AG.** Garment detail carries
+it and nothing else does: _"the closet is for finding. Four-line
+compositions under every card make the grid a spec sheet and bury the range,
+which is the number that decides what you wear."_ Labelled rows for
+`fabric_parts`, the verbatim line for `fabric_composition`, both null → no
+block. Values are the brand's text — **no normalising "elastane" to
+"spandex", no reordering by percentage, no summing to check it hits 100.**
+Composition never touches the recommendation. A "WRONG? ›" link files a
+product correction into the Desk review queue (task 110) rather than editing
+the runner's copy, because composition belongs to the product, like type.
 
-    **For the owner — whether colour becomes structured**, which is a schema
-    and product call and does not belong in this file. Free text cannot be
-    combined: "black", "black/grey", "Obsidian" and "BLK" are one colour
-    typed four ways, and mining them is precisely the parser round 5 rejected
-    ("no parser; free text is never mined for a type"). Making colour
-    combinable means a palette, which means a tap on F — and F's whole
-    argument is that identity is the only thing worth one.
+### Colour is §AH, and the answer is the conservative one
 
-    **Colour is not type, and the difference is the whole answer to where
-    it lives.** The first draft of this item reached for round 5's
-    precedent — _type is a property of the product, not of the garment_ —
-    and proposed colour follow it down to `products`, deriving free from
-    enrichment. **The owner's read (2026-09-18) is that it does not, and the
-    reasoning holds:** a product has one type forever, but it comes in many
-    colourways and they come and go. `products.color` would be either a lie
-    (one of several) or a list that never says which one this runner owns. A
-    colourway belongs to the instance, which is exactly where the schema
-    already puts it.
+**"The Call reasons about colour and never shows it."** Colour is a
+**tiebreak between kits of equal warmth**: it never changes a thermal call,
+never appears as a reason, and never puts a swatch on a verdict surface. The
+hue collision this file worried about is avoided by not drawing colour at
+all.
 
-    So the cheap route is closed. Structured colour cannot be derived from
-    the product record; the runner has to say. That lands it back on F's one
-    tap, unresolved — and it is why the owner's half of this question is the
-    harder half, not the formality it first looked like.
+- **Thirteen names, locked**, in two classes because the rule keys off the
+  class: **Neutral** — black, white, grey, navy, brown, beige; **Colour** —
+  red, orange, yellow, green, blue, purple, pink. No "multi", no "other".
+  "Pick the nearest. A print is its main colour."
+- **Chips are words, not swatches** — _"thirteen swatches is thirteen
+  accents in one viewport"_. Design applied the brand's own rule to the
+  picker.
+- **The rule, at two fidelities**, exactly the constraint we flagged:
+  name-level, neutrals pair with anything, same name twice passes, null
+  passes (no colour means no test); and **hex-level in OKLCH when both
+  pieces carry one**, where two Colours sharing a name pass only within a
+  distance band — _"farther is the near-miss, and it fails."_ Thresholds are
+  explicitly starting values, to tune on real closets.
+- **Hi-viz is invisible to the test** — not Neutral, not Colour, not
+  counted. _"It's safety because the runner said so, never because a hex is
+  bright. Reflective trim is not exempt; the base colour is what shows."_
+- **Scope is top, bottom, outer** — the three layers that show. Hats,
+  gloves, buffs, socks, shoes exempt.
+- **Where it runs**: after the thermal ranking, among candidates in the same
+  band. Prefer a passing kit; if none passes, take the thermal best and say
+  nothing. The one place a colour word may appear in Call copy is the "why
+  not" sheet — _"Same warmth. Went with the black under the red top."_
+  Prose, a name, no swatch.
+- **Before the Call**: garment detail carries the name on the identity line,
+  the way §AG carries composition. Not the closet grid, not a filter, no
+  swatch. Enrichment may propose the name as an editable claim (F2c); **it
+  never proposes a hex.**
+- **F placement**: colour is the fifth attribute inside the already-collapsed
+  group, so F stays identity-first and the happy-path tap count does not
+  move. The free-text colourway the runner typed ("Obsidian") stays as the
+  row's caption.
+- **Level 2 is composed, not drawn**: _"compose it, don't draw it — this is
+  the placement reference."_ Sheet, photo, one field, two buttons, all
+  existing primitives. The sampler is a tap on the photo reading the pixel
+  under the ring — no magnifier, no drag. No photo → no sampler. **Level 2
+  without level 1 is not possible**: the sheet is reached from a chosen name.
 
-    **And the quality framing inverts which half is optional.** This item
-    first called "reasons about colour but never shows it" the cheap answer.
-    It is not: reasoning is exactly the half that needs structured colour,
-    and _showing_ is the part that can be dropped for free. A Call that
-    silently avoids bad combinations needs the data; a Call that displays
-    swatches does not need anything the reasoning did not already require.
-
-    **Which makes this an Epic 200 dependency rather than a nice-to-have,
-    with a launch deadline rather than an epic one.** An earlier draft of
-    this item said "every day we collect free-text colour is a day of closet
-    data the Call cannot use" — that was wrong, and checking it is the point:
-    **we are pre-launch.** Launch-gate item 1 (task 106) is still an open PR,
-    there are no public sign-ups, and no closets are filling. Nothing is
-    being lost today.
-
-    The deadline is **launch**, and it is still real. Once strangers have
-    closets, adding a structured colour field means either a backfill or a
-    dataset permanently split between runners who have it and runners who do
-    not. And backfill means mapping "Obsidian" to black across everyone's
-    wardrobe — mining free text for a structured fact, precisely the parser
-    round 5 rejected, failing silently and uncorrectably when wrong. So the
-    cheap moment is any time before sign-ups open; the expensive moment is
-    after.
-
-    ### The shape, proposed by the owner 2026-09-18: two levels
-
-    **Level 1 — a standard high-level colour name, one tap.** There is a
-    real standard to adopt rather than invent: the Berlin–Kay basic colour
-    terms, the eleven that recur across languages — black, white, red,
-    green, yellow, blue, brown, purple, pink, orange, grey. Kit reality adds
-    a couple the linguistics folds away (navy is not blue and beige is not
-    brown, to anyone buying clothes), and running adds one more: **hi-viz**,
-    which is the same exception named above and must sit outside whatever
-    clash rule design writes. **The list is user-facing copy, so design owns
-    the names** — the lexicon rule applies.
-
-    **Level 2 — an optional hex**, typed or picked from the garment photo.
-    The owner's argument for why it earns its place is the sharpest thing in
-    this item: _two pinks can look worse together than two clearly different
-    colours._ A name-level rule sees "pink + pink" and passes it, and the
-    near-miss is exactly what reads as a mistake rather than a choice.
-
-    That has a concrete consequence for the rule design asks for: **the Call
-    has to reason at two fidelities.** Name-level when that is all a runner
-    gave, and _perceptual_ when a hex exists — which means colour distance
-    in a perceptual space (OKLab or CIELAB ΔE), not string comparison.
-    "Near-miss" is a band of distance; it cannot be expressed in names at
-    all.
-
-    **Picking from the photo is plausible but not free.** Client-side canvas
-    sampling is easy, and the photo path already does client-side WASM work
-    for face blur, so the infrastructure shape exists. But photo colour lies:
-    white balance, shadow and indoor light move a sampled hex a long way. A
-    picked value should be a suggestion the runner confirms, never a truth
-    written silently — "user-entered fields are always the floor" cuts both
-    ways.
-
-    **Schema shape: additive, three fields, each with its own job.** Keep
-    `color` (free text) — a colourway name like "Obsidian" is genuinely
-    worth displaying and is not the same fact as "black". Add a nullable
-    enum for level 1 and a nullable hex for level 2. Nothing is parsed,
-    nothing is backfilled, and per the schema protocol additive nullable
-    columns proceed without stopping.
-
-    **And this answers the tap objection above.** Level 1 is one tap from a
-    short swatch list; level 2 is opt-in and never required. F's doctrine —
-    identity is the only thing worth one tap — survives, because the default
-    cost stays one tap and the precision is there only for runners who want
-    it.
-
-    Two things design should be asked alongside the hue question, because
-    neither is obvious and both are domain-specific:
-
-    - **What rule?** "Don't clash" is culturally loaded and not universal.
-      Neutrals-always-fine? Avoid two saturated non-neutrals? Something
-      else? The Call needs a rule it can apply, not a sensibility.
-    - **Hi-viz is the exception that will break a naive rule.** Runners wear
-      deliberately loud colours for visibility, and this product literally
-      names a token `--hi-viz` after it. A generic clash rule would suppress
-      exactly the combinations a runner chose on purpose. Whatever the rule
-      is, safety colour has to be outside it.
-
-    The owner also raised an opt-out — _"maybe some people don't care, that
-    could be a preference for them"_ — which would fit the existing
-    preference patterns (units, share default, thermal level). Recorded as
-    an option, not a decision; a preference for something most runners
-    probably want by default may be over-engineering.
-
-    Nothing is blocked — Epic 200 is unscheduled (`post-mvp.md`) and the
-    column is already there either way.
-
-    **Not in round 10** (sent 2026-09-18 before this was written). Queued for
-    round 11, alongside anything else that accumulates.
+**What this costs us to build** is a schema addition (the thirteen-name enum
+and a nullable hex beside the existing free-text `color`), the F row, the
+shade sheet, and the garment-detail identity line. None of it is the Call,
+which is unscheduled — so the v1 slice is collection and display only.
 
 ## Answered in round 9 (imported 2026-09-17)
 
