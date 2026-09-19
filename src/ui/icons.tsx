@@ -10,8 +10,10 @@ import type { JSX } from "react";
  * - square caps + miter joins — the squared, engineered Archivo feel;
  * - stroke-width 1.75 at 20-24px, 2 at 28px+, 1.5 at 16px; never below 16px;
  * - never scale non-uniformly, rotate, or add a second color;
- * - the verdict glyphs and `generic` draw the bracket motif on purpose —
- *   no other glyph may.
+ * - the verdict glyphs, `generic` and `call` draw the bracket motif on
+ *   purpose — no other glyph may. `call` is the sixth and arrived in round
+ *   9 "by exception: it is the product's name"; do not read it as the rule
+ *   loosening.
  *
  * A glyph that is not in this manifest is an undesigned surface: request it
  * via docs/design-deltas.md, never draw your own (see CLAUDE.md).
@@ -26,6 +28,10 @@ export const ICONS = {
   profile: {
     group: "nav",
     d: "M12 4a4 4 0 100 8 4 4 0 000-8zM4 21c0-4 3.6-6 8-6s8 2 8 6",
+  },
+  call: {
+    group: "nav",
+    d: "M6 3H3v18h3M18 3h3v18h-3M12 7v3M9 12.5a3 3 0 106 0 3 3 0 00-6 0M12 15.5v1.5",
   },
   singlet: {
     group: "garment",
@@ -245,6 +251,18 @@ export const ICONS = {
   bracket: { group: "system", d: "M8 3H3v18h5M16 3h5v18h-5" },
   bracketLeft: { group: "system", d: "M8 3H3v18h5" },
   bracketRight: { group: "system", d: "M16 3h5v18h-5" },
+  trip: {
+    group: "system",
+    d: "M4 20V9l8-5 8 5v11M9 20v-6h6v6M2 20h20",
+  },
+  home: {
+    group: "system",
+    d: "M3 11l9-7 9 7M5 9.5V20h14V9.5M10 20v-5h4v5",
+  },
+  pack: {
+    group: "system",
+    d: "M5 8h14v13H5zM9 8V5h6v3M5 13h14M12 11v4",
+  },
 } as const;
 
 export type IconName = keyof typeof ICONS;
@@ -254,11 +272,13 @@ export type IconName = keyof typeof ICONS;
  * (design/icons.js `TAB_BAR`). It existed because the pack's nav group is
  * four glyphs and product.md's tab bar is five tabs — lanes were guessing.
  *
- * Call borrows `verdictPending` on purpose rather than getting a glyph of
- * its own: brackets around three dots is already the pack's idiom for "no
- * verdict yet", which is what an unopened surface is. It renders in mute
- * ink with no active state and no badge. Drawing a glyph now would ship a
- * meaning we have not decided; one gets drawn when Call ships in Epic 200.
+ * Call keeps `verdictPending`, and **this is now a deliberate divergence
+ * from the pack.** Round 9 drew the `call` glyph and the pack's own
+ * `TAB_BAR` points at it — but its note is explicit that the swap belongs
+ * to the epic, not to us: "before the epic lands, lanes keep
+ * verdictPending in mute ink; swapping to `call` is the epic's first
+ * visible commit." So the glyph is ported and unused. Do not "fix" this to
+ * match the pack; the icons test pins it.
  *
  * `discover` moved nav -> social in the same revision: it is a browse
  * surface, not a v1 tab.

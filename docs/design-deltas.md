@@ -1,9 +1,23 @@
 # dialed.run — Design Deltas (work order for Claude Design)
 
-The `design/*.dc.html` artboards are the visual truth; this file is the queue
-of revisions to work back through the Claude Design project ("Runner Wardrobe
-App Brief"). It is a **work order, not a changelog** — an item leaves when
-design has answered it, and the answer lives in the artboards from then on.
+This file is the queue of revisions to work back through the Claude Design
+project ("Runner Wardrobe App Brief"). It is a **work order, not a
+changelog** — an item leaves when design has answered it, and the answer
+lives in the design bundle from then on.
+
+**The contracts outrank the artboards** (owner's call, 2026-09-17). Where
+`design/tokens.js` or `Theme.dc.html`'s T1 table disagrees with a drawing,
+the contract wins — **and the drawing is not going to catch up.** Round 9's
+light boards carry 397 font sizes the seven-step scale does not contain —
+163 at 14px, 96 at 9px — and `tokens.js`'s COLLAPSE table calls them "a
+design correction we are asking for, not a value we are keeping". A lane
+reading the board would build 14px; the contract says 15px.
+
+So: **the artboards are the truth for composition** — what a screen
+contains, where it sits, the hierarchy, the copy, which states exist. **The
+contracts are the truth for values** — type, tracking, spacing, radius,
+colour, breakpoints, measures. When you need a number, it comes from
+`tokens.js` or T1, never from measuring a drawing.
 
 **Round 1** shipped in revision 2 (V1 Screens K/L/M/N/P/Q, comments removed,
 E2-lite, 5-state lexicon, Visual Crossing attribution).
@@ -110,6 +124,97 @@ round (D-26…D-33).
     The rule: if the answer is a drawing, it comes here. If the answer is a
     schema or a product call, it goes to the owner and lives in
     `docs/deferred.md`.
+
+16. **Round 9 contradicts itself about 9px, and the contract has already
+    won.** `Accessibility Contract.dc.html` requires a 44×44 hit area
+    "including 9px mono chips — pad the target, not the glyph", while
+    `tokens.js` law 3 says "nothing below MONO.xs (10px) exists anywhere, on
+    any ground, at any width" and COLLAPSE calls 9px "a board error".
+    Precedence resolves it for us — they are 10px chips, padded to 44 — so
+    **nothing is blocked and no lane should wait.** The ask is only that the
+    next revision agree with itself, so the contradiction does not get
+    rediscovered. The hit-area rule itself is right and we are building to
+    it.
+
+## Answered in round 9 (imported 2026-09-17)
+
+The round that made the system enforceable. Two asks, both answered, plus
+three deliveries nobody asked for.
+
+**`design/tokens.js` — the contract the drawings never were.** Seven type
+steps and a four-step mono ramp, each step carrying its own tracking, with a
+`for:` line naming its job; a 4px `SPACE` step; five radii plus `none`;
+`BREAKPOINT` (720 wide, 1040 desk); `MEASURE` (390 panel, 620 column, 1180
+page); a paste-ready `CSS_VARS` block; and nine `LINT` rules with reject
+patterns.
+
+Its first law is the fix for our single largest source of drift:
+**tracking is a function of size, not context.** `Mono` hardcoded 0.08em, so
+every site needing another value went around it — 17 of them. The `COLLAPSE`
+table names where each stray board value goes, and is explicit that those are
+"a design correction we are asking for, not a value we are keeping".
+
+That is what forced the precedence rule at the top of this file. **Read it
+before building anything from a board.**
+
+**`Desktop Contract.dc.html` — desktop is v1, and it is small.** The screen-X
+note is promoted to the system's position: desktop is a reading and
+closet-admin surface; every act of logging is the phone flow unchanged in a
+centred panel at phone width. Confirmed across all eight v1 areas, with four
+named bends and **none of them a second wide form**:
+
+1. A1/F open a drop zone in the photo well at width — copy and one state,
+   layout untouched. Face-blur runs the same WASM path on the dropped file.
+2. Desktop onboarding runs O1 → O3 → O4 → O5 in the panel; O2 stays a phone
+   act and O5 says so. The ladder loses no rung.
+3. **DS2, the verdict backlog — the one wide layout v1 earns.** A row per
+   imported run with no outfit, each row A3's three inputs laid flat.
+   Keyboard: ↑↓ rows, 1–4 verdict, Enter saves, Tab opens A2 in a panel.
+4. Phone ink header blocks collapse into one top bar at width.
+
+**DS1 is the shell**: one top bar from 720px, the four tabs as four text
+links in the same order with the same pink-underline active rule, the bell
+moved into the bar opening S1 as a centred panel (not a dropdown), the
+wordmark linking to Feed, the FAB as a pink pill. Explicitly **not a
+sidebar** — "the left rail is the Desk's chrome and is what marks a screen as
+operator-only. The product never grows one." X and C were each drawn with a
+different bar; DS1 supersedes both.
+
+And the limit, which is worth more than a drawing: **the Call does not go
+wide.** "A wide Call would be a dashboard, and a dashboard is the opposite of
+an answer."
+
+**Three deliveries nobody asked for.**
+
+- **`Accessibility Contract.dc.html` is v1-binding** — "every lane / WCAG 2.2
+  AA / what each lane has to test before a PR is done". Mostly it collects
+  rules already scattered across §AB, the Form Contract and the Motion
+  Doctrine, but it adds hard requirements we neither meet nor verify: 44×44
+  hit areas with 8px between them, a 2px focus outline that is never removed,
+  focus order following visual order, one live region per screen, "a screen
+  with no heading is a bug". It gets its own lane rather than leaking into
+  whichever surface a lane touches next.
+- **`Call Epic.dc.html`** (C0–C3, B1/B2) plus `design/docs/epic-200-*.md`.
+  Post-v1, Epic 200. Archived, not scheduled.
+- **Four new glyphs** in `icons.js`: `call`, `trip`, `home`, `pack`. `call`
+  closes round 4's deferral — it waited for Epic 200 and Epic 200 is now
+  drawn. `test/ui/icons.test.tsx` pins the manifest, so porting these is a
+  code change.
+
+**What the round costs us, recorded so it is a choice and not a surprise:**
+
+- **The boards did not move to the contract.** 397 font sizes on the new
+  light boards are outside the seven-step scale — 163 at 14px, 96 at 9px, 52
+  at 16px, 29 at 30px — and 9px and 8px violate `tokens.js`'s own third law
+  ("nothing below MONO.xs (10px) exists anywhere, on any ground, at any
+  width"). Deliberate, per COLLAPSE, and the precedence rule is what makes it
+  safe.
+- **Three of the four dark boards are byte-identical to round 8** while their
+  light twins were revised. This is not a defect to chase: `Theme.dc.html`
+  says the dark artboards are _generated_ from T1 — "if a screen looks wrong
+  in dark the fix is here, not there" — so T1 is the contract and the dark
+  boards are renderings of it. Regenerate them when task 111 is scheduled and
+  somebody needs something to look at.
 
 ## Answered in round 8 (imported 2026-09-16)
 
