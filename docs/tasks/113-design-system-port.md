@@ -1,9 +1,24 @@
-# Task 113 — The design system port (sequential on main; adoption lane 1 of 4)
+# Task 113 — The design system port, plus §AG and §AH (adoption lane 1 of 5)
 
 ## Goal
 
-Port `design/tokens.js` and `Theme.dc.html`'s T1 colour table into the app,
-collapse the values that predate them, and make the result enforceable.
+**Part A** — port `design/tokens.js` and `Theme.dc.html`'s T1 colour table
+into the app, collapse the values that predate them, and make the result
+enforceable.
+
+**Part B** — build §AG (composition on garment detail) and §AH (colour
+collection), the two v1 slices round 10/11 delivered.
+
+**Do Part A first and completely.** They are folded into one lane (owner,
+2026-09-18) because §AH edits `GarmentForm` and `garmentBase`, which Part A
+already rewrites, and three separate passes over those files is the
+contention this sequence exists to avoid. They are still two pieces of work:
+**land Part A, verify it, then start Part B.** Part A's done criteria do not
+mention colour and Part B's do not mention tokens.
+
+One consequence to accept up front: this lane is no longer
+"className-only". Part B adds a migration, new fields and new UI, so the
+"no behaviour changes" rule below applies to **Part A only**.
 
 This is the lane that fixes the drift the whole adoption sequence exists for:
 **93 arbitrary Tailwind values, 17 sites bypassing the `Mono` primitive, 10
@@ -22,7 +37,10 @@ immediately.
 
 - `src/ui/tokens.css`, `src/styles.css`, `src/ui/ink.css`
 - `src/ui/*.tsx` — every primitive
-- `src/modules/*/components/*.tsx` — className only. **No behaviour changes.**
+- `src/modules/*/components/*.tsx` — className only in Part A. **No
+  behaviour changes in Part A.**
+- For Part B: `src/db/schema-core.ts` + a migration, `src/lib/contracts.ts`,
+  `GarmentForm`, garment detail, and a new shade sheet.
 - `eslint.config.js` is a forbidden zone — the lint rule below needs the
   owner. Write it, propose it, do not land it yourself.
 
@@ -89,7 +107,7 @@ ever carry one tracking, and the scale has four.
    `min-w-[…]`) outside a narrow allowlist, plus raw hex anywhere. Model it
    on the existing rule that rejects new `requireUserId` copies.
 
-## Out of scope
+## Part A out of scope
 
 - The dark column (111), motion (114), accessibility (112), desktop (115).
 - Any layout change. If a collapsed value visibly moves something, that is
@@ -110,7 +128,7 @@ ever carry one tracking, and the scale has four.
   a documented rule (mono is the tell a value was measured; 1px→2px marks a
   field error), the rule still holds — only its spelling changes.
 
-## Done criteria
+## Part A done criteria
 
 - Zero arbitrary-value utilities outside the allowlist; zero raw hex outside
   `tokens.css`.
@@ -120,3 +138,99 @@ ever carry one tracking, and the scale has four.
 - **Demo video: yes.** Type, spacing and colour change on every screen. This
   is precisely the case CLAUDE.md names — a screen whose appearance changed
   behind unchanged behaviour is the demo worth watching.
+
+---
+
+# Part B — §AG and §AH
+
+Read `design/Remaining Screens.dc.html` §AG and §AH before starting. What
+follows is the shape and the traps, not a substitute for the artboards.
+
+## §AG — composition on garment detail
+
+- **Garment detail only.** Not the closet grid, not a filter, not the Call.
+  Design's reason: *"the closet is for finding. Four-line compositions under
+  every card make the grid a spec sheet and bury the range, which is the
+  number that decides what you wear."*
+- `fabric_parts` → labelled rows in the brand's order. `fabric_composition`
+  → verbatim, one line. Both null → no block at all.
+- **Values are the brand's text.** No normalising "elastane" to "spandex",
+  no reordering by percentage, no summing to check it hits 100. A "merino"
+  filter is post-v1 and needs normalised fibres — the parser round 5
+  refused.
+- Composition never touches the recommendation.
+
+**Stop and ask before building the "WRONG? ›" link.** The artboard files it
+into the Desk review queue, and **that queue does not exist**: task 110 is
+unscheduled and there is no product-correction table in the schema. Lane
+106's report flow is for content, not product facts. So either the link
+waits for 110, or it needs a destination this lane would have to invent —
+which is a product call, not yours.
+
+## §AH — colour
+
+**v1 is collection and display only.** The Call's tiebreak — the OKLCH
+distance rule — is Epic 200 and is **not** in scope. Build the data and the
+surfaces; leave the rule.
+
+- **Thirteen locked names, two classes** (the rule keys off the class):
+  Neutral — black, white, grey, navy, brown, beige. Colour — red, orange,
+  yellow, green, blue, purple, pink. No "multi", no "other".
+- **Chips are words, not swatches** — *"thirteen swatches is thirteen
+  accents in one viewport."* Do not render colour chips as colour.
+- **F**: colour is the fifth attribute inside the already-collapsed group,
+  so the happy-path tap count does not move. The existing free-text
+  colourway ("Obsidian") stays as the row's caption, untouched.
+- **Garment detail**: the name on the identity line, the way §AG carries
+  composition. No swatch.
+- **The shade sheet (level 2) is composed, not drawn** — sheet, photo, one
+  field, two buttons, all existing `ui/` primitives. The sampler is a tap on
+  the photo reading the pixel under the ring: no magnifier, no drag. No
+  photo → no sampler, the field stands alone. **Level 2 is unreachable
+  without level 1** — the sheet is opened from a chosen name.
+- Enrichment may propose the *name* as an editable claim (F2c). **It never
+  proposes a hex.**
+
+### Two traps, both found while scoping this
+
+1. **`visibility` is already taken, and it means something else.** §AH's F
+   attribute strip reads `WEIGHT · FABRIC · WIND · VISIBILITY · COLOUR`,
+   where VISIBILITY is a garment property feeding the hi-viz exemption. But
+   `wardrobe_items.visibility` **already exists** — `text("visibility")
+   .notNull().default("ok")`, sitting next to `retired`, and it is the
+   moderation state. `closet/service.ts` writes `"ok"`. **Naming the new
+   attribute `visibility` would overwrite a trust-and-safety field**, and
+   nothing would fail loudly. Pick a different name (`hiViz`,
+   `highVisibility`) and say so in the PR; raise the collision in
+   design-deltas so the artboard's label and our column stop disagreeing.
+2. **Hi-viz is not one of the thirteen.** It is *"invisible to the test —
+   not Neutral, not Colour, not counted. It's safety because the runner said
+   so, never because a hex is bright."* So it is a separate flag, not a
+   colour value, and the enum must not grow a fourteenth entry for it.
+
+### Schema
+
+Additive and nullable, so the protocol says proceed — but **name the
+migration for what it does** and number it past whatever is on `main` and in
+open PRs at the time:
+
+```sh
+npm run db:generate:core -- --name=add_garment_structured_color
+```
+
+Keep `color` (free text) as the colourway caption. Add the thirteen-name
+enum and a nullable hex beside it. **Nothing is parsed and nothing is
+backfilled** — mapping "Obsidian" to black is the parser round 5 rejected.
+
+`garmentBase` in `lib/contracts.ts` gains two optional fields. That is
+additive, and other lanes read the contract — say so in the PR.
+
+## Part B done criteria
+
+- §AG renders on garment detail and nowhere else; brand text untouched.
+- §AH: enum + hex collected on F, name on garment detail, shade sheet
+  composed from existing primitives, level 2 unreachable without level 1.
+- The `visibility` collision avoided and raised.
+- The "WRONG? ›" question answered by the owner, not assumed.
+- **Demo video: yes** — adding a colour to a garment and reading a
+  composition are both visible changes.
