@@ -79,7 +79,7 @@ file.
 
 | # | lane | why it sits here |
 | --- | --- | --- |
-| 1 | **113** design system port | Everything downstream takes its numbers from `tokens.js` and T1. Writing raw px before this means rewriting it after. |
+| 1 | **113** design system port **+ §AG/§AH** | Everything downstream takes its numbers from `tokens.js` and T1. Writing raw px before this means rewriting it after. Round 10/11's two v1 slices — composition on garment detail, colour collection on F — fold in here (owner, 2026-09-18) because §AH edits `GarmentForm` and `garmentBase`, which Part A already rewrites. **Part A lands first and completely; then Part B.** |
 | 2 | **114** motion adoption | Travel distances are spacing steps. |
 | 3 | **112** accessibility | The focus outline, 44px targets and 8px gaps are token values — and its reduced-motion requirement is vacuous until 114 gives it something that moves. |
 | 4 | **115** desktop | Consumes all three: `BREAKPOINT`/`MEASURE` from 113, the tab-switch treatment from 114, focus order from 112. Also the only one that crosses every lane's routes, so it runs alone. |
