@@ -86,12 +86,16 @@ the email is Today sent to you.
 
 ## Open questions for the owner
 
-1. **Nothing enqueues a classifier-sourced review row.** `review_queue`
-   has `source: "classifier"` and only `fileReport` ever writes a row —
-   `screenPhoto` hides a flagged photo and records the verdict, but queues
-   nothing for a person. D1 draws that row, so this lane either wires it or
-   the artboard's third row can never appear. It is a small change in
-   `screening.ts` and it is a behaviour decision, not a drawing one.
+1. ~~**Nothing enqueues a classifier-sourced review row.**~~ **Answered and
+   built in 106** (PR #73 review). `screenPhoto` now writes a
+   `source: "classifier"` row in the same batch as the verdict and the
+   visibility write, so D1's third row has something to render. It queues
+   two bands, not one: over `thresholds` the photo is hidden and queued,
+   and in the new middle band — at or above `reviewFloors`, below
+   `thresholds` — the photo **stays visible** and is queued anyway, so a
+   reviewer's agreement or disagreement is the calibration signal the eval
+   cannot produce. Garment photos are excluded on purpose (a closet is
+   private); that half is D-69.
 2. **Opening the "who reported" fold is logged** — logged where? There is no
    audit table. Sentry is for errors. A `review_audit` table is the obvious
    answer and it is a schema change.
@@ -115,3 +119,33 @@ the email is Today sent to you.
 
 `e2e/desk/` is a new feature directory. The journey: a report arrives, the
 operator opens the Desk, sees the photo, removes it, and undoes it.
+
+**Before any of that can be recorded, the harness has to be able to be an
+admin — and today it cannot.** This is the first thing to do in this lane,
+not the last, because every assertion above depends on it and because 106
+shipped its whole admin surface with no video for exactly this reason
+(D-72, raised twice on PR #73).
+
+`isAdmin` reads one thing, `env.ADMIN_USER_IDS`. Seeding a user row cannot
+make an admin — admin-ness is env, not data — and the usual escapes do not
+apply: the unit tests reach it with `Reflect.set(env, …)` inside the
+workers pool, which cannot touch a live dev server; `@cloudflare/vite-plugin`
+(1.54) has no `process.env` → worker-vars passthrough, so Playwright's
+`webServer.env` cannot carry it; and `wrangler.jsonc` has no `vars` block at
+all. A demo also cannot skip itself when the var is absent, because `.skip`
+is forbidden — so this lands green or not at all.
+
+The one place it can be set is `.dev.vars`, and CI already writes one:
+`ci.yml`'s e2e job does `echo "BETTER_AUTH_SECRET=ci-only-secret" > .dev.vars`.
+So the work is:
+
+1. **Owner, one line** — append `ADMIN_USER_IDS=<the fixed demo id>` to that
+   `ci.yml` line. It is a forbidden zone, which is why 106 stopped here.
+2. Give the demo account a **deterministic** user id. Today
+   `accounts.setup.ts` signs each one up fresh, so there is no id to name in
+   advance.
+3. Document the same line in `.dev.vars.example` for local runs — the two
+   vars this needs are already listed there.
+
+Then `e2e/desk/` can assert the admin gate itself: a signed-in non-admin
+gets a 404 from `/safety/review-photo/$`, and the operator does not.
