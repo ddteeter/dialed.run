@@ -18,6 +18,26 @@ on:
 permissions:
   contents: read
 
+# The same group `ci.yml` and `mutation.yml` have carried all along, and the
+# only one of the three that was missing it -- which mattered most here,
+# because this is the workflow that takes hours rather than minutes.
+#
+# Without it a push superseded nothing: the run on the old SHA kept going to
+# completion on its own runner while its replacement started beside it, and
+# only the replacement could ever count, since branch protection evaluates
+# checks against the head commit. Measured 2026-09-19 on lane/106: a
+# `gate --mode=ci` step still running at 116 minutes, already orphaned by
+# anything pushed after it.
+#
+# Keyed on `github.ref`, matching its siblings: that is `refs/pull/<n>/merge`
+# for a pull request, so PRs never cancel each other, and `refs/heads/main`
+# for a push. A cancelled run reports `cancelled`, which is not a pass --
+# correct, because the SHA it was asked about is no longer the head. The
+# `Mutation` gate job already spells that rule out for its own shards.
+concurrency:
+  group: guardrails-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   guardrails:
     runs-on: ubuntu-latest
