@@ -441,11 +441,11 @@ export function VerdictForm({
               }}
               className={
                 tags.has(tag)
-                  ? "rounded-pill bg-ink px-3 py-1 text-micro text-ground"
-                  : "rounded-pill border border-hairline px-3 py-1 text-micro"
+                  ? "rounded-pill bg-ink px-3 py-1 text-ground"
+                  : "rounded-pill border border-hairline px-3 py-1"
               }
             >
-              {tag.replaceAll("_", " ")}
+              <Mono step="xs">{tag.replaceAll("_", " ")}</Mono>
             </button>
           ))}
         </div>

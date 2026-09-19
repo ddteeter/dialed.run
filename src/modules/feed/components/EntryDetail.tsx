@@ -185,7 +185,7 @@ export function EntryDetail({
       {entry.tags.length === 0 ? undefined : (
         <div className="flex flex-wrap gap-2">
           {entry.tags.map((tag) => (
-            <Bracketed key={tag} className="text-micro text-muted">
+            <Bracketed key={tag} className="text-muted">
               {tag.replaceAll("_", " ")}
             </Bracketed>
           ))}

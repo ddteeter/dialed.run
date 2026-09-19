@@ -3,10 +3,10 @@ import type { ReactNode } from "react";
 /**
  * Which rung of the mono ramp. `design/tokens.js` MONO, and the whole
  * reason this prop exists: the ramp has four steps carrying four
- * trackings, and this component used to hardcode `` — a
+ * trackings, and this component used to hardcode `tracking-[0.08em]` — a
  * value no step has. One primitive that could only ever be one treatment
  * is what produced 17 call sites writing `font-mono text-[11px]
- * ` by hand instead of using it.
+ * tracking-[0.1em]` by hand instead of using it.
  */
 export type MonoStep = "xs" | "sm" | "md" | "lg";
 
