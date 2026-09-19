@@ -34,35 +34,35 @@ export function Feed({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl uppercase leading-none">Feed</h1>
-          <Link to="/feed/search" className="text-sm font-semibold text-pink">
-            Find runners
-          </Link>
-        </div>
-        <div className="flex gap-1 border-b border-night/15">
-          {(["following", "conditions"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => {
-                setTab(value);
-              }}
-              className={
-                tab === value
-                  ? "border-b-2 border-pink px-3 py-2 font-semibold"
-                  : "px-3 py-2 text-night/50"
-              }
-            >
-              {value === "following" ? "Following" : "Your conditions"}
-            </button>
-          ))}
-        </div>
-        {tab === "following" ? (
-          <FollowingTab items={items} units={units} />
-        ) : (
-          <ConditionsTab conditionsFor={conditionsFor} />
-        )}
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-2xl uppercase leading-none">Feed</h1>
+        <Link to="/feed/search" className="text-sm font-semibold text-pink">
+          Find runners
+        </Link>
+      </div>
+      <div className="flex gap-1 border-b border-night/15">
+        {(["following", "conditions"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => {
+              setTab(value);
+            }}
+            className={
+              tab === value
+                ? "border-b-2 border-pink px-3 py-2 font-semibold"
+                : "px-3 py-2 text-night/50"
+            }
+          >
+            {value === "following" ? "Following" : "Your conditions"}
+          </button>
+        ))}
+      </div>
+      {tab === "following" ? (
+        <FollowingTab items={items} units={units} />
+      ) : (
+        <ConditionsTab conditionsFor={conditionsFor} />
+      )}
     </div>
   );
 }
@@ -84,24 +84,35 @@ function FollowingTab({
   return (
     <ul className="m-0 flex list-none flex-col gap-4 p-0">
       {items.map((item) => (
-        <li key={item.entryId} className="rounded-xl border border-night/10 p-4">
+        <li
+          key={item.entryId}
+          className="rounded-xl border border-night/10 p-4"
+        >
           <Link
             to="/feed/entry/$entryId"
             params={{ entryId: item.entryId }}
             className="flex flex-col gap-2 text-night no-underline"
           >
             <div className="flex items-center justify-between">
-              <span className="font-semibold">{item.authorDisplayName ?? "A runner"}</span>
+              <span className="font-semibold">
+                {item.authorDisplayName ?? "A runner"}
+              </span>
               {item.conditions ? (
-                <Mono className="text-xs text-teal">{formatTempRange(
+                <Mono className="text-xs text-teal">
+                  {formatTempRange(
                     item.conditions.span.minTempC,
                     item.conditions.span.maxTempC,
                     units.temp,
-                  )}</Mono>
+                  )}
+                </Mono>
               ) : undefined}
             </div>
-            <Mono className="text-xs text-night/60">{formatDistance(item.distanceM, units.distance)}</Mono>
-            {item.caption ? <p className="m-0 text-sm">{item.caption}</p> : undefined}
+            <Mono className="text-xs text-night/60">
+              {formatDistance(item.distanceM, units.distance)}
+            </Mono>
+            {item.caption ? (
+              <p className="m-0 text-sm">{item.caption}</p>
+            ) : undefined}
             <Mono className="text-xs text-night/40">
               useful [{String(item.usefulCount)}]
             </Mono>
@@ -167,14 +178,16 @@ function ConditionsTab({
   if (result.total === 0) {
     return (
       <p className="py-12 text-center text-night/60">
-        Nobody near you has logged these conditions yet. You&rsquo;ll be the first.
+        Nobody near you has logged these conditions yet. You&rsquo;ll be the
+        first.
       </p>
     );
   }
   return (
     <div className="flex flex-col gap-3">
       <Bracketed className="text-sm">
-        {String(result.total)} {result.total === 1 ? "runner" : "runners"} logged
+        {String(result.total)} {result.total === 1 ? "runner" : "runners"}{" "}
+        logged
         {result.widened ? " (widened window)" : ""}
       </Bracketed>
       <ul className="m-0 flex list-none flex-col gap-2 p-0">

@@ -9,7 +9,11 @@
  * signature mirrors `redirect()` itself so callers keep full compile-time
  * route/param validation.
  */
-import type { AnyRouter, RedirectOptions, RegisteredRouter } from "@tanstack/react-router";
+import type {
+  AnyRouter,
+  RedirectOptions,
+  RegisteredRouter,
+} from "@tanstack/react-router";
 import { redirect } from "@tanstack/react-router";
 
 export function redirectTo<

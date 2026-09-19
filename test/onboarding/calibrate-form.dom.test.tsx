@@ -217,7 +217,9 @@ describe("CalibrateForm", () => {
     // a two-letter code.
     renderForm();
 
-    expect(screen.getByLabelText("Temperature")).toHaveTextContent("Fahrenheit");
+    expect(screen.getByLabelText("Temperature")).toHaveTextContent(
+      "Fahrenheit",
+    );
     expect(screen.getByLabelText("Temperature")).toHaveTextContent("Celsius");
     expect(screen.getByLabelText("Distance")).toHaveTextContent("Miles");
     expect(screen.getByLabelText("Distance")).toHaveTextContent("Kilometres");

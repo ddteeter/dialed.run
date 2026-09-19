@@ -10,6 +10,7 @@ import {
 } from "../../src/modules/runs/imports";
 import { newUlid } from "../../src/lib/ids";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
+import { nowSeconds } from "../../src/lib/now";
 
 function fakeQueue() {
   const sent: ImportJob[] = [];
@@ -152,12 +153,11 @@ describe("startImport: the rules, in the words the user reads", () => {
     // The consumer reads the format back out of this key, so its shape is
     // a contract between the two halves.
     const userId = newUlid();
-    const { importId } = await startImport(
-      coreDb(),
-      env.IMPORTS,
-      fakeQueue(),
-      { userId, filename: "Morning Run.TCX", bytes },
-    );
+    const { importId } = await startImport(coreDb(), env.IMPORTS, fakeQueue(), {
+      userId,
+      filename: "Morning Run.TCX",
+      bytes,
+    });
 
     const row = await getImportStatus(coreDb(), userId, importId);
     expect(row?.r2Key).toBe(`imports/${userId}/${importId}.tcx`);
@@ -231,7 +231,7 @@ describe("startImport: the rules, in the words the user reads", () => {
   it("stamps the import in epoch seconds and enqueues its id", async () => {
     const userId = newUlid();
     const queue = fakeQueue();
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     const { importId } = await startImport(coreDb(), env.IMPORTS, queue, {
       userId,

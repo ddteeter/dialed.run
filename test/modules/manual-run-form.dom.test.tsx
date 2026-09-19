@@ -103,9 +103,7 @@ describe("ManualRunForm: what it sends", () => {
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
     });
-    expect(
-      submitted(submitRun),
-    ).toMatchObject({ durationS: 1831 });
+    expect(submitted(submitRun)).toMatchObject({ durationS: 1831 });
   });
 
   it("sends the start as epoch seconds, not as the string it was typed in", async () => {
@@ -154,9 +152,7 @@ describe("ManualRunForm: what it sends", () => {
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
     });
-    expect(
-      submitted(submitRun),
-    ).toMatchObject({ indoor: true });
+    expect(submitted(submitRun)).toMatchObject({ indoor: true });
   });
 });
 
@@ -190,9 +186,7 @@ describe("ManualRunForm: effort is optional", () => {
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
     });
-    expect(
-      submitted(submitRun),
-    ).toMatchObject({ effort: "workout" });
+    expect(submitted(submitRun)).toMatchObject({ effort: "workout" });
   });
 
   it("takes it back when they choose Not set again", async () => {
@@ -277,7 +271,9 @@ describe("ManualRunForm: what it refuses", () => {
 
     await user.click(screen.getByRole("button", { name: "Log run" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(/Nothing saved/);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /Nothing saved/,
+    );
     expect(submitRun).not.toHaveBeenCalled();
   });
 
@@ -310,7 +306,10 @@ describe("ManualRunForm: what it refuses", () => {
     await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
 
     expect(screen.getByLabelText("Title")).toHaveAttribute("name", "title");
-    expect(screen.getByLabelText("Started")).toHaveAttribute("name", "startedAt");
+    expect(screen.getByLabelText("Started")).toHaveAttribute(
+      "name",
+      "startedAt",
+    );
     expect(screen.getByLabelText("Distance (km)")).toHaveAttribute(
       "name",
       "distanceM",
@@ -351,7 +350,9 @@ describe("ManualRunForm: what it refuses", () => {
     await user.type(minutes, "0");
     await user.click(screen.getByRole("button", { name: "Log run" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(/Nothing saved/);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /Nothing saved/,
+    );
     expect(submitRun).not.toHaveBeenCalled();
   });
 

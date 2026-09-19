@@ -15,6 +15,7 @@
  */
 import { z } from "zod";
 
+import { UpstreamError } from "../../../lib/errors";
 import {
   weatherObservationSchema,
   type ClimatePlace,
@@ -29,10 +30,9 @@ const TIMEOUT_MS = 10_000;
  * body, missing key). Always a plain caught error for the caller — never a
  * crash — so `attachObservation` can treat it as retryable (CLAUDE.md law 5).
  */
-export class WeatherUnavailableError extends Error {
+export class WeatherUnavailableError extends UpstreamError {
   constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "WeatherUnavailableError";
+    super("WeatherUnavailableError", message, options);
   }
 }
 
@@ -174,9 +174,12 @@ async function timelineJson<TSchema extends z.ZodType>(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
-    throw new WeatherUnavailableError(`Visual Crossing ${what} request failed`, {
-      cause: error,
-    });
+    throw new WeatherUnavailableError(
+      `Visual Crossing ${what} request failed`,
+      {
+        cause: error,
+      },
+    );
   }
   if (!response.ok) {
     throw new WeatherUnavailableError(

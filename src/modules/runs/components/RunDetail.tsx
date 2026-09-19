@@ -100,7 +100,10 @@ export function RunDetail({ run, recordManualTemp }: Readonly<RunDetailProps>) {
       </Mono>
       {isIndoor && <Bracketed className="text-night/60">Indoor</Bracketed>}
       {requiresManualTemp && (
-        <ManualTempFallback runId={run.id} recordManualTemp={recordManualTemp} />
+        <ManualTempFallback
+          runId={run.id}
+          recordManualTemp={recordManualTemp}
+        />
       )}
       {/* CTA slot repointed by lane 104 to attach-the-kit (A2). */}
       <div data-slot="attach-kit-cta" />

@@ -212,7 +212,8 @@ export function estimateTempRange(input: ThermalInput): TempRange | undefined {
 export function formatTempRange(range: TempRange): string | undefined {
   const low = range.lowC === undefined ? undefined : Math.round(range.lowC);
   const high = range.highC === undefined ? undefined : Math.round(range.highC);
-  if (low !== undefined && high !== undefined) return `${String(low)}–${String(high)}°`;
+  if (low !== undefined && high !== undefined)
+    return `${String(low)}–${String(high)}°`;
   if (low !== undefined) return `${String(low)}°+`;
   if (high !== undefined) return `under ${String(high)}°`;
   return undefined;

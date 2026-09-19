@@ -15,10 +15,7 @@ import { formatTemp } from "./temperature";
 const METRES_PER_MILE = 1609.34;
 const METRES_PER_KM = 1000;
 
-export function formatDistance(
-  distanceM: number,
-  unit: DistanceUnit,
-): string {
+export function formatDistance(distanceM: number, unit: DistanceUnit): string {
   return unit === "km"
     ? `${(distanceM / METRES_PER_KM).toFixed(1)}km`
     : `${(distanceM / METRES_PER_MILE).toFixed(1)}mi`;
@@ -33,8 +30,6 @@ export function formatDuration(durationS: number): string {
   const seconds = durationS % 60;
   return `${String(minutes)}:${seconds.toString().padStart(2, "0")}`;
 }
-
-
 
 /**
  * The temperature a run actually covered: `[4°]` when it fits one hour,

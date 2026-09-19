@@ -56,9 +56,9 @@ describe("signInSchema", () => {
   });
 
   it("names the fix when the email is missing or malformed", () => {
-    expect(messagesFor(signInSchema, { ...signIn, email: "" }, "email")).toContain(
-      "Enter your email address.",
-    );
+    expect(
+      messagesFor(signInSchema, { ...signIn, email: "" }, "email"),
+    ).toContain("Enter your email address.");
     expect(
       messagesFor(signInSchema, { ...signIn, email: "runner@" }, "email"),
     ).toContain("That does not look like an email address.");
@@ -89,12 +89,12 @@ describe("signUpSchema", () => {
     expect(
       messagesFor(signUpSchema, { ...signUp, name: "" }, "name"),
     ).toStrictEqual(["Tell us what to call you."]);
-    expect(signUpSchema.safeParse({ ...signUp, name: "a".repeat(60) }).success).toBe(
-      true,
-    );
-    expect(signUpSchema.safeParse({ ...signUp, name: "a".repeat(61) }).success).toBe(
-      false,
-    );
+    expect(
+      signUpSchema.safeParse({ ...signUp, name: "a".repeat(60) }).success,
+    ).toBe(true);
+    expect(
+      signUpSchema.safeParse({ ...signUp, name: "a".repeat(61) }).success,
+    ).toBe(false);
   });
 
   it("holds Better Auth's eight-character password floor", () => {
@@ -102,7 +102,11 @@ describe("signUpSchema", () => {
     // form say so before the round trip; a looser copy would let the user
     // submit something the server then rejects with worse wording.
     expect(
-      messagesFor(signUpSchema, { ...signUp, password: "a".repeat(7) }, "password"),
+      messagesFor(
+        signUpSchema,
+        { ...signUp, password: "a".repeat(7) },
+        "password",
+      ),
     ).toStrictEqual(["Use at least 8 characters."]);
     expect(
       signUpSchema.safeParse({ ...signUp, password: "a".repeat(8) }).success,
@@ -135,12 +139,12 @@ describe("runDraftSchema", () => {
       messagesFor(runDraftSchema, { ...runDraft, distanceM: 0 }, "distanceM"),
     ).toStrictEqual(["How far did you go?"]);
     // Fractional seconds are a parser bug, not a run.
-    expect(runDraftSchema.safeParse({ ...runDraft, durationS: 1800.5 }).success).toBe(
-      false,
-    );
-    expect(runDraftSchema.safeParse({ ...runDraft, startedAt: 1.5 }).success).toBe(
-      false,
-    );
+    expect(
+      runDraftSchema.safeParse({ ...runDraft, durationS: 1800.5 }).success,
+    ).toBe(false);
+    expect(
+      runDraftSchema.safeParse({ ...runDraft, startedAt: 1.5 }).success,
+    ).toBe(false);
   });
 
   it("holds the title between 1 and 120 characters", () => {

@@ -4,7 +4,9 @@ import { forecast } from "../../src/modules/weather";
 import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
 
 function mockFetchJson(body: unknown, status = 200) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(Response.json(body, { status }));
 }
 
 afterEach(() => {

@@ -50,3 +50,25 @@ export class ForbiddenError extends Error {
     this.name = "ForbiddenError";
   }
 }
+
+/**
+ * An upstream we do not control did not give us what we asked for.
+ *
+ * Three modules had written this same five-line class — the page fetch, the
+ * weather provider and the model adapter — and the clone detector was
+ * right that they are one idea: a named error carrying a `cause`, thrown at
+ * the boundary where something outside the app failed, and always caught by
+ * the caller rather than surfaced (law 5). The `name` is what a handler
+ * matches and a human reads in a report, so it stays per-subclass.
+ *
+ * **Distinct from `NotFoundError` and `ForbiddenError` above**, for the
+ * reason this file already gives: those are answers about *our* data, and
+ * collapsing a failed upstream into them would tell a caller the row is
+ * missing when the truth is that nobody could reach the shop.
+ */
+export class UpstreamError extends Error {
+  constructor(name: string, message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = name;
+  }
+}

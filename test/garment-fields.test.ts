@@ -81,8 +81,7 @@ describe("garmentFieldSpec", () => {
     // test/ui/icons.test.tsx, one level up.
     for (const type of allGarmentTypes) {
       const glyph = ICONS[type as keyof typeof ICONS] as
-        | { group: string }
-        | undefined;
+        { group: string } | undefined;
       expect(glyph, `no glyph named "${type}"`).toBeDefined();
       expect(glyph?.group, `"${type}" is not a garment glyph`).toBe("garment");
     }
@@ -98,7 +97,10 @@ describe("garmentFieldSpec", () => {
       const types = garmentTypesFor(category);
       expect(types.length, `${category} has no types`).toBeGreaterThan(0);
       for (const type of types) {
-        expect(owner.get(type), `"${type}" is in two categories`).toBeUndefined();
+        expect(
+          owner.get(type),
+          `"${type}" is in two categories`,
+        ).toBeUndefined();
         owner.set(type, category);
       }
     }

@@ -30,6 +30,7 @@ import { expect, scene, test } from "../support/demo";
 // this video opens on the verdict screen rather than on a signup form.
 test.use({ storageState: storageStateFor("verdict") });
 import { withLocalDb } from "../support/local-db";
+import { nowSeconds } from "../../src/lib/now";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -75,7 +76,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // Seed a run and an un-verdicted entry owned by the account that just
   // signed up — the verdict screen is owner-only, so the rows have to
   // belong to this user rather than a fixture one.
-  const startedAt = Math.floor(Date.now() / 1000) - 3600;
+  const startedAt = nowSeconds() - 3600;
   await withLocalDb(async ({ core }) => {
     const [row] = await core
       .select({ id: user.id })

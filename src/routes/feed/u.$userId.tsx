@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { OtherProfile } from "../../modules/feed/components/OtherProfile";
+import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
+import { fileReportAction } from "../../modules/safety/functions";
 import {
   followAction,
   followStatusQuery,
@@ -20,12 +22,13 @@ export const Route = createFileRoute("/feed/u/$userId")({
       await otherProfileQuery({ data: { userId: params.userId } }),
     ),
     isFollowing: await followStatusQuery({ data: { userId: params.userId } }),
+    viewerId: requireSignedIn(await getSession()).user.id,
   }),
   component: OtherProfilePage,
 });
 
 function OtherProfilePage() {
-  const { profile, isFollowing } = Route.useLoaderData();
+  const { profile, isFollowing, viewerId } = Route.useLoaderData();
 
   return (
     <Layout>
@@ -34,6 +37,19 @@ function OtherProfilePage() {
         isFollowing={isFollowing}
         follow={followAction}
         unfollow={unfollowAction}
+        reportAffordance={
+          <ReportAffordance
+            subject={{
+              type: "profile",
+              id: profile.userId,
+              label: profile.displayName ?? "A runner",
+              authorId: profile.userId,
+              authorName: profile.displayName ?? undefined,
+            }}
+            viewerId={viewerId}
+            fileReport={fileReportAction}
+          />
+        }
       />
     </Layout>
   );

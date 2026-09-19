@@ -143,25 +143,84 @@ describe("the tables themselves", () => {
    * reviewer reads: 39–59°F is 4–15°C, -8–25°F is -22–-4°C.
    */
   const cases: readonly [string, ThermalInput, TempRange][] = [
-    ["top regular mid", { category: "top", weight: "mid" }, { lowC: 4, highC: 15 }],
-    ["top regular heavy", { category: "top", weight: "heavy" }, { lowC: -7, highC: 8 }],
-    ["top outer light", { category: "top", weight: "light", layer: "outer" }, { lowC: 6, highC: 16 }],
-    ["bottom regular mid", { category: "bottom", weight: "mid" }, { lowC: -2, highC: 12 }],
-    ["bottom regular heavy", { category: "bottom", weight: "heavy" }, { lowC: -15, highC: 4 }],
-    ["bottom outer mid", { category: "bottom", weight: "mid", layer: "outer" }, { lowC: -8, highC: 6 }],
-    ["headwear mid", { category: "headwear", weight: "mid" }, { lowC: -6, highC: 6 }],
-    ["headwear heavy", { category: "headwear", weight: "heavy" }, { lowC: -20, highC: -2 }],
-    ["neckwear mid", { category: "neckwear", weight: "mid" }, { lowC: -10, highC: 4 }],
-    ["neckwear heavy", { category: "neckwear", weight: "heavy" }, { lowC: -22, highC: -4 }],
-    ["gloves mid", { category: "gloves", weight: "mid" }, { lowC: -8, highC: 5 }],
-    ["gloves heavy", { category: "gloves", weight: "heavy" }, { lowC: -22, highC: -5 }],
-    ["socks mid", { category: "socks", weight: "mid" }, { lowC: -4, highC: 12 }],
-    ["socks heavy", { category: "socks", weight: "heavy" }, { lowC: -18, highC: 4 }],
+    [
+      "top regular mid",
+      { category: "top", weight: "mid" },
+      { lowC: 4, highC: 15 },
+    ],
+    [
+      "top regular heavy",
+      { category: "top", weight: "heavy" },
+      { lowC: -7, highC: 8 },
+    ],
+    [
+      "top outer light",
+      { category: "top", weight: "light", layer: "outer" },
+      { lowC: 6, highC: 16 },
+    ],
+    [
+      "bottom regular mid",
+      { category: "bottom", weight: "mid" },
+      { lowC: -2, highC: 12 },
+    ],
+    [
+      "bottom regular heavy",
+      { category: "bottom", weight: "heavy" },
+      { lowC: -15, highC: 4 },
+    ],
+    [
+      "bottom outer mid",
+      { category: "bottom", weight: "mid", layer: "outer" },
+      { lowC: -8, highC: 6 },
+    ],
+    [
+      "headwear mid",
+      { category: "headwear", weight: "mid" },
+      { lowC: -6, highC: 6 },
+    ],
+    [
+      "headwear heavy",
+      { category: "headwear", weight: "heavy" },
+      { lowC: -20, highC: -2 },
+    ],
+    [
+      "neckwear mid",
+      { category: "neckwear", weight: "mid" },
+      { lowC: -10, highC: 4 },
+    ],
+    [
+      "neckwear heavy",
+      { category: "neckwear", weight: "heavy" },
+      { lowC: -22, highC: -4 },
+    ],
+    [
+      "gloves mid",
+      { category: "gloves", weight: "mid" },
+      { lowC: -8, highC: 5 },
+    ],
+    [
+      "gloves heavy",
+      { category: "gloves", weight: "heavy" },
+      { lowC: -22, highC: -5 },
+    ],
+    [
+      "socks mid",
+      { category: "socks", weight: "mid" },
+      { lowC: -4, highC: 12 },
+    ],
+    [
+      "socks heavy",
+      { category: "socks", weight: "heavy" },
+      { lowC: -18, highC: 4 },
+    ],
   ];
 
-  it.each(cases)("converts %s to its exact celsius band", (_label, input, expected) => {
-    expect(estimateTempRange(input)).toEqual(expected);
-  });
+  it.each(cases)(
+    "converts %s to its exact celsius band",
+    (_label, input, expected) => {
+      expect(estimateTempRange(input)).toEqual(expected);
+    },
+  );
 
   it("keeps the two body tables distinct", () => {
     // `estimateTempRange` picks BODY_RANGES or BOTTOM_RANGES on the

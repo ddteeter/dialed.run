@@ -257,9 +257,9 @@ describe("otherProfile", () => {
     const profile = await otherProfile(userId);
 
     expect(profile?.displayName).toBe("Public runner");
-    expect(profile?.recentPublicEntries.map((entry) => entry.entryId)).toStrictEqual(
-      [shown],
-    );
+    expect(
+      profile?.recentPublicEntries.map((entry) => entry.entryId),
+    ).toStrictEqual([shown]);
   });
 
   it("shows the newest entries first", async () => {
@@ -281,9 +281,9 @@ describe("otherProfile", () => {
 
     const profile = await otherProfile(userId);
 
-    expect(profile?.recentPublicEntries.map((entry) => entry.entryId)).toStrictEqual(
-      [newer, older],
-    );
+    expect(
+      profile?.recentPublicEntries.map((entry) => entry.entryId),
+    ).toStrictEqual([newer, older]);
   });
 
   it("carries the caption and the verdict, and nothing aggregated", async () => {

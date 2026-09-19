@@ -21,6 +21,7 @@ import {
   type CacheKey,
 } from "./store";
 
+import { nowSeconds } from "../../lib/now";
 type WeatherStatus = (typeof runs.$inferSelect)["weatherStatus"];
 
 const RETRY_BATCH_SIZE = 50;
@@ -41,7 +42,10 @@ function isResolved(status: WeatherStatus): boolean {
 }
 
 async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
-  await coreDb().update(runs).set({ weatherStatus: status }).where(eq(runs.id, runId));
+  await coreDb()
+    .update(runs)
+    .set({ weatherStatus: status })
+    .where(eq(runs.id, runId));
 }
 
 /**
@@ -66,7 +70,11 @@ type AttachOutcome =
  */
 // fallow-ignore-next-line code-duplication -- the same one-line run read with different failure handling: one warns and skips, the other throws
 async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
-  const [run] = await coreDb().select().from(runs).where(eq(runs.id, runId)).limit(1);
+  const [run] = await coreDb()
+    .select()
+    .from(runs)
+    .where(eq(runs.id, runId))
+    .limit(1);
   if (!run) {
     console.warn("[weather] attach: run not found", { runId });
     return "skipped-not-found";
@@ -117,7 +125,14 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     // from started_at + duration_s. What was missing was resolving the
     // later hours at all. The run still links to its starting hour, so
     // every existing reader is unaffected.
-    await sampleRunHours(provider, keys, run.lat, run.lng, run.startedAt, runId);
+    await sampleRunHours(
+      provider,
+      keys,
+      run.lat,
+      run.lng,
+      run.startedAt,
+      runId,
+    );
     await setStatus(runId, "attached");
     return "attached";
   } catch (error) {
@@ -163,7 +178,6 @@ async function sampleRunHours(
   }
 }
 
-
 /**
  * Public API: attach conditions to a run. No-op with a structured log when
  * the run is indoor/has no location/is already resolved; degrades to
@@ -185,7 +199,11 @@ export async function recordManualObservation(
   runId: Ulid,
   tempC: number,
 ): Promise<void> {
-  const [run] = await coreDb().select().from(runs).where(eq(runs.id, runId)).limit(1);
+  const [run] = await coreDb()
+    .select()
+    .from(runs)
+    .where(eq(runs.id, runId))
+    .limit(1);
   if (!run) {
     throw new Error(`recordManualObservation: run ${runId} not found`);
   }
@@ -263,17 +281,24 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
   const stillPending = await db
     .select({ id: runs.id })
     .from(runs)
-    .where(and(eq(runs.weatherStatus, "pending"), inArray(runs.id, candidateIds)));
+    .where(
+      and(eq(runs.weatherStatus, "pending"), inArray(runs.id, candidateIds)),
+    );
   const stillPendingIds = new Set(stillPending.map((r) => r.id));
 
-  const now = Math.floor(Date.now() / 1000);
+  const now = nowSeconds();
   const toFailIds = candidates
     .filter((c) => stillPendingIds.has(c.id))
-    .filter((c) => now - (c.importCreatedAt ?? c.startedAt) >= FAIL_AFTER_SECONDS)
+    .filter(
+      (c) => now - (c.importCreatedAt ?? c.startedAt) >= FAIL_AFTER_SECONDS,
+    )
     .map((c) => c.id);
 
   if (toFailIds.length > 0) {
-    await db.update(runs).set({ weatherStatus: "failed" }).where(inArray(runs.id, toFailIds));
+    await db
+      .update(runs)
+      .set({ weatherStatus: "failed" })
+      .where(inArray(runs.id, toFailIds));
     console.warn("[weather] retry cron: exhausted, marking failed", {
       runIds: toFailIds,
     });

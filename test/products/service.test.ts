@@ -16,6 +16,7 @@ import {
 } from "../../src/modules/products/service";
 import { brands, products } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
+import { nowSeconds } from "../../src/lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -205,7 +206,7 @@ describe("what a created row records", () => {
   it("stores the product name trimmed, unenriched, and stamped in seconds", async () => {
     const client = db();
     const brand = await createOrGetBrand(client, "Stamp Brand");
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     const product = await createOrGetProduct(client, {
       brandId: brand.id,

@@ -8,7 +8,13 @@ import {
   submitVerdict,
   verdictBandCounts,
 } from "../../src/modules/feed/entries";
-import { makeItem, makeObservation, makeRun, makeUser, resetTables } from "./helpers";
+import {
+  makeItem,
+  makeObservation,
+  makeRun,
+  makeUser,
+  resetTables,
+} from "./helpers";
 
 describe("verdict flow (A3)", () => {
   beforeEach(resetTables);
@@ -59,13 +65,27 @@ describe("verdict flow (A3)", () => {
     const lng = 5;
     const startedAt = 1_757_000_000;
 
-    const bandStartedAt = (offsetHours: number) => startedAt + offsetHours * 3600;
+    const bandStartedAt = (offsetHours: number) =>
+      startedAt + offsetHours * 3600;
     const makeVerdictedEntry = async (verdict: number, offsetHours: number) => {
       const at = bandStartedAt(offsetHours);
       const runId = await makeRun({ userId, lat, lng, startedAt: at });
-      await makeObservation({ lat, lng, startedAt: at, tempC: 6, feelsLikeC: 6 });
+      await makeObservation({
+        lat,
+        lng,
+        startedAt: at,
+        tempC: 6,
+        feelsLikeC: 6,
+      });
       const entryId = await attachKit({ userId, runId, itemIds: [] });
-      await submitVerdict({ userId, entryId, verdict, isPublic: true, tags: [], itemFlags: [] });
+      await submitVerdict({
+        userId,
+        entryId,
+        verdict,
+        isPublic: true,
+        tags: [],
+        itemFlags: [],
+      });
     };
 
     await makeVerdictedEntry(0, 0);
@@ -88,7 +108,13 @@ describe("verdict flow (A3)", () => {
     const wear = async (itemIds: string[], offsetHours: number) => {
       const at = 1_757_100_000 + offsetHours * 3600;
       const runId = await makeRun({ userId, lat, lng, startedAt: at });
-      await makeObservation({ lat, lng, startedAt: at, tempC: 6, feelsLikeC: 6 });
+      await makeObservation({
+        lat,
+        lng,
+        startedAt: at,
+        tempC: 6,
+        feelsLikeC: 6,
+      });
       await attachKit({ userId, runId, itemIds });
     };
 

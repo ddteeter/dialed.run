@@ -10,6 +10,7 @@ import {
   unreadNotificationCount,
 } from "../src/modules/notifications";
 import type { NotificationKind } from "../src/modules/notifications";
+import { nowSeconds } from "../src/lib/now";
 
 const KIT_REMINDER: NotificationKind = "kit_reminder";
 
@@ -92,7 +93,7 @@ describe("what a notification row records", () => {
     // itself to the top of the bell forever.
     const db = notificationsDb();
     const userId = newUlid();
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     await createNotification(db, {
       userId,

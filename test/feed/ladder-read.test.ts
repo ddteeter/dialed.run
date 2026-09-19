@@ -31,7 +31,13 @@ async function verdictAt(
   const lat = 30 + seq / 100;
   const lng = 30 + seq / 100;
   const runId = await makeRun({ userId, lat, lng, startedAt: NOW });
-  await makeObservation({ lat, lng, startedAt: NOW, tempC: feelsLikeC, feelsLikeC });
+  await makeObservation({
+    lat,
+    lng,
+    startedAt: NOW,
+    tempC: feelsLikeC,
+    feelsLikeC,
+  });
   await makeEntry({
     userId,
     runId,
@@ -86,7 +92,13 @@ describe("coverageLadder", () => {
     const lat = 40;
     const lng = 40;
     const runId = await makeRun({ userId, lat, lng, startedAt: NOW });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 2, feelsLikeC: 2 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 2,
+      feelsLikeC: 2,
+    });
     await makeEntry({ userId, runId, createdAt: NOW, itemIds: [item] });
 
     expect(await coverageLadder(userId)).toStrictEqual([]);

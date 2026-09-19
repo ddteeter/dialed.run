@@ -88,9 +88,9 @@ const noReaction = () => Promise.resolve({ useful: true });
 
 function detail(overrides: Partial<Entry> = {}, shouldPrompt = false) {
   return (
-    <EntryDetail units={{ temp: "f", distance: "mi" }}
+    <EntryDetail
+      units={{ temp: "f", distance: "mi" }}
       entry={entry(overrides)}
-      entryId="01ENTRY"
       shouldPromptVerdict={shouldPrompt}
       recordPrompted={nothing}
       toggleUseful={noReaction}
@@ -154,7 +154,11 @@ describe("EntryDetail: conditions", () => {
   it("shows the temperature and the condition when there are any", async () => {
     await renderWithRouter(
       detail({
-        conditions: pointConditions({ tempC: 10, feelsLikeC: 8, condition: "Clear" }),
+        conditions: pointConditions({
+          tempC: 10,
+          feelsLikeC: 8,
+          condition: "Clear",
+        }),
       }),
     );
     expect(screen.getByText(/Clear/)).toBeVisible();
@@ -166,7 +170,11 @@ describe("EntryDetail: conditions", () => {
     // whitespace between expressions.
     await renderWithRouter(
       detail({
-        conditions: pointConditions({ tempC: 10, feelsLikeC: 8, condition: "Clear" }),
+        conditions: pointConditions({
+          tempC: 10,
+          feelsLikeC: 8,
+          condition: "Clear",
+        }),
       }),
     );
     expect(screen.getByText(/Clear/)).toHaveTextContent("50° Clear");
@@ -179,7 +187,12 @@ describe("EntryDetail: conditions", () => {
       detail({
         conditions: {
           ...pointConditions({ tempC: 2, feelsLikeC: 2, condition: "Clear" }),
-          span: { minTempC: 2, maxTempC: 14, minFeelsLikeC: 2, maxFeelsLikeC: 14 },
+          span: {
+            minTempC: 2,
+            maxTempC: 14,
+            minFeelsLikeC: 2,
+            maxFeelsLikeC: 14,
+          },
         },
       }),
     );
@@ -211,7 +224,9 @@ describe("EntryDetail: the optional blocks", () => {
 
   it("renders one image per photo key, pointing at the cached route", async () => {
     const { container } = await renderWithRouter(
-      detail({ photoKeys: ["entries/01USER/01ENTRY/a", "entries/01USER/01ENTRY/b"] }),
+      detail({
+        photoKeys: ["entries/01USER/01ENTRY/a", "entries/01USER/01ENTRY/b"],
+      }),
     );
 
     const images = [...container.querySelectorAll("img")];
@@ -303,9 +318,9 @@ describe("EntryDetail: the useful reaction", () => {
     const user = userEvent.setup();
     const toggleUseful = vi.fn(() => Promise.resolve({ useful: true }));
     await renderWithRouter(
-      <EntryDetail units={{ temp: "f", distance: "mi" }}
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
         entry={entry({ usefulCount: 4, viewerHasReacted: false })}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={nothing}
         toggleUseful={toggleUseful}
@@ -325,9 +340,9 @@ describe("EntryDetail: the useful reaction", () => {
   it("counts down when they take it back", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      <EntryDetail units={{ temp: "f", distance: "mi" }}
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
         entry={entry({ usefulCount: 4, viewerHasReacted: true })}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={nothing}
         toggleUseful={() => Promise.resolve({ useful: false })}
@@ -361,9 +376,9 @@ describe("EntryDetail: the useful reaction", () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<{ useful: boolean }>();
     await renderWithRouter(
-      <EntryDetail units={{ temp: "f", distance: "mi" }}
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={nothing}
         toggleUseful={() => pending.promise}
@@ -394,19 +409,18 @@ describe("EntryDetail: the verdict prompt", () => {
     // what spends the budget, so the record happens on mount.
     const recordPrompted = vi.fn(() => Promise.resolve());
     await renderWithRouter(
-      <EntryDetail units={{ temp: "f", distance: "mi" }}
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict
         recordPrompted={recordPrompted}
         toggleUseful={noReaction}
       />,
     );
 
-    expect(screen.getByRole("link", { name: /didn’t log a verdict/ })).toHaveAttribute(
-      "href",
-      "/feed/verdict/01ENTRY",
-    );
+    expect(
+      screen.getByRole("link", { name: /didn’t log a verdict/ }),
+    ).toHaveAttribute("href", "/feed/verdict/01ENTRY");
     await waitFor(() => {
       expect(recordPrompted).toHaveBeenCalledWith({
         data: { entryId: "01ENTRY" },
@@ -420,9 +434,9 @@ describe("EntryDetail: the verdict prompt", () => {
     const user = userEvent.setup();
     const recordPrompted = vi.fn(() => Promise.resolve());
     await renderWithRouter(
-      <EntryDetail units={{ temp: "f", distance: "mi" }}
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict
         recordPrompted={recordPrompted}
         toggleUseful={noReaction}
@@ -462,9 +476,9 @@ describe("EntryDetail: the verdict prompt", () => {
           >
             The prompt arrives
           </button>
-          <EntryDetail units={{ temp: "f", distance: "mi" }}
+          <EntryDetail
+            units={{ temp: "f", distance: "mi" }}
             entry={entry()}
-            entryId="01ENTRY"
             shouldPromptVerdict={prompt}
             recordPrompted={recordPrompted}
             toggleUseful={noReaction}
@@ -488,9 +502,9 @@ describe("EntryDetail: the verdict prompt", () => {
   it("spends nothing when there is no prompt to show", async () => {
     const recordPrompted = vi.fn(() => Promise.resolve());
     await renderWithRouter(
-      <EntryDetail units={{ temp: "f", distance: "mi" }}
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
         entry={entry()}
-        entryId="01ENTRY"
         shouldPromptVerdict={false}
         recordPrompted={recordPrompted}
         toggleUseful={noReaction}

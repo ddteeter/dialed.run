@@ -16,7 +16,10 @@ import {
  * count": a runner with forty verdicts all at 50° is still guessing in
  * January, so the screen has to show the bands they have *not* covered.
  */
-function band(bandFloorC: number, counts: Partial<CoverageBand> = {}): CoverageBand {
+function band(
+  bandFloorC: number,
+  counts: Partial<CoverageBand> = {},
+): CoverageBand {
   return {
     bandFloorC,
     label: `${String(bandFloorC)}°`,
@@ -88,7 +91,9 @@ describe("ladderFrom", () => {
   it("never counts down past zero", () => {
     // "N verdicts until your first call" must not go negative on someone
     // who kept logging.
-    const ladder = ladderFrom([band(0, { dialed: CALL_VERDICT_THRESHOLD + 9 })]);
+    const ladder = ladderFrom([
+      band(0, { dialed: CALL_VERDICT_THRESHOLD + 9 }),
+    ]);
 
     expect(ladder.verdictsUntilCall).toBe(0);
   });

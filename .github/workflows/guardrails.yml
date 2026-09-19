@@ -18,6 +18,26 @@ on:
 permissions:
   contents: read
 
+# The same group `ci.yml` and `mutation.yml` have carried all along, and the
+# only one of the three that was missing it -- which mattered most here,
+# because this is the workflow that takes hours rather than minutes.
+#
+# Without it a push superseded nothing: the run on the old SHA kept going to
+# completion on its own runner while its replacement started beside it, and
+# only the replacement could ever count, since branch protection evaluates
+# checks against the head commit. Measured 2026-09-19 on lane/106: a
+# `gate --mode=ci` step still running at 116 minutes, already orphaned by
+# anything pushed after it.
+#
+# Keyed on `github.ref`, matching its siblings: that is `refs/pull/<n>/merge`
+# for a pull request, so PRs never cancel each other, and `refs/heads/main`
+# for a push. A cancelled run reports `cancelled`, which is not a pass --
+# correct, because the SHA it was asked about is no longer the head. The
+# `Mutation` gate job already spells that rule out for its own shards.
+concurrency:
+  group: guardrails-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   guardrails:
     runs-on: ubuntu-latest
@@ -32,6 +52,17 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      # The stryker analyzer runs at the `push`/`ci` rung, and stryker runs
+      # vitest — which boots all three projects, `browser` among them. No
+      # Chromium, no dry run, and the gate fails for a reason unrelated to
+      # the diff it was asked about.
+      - run: npx playwright install --with-deps chromium
+      # MediaPipe's WASM is gitignored and staged out of node_modules, and
+      # the `browser` vitest project fetches it over HTTP. `npm test` stages
+      # it through `pretest`; anything that reaches vitest by another road —
+      # stryker here, the dev server for e2e — has to ask for it, or the
+      # model 404s and every browser test fails as "unavailable".
+      - run: npm run stage:mediapipe
       # `gate --mode=ci` runs verify PLUS the diff-auditor PLUS the sanction
       # budget. Bare `verify` runs none of the last two.
       #

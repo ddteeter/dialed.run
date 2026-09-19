@@ -1,10 +1,13 @@
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { createOrGetBrand, createOrGetProduct } from "../../src/modules/products/service";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../../src/modules/products/service";
 import {
   outfitEntries,
   outfitEntryItems,
@@ -26,6 +29,7 @@ import {
   withResolvedProduct,
 } from "../../src/modules/closet/service";
 
+import { nowSeconds } from "../../src/lib/now";
 /**
  * The closet service's remaining edges: product resolution on save, the
  * stored-versus-estimated temperature range, and the reads that answer with
@@ -47,6 +51,10 @@ function db() {
   return drizzle(env.DIALED_CORE);
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("withResolvedProduct", () => {
   it("links a garment that names both a brand and a product", async () => {
     const userId = newUlid();
@@ -57,6 +65,51 @@ describe("withResolvedProduct", () => {
     );
     expect(resolved.productId).toBeDefined();
     expect(resolved.name).toBe("Rover Half-Zip");
+  });
+  it("asks for enrichment when the garment carries a product URL", async () => {
+    // The paste path (107). It runs here rather than in the server
+    // function so it cannot be skipped: every garment write goes through
+    // this, and a URL nobody enriched is a product page nobody ever reads.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    const resolved = await withResolvedProduct(
+      db(),
+      {
+        category: "top",
+        name: `Linked Tee ${newUlid()}`,
+        brand: "Linked Brand",
+        productUrl: "https://shop.example.com/products/tee",
+      },
+      newUlid(),
+    );
+
+    expect(send).toHaveBeenCalledWith({
+      type: "enrich",
+      productId: resolved.productId,
+    });
+    const [row] = await db()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, resolved.productId ?? ""));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("asks for nothing when the garment has no product URL", async () => {
+    // Nothing to fetch, so nothing to queue — and a job for a product with
+    // no URL would only fail.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    await withResolvedProduct(
+      db(),
+      {
+        category: "top",
+        name: `Unlinked Tee ${newUlid()}`,
+        brand: "Unlinked Brand",
+      },
+      newUlid(),
+    );
+
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("leaves a garment with no brand generic", async () => {
@@ -346,7 +399,7 @@ describe("what createItem writes down", () => {
   it("stamps created_at in seconds and starts an item visible", async () => {
     // `visibility` gates whether an item can appear anywhere social; a
     // blank one is a value no reader knows how to interpret.
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
     const item = await createItem(
       db(),
       newUlid(),
@@ -504,9 +557,9 @@ describe("an item belongs to exactly one runner", () => {
       "manual",
     );
 
-    await expect(
-      getOwnedItem(client, newUlid(), item.id),
-    ).rejects.toThrow(/not found/i);
+    await expect(getOwnedItem(client, newUlid(), item.id)).rejects.toThrow(
+      /not found/i,
+    );
   });
 });
 
@@ -675,7 +728,7 @@ describe("computeUserPerformance reads the clock in seconds", () => {
       { category: "top", name: "Forgotten shirt" },
       "manual",
     );
-    const aYearAgo = Math.floor(Date.now() / 1000) - 365 * 86_400;
+    const aYearAgo = nowSeconds() - 365 * 86_400;
     await logEntryFor(userId, item.id, aYearAgo);
 
     const performance = await computeUserPerformance(client, userId);
@@ -758,7 +811,7 @@ describe("a run logged today is not a retire candidate", () => {
       { category: "top", name: "Worn today" },
       "manual",
     );
-    await logEntryFor(userId, item.id, Math.floor(Date.now() / 1000));
+    await logEntryFor(userId, item.id, nowSeconds());
 
     const performance = await computeUserPerformance(client, userId);
 

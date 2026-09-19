@@ -10,7 +10,7 @@
  * (`attachObservation`) so this compiles and tests fully without lane 103
  * — see the pending-integration call-site below.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import {
   imports,
@@ -19,7 +19,10 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../db/schema-core";
+import { didClaim } from "../../lib/claim";
 import { newUlid } from "../../lib/ids";
+import { firstRowWhere } from "../../lib/keyed-read";
+import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
 import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
@@ -40,10 +43,7 @@ export interface ConsumerDeps {
   without restating an R2 bucket.
   */
   importBucket: Pick<R2Bucket, "get">;
-  captureException: (
-    error: unknown,
-    context: Record<string, string>,
-  ) => void;
+  captureException: (error: unknown, context: Record<string, string>) => void;
   /**
   Pending(102↔103): wire to weather.attachObservation once that module
   merges; degrades to a no-op (weather stays 'pending') until then.
@@ -58,20 +58,15 @@ export interface ConsumerDeps {
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
 
-async function didClaimImport(
-  db: CoreDb,
-  importId: string,
-): Promise<boolean> {
-  const result = await db
-    .update(imports)
-    .set({ status: "processing" })
-    .where(
-      and(
-        eq(imports.id, importId),
-        inArray(imports.status, ["pending", "processing"]),
-      ),
-    );
-  return result.meta.changes > 0;
+async function didClaimImport(db: CoreDb, importId: string): Promise<boolean> {
+  return await didClaim(
+    db,
+    imports,
+    { id: imports.id, status: imports.status },
+    importId,
+    ["pending", "processing"],
+    { status: "processing" },
+  );
 }
 
 async function failImport(
@@ -104,16 +99,18 @@ export function importFailureReason(error: unknown): string {
   return error instanceof Error ? error.message : PARSE_FAILURE_MESSAGE;
 }
 
+/**
+The import a job points at, or nothing when the row is gone.
+*/
+function importById(db: CoreDb, importId: string) {
+  return firstRowWhere(db, imports, eq(imports.id, importId));
+}
+
 async function processImportJob(
   deps: ConsumerDeps,
   job: ImportJob,
 ): Promise<void> {
-  const rows = await deps.db
-    .select()
-    .from(imports)
-    .where(eq(imports.id, job.importId))
-    .limit(1);
-  const importRow = rows[0];
+  const importRow = await importById(deps.db, job.importId);
   if (importRow === undefined) {
     // Nothing to do — the row is gone (shouldn't happen; log and move on).
     deps.captureException(new Error("import row missing for queue job"), {
@@ -264,9 +261,12 @@ async function processRevokeJob(
   job: RevokeJob,
 ): Promise<void> {
   if (deps.stravaApi === undefined) {
-    deps.captureException(new Error("strava revoke job with no api configured"), {
-      surface: "strava-revoke",
-    });
+    deps.captureException(
+      new Error("strava revoke job with no api configured"),
+      {
+        surface: "strava-revoke",
+      },
+    );
     return; // no credentials: retrying will not help
   }
 
@@ -312,27 +312,11 @@ export async function handleImportsBatch(
   batch: MessageBatch,
   deps: ConsumerDeps,
 ): Promise<void> {
-  for (const message of batch.messages) {
-    const parsed = importsQueueMessageSchema.safeParse(message.body);
-    if (!parsed.success) {
-      deps.captureException(new Error("invalid imports queue message"), {
-        queue: batch.queue,
-        messageId: message.id,
-      });
-      message.ack(); // never retry structurally-invalid garbage
-      continue;
-    }
-    try {
-      await processJob(deps, parsed.data);
-      message.ack();
-    } catch (error) {
-      deps.captureException(error, {
-        queue: batch.queue,
-        messageId: message.id,
-      });
-      message.retry();
-    }
-  }
+  await consumeEach(batch, importsQueueMessageSchema, {
+    process: (job) => processJob(deps, job),
+    invalidMessage: "invalid imports queue message",
+    captureException: deps.captureException,
+  });
 }
 
 /**
@@ -345,15 +329,10 @@ export async function handleImportsDlqBatch(
   batch: MessageBatch,
   deps: ConsumerDeps,
 ): Promise<void> {
-  for (const message of batch.messages) {
-    const parsed = importsQueueMessageSchema.safeParse(message.body);
-    if (parsed.success && parsed.data.type === "import") {
-      const rows = await deps.db
-        .select()
-        .from(imports)
-        .where(eq(imports.id, parsed.data.importId))
-        .limit(1);
-      const importRow = rows[0];
+  await deadLetterEach(batch, importsQueueMessageSchema, {
+    onJob: async (job) => {
+      if (job.type !== "import") return;
+      const importRow = await importById(deps.db, job.importId);
       if (
         importRow !== undefined &&
         !(IMPORT_TERMINAL_STATUSES as readonly string[]).includes(
@@ -366,11 +345,8 @@ export async function handleImportsDlqBatch(
           "We couldn't process this import after several tries. Try uploading it again.",
         );
       }
-    }
-    deps.captureException(new Error("dead-lettered dialed-imports message"), {
-      queue: batch.queue,
-      messageId: message.id,
-    });
-    message.ack();
-  }
+    },
+    deadLettered: "dead-lettered dialed-imports message",
+    captureException: deps.captureException,
+  });
 }

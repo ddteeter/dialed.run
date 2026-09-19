@@ -9,6 +9,8 @@ import { drizzle } from "drizzle-orm/d1";
 import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { isEntryPubliclyVisible } from "../safety";
+import { nowSeconds } from "../../lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -22,12 +24,20 @@ class NotVisibleError extends Error {
 
 async function assertVisible(entryId: string, viewerId: string): Promise<void> {
   const [entry] = await db()
-    .select({ userId: outfitEntries.userId, isPublic: outfitEntries.isPublic })
+    .select({
+      userId: outfitEntries.userId,
+      isPublic: outfitEntries.isPublic,
+      moderationStatus: outfitEntries.moderationStatus,
+    })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId))
     .limit(1);
   if (!entry) throw new NotVisibleError();
-  if (!entry.isPublic && entry.userId !== viewerId) throw new NotVisibleError();
+  // Reacting to a hidden entry would leak that it exists, and would put a
+  // count on something a reviewer may be about to remove.
+  if (!isEntryPubliclyVisible(entry) && entry.userId !== viewerId) {
+    throw new NotVisibleError();
+  }
 }
 
 /**
@@ -51,7 +61,7 @@ export async function toggleUsefulReaction(
       entryId,
       userId,
       kind: "useful",
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
   return { useful: true };

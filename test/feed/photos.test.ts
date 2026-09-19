@@ -18,6 +18,12 @@ import {
   photoUploadFrom,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
+import {
+  imageCategories,
+  type CategoryScores,
+  type Classify,
+} from "../../src/modules/safety";
+
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
 
 const JPEG_BYTES = new Uint8Array([1, 2, 3]).buffer;
@@ -64,7 +70,12 @@ describe("entry photos", () => {
     const entryId = await makeEntry({ userId, runId });
 
     await expect(
-      uploadPhoto({ userId, entryId, contentType: "image/gif", bytes: JPEG_BYTES }),
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/gif",
+        bytes: JPEG_BYTES,
+      }),
     ).rejects.toBeInstanceOf(InvalidPhotoError);
   });
 
@@ -74,11 +85,21 @@ describe("entry photos", () => {
     const entryId = await makeEntry({ userId, runId });
 
     for (let index = 0; index < MAX_PHOTOS_PER_ENTRY; index += 1) {
-      await uploadPhoto({ userId, entryId, contentType: "image/jpeg", bytes: JPEG_BYTES });
+      await uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      });
     }
 
     await expect(
-      uploadPhoto({ userId, entryId, contentType: "image/jpeg", bytes: JPEG_BYTES }),
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
     ).rejects.toBeInstanceOf(InvalidPhotoError);
   });
 
@@ -99,7 +120,9 @@ describe("entry photos", () => {
     expect(await isPhotoVisible(key, undefined)).toBe(false);
     // A made-up key under the same convention that was never actually
     // uploaded is never visible either.
-    expect(await isPhotoVisible(photoKeyFor(owner, entryId, "nonexistent"), owner)).toBe(false);
+    expect(
+      await isPhotoVisible(photoKeyFor(owner, entryId, "nonexistent"), owner),
+    ).toBe(false);
   });
 });
 
@@ -312,7 +335,6 @@ function jpeg(bytes = 10): File {
 }
 
 describe("photoUploadFrom", () => {
-
   it("pulls the entry, the type and the file out of a multipart body", () => {
     const entryId = newUlid();
     const idempotencyKey = newUlid();
@@ -378,16 +400,35 @@ describe("photoUploadFrom", () => {
   });
 });
 
+/**
+ * A screened-clean photo, because these tests are about ENTRY visibility.
+ *
+ * The screening verdict is a second gate on the same route (a photo the
+ * classifier flagged is not public even on a public entry), so a fixture
+ * that left it unscreened would make every case below fail for the wrong
+ * reason. `test/safety/upload-screening.test.ts` owns the other gate.
+ */
+const CLEAN: Classify = () =>
+  Promise.resolve({
+    flagged: false,
+    scores: Object.fromEntries(
+      imageCategories.map((category) => [category, 0]),
+    ) as CategoryScores,
+  });
+
 async function ownedPhoto(isPublic = true) {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
   const entryId = await makeEntry({ userId, runId, isPublic });
-  const key = await uploadPhoto({
-    userId,
-    entryId,
-    contentType: "image/jpeg",
-    bytes: JPEG_BYTES,
-  });
+  const key = await uploadPhoto(
+    {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    },
+    { classify: CLEAN },
+  );
   return { userId, key };
 }
 

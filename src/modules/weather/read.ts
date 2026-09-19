@@ -75,7 +75,12 @@ export async function observationsForRuns(
   }
 
   const runRows = await drizzle(env.DIALED_CORE)
-    .select({ id: runs.id, lat: runs.lat, lng: runs.lng, startedAt: runs.startedAt })
+    .select({
+      id: runs.id,
+      lat: runs.lat,
+      lng: runs.lng,
+      startedAt: runs.startedAt,
+    })
     .from(runs)
     .where(or(...runIds.map((id) => eq(runs.id, id))));
 
@@ -118,7 +123,9 @@ export async function observationsForRuns(
   const rows = await drizzle(env.DIALED_WEATHER)
     .select()
     .from(weatherObservations)
-    .where(and(or(...cellConditions), ne(weatherObservations.source, "manual")));
+    .where(
+      and(or(...cellConditions), ne(weatherObservations.source, "manual")),
+    );
 
   const bySourceKey = new Map(
     rows.map((row) => [keyString(row.latR, row.lngR, row.hourBucket), row]),

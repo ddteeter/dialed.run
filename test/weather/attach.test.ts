@@ -61,7 +61,11 @@ async function insertRun(
 }
 
 async function statusOf(runId: Ulid): Promise<string | undefined> {
-  const [row] = await coreDb().select().from(runs).where(eq(runs.id, runId)).limit(1);
+  const [row] = await coreDb()
+    .select()
+    .from(runs)
+    .where(eq(runs.id, runId))
+    .limit(1);
   return row?.weatherStatus;
 }
 
@@ -114,7 +118,11 @@ describe("attachObservation (103)", () => {
 
   it("a cache hit attaches without ever calling the provider", async () => {
     const runId = await insertRun({ lat: 50.5, lng: 12.5 });
-    const key = cacheKeyFor(50.5, 12.5, new Date(OBSERVATION_HOUR_EPOCH * 1000));
+    const key = cacheKeyFor(
+      50.5,
+      12.5,
+      new Date(OBSERVATION_HOUR_EPOCH * 1000),
+    );
     await upsertRealObservation(
       key,
       {
@@ -335,9 +343,9 @@ describe("attachObservation reports what it did", () => {
 /**
 Every observation row stored for this rounded latitude, by hour bucket.
 */
-async function observationsAt(lat: number): Promise<
-  Map<number, { tempC: number; runId: string | null }>
-> {
+async function observationsAt(
+  lat: number,
+): Promise<Map<number, { tempC: number; runId: string | null }>> {
   const rows = await drizzle(env.DIALED_WEATHER)
     .select()
     .from(weatherObservations)

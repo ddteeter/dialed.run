@@ -1,0 +1,375 @@
+/**
+ * Report → hide → review (packet §2).
+ *
+ * Two hides, not one, and they are different mechanisms:
+ *
+ * - **Reporter-scoped, immediately.** W1 promises "The entry is hidden from
+ *   your feed straight away, whatever we decide", and that promise is what
+ *   makes filing a report cost the reporter nothing. It needs no column and
+ *   no extra table: a row in `reports` *is* the hide, because the reader's
+ *   own feed filters out subjects they have reported.
+ * - **Global, at the threshold.** Three distinct reporters flips the
+ *   subject to `hidden_pending_review` and queues it for a person. Nothing
+ *   is removed and nothing is counted against anyone — the artboard's "no
+ *   automated takedowns" stance holds, because a person still decides.
+ */
+import { and, countDistinct, eq, gte, inArray, isNull } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+import { drizzle } from "drizzle-orm/d1";
+
+import {
+  entryPhotos,
+  outfitEntries,
+  reports,
+  reviewQueue,
+} from "../../db/schema-core";
+import { env } from "../../env";
+import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { newUlid } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
+
+import {
+  autoHideReporterThreshold,
+  type ReportReason,
+  type ReportSubjectType,
+} from "./contracts";
+import { blockRunner } from "./blocks";
+import { enqueueForReview } from "./review";
+
+function db() {
+  return drizzle(env.DIALED_CORE);
+}
+
+export interface FileReportInput {
+  reporterId: string;
+  subjectType: ReportSubjectType;
+  subjectId: string;
+  reason: ReportReason;
+  note?: string | undefined;
+  /**
+   * W1's "Block them as well". Handled here rather than by the caller, for
+   * two reasons: a route file may not branch (`server-functions-are-glue`
+   * forbids it, and a decision there is one no test can reach), and
+   * blocking-with-a-report is one intent that should not be able to
+   * half-happen.
+   */
+  alsoBlock?: boolean | undefined;
+}
+
+export interface FileReportResult {
+  /**
+  Distinct people who have now reported this subject.
+  */
+  reporterCount: number;
+  /**
+  Whether this report is what crossed the threshold.
+  */
+  hiddenPendingReview: boolean;
+}
+
+/**
+ * Files a report, and hides the subject globally if this is the third
+ * distinct person to object.
+ *
+ * **A repeat report is not an error.** Law 8b: a double-click, a replayed
+ * POST and a retry over a flaky connection are indistinguishable from a
+ * genuine second submission, and W1 gives the reporter no feedback that
+ * would let them tell either. `onConflictDoNothing` against the UNIQUE
+ * index makes the second one a no-op that still returns the truth about
+ * where the subject stands.
+ */
+export async function fileReport(
+  input: FileReportInput,
+): Promise<FileReportResult> {
+  await db()
+    .insert(reports)
+    .values({
+      id: newUlid(),
+      reporterId: input.reporterId,
+      subjectType: input.subjectType,
+      subjectId: input.subjectId,
+      reason: input.reason,
+      // Omitted rather than an explicit NULL: on an INSERT drizzle stores
+      // NULL for an absent nullable column, so `?? null` would only be
+      // ceremony. (On an UPDATE it would matter — see lib/sql-null.)
+      note: input.note,
+      createdAt: nowSeconds(),
+    })
+    // The UNIQUE index is on (reporter, subjectType, subjectId), so this
+    // drops a second report of the same thing by the same person. That is
+    // what makes the count below a count of people rather than of clicks.
+    .onConflictDoNothing();
+
+  // Only a profile can be blocked — a report against an entry names the
+  // entry, and blocking its author would need a lookup the reporter never
+  // asked for. W1 offers the checkbox only where there is somebody to
+  // block, and this is the same rule on the write side.
+  if (input.alsoBlock === true && input.subjectType === "profile") {
+    await blockRunner(input.reporterId, input.subjectId);
+  }
+
+  const reporterCount = await distinctReporterCount(
+    input.subjectType,
+    input.subjectId,
+  );
+
+  if (reporterCount < autoHideReporterThreshold) {
+    return { reporterCount, hiddenPendingReview: false };
+  }
+
+  await hidePendingReview(input.subjectType, input.subjectId);
+  return { reporterCount, hiddenPendingReview: true };
+}
+
+export interface ReconcileReport {
+  /**
+  Subjects found over the threshold with no decision recorded.
+  */
+  found: number;
+  /**
+  Of those, the ones this sweep hid and queued.
+  */
+  hidden: number;
+}
+
+/**
+ * Hides anything that crossed the report threshold and never got hidden
+ * (law 8c, the reconciliation half).
+ *
+ * **The hole this closes.** `fileReport` inserts the report, counts the
+ * reporters, and only then hides — three statements with two gaps, and D1
+ * has no transaction spanning them. A worker that dies in either gap
+ * leaves the third report durably written and the entry still visible,
+ * with nothing to re-drive it: the count is derived, so nothing anywhere
+ * is wearing a "not finished" marker. Raised on PR #73, and correct — the
+ * window is small and the consequence is the one thing this lane exists to
+ * prevent.
+ *
+ * **The marker is the queue row, not a new column.** `hidePendingReview`
+ * writes the queue row and the hide in a single batch, so a subject with a
+ * queue row is a subject whose hide landed. Using its absence as the
+ * signal also gets the case that matters most right for free: a subject a
+ * reviewer has already *approved* keeps its row, so this never re-hides
+ * something a person deliberately let stand.
+ *
+ * Bounded, like every other sweep here: this runs hourly beside the
+ * screening retry, and a backlog that cannot be cleared in one firing is
+ * cleared over several.
+ */
+export async function reconcileUnhiddenReports(
+  limit = 50,
+): Promise<ReconcileReport> {
+  const database = db();
+  const over = await database
+    .select({
+      subjectType: reports.subjectType,
+      subjectId: reports.subjectId,
+      reporters: countDistinct(reports.reporterId),
+    })
+    .from(reports)
+    .leftJoin(
+      reviewQueue,
+      and(
+        eq(reviewQueue.subjectType, reports.subjectType),
+        eq(reviewQueue.subjectId, reports.subjectId),
+      ),
+    )
+    // Only subjects nothing has decided on. Filtered in SQL rather than
+    // after the fact, so D1 is not billed for scanning every settled
+    // subject this app will ever accumulate.
+    .where(isNull(reviewQueue.id))
+    .groupBy(reports.subjectType, reports.subjectId)
+    .having(gte(countDistinct(reports.reporterId), autoHideReporterThreshold))
+    .limit(limit);
+
+  const outcome: ReconcileReport = { found: over.length, hidden: 0 };
+  for (const row of over) {
+    await hidePendingReview(row.subjectType, row.subjectId);
+    outcome.hidden += 1;
+  }
+  return outcome;
+}
+
+/**
+ * The predicate every subject-keyed read shares: this type, this id.
+ *
+ * Three reads were building it inline — the reporter count, the queue
+ * lookup, and the hide — and a clone detector is right that they are one
+ * idea. The columns stay arguments for the reason `lib/keyed-read.ts`
+ * gives: which column a query touches decides whether SQLite answers from
+ * an index, and D1 bills rows scanned, so that choice stays visible at the
+ * call site rather than being picked by a helper.
+ */
+function subjectMatches(
+  typeColumn: SQLiteColumn,
+  idColumn: SQLiteColumn,
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): SQL | undefined {
+  return and(eq(typeColumn, subjectType), eq(idColumn, subjectId));
+}
+
+/**
+ * How many distinct people have reported this subject.
+ *
+ * Reads `reporter_id` alone, which the `reports_subject` index does not
+ * carry — but the alternative is `select *`, and D1 bills rows scanned.
+ * The count is small by construction: a subject with enough reports to
+ * matter is already hidden and already in front of a person.
+ */
+export async function distinctReporterCount(
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<number> {
+  const reporters = await columnWhere(
+    db(),
+    reports,
+    reports.reporterId,
+    subjectMatches(
+      reports.subjectType,
+      reports.subjectId,
+      subjectType,
+      subjectId,
+    ),
+  );
+  // The UNIQUE index already guarantees one row per reporter, so the row
+  // count *is* the distinct count. Deduplicating here as well would be a
+  // second answer to a question the schema has already settled.
+  return reporters.length;
+}
+
+/**
+ * "This person reported something of this type" — the other predicate this
+ * table is read by, named for symmetry with `subjectMatches`.
+ */
+function reportedBy(
+  reporterId: string,
+  subjectType: ReportSubjectType,
+): SQL | undefined {
+  return and(
+    eq(reports.reporterId, reporterId),
+    eq(reports.subjectType, subjectType),
+  );
+}
+
+/**
+ * The subject ids this viewer has reported, so their own feed can drop them
+ * — W1's "hidden from your feed straight away".
+ *
+ * Returns ids for one subject type at a time because the caller is always
+ * filtering one list: a feed of entries, a grid of photos. Mixing types
+ * would hand the caller a set it has to re-filter.
+ */
+export async function reportedSubjectIdsFor(
+  reporterId: string,
+  subjectType: ReportSubjectType,
+): Promise<string[]> {
+  return columnWhere(
+    db(),
+    reports,
+    reports.subjectId,
+    reportedBy(reporterId, subjectType),
+  );
+}
+
+/**
+ * Flips the subject out of public view and puts it in front of a person.
+ *
+ * **One batch** (CLAUDE.md: two writes in one handler go in one batch
+ * unless you can say why they are independent). These are the worst case
+ * the rule names — a state change plus the record that authorises acting on
+ * it. A gap between them leaves a subject hidden with nothing queued, which
+ * is a silent permanent takedown: exactly the outcome the artboard's stance
+ * forbids.
+ *
+ * `profile` has no moderation column of its own — a reported profile is a
+ * ban decision, which is a person's call, so it queues without hiding
+ * anything. `photo` and `product` are wired as their owning lanes' columns
+ * come under this module's reads.
+ */
+async function hidePendingReview(
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<void> {
+  const queueWrite = enqueueForReview(db(), {
+    subjectType,
+    subjectId,
+    source: "reports",
+  });
+
+  await db().batch([queueWrite, ...hideWritesFor[subjectType](subjectId)]);
+}
+
+/**
+ * What crossing the threshold hides, per subject type.
+ *
+ * Keyed rather than written as `if (subjectType !== "entry")`, which was
+ * a branch no test could tell from its opposite: running the entry update
+ * against a product id matches no row, so both sides of it looked
+ * identical from outside. A lookup has no branch to get wrong, and
+ * `Record<ReportSubjectType, …>` makes a new subject type a compile error
+ * here rather than a silent no-op.
+ */
+const hideWritesFor: Record<
+  ReportSubjectType,
+  (subjectId: string) => BatchItem<"sqlite">[]
+> = {
+  entry: (subjectId) => [
+    db()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, subjectId)),
+  ],
+  // A photo hides the way the classifier hides one, and into the same
+  // state for the same reason: `hidden_pending_review` is exactly "not
+  // public, a person will look", which is what crossing the threshold
+  // means. Entry photos only — a garment photo carries the same subject
+  // type but lives in `wardrobe_items.visibility`, and a closet is
+  // private, so nobody but its owner can see one to report it.
+  photo: (subjectId) => [
+    db()
+      .update(entryPhotos)
+      .set({ screenStatus: "hidden_pending_review" })
+      .where(eq(entryPhotos.id, subjectId)),
+  ],
+  // The two that hide nothing, each for its own reason. A profile is a
+  // ban decision, which is a person's call with its own path and its own
+  // notice. A product's rows stay visible until a reviewer removes them,
+  // because hiding a shared canonical row on three reports would take
+  // every garment linked to it down with it.
+  profile: () => [],
+  product: () => [],
+};
+
+/**
+ * Whether this subject is already waiting on a person — used by the review
+ * page and by tests, so "queued" is observable rather than inferred from
+ * the side effects of queueing.
+ */
+export async function isQueuedForReview(
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<boolean> {
+  // The open-status test is an `inArray` in the WHERE, not a `.some()`
+  // afterwards. CLAUDE.md's D1 discipline is explicit — a filter a WHERE
+  // could have expressed is billed for every row it scanned and threw
+  // away — and `hasRowWhere` adds the LIMIT 1 that stops at the first
+  // match instead of reading every row of a subject's history to answer
+  // yes or no.
+  return hasRowWhere(
+    db(),
+    reviewQueue,
+    reviewQueue.status,
+    and(
+      subjectMatches(
+        reviewQueue.subjectType,
+        reviewQueue.subjectId,
+        subjectType,
+        subjectId,
+      ),
+      inArray(reviewQueue.status, ["pending", "reviewing"]),
+    ),
+  );
+}

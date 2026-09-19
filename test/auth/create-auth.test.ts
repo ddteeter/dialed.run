@@ -55,9 +55,9 @@ describe("createAuth", () => {
     // better-auth derives it from the request when absent; setting it to
     // `undefined` explicitly is not the same as leaving it out, and the
     // OAuth callback is built from it.
-    expect(auth({ ...BASE, baseUrl: "https://dialed.run" }).options.baseURL).toBe(
-      "https://dialed.run",
-    );
+    expect(
+      auth({ ...BASE, baseUrl: "https://dialed.run" }).options.baseURL,
+    ).toBe("https://dialed.run");
     // `in`, not `toBeUndefined`: spreading `{ baseURL: undefined }` also
     // reads as undefined, and better-auth treats a present-but-undefined
     // key as a configured empty origin rather than as "derive it from the
@@ -66,7 +66,9 @@ describe("createAuth", () => {
   });
 
   it("enables email and password", () => {
-    expect(auth(BASE).options.emailAndPassword).toStrictEqual({ enabled: true });
+    expect(auth(BASE).options.emailAndPassword).toStrictEqual({
+      enabled: true,
+    });
   });
 
   it("configures Google only when credentials exist", () => {
