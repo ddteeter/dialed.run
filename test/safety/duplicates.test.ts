@@ -133,7 +133,9 @@ describe("the edges of the matching rule", () => {
     expect(clustersIn(["rapid lite short", "rapid lite short 24"])).toEqual([
       ["rapid lite short", "rapid lite short 24"],
     ]);
-    expect(clustersIn(["rapid lite short", "rapid lite short pro"])).toEqual([]);
+    expect(clustersIn(["rapid lite short", "rapid lite short pro"])).toEqual(
+      [],
+    );
   });
 
   it("accepts a two-character spelling difference and refuses a longer one", () => {
@@ -151,7 +153,9 @@ describe("the edges of the matching rule", () => {
   });
 
   it("refuses two names that differ in two positions", () => {
-    expect(clustersIn(["thermal tight blue", "thermal tights red"])).toEqual([]);
+    expect(clustersIn(["thermal tight blue", "thermal tights red"])).toEqual(
+      [],
+    );
   });
 
   it("compares the position that differs, not the first token spelled that way", () => {
@@ -187,9 +191,9 @@ describe("the edges of the matching rule", () => {
     // makes the halves visible: asking in one direction only, "elite
     // 1000" collects nothing, and the mess arrives as two overlapping
     // clusters instead of one.
-    expect(
-      clustersIn(["elite 1000", "elite 100", "elite 10"]),
-    ).toEqual([["elite 1000", "elite 100", "elite 10"]]);
+    expect(clustersIn(["elite 1000", "elite 100", "elite 10"])).toEqual([
+      ["elite 1000", "elite 100", "elite 10"],
+    ]);
   });
 
   it("is not a near-miss when two names hold the very same tokens", () => {
@@ -205,20 +209,24 @@ async function brandWith(
   products: readonly string[],
 ): Promise<string> {
   const brandId = newUlid();
-  await core().insert(brands).values({
-    id: brandId,
-    name,
-    normalized: normalizeIdentity(name),
-  });
-  for (const productName of products) {
-    await core().insert(productsTable).values({
-      id: newUlid(),
-      brandId,
-      name: productName,
-      normalizedName: normalizeIdentity(productName),
-      createdBy: newUlid(),
-      createdAt: NOW,
+  await core()
+    .insert(brands)
+    .values({
+      id: brandId,
+      name,
+      normalized: normalizeIdentity(name),
     });
+  for (const productName of products) {
+    await core()
+      .insert(productsTable)
+      .values({
+        id: newUlid(),
+        brandId,
+        name: productName,
+        normalizedName: normalizeIdentity(productName),
+        createdBy: newUlid(),
+        createdAt: NOW,
+      });
   }
   return brandId;
 }
@@ -239,12 +247,18 @@ describe("the report over real rows", () => {
     expect(found).toHaveLength(1);
     expect(found[0]?.brand).toBe("Janji");
     expect(
-      found[0]?.products.map((p) => p.name).toSorted((a, b) => a.localeCompare(b)),
+      found[0]?.products
+        .map((p) => p.name)
+        .toSorted((a, b) => a.localeCompare(b)),
     ).toEqual(["Thermal Tight", "Thermal Tights"]);
   });
 
   it("reports the pair, not the brand's whole catalogue", async () => {
-    await brandWith("Janji", ["Thermal Tight", "Thermal Tights", "Rapid Short"]);
+    await brandWith("Janji", [
+      "Thermal Tight",
+      "Thermal Tights",
+      "Rapid Short",
+    ]);
 
     const found = await duplicateProducts();
 

@@ -32,9 +32,7 @@ describe("NowGoRun", () => {
   it("ends on an instruction", async () => {
     await renderScreen();
 
-    expect(
-      screen.getByRole("heading", { name: "Now go run." }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Now go run." })).toBeVisible();
   });
 
   it("states the call promise in the threshold's own terms", async () => {
@@ -126,7 +124,8 @@ describe("NowGoRun", () => {
     // the next epic and this screen is the reason it is not shipped yet.
     await renderScreen();
 
-    const page = screen.getByRole("heading", { name: "Now go run." })
+    const page = screen
+      .getByRole("heading", { name: "Now go run." })
       .closest("div")?.parentElement;
 
     expect(page?.textContent).not.toMatch(/congrat|all set|you're ready|nice/i);

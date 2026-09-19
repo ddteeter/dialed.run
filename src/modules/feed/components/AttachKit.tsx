@@ -94,7 +94,9 @@ export function AttachKit({
 }>) {
   const navigate = useNavigate();
   const coords = useCoordinates();
-  const [prefill, setPrefill] = useState<PrefillCandidate | undefined | "none">();
+  const [prefill, setPrefill] = useState<
+    PrefillCandidate | undefined | "none"
+  >();
   const [groups, setGroups] = useState<PickerGroup[] | undefined>();
   const [showPicker, setShowPicker] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -133,63 +135,66 @@ export function AttachKit({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
-        <h1 className="font-display text-2xl uppercase leading-none">Attach the kit</h1>
+      <h1 className="font-display text-2xl uppercase leading-none">
+        Attach the kit
+      </h1>
 
-        {!showPicker && prefill === undefined ? (
-          <Skeleton className="h-32 w-full" />
-        ) : undefined}
+      {!showPicker && prefill === undefined ? (
+        <Skeleton className="h-32 w-full" />
+      ) : undefined}
 
-        {!showPicker && prefill && prefill !== "none" ? (
-          <div className="flex flex-col gap-3 rounded-xl border border-night/10 p-4">
-            <Bracketed className="text-xs text-teal">
-              Most likely · from {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
-              {Math.round(prefill.feelsLikeDeltaC)}° off
-            </Bracketed>
-            <button
-              type="button"
-              onClick={() => {
-                void submit(prefill.itemIds);
-              }}
-              className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
-            >
-              That&rsquo;s it
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowPicker(true);
-              }}
-              className="text-sm font-semibold text-pink"
-            >
-              Choose different items
-            </button>
-          </div>
-        ) : undefined}
-
-        {!showPicker && prefill === "none" ? (
+      {!showPicker && prefill && prefill !== "none" ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-night/10 p-4">
+          <Bracketed className="text-xs text-teal">
+            Most likely · from{" "}
+            {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
+            {Math.round(prefill.feelsLikeDeltaC)}° off
+          </Bracketed>
+          <button
+            type="button"
+            onClick={() => {
+              void submit(prefill.itemIds);
+            }}
+            className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+          >
+            That&rsquo;s it
+          </button>
           <button
             type="button"
             onClick={() => {
               setShowPicker(true);
             }}
-            className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+            className="text-sm font-semibold text-pink"
           >
-            Choose your kit
+            Choose different items
           </button>
-        ) : undefined}
+        </div>
+      ) : undefined}
 
-        {showPicker ? (
-          <PickerOrSkeleton
-            groups={groups}
-            selected={selected}
-            onToggle={(itemId) => {
-              setSelected((prev) => toggledIn(prev, itemId));
-            }}
-            onSubmit={() => {
-              void submit([...selected]);
-            }}
-          />
-        ) : undefined}
+      {!showPicker && prefill === "none" ? (
+        <button
+          type="button"
+          onClick={() => {
+            setShowPicker(true);
+          }}
+          className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+        >
+          Choose your kit
+        </button>
+      ) : undefined}
+
+      {showPicker ? (
+        <PickerOrSkeleton
+          groups={groups}
+          selected={selected}
+          onToggle={(itemId) => {
+            setSelected((prev) => toggledIn(prev, itemId));
+          }}
+          onSubmit={() => {
+            void submit([...selected]);
+          }}
+        />
+      ) : undefined}
 
       {error === undefined ? undefined : (
         <p className="text-sm font-semibold text-pink">{error}</p>
@@ -211,7 +216,12 @@ function PickerOrSkeleton({
 }>) {
   if (!groups) return <Skeleton className="h-64 w-full" />;
   return (
-    <Picker groups={groups} selected={selected} onToggle={onToggle} onSubmit={onSubmit} />
+    <Picker
+      groups={groups}
+      selected={selected}
+      onToggle={onToggle}
+      onSubmit={onSubmit}
+    />
   );
 }
 

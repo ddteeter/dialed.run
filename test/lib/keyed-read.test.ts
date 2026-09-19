@@ -86,9 +86,9 @@ describe("hasRowWhere", () => {
       eq(follows.followerId, follower),
       eq(follows.followeeId, followee),
     );
-    expect(
-      await hasRowWhere(coreDb(), follows, follows.followeeId, both),
-    ).toBe(true);
+    expect(await hasRowWhere(coreDb(), follows, follows.followeeId, both)).toBe(
+      true,
+    );
 
     // The reverse pair: following is not mutual by existing.
     const reversed = and(
@@ -170,7 +170,10 @@ describe("firstRowWhere", () => {
     const row = await firstRowWhere(
       coreDb(),
       follows,
-      and(eq(follows.followerId, followerId), eq(follows.followeeId, followeeId)),
+      and(
+        eq(follows.followerId, followerId),
+        eq(follows.followeeId, followeeId),
+      ),
     );
 
     expect(row).toStrictEqual({

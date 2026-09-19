@@ -191,5 +191,4 @@ export function detectedRegions(outcome: DetectionAnswer): BlurRegion[] {
  * type already rules out.
  */
 export type DetectionAnswer =
-  | { status: "ran"; faces: readonly Region[] }
-  | { status: "unavailable" };
+  { status: "ran"; faces: readonly Region[] } | { status: "unavailable" };

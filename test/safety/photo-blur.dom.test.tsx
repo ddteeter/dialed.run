@@ -25,9 +25,10 @@ const BLURRED = new File([new Uint8Array([9])], "run.jpg", {
   type: "image/jpeg",
 });
 
-function fakePipeline(
-  overrides: Partial<BlurPipeline> = {},
-): { pipeline: BlurPipeline; painted: BlurRegion[][] } {
+function fakePipeline(overrides: Partial<BlurPipeline> = {}): {
+  pipeline: BlurPipeline;
+  painted: BlurRegion[][];
+} {
   const painted: BlurRegion[][] = [];
   const pipeline: BlurPipeline = {
     load: () =>
@@ -154,7 +155,9 @@ describe("with blur on", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("No face found. Posting as-is.")).toBeInTheDocument();
+      expect(
+        screen.getByText("No face found. Posting as-is."),
+      ).toBeInTheDocument();
     });
   });
 
@@ -220,7 +223,9 @@ describe("tapping", () => {
       expect(screen.getByText(/No face found/)).toBeInTheDocument();
     });
 
-    await user.click(screen.getByLabelText("Outfit photo. Tap a spot to blur it."));
+    await user.click(
+      screen.getByLabelText("Outfit photo. Tap a spot to blur it."),
+    );
 
     await waitFor(() => {
       expect(painted.at(-1)).toHaveLength(1);
@@ -243,7 +248,9 @@ describe("tapping", () => {
       expect(screen.getByText(/No face found/)).toBeInTheDocument();
     });
 
-    await user.click(screen.getByLabelText("Outfit photo. Tap a spot to blur it."));
+    await user.click(
+      screen.getByLabelText("Outfit photo. Tap a spot to blur it."),
+    );
 
     // "We blurred" is a claim about detection; a tap is not one, and
     // crediting the model for it would overstate what it found.
@@ -546,7 +553,9 @@ describe("before the photo has decoded", () => {
 
     held.resolve({ image: {} as ImageBitmap, width: 100, height: 100 });
     await waitFor(() => {
-      expect(screen.getByLabelText(/Tap a spot to blur it/)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/Tap a spot to blur it/),
+      ).toBeInTheDocument();
     });
     expect(painted.length).toBeGreaterThan(0);
   });

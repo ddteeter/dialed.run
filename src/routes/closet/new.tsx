@@ -29,7 +29,9 @@ function NewGarmentPage() {
           Add a piece
         </h1>
         <GarmentForm
-          save={async (garment) => createItemFn({ data: { garment, idempotencyKey } })}
+          save={async (garment) =>
+            createItemFn({ data: { garment, idempotencyKey } })
+          }
           onSaved={async (created) => {
             rotate();
             await navigate({

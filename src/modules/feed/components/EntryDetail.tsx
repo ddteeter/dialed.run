@@ -15,8 +15,6 @@ import { ListSection } from "../../../ui";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
-
-
 /**
  * One entry, in full (screen D).
  *
@@ -129,7 +127,8 @@ export function EntryDetail({
 
       <div className="flex items-center gap-4">
         <Mono className="text-sm text-night/60">
-          {formatDistance(entry.distanceM, units.distance)} · {formatDuration(entry.durationS)}
+          {formatDistance(entry.distanceM, units.distance)} ·{" "}
+          {formatDuration(entry.durationS)}
         </Mono>
         {entry.conditions === undefined ? undefined : (
           <Mono className="text-sm text-teal">

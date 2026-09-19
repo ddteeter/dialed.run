@@ -47,7 +47,8 @@ function redirectFrom(work: () => unknown): { to: unknown } {
   try {
     work();
   } catch (error) {
-    if (isRedirect(error)) return (error as { options: { to: unknown } }).options;
+    if (isRedirect(error))
+      return (error as { options: { to: unknown } }).options;
     throw error;
   }
   throw new Error("expected a redirect");
@@ -81,6 +82,10 @@ describe("orBackToFeed", () => {
     // The same answer for "does not exist" and "you may not see it":
     // telling someone a private entry exists is most of what they wanted
     // to know.
-    expect(redirectFrom(() => { orBackToFeed(undefined); }).to).toBe("/feed");
+    expect(
+      redirectFrom(() => {
+        orBackToFeed(undefined);
+      }).to,
+    ).toBe("/feed");
   });
 });

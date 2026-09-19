@@ -28,15 +28,15 @@ it throws, inside an async function whose promise is `void`-ed — an
 unhandled rejection. The button does nothing. No message, no mark, no
 console error the user can see. Three ways to reach it today:
 
-| input | why the browser lets it through | what the schema says |
-| --- | --- | --- |
+| input                                | why the browser lets it through | what the schema says               |
+| ------------------------------------ | ------------------------------- | ---------------------------------- |
 | `http://example.com` in Product link | `type="url"` accepts any scheme | `httpsUrlSchema` requires `https:` |
-| a name over 80 characters | no `maxLength` on any input | `name: z.string().min(1).max(80)` |
-| brand > 60, size > 20, color > 30 | same | same shape |
+| a name over 80 characters            | no `maxLength` on any input     | `name: z.string().min(1).max(80)`  |
+| brand > 60, size > 20, color > 30    | same                            | same shape                         |
 
 **And the copy does not exist.** `z.string().min(1).max(80)` carries no
 `message`, so the sentence a user would eventually see is zod's default,
-*"Too small: expected string to have >=1 characters"*. The contract's rule
+_"Too small: expected string to have >=1 characters"_. The contract's rule
 is that error copy lives in the schema; `signUpSchema`, twelve lines below
 in the same file, already does it right (`"Tell us what to call you."`).
 
@@ -62,12 +62,12 @@ Two register rows attach to this pass by their own triggers:
 The contract permits a client pre-check only because there is one schema
 run twice. `GarmentFormValues` is not `Garment` — unanswered selects are
 `""` and the domain type is a discriminated union — so the form needs a
-schema of its *own shape* that ends in the real one:
+schema of its _own shape_ that ends in the real one:
 
 ```ts
-export const garmentFormSchema = garmentFormValues   // the "" shapes, with the copy
-  .transform(toGarmentInput)                          // the reshape, already written
-  .pipe(garmentSchema);                               // the rules, not restated
+export const garmentFormSchema = garmentFormValues // the "" shapes, with the copy
+  .transform(toGarmentInput) // the reshape, already written
+  .pipe(garmentSchema); // the rules, not restated
 ```
 
 `toGarmentInput` is today's `garmentFromFormValues` minus its final
@@ -98,7 +98,7 @@ function — the same injection shape the routes lane established, so
 `GarmentForm` stays testable and stays in the mutation ratchet.
 
 **4. D-44 in `useFormSubmit`, once, for every form.** The fix already exists
-eight lines below the bug: the *failure* path sets the status and then
+eight lines below the bug: the _failure_ path sets the status and then
 defers the focus move by `DURATION.instant`. Success gets the same
 treatment, so `onSuccess` runs after the region has committed. Fixing it in
 the hook rather than per-form is the point — every form that navigates on
@@ -124,7 +124,7 @@ the one the register already named. No new product decision.
 ## Test plan
 
 The mutation ratchet covers `src/ui/**/*.tsx` and `src/modules/**/*.tsx` at
-100%, so every branch added here needs a test that *observes* it. DOM tests
+100%, so every branch added here needs a test that _observes_ it. DOM tests
 (`*.dom.test.tsx`, jsdom project) for anything with an interaction.
 
 - **The path-through-pipe question, first and alone** — `http://` product
@@ -169,7 +169,7 @@ screens C and F. Re-record per workflow rule 5.
 to be given an `Error`. For `test/ui/form.dom.test.tsx` that is the wrong
 requirement, and not marginally:
 
-The hook's whole reason for *parsing* a rejection rather than casting it is
+The hook's whole reason for _parsing_ a rejection rather than casting it is
 that a server function's rejection has crossed a structured clone — it
 arrives as a plain object with no prototype, so `instanceof ZodError` is
 false for a real one. The tests therefore have to reject with plain

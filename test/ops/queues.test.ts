@@ -75,7 +75,9 @@ describe("handleQueueBatch routes by queue name", () => {
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
       expect.objectContaining({ queue: "dialed-imports-dlq", messageId: "m2" }),
-      expect.objectContaining({ message: "dead-lettered dialed-imports message" }),
+      expect.objectContaining({
+        message: "dead-lettered dialed-imports message",
+      }),
     );
   });
 
@@ -98,7 +100,10 @@ describe("handleQueueBatch routes by queue name", () => {
       .update(products)
       .set({ extractionStatus: "pending" })
       .where(eq(products.id, product.id));
-    const message = fakeMessage("m3", { type: "enrich", productId: product.id });
+    const message = fakeMessage("m3", {
+      type: "enrich",
+      productId: product.id,
+    });
 
     await handleQueueBatch(batchOf("dialed-enrichment", [message]));
 
@@ -139,7 +144,9 @@ describe("handleQueueBatch routes by queue name", () => {
     // CI; this is what happens if it reaches production anyway.
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
 
-    await handleQueueBatch(batchOf("dialed-unheard-of", [fakeMessage("m7", {})]));
+    await handleQueueBatch(
+      batchOf("dialed-unheard-of", [fakeMessage("m7", {})]),
+    );
 
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),

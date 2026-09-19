@@ -11,7 +11,7 @@ a call to something outside D1 goes through an outbox.
 It was a review comment, twice, on the same PR — and by then three separate
 handlers had already been written against a rule that existed and said the
 right thing. The rule's phrasing was the problem ("if two or more writes
-*must* land together"), and it has been inverted: batch by default, justify
+_must_ land together"), and it has been inverted: batch by default, justify
 splitting. This task is the sweep that the rewritten rule does not do on its
 own.
 
@@ -25,7 +25,7 @@ that cross modules, and no lane can see another's write paths.
 
 ## Method
 
-Do not grep for `.batch(`. The failures are *absences*, and the shapes that
+Do not grep for `.batch(`. The failures are _absences_, and the shapes that
 matter do not look alike textually. Read every function that writes, and for
 each one answer two questions.
 
@@ -36,11 +36,11 @@ announces are always different tables.
 
 Three shapes are almost never independent:
 
-| shape | why it fails invisibly |
-| --- | --- |
-| write + the notification/log/event recording it | the state changes and nobody is told; a transition guard means the next attempt stays silent too |
-| **claim + the work it authorises** | the claim is what stops a retry, so a gap after it loses the work *permanently* rather than repeating it |
-| delete + its cleanup | orphans nothing will ever look at again |
+| shape                                           | why it fails invisibly                                                                                   |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| write + the notification/log/event recording it | the state changes and nobody is told; a transition guard means the next attempt stays silent too         |
+| **claim + the work it authorises**              | the claim is what stops a retry, so a gap after it loses the work _permanently_ rather than repeating it |
+| delete + its cleanup                            | orphans nothing will ever look at again                                                                  |
 
 **2. Does it write to two systems?** A queue send, an HTTP call, an R2 put —
 **and writes that span `DIALED_CORE` and `DIALED_WEATHER`**, which is the case
@@ -64,16 +64,16 @@ which of the three each site uses, in a comment.
 
 A first pass ran over the four lanes' write paths before merge. Each site
 below now carries a comment naming which of the three answers it uses, so
-this task is the *remaining* surface, not a re-run.
+this task is the _remaining_ surface, not a re-run.
 
-| site | outcome |
-| --- | --- |
-| `recordRefreshFailure`, `processReminderJob` | batched |
-| `disconnectStrava` | outbox (`strava_revocations`) |
-| `startImport` | reconciliation — the digest re-dispatches imports stalled `pending` |
-| `attach.ts` cross-database writes | reconciliation — `runs.weather_status` + the hourly cron, verified by reading it |
-| `modules/closet/photos.ts` | safe as-is: the photo key is deterministic per item, so a retry overwrites rather than orphaning |
-| `modules/feed/photos.ts` | accepted, recorded as D-27 — visible failure, orphan is storage not correctness |
+| site                                         | outcome                                                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `recordRefreshFailure`, `processReminderJob` | batched                                                                                          |
+| `disconnectStrava`                           | outbox (`strava_revocations`)                                                                    |
+| `startImport`                                | reconciliation — the digest re-dispatches imports stalled `pending`                              |
+| `attach.ts` cross-database writes            | reconciliation — `runs.weather_status` + the hourly cron, verified by reading it                 |
+| `modules/closet/photos.ts`                   | safe as-is: the photo key is deterministic per item, so a retry overwrites rather than orphaning |
+| `modules/feed/photos.ts`                     | accepted, recorded as D-27 — visible failure, orphan is storage not correctness                  |
 
 ## Still to read
 

@@ -18,12 +18,17 @@ export interface SearchResult {
   displayName: string;
 }
 
-export async function searchByDisplayName(prefix: string): Promise<SearchResult[]> {
+export async function searchByDisplayName(
+  prefix: string,
+): Promise<SearchResult[]> {
   const trimmed = prefix.trim();
   if (trimmed.length === 0) return [];
   const database = drizzle(env.DIALED_CORE);
   const rows = await database
-    .select({ userId: userProfiles.userId, displayName: userProfiles.displayName })
+    .select({
+      userId: userProfiles.userId,
+      displayName: userProfiles.displayName,
+    })
     .from(userProfiles)
     .where(like(userProfiles.displayName, `${trimmed}%`))
     .limit(RESULT_LIMIT);
@@ -33,7 +38,9 @@ export async function searchByDisplayName(prefix: string): Promise<SearchResult[
   // result type promises a name — a compiler-driven guard, not a runtime
   // one.
   // Stryker disable next-line ConditionalExpression,MethodExpression
-  return rows.filter(isNamed).map((r) => ({ userId: r.userId, displayName: r.displayName }));
+  return rows
+    .filter(isNamed)
+    .map((r) => ({ userId: r.userId, displayName: r.displayName }));
 }
 
 function isNamed(row: {

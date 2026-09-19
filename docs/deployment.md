@@ -57,10 +57,10 @@ wrangler r2 bucket create dialed-media
 wrangler r2 bucket create dialed-imports
 ```
 
-| Bucket | Binding | Holds | Retention |
-| --- | --- | --- | --- |
-| `dialed-media` | `MEDIA` | Garment photos, entry photos | Indefinite — the app renders these; deleting one breaks a page |
-| `dialed-imports` | `IMPORTS` | Uploaded `.fit`/`.gpx`/`.tcx` | **30 days** |
+| Bucket           | Binding   | Holds                         | Retention                                                      |
+| ---------------- | --------- | ----------------------------- | -------------------------------------------------------------- |
+| `dialed-media`   | `MEDIA`   | Garment photos, entry photos  | Indefinite — the app renders these; deleting one breaks a page |
+| `dialed-imports` | `IMPORTS` | Uploaded `.fit`/`.gpx`/`.tcx` | **30 days**                                                    |
 
 **The 30-day rule on `dialed-imports` must be set by hand** — wrangler does
 not manage R2 object lifecycle. In the dashboard: R2 → `dialed-imports` →
@@ -101,10 +101,10 @@ Declared in `wrangler.jsonc` and created by the deploy itself — nothing to do
 by hand. Listed here because they were absent entirely until recently, so both
 the daily digest and the weather retry silently never ran.
 
-| Schedule | Handler |
-| --- | --- |
-| `0 12 * * *` | daily digest |
-| `0 * * * *` | weather retry (lane 103) |
+| Schedule     | Handler                  |
+| ------------ | ------------------------ |
+| `0 12 * * *` | daily digest             |
+| `0 * * * *`  | weather retry (lane 103) |
 
 `test/bindings-conformance.test.ts` fails CI if this list and
 `src/modules/ops/crons.ts` disagree. After deploying, confirm both appear
@@ -115,16 +115,16 @@ under Workers → dialed → Settings → Triggers.
 `wrangler secret put <NAME>` for each. None of these belong in
 `wrangler.jsonc` — it is committed.
 
-| Secret | Required | Without it |
-| --- | --- | --- |
-| `BETTER_AUTH_SECRET` | **yes** | Auth cannot sign sessions. Use ≥32 random chars (`openssl rand -base64 32`) |
-| `VISUAL_CROSSING_API_KEY` | **yes** | No weather resolves; every run falls back to manual temp |
-| `STRAVA_CLIENT_ID` | for Strava | The connect screen renders a "not configured" state |
-| `STRAVA_CLIENT_SECRET` | for Strava | As above |
-| `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6 |
-| `SENTRY_DSN` | strongly | Errors go nowhere. This is the only place terminal failures surface for a solo operator |
-| `GOOGLE_CLIENT_ID` | optional | Google sign-in button 500s — set **both** or neither |
-| `GOOGLE_CLIENT_SECRET` | optional | As above |
+| Secret                        | Required   | Without it                                                                              |
+| ----------------------------- | ---------- | --------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`          | **yes**    | Auth cannot sign sessions. Use ≥32 random chars (`openssl rand -base64 32`)             |
+| `VISUAL_CROSSING_API_KEY`     | **yes**    | No weather resolves; every run falls back to manual temp                                |
+| `STRAVA_CLIENT_ID`            | for Strava | The connect screen renders a "not configured" state                                     |
+| `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                |
+| `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6  |
+| `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator |
+| `GOOGLE_CLIENT_ID`            | optional   | Google sign-in button 500s — set **both** or neither                                    |
+| `GOOGLE_CLIENT_SECRET`        | optional   | As above                                                                                |
 
 Better Auth also warns if it cannot derive a base URL. Set `BETTER_AUTH_URL`
 to the deployed origin once the domain is known, or callbacks and redirects

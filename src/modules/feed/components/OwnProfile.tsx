@@ -77,10 +77,7 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
 
       <ListSection title="How you call it, by band" items={profile.coverage}>
         {(band) => (
-          <li
-            key={band.bandFloorC}
-            className="flex items-center gap-3 text-sm"
-          >
+          <li key={band.bandFloorC} className="flex items-center gap-3 text-sm">
             <Bracketed className="w-24 shrink-0 text-night/40">
               {band.label}
             </Bracketed>

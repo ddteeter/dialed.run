@@ -113,7 +113,9 @@ export async function copyProductImage(
 
   const webp = await reencode(new Uint8Array(bytes));
   const key = productImageKey(productId, fetchedAt);
-  await env.MEDIA.put(key, webp, { httpMetadata: { contentType: "image/webp" } });
+  await env.MEDIA.put(key, webp, {
+    httpMetadata: { contentType: "image/webp" },
+  });
   return key;
 }
 
@@ -157,5 +159,7 @@ function decode(
 }
 
 type PhotonImage = Awaited<
-  ReturnType<typeof import("@cf-wasm/photon/workerd")["PhotonImage"]["new_from_byteslice"]>
+  ReturnType<
+    (typeof import("@cf-wasm/photon/workerd"))["PhotonImage"]["new_from_byteslice"]
+  >
 >;

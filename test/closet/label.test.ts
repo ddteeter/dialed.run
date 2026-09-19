@@ -42,7 +42,11 @@ describe("garmentLabel", () => {
 
   it("uses the name alone when there is no brand", () => {
     expect(
-      garmentLabel({ name: "Green L/S Crew", brand: NO_BRAND, isGeneric: false }),
+      garmentLabel({
+        name: "Green L/S Crew",
+        brand: NO_BRAND,
+        isGeneric: false,
+      }),
     ).toBe("Green L/S Crew");
   });
 

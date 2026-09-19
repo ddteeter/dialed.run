@@ -40,16 +40,7 @@ const FAHRENHEIT_REGIONS = new Set(["US", "PR", "GU", "VI", "AS"]);
  *
  * Myanmar and Liberia are the other two non-metric road systems.
  */
-const MILES_REGIONS = new Set([
-  "US",
-  "PR",
-  "GU",
-  "VI",
-  "AS",
-  "GB",
-  "MM",
-  "LR",
-]);
+const MILES_REGIONS = new Set(["US", "PR", "GU", "VI", "AS", "GB", "MM", "LR"]);
 
 export function unitsFromLocale(
   acceptLanguage: string | null | undefined,
@@ -88,7 +79,9 @@ function upTo(text: string, separator: string): string {
  * A bare `en` has no region and yields nothing, which lands on
  * `defaultUnits` rather than on a guess about which English.
  */
-function regionOf(acceptLanguage: string | null | undefined): string | undefined {
+function regionOf(
+  acceptLanguage: string | null | undefined,
+): string | undefined {
   // An explicit guard rather than `acceptLanguage ?? ""`, because the
   // empty string in that fallback is a literal no test can pin: any
   // nonsense substituted for it still has no region subtag, so it still

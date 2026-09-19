@@ -77,7 +77,9 @@ describe("what the sheet promises", () => {
     // Each sentence is a promise the code keeps, so the copy is pinned:
     // a person reads it, the entry goes from your feed immediately, and
     // the author is never told who reported them.
-    expect(screen.getByText(/A person reads it within a day/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A person reads it within a day/),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/hidden from your feed straight away/),
     ).toBeInTheDocument();
@@ -176,7 +178,9 @@ describe("filing a report", () => {
     // runner's. One missing field shows the field's message rather than
     // the summary, which deliberately stays quiet under two errors.
     await waitFor(() => {
-      expect(screen.getByText("Pick what's wrong with it.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Pick what's wrong with it."),
+      ).toBeInTheDocument();
     });
     expect(fileReport).not.toHaveBeenCalled();
   });
@@ -251,7 +255,9 @@ describe("filing a report", () => {
     });
     const summary = screen.getByText("Nothing saved").parentElement;
     if (!summary) throw new Error("the summary has no container");
-    expect(within(summary).getByText(/What's wrong with it/)).toBeInTheDocument();
+    expect(
+      within(summary).getByText(/What's wrong with it/),
+    ).toBeInTheDocument();
     expect(within(summary).getByText(/Anything else/)).toBeInTheDocument();
   });
 

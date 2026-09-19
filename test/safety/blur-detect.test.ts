@@ -69,12 +69,14 @@ describe("with a detector", () => {
 describe("the browser's own Shape Detection API", () => {
   it("asks the browser detector for its fast mode", async () => {
     let options: unknown;
-    Reflect.set(globalThis, "FaceDetector", function FaceDetector(
-      given: unknown,
-    ) {
-      options = given;
-      return { detect: () => Promise.resolve([]) };
-    });
+    Reflect.set(
+      globalThis,
+      "FaceDetector",
+      function FaceDetector(given: unknown) {
+        options = given;
+        return { detect: () => Promise.resolve([]) };
+      },
+    );
 
     await detectFaces(SOURCE);
 
@@ -86,9 +88,11 @@ describe("the browser's own Shape Detection API", () => {
   });
 
   it("is used when the browser has one", async () => {
-    const detect = vi.fn().mockResolvedValue([
-      { boundingBox: { x: 10, y: 20, width: 30, height: 40 } },
-    ]);
+    const detect = vi
+      .fn()
+      .mockResolvedValue([
+        { boundingBox: { x: 10, y: 20, width: 30, height: 40 } },
+      ]);
     Reflect.set(globalThis, "FaceDetector", function FaceDetector() {
       return { detect };
     });
@@ -143,7 +147,9 @@ describe("the browser's own Shape Detection API", () => {
     Reflect.set(globalThis, "FaceDetector", function FaceDetector() {
       return {
         detect: () =>
-          Promise.resolve([{ boundingBox: { x: 1, y: 1, width: 0, height: 5 } }]),
+          Promise.resolve([
+            { boundingBox: { x: 1, y: 1, width: 0, height: 5 } },
+          ]),
       };
     });
 
@@ -172,7 +178,10 @@ describe("the browser's own Shape Detection API", () => {
     });
     const outcome = await detectFaces(SOURCE, findsCorner);
 
-    expect(outcome).toEqual({ status: "ran", faces: [{ x: 9, y: 9, width: 9, height: 9 }] });
+    expect(outcome).toEqual({
+      status: "ran",
+      faces: [{ x: 9, y: 9, width: 9, height: 9 }],
+    });
     expect(native).not.toHaveBeenCalled();
   });
 });

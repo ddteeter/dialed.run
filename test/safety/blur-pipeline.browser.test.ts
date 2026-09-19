@@ -61,7 +61,13 @@ describe("what the pipeline is wired to", () => {
     // proves the detector looked, rather than that nothing looked.
     expect(outcome).toEqual({ status: "ran", faces: [] });
 
-    browserPipeline.paint(canvas, loaded.image, loaded.width, loaded.height, []);
+    browserPipeline.paint(
+      canvas,
+      loaded.image,
+      loaded.width,
+      loaded.height,
+      [],
+    );
     expect(canvas.width).toBe(40);
 
     const file = await browserPipeline.toFile(canvas, "out.jpg");

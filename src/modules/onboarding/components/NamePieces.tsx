@@ -140,7 +140,9 @@ export function NamePieces({
  * pending payload and no failure of its own — which is also why it cannot
  * gate. Skip is O3's underlined text, and both land on P3 (rule 06).
  */
-function NextAndSkip({ onDone }: Readonly<{ onDone: () => void }>): JSX.Element {
+function NextAndSkip({
+  onDone,
+}: Readonly<{ onDone: () => void }>): JSX.Element {
   return (
     <div className="flex flex-col gap-2.5">
       <button
@@ -228,4 +230,3 @@ function PieceRow({
     </div>
   );
 }
-

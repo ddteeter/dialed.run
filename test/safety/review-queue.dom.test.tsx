@@ -50,7 +50,12 @@ describe("what a reviewer is shown", () => {
   it("distinguishes a classifier flag from a pile of reports", () => {
     renderQueue([
       row(),
-      row({ id: "b", subjectId: "p-1", subjectType: "photo", source: "classifier" }),
+      row({
+        id: "b",
+        subjectId: "p-1",
+        subjectType: "photo",
+        source: "classifier",
+      }),
     ]);
 
     // A photo a model flagged is a threshold question; an entry three
@@ -120,7 +125,9 @@ describe("deciding", () => {
     // The row is gone, so there is no second button to press. The server
     // refuses a second decision anyway, but a UI that kept offering one
     // would be inviting a reviewer to undo their own call by accident.
-    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Approve" }),
+    ).not.toBeInTheDocument();
     expect(resolve).toHaveBeenCalledTimes(1);
   });
 });
@@ -150,9 +157,7 @@ describe("what a row tells the reviewer", () => {
   });
 
   it("says nobody reported a row the classifier raised", () => {
-    renderQueue([
-      row({ source: "classifier", reporterCount: 0, reasons: [] }),
-    ]);
+    renderQueue([row({ source: "classifier", reporterCount: 0, reasons: [] })]);
 
     // A classifier row has no people behind it. Rendering an empty reason
     // list would read as a report with nothing written on it.
@@ -222,9 +227,7 @@ describe("the subject itself", () => {
   });
 
   it("falls back to the id when there is nothing to name", () => {
-    renderQueue([
-      row({ subjectId: "e-404", subject: { photoKeys: [] } }),
-    ]);
+    renderQueue([row({ subjectId: "e-404", subject: { photoKeys: [] } })]);
 
     // A subject whose row has been deleted since the report. The id is
     // not useful, but it is honest — and it is what a reviewer would
@@ -245,8 +248,9 @@ describe("the subject itself", () => {
     // so an element with nothing in it is not nothing — it is a blank
     // band between the subject and the reasons, on every row that is a
     // runner or a product rather than a photo.
-    const empties = [...screen.getByRole("listitem").querySelectorAll("span")]
-      .filter((node) => node.childElementCount === 0 && node.textContent === "");
+    const empties = [
+      ...screen.getByRole("listitem").querySelectorAll("span"),
+    ].filter((node) => node.childElementCount === 0 && node.textContent === "");
     expect(empties).toEqual([]);
   });
 });

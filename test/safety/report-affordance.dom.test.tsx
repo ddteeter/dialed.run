@@ -44,7 +44,9 @@ describe("who is offered a report control", () => {
     renderAffordance({ viewerId: "author-1" });
     // Reporting your own entry does nothing, and offering it reads as a
     // bug rather than a courtesy.
-    expect(screen.queryByRole("button", { name: "Report" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Report" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers none to someone signed out", () => {
@@ -52,7 +54,9 @@ describe("who is offered a report control", () => {
     // A signed-out reporter has no identity for the distinct-reporter
     // count to be counted against, and that count is the rule the whole
     // auto-hide threshold rests on.
-    expect(screen.queryByRole("button", { name: "Report" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Report" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers one on a subject with no author at all", () => {

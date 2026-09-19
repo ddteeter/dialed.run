@@ -14,7 +14,6 @@
 import { detectFaces } from "./detect";
 import { blurredFile, paintBlurred } from "./paint";
 
-
 export interface LoadedImage {
   /**
    * An `ImageBitmap` specifically, not any `CanvasImageSource`: the
@@ -49,7 +48,5 @@ export const browserPipeline: BlurPipeline = {
   toFile: blurredFile,
 };
 
-
-
-export {type Detector} from "./detect";
-export {type BlurRegion} from "./regions";
+export { type Detector } from "./detect";
+export { type BlurRegion } from "./regions";

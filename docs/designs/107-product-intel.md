@@ -142,7 +142,7 @@ the model as OpenAI does, `gpt-5.6-luna`; the eval reads
 `OPENROUTER_API_KEY` from `.dev.vars` and names it `openai/gpt-5.6-luna`.
 
 **Through the router the provider is pinned and fallbacks are off.**
-Structured output is a property of the *endpoint*, not the model — and the
+Structured output is a property of the _endpoint_, not the model — and the
 endpoint listing proves it: `openai/gpt-5.6-luna` is served by seven
 endpoints and the **Amazon Bedrock** one reports `structured_outputs:
 false` while OpenAI's and Azure's report true. Unpinned, a request can be
@@ -184,7 +184,7 @@ a page. The Worker secret is still the owner's to set.
 
 `fibre_candidates` recorded every material the model named that
 `fibres.ts` did not recognise, so a human could promote the real ones and
-make the *deterministic* composition pass better on the next `reextract`.
+make the _deterministic_ composition pass better on the next `reextract`.
 It was removed on 2026-09-14, in the same breath as the pass it existed to
 improve.
 
@@ -208,7 +208,7 @@ reading the report.
 
 **Open, and smaller than it looks:** that gate may not belong on a declared
 field at all. It exists to tell `20% off today` from a composition in
-*prose*; a shop writing `material: "100% Primeflex"` has already said what
+_prose_; a shop writing `material: "100% Primeflex"` has already said what
 the field is, and the gate silently drops it. Worth measuring before
 changing.
 
@@ -223,14 +223,14 @@ socks, gloves, headwear and technical outerwear.
 **It stopped being deterministic-versus-model on 2026-09-14**, because the
 ladder no longer produces a composition and there is nothing left to
 compare it with. What it answers now is the question D-32 asked first —
-*which model* — on three axes:
+_which model_ — on three axes:
 
-| by | answered | found a composition | materials | named non-fibres |
-| --- | --- | --- | --- | --- |
-| deterministic | 22/22 | 0/22 | 0 | 0 |
-| `openai/gpt-5.6-luna` | 22/22 | **21/22** | 71 | 6 |
-| `qwen/qwen3.8-flash` | 13/22 | 12/22 | 20 | 0 |
-| `qwen/qwen3.8-27b` | 11/22 | 10/22 | 37 | 0 |
+| by                    | answered | found a composition | materials | named non-fibres |
+| --------------------- | -------- | ------------------- | --------- | ---------------- |
+| deterministic         | 22/22    | 0/22                | 0         | 0                |
+| `openai/gpt-5.6-luna` | 22/22    | **21/22**           | 71        | 6                |
+| `qwen/qwen3.8-flash`  | 13/22    | 12/22               | 20        | 0                |
+| `qwen/qwen3.8-27b`    | 11/22    | 10/22               | 37        | 0                |
 
 **Finding a composition and structuring it are separate columns**, and
 conflating them was the flaw the first two reports had: on SOAR's shorts
@@ -248,14 +248,14 @@ wrongly claimed for SOAR.
 **Two claims this document made and had to withdraw**, both mine and both
 from reading a symptom as a cause:
 
-- *"The model is not perfectly stable."* Arc'teryx's Alpha SV answered
+- _"The model is not perfectly stable."_ Arc'teryx's Alpha SV answered
   nothing once and a partial answer the next minute, and that looked like
   variance. It was the prompt budget: the composition sits at character
   25,646 and the cap was 24,000, so the model was being asked about a page
   whose answer it had never seen, and varied between saying nothing and
   guessing from a marketing banner. Shown the real content it answers
   correctly and identically three runs running.
-- *"The model is not a superset of the deterministic pass."* Same cause, an
+- _"The model is not a superset of the deterministic pass."_ Same cause, an
   earlier form: three pages it "missed" were pages `pageTextFor` had
   truncated.
 
@@ -263,7 +263,7 @@ The lesson both times is the same and worth keeping: when a model looks
 wrong, check what it was shown before concluding anything about the model.
 
 **A production bug the eval caught.****A production bug the eval caught.** Asked about a page with no
-composition, a model answered `{"verbatim": "null"}` — the *string*. The
+composition, a model answered `{"verbatim": "null"}` — the _string_. The
 schema accepts it, because a string is what the field wants, and it would
 have reached `products.fabric_composition`: a runner shown the word "null"
 as their garment's fabric. `withoutSaidNull` drops that and four spellings
@@ -285,12 +285,12 @@ each was a fault in our own instrumentation.
    patient timeout it answers 22 of 22. `qwen3.8-27b`'s failures are real
    rate limits.
 3. **"Deterministic loses on five pages."** The verdict scored against the
-   *best* model rather than the consensus, which rewards over-counting: one
+   _best_ model rather than the consensus, which rewards over-counting: one
    model read the legal phrase "Exclusive of decoration" as a material and
    that inflated count marked a correct deterministic answer as a failure.
 
 **A fourth is still standing**, and the numbers above are reported knowing
-it: material count conflates *finding* a composition with *structuring* it.
+it: material count conflates _finding_ a composition with _structuring_ it.
 On SOAR's shorts `gpt-5.6-luna` returned exactly the right verbatim
 (`Shell 88% PA 12% EL`) and no parsed parts, so it scores zero and the page
 reads as agreement with a deterministic pass that found nothing at all.
@@ -306,7 +306,7 @@ the source of `fabric_composition`.
 
 **Cost is not the reason.** Measured against the real API: a page is ~4,800
 prompt tokens and ~270 completion, which is **$0.00065 per product** on the
-pinned endpoint — and enrichment is per *product*, not per paste, because
+pinned endpoint — and enrichment is per _product_, not per paste, because
 products are canonical rows and `requestEnrichment` only claims `none` and
 `failed`. A thousand products is 65 cents. The Firecrawl fetch that obtains
 the page costs about five times as much as the model call that reads it.
@@ -333,7 +333,7 @@ it is worse than not answering:**
 Open Graph — are not heuristics. They read a field a shop published, they
 cost nothing, they are instant, and they cannot be plausibly-wrong the way
 a prose search can. They agreed with the models on name, brand and image on
-essentially every page. Only the *composition text pass* is retired as a
+essentially every page. Only the _composition text pass_ is retired as a
 producer.
 
 **Wired, 2026-09-14.** The composition parser is gone entirely, in three
@@ -440,7 +440,7 @@ The primary image is copied to R2 (`image_key`) after the write-back, and
 only while the column is null: nobody hand-edits an R2 key, so the ledger
 `applyExtraction` needs has nothing to protect here, and the only question
 is whether we have already paid for this image. A later run finding a
-*different* image does not replace it — D-61, because that needs a rule for
+_different_ image does not replace it — D-61, because that needs a rule for
 the old object and for anything holding its URL. A failed image fetch never
 fails the job: a product whose picture 404s still has a composition.
 
@@ -519,7 +519,7 @@ reasoning is at each code site; this is the map.
 
 - **"Regexes good enough?"** — measured, and no. Over the 22 eval pages the
   Open Graph pattern cut a name at its first apostrophe on nine (`Men's
-  WoolTech Half Tights` → `Men`, `Arc'teryx` → `Arc`), the entity strip
+WoolTech Half Tights` → `Men`, `Arc'teryx` → `Arc`), the entity strip
   turned `Men&#39;s` into `Men s`, and a comment or an attribute holding
   `>` leaked into the prose. JSON-LD masked most of it by winning the field
   first. `html.ts` is now htmlparser2 — chosen over the platform's
@@ -564,4 +564,3 @@ reasoning is at each code site; this is the map.
   closet's `full` edge, so metadata, appended payloads and a lying type
   header do not survive into an object we will serve. A body the decoder
   rejects is refused with its header ignored.
-

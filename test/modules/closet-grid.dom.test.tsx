@@ -68,7 +68,9 @@ describe("ClosetGrid: the empty closet", () => {
       item: wardrobeItem({ id: "01RET", retired: true }),
     });
     await renderWithRouter(
-      <ClosetGrid listing={{ items: [retired], totalCount: 1, genericCount: 0 }} />,
+      <ClosetGrid
+        listing={{ items: [retired], totalCount: 1, genericCount: 0 }}
+      />,
     );
 
     expect(screen.queryByText(/Nothing in here yet/)).toBeNull();
@@ -77,7 +79,9 @@ describe("ClosetGrid: the empty closet", () => {
 
 describe("ClosetGrid: what a piece says about itself", () => {
   it("names a branded piece, tags a generic one, and links to each", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier, genericTop])} />);
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, genericTop])} />,
+    );
 
     const branded = screen.getByRole("link", { name: /Harrier/ });
     expect(branded).toHaveAttribute("href", "/closet/01TOP");
@@ -96,11 +100,13 @@ describe("ClosetGrid: what a piece says about itself", () => {
   });
 
   it("shows the tested range, and says Untested when there is none", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier, genericTop])} />);
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, genericTop])} />,
+    );
 
-    expect(
-      screen.getByRole("link", { name: /Harrier/ }),
-    ).toHaveTextContent("[4–12°]");
+    expect(screen.getByRole("link", { name: /Harrier/ })).toHaveTextContent(
+      "[4–12°]",
+    );
     expect(
       screen.getByRole("link", { name: /Long sleeve top/ }),
     ).toHaveTextContent("[Untested]");
@@ -118,9 +124,9 @@ describe("ClosetGrid: what a piece says about itself", () => {
     });
     await renderWithRouter(<ClosetGrid listing={listing([halfKnown])} />);
 
-    expect(
-      screen.getByRole("link", { name: /Mystery tee/ }),
-    ).toHaveTextContent("[Untested]");
+    expect(screen.getByRole("link", { name: /Mystery tee/ })).toHaveTextContent(
+      "[Untested]",
+    );
   });
 
   it("marks a retired piece as retired", async () => {
@@ -188,7 +194,9 @@ describe("ClosetGrid: the groups", () => {
 
 describe("ClosetGrid: the enrichment nudge", () => {
   it("counts the generic pieces against the whole closet", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier, genericTop])} />);
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, genericTop])} />,
+    );
     expect(screen.getByText(/still generic/)).toHaveTextContent(
       "1 of 2 pieces are still generic",
     );
@@ -209,7 +217,9 @@ describe("ClosetGrid: retired items behind a toggle", () => {
 
   it("hides them, offers the count, and shows them on demand", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(<ClosetGrid listing={listing([harrier, retired])} />);
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, retired])} />,
+    );
 
     expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
     const toggle = screen.getByRole("button", { name: /Show retired \(1\)/ });
@@ -217,7 +227,9 @@ describe("ClosetGrid: retired items behind a toggle", () => {
     await user.click(toggle);
 
     expect(screen.getByRole("link", { name: /Old tee/ })).toBeVisible();
-    expect(screen.getByRole("button", { name: /Hide retired \(1\)/ })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /Hide retired \(1\)/ }),
+    ).toBeVisible();
 
     // And back — the toggle is a toggle, not a one-way reveal.
     await user.click(screen.getByRole("button", { name: /Hide retired/ }));

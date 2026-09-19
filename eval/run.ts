@@ -1,6 +1,9 @@
-
 import { CORPUS } from "./corpus";
-import { extractEveryWay, type ModelChoice, type PageExtractions } from "./extractions";
+import {
+  extractEveryWay,
+  type ModelChoice,
+  type PageExtractions,
+} from "./extractions";
 import { fetchPage } from "./page-cache";
 import { reportFor } from "./report";
 import { secret } from "./secrets";
@@ -44,9 +47,7 @@ async function main(): Promise<void> {
   for (const entry of CORPUS) {
     try {
       const html = await fetchPage(entry.url, firecrawl);
-      pages.push(
-        await extractEveryWay({ ...entry, html }, MODELS, openrouter),
-      );
+      pages.push(await extractEveryWay({ ...entry, html }, MODELS, openrouter));
       console.log(`  ok    ${entry.brand} — ${entry.category}`);
     } catch (error: unknown) {
       // A shop that is down is not a reason to lose the other nineteen

@@ -143,9 +143,13 @@ export async function blurredFile(
   fileName: string,
 ): Promise<File | undefined> {
   const blob = await new Promise<Blob | undefined>((resolve) => {
-    canvas.toBlob((result) => {
-      resolve(result ?? undefined);
-    }, "image/jpeg", 0.92);
+    canvas.toBlob(
+      (result) => {
+        resolve(result ?? undefined);
+      },
+      "image/jpeg",
+      0.92,
+    );
   });
   if (blob === undefined) return undefined;
   return new File([blob], fileName, { type: "image/jpeg" });

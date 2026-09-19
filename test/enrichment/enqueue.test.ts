@@ -48,7 +48,9 @@ describe("enqueueEnrichment", () => {
     const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
     const productId = await productWithUrl();
 
-    expect(await enqueueEnrichment(db(), productId, captureException)).toBe("queued");
+    expect(await enqueueEnrichment(db(), productId, captureException)).toBe(
+      "queued",
+    );
 
     expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
     const [row] = await db()
@@ -64,7 +66,9 @@ describe("enqueueEnrichment", () => {
     await enqueueEnrichment(db(), productId, captureException);
     send.mockClear();
 
-    expect(await enqueueEnrichment(db(), productId, captureException)).toBe("skipped");
+    expect(await enqueueEnrichment(db(), productId, captureException)).toBe(
+      "skipped",
+    );
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -76,9 +80,13 @@ describe("enqueueEnrichment", () => {
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
     const productId = await productWithUrl();
 
-    expect(await enqueueEnrichment(drizzle(env.DIALED_WEATHER), productId, captureException)).toBe(
-      "skipped",
-    );
+    expect(
+      await enqueueEnrichment(
+        drizzle(env.DIALED_WEATHER),
+        productId,
+        captureException,
+      ),
+    ).toBe("skipped");
 
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),

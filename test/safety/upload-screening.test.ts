@@ -26,7 +26,13 @@ import {
   type Classify,
 } from "../../src/modules/safety";
 
-import { makeEntry, makeItem, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeItem,
+  makeRun,
+  makeUser,
+  resetSafetyTables,
+} from "./helpers";
 
 /**
  * That the upload paths screen at all is the thing worth testing here.

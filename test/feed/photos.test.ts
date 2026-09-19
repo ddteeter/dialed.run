@@ -70,7 +70,12 @@ describe("entry photos", () => {
     const entryId = await makeEntry({ userId, runId });
 
     await expect(
-      uploadPhoto({ userId, entryId, contentType: "image/gif", bytes: JPEG_BYTES }),
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/gif",
+        bytes: JPEG_BYTES,
+      }),
     ).rejects.toBeInstanceOf(InvalidPhotoError);
   });
 
@@ -80,11 +85,21 @@ describe("entry photos", () => {
     const entryId = await makeEntry({ userId, runId });
 
     for (let index = 0; index < MAX_PHOTOS_PER_ENTRY; index += 1) {
-      await uploadPhoto({ userId, entryId, contentType: "image/jpeg", bytes: JPEG_BYTES });
+      await uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      });
     }
 
     await expect(
-      uploadPhoto({ userId, entryId, contentType: "image/jpeg", bytes: JPEG_BYTES }),
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
     ).rejects.toBeInstanceOf(InvalidPhotoError);
   });
 
@@ -105,7 +120,9 @@ describe("entry photos", () => {
     expect(await isPhotoVisible(key, undefined)).toBe(false);
     // A made-up key under the same convention that was never actually
     // uploaded is never visible either.
-    expect(await isPhotoVisible(photoKeyFor(owner, entryId, "nonexistent"), owner)).toBe(false);
+    expect(
+      await isPhotoVisible(photoKeyFor(owner, entryId, "nonexistent"), owner),
+    ).toBe(false);
   });
 });
 
@@ -318,7 +335,6 @@ function jpeg(bytes = 10): File {
 }
 
 describe("photoUploadFrom", () => {
-
   it("pulls the entry, the type and the file out of a multipart body", () => {
     const entryId = newUlid();
     const idempotencyKey = newUlid();

@@ -59,7 +59,7 @@ Three facts constrain this:
 sharing with the dev server is verified in both directions: rows written from
 Node are readable by `wrangler d1 execute --local`, and rows the dev server
 writes (a Playwright signup) are readable from Node. Concurrent access while
-the dev server is running works — no SQLite lock contention. A Node-side helper opens the *same* local
+the dev server is running works — no SQLite lock contention. A Node-side helper opens the _same_ local
 bindings the dev server uses and writes with Drizzle and the real schema:
 
 ```ts
@@ -73,7 +73,7 @@ await dispose();
 Why this over the alternatives: raw `wrangler d1 execute --local` means
 hand-written SQL that bypasses `garmentSchema` and rots against schema
 changes; opening the `.sqlite` file directly depends on a wrangler-internal
-path; a dev-only seed *route* would ship test-only code paths inside the
+path; a dev-only seed _route_ would ship test-only code paths inside the
 app. `getPlatformProxy` is a supported API, is typed, reuses the contracts,
 and adds nothing to the deployed Worker.
 
@@ -85,7 +85,7 @@ on top of it.
 Signing up through the UI in every spec is slow and re-tests signup for no
 reason. A `globalSetup` signs up one user per feature suite and saves
 `storageState`; specs adopt the cookie and start authenticated. The auth
-demo keeps exercising the real signup path, because there it *is* the
+demo keeps exercising the real signup path, because there it _is_ the
 feature under test.
 
 ## 4. Determinism

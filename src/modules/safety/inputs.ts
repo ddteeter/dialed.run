@@ -85,9 +85,6 @@ export const denyDomainInput = z.object({
     // `domainOf` normalises a full URL or a bare host to the same stored
     // value. A strict pattern here would reject the URL a reviewer is
     // most likely to have in their clipboard.
-    .refine(
-      (value) => !value.includes(" "),
-      "A domain has no spaces in it.",
-    ),
+    .refine((value) => !value.includes(" "), "A domain has no spaces in it."),
   reason: z.string().trim().max(500).optional(),
 });

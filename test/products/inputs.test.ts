@@ -27,12 +27,12 @@ describe("brandSearchInput", () => {
   it("bounds the prefix at 60 characters", () => {
     // The prefix reaches a `LIKE`. An unbounded one is a bigger scan for an
     // answer nobody can read.
-    expect(
-      brandSearchInput.safeParse({ prefix: "a".repeat(60) }).success,
-    ).toBe(true);
-    expect(
-      brandSearchInput.safeParse({ prefix: "a".repeat(61) }).success,
-    ).toBe(false);
+    expect(brandSearchInput.safeParse({ prefix: "a".repeat(60) }).success).toBe(
+      true,
+    );
+    expect(brandSearchInput.safeParse({ prefix: "a".repeat(61) }).success).toBe(
+      false,
+    );
   });
 
   it("needs a prefix at all", () => {

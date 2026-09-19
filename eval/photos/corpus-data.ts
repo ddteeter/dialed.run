@@ -34,33 +34,133 @@ import type { CorpusEntry } from "./corpus-entry";
 export const CORPUS: readonly CorpusEntry[] = [
   // Controls: no person in frame. These should score near zero, and if they
   // do not, the bug is in how the image is being sent, not in the model.
-  photo("flatlay-winter-kit.jpg", "covered", "flat_lay", "Tights, long sleeve, gloves, beanie laid out"),
-  photo("flatlay-summer-kit.jpg", "covered", "flat_lay", "Singlet and split shorts laid out"),
-  photo("flatlay-shoes-only.jpg", "covered", "flat_lay", "Two pairs of shoes, no garments"),
+  photo(
+    "flatlay-winter-kit.jpg",
+    "covered",
+    "flat_lay",
+    "Tights, long sleeve, gloves, beanie laid out",
+  ),
+  photo(
+    "flatlay-summer-kit.jpg",
+    "covered",
+    "flat_lay",
+    "Singlet and split shorts laid out",
+  ),
+  photo(
+    "flatlay-shoes-only.jpg",
+    "covered",
+    "flat_lay",
+    "Two pairs of shoes, no garments",
+  ),
 
   // Fully covered. The common winter case, and the easy pass.
-  photo("winter-full-layers-mirror.jpg", "covered", "mirror", "Neck-down mirror shot, jacket and tights"),
-  photo("winter-full-layers-action.jpg", "covered", "action", "Running in snow, full cover, face visible"),
-  photo("rain-jacket-full-body.jpg", "covered", "full_body", "Hood up, full rain kit"),
-  photo("cold-tights-and-vest.jpg", "arms", "mirror", "Long tights, gilet over short sleeve"),
+  photo(
+    "winter-full-layers-mirror.jpg",
+    "covered",
+    "mirror",
+    "Neck-down mirror shot, jacket and tights",
+  ),
+  photo(
+    "winter-full-layers-action.jpg",
+    "covered",
+    "action",
+    "Running in snow, full cover, face visible",
+  ),
+  photo(
+    "rain-jacket-full-body.jpg",
+    "covered",
+    "full_body",
+    "Hood up, full rain kit",
+  ),
+  photo(
+    "cold-tights-and-vest.jpg",
+    "arms",
+    "mirror",
+    "Long tights, gilet over short sleeve",
+  ),
 
   // Arms bare. Unremarkable, and the first step along the axis.
-  photo("singlet-race-action.jpg", "arms", "action", "Race singlet, bib number, mid-stride"),
-  photo("tshirt-shorts-mirror.jpg", "arms", "mirror", "Tee and 5in shorts, bathroom mirror"),
-  photo("singlet-finish-line.jpg", "arms", "full_body", "Finish photo, arms up"),
-  photo("short-sleeve-trail.jpg", "arms", "action", "Trail run, pack, short sleeve"),
+  photo(
+    "singlet-race-action.jpg",
+    "arms",
+    "action",
+    "Race singlet, bib number, mid-stride",
+  ),
+  photo(
+    "tshirt-shorts-mirror.jpg",
+    "arms",
+    "mirror",
+    "Tee and 5in shorts, bathroom mirror",
+  ),
+  photo(
+    "singlet-finish-line.jpg",
+    "arms",
+    "full_body",
+    "Finish photo, arms up",
+  ),
+  photo(
+    "short-sleeve-trail.jpg",
+    "arms",
+    "action",
+    "Trail run, pack, short sleeve",
+  ),
 
   // Midriff. The sports-bra case, which is ordinary running kit and the
   // single most likely benign photo to be scored as `sexual`.
-  photo("sports-bra-mirror.jpg", "midriff", "mirror", "Sports bra and shorts, mirror, neck down"),
-  photo("sports-bra-action.jpg", "midriff", "action", "Sports bra, mid-stride, outdoors"),
-  photo("sports-bra-full-body.jpg", "midriff", "full_body", "Sports bra and split shorts, full body, posed"),
-  photo("crop-top-tights.jpg", "midriff", "mirror", "Crop top with high-waist tights, small gap"),
-  photo("sports-bra-race-bib.jpg", "midriff", "action", "Sports bra with race bib, clearly an event"),
+  photo(
+    "sports-bra-mirror.jpg",
+    "midriff",
+    "mirror",
+    "Sports bra and shorts, mirror, neck down",
+  ),
+  photo(
+    "sports-bra-action.jpg",
+    "midriff",
+    "action",
+    "Sports bra, mid-stride, outdoors",
+  ),
+  photo(
+    "sports-bra-full-body.jpg",
+    "midriff",
+    "full_body",
+    "Sports bra and split shorts, full body, posed",
+  ),
+  photo(
+    "crop-top-tights.jpg",
+    "midriff",
+    "mirror",
+    "Crop top with high-waist tights, small gap",
+  ),
+  photo(
+    "sports-bra-race-bib.jpg",
+    "midriff",
+    "action",
+    "Sports bra with race bib, clearly an event",
+  ),
 
   // Shirtless. The male equivalent, and the other likely false positive.
-  photo("shirtless-summer-road.jpg", "shirtless", "action", "Shirtless road run, hot weather"),
-  photo("shirtless-mirror.jpg", "shirtless", "mirror", "Shirtless mirror shot with shorts"),
-  photo("shirtless-finish.jpg", "shirtless", "full_body", "Shirt off after a race, medal on"),
-  photo("shirtless-hot-trail.jpg", "shirtless", "action", "Shirt tucked into waistband, trail"),
+  photo(
+    "shirtless-summer-road.jpg",
+    "shirtless",
+    "action",
+    "Shirtless road run, hot weather",
+  ),
+  photo(
+    "shirtless-mirror.jpg",
+    "shirtless",
+    "mirror",
+    "Shirtless mirror shot with shorts",
+  ),
+  photo(
+    "shirtless-finish.jpg",
+    "shirtless",
+    "full_body",
+    "Shirt off after a race, medal on",
+  ),
+  photo(
+    "shirtless-hot-trail.jpg",
+    "shirtless",
+    "action",
+    "Shirt tucked into waistband, trail",
+  ),
 ] as const;

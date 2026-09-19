@@ -29,12 +29,15 @@ import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
-
 function db() {
   return drizzle(env.DIALED_CORE);
 }
 
-export function photoKeyFor(userId: string, entryId: string, photoId: string): string {
+export function photoKeyFor(
+  userId: string,
+  entryId: string,
+  photoId: string,
+): string {
   return `entries/${userId}/${entryId}/${photoId}`;
 }
 
@@ -76,7 +79,7 @@ export async function uploadPhoto(
   requireOwned(entry, input.userId, {
     missing: "entry not found",
     forbidden: "cannot add photos to another user's entry",
-  // fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ
+    // fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ
   });
 
   // A repeat of a submission we already stored returns the key it made
@@ -106,7 +109,9 @@ export async function uploadPhoto(
     .from(entryPhotos)
     .where(eq(entryPhotos.entryId, input.entryId));
   if (existing.length >= MAX_PHOTOS_PER_ENTRY) {
-    throw new InvalidPhotoError(`at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`);
+    throw new InvalidPhotoError(
+      `at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`,
+    );
   }
 
   // R2 then the row, which cannot be atomic (law 8c). Deliberately left as
@@ -191,7 +196,9 @@ export async function isPhotoVisible(
   );
 }
 
-export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {
+export async function getPhotoObject(
+  photoKey: string,
+): Promise<R2ObjectBody | null> {
   return env.MEDIA.get(photoKey);
 }
 

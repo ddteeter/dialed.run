@@ -31,10 +31,7 @@ required session field out altogether — `exactOptionalPropertyTypes` means
 a key set to `undefined` is not the same thing as an absent one, and the
 SDK is being asked about the absent one.
 */
-type OmittableSessionField =
-  | "startTime"
-  | "totalElapsedTime"
-  | "totalDistance";
+type OmittableSessionField = "startTime" | "totalElapsedTime" | "totalDistance";
 
 function fitFile(
   session: Partial<Encodable<SessionMesg>> = {},
@@ -135,9 +132,7 @@ describe("fit: the position conversion", () => {
   });
 
   it("treats half a position as no position", async () => {
-    const draft = await fitSource.parse(
-      fitFile({ startPositionLat: 2 ** 29 }),
-    );
+    const draft = await fitSource.parse(fitFile({ startPositionLat: 2 ** 29 }));
 
     expect(draft.indoor).toBe(true);
     expect(draft.lat).toBeUndefined();

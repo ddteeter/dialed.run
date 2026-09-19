@@ -53,40 +53,45 @@ Object.defineProperty(globalThis, "createImageBitmap", {
 });
 
 const contexts = new WeakMap<HTMLCanvasElement, unknown>();
-const backings = new WeakMap<HTMLCanvasElement, ReturnType<typeof createCanvas>>();
+const backings = new WeakMap<
+  HTMLCanvasElement,
+  ReturnType<typeof createCanvas>
+>();
 
 Object.defineProperties(HTMLCanvasElement.prototype, {
   getContext: {
-  configurable: true,
-  value(this: HTMLCanvasElement, kind: string): unknown {
-    if (kind !== "2d") return undefined;
-    const existing = contexts.get(this);
-    if (existing !== undefined) return existing;
-    const backing = createCanvas(this.width || 1, this.height || 1);
-    const context = backing.getContext("2d");
-    contexts.set(this, context);
-    backings.set(this, backing);
-    return context;
+    configurable: true,
+    value(this: HTMLCanvasElement, kind: string): unknown {
+      if (kind !== "2d") return undefined;
+      const existing = contexts.get(this);
+      if (existing !== undefined) return existing;
+      const backing = createCanvas(this.width || 1, this.height || 1);
+      const context = backing.getContext("2d");
+      contexts.set(this, context);
+      backings.set(this, backing);
+      return context;
+    },
   },
-},
   toBlob: {
-  configurable: true,
-  value(
-    this: HTMLCanvasElement,
-    callback: (blob: Blob | null) => void,
-    type?: string,
-  ): void {
-    const backing = backings.get(this);
-    if (backing === undefined) {
-      callback(NOTHING);
-      return;
-    }
-    const buffer = backing.toBuffer("image/png");
-    // Copied into a plain Uint8Array: node's Buffer is backed by a shared
-    // pool, and Blob's types will not take one.
-    callback(new Blob([Uint8Array.from(buffer)], { type: type ?? "image/png" }));
+    configurable: true,
+    value(
+      this: HTMLCanvasElement,
+      callback: (blob: Blob | null) => void,
+      type?: string,
+    ): void {
+      const backing = backings.get(this);
+      if (backing === undefined) {
+        callback(NOTHING);
+        return;
+      }
+      const buffer = backing.toBuffer("image/png");
+      // Copied into a plain Uint8Array: node's Buffer is backed by a shared
+      // pool, and Blob's types will not take one.
+      callback(
+        new Blob([Uint8Array.from(buffer)], { type: type ?? "image/png" }),
+      );
+    },
   },
-},
 });
 
 afterEach(() => {

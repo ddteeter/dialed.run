@@ -6,7 +6,13 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -93,7 +99,8 @@ The nth flag picker, or a clear failure rather than an `undefined`.
 */
 function flagSelect(index: number): HTMLElement {
   const select = flagSelects()[index];
-  if (select === undefined) throw new Error(`no flag select at ${String(index)}`);
+  if (select === undefined)
+    throw new Error(`no flag select at ${String(index)}`);
   return select;
 }
 
@@ -121,12 +128,13 @@ function rejectWith(reason: unknown): never {
   throw reason;
 }
 
-
 function form(
   overrides: {
     entry?: Partial<Entry>;
     bandFloor?: number;
-    submitVerdict?: (input: { data: Record<string, unknown> }) => Promise<unknown>;
+    submitVerdict?: (input: {
+      data: Record<string, unknown>;
+    }) => Promise<unknown>;
     uploadPhoto?: (input: { data: FormData }) => Promise<{ key: string }>;
     itemBandWearStat?: (input: {
       data: { itemId: string; bandFloorC: number };
@@ -177,7 +185,10 @@ describe("VerdictForm: the scale", () => {
             issues: [
               { path: ["verdict"], message: "Out of range." },
               { path: ["tags"], message: "That tag is retired." },
-              { path: ["itemFlags"], message: "That piece is not on this run." },
+              {
+                path: ["itemFlags"],
+                message: "That piece is not on this run.",
+              },
               { path: ["isPublic"], message: "Not allowed for this account." },
             ],
           }),
@@ -228,7 +239,9 @@ describe("VerdictForm: the scale", () => {
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
 
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass("bg-night");
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
+      "bg-night",
+    );
     expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
       "bg-night",
     );
@@ -251,7 +264,9 @@ describe("VerdictForm: the scale", () => {
     // show the form as unanswered.
     await renderWithRouter(form({ entry: { verdict: 0 } }));
 
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass("bg-night");
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
+      "bg-night",
+    );
     expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
   });
 
@@ -278,10 +293,19 @@ describe("VerdictForm: the scale", () => {
 describe("VerdictForm: per-item flags", () => {
   it("offers a flag per item, defaulting to none", async () => {
     await renderWithRouter(
-      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini"), item("01JTEMB0000000000000000000", "Tights")] } }),
+      form({
+        entry: {
+          items: [
+            item("01JTEMA0000000000000000000", "Houdini"),
+            item("01JTEMB0000000000000000000", "Tights"),
+          ],
+        },
+      }),
     );
 
-    expect(screen.getByRole("heading", { name: "Per-item notes" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Per-item notes" }),
+    ).toBeVisible();
     expect(screen.getByText("Houdini")).toBeVisible();
     const selects = flagSelects();
     expect(selects).toHaveLength(2);
@@ -296,7 +320,9 @@ describe("VerdictForm: per-item flags", () => {
     // `?? ""` — a select with a value matching no option shows its first
     // one anyway, so the fallback is what keeps the control honest.
     await renderWithRouter(
-      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] } }),
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+      }),
     );
     // The *selected option*, not the value: a select whose value matches
     // no option shows its first one regardless, so `toHaveValue("")` would
@@ -313,7 +339,10 @@ describe("VerdictForm: per-item flags", () => {
       form({
         entry: {
           items: [
-            { ...item("01JTEMA0000000000000000000", "Houdini"), flag: "not_enough" as const },
+            {
+              ...item("01JTEMA0000000000000000000", "Houdini"),
+              flag: "not_enough" as const,
+            },
             item("01JTEMB0000000000000000000", "Tights"),
           ],
         },
@@ -336,7 +365,12 @@ describe("VerdictForm: per-item flags", () => {
     await renderWithRouter(
       form({
         entry: {
-          items: [{ ...item("01JTEMA0000000000000000000", "Houdini"), flag: "not_enough" as const }],
+          items: [
+            {
+              ...item("01JTEMA0000000000000000000", "Houdini"),
+              flag: "not_enough" as const,
+            },
+          ],
         },
         submitVerdict,
       }),
@@ -356,7 +390,14 @@ describe("VerdictForm: per-item flags", () => {
   it("keeps each item's flag to itself", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini"), item("01JTEMB0000000000000000000", "Tights")] } }),
+      form({
+        entry: {
+          items: [
+            item("01JTEMA0000000000000000000", "Houdini"),
+            item("01JTEMB0000000000000000000", "Tights"),
+          ],
+        },
+      }),
     );
 
     await user.selectOptions(flagSelect(0), "too_much");
@@ -367,7 +408,9 @@ describe("VerdictForm: per-item flags", () => {
 
   it("says nothing about items when the entry has none", async () => {
     await renderWithRouter(form());
-    expect(screen.queryByRole("heading", { name: "Per-item notes" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Per-item notes" }),
+    ).toBeNull();
   });
 
   it("sends a flag for the item it was set on, and undefined for the rest", async () => {
@@ -379,7 +422,12 @@ describe("VerdictForm: per-item flags", () => {
     >(() => Promise.resolve());
     await renderWithRouter(
       form({
-        entry: { items: [item("01JTEMA0000000000000000000", "Houdini"), item("01JTEMB0000000000000000000", "Tights")] },
+        entry: {
+          items: [
+            item("01JTEMA0000000000000000000", "Houdini"),
+            item("01JTEMB0000000000000000000", "Tights"),
+          ],
+        },
         submitVerdict,
       }),
     );
@@ -403,7 +451,10 @@ describe("VerdictForm: per-item flags", () => {
       (input: { data: Record<string, unknown> }) => Promise<unknown>
     >(() => Promise.resolve());
     await renderWithRouter(
-      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] }, submitVerdict }),
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        submitVerdict,
+      }),
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
@@ -447,7 +498,9 @@ describe("VerdictForm: tags and sharing", () => {
     const chafed = screen.getByRole("button", { name: "chafed" });
 
     await user.click(chafed);
-    expect(screen.getByRole("button", { name: "chafed" })).toHaveClass("bg-night");
+    expect(screen.getByRole("button", { name: "chafed" })).toHaveClass(
+      "bg-night",
+    );
 
     await user.click(screen.getByRole("button", { name: "chafed" }));
     expect(screen.getByRole("button", { name: "chafed" })).not.toHaveClass(
@@ -471,7 +524,9 @@ describe("VerdictForm: tags and sharing", () => {
       form({ entry: { tags: ["chafed"] }, submitVerdict }),
     );
 
-    expect(screen.getByRole("button", { name: "chafed" })).toHaveClass("bg-night");
+    expect(screen.getByRole("button", { name: "chafed" })).toHaveClass(
+      "bg-night",
+    );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
@@ -522,14 +577,15 @@ function jpeg(name = "a.jpg"): File {
 }
 
 describe("VerdictForm: photos", () => {
-
-
   it("shows the photos the entry already has", async () => {
     const { container } = await renderWithRouter(
       form({ entry: { photoKeys: ["entries/01USER/01ENTRY/a"] } }),
     );
     const image = container.querySelector("img");
-    expect(image).toHaveAttribute("src", "/feed/photo/entries/01USER/01ENTRY/a");
+    expect(image).toHaveAttribute(
+      "src",
+      "/feed/photo/entries/01USER/01ENTRY/a",
+    );
   });
 
   it("shows no grid at all when there are none", async () => {
@@ -776,16 +832,23 @@ describe("VerdictForm: what happens after saving", () => {
 
   it("goes straight to the entry when there is no band to count in", async () => {
     const user = userEvent.setup();
-    const itemBandWearStat = vi.fn(() => Promise.resolve({ worn: 1, total: 1 }));
+    const itemBandWearStat = vi.fn(() =>
+      Promise.resolve({ worn: 1, total: 1 }),
+    );
     const { router } = await renderWithRouter(
-      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] }, itemBandWearStat }),
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        itemBandWearStat,
+      }),
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/feed/entry/01JENTRY000000000000000000");
+      expect(router.state.location.pathname).toBe(
+        "/feed/entry/01JENTRY000000000000000000",
+      );
     });
     expect(itemBandWearStat).not.toHaveBeenCalled();
   });
@@ -798,7 +861,9 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/feed/entry/01JENTRY000000000000000000");
+      expect(router.state.location.pathname).toBe(
+        "/feed/entry/01JENTRY000000000000000000",
+      );
     });
   });
 
@@ -818,14 +883,18 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Done" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/feed/entry/01JENTRY000000000000000000");
+      expect(router.state.location.pathname).toBe(
+        "/feed/entry/01JENTRY000000000000000000",
+      );
     });
   });
 
   it("says so when the save fails, and leaves the form standing", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      form({ submitVerdict: () => Promise.reject(new Error("D1 unavailable")) }),
+      form({
+        submitVerdict: () => Promise.reject(new Error("D1 unavailable")),
+      }),
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
@@ -1037,7 +1106,9 @@ describe("the photo step W3 hangs off", () => {
     await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
     await user.upload(fileInput(), jpeg());
 
-    step.hand(new File([new Uint8Array([9])], "blurred.jpg", { type: "image/jpeg" }));
+    step.hand(
+      new File([new Uint8Array([9])], "blurred.jpg", { type: "image/jpeg" }),
+    );
 
     await waitFor(() => {
       expect(uploadPhoto).toHaveBeenCalledTimes(1);
@@ -1050,7 +1121,10 @@ describe("the photo step W3 hangs off", () => {
     const inFlight = Promise.withResolvers<{ key: string }>();
     const step = recordingStep();
     await renderWithRouter(
-      form({ uploadPhoto: () => inFlight.promise, renderPhotoStep: step.render }),
+      form({
+        uploadPhoto: () => inFlight.promise,
+        renderPhotoStep: step.render,
+      }),
     );
     await user.upload(fileInput(), jpeg());
 

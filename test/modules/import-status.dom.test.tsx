@@ -106,7 +106,9 @@ describe("ImportStatus: while it is still working", () => {
     );
 
     await waitFor(() => {
-      expect(getStatus).toHaveBeenCalledWith({ data: { importId: "01THISONE" } });
+      expect(getStatus).toHaveBeenCalledWith({
+        data: { importId: "01THISONE" },
+      });
     });
   });
 
@@ -234,10 +236,9 @@ describe("ImportStatus: when it fails", () => {
 
     expect(await screen.findByText("[Import failed]")).toBeVisible();
     expect(screen.getByText("That file is larger than 25 MB.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Try another file" })).toHaveAttribute(
-      "href",
-      "/runs/new",
-    );
+    expect(
+      screen.getByRole("link", { name: "Try another file" }),
+    ).toHaveAttribute("href", "/runs/new");
   });
 
   it("falls back to the parse sentence when no reason was recorded", async () => {
@@ -248,9 +249,7 @@ describe("ImportStatus: when it fails", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(/That file didn't parse/),
-    ).toBeVisible();
+    expect(await screen.findByText(/That file didn't parse/)).toBeVisible();
   });
 
   it("says the same when the query itself keeps failing", async () => {
@@ -280,8 +279,6 @@ describe("ImportStatus: when it fails", () => {
       await screen.findByText(/We lost track of that import/),
     ).toBeVisible();
   });
-
-
 });
 
 describe("ImportStatus: when it takes too long", () => {
@@ -312,7 +309,6 @@ describe("ImportStatus: when it takes too long", () => {
     clearTimer.mockRestore();
   });
 
-
   it("stops promising and says to check back", async () => {
     // The budget is two minutes of watching. Past it the honest thing is
     // to say the work continues rather than keep a skeleton spinning.
@@ -332,7 +328,6 @@ describe("ImportStatus: when it takes too long", () => {
       />,
     );
     expect(await screen.findByText("Reading your run…")).toBeVisible();
-
 
     await vi.advanceTimersByTimeAsync(120_000);
 

@@ -472,13 +472,16 @@ export const stravaConnections = /*#__PURE__*/ sqliteTable(
  * revocation that has not happened yet, which the digest can see and
  * re-dispatch.
  */
-export const stravaRevocations = /*#__PURE__*/ sqliteTable("strava_revocations", {
-  id: text("id").primaryKey(),
-  // The only thing deauthorize needs. The connection row it came from is
-  // already gone by the time this exists.
-  accessToken: text("access_token").notNull(),
-  createdAt: integer("created_at").notNull(),
-});
+export const stravaRevocations = /*#__PURE__*/ sqliteTable(
+  "strava_revocations",
+  {
+    id: text("id").primaryKey(),
+    // The only thing deauthorize needs. The connection row it came from is
+    // already gone by the time this exists.
+    accessToken: text("access_token").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+);
 
 export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
   "processed_webhook_events",

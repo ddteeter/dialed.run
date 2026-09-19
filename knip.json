@@ -22,10 +22,7 @@
     "src/modules/*/index.ts",
     "src/modules/*/functions.ts"
   ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "test/**/*.{ts,tsx}"
-  ],
+  "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
   "ignoreDependencies": [
     "@stryker-mutator/command-runner",
     "@tailwindcss/typography",

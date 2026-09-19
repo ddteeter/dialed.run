@@ -124,119 +124,119 @@ export function GarmentDetail({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-8 sm:px-6">
-        {item.photoKey === null ? undefined : (
-          <img
-            src={`/closet/photo/${item.id}/card`}
-            alt={label}
-            className="aspect-square w-full rounded-lg object-cover"
-          />
-        )}
+      {item.photoKey === null ? undefined : (
+        <img
+          src={`/closet/photo/${item.id}/card`}
+          alt={label}
+          className="aspect-square w-full rounded-lg object-cover"
+        />
+      )}
 
-        <div>
-          <h1 className="font-display text-2xl uppercase tracking-[-0.01em]">
-            {label}
-          </h1>
-          {isGeneric ? (
-            <Bracketed className="text-xs">Generic</Bracketed>
-          ) : undefined}
-          {item.retired ? (
-            <Bracketed className="ml-2 text-xs">Retired</Bracketed>
-          ) : undefined}
-        </div>
-
-        <ProductLink url={item.productUrl} label={label} />
-
-        <p className="text-sm text-night/70">
-          {tempRange ? (
-            <>
-              Works at{" "}
-              <Bracketed className="text-teal">
-                {formatTempRange(tempRange)}
-              </Bracketed>
-            </>
-          ) : (
-            <Bracketed>Untested</Bracketed>
-          )}
-        </p>
-
-        {attributeChips(effective).length > 0 ? (
-          <p className="text-sm text-night/70">
-            {attributeChips(effective).join(" · ")}
-          </p>
+      <div>
+        <h1 className="font-display text-2xl uppercase tracking-[-0.01em]">
+          {label}
+        </h1>
+        {isGeneric ? (
+          <Bracketed className="text-xs">Generic</Bracketed>
         ) : undefined}
-
-        <p className="text-sm text-night/70">
-          <Mono>
-            {Math.round((performance?.summary.mileageM ?? 0) / 1000)} km
-          </Mono>{" "}
-          logged
-          {performance !== undefined && performance.summary.verdictCount > 0 ? (
-            <>
-              {" "}
-              ·{" "}
-              <Mono>
-                {performance.summary.dialedCount}/
-                {performance.summary.verdictCount}
-              </Mono>{" "}
-              dialed
-            </>
-          ) : undefined}
-        </p>
-
-        {pairedItems.length > 0 ? (
-          <p className="text-sm text-night/70">
-            Pairs with{" "}
-            {pairedItems.map((pair, index) => (
-              <span key={pair.id}>
-                {index > 0 ? ", " : undefined}
-                {pair.name}
-              </span>
-            ))}
-          </p>
+        {item.retired ? (
+          <Bracketed className="ml-2 text-xs">Retired</Bracketed>
         ) : undefined}
+      </div>
 
-        <label className="flex flex-col gap-1 text-sm font-semibold">
-          Photo
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            disabled={uploading}
-            onChange={(event) => {
-              void handlePhotoChange(event);
-            }}
-          />
-        </label>
-        {photoError === undefined ? undefined : (
-          <p className="text-sm font-semibold text-pink">{photoError}</p>
+      <ProductLink url={item.productUrl} label={label} />
+
+      <p className="text-sm text-night/70">
+        {tempRange ? (
+          <>
+            Works at{" "}
+            <Bracketed className="text-teal">
+              {formatTempRange(tempRange)}
+            </Bracketed>
+          </>
+        ) : (
+          <Bracketed>Untested</Bracketed>
         )}
+      </p>
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/closet/edit/$itemId"
-            params={{ itemId: item.id }}
-            className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
-          >
-            Edit
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              void handleRetireToggle();
-            }}
-            className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
-          >
-            {item.retired ? "Unretire" : "Retire"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void handleDelete();
-            }}
-            className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold text-pink"
-          >
-            Delete
-          </button>
-        </div>
+      {attributeChips(effective).length > 0 ? (
+        <p className="text-sm text-night/70">
+          {attributeChips(effective).join(" · ")}
+        </p>
+      ) : undefined}
+
+      <p className="text-sm text-night/70">
+        <Mono>
+          {Math.round((performance?.summary.mileageM ?? 0) / 1000)} km
+        </Mono>{" "}
+        logged
+        {performance !== undefined && performance.summary.verdictCount > 0 ? (
+          <>
+            {" "}
+            ·{" "}
+            <Mono>
+              {performance.summary.dialedCount}/
+              {performance.summary.verdictCount}
+            </Mono>{" "}
+            dialed
+          </>
+        ) : undefined}
+      </p>
+
+      {pairedItems.length > 0 ? (
+        <p className="text-sm text-night/70">
+          Pairs with{" "}
+          {pairedItems.map((pair, index) => (
+            <span key={pair.id}>
+              {index > 0 ? ", " : undefined}
+              {pair.name}
+            </span>
+          ))}
+        </p>
+      ) : undefined}
+
+      <label className="flex flex-col gap-1 text-sm font-semibold">
+        Photo
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={uploading}
+          onChange={(event) => {
+            void handlePhotoChange(event);
+          }}
+        />
+      </label>
+      {photoError === undefined ? undefined : (
+        <p className="text-sm font-semibold text-pink">{photoError}</p>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <Link
+          to="/closet/edit/$itemId"
+          params={{ itemId: item.id }}
+          className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
+        >
+          Edit
+        </Link>
+        <button
+          type="button"
+          onClick={() => {
+            void handleRetireToggle();
+          }}
+          className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold"
+        >
+          {item.retired ? "Unretire" : "Retire"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void handleDelete();
+          }}
+          className="rounded-md border border-night/20 px-3 py-1.5 text-sm font-semibold text-pink"
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 }

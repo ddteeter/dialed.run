@@ -85,7 +85,15 @@ export async function makeRun(params: {
 export async function makeItem(params: {
   userId: string;
   name?: string;
-  category?: "top" | "bottom" | "headwear" | "neckwear" | "gloves" | "socks" | "shoes" | "accessory";
+  category?:
+    | "top"
+    | "bottom"
+    | "headwear"
+    | "neckwear"
+    | "gloves"
+    | "socks"
+    | "shoes"
+    | "accessory";
   layer?: "base" | "mid" | "outer";
 }): Promise<string> {
   const itemId = newUlid();
@@ -207,4 +215,3 @@ export async function makeObservation(params: {
       fetchedAt: NOW,
     });
 }
-

@@ -77,9 +77,7 @@ export const namingOfferQuery = createServerFn({ method: "GET" }).handler(
 export const nameGarmentFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => nameGarmentInput.parse(data))
   .handler(async ({ data }) =>
-    namedResult(
-      await nameItem(db(), await requireUserId(), data.itemId, data),
-    ),
+    namedResult(await nameItem(db(), await requireUserId(), data.itemId, data)),
   );
 
 export const namingSuggestionsQuery = createServerFn({ method: "GET" })

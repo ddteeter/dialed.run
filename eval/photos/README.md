@@ -7,16 +7,16 @@ an empty directory.
 
 ## What exists and what does not
 
-| | state |
-| --- | --- |
-| The harness (`run.ts`, `report.ts`, `corpus.ts`) | **built**, and covered by tests |
-| The corpus **table** — 20 entries, each with the file name it expects and the label it should get | **written** (`corpus-data.ts`) |
-| The corpus **photos** themselves | **do not exist.** `eval/photos/corpus/` is gitignored and empty |
-| A run against a real model | **has never happened** |
+|                                                                                                   | state                                                           |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| The harness (`run.ts`, `report.ts`, `corpus.ts`)                                                  | **built**, and covered by tests                                 |
+| The corpus **table** — 20 entries, each with the file name it expects and the label it should get | **written** (`corpus-data.ts`)                                  |
+| The corpus **photos** themselves                                                                  | **do not exist.** `eval/photos/corpus/` is gitignored and empty |
+| A run against a real model                                                                        | **has never happened**                                          |
 
-So `corpus-data.ts` is a *specification of photos to gather*, not a record
+So `corpus-data.ts` is a _specification of photos to gather_, not a record
 of photos that were tested. Every row is a claim about what the classifier
-*should* say, written from the packet's reasoning about where the
+_should_ say, written from the packet's reasoning about where the
 interesting boundaries are — bare arms, a sports bra, a race singlet — and
 none of them has been checked against the model.
 

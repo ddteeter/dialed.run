@@ -30,9 +30,7 @@ async function renderWithRouter(element: ReactElement) {
 
 describe("BelledLayout", () => {
   it("puts the bell in the layout's slot, carrying the count it was given", async () => {
-    await renderWithRouter(
-      <BelledLayout unreadCount={3}>page</BelledLayout>,
-    );
+    await renderWithRouter(<BelledLayout unreadCount={3}>page</BelledLayout>);
 
     // The count reaches the bell rather than being dropped on the way:
     // bracket notation, per docs/product.md §Brand. `textContent` because
@@ -44,9 +42,7 @@ describe("BelledLayout", () => {
   it("still renders the bell when there is nothing unread", async () => {
     // The bell is the link to /notifications whether or not it has a
     // number on it — a route with a zero count must not lose its way back.
-    await renderWithRouter(
-      <BelledLayout unreadCount={0}>page</BelledLayout>,
-    );
+    await renderWithRouter(<BelledLayout unreadCount={0}>page</BelledLayout>);
 
     const bell = screen.getByRole("link", { name: "Notifications" });
     expect(bell.textContent).not.toContain("[0]");

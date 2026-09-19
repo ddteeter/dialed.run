@@ -28,8 +28,10 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
       entry,
       viewerId: session.user.id,
       units: await viewerUnitsQuery(),
-      shouldPromptVerdict: await shouldAskForVerdict(entry, session.user.id, () =>
-        verdictPromptQuery({ data: { entryId: params.entryId } }),
+      shouldPromptVerdict: await shouldAskForVerdict(
+        entry,
+        session.user.id,
+        () => verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
     };
   },

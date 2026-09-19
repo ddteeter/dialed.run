@@ -174,12 +174,12 @@ credential and no bearer-token path.
 Four entry points, all in `modules/auth`, differing only in what they do when
 there is no session:
 
-| call | for | on no session |
-|---|---|---|
-| `requireUserId()` | server functions | throws `AuthRequiredError` |
-| `requireSession()` | route loaders | redirects to `/auth/login` |
-| `sessionFromRequest(request)` | raw `server.handlers` routes | returns `null`, caller decides |
-| `getSession()` | anything rendering signed-out state | returns `null` |
+| call                          | for                                 | on no session                  |
+| ----------------------------- | ----------------------------------- | ------------------------------ |
+| `requireUserId()`             | server functions                    | throws `AuthRequiredError`     |
+| `requireSession()`            | route loaders                       | redirects to `/auth/login`     |
+| `sessionFromRequest(request)` | raw `server.handlers` routes        | returns `null`, caller decides |
+| `getSession()`                | anything rendering signed-out state | returns `null`                 |
 
 `sessionFromRequest` exists because a raw handler has a `Request` rather than
 TanStack's server context, so it cannot read headers the way the other two do.
@@ -297,7 +297,7 @@ routes/feed/entry.$entryId.tsx     imports BOTH modules — it is a route,
                                   testable in the ui project.
 ```
 
-**Not a callback.** The thing feed must not import is not the *function* —
+**Not a callback.** The thing feed must not import is not the _function_ —
 it is the sheet and its copy, which a callback would still have to render
 from inside feed. A node moves the whole subtree across; a callback moves
 only the verb.

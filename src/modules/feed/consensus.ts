@@ -40,7 +40,10 @@ export function recentPublicEntriesStatement(
       // pending-review entry must not count toward the numbers everyone
       // reads (packet: "hidden content must not count"). A missed clause
       // here hides nothing visibly — it just quietly skews the aggregate.
-      and(publiclyVisibleEntry(), gte(outfitEntries.createdAt, sinceEpochSeconds)),
+      and(
+        publiclyVisibleEntry(),
+        gte(outfitEntries.createdAt, sinceEpochSeconds),
+      ),
     )
     .orderBy(desc(outfitEntries.createdAt))
     .limit(limit);
@@ -72,7 +75,8 @@ function isWithinConsensusWindow(
   deltaC: number,
 ): boolean {
   if (observation.source === "manual") return false;
-  if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm)) return false;
+  if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm))
+    return false;
   return (
     Math.abs(judgedFeelsLikeC(observation, verdict) - viewer.feelsLikeC) <=
     deltaC
@@ -85,7 +89,10 @@ async function qualifyingEntryIdsInWindow(
   sinceEpochSeconds: number,
   deltaC: number,
 ): Promise<string[]> {
-  const entries = await recentPublicEntriesStatement(database, sinceEpochSeconds);
+  const entries = await recentPublicEntriesStatement(
+    database,
+    sinceEpochSeconds,
+  );
   // Equivalent mutant: no entries means no observations and nothing to
   // filter, so the empty list comes out either way. The return saves the
   // cross-database walk.
@@ -119,7 +126,12 @@ export async function yourConditionsConsensus(
     // because an index signature cannot promise that.
     // Stryker disable next-line LogicalOperator,UnaryOperator
     const deltaC = FEELS_LIKE_DELTA_C[pass] ?? FEELS_LIKE_DELTA_C.at(-1) ?? 3;
-    const qualifyingEntryIds = await qualifyingEntryIdsInWindow(database, viewer, since, deltaC);
+    const qualifyingEntryIds = await qualifyingEntryIdsInWindow(
+      database,
+      viewer,
+      since,
+      deltaC,
+    );
     // Widen before declaring empty. There was an `isLastPass` check here
     // as well, so the final pass returned its own empty result rather than
     // falling through; mutation testing showed the two paths produce the

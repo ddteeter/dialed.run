@@ -13,17 +13,13 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { ulidSchema } from "../../lib/ids";
-import {
-  isAllowedPhotoType,
-  maxPhotoBytes,
-} from "../../lib/photo-constraints";
+import { isAllowedPhotoType, maxPhotoBytes } from "../../lib/photo-constraints";
 import { env } from "../../env";
 import { fitWithin, withReleased } from "../../lib/photo-pipeline";
 import { getOwnedItem } from "./service";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
-
 
 export const photoSizes = ["thumb", "card", "full"] as const;
 export type PhotoSize = (typeof photoSizes)[number];
@@ -120,9 +116,13 @@ export async function uploadItemPhoto(
       await withReleased(
         resize(input, dims.width, dims.height, SamplingFilter.Lanczos3),
         async (resized) => {
-          await env.MEDIA.put(`${keyPrefix}/${size}.webp`, resized.get_bytes_webp(), {
-            httpMetadata: { contentType: "image/webp" },
-          });
+          await env.MEDIA.put(
+            `${keyPrefix}/${size}.webp`,
+            resized.get_bytes_webp(),
+            {
+              httpMetadata: { contentType: "image/webp" },
+            },
+          );
         },
       );
     }
@@ -161,8 +161,7 @@ export async function uploadItemPhoto(
  * photo-specific retry and the item stays intact.
  */
 export type UploadPhotoResult =
-  | { ok: true; result: PhotoUploadResult }
-  | { ok: false; error: string };
+  { ok: true; result: PhotoUploadResult } | { ok: false; error: string };
 
 /**
  * The multipart upload path: pull the item and the file out of the form,

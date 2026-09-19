@@ -5,7 +5,9 @@ const WORDMARK_CLASS =
  * The [dialed.run] lockup: pink brackets, "dialed" in Archivo Black in the
  * inherited ink, grey ".run". Lowercase always, including sentence-initial.
  */
-export function Wordmark({ className }: Readonly<{ className?: string | undefined }>) {
+export function Wordmark({
+  className,
+}: Readonly<{ className?: string | undefined }>) {
   return (
     <span
       className={className ? `${WORDMARK_CLASS} ${className}` : WORDMARK_CLASS}

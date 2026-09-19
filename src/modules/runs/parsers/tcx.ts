@@ -100,7 +100,10 @@ export const tcxSource: RunSource = {
       distanceM !== undefined &&
       durationS > 0 &&
       distanceM > 0;
-    if (!hasRequiredTotals) throw new RunParseError("tcx: lap missing positive TotalTimeSeconds/DistanceMeters");
+    if (!hasRequiredTotals)
+      throw new RunParseError(
+        "tcx: lap missing positive TotalTimeSeconds/DistanceMeters",
+      );
 
     const position = firstPosition(lap);
 
@@ -112,7 +115,10 @@ export const tcxSource: RunSource = {
       title: "Imported run",
       ...(position && { lat: position.lat, lng: position.lon }),
     });
-    if (!parsed.success) throw new RunParseError("tcx: assembled draft failed runDraftSchema", { cause: parsed.error });
+    if (!parsed.success)
+      throw new RunParseError("tcx: assembled draft failed runDraftSchema", {
+        cause: parsed.error,
+      });
     return parsed.data;
   },
 };

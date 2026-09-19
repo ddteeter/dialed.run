@@ -95,7 +95,7 @@ Two things this surfaced that the config had to absorb:
 swapping `aria-disabled` for `disabled`, deleting the `inFlight` guard,
 adding a `clearField` on blur. That third one caught a bad test: the
 clear-on-blur case was submitting an empty form, which focuses the
-*summary*, so nothing ever blurred the field and the assertion passed
+_summary_, so nothing ever blurred the field and the assertion passed
 without testing anything.
 
 ## Open questions

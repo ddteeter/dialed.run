@@ -183,9 +183,7 @@ describe("summarizeByItem", () => {
 
 describe("co-occurrence", () => {
   it("counts a pair once per entry, in both directions", () => {
-    const counts = buildCoOccurrence(
-      new Map([["run-1", ["shirt", "shorts"]]]),
-    );
+    const counts = buildCoOccurrence(new Map([["run-1", ["shirt", "shorts"]]]));
     expect(counts.get("shirt")?.get("shorts")).toBe(1);
     expect(counts.get("shorts")?.get("shirt")).toBe(1);
   });

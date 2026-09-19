@@ -34,7 +34,8 @@ export const Route = createFileRoute("/closet/photo/$itemId/$size")({
           headers.set("cache-control", "private, max-age=31536000, immutable");
           // R2 returns no body when the caller's etag still matches, so the
           // bytes are never read or streamed — a 304 instead of the image.
-          if (!("body" in object)) return new Response(undefined, { status: 304, headers });
+          if (!("body" in object))
+            return new Response(undefined, { status: 304, headers });
           return new Response(object.body, { headers });
         } catch (error) {
           if (error instanceof NotFoundError) {

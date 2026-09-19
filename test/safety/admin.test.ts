@@ -38,7 +38,11 @@ describe("reading the configured admins", () => {
   it.each([
     ["a single id", "runner-1", ["runner-1"]],
     ["several, comma-separated", "runner-1,runner-2", ["runner-1", "runner-2"]],
-    ["the spaces a human types", " runner-1 , runner-2 ", ["runner-1", "runner-2"]],
+    [
+      "the spaces a human types",
+      " runner-1 , runner-2 ",
+      ["runner-1", "runner-2"],
+    ],
     ["a stray empty entry", "runner-1,,runner-2,", ["runner-1", "runner-2"]],
   ])("parses %s", (_label, configured, expected) => {
     configure(configured);

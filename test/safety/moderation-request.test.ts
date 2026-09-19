@@ -22,9 +22,7 @@ const BYTES = new Uint8Array([1, 2, 3]);
 const ORIGINAL_KEY = env.OPENAI_API_KEY;
 
 function respondWith(body: unknown, status = 200): typeof fetch {
-  return vi.fn().mockResolvedValue(
-    Response.json(body, { status }),
-  );
+  return vi.fn().mockResolvedValue(Response.json(body, { status }));
 }
 
 afterEach(() => {
@@ -65,9 +63,7 @@ const CLEAN_RESPONSE = {
 
 describe("the request", () => {
   it("names the model and carries the key", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue(
-      Response.json(CLEAN_RESPONSE),
-    );
+    const fetchSpy = vi.fn().mockResolvedValue(Response.json(CLEAN_RESPONSE));
     vi.stubGlobal("fetch", fetchSpy);
 
     await classifyImage({
@@ -104,9 +100,7 @@ describe("the request", () => {
   });
 
   it("sends the image as a data URL, not a link", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue(
-      Response.json(CLEAN_RESPONSE),
-    );
+    const fetchSpy = vi.fn().mockResolvedValue(Response.json(CLEAN_RESPONSE));
     vi.stubGlobal("fetch", fetchSpy);
 
     await classifyImage({
@@ -142,12 +136,14 @@ describe("the request", () => {
   });
 
   it("carries a timeout, because law 4 says every outbound fetch does", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue(
-      Response.json(CLEAN_RESPONSE),
-    );
+    const fetchSpy = vi.fn().mockResolvedValue(Response.json(CLEAN_RESPONSE));
     vi.stubGlobal("fetch", fetchSpy);
 
-    await classifyImage({ bytes: BYTES, contentType: "image/jpeg", apiKey: "k" });
+    await classifyImage({
+      bytes: BYTES,
+      contentType: "image/jpeg",
+      apiKey: "k",
+    });
 
     // A slow upstream must never wedge a photo upload or a cron sweep.
     expect(initOf(fetchSpy).signal).toBeInstanceOf(AbortSignal);
@@ -202,7 +198,11 @@ describe("the response", () => {
 One attempt against whatever `fetch` is currently stubbed to do.
 */
 function classifyJpeg(): Promise<ModerationResult> {
-  return classifyImage({ bytes: BYTES, contentType: "image/jpeg", apiKey: "k" });
+  return classifyImage({
+    bytes: BYTES,
+    contentType: "image/jpeg",
+    apiKey: "k",
+  });
 }
 
 describe("when the far side misbehaves", () => {
@@ -269,9 +269,7 @@ describe("assembling the classifier from the environment", () => {
 
   it("returns a classifier that uses the configured key", async () => {
     Reflect.set(env, "OPENAI_API_KEY", "sk-from-env");
-    const fetchSpy = vi.fn().mockResolvedValue(
-      Response.json(CLEAN_RESPONSE),
-    );
+    const fetchSpy = vi.fn().mockResolvedValue(Response.json(CLEAN_RESPONSE));
     vi.stubGlobal("fetch", fetchSpy);
 
     const classify = classifierFromEnv();

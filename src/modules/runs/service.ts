@@ -15,7 +15,6 @@ export const DUPLICATE_WINDOW_S = 120;
 
 export type RunRow = typeof runs.$inferSelect;
 
-
 /**
 Weather is never typed by a human on the default path (D-24): indoor runs
 never get conditions; outdoor runs with a location wait for the weather
@@ -82,10 +81,7 @@ export async function createManualRun(
       .select({ id: runs.id, weatherStatus: runs.weatherStatus })
       .from(runs)
       .where(
-        and(
-          eq(runs.userId, userId),
-          eq(runs.idempotencyKey, idempotencyKey),
-        ),
+        and(eq(runs.userId, userId), eq(runs.idempotencyKey, idempotencyKey)),
       )
       .limit(1);
     if (existing !== undefined) {
@@ -175,4 +171,3 @@ export async function didRecordManualTemp(
     );
   return result.meta.changes > 0;
 }
-

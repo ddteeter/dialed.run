@@ -58,7 +58,9 @@ export async function namingOffer(
 ): Promise<NamingOffer> {
   const listing = await listItems(db, userId, {});
   return {
-    items: listing.items.filter((view) => view.isGeneric).map((view) => toNameable(view)),
+    items: listing.items
+      .filter((view) => view.isGeneric)
+      .map((view) => toNameable(view)),
     totalCount: listing.totalCount,
   };
 }

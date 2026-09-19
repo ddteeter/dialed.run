@@ -49,9 +49,7 @@ function enrichmentDeps() {
  * + DLQ user-notification; lane 107 owns dialed-enrichment. Every consumer
  * acks or retries per message, so one bad message never blocks a batch.
  */
-export async function handleQueueBatch(
-  batch: MessageBatch,
-): Promise<void> {
+export async function handleQueueBatch(batch: MessageBatch): Promise<void> {
   switch (batch.queue) {
     case "dialed-imports": {
       await handleImportsBatch(batch, {

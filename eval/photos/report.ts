@@ -41,8 +41,8 @@ export function reportFor(scored: readonly Scored[]): string {
     "",
     "**Every photo in this corpus is benign.** This measures the false",
     "positive rate and nothing else — recall is NOT measured here, so a",
-    "clean table below means \"it does not flag ordinary running photos\",",
-    "never \"it catches what we need it to catch\".",
+    'clean table below means "it does not flag ordinary running photos",',
+    'never "it catches what we need it to catch".',
     "",
     `${String(ok.length)} of ${String(scored.length)} photos classified.`,
     "",
@@ -107,7 +107,9 @@ function flaggedSection(
           "",
           "This is why the code thresholds on `category_scores` instead:",
           "",
-          ...flagged.map((row) => `- \`${row.entry.file}\` — ${row.entry.note}`),
+          ...flagged.map(
+            (row) => `- \`${row.entry.file}\` — ${row.entry.note}`,
+          ),
         ]),
   ].join("\n");
 }

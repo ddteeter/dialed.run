@@ -31,7 +31,9 @@ describe("a link a stranger typed", () => {
   });
 
   it("shows the bare domain beside the text", () => {
-    render(<ProductLink url="https://www.janji.com/p/tee" label="Merino Tee" />);
+    render(
+      <ProductLink url="https://www.janji.com/p/tee" label="Merino Tee" />,
+    );
 
     // A link whose text a stranger chose says nothing about where it
     // goes, and "check the status bar" is not a defence on a phone.
@@ -40,7 +42,10 @@ describe("a link a stranger typed", () => {
 
   it("shows the real host, not a lookalike in the link text", () => {
     render(
-      <ProductLink url="https://totally-not-janji.example/x" label="janji.com" />,
+      <ProductLink
+        url="https://totally-not-janji.example/x"
+        label="janji.com"
+      />,
     );
 
     // The label claims one thing and the host says another. Rendering the
@@ -68,7 +73,9 @@ describe("a link we cannot read", () => {
 
 describe("a garment with no link", () => {
   it("renders nothing at all", () => {
-    const { container } = render(<ProductLink url={NO_LINK} label="Rover Half-Zip" />);
+    const { container } = render(
+      <ProductLink url={NO_LINK} label="Rover Half-Zip" />,
+    );
 
     // Not the label as plain text — that is what an unparseable URL gets,
     // and it is the right answer there because something WAS stored and a

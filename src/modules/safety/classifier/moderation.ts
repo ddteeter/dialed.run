@@ -178,16 +178,17 @@ export async function classifyImage(params: {
   });
 
   if (!response.ok) {
-    throw new ModerationError(
-      `moderation ${String(response.status)}`,
-    );
+    throw new ModerationError(`moderation ${String(response.status)}`);
   }
 
   const parsed = moderationResponseSchema.parse(await response.json());
   const [result] = parsed.results;
   if (!result) throw new ModerationError("moderation returned no results");
 
-  return { flagged: result.flagged, scores: scoresFrom(result.category_scores) };
+  return {
+    flagged: result.flagged,
+    scores: scoresFrom(result.category_scores),
+  };
 }
 
 export class ModerationError extends Error {}
@@ -223,7 +224,9 @@ function base64Of(bytes: Uint8Array): string {
   const chunks = Array.from(
     { length: Math.ceil(bytes.length / CHUNK) },
     (_, index) =>
-      String.fromCodePoint(...bytes.subarray(index * CHUNK, (index + 1) * CHUNK)),
+      String.fromCodePoint(
+        ...bytes.subarray(index * CHUNK, (index + 1) * CHUNK),
+      ),
   );
   return btoa(chunks.join(""));
 }

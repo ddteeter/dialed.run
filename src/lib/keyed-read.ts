@@ -27,7 +27,10 @@ export async function columnWhere<TColumn extends SQLiteColumn>(
   column: TColumn,
   where: SQL | undefined,
 ): Promise<TColumn["_"]["data"][]> {
-  const rows = await database.select({ value: column }).from(table).where(where);
+  const rows = await database
+    .select({ value: column })
+    .from(table)
+    .where(where);
   return rows.map((row) => row.value);
 }
 

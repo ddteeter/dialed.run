@@ -55,9 +55,9 @@ function nativeDetector(): Detector | undefined {
   const candidate = (globalThis as { FaceDetector?: unknown }).FaceDetector;
   if (typeof candidate !== "function") return undefined;
 
-  const Construct = candidate as new (options?: {
-    fastMode?: boolean;
-  }) => { detect: (source: ImageBitmap) => Promise<unknown> };
+  const Construct = candidate as new (options?: { fastMode?: boolean }) => {
+    detect: (source: ImageBitmap) => Promise<unknown>;
+  };
 
   return async (source) => {
     // Constructed per call rather than at module scope: CLAUDE.md's
@@ -145,7 +145,14 @@ export function regionsFromDetections(
     const box = detection.boundingBox;
     return box === undefined
       ? []
-      : [{ x: box.originX, y: box.originY, width: box.width, height: box.height }];
+      : [
+          {
+            x: box.originX,
+            y: box.originY,
+            width: box.width,
+            height: box.height,
+          },
+        ];
   });
 }
 

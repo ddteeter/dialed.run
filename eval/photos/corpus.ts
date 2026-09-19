@@ -40,4 +40,4 @@ import type { CorpusEntry } from "./corpus-entry";
 export function validatedCorpus(): readonly CorpusEntry[] {
   return z.array(corpusEntrySchema).parse(CORPUS);
 }
-export {type CorpusEntry} from "./corpus-entry";
+export { type CorpusEntry } from "./corpus-entry";

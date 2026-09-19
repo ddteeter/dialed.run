@@ -56,7 +56,11 @@ describe("modelPass", () => {
     const declared: ExtractedProduct = {
       fabricComposition: { verbatim: "declared by the shop" },
     };
-    const pass = await modelPass(deps(modelAnswering(MERINO)), declared, page());
+    const pass = await modelPass(
+      deps(modelAnswering(MERINO)),
+      declared,
+      page(),
+    );
 
     expect(pass.didContribute).toBe(false);
     expect(pass.extracted.fabricComposition?.verbatim).toBe(

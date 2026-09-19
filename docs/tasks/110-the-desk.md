@@ -23,7 +23,7 @@ app. Desktop-first; nobody moderates from a phone on purpose.
 **Three destinations, not four**, which is a better decomposition than the
 one 106's design doc proposed: Today, Review, Duplicates, Runners. Banning is
 not a destination — it is something you do to a runner, so it lives on the
-runner's page. The digest is not a destination either — it *is* Today, and
+runner's page. The digest is not a destination either — it _is_ Today, and
 the email is Today sent to you.
 
 ## Scope
@@ -35,7 +35,7 @@ the email is Today sent to you.
 2. **D1 · Review.** Replaces `/safety/review`. What 106 already has —
    reported photo, reasons in the reporters' own sentences, distinct-reporter
    count — plus what it does not:
-   - **One row per reported *thing*, never per photo.** A reported photo
+   - **One row per reported _thing_, never per photo.** A reported photo
      shows large with a hi-viz frame and its siblings small for context; a
      reported entry shows all photos at one size.
    - **The Remove button names its own scope** ("Remove this photo" /
@@ -48,7 +48,7 @@ the email is Today sent to you.
      the same row.
    - **Who reported, behind a fold, and opening the fold is logged.**
      Coordinated reporting is itself a moderation case. The promise to the
-     reporter is that the *author* never learns — not that the reviewer
+     reporter is that the _author_ never learns — not that the reviewer
      cannot see.
    - **Screener-sourced rows** read "0 PEOPLE · HIDDEN UNTIL YOU LOOK". The
      row type exists in the schema and nothing writes it yet (see Open
@@ -60,8 +60,8 @@ the email is Today sent to you.
    affected, with a header count.
 
 4. **D3 · Ban a runner.** A panel at the bottom of a runner's page under
-   Runners. One required field whose label is the policy: *"they will read
-   this exactly as written"*. One confirmation, not two — the reason IS the
+   Runners. One required field whose label is the policy: _"they will read
+   this exactly as written"_. One confirmation, not two — the reason IS the
    confirmation. The mechanics exist in `modules/safety/bans.ts`.
 
 5. **D4 · The notice.** The only screen in this lane a runner sees. "Your
@@ -78,7 +78,7 @@ the email is Today sent to you.
 - `/safety/review` and `/safety/review-photo/$` move under `/desk`. The photo
   route's rule does not change: admin or 404.
 - `pendingReviewQueue` already returns reasons, reporter counts and resolved
-  subjects. It does not return *who* reported, resolved-today rows, or
+  subjects. It does not return _who_ reported, resolved-today rows, or
   anything to undo with.
 - `resolveReview` refuses a second decision by design (law 2, claim-then-work).
   Undo needs that relaxed deliberately rather than by accident, and probably

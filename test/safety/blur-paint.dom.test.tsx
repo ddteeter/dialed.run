@@ -2,10 +2,7 @@ import { createCanvas } from "canvas";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  blurredFile,
-  paintBlurred,
-} from "../../src/modules/safety/blur/paint";
+import { blurredFile, paintBlurred } from "../../src/modules/safety/blur/paint";
 import type { BlurRegion } from "../../src/modules/safety/blur/regions";
 
 /**
@@ -29,7 +26,10 @@ import type { BlurRegion } from "../../src/modules/safety/blur/regions";
  * decode the production path uses is both honest and closer to what a
  * picked photo actually is.
  */
-async function sourceImage(width: number, height: number): Promise<ImageBitmap> {
+async function sourceImage(
+  width: number,
+  height: number,
+): Promise<ImageBitmap> {
   const source = createCanvas(width, height);
   const context = source.getContext("2d");
   context.fillStyle = "#ffffff";
@@ -85,13 +85,9 @@ describe("painting onto a real canvas", () => {
     const outside = { x: 18, y: 18 };
     const inside = { x: 24, y: 24 };
 
-    paintBlurred(
-      canvas,
-      await sourceImage(100, 100),
-      100,
-      100,
-      [tapped({ x: 0, y: 0, width: 100, height: 100 })],
-    );
+    paintBlurred(canvas, await sourceImage(100, 100), 100, 100, [
+      tapped({ x: 0, y: 0, width: 100, height: 100 }),
+    ]);
 
     // Downscaling with smoothing off is nearest-neighbour SAMPLING rather
     // than averaging, so a block takes one source pixel's colour — which
@@ -115,13 +111,7 @@ describe("painting onto a real canvas", () => {
   it("leaves pixels outside the region alone", async () => {
     const canvas = document.createElement("canvas");
 
-    paintBlurred(
-      canvas,
-      await sourceImage(100, 100),
-      100,
-      100,
-      [tapped()],
-    );
+    paintBlurred(canvas, await sourceImage(100, 100), 100, 100, [tapped()]);
 
     // A blur that bled across the whole photo would pass a "something
     // changed" test while ruining every image.

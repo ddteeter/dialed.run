@@ -19,27 +19,27 @@ answers ImageNet's 1000 classes (dog breeds, vehicles, instruments). It cannot
 answer a safety question. `llama-guard-3-8b` is text-only. There is no NSFW or
 content-safety image classifier in the Workers AI catalogue.
 
-Three real shapes, measured against what this lane actually needs (a *tunable*
+Three real shapes, measured against what this lane actually needs (a _tunable_
 answer, because the packet's own worry is false positives on sports imagery):
 
-| | what it is | threshold tunable | cost | binding |
-| --- | --- | --- | --- | --- |
-| **A. OpenAI `omni-moderation-latest`** | purpose-built multimodal moderation classifier | **yes** — `category_scores` 0–1 per category | free, images ≤20 MB | a *secret*, not a wrangler binding |
-| **B. VLM as judge** (`llava-1.5-7b`, `llama-3.2-11b-vision`, `moondream3.1`) | prompt a vision model to answer a safety question | no — a sentence, not a score | Workers AI neurons, or tokens via 107's OpenRouter key | `"ai"` block in `wrangler.jsonc` — **or none**, if it goes through the OpenRouter key 107 already added |
-| **C. Vendor** (Hive, Sightengine, Rekognition, Vision SafeSearch) | purpose-built, commercial | yes | paid, new account | secret |
+|                                                                              | what it is                                        | threshold tunable                            | cost                                                   | binding                                                                                                 |
+| ---------------------------------------------------------------------------- | ------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **A. OpenAI `omni-moderation-latest`**                                       | purpose-built multimodal moderation classifier    | **yes** — `category_scores` 0–1 per category | free, images ≤20 MB                                    | a _secret_, not a wrangler binding                                                                      |
+| **B. VLM as judge** (`llava-1.5-7b`, `llama-3.2-11b-vision`, `moondream3.1`) | prompt a vision model to answer a safety question | no — a sentence, not a score                 | Workers AI neurons, or tokens via 107's OpenRouter key | `"ai"` block in `wrangler.jsonc` — **or none**, if it goes through the OpenRouter key 107 already added |
+| **C. Vendor** (Hive, Sightengine, Rekognition, Vision SafeSearch)            | purpose-built, commercial                         | yes                                          | paid, new account                                      | secret                                                                                                  |
 
 **Recommendation: A**, with B as the fallback the eval can promote. Note B does
 not have to mean Workers AI: 107 already ships an `OPENROUTER_API_KEY` and
 OpenRouter serves vision models, so a VLM judge can reach production with no
-new secret *and* no `wrangler.jsonc` edit. That makes B cheap to *try* — which
+new secret _and_ no `wrangler.jsonc` edit. That makes B cheap to _try_ — which
 is an argument for the eval measuring both, not for skipping A.
 
 Why A, in this lane's terms. It is the only one of the three that gives a
-*number per category*, and a number is what the packet's pre-launch eval exists
+_number per category_, and a number is what the packet's pre-launch eval exists
 to tune — a VLM that answers "this looks like a person running" leaves nothing
 to turn. Its image categories are `sexual`, `violence`, `violence/graphic`,
 `self-harm{,/intent,/instructions}`; `harassment`, `hate`, `illicit` and
-**`sexual/minors` are text-only**, so images of minors are *not* covered by it
+**`sexual/minors` are text-only**, so images of minors are _not_ covered by it
 — that gap is exactly what Cloudflare's CSAM scanning tool (packet §Explicitly
 configured outside this lane) covers, and the two are complements, not
 alternatives. It also removes a forbidden-zone edit: a secret follows lane
@@ -84,7 +84,7 @@ The eval is `eval/photos/` — **a script, not a test**, same reasoning as
 107's: it costs money, it answers a judgement, `vitest.config.ts` collects
 `test/**` only. ~20 hand-picked benign running photos (flat-lay, mirror shot,
 shirtless summer road, sports bra, race finish, cold-weather layers), reported
-as a score distribution per category so the threshold is *read off* the results
+as a score distribution per category so the threshold is _read off_ the results
 rather than guessed. Photos are gitignored, like 107's page cache.
 
 ## Contract touches
@@ -110,12 +110,13 @@ rather than guessed. Photos are gitignored, like 107's page cache.
   written by nobody) and `products.status` (`active`|`hidden`) both exist —
   this lane wires them, it does not add them. `0015` is free: `main` is at
   `0014` and neither open PR adds a migration (law 11 checked).
+
 - **New binding ⇒ STILL A HARD STOP, and the only one left — but smaller than
   first written.** Decision 1 removed the classifier's binding. Screening retry
   still needs one, and the first draft of this doc reached for a queue
   (`dialed-screening` + a DLQ). That is over-engineering by law 8c's own test:
   a queue is for when nothing durable says "not finished", and here
-  `screen_status='pending'` *is* that marker. `weather-retry` is the same
+  `screen_status='pending'` _is_ that marker. `weather-retry` is the same
   shape already in the tree — `runs.weather_status='pending'` re-driven by an
   hourly cron — and 8c says reconciliation is "cheapest, and always preferred
   when the marker exists". So: **one cron, not a queue.** The ask against
@@ -138,7 +139,7 @@ rather than guessed. Photos are gitignored, like 107's page cache.
   feed tabs, entry detail, profile, and the consensus aggregate.
 - `screening-failure.test.ts` (int) — owner sees, public doesn't, the row
   stays `pending`, and the next `screening-retry` firing clears it.
-- `report-threshold.test.ts` (int) — 3 *distinct* reporters auto-hide; 3 from
+- `report-threshold.test.ts` (int) — 3 _distinct_ reporters auto-hide; 3 from
   one reporter do not.
 - `denylist.test.ts` (int) — denylisted domain rejected at save, message shown.
 - `bans.test.ts` (int) — content hidden, sessions revoked, sign-in blocked.
@@ -161,7 +162,7 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 
 1. **Classifier: OpenAI `omni-moderation-latest`** (option A). So: an
    `OPENAI_API_KEY` secret in `env.d.ts` + `wrangler secret put`, no `"ai"`
-   block, and `wrangler.jsonc` untouched *by the classifier*. The eval still
+   block, and `wrangler.jsonc` untouched _by the classifier_. The eval still
    measures a VLM judge through 107's OpenRouter key as the comparison,
    because "the purpose-built one is better" should be a measurement.
 2. **Migration 0015 lands on this branch**, not on `main` — a `main` migration
@@ -171,7 +172,7 @@ rather than guessed. Photos are gitignored, like 107's page cache.
    artboard, so §W3 below records how it stays inside the client-bundle rules.
 4. **Blocking (W2) is in scope**, with W1's "Block them as well" checkbox live.
 5. **Auto-hide is both halves.** Reporting hides the entry for the reporter
-   immediately — W1's promise that filing costs them nothing — *and* three
+   immediately — W1's promise that filing costs them nothing — _and_ three
    reports from distinct users flips it to `hidden_pending_review` globally.
    Read against the artboard's "no automated takedowns": nothing is removed
    or counted against anyone, it is queued for the person the stance promises.
@@ -182,8 +183,8 @@ rather than guessed. Photos are gitignored, like 107's page cache.
 
 ## W3: face blur on a stack the design didn't plan for
 
-The artboard's promise is *"detection runs on-device, so the unblurred frame
-never leaves the phone"*. On the web that means the model runs in the browser
+The artboard's promise is _"detection runs on-device, so the unblurred frame
+never leaves the phone"_. On the web that means the model runs in the browser
 and only the blurred canvas is uploaded — the promise survives, the delivery
 changes. Three constraints this lane has to respect while doing it:
 
@@ -191,8 +192,8 @@ changes. Three constraints this lane has to respect while doing it:
   the client entry chunk: dynamic `import()` at the moment the file picker
   returns, never at module scope (CLAUDE.md's "construct on first use"), and
   `npm run check:bundle` gains a marker for it so a regression is loud.
-- **Recall is not a promise.** The artboard is deliberate that copy says *"We
-  blurred one face"* and *"No face found"*, never "faces are blurred". The
+- **Recall is not a promise.** The artboard is deliberate that copy says _"We
+  blurred one face"_ and _"No face found"_, never "faces are blurred". The
   manual tap-to-blur is not a nicety, it is what makes the honest wording
   true, and it ships in the same PR.
 - **Degrade, don't fail** (law 5). If the wasm fails to load, the tap-to-blur
@@ -273,7 +274,7 @@ by `bindings-conformance`. Review-queue depth in the daily digest.
 **Waiting on the owner.** `OPENAI_API_KEY` in `.dev.vars`, so the eval can
 run. Until then the app is correct and safe — every photo stays `pending`,
 owners see their own, the public sees none, and the first sweep after the
-key exists screens the backlog. What is missing is the *measurement*, and
+key exists screens the backlog. What is missing is the _measurement_, and
 the packet makes that a launch gate.
 
 **Also landed since.** W1 report sheet, W2 blocked-runners list, W3

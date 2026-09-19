@@ -200,7 +200,12 @@ describe("applyExtraction: precedence", () => {
 
   it("never overwrites a column a human edited, and says so", async () => {
     const id = await freshProduct();
-    await applyExtraction(db(), id, { weight: "light", fabric: "merino" }, "og");
+    await applyExtraction(
+      db(),
+      id,
+      { weight: "light", fabric: "merino" },
+      "og",
+    );
     // The edit: a person corrects the weight by hand.
     await db()
       .update(products)
@@ -246,7 +251,11 @@ describe("applyExtraction: precedence", () => {
       .where(eq(products.id, id));
 
     const report = await applyExtraction(db(), id, { weight: "light" }, "og");
-    expect(report).toStrictEqual({ filled: [], refreshed: [], kept: ["weight"] });
+    expect(report).toStrictEqual({
+      filled: [],
+      refreshed: [],
+      kept: ["weight"],
+    });
     const after = await rowOf(id);
     expect(after.weight).toBeNull();
   });
@@ -269,7 +278,12 @@ describe("applyExtraction: precedence", () => {
     // truthiness check: false must compare equal to the false we wrote.
     const id = await freshProduct();
     await applyExtraction(db(), id, { windResistant: false }, "og");
-    const report = await applyExtraction(db(), id, { windResistant: true }, "text");
+    const report = await applyExtraction(
+      db(),
+      id,
+      { windResistant: true },
+      "text",
+    );
     expect(report.refreshed).toStrictEqual(["windResistant"]);
     const after = await rowOf(id);
     expect(after.windResistant).toBe(true);

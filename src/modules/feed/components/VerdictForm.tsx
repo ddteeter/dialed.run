@@ -91,7 +91,9 @@ export function VerdictForm({
   const [flags, setFlags] = useState<
     Record<string, "too_much" | "not_enough" | "">
   >(() =>
-    Object.fromEntries(entry.items.map((item) => [item.itemId, item.flag ?? ""])),
+    Object.fromEntries(
+      entry.items.map((item) => [item.itemId, item.flag ?? ""]),
+    ),
   );
   const [noted, setNoted] = useState<string | undefined>();
   const [photoKeys, setPhotoKeys] = useState<string[]>(entry.photoKeys);
@@ -281,14 +283,14 @@ export function VerdictForm({
   if (noted !== undefined) {
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 px-5 pt-16 text-center">
-          <Bracketed className="text-teal">Noted</Bracketed>
-          <p>{noted}</p>
-          <button
-            type="button"
-            onClick={() => {
-              void navigate({ to: "/feed/entry/$entryId", params: { entryId } });
-            }}
-            className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
+        <Bracketed className="text-teal">Noted</Bracketed>
+        <p>{noted}</p>
+        <button
+          type="button"
+          onClick={() => {
+            void navigate({ to: "/feed/entry/$entryId", params: { entryId } });
+          }}
+          className="rounded-md bg-night px-4 py-3 font-semibold text-chalk"
         >
           Done
         </button>
@@ -306,18 +308,18 @@ export function VerdictForm({
         void form.submit(payload());
       }}
     >
-        <h1 className="font-display text-2xl uppercase leading-none">Verdict</h1>
-        <FormStatus>{form.status}</FormStatus>
-        <FormErrorSummary
-          rows={form.summaryRows}
-          onFocusField={form.focusField}
-          summaryRef={form.summaryRef}
-        />
-        <FormField
-          name="verdict"
-          label={LABELS.verdict}
-          error={form.fieldErrors.verdict}
-        >
+      <h1 className="font-display text-2xl uppercase leading-none">Verdict</h1>
+      <FormStatus>{form.status}</FormStatus>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
+      <FormField
+        name="verdict"
+        label={LABELS.verdict}
+        error={form.fieldErrors.verdict}
+      >
         <div className="flex flex-col gap-2">
           {verdictScale.map((choice) => (
             <button
@@ -336,129 +338,133 @@ export function VerdictForm({
             </button>
           ))}
         </div>
-        </FormField>
+      </FormField>
 
-        {entry.items.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase">Per-item notes</h2>
-            {entry.items.map((item) => (
-              <div key={item.itemId} className="flex items-center justify-between text-sm">
-                <span>{item.name}</span>
-                <select
-                  value={flagFor(item.itemId)}
-                  onChange={(event) => {
-                    setFlags((prev) => ({
-                      ...prev,
-                      [item.itemId]: event.target.value as "too_much" | "not_enough" | "",
-                    }));
-                  }}
-                  className="rounded-md border border-night/20 px-2 py-1"
-                >
-                  <option value="">No flag</option>
-                  <option value="too_much">Too much</option>
-                  <option value="not_enough">Not enough</option>
-                </select>
-              </div>
+      {entry.items.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold uppercase">Per-item notes</h2>
+          {entry.items.map((item) => (
+            <div
+              key={item.itemId}
+              className="flex items-center justify-between text-sm"
+            >
+              <span>{item.name}</span>
+              <select
+                value={flagFor(item.itemId)}
+                onChange={(event) => {
+                  setFlags((prev) => ({
+                    ...prev,
+                    [item.itemId]: event.target.value as
+                      "too_much" | "not_enough" | "",
+                  }));
+                }}
+                className="rounded-md border border-night/20 px-2 py-1"
+              >
+                <option value="">No flag</option>
+                <option value="too_much">Too much</option>
+                <option value="not_enough">Not enough</option>
+              </select>
+            </div>
+          ))}
+        </div>
+      ) : undefined}
+
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold uppercase">Photos</h2>
+        {photoKeys.length > 0 ? (
+          <div className="grid grid-cols-4 gap-2">
+            {photoKeys.map((key) => (
+              <img
+                key={key}
+                src={`/feed/photo/${key}`}
+                alt=""
+                className="aspect-square w-full rounded-lg object-cover"
+              />
             ))}
           </div>
         ) : undefined}
-
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">Photos</h2>
-          {photoKeys.length > 0 ? (
-            <div className="grid grid-cols-4 gap-2">
-              {photoKeys.map((key) => (
-                <img
-                  key={key}
-                  src={`/feed/photo/${key}`}
-                  alt=""
-                  className="aspect-square w-full rounded-lg object-cover"
-                />
-              ))}
-            </div>
-          ) : undefined}
-          {/*
+        {/*
             The field outlives the control. "Up to 4 photos per entry." is
             set exactly when the cap is reached — which is exactly when the
             Add-a-photo link stops rendering — so putting the message
             inside that conditional hid it in the one case it exists for.
           */}
-          {photoError !== undefined || photoKeys.length < maxPhotosPerEntry ? (
-            <FormField
-              name="photo"
-              label={uploading ? "Uploading…" : "Add a photo"}
-              error={photoError}
-            >
-              {photoKeys.length < maxPhotosPerEntry ? (
-                <input
-                  id="photo"
-                  name="photo"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  // Not `disabled` while uploading (§5): it drops focus and
-                  // stops announcing. The re-entry guard is in the handler,
-                  // where it can also survive a re-render.
-                  aria-busy={uploading || undefined}
-                  onChange={(event) => {
-                    void handlePhotoSelect(event);
-                  }}
-                  className="text-sm"
-                />
-              ) : undefined}
-            </FormField>
-          ) : undefined}
-
-          {pending === undefined
-            ? undefined
-            : pending.step(pending.file, (ready) => {
-                void handlePhotoReady(ready);
-              })}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase">Tags</h2>
-          <div className="flex flex-wrap gap-2">
-            {entryTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => {
-                  setTags((prev) => toggledIn(prev, tag));
+        {photoError !== undefined || photoKeys.length < maxPhotosPerEntry ? (
+          <FormField
+            name="photo"
+            label={uploading ? "Uploading…" : "Add a photo"}
+            error={photoError}
+          >
+            {photoKeys.length < maxPhotosPerEntry ? (
+              <input
+                id="photo"
+                name="photo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                // Not `disabled` while uploading (§5): it drops focus and
+                // stops announcing. The re-entry guard is in the handler,
+                // where it can also survive a re-render.
+                aria-busy={uploading || undefined}
+                onChange={(event) => {
+                  void handlePhotoSelect(event);
                 }}
-                className={
-                  tags.has(tag)
-                    ? "rounded-full bg-night px-3 py-1 text-xs text-chalk"
-                    : "rounded-full border border-night/20 px-3 py-1 text-xs"
-                }
-              >
-                {tag.replaceAll("_", " ")}
-              </button>
-            ))}
-          </div>
+                className="text-sm"
+              />
+            ) : undefined}
+          </FormField>
+        ) : undefined}
+
+        {pending === undefined
+          ? undefined
+          : pending.step(pending.file, (ready) => {
+              void handlePhotoReady(ready);
+            })}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold uppercase">Tags</h2>
+        <div className="flex flex-wrap gap-2">
+          {entryTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => {
+                setTags((prev) => toggledIn(prev, tag));
+              }}
+              className={
+                tags.has(tag)
+                  ? "rounded-full bg-night px-3 py-1 text-xs text-chalk"
+                  : "rounded-full border border-night/20 px-3 py-1 text-xs"
+              }
+            >
+              {tag.replaceAll("_", " ")}
+            </button>
+          ))}
         </div>
+      </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(event) => {
-              setIsPublic(event.target.checked);
-            }}
-          />
-          Share this — the verdict label shows on the post
-        </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={isPublic}
+          onChange={(event) => {
+            setIsPublic(event.target.checked);
+          }}
+        />
+        Share this — the verdict label shows on the post
+      </label>
 
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <SubmitButton
-          label="Save verdict"
-          pendingLabel="Saving"
-          pending={form.pending}
-        />
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        label="Save verdict"
+        pendingLabel="Saving"
+        pending={form.pending}
+      />
     </form>
   );
 }

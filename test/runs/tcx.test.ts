@@ -70,7 +70,8 @@ function lap(options: {
 }
 
 function trackpoint(lat?: number, lon?: number): string {
-  if (lat === undefined || lon === undefined) return "<Trackpoint></Trackpoint>";
+  if (lat === undefined || lon === undefined)
+    return "<Trackpoint></Trackpoint>";
   return `<Trackpoint><Position><LatitudeDegrees>${String(lat)}</LatitudeDegrees><LongitudeDegrees>${String(lon)}</LongitudeDegrees></Position></Trackpoint>`;
 }
 
@@ -181,12 +182,12 @@ describe("tcx: the treadmill case", () => {
 describe("tcx: every way it refuses", () => {
   it("says when there is no lap to read", async () => {
     const documents = [
-      "<?xml version=\"1.0\"?><other/>",
-      "<?xml version=\"1.0\"?><TrainingCenterDatabase/>",
-      "<?xml version=\"1.0\"?><TrainingCenterDatabase><Activities/></TrainingCenterDatabase>",
-      "<?xml version=\"1.0\"?><TrainingCenterDatabase><Activities><Activity/></Activities></TrainingCenterDatabase>",
-      "<?xml version=\"1.0\"?><TrainingCenterDatabase>text</TrainingCenterDatabase>",
-      "<?xml version=\"1.0\"?><TrainingCenterDatabase><Activities>text</Activities></TrainingCenterDatabase>",
+      '<?xml version="1.0"?><other/>',
+      '<?xml version="1.0"?><TrainingCenterDatabase/>',
+      '<?xml version="1.0"?><TrainingCenterDatabase><Activities/></TrainingCenterDatabase>',
+      '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity/></Activities></TrainingCenterDatabase>',
+      '<?xml version="1.0"?><TrainingCenterDatabase>text</TrainingCenterDatabase>',
+      '<?xml version="1.0"?><TrainingCenterDatabase><Activities>text</Activities></TrainingCenterDatabase>',
     ];
 
     for (const document of documents) {
@@ -231,7 +232,7 @@ describe("tcx: every way it refuses", () => {
   it("names the format in the reason, not just the failure", async () => {
     // GPX and TCX share the decode step; the reason is how a maintainer
     // tells which file class is failing.
-    const failure = await failureFrom("<?xml version=\"1.0\"?><other/>");
+    const failure = await failureFrom('<?xml version="1.0"?><other/>');
     expect(failure.reason.startsWith("tcx:")).toBe(true);
 
     // Including the shared decode step, which takes the format as an

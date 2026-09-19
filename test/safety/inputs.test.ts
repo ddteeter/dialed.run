@@ -104,7 +104,9 @@ describe("filing a report", () => {
 
 describe("blocking", () => {
   it("takes a user id", () => {
-    expect(blockRunnerInput.parse({ userId: "u-1" })).toEqual({ userId: "u-1" });
+    expect(blockRunnerInput.parse({ userId: "u-1" })).toEqual({
+      userId: "u-1",
+    });
   });
 
   it("refuses an empty one", () => {
@@ -176,7 +178,7 @@ describe("banning", () => {
 
   it("trims it, so whitespace is not a reason", () => {
     expect(
-      banUserInput.safeParse({ userId: "u-1", reason: ' '.repeat(3) }).success,
+      banUserInput.safeParse({ userId: "u-1", reason: " ".repeat(3) }).success,
     ).toBe(false);
   });
 });
@@ -207,7 +209,9 @@ describe("denying a domain", () => {
   it("refuses something with spaces in it", () => {
     const result = denyDomainInput.safeParse({ domain: "two words" });
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe("A domain has no spaces in it.");
+    expect(result.error?.issues[0]?.message).toBe(
+      "A domain has no spaces in it.",
+    );
   });
 
   it("refuses one longer than any real domain, and says so", () => {
@@ -221,13 +225,15 @@ describe("denying a domain", () => {
   it("trims what was pasted, because a clipboard carries whitespace", () => {
     // Untrimmed, the stored domain would be " spam.example" and would
     // never match the host of a link anyone actually saved.
-    expect(
-      denyDomainInput.parse({ domain: "  spam.example  " }).domain,
-    ).toBe("spam.example");
+    expect(denyDomainInput.parse({ domain: "  spam.example  " }).domain).toBe(
+      "spam.example",
+    );
   });
 
   it("makes the reason optional", () => {
-    expect(denyDomainInput.parse({ domain: "spam.example" }).reason).toBeUndefined();
+    expect(
+      denyDomainInput.parse({ domain: "spam.example" }).reason,
+    ).toBeUndefined();
   });
 
   it("trims the reason and caps it", () => {

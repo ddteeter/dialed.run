@@ -32,7 +32,10 @@ async function productWith(
     createdBy: newUlid(),
   });
   if (Object.keys(overrides).length > 0) {
-    await client.update(products).set(overrides).where(eq(products.id, product.id));
+    await client
+      .update(products)
+      .set(overrides)
+      .where(eq(products.id, product.id));
   }
   return product.id;
 }
@@ -58,7 +61,10 @@ describe("requestEnrichment", () => {
     const d = deps();
     expect(await requestEnrichment(db(), id, d)).toBe("queued");
     expect(await statusOf(id)).toBe("pending");
-    expect(d.queue.send).toHaveBeenCalledWith({ type: "enrich", productId: id });
+    expect(d.queue.send).toHaveBeenCalledWith({
+      type: "enrich",
+      productId: id,
+    });
   });
 
   it("sends nothing for a product already pending — the flip is the dedupe", async () => {

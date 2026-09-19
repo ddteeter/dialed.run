@@ -31,13 +31,15 @@ export interface FeedCursor {
 
 const PAGE_SIZE = 20;
 
-
 function feedCursorPredicate(cursor: FeedCursor) {
   const sameInstantEarlierId = and(
     eq(outfitEntries.createdAt, cursor.createdAt),
     lt(outfitEntries.id, cursor.id),
   );
-  return or(lt(outfitEntries.createdAt, cursor.createdAt), sameInstantEarlierId);
+  return or(
+    lt(outfitEntries.createdAt, cursor.createdAt),
+    sameInstantEarlierId,
+  );
 }
 
 export function followingFeedStatement(
@@ -100,9 +102,15 @@ async function hydrateEntries(
   const runIds = entryRows.map((e) => e.runId);
   const userIds = [...new Set(entryRows.map((e) => e.userId))];
 
-  const runsQuery = database.select().from(runs).where(inArray(runs.id, runIds));
+  const runsQuery = database
+    .select()
+    .from(runs)
+    .where(inArray(runs.id, runIds));
   const authorsQuery = database
-    .select({ userId: userProfiles.userId, displayName: userProfiles.displayName })
+    .select({
+      userId: userProfiles.userId,
+      displayName: userProfiles.displayName,
+    })
     .from(userProfiles)
     .where(inArray(userProfiles.userId, userIds));
   const itemsQuery = database
@@ -168,7 +176,8 @@ async function hydrateEntries(
       // in the batch that fetched them, so the lookup always hits. It is
       // here because `Map#get` is typed as possibly missing.
       // Stryker disable next-line OptionalChaining
-      authorDisplayName: authorsById.get(entry.userId)?.displayName ?? undefined,
+      authorDisplayName:
+        authorsById.get(entry.userId)?.displayName ?? undefined,
       runId: entry.runId,
       runTitle: run?.title ?? "Run",
       distanceM: run?.distanceM ?? 0,
@@ -196,13 +205,20 @@ export async function followingFeed(
   const database = drizzle(env.DIALED_CORE);
   const followeeIds = await followeeIdsOf(viewerId);
   const userIds = [viewerId, ...followeeIds];
-  const rows = await followingFeedStatement(database, userIds, cursor, limit + 1);
+  const rows = await followingFeedStatement(
+    database,
+    userIds,
+    cursor,
+    limit + 1,
+  );
   const page = rows.slice(0, limit);
   const items = await hydrateEntries(database, page, viewerId);
   const last = page.at(-1);
   return {
     items,
     nextCursor:
-      last && rows.length > limit ? { createdAt: last.createdAt, id: last.id } : undefined,
+      last && rows.length > limit
+        ? { createdAt: last.createdAt, id: last.id }
+        : undefined,
   };
 }

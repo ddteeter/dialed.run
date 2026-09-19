@@ -36,7 +36,14 @@ function fakeContext() {
 const IMAGE = {} as CanvasImageSource;
 
 function detected(over: Partial<BlurRegion> = {}): BlurRegion {
-  return { x: 100, y: 100, width: 100, height: 100, source: "detected", ...over };
+  return {
+    x: 100,
+    y: 100,
+    width: 100,
+    height: 100,
+    source: "detected",
+    ...over,
+  };
 }
 function tapped(over: Partial<BlurRegion> = {}): BlurRegion {
   return { x: 100, y: 100, width: 100, height: 100, source: "tapped", ...over };

@@ -51,7 +51,9 @@ describe("what the screen leads with", () => {
 
   it("says blocking is quiet", () => {
     render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
-    expect(screen.getByText(/not told\. Blocking is quiet/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/not told\. Blocking is quiet/),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/Nothing here is a list anyone else can see/),
     ).toBeInTheDocument();
@@ -62,7 +64,10 @@ describe("the roster", () => {
   it("counts and names who is blocked", () => {
     render(
       <BlockedRunners
-        blocked={[runner(), runner({ userId: "u-2", displayName: "gearfiend22" })]}
+        blocked={[
+          runner(),
+          runner({ userId: "u-2", displayName: "gearfiend22" }),
+        ]}
         unblock={vi.fn()}
       />,
     );
@@ -102,7 +107,10 @@ describe("the roster", () => {
     const user = userEvent.setup();
     render(
       <BlockedRunners
-        blocked={[runner(), runner({ userId: "u-2", displayName: "gearfiend22" })]}
+        blocked={[
+          runner(),
+          runner({ userId: "u-2", displayName: "gearfiend22" }),
+        ]}
         unblock={vi.fn().mockResolvedValue({})}
       />,
     );
