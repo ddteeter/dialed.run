@@ -212,10 +212,7 @@ describe("verifyStravaChallenge: every reason it refuses", () => {
     expect(verifyStravaChallenge(params(GOOD), undefined)).toBeUndefined();
     expect(verifyStravaChallenge(params(GOOD), "")).toBeUndefined();
     expect(
-      verifyStravaChallenge(
-        params({ ...GOOD, "hub.verify_token": "" }),
-        "",
-      ),
+      verifyStravaChallenge(params({ ...GOOD, "hub.verify_token": "" }), ""),
     ).toBeUndefined();
   });
 

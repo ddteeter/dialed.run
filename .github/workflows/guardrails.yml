@@ -32,6 +32,17 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      # The stryker analyzer runs at the `push`/`ci` rung, and stryker runs
+      # vitest — which boots all three projects, `browser` among them. No
+      # Chromium, no dry run, and the gate fails for a reason unrelated to
+      # the diff it was asked about.
+      - run: npx playwright install --with-deps chromium
+      # MediaPipe's WASM is gitignored and staged out of node_modules, and
+      # the `browser` vitest project fetches it over HTTP. `npm test` stages
+      # it through `pretest`; anything that reaches vitest by another road —
+      # stryker here, the dev server for e2e — has to ask for it, or the
+      # model 404s and every browser test fails as "unavailable".
+      - run: npm run stage:mediapipe
       # `gate --mode=ci` runs verify PLUS the diff-auditor PLUS the sanction
       # budget. Bare `verify` runs none of the last two.
       #

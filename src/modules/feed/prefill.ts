@@ -67,7 +67,9 @@ export async function nearestPriorEntry(
     const observation = observations.get(entry.runId);
     if (!observation) continue;
     if (precipClassOf(observation.precipMm) !== targetPrecip) continue;
-    const delta = Math.abs(observation.feelsLikeC - currentConditions.feelsLikeC);
+    const delta = Math.abs(
+      observation.feelsLikeC - currentConditions.feelsLikeC,
+    );
     // `<`, and no tie-break: `own` is already ordered newest first, so the
     // first entry at a given delta is the most recent one at that delta and
     // a strictly-smaller delta is the only reason to replace it. There was

@@ -73,7 +73,10 @@ describe("NotificationList", () => {
     await renderWithRouter(
       <NotificationList
         notifications={[
-          notification({ id: "01A", body: "New run on Strava — log your kit?" }),
+          notification({
+            id: "01A",
+            body: "New run on Strava — log your kit?",
+          }),
           notification({ id: "01B", body: "Your run import didn't work" }),
         ]}
         markAllRead={nothing}
@@ -256,9 +259,7 @@ describe("NotificationList", () => {
     await user.click(retry);
 
     await waitFor(() => {
-      expect(
-        screen.queryByText("Our end failed. Nothing changed."),
-      ).toBeNull();
+      expect(screen.queryByText("Our end failed. Nothing changed.")).toBeNull();
     });
     expect(markAllRead).toHaveBeenCalledTimes(2);
   });
@@ -296,9 +297,7 @@ describe("NotificationList", () => {
       expect(screen.getByRole("status")).toHaveTextContent(
         "Nothing saved. Our end failed. Nothing changed.",
       );
-      expect(
-        screen.getByRole("button", { name: "Try again" }),
-      ).toBeVisible();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
     } finally {
       globalThis.removeEventListener("unhandledrejection", watch);
     }

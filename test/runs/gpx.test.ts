@@ -146,10 +146,10 @@ describe("gpx: every way it refuses", () => {
   });
 
   it("says when there is no track at all", async () => {
-    expect(await reasonFor("<?xml version=\"1.0\"?><gpx></gpx>")).toContain(
+    expect(await reasonFor('<?xml version="1.0"?><gpx></gpx>')).toContain(
       "fewer than 2 track points",
     );
-    expect(await reasonFor("<?xml version=\"1.0\"?><other/>")).toContain(
+    expect(await reasonFor('<?xml version="1.0"?><other/>')).toContain(
       "fewer than 2 track points",
     );
   });
@@ -223,7 +223,9 @@ describe("gpx: every way it refuses", () => {
   it("names the format in the reason, not just the failure", async () => {
     // GPX and TCX share the decode step; the reason is how a maintainer
     // tells which file class is failing.
-    const failure = await failureFrom(() => parse("<?xml version=\"1.0\"?><other/>"));
+    const failure = await failureFrom(() =>
+      parse('<?xml version="1.0"?><other/>'),
+    );
     expect(failure.reason.startsWith("gpx:")).toBe(true);
 
     // Including the shared decode step, which takes the format as an
@@ -237,7 +239,7 @@ describe("gpx: every way it refuses", () => {
 
   it("ignores a track or segment that is not an element", async () => {
     const textTrack = await reasonFor(
-      "<?xml version=\"1.0\"?><gpx><trk>plain text</trk></gpx>",
+      '<?xml version="1.0"?><gpx><trk>plain text</trk></gpx>',
     );
     const textSegment = await reasonFor(gpxWith("<trkseg>plain text</trkseg>"));
     expect(textTrack).toContain("fewer than 2 track points");

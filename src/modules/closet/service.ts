@@ -35,12 +35,16 @@ import type {
   weightSchema,
 } from "../../lib/contracts";
 import { garmentSchema, uiGroupFor } from "../../lib/contracts";
+// Was private to this file until modules/safety needed the same helper.
+import { orSqlNull } from "../../lib/sql-null";
 import { garmentTypesFor } from "../../lib/garment-fields";
 import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
+import { enqueueEnrichment } from "../enrichment";
+import { captureException } from "../ops";
 import {
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
@@ -49,6 +53,8 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults } from "../products";
 import { ownedBy } from "../../lib/owned";
+import { isDeniedDomain } from "../safety";
+import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
 type Layer = z.infer<typeof layerSchema>;
@@ -68,13 +74,6 @@ carried the `isNotFound` marker the router duck-types on. One type now,
 in `lib/errors.ts`.
 */
 export { NotFoundError } from "../../lib/errors";
-
-/**
- * Column value that clears a nullable column without the `null` literal.
- */
-function orSqlNull<T>(value: T | undefined): T | SQL {
-  return value ?? sql`NULL`;
-}
 
 /**
  * Writes a real SQL NULL for "not stated", which is distinct from false —
@@ -182,6 +181,28 @@ export async function getOwnedItem(
   return row;
 }
 
+/**
+ * Refuses a product link pointing at a denylisted domain (packet §3).
+ *
+ * Checked on the way in rather than filtered on the way out: a link that
+ * is already stored is one already rendered to someone, and a denylist
+ * that only hides things leaves the row there for the next reader of the
+ * raw data.
+ *
+ * The message is the runner's, not the operator's. It says the link was
+ * not accepted and stops there — naming why, or which list, would turn a
+ * moderation tool into a probe anyone can query.
+ */
+export class DeniedLinkError extends Error {
+  constructor() {
+    super("That link isn't allowed here. The rest of the piece is fine.");
+  }
+}
+
+async function assertLinkAllowed(garment: Garment): Promise<void> {
+  if (await isDeniedDomain(garment.productUrl)) throw new DeniedLinkError();
+}
+
 export async function createItem(
   db: Db,
   userId: string,
@@ -189,6 +210,7 @@ export async function createItem(
   origin: ItemOrigin = "manual",
   idempotencyKey?: string,
 ): Promise<WardrobeItemRow> {
+  await assertLinkAllowed(garment);
   // Add-a-piece is the highest-traffic form in the product, and a
   // double-click, a browser POST replay and a retry over a flaky
   // connection are indistinguishable from someone genuinely adding two of
@@ -216,7 +238,7 @@ export async function createItem(
     idempotencyKey,
     retired: false,
     visibility: "ok",
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: nowSeconds(),
   });
   return getOwnedItem(db, userId, id);
 }
@@ -265,6 +287,7 @@ export async function updateItem(
   itemId: string,
   garment: Garment,
 ): Promise<WardrobeItemRow> {
+  await assertLinkAllowed(garment);
   return updateOwnedItem(db, userId, itemId, garmentRowValues(garment));
 }
 
@@ -365,9 +388,7 @@ export async function deleteOrRetireItem(
       .where(ownedItemWhere(userId, itemId));
     return { action: "retired" };
   }
-  await db
-    .delete(wardrobeItems)
-    .where(ownedItemWhere(userId, itemId));
+  await db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId));
   return { action: "deleted" };
 }
 
@@ -414,8 +435,6 @@ export function effectiveTempRange(
 
 // ---- Performance (D-27 filters; per-item verdict summary) ------------------
 
-
-
 export interface PerformanceSummary {
   verdictCount: number;
   dialedCount: number;
@@ -449,10 +468,16 @@ export function classifyPerformance(
   // gives `NaN` seconds, and `NaN > anything` is already false. It is here
   // so the line reads as arithmetic rather than as a comparison against a
   // missing value.
-  // Stryker disable next-line ConditionalExpression
-  if (lastWornAt !== undefined && nowSeconds - lastWornAt > RETIRE_CANDIDATE_S) {
+  // Block pair, not `next-line`: prettier wraps this condition across
+  // three lines and the directive only ever covered the `if (`.
+  // Stryker disable ConditionalExpression
+  if (
+    lastWornAt !== undefined &&
+    nowSeconds - lastWornAt > RETIRE_CANDIDATE_S
+  ) {
     buckets.push("retire_candidate");
   }
+  // Stryker restore ConditionalExpression
   return buckets;
 }
 
@@ -549,7 +574,10 @@ function addPairCounts(
  * `lib/top-by-count` — the profile's "most worn" is the same one, and both
  * had their own loop.
  */
-export function topPairIds(counts: Map<string, number>, limit: number): string[] {
+export function topPairIds(
+  counts: Map<string, number>,
+  limit: number,
+): string[] {
   return topByCount(counts, limit).map(([itemId]) => itemId);
 }
 
@@ -569,7 +597,7 @@ export async function computeUserPerformance(
   const { summaries, entryItems } = summarizeByItem(rows);
   const coOccurrence = buildCoOccurrence(entryItems);
 
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  const now = nowSeconds();
   const result = new Map<string, ItemPerformance>();
   for (const [itemId, summary] of summaries) {
     const pairsWith = topPairIds(
@@ -578,7 +606,7 @@ export async function computeUserPerformance(
     );
     result.set(itemId, {
       summary,
-      buckets: classifyPerformance(summary, nowSeconds),
+      buckets: classifyPerformance(summary, now),
       pairsWith,
     });
   }
@@ -809,6 +837,13 @@ export async function withResolvedProduct(
     sourceUrl: garment.productUrl,
     createdBy,
   });
+  // The paste path (107): a product with a URL and no extraction yet gets
+  // one asked for. Here rather than in the server function for the same
+  // reason the type inheritance is — it runs wherever a garment is
+  // written, so it cannot be skipped. `enqueueEnrichment` never throws:
+  // enrichment must not be able to fail the save that asked for it (law 5),
+  // and the row it leaves behind is what the retry cron re-drives.
+  await enqueueEnrichment(db, product.id, captureException);
   const allowed: readonly string[] = garmentTypesFor(garment.category);
   // Equivalent mutant on the null check: `allowed.includes(null)` is already
   // false, so dropping it changes no answer. It is here because `includes`

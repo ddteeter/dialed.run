@@ -9,8 +9,17 @@ import { createItem } from "../src/modules/closet/service";
 import { attachKit } from "../src/modules/feed/entries";
 import { follow } from "../src/modules/feed/follows";
 import { toggleUsefulReaction } from "../src/modules/feed/reactions";
-import { createOrGetBrand, createOrGetProduct } from "../src/modules/products/service";
-import { makeEntry, makeItem, makeRun, makeUser, resetTables } from "./feed/helpers";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../src/modules/products/service";
+import {
+  makeEntry,
+  makeItem,
+  makeRun,
+  makeUser,
+  resetTables,
+} from "./feed/helpers";
 
 /**
  * Task 108. Every server function that **creates** a row from a user action
@@ -43,7 +52,11 @@ describe("keyed paths: same key twice returns the same row", () => {
   it("garment create", async () => {
     const userId = await makeUser();
     const key = newUlid();
-    const garment = { category: "top", name: "Janji Rover", type: "halfZip" } as const;
+    const garment = {
+      category: "top",
+      name: "Janji Rover",
+      type: "halfZip",
+    } as const;
 
     const first = await createItem(db(), userId, garment, "manual", key);
     const second = await createItem(db(), userId, garment, "manual", key);
@@ -173,8 +186,14 @@ describe("a toggle is not a create, and must not be made idempotent", () => {
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId });
 
-    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({ useful: true });
-    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({ useful: false });
-    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({ useful: true });
+    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({
+      useful: true,
+    });
+    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({
+      useful: false,
+    });
+    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({
+      useful: true,
+    });
   });
 });

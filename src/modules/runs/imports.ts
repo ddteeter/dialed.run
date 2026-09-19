@@ -17,6 +17,7 @@ import { IMPORT_EXTENSIONS, importExtensionOf } from "./parsers";
 import type { ImportExtension } from "./parsers";
 import type { ImportJob } from "./queue-messages";
 import { selectOwnedRow } from "../../lib/owned";
+import { nowSeconds } from "../../lib/now";
 
 /**
  * Re-exported, not declared: both live in `./upload-limits` so a route can
@@ -100,7 +101,7 @@ export async function startImport(
     r2Key,
     idempotencyKey: input.idempotencyKey,
     status: "pending",
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: nowSeconds(),
   });
 
   await queue.send({ type: "import", importId });

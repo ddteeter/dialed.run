@@ -19,16 +19,25 @@ import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
+import {
+  isAdmin,
+  isEntryPubliclyVisible,
+  isPhotoPubliclyVisible,
+} from "../safety";
+import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
-
 
 function db() {
   return drizzle(env.DIALED_CORE);
 }
 
-export function photoKeyFor(userId: string, entryId: string, photoId: string): string {
+export function photoKeyFor(
+  userId: string,
+  entryId: string,
+  photoId: string,
+): string {
   return `entries/${userId}/${entryId}/${photoId}`;
 }
 
@@ -42,7 +51,18 @@ export interface UploadPhotoInput {
   idempotencyKey?: string | undefined;
 }
 
-export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
+/**
+ * The classifier, injectable so a test can make the upstream fail on
+ * demand. Production passes nothing and gets `classifierFromEnv()`.
+ */
+export interface UploadPhotoOptions {
+  classify?: Classify | undefined;
+}
+
+export async function uploadPhoto(
+  input: UploadPhotoInput,
+  { classify }: UploadPhotoOptions = {},
+): Promise<string> {
   if (!isAllowedPhotoType(input.contentType)) {
     throw new InvalidPhotoError("unsupported photo type");
   }
@@ -59,7 +79,7 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
   requireOwned(entry, input.userId, {
     missing: "entry not found",
     forbidden: "cannot add photos to another user's entry",
-  // fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ
+    // fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ
   });
 
   // A repeat of a submission we already stored returns the key it made
@@ -89,7 +109,9 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
     .from(entryPhotos)
     .where(eq(entryPhotos.entryId, input.entryId));
   if (existing.length >= MAX_PHOTOS_PER_ENTRY) {
-    throw new InvalidPhotoError(`at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`);
+    throw new InvalidPhotoError(
+      `at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`,
+    );
   }
 
   // R2 then the row, which cannot be atomic (law 8c). Deliberately left as
@@ -110,6 +132,24 @@ export async function uploadPhoto(input: UploadPhotoInput): Promise<string> {
     position: existing.length,
     idempotencyKey: input.idempotencyKey,
   });
+
+  // Screened inline rather than after responding, because the packet's
+  // common path is "pass -> visible immediately" and a photo that appears
+  // then vanishes for its own author is worse than one that takes a beat
+  // to upload. The call is bounded by law 4's timeout, and `screenPhoto`
+  // never throws: with no key, a slow upstream or a dead one, the row
+  // simply stays `pending` and the screening-retry cron owns it from
+  // there. So this can delay a save but can never fail one.
+  await screenPhoto(
+    {
+      scope: "entry",
+      photoId,
+      bytes: new Uint8Array(input.bytes),
+      contentType: input.contentType,
+    },
+    classify ?? classifierFromEnv(),
+  );
+
   return key;
 }
 
@@ -125,21 +165,40 @@ export async function isPhotoVisible(
 ): Promise<boolean> {
   const database = db();
   const [photo] = await database
-    .select({ entryId: entryPhotos.entryId })
+    .select({
+      entryId: entryPhotos.entryId,
+      screenStatus: entryPhotos.screenStatus,
+    })
     .from(entryPhotos)
     .where(eq(entryPhotos.photoKey, photoKey))
     .limit(1);
   if (!photo) return false;
   const [entry] = await database
-    .select({ userId: outfitEntries.userId, isPublic: outfitEntries.isPublic })
+    .select({
+      userId: outfitEntries.userId,
+      isPublic: outfitEntries.isPublic,
+      moderationStatus: outfitEntries.moderationStatus,
+    })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, photo.entryId))
     .limit(1);
   if (!entry) return false;
-  return entry.isPublic || entry.userId === viewerId;
+  // The owner keeps seeing their own photo whatever is pending against
+  // it — fail open for the owner, closed for the public.
+  //
+  // **Both halves, and the photo half used to be missing.** The entry
+  // being public is not enough: a photo the classifier flagged carries
+  // `hidden_pending_review` and was still served with HTTP 200, because
+  // nothing read the column `screenPhoto` writes.
+  return (
+    (isEntryPubliclyVisible(entry) && isPhotoPubliclyVisible(photo)) ||
+    entry.userId === viewerId
+  );
 }
 
-export async function getPhotoObject(photoKey: string): Promise<R2ObjectBody | null> {
+export async function getPhotoObject(
+  photoKey: string,
+): Promise<R2ObjectBody | null> {
   return env.MEDIA.get(photoKey);
 }
 
@@ -196,6 +255,52 @@ export async function photoResponse(
   // query.
   if (!key) return notFound();
   if (!(await isPhotoVisible(key, viewerId))) return notFound();
+  return bytesResponse(key);
+}
+
+/**
+ * The bytes of a photo a reviewer is being asked about.
+ *
+ * **A different rule, not a missing one.** The review queue shows photos
+ * that are hidden *because* they were reported, so `isPhotoVisible` would
+ * refuse every one of them — being unable to see the thing is what made
+ * the queue unusable. `requireAdmin` replaces the check rather than
+ * skipping it.
+ *
+ * It lives here rather than in `modules/safety` because photos live here,
+ * and because the arrow runs feed → safety: feed already imports safety's
+ * visibility rules, and safety imports nothing from feed
+ * (`docs/architecture.md`).
+ */
+export async function reviewerPhotoResponse(
+  key: string,
+  viewerId: string,
+): Promise<Response> {
+  // Both are parameters, as they are for `photoResponse`, and for the same
+  // reason: a function that reads the session or the params itself cannot
+  // be called by a test.
+  //
+  // **The route hands both across already normalised**, and that is what
+  // keeps this to one rule. A bare URL gives an empty key, which misses in
+  // R2 and answers 404 on its own; a signed-out viewer gives an empty id,
+  // which is never in the admin list (`adminUserIds` drops empties). Both
+  // guards that used to sit here were conditions with no second outcome —
+  // `viewerId === undefined ||` in front of a membership test that already
+  // says no, and `if (!key)` in front of a lookup that already misses.
+  //
+  // **404, not 403, and not a thrown `AdminRequiredError`.** The rest of
+  // this route answers "you may not see this" as "there is nothing here",
+  // deliberately — a 403 tells a stranger the photo exists, which is most
+  // of what they wanted to know. A throw would also surface as a 500 on a
+  // media URL, which says the same thing louder.
+  if (!isAdmin(viewerId)) return notFound();
+  return bytesResponse(key);
+}
+
+/**
+The bytes and their headers, once, for both rules above.
+*/
+async function bytesResponse(key: string): Promise<Response> {
   const object = await getPhotoObject(key);
   if (object === null) return notFound();
 

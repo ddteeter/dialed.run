@@ -32,6 +32,12 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     onboardingComplete: integer("onboarding_complete", { mode: "boolean" })
       .notNull()
       .default(false),
+    // Task 106 ban mechanics. Nullable rather than a boolean + a date:
+    // `bannedAt IS NOT NULL` is the ban, so there is one fact, not two
+    // that can disagree. Sign-in, every public read and session revocation
+    // all gate on the same column.
+    bannedAt: integer("banned_at"),
+    banReason: text("ban_reason"),
   },
   (t) => [
     // People search is a prefix LIKE on display_name, which SQLite can only
@@ -120,8 +126,12 @@ export const productSnapshots = /*#__PURE__*/ sqliteTable("product_snapshots", {
   productId: text("product_id").notNull(),
   url: text("url").notNull(),
   r2Key: text("r2_key").notNull(),
+  // "text" is the page's rendered text, searched for a fibre percentage —
+  // added by 107 once measurement showed composition is almost never in a
+  // declared field. Type-level only: the column is plain TEXT with no CHECK,
+  // so widening the set needs no migration.
   rung: text("rung", {
-    enum: ["jsonld", "shopify", "og", "llm", "none"],
+    enum: ["jsonld", "shopify", "og", "text", "llm", "none"],
   }).notNull(),
   fetchedAt: integer("fetched_at").notNull(),
 });
@@ -211,7 +221,19 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // invent one.
     idempotencyKey: text("idempotency_key"),
     retired: integer("retired", { mode: "boolean" }).notNull().default(false),
-    visibility: text("visibility").notNull().default("ok"),
+    // Reserved by 000 as untyped text written by nobody; task 106 is what
+    // it was reserved for. Typing it is type-level only in drizzle — the
+    // emitted SQL for a text enum carries no CHECK — so this narrows the
+    // compiler without a table rebuild. Same vocabulary as
+    // entry_photos.screen_status on purpose: a garment photo and an entry
+    // photo are screened by the same path and must not drift into two
+    // spellings of one state. 'ok' is the pre-106 default and means
+    // "never screened", which is distinct from 'pass'.
+    visibility: text("visibility", {
+      enum: ["ok", "pending", "pass", "flagged", "hidden_pending_review"],
+    })
+      .notNull()
+      .default("ok"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
@@ -271,13 +293,35 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     userId: text("user_id").notNull(),
     verdict: integer("verdict"),
     isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
+    // Task 106. Deliberately NOT `isPublic`: that column is the runner's own
+    // sharing choice, and a moderator writing to it would silently rewrite a
+    // preference the runner set. Two different facts, two columns — an entry
+    // hidden for review that the owner had shared must go back to shared when
+    // it is approved, which is only knowable if nothing overwrote it.
+    //
+    // 'ok' is the default and the overwhelmingly common value. Public reads
+    // require it; the owner's own reads ignore it, so a reported entry stays
+    // visible to its author with an "under review" badge.
+    moderationStatus: text("moderation_status", {
+      enum: ["ok", "hidden_pending_review", "removed"],
+    })
+      .notNull()
+      .default("ok"),
     caption: text("caption"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
     uniqueIndex("entries_run").on(t.runId),
     index("entries_user_created").on(t.userId, t.createdAt),
-    index("entries_public_created").on(t.isPublic, t.createdAt),
+    // moderationStatus joins the covering index because every public read
+    // now filters on it too. Left out, the feed query filters in memory
+    // after LIMIT — which CLAUDE.md's D1 discipline calls out by name as
+    // returning "the survivors of the first 200 rows".
+    index("entries_public_created").on(
+      t.isPublic,
+      t.moderationStatus,
+      t.createdAt,
+    ),
   ],
 );
 
@@ -313,8 +357,21 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
     // anything other than a form have no key and must not be forced to
     // invent one.
     idempotencyKey: text("idempotency_key"),
+    // Task 106 photo screening. 'pending' is the durable marker the
+    // screening-retry cron reconciles against (law 8c) — the reason this
+    // path needs no queue. The owner's own reads ignore this column; every
+    // public read requires 'pass'. So a classifier outage degrades to
+    // "nobody else sees it yet" and never to a wrong answer or a failed
+    // save (law 5).
+    screenStatus: text("screen_status", {
+      enum: ["pending", "pass", "flagged", "hidden_pending_review"],
+    })
+      .notNull()
+      .default("pending"),
   },
   (t) => [
+    // The retry sweep reads "still pending, oldest first".
+    index("entry_photos_screen_status").on(t.screenStatus, t.id),
     // Scoped to the *entry*, not the user, which is narrower and needs no
     // denormalised owner column: an entry has exactly one owner, and the
     // upload path already refuses a caller who does not own it, so two
@@ -415,13 +472,16 @@ export const stravaConnections = /*#__PURE__*/ sqliteTable(
  * revocation that has not happened yet, which the digest can see and
  * re-dispatch.
  */
-export const stravaRevocations = /*#__PURE__*/ sqliteTable("strava_revocations", {
-  id: text("id").primaryKey(),
-  // The only thing deauthorize needs. The connection row it came from is
-  // already gone by the time this exists.
-  accessToken: text("access_token").notNull(),
-  createdAt: integer("created_at").notNull(),
-});
+export const stravaRevocations = /*#__PURE__*/ sqliteTable(
+  "strava_revocations",
+  {
+    id: text("id").primaryKey(),
+    // The only thing deauthorize needs. The connection row it came from is
+    // already gone by the time this exists.
+    accessToken: text("access_token").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+);
 
 export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
   "processed_webhook_events",
@@ -461,4 +521,163 @@ export const imports = /*#__PURE__*/ sqliteTable(
     idempotencyKey: text("idempotency_key"),
   },
   (t) => [uniqueIndex("imports_idempotency").on(t.userId, t.idempotencyKey)],
+);
+
+/**
+ * Task 106's trust & safety tables. All additive (CLAUDE.md schema protocol):
+ * new tables, plus nullable columns on existing ones, so this is expand-only
+ * and safe to deploy ahead of the code that reads it (law 8).
+ */
+
+/**
+ * A report filed by one user against one thing. `subjectType` discriminates
+ * what `subjectId` points at — an entry, a photo, a profile, or a product
+ * name (D-26 makes product names UGC and therefore reportable).
+ *
+ * The UNIQUE index is the whole auto-hide mechanism: the packet's threshold
+ * is "N reports from *distinct* users", and the only way to make that true
+ * under retries and double-clicks (law 8b) is to refuse a user's second
+ * report of the same subject at the storage layer. Counting rows is then
+ * counting people, which is what the rule actually means.
+ */
+export const reports = /*#__PURE__*/ sqliteTable(
+  "reports",
+  {
+    id: text("id").primaryKey(),
+    reporterId: text("reporter_id").notNull(),
+    subjectType: text("subject_type", {
+      enum: ["entry", "photo", "profile", "product"],
+    }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    reason: text("reason", {
+      enum: ["explicit", "harassment", "spam", "not_theirs", "other"],
+    }).notNull(),
+    note: text("note"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    // One report per person per subject. Not a dedupe convenience: it is
+    // what makes a COUNT(*) over this table a count of distinct reporters.
+    uniqueIndex("reports_one_per_reporter").on(
+      t.reporterId,
+      t.subjectType,
+      t.subjectId,
+    ),
+    // The auto-hide count, and the reviewer's "what else was said about
+    // this" read. Both filter on the subject, so the subject leads.
+    index("reports_subject").on(t.subjectType, t.subjectId),
+  ],
+);
+
+/**
+ * One row per thing awaiting a human, not one per report — three reports
+ * about the same entry are one decision. `status` is the claim column
+ * (law 2): the review UI claims a row before acting on it, so two open
+ * tabs cannot both resolve it.
+ */
+export const reviewQueue = /*#__PURE__*/ sqliteTable(
+  "review_queue",
+  {
+    id: text("id").primaryKey(),
+    subjectType: text("subject_type", {
+      enum: ["entry", "photo", "profile", "product"],
+    }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    // Why it is here: reports crossed the threshold, or the classifier
+    // flagged it. The reviewer reads a photo flagged by a model
+    // differently from one three people objected to.
+    source: text("source", { enum: ["reports", "classifier"] }).notNull(),
+    status: text("status", {
+      enum: ["pending", "reviewing", "approved", "removed"],
+    })
+      .notNull()
+      .default("pending"),
+    resolvedBy: text("resolved_by"),
+    resolvedAt: integer("resolved_at"),
+    // When a reviewer claimed it, and the only thing that can ever release
+    // the claim. `status='reviewing'` is a lock held by a browser tab, and
+    // a tab that is closed, crashed or simply walked away from used to
+    // hold it forever: the row left the queue, no one was looking at it,
+    // and nothing anywhere said so. Null unless claimed. Raised on PR #73.
+    claimedAt: integer("claimed_at"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    // One open decision per subject; a second trigger updates rather than
+    // stacking a duplicate in front of the reviewer.
+    uniqueIndex("review_queue_subject").on(t.subjectType, t.subjectId),
+    // The stale-claim sweep's only query: rows still `reviewing`, oldest
+    // claim first.
+    index("review_queue_claimed").on(t.status, t.claimedAt),
+    // The queue page and the digest's depth count both read
+    // "pending, oldest first" — a covering index for the only query.
+    index("review_queue_status_created").on(t.status, t.createdAt),
+  ],
+);
+
+/**
+ * Domains product URLs may not point at. Seeded empty; the review flow adds
+ * to it. Stored as the bare registrable host, lowercased, which is what the
+ * save path compares against — never the full URL.
+ */
+export const domainDenylist = /*#__PURE__*/ sqliteTable("domain_denylist", {
+  domain: text("domain").primaryKey(),
+  addedBy: text("added_by").notNull(),
+  reason: text("reason"),
+  createdAt: integer("created_at").notNull(),
+});
+
+/**
+ * What the classifier said about one photo, kept separately from the
+ * photo's `screen_status` so a threshold can be re-tuned against real
+ * scores after launch without re-classifying anything.
+ *
+ * `scores` is the raw per-category JSON as returned. Parsed through a zod
+ * codec on read like any other stored blob — it is our own write, but the
+ * shape came from outside and the rule does not care which.
+ */
+export const photoScreenings = /*#__PURE__*/ sqliteTable(
+  "photo_screenings",
+  {
+    id: text("id").primaryKey(),
+    // 'entry' | 'garment' — the two photo kinds, in their own tables.
+    photoScope: text("photo_scope", { enum: ["entry", "garment"] }).notNull(),
+    photoId: text("photo_id").notNull(),
+    model: text("model").notNull(),
+    scores: text("scores").notNull(),
+    // Three bands, not two (PR #73). `review` is the middle one: the photo
+    // stays visible and a person is asked to look anyway, so a borderline
+    // score buys calibration instead of costing a runner their photo.
+    // Widening a drizzle text enum is a TypeScript change only — the column
+    // is plain `text` with no CHECK, so there is no migration in it.
+    decision: text("decision", {
+      enum: ["pass", "review", "flag"],
+    }).notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("photo_screenings_photo").on(t.photoScope, t.photoId)],
+);
+
+/**
+ * A block: `blockerId` no longer sees `blockedId`, and vice versa (W2's
+ * copy promises both directions). Distinct from a ban, which is ours;
+ * a block is the runner's own and is never announced.
+ *
+ * Deliberately NOT read by the conditions aggregate — W2 states that a
+ * blocked runner's verdicts still count in the anonymous numbers, because
+ * those name nobody. `test/.../blocks.test.ts` pins that.
+ */
+export const blocks = /*#__PURE__*/ sqliteTable(
+  "blocks",
+  {
+    blockerId: text("blocker_id").notNull(),
+    blockedId: text("blocked_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("blocks_pk").on(t.blockerId, t.blockedId),
+    // The reverse direction is a query too: "who has blocked me" filters
+    // my content out of their feed, and without this it is a table scan.
+    index("blocks_blocked").on(t.blockedId),
+  ],
 );

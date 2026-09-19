@@ -48,13 +48,15 @@ describe("SettingsForm", () => {
   it("opens on what is already saved, not on the app defaults", async () => {
     // A settings screen that rendered defaults would quietly offer to
     // overwrite a choice with the thing the user changed it away from.
-    await renderForm({ tempUnit: "c", distanceUnit: "km", shareDefault: false });
+    await renderForm({
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
 
     expect(screen.getByLabelText("Temperature")).toHaveValue("c");
     expect(screen.getByLabelText("Distance")).toHaveValue("km");
-    expect(
-      screen.getByLabelText("Share to feed by default"),
-    ).not.toBeChecked();
+    expect(screen.getByLabelText("Share to feed by default")).not.toBeChecked();
   });
 
   it("states the calibration and its offset, without opening anything", async () => {

@@ -38,7 +38,9 @@ export const fitSource: RunSource = {
     try {
       stream = Stream.fromArrayBuffer(bytes);
     } catch (error) {
-      throw new RunParseError("fit: bytes are not a readable stream", { cause: error });
+      throw new RunParseError("fit: bytes are not a readable stream", {
+        cause: error,
+      });
     }
     if (!Decoder.isFIT(stream)) {
       throw new RunParseError("fit: stream failed the FIT magic-byte check");
@@ -52,7 +54,10 @@ export const fitSource: RunSource = {
     // impossible, and a mutant in it could never be killed.
     const { messages, errors } = new Decoder(stream).read();
     if (errors.length > 0) {
-      throw new RunParseError(`fit: decoder reported ${String(errors.length)} error(s)`, { cause: errors[0] });
+      throw new RunParseError(
+        `fit: decoder reported ${String(errors.length)} error(s)`,
+        { cause: errors[0] },
+      );
     }
 
     const session = messages.sessionMesgs?.[0];
@@ -62,7 +67,9 @@ export const fitSource: RunSource = {
       session.totalDistance === undefined ||
       session.totalDistance <= 0
     ) {
-      throw new RunParseError("fit: session message missing startTime/elapsed/distance");
+      throw new RunParseError(
+        "fit: session message missing startTime/elapsed/distance",
+      );
     }
 
     const { startPositionLat, startPositionLong } = session;
@@ -84,7 +91,9 @@ export const fitSource: RunSource = {
       ...startPosition,
     });
     if (!parsed.success) {
-      throw new RunParseError("fit: assembled draft failed runDraftSchema", { cause: parsed.error });
+      throw new RunParseError("fit: assembled draft failed runDraftSchema", {
+        cause: parsed.error,
+      });
     }
     return parsed.data;
   },

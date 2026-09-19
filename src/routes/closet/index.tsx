@@ -41,7 +41,10 @@ function ClosetPage() {
           Add
         </Link>
       </div>
-      <ClosetGrid listing={listing} initialShowRetired={search.retired ?? false} />
+      <ClosetGrid
+        listing={listing}
+        initialShowRetired={search.retired ?? false}
+      />
     </Layout>
   );
 }

@@ -140,7 +140,9 @@ export function CalibrateForm({
         legend="Compared to people you run with, do you run warm or cold?"
         options={THERMAL_OPTIONS}
         optionLabels={THERMAL_LABELS}
-        optionNotes={offsetLabels(tempUnit === "" ? defaultUnits.temp : tempUnit)}
+        optionNotes={offsetLabels(
+          tempUnit === "" ? defaultUnits.temp : tempUnit,
+        )}
         hint="The offset is visible on purpose. You'll see it change as we learn."
         value={thermalLevel}
         field={form.field}

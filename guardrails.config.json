@@ -7,8 +7,11 @@
     "tsc": "required",
     "knip": "required",
     "dependency-cruiser": "required",
-    "//stryker": "At the push rung, not commit (guardrails 0.3.0, upstream #61). Stryker's cost here is dominated by a fixed per-invocation overhead — a full dry run of the whole suite in workerd, booting an isolate and applying migrations, before a single mutant is tested — so a one-file commit costs ~5 minutes and a 25-file one ~15. At commit an agent pays that on every checkpoint and mutates the same file again on each; at push the union of the branch's changed files is mutated once. What does NOT change is what leaves the machine, since nothing is pushed between commits. The trade is real: a mutation regression is now caught later, on a wider diff, so localizing it takes longer.",
-    "stryker": { "mode": "required", "rung": "push" },
+    "//stryker": "At the push rung, not commit (guardrails 0.3.0, upstream #61). Stryker's cost here is dominated by a fixed per-invocation overhead \u2014 a full dry run of the whole suite in workerd, booting an isolate and applying migrations, before a single mutant is tested \u2014 so a one-file commit costs ~5 minutes and a 25-file one ~15. At commit an agent pays that on every checkpoint and mutates the same file again on each; at push the union of the branch's changed files is mutated once. What does NOT change is what leaves the machine, since nothing is pushed between commits. The trade is real: a mutation regression is now caught later, on a wider diff, so localizing it takes longer.",
+    "stryker": {
+      "mode": "required",
+      "rung": "push"
+    },
     "dupes": "required"
   },
   "sanctionedFiles": [
@@ -25,13 +28,23 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/routes/safety/review.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes of one lane are the same shape by mandate: createFileRoute + requireSignedIn + one loader call + Layout + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "The route-shape grant, ninth of its kind and mechanically identical to the eight already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx, onboarding/calibrate.tsx, onboarding/taplist.tsx, onboarding/name.tsx). server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ \u2014 so the shape is mandated, not copied. Lane 106 resolved five other clone groups by extraction rather than suppression, including moving ListSection to ui/ and folding the bracketed count into it; this is the one class extraction cannot touch. Added by the agent on the strength of the eight precedents rather than a fresh decision \u2014 veto it and the routes can carry the duplication instead.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/safety/review.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what \"load a row and decide\" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module",
+      "reason": "The measured instance of the cost .fallowrc.jsonc predicts. openRow was extracted out of resolveReview specifically to kill two clone groups, and that extraction is what made it match feed/reactions.ts's assertVisible and feed/entries.ts's row read \u2014 \"the flip's price is a set of fallow-ignore comments that grows as the code gets better factored, not worse\". Same class as the route-shape grants already here. The alternative was measured rather than assumed: inlining openRow back into resolveReview restores TWO clone groups instead of this one, and makes the function open with an eight-line column list. Lane 106 got duplication from 141 lines to zero groups by extraction; this is the only suppression it asked for. Owner's call, 2026-09-15.",
+      "count": 1
+    },
+    {
       "key": "src/routes/onboarding/name.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes of one flow are the same shape by mandate: createFileRoute + requireSession + one loader call + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
-      "reason": "P2.5 and the settings page, which server-functions-are-glue REQUIRES to be createFileRoute + a session guard + a loader call + a shell — and which it forbids from differing, since branching in a route file is exactly what that test rejects. Same class as the route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx, onboarding/calibrate.tsx, onboarding/taplist.tsx). Two other clones in the same change were fixed rather than granted: the fold became MoreDisclosure, and the second turned out to be a real defect — nameGarmentInput typed itemId as any non-empty string where item ids are ULIDs.",
+      "reason": "P2.5 and the settings page, which server-functions-are-glue REQUIRES to be createFileRoute + a session guard + a loader call + a shell \u2014 and which it forbids from differing, since branching in a route file is exactly what that test rejects. Same class as the route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx, onboarding/calibrate.tsx, onboarding/taplist.tsx). Two other clones in the same change were fixed rather than granted: the fold became MoreDisclosure, and the second turned out to be a real defect \u2014 nameGarmentInput typed itemId as any non-empty string where item ids are ULIDs.",
       "count": 1
     },
     {
       "key": "src/routes/onboarding/calibrate.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
-      "reason": "Two steps of one onboarding flow. server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ — so the shape is mandated, not copied. Same class as the five route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx).",
+      "reason": "Two steps of one onboarding flow. server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ \u2014 so the shape is mandated, not copied. Same class as the five route-shape grants already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx).",
       "count": 1
     },
     {
@@ -41,7 +54,17 @@
     },
     {
       "key": "src/modules/onboarding/starter-list.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the query is the same read as feed/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since \"no location\" and \"no unit preference\" are different facts with different right answers",
-      "reason": "Same two-column read of user_profiles as feed/units.ts's unitsFor, and the extraction into lib/keyed-read provably does not compile: drizzle infers a row type for a literal column map and stops for a generic one, widening select().from().where() to a union that includes the query builder, so the awaited value is neither iterable nor indexable. Four shapes were tried (annotated result, .all(), .execute(), a generic table param) — the same class of failure CLAUDE.md already records for wrapping createServerFn. What differs after the query is the part that matters: “no location” and “no unit preference” are different facts with different right answers.",
+      "reason": "Same two-column read of user_profiles as feed/units.ts's unitsFor, and the extraction into lib/keyed-read provably does not compile: drizzle infers a row type for a literal column map and stops for a generic one, widening select().from().where() to a union that includes the query builder, so the awaited value is neither iterable nor indexable. Four shapes were tried (annotated result, .all(), .execute(), a generic table param) \u2014 the same class of failure CLAUDE.md already records for wrapping createServerFn. What differs after the query is the part that matters: \u201cno location\u201d and \u201cno unit preference\u201d are different facts with different right answers.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/enrichment/html.ts|mutation-suppress|// Stryker restore BlockStatement",
+      "reason": "The closing half of the block pair below, not a second decision. A `next-line` directive does not attach to a line opening with `} catch`, so the equivalent catch in parseJson has to be bracketed by disable/restore \u2014 and the diff-auditor counts each comment as its own suppression. Restoring immediately after the try keeps the scope to those five lines rather than the rest of the file; dropping it would silence BlockStatement everywhere below. See the paired entry for the proof. Owner's call, 2026-09-13.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/enrichment/html.ts|mutation-suppress|// Stryker disable BlockStatement",
+      "reason": "Equivalent mutant, proof at the site: emptying the catch in parseJson falls off the end of the function, which is undefined \u2014 the same value the explicit return produces. No caller can distinguish them, and that is by design rather than by accident: malformed JSON and \"no Product in this block\" must both skip to the next block, because a page shipping one broken script beside a good one has to still yield the good one (tested). Making it observable would mean inventing behaviour \u2014 recording a parse failure somewhere nothing reads \u2014 to satisfy a mutant rather than a requirement. Three restructurings were tried: inlining the try/catch with continue, returning a result wrapper, and moving the guard to the call site; the caller behaves identically in all three. A block disable/restore pair rather than next-line, because the mutated line opens with `} catch` and next-line does not attach to a line beginning with a closing brace. Owner's call, 2026-09-13.",
       "count": 1
     },
     {
@@ -80,11 +103,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
-      "reason": "Unreachable, proof at the site: the insert either wrote the row or conflicted with one already present, so the read that follows always finds something. The guard exists to narrow `ObservationRow | undefined` for the caller.",
-      "count": 1
-    },
-    {
       "key": "src/modules/ops/health.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: the probe key is arbitrary. The check asks R2 whether an object exists, and a miss is a successful round trip \u2014 which is the whole point. Any string, empty included, proves the same reachability, so no assertion can tell them apart.",
       "count": 1
@@ -120,11 +138,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
-      "reason": "Equivalent mutants on both `<=` in `fitWithin`: they differ from `<` only when a side equals `max`, and that side is then the longest, so the scale factor is exactly 1 and the arithmetic below is the identity. What the guard really prevents is scaling *up* an image smaller than the box on both sides, which a test does assert.",
-      "count": 1
-    },
-    {
       "key": "src/modules/closet/photos.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: R2 treats `etagDoesNotMatch: undefined` as no condition at all, so both arms of the conditional-request branch answer the same for a caller that sent no usable If-None-Match. The branch is there to say so out loud.",
       "count": 1
@@ -132,7 +145,7 @@
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Seven equivalent guards, each with its proof at the site: a never-worn item gives NaN seconds and `NaN > threshold` is already false; deleting `undefined` from a Map removes nothing; an empty `inArray` matches nothing (twice \u2014 the id list and the product-defaults lookup); `allowed.includes(null)` is already false; `Map#get` of a null key answers undefined; and filtering nulls out of an `IN` list changes no match. Every one exists because the operation below it takes a value the type system will not let be null, and every one saves a query or says an intent that the runtime would otherwise leave implicit.",
-      "count": 6
+      "count": 5
     },
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
@@ -195,11 +208,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Equivalent mutant: every entry's author is in the batch that fetched them, so the lookup always hits. The optional chain is here because `Map#get` is typed as possibly missing.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/prefill.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the loop below would find no best and answer undefined anyway. The return saves two queries on every attach by a runner with no history.",
       "count": 1
@@ -207,11 +215,6 @@
     {
       "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: a `LIKE` never matches NULL, so the predicate cannot drop a row. It is here because the column is nullable and the result type promises a name.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,MethodExpression",
-      "reason": "Equivalent mutants, both on the same idea: a `LIKE` never matches NULL, so the filter cannot drop a row and the raw rows already have the shape returned. A compiler-driven guard, not a runtime one.",
       "count": 1
     },
     {
@@ -242,11 +245,6 @@
     {
       "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
       "reason": "Equivalent mutant: the undefined checks are the same fact said twice \u2014 the loop only visits indexes that exist, so neither element can be missing. They are here because `noUncheckedIndexedAccess` types every array access as possibly absent.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
-      "reason": "Unreachable: the length check above already refused anything under two points. It is here because indexing an array is typed as possibly absent, and the message names that impossibility.",
       "count": 1
     },
     {
@@ -291,7 +289,7 @@
     },
     {
       "key": "src/modules/closet/components/GarmentDetail.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` — empty when the picker was dismissed — so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
+      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` \u2014 empty when the picker was dismissed \u2014 so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
       "count": 1
     },
     {
@@ -301,7 +299,7 @@
     },
     {
       "key": "src/modules/feed/components/AttachKit.tsx|mutation-suppress|// Stryker restore ArrayDeclaration",
-      "reason": "Closes the block-scoped disable above it — the pair is one grant, not two decisions.",
+      "reason": "Closes the block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
       "count": 1
     },
     {
@@ -326,7 +324,7 @@
     },
     {
       "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker restore BlockStatement,ArrayDeclaration,CallExpression",
-      "reason": "Closes the block-scoped disable above it — the pair is one grant, not two decisions.",
+      "reason": "Closes the block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
       "count": 1
     },
     {
@@ -341,7 +339,7 @@
     },
     {
       "key": "src/modules/runs/components/ManualRunForm.tsx|mutation-suppress|// Stryker disable next-line StringLiteral",
-      "reason": "Two equivalent mutants, each proved at its site: anything stryker substitutes for the empty `startedAt` is no more a parseable datetime, so `toEpochSeconds` answers NaN either way and the schema refuses both — and the empty string is what a `datetime-local` renders as blank; and `successMessage` is announced into a live region that `onSuccess` unmounts in the same commit, so nothing can observe the sentence. The second is a finding rather than a gap, recorded as D-44.",
+      "reason": "Two equivalent mutants, each proved at its site: anything stryker substitutes for the empty `startedAt` is no more a parseable datetime, so `toEpochSeconds` answers NaN either way and the schema refuses both \u2014 and the empty string is what a `datetime-local` renders as blank; and `successMessage` is announced into a live region that `onSuccess` unmounts in the same commit, so nothing can observe the sentence. The second is a finding rather than a gap, recorded as D-44.",
       "count": 2
     },
     {
@@ -351,7 +349,7 @@
     },
     {
       "key": "src/modules/runs/components/UploadForm.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` — empty when the picker was dismissed — so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
+      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` \u2014 empty when the picker was dismissed \u2014 so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
       "count": 1
     },
     {
@@ -361,37 +359,37 @@
     },
     {
       "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker restore OptionalChaining,ArrayDeclaration",
-      "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
+      "reason": "Closing directive for block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
       "count": 2
     },
     {
       "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
-      "reason": "Equivalent mutant — stryker's replacement dependency array is a constant, so the callback is exactly as stable as this list makes it.",
+      "reason": "Equivalent mutant \u2014 stryker's replacement dependency array is a constant, so the callback is exactly as stable as this list makes it.",
       "count": 1
     },
     {
       "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable ArrayDeclaration",
-      "reason": "Equivalent mutant, same constant-array case — stryker's replacement is a constant one-element array, just as stable as an empty one. Block form used because the mutant's line begins with a closing brace and next-line directive cannot attach.",
+      "reason": "Equivalent mutant, same constant-array case \u2014 stryker's replacement is a constant one-element array, just as stable as an empty one. Block form used because the mutant's line begins with a closing brace and next-line directive cannot attach.",
       "count": 1
     },
     {
       "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker restore ArrayDeclaration",
-      "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
+      "reason": "Closing directive for block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
       "count": 1
     },
     {
       "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutant — `retry` is only reachable from the failure band which only renders after a submit that recorded values. The guard narrows `unknown` for the compiler; there is no state where a user can reach this with nothing to resend.",
+      "reason": "Equivalent mutant \u2014 `retry` is only reachable from the failure band which only renders after a submit that recorded values. The guard narrows `unknown` for the compiler; there is no state where a user can reach this with nothing to resend.",
       "count": 1
     },
     {
       "key": "src/ui/use-idempotency-key.ts|mutation-suppress|// Stryker disable ArrayDeclaration",
-      "reason": "Equivalent mutant — stryker's replacement for an empty dependency array is a constant array, exactly as stable as `[]`, so `rotate` keeps its identity and no caller can tell.",
+      "reason": "Equivalent mutant \u2014 stryker's replacement for an empty dependency array is a constant array, exactly as stable as `[]`, so `rotate` keeps its identity and no caller can tell.",
       "count": 1
     },
     {
       "key": "src/ui/use-idempotency-key.ts|mutation-suppress|// Stryker restore ArrayDeclaration",
-      "reason": "Closing directive for block-scoped disable above it — the pair is one grant, not two decisions.",
+      "reason": "Closing directive for block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
       "count": 1
     },
     {
@@ -415,13 +413,13 @@
       "count": 1
     },
     {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two different backlogs: imports stalled past the grace window, and runs whose weather never resolved -- same shape, different tables and thresholds.",
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
+      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
       "count": 1
     },
     {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
+      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
+      "reason": "The enrichment sweep is the third stalled-marker reconciliation beside imports and Strava revocations, and the third caller of redispatchEach. The loop body and the stalled-row query (stalledPending) are both extracted; what remains at each site is the 13-line call naming a queue, a message shape, a Sentry context and a sentence, which fallow's identifier matching reads as a clone of the imports call. This is the well-factored-pair case CLAUDE.md records: extraction leaves call sites that are skeletally identical, and the price of the flip is a suppression per caller. Three other shapes were tried (a query helper alone, sweeps as data run by one function, a call-site helper) and each moved the clone rather than removed it. Owner's call, 2026-09-13.",
       "count": 1
     },
     {
@@ -501,12 +499,12 @@
     },
     {
       "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable ArrowFunction",
-      "reason": "Equivalent mutant: emptying the where-clause arrow widens the query to every observation, and the answer is assembled by matching cache keys against the rows afterwards — so a superset changes what D1 *scans*, which is what it bills, and not what is returned. Block form because the read is one statement over five lines and a next-line directive would attach to its first line and silently do nothing.",
+      "reason": "Equivalent mutant: emptying the where-clause arrow widens the query to every observation, and the answer is assembled by matching cache keys against the rows afterwards \u2014 so a superset changes what D1 *scans*, which is what it bills, and not what is returned. Block form because the read is one statement over five lines and a next-line directive would attach to its first line and silently do nothing.",
       "count": 1
     },
     {
       "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker restore ArrowFunction",
-      "reason": "Closing directive for the block-scoped disable above it — the pair is one grant, not two decisions.",
+      "reason": "Closing directive for the block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
       "count": 1
     },
     {
@@ -532,6 +530,56 @@
     {
       "key": "src/ui/form.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable OptionalChaining",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker restore OptionalChaining",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable ConditionalExpression,MethodExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker restore ConditionalExpression,MethodExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker restore ConditionalExpression,LogicalOperator,StringLiteral,CallExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker disable ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/weather/store.ts|mutation-suppress|// Stryker restore ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable ConditionalExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker restore ConditionalExpression",
+      "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
       "count": 1
     }
   ]

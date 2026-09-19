@@ -1,0 +1,82 @@
+import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+
+import {
+  extractionModelFor,
+  extractionModelFromEnv,
+} from "../../../src/modules/enrichment/model/from-env";
+
+/**
+ * Whether there is a model at all. Unconfigured is the default and a
+ * supported state — the ladder already answers seven of the eight sampled
+ * pages without one — so "no key, no model" is the behaviour under test
+ * rather than a degradation to apologise for.
+ */
+
+describe("extractionModelFor", () => {
+  it("builds a model when there is a key", () => {
+    expect(extractionModelFor("or-key")).toBeDefined();
+  });
+
+  it("builds nothing when there is no key", () => {
+    expect(extractionModelFor(undefined)).toBeUndefined();
+  });
+
+  it("builds nothing for an empty key, which is how an unset secret arrives", () => {
+    // The same trap `modules/ops/sentry.ts` records for the Sentry DSN: an
+    // empty value is not a value, and treating it as one made the reporter
+    // throw on construction.
+    expect(extractionModelFor("")).toBeUndefined();
+  });
+});
+
+const requestSchema = z.object({
+  model: z.string(),
+  provider: z.unknown().optional(),
+});
+
+function sentBody(fetchImpl: ReturnType<typeof answering>) {
+  const body = fetchImpl.mock.calls[0]?.[1]?.body;
+  if (typeof body !== "string") throw new TypeError("body was not a string");
+  return requestSchema.parse(JSON.parse(body));
+}
+
+/**
+An empty but well-formed completion — enough to reach the request.
+*/
+const emptyCompletion: typeof fetch = () =>
+  Promise.resolve(Response.json({ choices: [{ message: { content: "{}" } }] }));
+
+function answering() {
+  return vi.fn(emptyCompletion);
+}
+
+describe("the choice the eval makes (D-32)", () => {
+  it("names the model, and asks OpenAI for it directly", async () => {
+    // The owner's decision lives here as a constant rather than in an
+    // environment nobody diffs: it is not a secret and not per-request,
+    // and it carries accuracy and cost behind it. Straight to OpenAI (PR
+    // #72 review), so the id is OpenAI's own and there is no router
+    // provider to pin.
+    const fetchImpl = answering();
+    await extractionModelFor("sk-key", fetchImpl)?.extract("100% merino", {
+      url: "https://shop.example.com/p",
+    });
+
+    const body = sentBody(fetchImpl);
+    expect(body.model).toBe("gpt-5.6-luna");
+    expect(body.provider).toBeUndefined();
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      "https://api.openai.com/v1/chat/completions",
+    );
+  });
+});
+
+describe("extractionModelFromEnv", () => {
+  it("builds one from this Worker's secret", () => {
+    // The stand-in key in `test/wrangler.test.jsonc`: a secret cannot be
+    // set from inside the isolate, so without it this shell is unreachable.
+    const model = extractionModelFromEnv();
+    expect(model).toBeDefined();
+  });
+});

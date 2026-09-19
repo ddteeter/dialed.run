@@ -73,12 +73,8 @@ describe("Devtools", () => {
     vi.stubEnv("VITE_DEVTOOLS", "");
     const { getByTestId } = render(<Devtools />);
 
-    expect(getByTestId("devtools-mock").dataset.position).toBe(
-      "bottom-right",
-    );
-    expect(getByTestId("devtools-plugin").dataset.name).toBe(
-      "Tanstack Router",
-    );
+    expect(getByTestId("devtools-mock").dataset.position).toBe("bottom-right");
+    expect(getByTestId("devtools-plugin").dataset.name).toBe("Tanstack Router");
     expect(getByTestId("router-panel")).toBeInTheDocument();
   });
 });

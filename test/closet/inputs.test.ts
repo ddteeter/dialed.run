@@ -50,9 +50,9 @@ describe("closetFiltersInput", () => {
   });
 
   it("takes the condition flags as booleans", () => {
-    expect(
-      closetFiltersInput.safeParse({ windResistant: false }).success,
-    ).toBe(true);
+    expect(closetFiltersInput.safeParse({ windResistant: false }).success).toBe(
+      true,
+    );
     expect(
       closetFiltersInput.safeParse({ waterResistant: "yes" }).success,
     ).toBe(false);

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import type { ReactNode } from "react";
 
 import { Mono } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
@@ -17,11 +18,18 @@ export function OtherProfile({
   isFollowing: initiallyFollowing,
   follow,
   unfollow,
+  reportAffordance,
 }: Readonly<{
   profile: OtherProfileData;
   isFollowing: boolean;
   follow: (input: { data: { userId: string } }) => Promise<unknown>;
   unfollow: (input: { data: { userId: string } }) => Promise<unknown>;
+  /**
+   * W1's report control, composed by the route — a node rather than a
+   * callback for the same boundary reason as `EntryDetail`: this module
+   * may not reach `modules/safety`.
+   */
+  reportAffordance?: ReactNode;
 }>) {
   const [isFollowing, setIsFollowing] = useState(initiallyFollowing);
   const [pending, setPending] = useState(false);
@@ -71,6 +79,8 @@ export function OtherProfile({
           {isFollowing ? "Following" : "Follow"}
         </button>
       </div>
+
+      {reportAffordance}
 
       {profile.recentPublicEntries.length === 0 ? (
         <p className="text-sm text-night/60">No public entries yet.</p>

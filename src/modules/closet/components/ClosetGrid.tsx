@@ -55,9 +55,7 @@ export function ClosetGrid({
   const visible = listing.items.filter(
     (view) => showRetired || !view.item.retired,
   );
-  const retiredCount = listing.items.filter(
-    (view) => view.item.retired,
-  ).length;
+  const retiredCount = listing.items.filter((view) => view.item.retired).length;
 
   if (listing.totalCount === 0) {
     return (

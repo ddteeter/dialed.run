@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import { verdictLabel } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
@@ -10,11 +11,9 @@ import {
 } from "../../../lib/measures";
 import { Bracketed, Mono } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
-import { ListSection } from "./ListSection";
+import { ListSection } from "../../../ui";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
-
-
 
 /**
  * One entry, in full (screen D).
@@ -27,24 +26,56 @@ type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
  */
 export function EntryDetail({
   entry,
-  entryId,
   shouldPromptVerdict,
   recordPrompted,
   toggleUseful,
   units,
+  reportAffordance,
 }: Readonly<{
   entry: Entry;
   /**
   The viewer's own units — every number on this screen is theirs.
   */
   units: Units;
-  entryId: string;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
   toggleUseful: (input: {
     data: { entryId: string };
   }) => Promise<{ useful: boolean }>;
+  /**
+   * W1's report control, composed by the route.
+   *
+   * A node rather than a callback, because this module may not import
+   * `modules/safety` — dependency-cruiser forbids a cross-module deep
+   * import and the safety barrel reaches D1, which a component in the
+   * client bundle cannot. So this screen renders whatever it is handed
+   * and does not know what a report is.
+   *
+   * **Asked on PR #73: is this a problem, and should the rules bend?**
+   * No, on the evidence. A callback would not help — the thing feed must
+   * not import is not the *function*, it is the sheet, its reason list and
+   * its copy, all of which live in `modules/safety/components` and all of
+   * which a callback would still have to render from here. The node IS
+   * the seam, and it is the one the architecture already prescribes:
+   * routes wire, components take props. The rule is also load-bearing
+   * rather than tidy — the safety barrel reaches D1, and a component
+   * importing it puts the drizzle schema in the client bundle, which is
+   * invisible to tsc, eslint, dependency-cruiser and the test suite alike
+   * (CLAUDE.md §Architecture records two live instances, one of which did
+   * not even fail the build).
+   *
+   * What would be worth changing is not the rule but its discoverability:
+   * this is the first cross-lane composition seam in the app, and the next
+   * lane that needs one will re-derive it from scratch. Written up in
+   * `docs/architecture.md` §"Composing across modules" for that reason.
+   */
+  reportAffordance?: ReactNode;
 }>) {
+  // `entry.id` rather than an `entryId` prop beside it. The component
+  // took both, which is two sources for one fact — and the kind a route
+  // can silently disagree with itself about, since one came from the URL
+  // params and the other from the loader.
+  const entryId = entry.id;
   const [useful, setUseful] = useState({
     count: entry.usefulCount,
     reacted: entry.viewerHasReacted,
@@ -96,7 +127,8 @@ export function EntryDetail({
 
       <div className="flex items-center gap-4">
         <Mono className="text-sm text-night/60">
-          {formatDistance(entry.distanceM, units.distance)} · {formatDuration(entry.durationS)}
+          {formatDistance(entry.distanceM, units.distance)} ·{" "}
+          {formatDuration(entry.durationS)}
         </Mono>
         {entry.conditions === undefined ? undefined : (
           <Mono className="text-sm text-teal">
@@ -113,6 +145,8 @@ export function EntryDetail({
       <p className="m-0 text-sm text-night/60">
         {entry.authorDisplayName ?? "A runner"}
       </p>
+
+      {reportAffordance}
 
       {entry.photoKeys.length === 0 ? undefined : (
         <div className="grid grid-cols-2 gap-2">

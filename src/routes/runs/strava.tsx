@@ -28,12 +28,12 @@ function StravaPage() {
     <BelledLayout unreadCount={unreadCount}>
       <Page title="Strava" width="narrow">
         <p className="text-sm text-night/50">
-          We never store your Strava activity data — connecting only turns on
-          a reminder to log your kit after a run.
+          We never store your Strava activity data — connecting only turns on a
+          reminder to log your kit after a run.
         </p>
         <p className="text-sm text-night/50">
-          If that seems like more work than it needs to be, we agree. Take it
-          up with Strava&rsquo;s terms of use.
+          If that seems like more work than it needs to be, we agree. Take it up
+          with Strava&rsquo;s terms of use.
         </p>
         <StravaConnect
           configured={strava.configured}

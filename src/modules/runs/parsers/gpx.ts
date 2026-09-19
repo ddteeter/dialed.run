@@ -100,21 +100,28 @@ export const gpxSource: RunSource = {
     const doc = parseXmlDocument(bytes, "gpx");
 
     const points = extractTrackPoints(doc);
-    if (points.length < 2) throw new RunParseError("gpx: fewer than 2 track points with time");
+    if (points.length < 2)
+      throw new RunParseError("gpx: fewer than 2 track points with time");
 
     const first = points[0];
     const last = points.at(-1);
     // Unreachable: the length check above already refused anything under
     // two points. It is here because indexing an array is typed as
     // possibly absent, and the message names that impossibility.
-    // Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
-    if (first === undefined || last === undefined) throw new RunParseError("gpx: track point list was unexpectedly empty");
+    // Block pair rather than `next-line`: prettier moves the `throw` onto
+    // its own line, so the StringLiteral and CallExpression mutants sit
+    // outside what `next-line` covers.
+    // Stryker disable ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
+    if (first === undefined || last === undefined)
+      throw new RunParseError("gpx: track point list was unexpectedly empty");
+    // Stryker restore ConditionalExpression,LogicalOperator,StringLiteral,CallExpression
 
     const durationS = Math.round(
       (last.time.getTime() - first.time.getTime()) / 1000,
     );
     const distanceM = totalDistanceMeters(points);
-    if (durationS <= 0 || distanceM <= 0) throw new RunParseError("gpx: non-positive duration or distance");
+    if (durationS <= 0 || distanceM <= 0)
+      throw new RunParseError("gpx: non-positive duration or distance");
 
     const parsed = runDraftSchema.safeParse({
       startedAt: Math.floor(first.time.getTime() / 1000),
@@ -125,7 +132,10 @@ export const gpxSource: RunSource = {
       indoor: false,
       title: "Imported run",
     });
-    if (!parsed.success) throw new RunParseError("gpx: assembled draft failed runDraftSchema", { cause: parsed.error });
+    if (!parsed.success)
+      throw new RunParseError("gpx: assembled draft failed runDraftSchema", {
+        cause: parsed.error,
+      });
     return parsed.data;
   },
 };

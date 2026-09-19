@@ -9,7 +9,11 @@
  * dependency-cruiser's index-only cross-module rule; it is an infra entry
  * point, not a domain one.
  */
-export { attachObservation, recordManualObservation, retryPendingWeather } from "./attach";
+export {
+  attachObservation,
+  recordManualObservation,
+  retryPendingWeather,
+} from "./attach";
 export { WeatherAttribution } from "./components/WeatherAttribution";
 export { forecast } from "./forecast";
 // Seasonal normals, for onboarding's starter list (O3). See ./normals for

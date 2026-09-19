@@ -7,10 +7,7 @@
  */
 import { eq, sql } from "drizzle-orm";
 
-import {
-  stravaConnections,
-  stravaRevocations,
-} from "../../../db/schema-core";
+import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
 import { captureException } from "../../ops";
@@ -18,6 +15,7 @@ import { notificationInsert } from "../../notifications";
 import { isTerminalStravaError } from "./api";
 import type { StravaApi } from "./api";
 import type { RevokeJob } from "../queue-messages";
+import { nowSeconds } from "../../../lib/now";
 
 export interface RevokeQueueProducer {
   send(message: RevokeJob): Promise<unknown>;
@@ -26,7 +24,7 @@ export interface RevokeQueueProducer {
 export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
 
 function nowS(): number {
-  return Math.floor(Date.now() / 1000);
+  return nowSeconds();
 }
 
 /**
@@ -219,7 +217,10 @@ async function recordRefreshFailure(
     // about. Remember it and leave the connection alone.
     await db
       .update(stravaConnections)
-      .set({ refreshFailureCount: failureCount, refreshFirstFailedAt: firstFailedAt })
+      .set({
+        refreshFailureCount: failureCount,
+        refreshFirstFailedAt: firstFailedAt,
+      })
       .where(eq(stravaConnections.userId, userId));
     return "degraded";
   }
@@ -322,6 +323,9 @@ export async function disconnectStrava(
   try {
     await queue.send({ type: "strava_revoke", revocationId });
   } catch (error) {
-    captureException(error, { surface: "strava-revoke-dispatch", revocationId });
+    captureException(error, {
+      surface: "strava-revoke-dispatch",
+      revocationId,
+    });
   }
 }

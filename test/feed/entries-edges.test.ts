@@ -32,6 +32,7 @@ import {
   NOW,
 } from "./helpers";
 
+import { nowSeconds } from "../../src/lib/now";
 /**
  * The write path's refusals and the detail read's fallbacks.
  *
@@ -112,7 +113,7 @@ describe("attachKit follows the runner's sharing default", () => {
     // years.
     const userId = await makeUser();
     const runId = await makeRun({ userId });
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     const entryId = await attachKit({ userId, runId, itemIds: [] });
 
@@ -212,7 +213,6 @@ async function ownEntry(): Promise<{
 }
 
 describe("submitVerdict writes the whole submission or none of it", () => {
-
   it("records the tags it was given, replacing the previous ones", async () => {
     const { userId, entryId } = await ownEntry();
 
@@ -400,16 +400,15 @@ async function unratedEntry(): Promise<{ userId: string; entryId: string }> {
 }
 
 describe("the verdict prompt", () => {
-
   it("prompts the owner of an entry with no verdict", async () => {
     const { userId, entryId } = await unratedEntry();
     expect(await shouldPromptForVerdict(userId, entryId)).toBe(true);
   });
 
   it("does not prompt about an entry that does not exist", async () => {
-    expect(
-      await shouldPromptForVerdict(await makeUser(), newUlid()),
-    ).toBe(false);
+    expect(await shouldPromptForVerdict(await makeUser(), newUlid())).toBe(
+      false,
+    );
   });
 
   it("does not prompt anyone but the owner", async () => {
@@ -496,7 +495,6 @@ async function ratedEntryInBand(params: {
 }
 
 describe("band statistics", () => {
-
   it("answers with zeroes for a runner with no history", async () => {
     expect(
       await itemBandWearStat(await makeUser(), newUlid(), 0),
@@ -677,7 +675,7 @@ describe("the verdict prompt notification", () => {
     const userId = await makeUser();
     const runId = await makeRun({ userId });
     const entryId = await attachKit({ userId, runId, itemIds: [] });
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     await recordVerdictPrompted(userId, entryId);
 

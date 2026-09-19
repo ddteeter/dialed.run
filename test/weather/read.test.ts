@@ -10,7 +10,10 @@ import {
   recordManualObservation,
   type WeatherReading,
 } from "../../src/modules/weather";
-import { cacheKeyFor, upsertRealObservation } from "../../src/modules/weather/store";
+import {
+  cacheKeyFor,
+  upsertRealObservation,
+} from "../../src/modules/weather/store";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -59,11 +62,22 @@ describe("observationForRun (103, read API for 104)", () => {
   });
 
   it("returns a real reading tagged with its source", async () => {
-    const runId = await insertRun({ lat: 73.1, lng: 33.1, startedAt: 1_768_500_000 });
+    const runId = await insertRun({
+      lat: 73.1,
+      lng: 33.1,
+      startedAt: 1_768_500_000,
+    });
     const key = cacheKeyFor(73.1, 33.1, new Date(1_768_500_000 * 1000));
     await upsertRealObservation(
       key,
-      { tempC: 2, feelsLikeC: 0, humidity: 70, windKph: 10, precipMm: 0, condition: "cloudy" },
+      {
+        tempC: 2,
+        feelsLikeC: 0,
+        humidity: 70,
+        windKph: 10,
+        precipMm: 0,
+        condition: "cloudy",
+      },
       runId,
     );
     const reading = await observationForRun(runId);
@@ -81,7 +95,14 @@ describe("observationsForRuns (103, consensus batch read for 104)", () => {
     const key = cacheKeyFor(75.1, 35.1, new Date(1_768_500_000 * 1000));
     await upsertRealObservation(
       key,
-      { tempC: 4, feelsLikeC: 2, humidity: 60, windKph: 8, precipMm: 0, condition: "clear" },
+      {
+        tempC: 4,
+        feelsLikeC: 2,
+        humidity: 60,
+        windKph: 8,
+        precipMm: 0,
+        condition: "clear",
+      },
       realRun,
     );
 

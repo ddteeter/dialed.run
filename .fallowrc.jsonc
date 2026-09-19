@@ -111,7 +111,12 @@
       // behaviour (`Icon`); splitting its manifest out would narrow it, the
       // way `tap-list-data.ts` already did — see D-34.
       "src/ui/icons.tsx",
-      "src/modules/closet/tap-list-data.ts"
-    ]
-  }
+      "src/modules/closet/tap-list-data.ts",
+      // Task 106's photo-eval corpus: twenty rows of the same four fields,
+      // split out of `corpus.ts` exactly as tap-list-data was, so the
+      // ignore covers the table and not `photo`/`validatedCorpus` beside
+      // it.
+      "eval/photos/corpus-data.ts",
+    ],
+  },
 }

@@ -35,12 +35,12 @@ design screens B1/B2, O2, O4, O5/O6 and the Onboarding artboard's
   threshold — and today the only intensity signal is the user-entered
   `effort` enum, which most people will not set.
   **The asymmetry is the interesting part, and it is worth deciding
-  deliberately rather than discovering.** CLAUDE.md's rule is that *Strava*
+  deliberately rather than discovering.** CLAUDE.md's rule is that _Strava_
   activity data is never stored; that is a compliance constraint from
   Strava's API terms, not a privacy position. A user uploading their own
   `.tcx` is a different situation in every respect: it is their file,
-  handed to us directly, with no third-party terms attached. So we *may*
-  store intensity for file-importers and *may not* for Strava-connected
+  handed to us directly, with no third-party terms attached. So we _may_
+  store intensity for file-importers and _may not_ for Strava-connected
   users — which means recommendations would quietly be better for one group
   than the other. That is a product decision (accept the split? ask Strava
   users to self-report effort? ignore intensity entirely for parity?) and

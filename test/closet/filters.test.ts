@@ -141,9 +141,9 @@ describe("shouldIncludeByTempFilter", () => {
     // A garment nothing can place on a temperature scale cannot answer a
     // temperature question, and guessing it in would be worse than
     // leaving it out.
-    expect(
-      shouldIncludeByTempFilter(undefined, filters({ minTempC: 0 })),
-    ).toBe(false);
+    expect(shouldIncludeByTempFilter(undefined, filters({ minTempC: 0 }))).toBe(
+      false,
+    );
     expect(
       shouldIncludeByTempFilter(undefined, filters({ maxTempC: 20 })),
     ).toBe(false);
@@ -188,16 +188,10 @@ describe("shouldIncludeByTempFilter", () => {
     // A garment with no upper bound is appropriate however warm the filter
     // asks for — the comment in the source says so, and nothing checked it.
     expect(
-      shouldIncludeByTempFilter(
-        { lowC: -20 },
-        filters({ minTempC: 40 }),
-      ),
+      shouldIncludeByTempFilter({ lowC: -20 }, filters({ minTempC: 40 })),
     ).toBe(true);
     expect(
-      shouldIncludeByTempFilter(
-        { highC: 5 },
-        filters({ maxTempC: -30 }),
-      ),
+      shouldIncludeByTempFilter({ highC: 5 }, filters({ maxTempC: -30 })),
     ).toBe(true);
   });
 });
@@ -207,7 +201,10 @@ describe("shouldIncludeByTempFilter", () => {
  * and the cast is what lets a fixture drift from the schema.
  */
 function itemWith(
-  attributes: { weight?: "light" | "mid" | "heavy"; windResistant?: boolean } = {},
+  attributes: {
+    weight?: "light" | "mid" | "heavy";
+    windResistant?: boolean;
+  } = {},
 ): ReturnType<typeof createItem> {
   return createItem(
     drizzle(env.DIALED_CORE),
@@ -237,7 +234,10 @@ describe("mergeWithProductDefaults", () => {
   });
 
   it("falls back to the product where the item says nothing", async () => {
-    const merged = mergeWithProductDefaults(await itemWith({}), PRODUCT_DEFAULTS);
+    const merged = mergeWithProductDefaults(
+      await itemWith({}),
+      PRODUCT_DEFAULTS,
+    );
     expect(merged.weight).toBe("light");
     expect(merged.fabric).toBe("merino");
     // The one that matters: the product said `false`, and `false` is an

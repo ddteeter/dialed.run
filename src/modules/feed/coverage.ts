@@ -142,4 +142,3 @@ export function bandVerdict(band: CoverageBand): VerdictKind {
   if (band.cold >= band.dialed && band.cold >= band.warm) return "cold";
   return band.dialed >= band.warm ? "dialed" : "warm";
 }
-

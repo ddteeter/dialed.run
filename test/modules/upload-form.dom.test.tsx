@@ -56,9 +56,13 @@ function fileInput(): HTMLInputElement {
 
 describe("UploadForm", () => {
   it("says which files it takes, and how big", async () => {
-    await renderWithRouter(<UploadForm upload={() => Promise.resolve({ importId: "x" })} />);
+    await renderWithRouter(
+      <UploadForm upload={() => Promise.resolve({ importId: "x" })} />,
+    );
 
-    expect(screen.getByText(/Drop a \.FIT, \.gpx, or \.tcx file/)).toBeVisible();
+    expect(
+      screen.getByText(/Drop a \.FIT, \.gpx, or \.tcx file/),
+    ).toBeVisible();
     expect(screen.getByText("up to 25 MB")).toBeVisible();
     // The input is visually hidden but still in the accessibility tree —
     // `sr-only`, not `hidden`, or a keyboard user cannot reach it.
@@ -68,10 +72,9 @@ describe("UploadForm", () => {
 
   it("sends the chosen file as multipart under the name the server reads", async () => {
     const user = userEvent.setup();
-    const upload =
-      vi.fn<(input: { data: FormData }) => Promise<{ importId: string }>>(() =>
-        Promise.resolve({ importId: "01IMPORT" }),
-      );
+    const upload = vi.fn<
+      (input: { data: FormData }) => Promise<{ importId: string }>
+    >(() => Promise.resolve({ importId: "01IMPORT" }));
     await renderWithRouter(<UploadForm upload={upload} />);
 
     await user.upload(fileInput(), gpx());
@@ -151,7 +154,9 @@ describe("UploadForm", () => {
 
     await user.upload(fileInput(), gpx());
 
-    expect(await screen.findByText("That didn't upload. Try again.")).toBeVisible();
+    expect(
+      await screen.findByText("That didn't upload. Try again."),
+    ).toBeVisible();
     // Released, not stuck: the retry is choosing the file again.
     expect(fileInput()).not.toBeDisabled();
   });
@@ -183,7 +188,9 @@ describe("UploadForm", () => {
   });
 
   it("says nothing at rest, rather than reserving a line for an error", async () => {
-    await renderWithRouter(<UploadForm upload={() => Promise.resolve({ importId: "x" })} />);
+    await renderWithRouter(
+      <UploadForm upload={() => Promise.resolve({ importId: "x" })} />,
+    );
     expect(screen.queryByRole("paragraph")).toBeNull();
   });
 });

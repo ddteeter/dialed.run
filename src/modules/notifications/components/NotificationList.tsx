@@ -10,9 +10,7 @@ import {
 } from "../../../ui";
 import type { listNotifications } from "../service";
 
-type NotificationRow = Awaited<
-  ReturnType<typeof listNotifications>
->[number];
+type NotificationRow = Awaited<ReturnType<typeof listNotifications>>[number];
 
 /**
  * The server function, handed in rather than imported.

@@ -67,7 +67,9 @@ function page(overrides: Partial<Parameters<typeof AuthPage>[0]> = {}) {
       onSubmit={() => {
         // overridden where the call is what is being asserted
       }}
-      footer={<AuthCrossLink prompt="New here?" to="/auth/signup" label="Sign up" />}
+      footer={
+        <AuthCrossLink prompt="New here?" to="/auth/signup" label="Sign up" />
+      }
       {...overrides}
     >
       <input aria-label="Email" name="email" />
@@ -84,7 +86,9 @@ describe("AuthPage", () => {
     const user = userEvent.setup();
     await renderWithRouter(page({ onSubmit }));
 
-    const form = screen.getByRole("button", { name: "Sign in" }).closest("form");
+    const form = screen
+      .getByRole("button", { name: "Sign in" })
+      .closest("form");
     expect(form).toHaveAttribute("novalidate");
 
     // The submit is prevented, so the browser never navigates and the
@@ -139,7 +143,9 @@ describe("GoogleButton", () => {
     vi.mocked(authClient.signIn.social).mockResolvedValue({ error: undefined });
     render(<GoogleButton />);
 
-    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
 
     expect(authClient.signIn.social).toHaveBeenCalledWith({
       provider: "google",
@@ -182,7 +188,9 @@ describe("GoogleButton", () => {
     });
     render(<GoogleButton />);
 
-    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
 
     expect(await screen.findByText("Account is disabled.")).toBeVisible();
   });
@@ -194,8 +202,12 @@ describe("GoogleButton", () => {
     });
     render(<GoogleButton />);
 
-    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
 
-    expect(await screen.findByText("That didn't work. Try again.")).toBeVisible();
+    expect(
+      await screen.findByText("That didn't work. Try again."),
+    ).toBeVisible();
   });
 });
