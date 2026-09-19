@@ -41,7 +41,13 @@ export function googleCredentials(
   return { clientId, clientSecret };
 }
 
-export function createAuth({ db, secret, baseUrl, google, plugins }: AuthConfig) {
+export function createAuth({
+  db,
+  secret,
+  baseUrl,
+  google,
+  plugins,
+}: AuthConfig) {
   return betterAuth({
     secret,
     telemetry: { enabled: false },

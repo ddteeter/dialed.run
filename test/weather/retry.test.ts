@@ -8,6 +8,7 @@ import { newUlid, type Ulid } from "../../src/lib/ids";
 import { retryPendingWeather } from "../../src/modules/weather";
 import { handleScheduled } from "../../src/modules/ops";
 import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
+import { nowSeconds } from "../../src/lib/now";
 
 const HOUR = 3600;
 
@@ -15,7 +16,9 @@ function coreDb() {
   return drizzle(env.DIALED_CORE);
 }
 
-async function insertPendingRun(overrides: Partial<typeof runs.$inferInsert>): Promise<Ulid> {
+async function insertPendingRun(
+  overrides: Partial<typeof runs.$inferInsert>,
+): Promise<Ulid> {
   const id = newUlid();
   await coreDb()
     .insert(runs)
@@ -35,7 +38,11 @@ async function insertPendingRun(overrides: Partial<typeof runs.$inferInsert>): P
 }
 
 async function statusOf(runId: Ulid): Promise<string | undefined> {
-  const [row] = await coreDb().select().from(runs).where(eq(runs.id, runId)).limit(1);
+  const [row] = await coreDb()
+    .select()
+    .from(runs)
+    .where(eq(runs.id, runId))
+    .limit(1);
   return row?.weatherStatus;
 }
 
@@ -50,7 +57,9 @@ function silenceWarn() {
 }
 
 function mockFetchJson(body: unknown, status = 200) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(Response.json(body, { status }));
 }
 
 afterEach(() => {
@@ -69,7 +78,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
   });
 
   it("pending -> exhausted: past the 5h window with no resolution becomes failed", async () => {
-    const sixHoursAgo = Math.floor(Date.now() / 1000) - 6 * HOUR;
+    const sixHoursAgo = nowSeconds() - 6 * HOUR;
     const runId = await insertPendingRun({
       lat: 61.1,
       lng: 21.1,
@@ -84,7 +93,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
   });
 
   it("a run within the 5h window stays pending rather than failing early", async () => {
-    const oneHourAgo = Math.floor(Date.now() / 1000) - 1 * HOUR;
+    const oneHourAgo = nowSeconds() - 1 * HOUR;
     const runId = await insertPendingRun({
       lat: 62.1,
       lng: 22.1,
@@ -151,7 +160,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     const runId = await insertPendingRun({
       lat: 64.1,
       lng: 24.1,
-      startedAt: Math.floor(Date.now() / 1000) - HOUR,
+      startedAt: nowSeconds() - HOUR,
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -170,7 +179,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     await insertPendingRun({
       lat: 65.1,
       lng: 25.1,
-      startedAt: Math.floor(Date.now() / 1000) - HOUR,
+      startedAt: nowSeconds() - HOUR,
     });
     mockFetchJson({ unexpected: "shape" });
     const warn = silenceWarn();
@@ -188,7 +197,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     const runId = await insertPendingRun({
       lat: 66.1,
       lng: 26.1,
-      startedAt: Math.floor(Date.now() / 1000) - 6 * HOUR,
+      startedAt: nowSeconds() - 6 * HOUR,
     });
     mockFetchJson({ unexpected: "shape" });
     const warn = silenceWarn();
@@ -196,10 +205,9 @@ describe("retryPendingWeather counts what it actually did", () => {
     await retryPendingWeather();
 
     // The only trace an operator gets that a run stopped retrying.
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("exhausted"),
-      { runIds: [runId] },
-    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("exhausted"), {
+      runIds: [runId],
+    });
   });
 
   it("gives up exactly at five hours, not a second before", async () => {
@@ -216,7 +224,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     // the drift makes the age strictly greater, both operators agree, and
     // the mutant survives. It did, on CI, on a run where nothing about
     // this code had changed.
-    const now = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const FAIL_AFTER = 5 * HOUR;
 

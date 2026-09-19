@@ -172,6 +172,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Stryker runs vitest, and vitest runs all three projects —
+      # including `browser`, which is where eight of blur/detect.ts's
+      # mutants are killed. A shard without a browser cannot kill them and
+      # would fail on `break: 100` for a reason that has nothing to do
+      # with the diff. Installed for every shard rather than only the
+      # safety one, because the matrix is derived from stryker.conf.json
+      # and a condition naming a scope here would be the hand-kept copy
+      # that file exists to avoid.
+      - name: Install the browser the vitest browser project drives
+        run: npx playwright install --with-deps chromium
+
+      # MediaPipe's WASM is gitignored and staged out of node_modules, and
+      # the `browser` vitest project fetches it over HTTP. `npm test` stages
+      # it through `pretest`; anything that reaches vitest by another road —
+      # stryker here, the dev server for e2e — has to ask for it, or the
+      # model 404s and every browser test fails as "unavailable".
+      - run: npm run stage:mediapipe
+
       # Restore on PRs only. The run on `main` is deliberately cold: it is
       # the measurement everything else is calibrated against, and a warm
       # one would inherit whatever the last warm one assumed.

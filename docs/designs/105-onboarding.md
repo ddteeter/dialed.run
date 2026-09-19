@@ -15,7 +15,7 @@ honest ladder instead of a promise.
 
 - **`thermalScale` joins `lib/contracts.ts`**, next to `verdictScale` and
   shaped like it: `{ value, token, label }` ×5, +2 "Always freezing" …
-  −2 "Sweating in a t-shirt at 40°". Today that mapping lives in a *comment*
+  −2 "Sweating in a t-shirt at 40°". Today that mapping lives in a _comment_
   on `thermalLevelSchema`, and onboarding plus settings-recalibrate would
   otherwise each restate it. Pinned against `thermalLevelSchema`'s range.
 - **The climate band, revised twice while building, and both times by
@@ -34,13 +34,13 @@ honest ladder instead of a promise.
   3. The owner asked why a runner who refuses geolocation cannot pick a
      band (PR #71). The typed city was a label with nothing behind it, and
      the provider turns out to geocode a place string itself — so
-     `ClimatePlace` is coordinates *or* a label, `starterList` asks about
+     `ClimatePlace` is coordinates _or_ a label, `starterList` asks about
      whichever O1 left, and O1 stays one question (D-59). A label the
      provider cannot place falls back to `mild`, never to a latitude
      guessed from text.
-  Neither coordinates nor a city → `mild`, and no provider call at all.
-  Since round 6 the band only *orders* the list, so a wrong band costs a
-  scroll rather than a garment.
+     Neither coordinates nor a city → `mild`, and no provider call at all.
+     Since round 6 the band only _orders_ the list, so a wrong band costs a
+     scroll rather than a garment.
 - **Steps are routes, not a wizard component**: `/onboarding/calibrate`,
   `/thermal`... each writes on submit and redirects, so a bail keeps what
   was answered. `onboarding_complete` flips only at P3.
@@ -80,8 +80,8 @@ honest ladder instead of a promise.
 
 The packet describes a per-band list. Design replaced that while this lane
 was building: **one `TAP_LIST`, ranked per band, folded at 14**, and the
-band never removes a row — *a Minneapolis runner owns tights and a
-singlet*. `TapListForm` is built to the six rules that came with it; the
+band never removes a row — _a Minneapolis runner owns tights and a
+singlet_. `TapListForm` is built to the six rules that came with it; the
 two that are easiest to lose are **nothing arrives ticked** (so the
 component has no prop for a starting selection, deliberately) and **the
 disclosure states the real remainder** (so nothing hardcodes design's "10
@@ -96,7 +96,7 @@ Two things that fell out of building it, both recorded at their sites:
   reaches `db/schema`. That is CLAUDE.md's own escape hatch for this exact
   case.
 - **`addFromTapList` dedupes.** The screen holds a `Set`, so it was the
-  payload it did *not* build — a retry, a hand-made request — that could
+  payload it did _not_ build — a retry, a hand-made request — that could
   create the same beanie twice. Deduping there is also what let the schema
   drop a length cap that was never the real bound.
 
@@ -121,7 +121,7 @@ belong to other lanes and to D-32. The page is where they will join.
 
 U1's rule is that every row states its current value, "a settings list you
 can read without opening anything"; the calibration row honours it
-literally, stating the answer *and* the offset, in whichever unit is
+literally, stating the answer _and_ the offset, in whichever unit is
 selected above it.
 
 Still open: **nothing routes a new account into the flow** (D-52). Signup

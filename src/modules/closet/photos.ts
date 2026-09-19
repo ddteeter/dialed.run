@@ -13,15 +13,13 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { ulidSchema } from "../../lib/ids";
-import {
-  isAllowedPhotoType,
-  maxPhotoBytes,
-} from "../../lib/photo-constraints";
+import { isAllowedPhotoType, maxPhotoBytes } from "../../lib/photo-constraints";
 import { env } from "../../env";
+import { fitWithin, withReleased } from "../../lib/photo-pipeline";
 import { getOwnedItem } from "./service";
+import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
-
 
 export const photoSizes = ["thumb", "card", "full"] as const;
 export type PhotoSize = (typeof photoSizes)[number];
@@ -72,45 +70,6 @@ export function validatePhoto(contentType: string, byteLength: number): void {
   }
 }
 
-export function fitWithin(
-  width: number,
-  height: number,
-  max: number,
-): { width: number; height: number } {
-  // Equivalent mutants on both `<=`: they differ from `<` only when a side
-  // equals `max`, and that side is then the longest, so `scale` is exactly
-  // 1 and the arithmetic below is the identity. What the guard really
-  // prevents is scaling *up* — an image smaller than the box on both sides.
-  // Stryker disable next-line EqualityOperator
-  if (width <= max && height <= max) return { width, height };
-  const scale = max / Math.max(width, height);
-  return {
-    width: Math.max(1, Math.round(width * scale)),
-    height: Math.max(1, Math.round(height * scale)),
-  };
-}
-
-/**
- * Runs `use`, then hands the WASM image's memory back — whether `use`
- * returned or threw.
- *
- * One helper rather than two `try/finally` blocks, because a release is
- * the kind of thing that is invisible when it stops happening: nothing in
- * a test can see a leak, and nothing in production sees it either until an
- * isolate runs out of memory mid-upload. Written down once, it can at
- * least be asserted once.
- */
-export async function withReleased<Image extends { free: () => void }, Result>(
-  image: Image,
-  use: (image: Image) => Promise<Result>,
-): Promise<Result> {
-  try {
-    return await use(image);
-  } finally {
-    image.free();
-  }
-}
-
 export function photoKeyFor(userId: string, itemId: string): string {
   return `items/${userId}/${itemId}`;
 }
@@ -125,6 +84,10 @@ export async function uploadItemPhoto(
   itemId: string,
   bytes: Uint8Array,
   contentType: string,
+  /**
+  Injectable so a test can make the upstream fail on demand.
+  */
+  classify?: Classify,
 ): Promise<PhotoUploadResult> {
   validatePhoto(contentType, bytes.byteLength);
   await getOwnedItem(db, userId, itemId);
@@ -153,9 +116,13 @@ export async function uploadItemPhoto(
       await withReleased(
         resize(input, dims.width, dims.height, SamplingFilter.Lanczos3),
         async (resized) => {
-          await env.MEDIA.put(`${keyPrefix}/${size}.webp`, resized.get_bytes_webp(), {
-            httpMetadata: { contentType: "image/webp" },
-          });
+          await env.MEDIA.put(
+            `${keyPrefix}/${size}.webp`,
+            resized.get_bytes_webp(),
+            {
+              httpMetadata: { contentType: "image/webp" },
+            },
+          );
         },
       );
     }
@@ -163,8 +130,24 @@ export async function uploadItemPhoto(
 
   await db
     .update(wardrobeItems)
-    .set({ photoKey: keyPrefix })
+    // `visibility: "pending"` in the same write as the key. A garment with
+    // a photo and no screening state would read as `ok` — the pre-106
+    // default meaning "never screened" — and slip into public view
+    // unclassified. Setting it here rather than in the column default is
+    // deliberate: most wardrobe rows have no photo at all and should stay
+    // `ok` rather than queue for a sweep that has nothing to fetch.
+    .set({ photoKey: keyPrefix, visibility: "pending" })
     .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
+
+  // Same shape as the entry path: bounded, never throws, and a failure
+  // leaves the row `pending` for the screening-retry cron. The ORIGINAL
+  // bytes are classified rather than a derived size — a resize is our
+  // artefact, and screening something the runner never uploaded would
+  // make a verdict hard to explain.
+  await screenPhoto(
+    { scope: "garment", photoId: itemId, bytes, contentType },
+    classify ?? classifierFromEnv(),
+  );
 
   return { photoKey: keyPrefix };
 }
@@ -178,8 +161,7 @@ export async function uploadItemPhoto(
  * photo-specific retry and the item stays intact.
  */
 export type UploadPhotoResult =
-  | { ok: true; result: PhotoUploadResult }
-  | { ok: false; error: string };
+  { ok: true; result: PhotoUploadResult } | { ok: false; error: string };
 
 /**
  * The multipart upload path: pull the item and the file out of the form,

@@ -264,9 +264,7 @@ describe("a field error is announced, then focused", () => {
     await waitFor(() => {
       expect(summary).toHaveFocus();
     });
-    expect(
-      screen.getByRole("button", { name: /Name/ }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Name/ })).toBeVisible();
   });
 
   it("clears on input, not on blur, and does not re-validate while typing", async () => {
@@ -410,8 +408,10 @@ describe("the details that go missing silently", () => {
     // The field's own children, not the form's: the submit button stacks
     // two spans of its own and would swamp the count.
     const messages = () =>
-      screen.getByLabelText("Name").closest("div")?.parentElement
-        ?.querySelectorAll(":scope > span") ?? [];
+      screen
+        .getByLabelText("Name")
+        .closest("div")
+        ?.parentElement?.querySelectorAll(":scope > span") ?? [];
 
     expect(messages()).toHaveLength(1);
 
@@ -589,9 +589,7 @@ describe("what counts as field errors coming back from a server function", () =>
       issues: [{ path: ["brand"], message: "We do not stock that one." }],
     });
 
-    expect(
-      await screen.findByText("We do not stock that one."),
-    ).toBeVisible();
+    expect(await screen.findByText("We do not stock that one.")).toBeVisible();
     expect(screen.getByLabelText("Brand")).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -666,15 +664,22 @@ describe("what counts as field errors coming back from a server function", () =>
     ["an object with no issues at all", { message: "500" }],
     ["issues that are not issues", { issues: [{ nope: true }] }],
     ["issues that are not even a list", { issues: "lots" }],
-  ])("treats %s as a form failure, not as field errors", async (_label, reason) => {
-    await submitAndReject(reason);
+  ])(
+    "treats %s as a form failure, not as field errors",
+    async (_label, reason) => {
+      await submitAndReject(reason);
 
-    // The button, not the fields: nothing was saved and the fix is not
-    // inside the form.
-    expect(await screen.findByRole("button", { name: /try again/i })).toBeVisible();
-    expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
-    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("aria-invalid");
-  });
+      // The button, not the fields: nothing was saved and the fix is not
+      // inside the form.
+      expect(
+        await screen.findByRole("button", { name: /try again/i }),
+      ).toBeVisible();
+      expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
+      expect(screen.getByLabelText("Brand")).not.toHaveAttribute(
+        "aria-invalid",
+      );
+    },
+  );
 
   it("clears a failure band when the next attempt comes back with field errors", async () => {
     // `setFailure(undefined)` inside `land`. Without it the band from a
@@ -972,7 +977,9 @@ describe("ChoiceField", () => {
   const LAYERS = ["base", "mid", "outer"] as const;
   const LAYER_LABELS = { base: "Base", mid: "Mid", outer: "Outer" };
 
-  function renderChoice(onChange: (value: "base" | "mid" | "outer" | "") => void) {
+  function renderChoice(
+    onChange: (value: "base" | "mid" | "outer" | "") => void,
+  ) {
     return render(
       <ChoiceField
         name="layer"
@@ -1034,9 +1041,9 @@ describe("ChoiceField", () => {
     ]);
     // The *values* are the schema's own, so an option can never exist that
     // the contract would reject.
-    expect(
-      options.map((option) => option.getAttribute("value")),
-    ).toStrictEqual(["", "base", "mid", "outer"]);
+    expect(options.map((option) => option.getAttribute("value"))).toStrictEqual(
+      ["", "base", "mid", "outer"],
+    );
   });
 
   it("wears the field's error the way every other field does", () => {
@@ -1137,7 +1144,9 @@ describe("ToggleField", () => {
       />,
     );
 
-    expect(screen.getByRole("checkbox", { name: "Wind resistant" })).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Wind resistant" }),
+    ).toBeChecked();
   });
 
   it("labels the box by wrapping it, so the words are part of the hit area", async () => {
@@ -1168,7 +1177,11 @@ describe("ChoiceList", () => {
   const LEVELS = ["hot", "mild", "cold"] as const;
   const LABELS = { hot: "Runs hot", mild: "About average", cold: "Runs cold" };
 
-  const NOTES = { hot: "\u{2212}8\u{00B0}", mild: "0\u{00B0}", cold: "+8\u{00B0}" };
+  const NOTES = {
+    hot: "\u{2212}8\u{00B0}",
+    mild: "0\u{00B0}",
+    cold: "+8\u{00B0}",
+  };
 
   function renderList(
     onChange: (value: "hot" | "mild" | "cold") => void,

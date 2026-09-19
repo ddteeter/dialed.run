@@ -68,7 +68,8 @@ describe("Icon (design icon pack contract)", () => {
       /^ {2}([A-Za-z][A-Za-z0-9]*): \{ group: '([a-z]+)', keywords: '[^']*', d: '([^']*)' \},$/gm;
     for (const match of iconPackSource.matchAll(entry)) {
       const [, name, group, d] = match;
-      if (name === undefined || group === undefined || d === undefined) continue;
+      if (name === undefined || group === undefined || d === undefined)
+        continue;
       declared.set(name, { group, d });
       declaredNames.push(name);
     }
@@ -78,7 +79,9 @@ describe("Icon (design icon pack contract)", () => {
     expect(declared.size).toBeGreaterThan(70);
     const ported = new Set(Object.keys(ICONS));
     expect(declaredNames.filter((name) => !ported.has(name))).toEqual([]);
-    expect(Object.keys(ICONS).filter((name) => !declared.has(name))).toEqual([]);
+    expect(Object.keys(ICONS).filter((name) => !declared.has(name))).toEqual(
+      [],
+    );
     for (const [name, glyph] of Object.entries(ICONS)) {
       expect({ name, ...glyph }).toEqual({ name, ...declared.get(name) });
     }

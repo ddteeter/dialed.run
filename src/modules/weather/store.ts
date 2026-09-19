@@ -17,6 +17,7 @@ import { env } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
 import type { WeatherObservation } from "../../lib/contracts";
+import { nowSeconds } from "../../lib/now";
 
 export interface CacheKey {
   latR: number;
@@ -119,8 +120,15 @@ async function upsertObservation(
   // finds something. The guard exists to narrow `ObservationRow |
   // undefined` for the caller, and no test can enter it — which is why the
   // mutants on this line are suppressed rather than chased.
-  // Stryker disable next-line ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
-  if (!row) throw new Error(`observation upsert produced no row at ${JSON.stringify(key)}`);
+  // Block pair, not `next-line`: prettier wraps the throw onto its own
+  // lines, so the StringLiteral and CallExpression mutants sit outside
+  // what a single-line directive covers.
+  // Stryker disable ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
+  if (!row)
+    throw new Error(
+      `observation upsert produced no row at ${JSON.stringify(key)}`,
+    );
+  // Stryker restore ConditionalExpression,BooleanLiteral,CallExpression,StringLiteral
   return row;
 }
 
@@ -129,7 +137,7 @@ export async function upsertRealObservation(
   observation: WeatherObservation,
   runId: Ulid | undefined,
 ): Promise<ObservationRow> {
-  const fetchedAt = Math.floor(Date.now() / 1000);
+  const fetchedAt = nowSeconds();
   const values = {
     id: newUlid(),
     runId,
@@ -158,7 +166,7 @@ export async function upsertManualObservation(
   tempC: number,
   runId: Ulid,
 ): Promise<ObservationRow> {
-  const fetchedAt = Math.floor(Date.now() / 1000);
+  const fetchedAt = nowSeconds();
   const values = {
     id: newUlid(),
     runId,
@@ -208,7 +216,8 @@ export function runHourKeys(
   startedAt: number,
   durationS: number,
 ): CacheKey[] {
-  const spanned = Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
+  const spanned =
+    Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
     Math.floor(startedAt / 3600);
   const hours = Math.min(spanned + 1, MAX_SAMPLED_HOURS);
   return Array.from({ length: hours }, (_unused, index) =>

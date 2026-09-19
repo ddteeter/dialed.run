@@ -52,7 +52,9 @@ describe("Layout", () => {
       screen.getByRole("button", { name: "Notifications" }),
     ).toBeInTheDocument();
     // The placeholder gives way rather than sitting beside it.
-    expect(document.querySelector("[data-slot='notification-bell']")).toBeNull();
+    expect(
+      document.querySelector("[data-slot='notification-bell']"),
+    ).toBeNull();
   });
 
   it("holds the slot open with an inert placeholder when it is not", async () => {

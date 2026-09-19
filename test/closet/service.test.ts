@@ -1,7 +1,11 @@
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
-import { outfitEntries, outfitEntryItems, runs } from "../../src/db/schema-core";
+import {
+  outfitEntries,
+  outfitEntryItems,
+  runs,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -20,6 +24,7 @@ import {
   updateItem,
 } from "../../src/modules/closet/service";
 import { addFromTapList } from "../../src/modules/closet/tap-list";
+import { nowSeconds } from "../../src/lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -32,7 +37,7 @@ async function logEntry(
   itemIds: string[],
   verdict: number | null,
   distanceM = 8000,
-  createdAt = Math.floor(Date.now() / 1000),
+  createdAt = nowSeconds(),
 ) {
   const client = db();
   const runId = newUlid();
@@ -162,7 +167,10 @@ describe("cross-user authorization", () => {
       NotFoundError,
     );
     await expect(
-      updateItem(db(), intruder, item.id, { category: "top", name: "Hijacked" }),
+      updateItem(db(), intruder, item.id, {
+        category: "top",
+        name: "Hijacked",
+      }),
     ).rejects.toBeInstanceOf(NotFoundError);
     await expect(retireItem(db(), intruder, item.id)).rejects.toBeInstanceOf(
       NotFoundError,
@@ -300,7 +308,9 @@ describe("performance stats: verdicts, mileage, pairs-with", () => {
     const client = db();
     await createItem(client, userId, { category: "socks", name: "New socks" });
 
-    const listing = await listItems(client, userId, { performance: "untested" });
+    const listing = await listItems(client, userId, {
+      performance: "untested",
+    });
     expect(listing.items).toHaveLength(1);
   });
 });
@@ -337,12 +347,7 @@ describe("tap-list", () => {
 
     expect(created).toHaveLength(2);
     expect(
-      created
-        .map((item) => item.name)
-        .toSorted((a, b) => a.localeCompare(b)),
-    ).toEqual([
-      "Beanie",
-      "Short sleeve tee",
-    ]);
+      created.map((item) => item.name).toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual(["Beanie", "Short sleeve tee"]);
   });
 });

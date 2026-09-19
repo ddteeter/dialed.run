@@ -29,9 +29,9 @@ describe("attachKitInput", () => {
       attachKitInput.safeParse({ runId: newUlid(), itemIds: [newUlid()] })
         .success,
     ).toBe(true);
-    expect(attachKitInput.safeParse({ runId: newUlid(), itemIds: [] }).success).toBe(
-      true,
-    );
+    expect(
+      attachKitInput.safeParse({ runId: newUlid(), itemIds: [] }).success,
+    ).toBe(true);
   });
 
   it("caps the kit at forty pieces", () => {
@@ -42,8 +42,10 @@ describe("attachKitInput", () => {
       attachKitInput.safeParse({ runId: newUlid(), itemIds: ids }).success,
     ).toBe(true);
     expect(
-      attachKitInput.safeParse({ runId: newUlid(), itemIds: [...ids, newUlid()] })
-        .success,
+      attachKitInput.safeParse({
+        runId: newUlid(),
+        itemIds: [...ids, newUlid()],
+      }).success,
     ).toBe(false);
   });
 
@@ -59,11 +61,13 @@ describe("attachKitInput", () => {
 
 describe("the coordinate inputs", () => {
   it("takes a real WGS84 pair, and refuses one outside the globe", () => {
-    expect(coordinatesInput.safeParse({ lat: 44.98, lng: -93.27 }).success).toBe(
-      true,
-    );
+    expect(
+      coordinatesInput.safeParse({ lat: 44.98, lng: -93.27 }).success,
+    ).toBe(true);
     expect(coordinatesInput.safeParse({ lat: 91, lng: 0 }).success).toBe(false);
-    expect(coordinatesInput.safeParse({ lat: 0, lng: -181 }).success).toBe(false);
+    expect(coordinatesInput.safeParse({ lat: 0, lng: -181 }).success).toBe(
+      false,
+    );
   });
 
   it("requires both coordinates where a conditions lookup needs them", () => {
@@ -77,7 +81,9 @@ describe("the coordinate inputs", () => {
     expect(
       pickerGroupsInput.safeParse({ lat: 44.98, lng: -93.27 }).success,
     ).toBe(true);
-    expect(pickerGroupsInput.safeParse({ lat: 91, lng: 0 }).success).toBe(false);
+    expect(pickerGroupsInput.safeParse({ lat: 91, lng: 0 }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -95,9 +101,9 @@ describe("submitVerdictInput", () => {
   });
 
   it("holds the verdict to the −2..+2 scale", () => {
-    expect(submitVerdictInput.safeParse({ ...valid, verdict: -2 }).success).toBe(
-      true,
-    );
+    expect(
+      submitVerdictInput.safeParse({ ...valid, verdict: -2 }).success,
+    ).toBe(true);
     expect(submitVerdictInput.safeParse({ ...valid, verdict: 3 }).success).toBe(
       false,
     );
@@ -118,9 +124,9 @@ describe("submitVerdictInput", () => {
     // Derived from the enum rather than a number written here: a request
     // naming more tags than exist is a repeat or a bug either way.
     const every = [...entryTagSchema.options];
-    expect(submitVerdictInput.safeParse({ ...valid, tags: every }).success).toBe(
-      true,
-    );
+    expect(
+      submitVerdictInput.safeParse({ ...valid, tags: every }).success,
+    ).toBe(true);
     expect(
       submitVerdictInput.safeParse({ ...valid, tags: [...every, every[0]] })
         .success,
@@ -208,7 +214,9 @@ describe("feedInput", () => {
 describe("searchInput", () => {
   it("takes a prefix and bounds it", () => {
     expect(searchInput.safeParse({ prefix: "" }).success).toBe(true);
-    expect(searchInput.safeParse({ prefix: "a".repeat(60) }).success).toBe(true);
+    expect(searchInput.safeParse({ prefix: "a".repeat(60) }).success).toBe(
+      true,
+    );
     expect(searchInput.safeParse({ prefix: "a".repeat(61) }).success).toBe(
       false,
     );
@@ -221,7 +229,8 @@ describe("uploadPhotoFields", () => {
     // feed had its own copy of this list before.
     for (const contentType of allowedPhotoTypes) {
       expect(
-        uploadPhotoFields.safeParse({ entryId: newUlid(), contentType }).success,
+        uploadPhotoFields.safeParse({ entryId: newUlid(), contentType })
+          .success,
         contentType,
       ).toBe(true);
     }

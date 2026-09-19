@@ -26,15 +26,27 @@ const HOUR = 3600;
 describe("your conditions consensus (E2-lite)", () => {
   beforeEach(resetTables);
 
-
   it("counts an entry within the 72h/±3°C/same-precip window", async () => {
     const lat = 10;
     const lng = 10;
     const author = await makeUser();
     const item = await makeItem({ userId: author, category: "top" });
     const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-    await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW, itemIds: [item] });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 6, precipMm: 0 });
+    await makeEntry({
+      userId: author,
+      runId,
+      isPublic: true,
+      createdAt: NOW,
+      itemIds: [item],
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 6,
+      precipMm: 0,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 7 }),
@@ -51,7 +63,14 @@ describe("your conditions consensus (E2-lite)", () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
     await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 20, feelsLikeC: 20, precipMm: 0 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 20,
+      feelsLikeC: 20,
+      precipMm: 0,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 8 }),
@@ -67,7 +86,14 @@ describe("your conditions consensus (E2-lite)", () => {
     const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
     await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW });
     // wet (>2.5mm) vs. the viewer's dry conditions.
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 8, precipMm: 5 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 8,
+      precipMm: 5,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 8 }),
@@ -104,9 +130,26 @@ describe("your conditions consensus (E2-lite)", () => {
     const lng = 50;
     const author = await makeUser();
     const eightDaysAgo = NOW - 8 * 24 * HOUR;
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: eightDaysAgo });
-    await makeEntry({ userId: author, runId, isPublic: true, createdAt: eightDaysAgo });
-    await makeObservation({ lat, lng, startedAt: eightDaysAgo, tempC: 8, feelsLikeC: 8, precipMm: 0 });
+    const runId = await makeRun({
+      userId: author,
+      lat,
+      lng,
+      startedAt: eightDaysAgo,
+    });
+    await makeEntry({
+      userId: author,
+      runId,
+      isPublic: true,
+      createdAt: eightDaysAgo,
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: eightDaysAgo,
+      tempC: 8,
+      feelsLikeC: 8,
+      precipMm: 0,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 8 }),
@@ -121,10 +164,27 @@ describe("your conditions consensus (E2-lite)", () => {
     const lng = 60;
     const author = await makeUser();
     const fourDaysAgo = NOW - 4 * 24 * HOUR;
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: fourDaysAgo });
-    await makeEntry({ userId: author, runId, isPublic: true, createdAt: fourDaysAgo });
+    const runId = await makeRun({
+      userId: author,
+      lat,
+      lng,
+      startedAt: fourDaysAgo,
+    });
+    await makeEntry({
+      userId: author,
+      runId,
+      isPublic: true,
+      createdAt: fourDaysAgo,
+    });
     // 4°C outside the first pass's ±3, inside the widened pass's ±5.
-    await makeObservation({ lat, lng, startedAt: fourDaysAgo, tempC: 12, feelsLikeC: 12, precipMm: 0 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: fourDaysAgo,
+      tempC: 12,
+      feelsLikeC: 12,
+      precipMm: 0,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 8 }),
@@ -152,8 +212,21 @@ describe("your conditions consensus (E2-lite)", () => {
       createdAt: NOW,
       itemIds: [topA, bottomA],
     });
-    await makeEntry({ userId: authorB, runId: runB, isPublic: true, createdAt: NOW, itemIds: [topB] });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 8, precipMm: 0 });
+    await makeEntry({
+      userId: authorB,
+      runId: runB,
+      isPublic: true,
+      createdAt: NOW,
+      itemIds: [topB],
+    });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 8,
+      precipMm: 0,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 8 }),
@@ -166,7 +239,10 @@ describe("your conditions consensus (E2-lite)", () => {
 
   it("resolves the recent-public-entries scan window with an index seek, no table scan", async () => {
     const database = drizzle(env.DIALED_CORE);
-    const { sql, params } = recentPublicEntriesStatement(database, NOW - 72 * HOUR).toSQL();
+    const { sql, params } = recentPublicEntriesStatement(
+      database,
+      NOW - 72 * HOUR,
+    ).toSQL();
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
       .all<{ detail: string }>();
@@ -218,7 +294,12 @@ describe("consensus: the edges of the window", () => {
     // conditions is a crash, not a miscount.
     const author = await makeUser();
     const item = await makeItem({ userId: author, category: "top" });
-    const runId = await makeRun({ userId: author, lat: 62, lng: 62, startedAt: NOW });
+    const runId = await makeRun({
+      userId: author,
+      lat: 62,
+      lng: 62,
+      startedAt: NOW,
+    });
     await makeEntry({
       userId: author,
       runId,

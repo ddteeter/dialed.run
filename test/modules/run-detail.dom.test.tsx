@@ -69,9 +69,7 @@ describe("RunDetail: what the run says", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Evening run" }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Evening run" })).toBeVisible();
     // 5432 m is 5.43 KM and 1830 s is 31 MIN — rounded to the minute, not
     // truncated, or a 1:59:30 run reads as an hour and 59.
     const measured = screen.getByText(/5\.43 KM/);
@@ -87,7 +85,9 @@ describe("RunDetail: what the run says", () => {
   });
 
   it("does not mark an outdoor one", async () => {
-    await renderWithRouter(<RunDetail run={run()} recordManualTemp={nothing} />);
+    await renderWithRouter(
+      <RunDetail run={run()} recordManualTemp={nothing} />,
+    );
     expect(screen.queryByText("[Indoor]")).toBeNull();
   });
 });
@@ -99,20 +99,23 @@ describe("RunDetail: when the manual-temp fallback appears", () => {
     ["attached", false],
     ["manual", false],
     ["none", false],
-  ] as const)("outdoor run with %s conditions: %s", async (status, expected) => {
-    // D-24: the fallback exists only where no observation is resolvable.
-    // Offering it next to conditions we already have invites a human to
-    // overwrite a measurement.
-    await renderWithRouter(
-      <RunDetail
-        run={run({ weatherStatus: status })}
-        recordManualTemp={nothing}
-      />,
-    );
+  ] as const)(
+    "outdoor run with %s conditions: %s",
+    async (status, expected) => {
+      // D-24: the fallback exists only where no observation is resolvable.
+      // Offering it next to conditions we already have invites a human to
+      // overwrite a measurement.
+      await renderWithRouter(
+        <RunDetail
+          run={run({ weatherStatus: status })}
+          recordManualTemp={nothing}
+        />,
+      );
 
-    const form = screen.queryByRole("button", { name: "Save temperature" });
-    expect(form === null).toBe(!expected);
-  });
+      const form = screen.queryByRole("button", { name: "Save temperature" });
+      expect(form === null).toBe(!expected);
+    },
+  );
 
   it("never appears on an indoor run, whatever the status says", async () => {
     // An indoor run has no conditions to resolve, so a stale 'pending' on
@@ -131,7 +134,9 @@ describe("RunDetail: when the manual-temp fallback appears", () => {
 
 describe("RunDetail: typing a temperature", () => {
   it("says what it is for, and that it will not train the model", async () => {
-    await renderWithRouter(<RunDetail run={run()} recordManualTemp={nothing} />);
+    await renderWithRouter(
+      <RunDetail run={run()} recordManualTemp={nothing} />,
+    );
 
     expect(screen.getByText("[Unavailable]")).toBeVisible();
     expect(screen.getByText(/won’t train the model/)).toBeVisible();
@@ -162,7 +167,9 @@ describe("RunDetail: typing a temperature", () => {
 
   it("submits through its own handler, never the browser's", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(<RunDetail run={run()} recordManualTemp={nothing} />);
+    await renderWithRouter(
+      <RunDetail run={run()} recordManualTemp={nothing} />,
+    );
 
     let prevented: boolean | undefined;
     const watch = (event: Event) => {
@@ -170,7 +177,9 @@ describe("RunDetail: typing a temperature", () => {
     };
     document.addEventListener("submit", watch);
     try {
-      await user.click(screen.getByRole("button", { name: "Save temperature" }));
+      await user.click(
+        screen.getByRole("button", { name: "Save temperature" }),
+      );
     } finally {
       document.removeEventListener("submit", watch);
     }
@@ -226,7 +235,11 @@ describe("RunDetail: typing a temperature", () => {
   });
 
   it("leaves the CTA slot for the kit-attach flow", async () => {
-    await renderWithRouter(<RunDetail run={run()} recordManualTemp={nothing} />);
-    expect(document.querySelector("[data-slot='attach-kit-cta']")).not.toBeNull();
+    await renderWithRouter(
+      <RunDetail run={run()} recordManualTemp={nothing} />,
+    );
+    expect(
+      document.querySelector("[data-slot='attach-kit-cta']"),
+    ).not.toBeNull();
   });
 });

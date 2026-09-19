@@ -16,7 +16,10 @@ import { ladderFrom } from "../../src/modules/onboarding/ladder";
  * the next epic and a teaser that guessed an outfit would ship the thing
  * the data is not good enough for yet.
  */
-function band(bandFloorC: number, counts: Partial<CoverageBand> = {}): CoverageBand {
+function band(
+  bandFloorC: number,
+  counts: Partial<CoverageBand> = {},
+): CoverageBand {
   return {
     bandFloorC,
     label: `${String(bandFloorC)}–${String(bandFloorC + 5)}°`,
@@ -39,9 +42,7 @@ describe("CallLadder", () => {
   it("tells a runner with nothing logged that it is listening", () => {
     render(<CallLadder ladder={ladderFrom([])} />);
 
-    expect(
-      screen.getByText(/Logging now, calling later/),
-    ).toBeVisible();
+    expect(screen.getByText(/Logging now, calling later/)).toBeVisible();
     // No ladder at all rather than an empty frame: there is nothing to
     // show, and a row of zeroes would read as a failure to load.
     expect(screen.queryByRole("list")).toBeNull();
@@ -56,9 +57,7 @@ describe("CallLadder", () => {
 
   it("names the thinnest band, which is the ask", () => {
     render(
-      <CallLadder
-        ladder={ladderFrom([band(-5), band(0, { dialed: 4 })])}
-      />,
+      <CallLadder ladder={ladderFrom([band(-5), band(0, { dialed: 4 })])} />,
     );
 
     // The words as well as the band: without them the line is a bracket
@@ -75,9 +74,7 @@ describe("CallLadder", () => {
   it("says the data is ready and the feature is not, once the threshold is met", () => {
     render(<CallLadder ladder={ladderFrom([band(0, { dialed: 15 })])} />);
 
-    expect(
-      screen.getByText(/The call is coming in an update/),
-    ).toBeVisible();
+    expect(screen.getByText(/The call is coming in an update/)).toBeVisible();
     // And stops counting down.
     expect(screen.queryByText(/verdicts until/)).toBeNull();
   });
@@ -179,9 +176,15 @@ describe("CallLadder", () => {
 
     const legend = screen.getAllByRole("list")[1];
     expect(legend).toBeDefined();
-    expect(within(legend ?? document.body).getByText(/covered 2/)).toBeVisible();
-    expect(within(legend ?? document.body).getByText(/partial 1/)).toBeVisible();
-    expect(within(legend ?? document.body).getByText(/unknown 1/)).toBeVisible();
+    expect(
+      within(legend ?? document.body).getByText(/covered 2/),
+    ).toBeVisible();
+    expect(
+      within(legend ?? document.body).getByText(/partial 1/),
+    ).toBeVisible();
+    expect(
+      within(legend ?? document.body).getByText(/unknown 1/),
+    ).toBeVisible();
   });
 
   it("shows how many verdicts each band holds, adding all three kinds", () => {
@@ -201,9 +204,7 @@ describe("CallLadder", () => {
   it("never recommends a garment", () => {
     // The hard line in the packet. If this screen ever grows a kit, it has
     // stopped being a teaser.
-    render(
-      <CallLadder ladder={ladderFrom([band(0, { dialed: 20 })])} />,
-    );
+    render(<CallLadder ladder={ladderFrom([band(0, { dialed: 20 })])} />);
 
     expect(screen.queryByText(/wear|jacket|tights|singlet/i)).toBeNull();
   });

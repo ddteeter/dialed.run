@@ -49,7 +49,9 @@ describe("authorization", () => {
     const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
 
     await expect(getEntryDetail(entryId, viewer)).resolves.toBeUndefined();
-    await expect(getEntryDetail(entryId, owner)).resolves.toMatchObject({ id: entryId });
+    await expect(getEntryDetail(entryId, owner)).resolves.toMatchObject({
+      id: entryId,
+    });
     await expect(getEntryDetail(entryId, undefined)).resolves.toBeUndefined();
   });
 
@@ -66,7 +68,12 @@ describe("authorization", () => {
       isPublic: true,
       createdAt: NOW,
     });
-    await makeEntry({ userId: author, runId: privateRun, isPublic: false, createdAt: NOW + 1 });
+    await makeEntry({
+      userId: author,
+      runId: privateRun,
+      isPublic: false,
+      createdAt: NOW + 1,
+    });
 
     const page = await followingFeed(follower);
     const entryIds = page.items.map((item) => item.entryId);
@@ -78,7 +85,11 @@ describe("authorization", () => {
     const author = await makeUser();
     const publicRun = await makeRun({ userId: author });
     const privateRun = await makeRun({ userId: author });
-    const publicEntry = await makeEntry({ userId: author, runId: publicRun, isPublic: true });
+    const publicEntry = await makeEntry({
+      userId: author,
+      runId: publicRun,
+      isPublic: true,
+    });
     await makeEntry({ userId: author, runId: privateRun, isPublic: false });
 
     const profile = await otherProfile(author);
@@ -92,7 +103,12 @@ describe("authorization", () => {
     // instance across `it()` blocks can't spuriously collide cache keys.
     const lat = 61.22;
     const lng = -149.9;
-    const privateRun = await makeRun({ userId: author, lat, lng, startedAt: NOW });
+    const privateRun = await makeRun({
+      userId: author,
+      lat,
+      lng,
+      startedAt: NOW,
+    });
     const item = await makeItem({ userId: author, category: "top" });
     await makeEntry({
       userId: author,
@@ -101,7 +117,13 @@ describe("authorization", () => {
       createdAt: NOW,
       itemIds: [item],
     });
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 10, feelsLikeC: 9 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 10,
+      feelsLikeC: 9,
+    });
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 10, feelsLikeC: 9 }),
@@ -115,14 +137,21 @@ describe("authorization", () => {
     const stranger = await makeUser();
     const runId = await makeRun({ userId: owner });
     const item = await makeItem({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: true, itemIds: [item] });
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      isPublic: true,
+      itemIds: [item],
+    });
     await submitVerdict({
       userId: owner,
       entryId,
       verdict: 1,
       isPublic: true,
       tags: [],
-      itemFlags: [{ itemId: item, flag: "too_much", note: "sweated through it" }],
+      itemFlags: [
+        { itemId: item, flag: "too_much", note: "sweated through it" },
+      ],
     });
 
     const asOwner = await getEntryDetail(entryId, owner);

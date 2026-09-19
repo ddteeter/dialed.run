@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { PhotoBlur } from "../../modules/safety/components/PhotoBlur";
+
 import { bandFloorC } from "../../lib/temperature";
 import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/components/VerdictForm";
@@ -41,10 +43,12 @@ function VerdictPage() {
     <Layout>
       <VerdictForm
         entry={entry}
-        entryId={Route.useParams().entryId}
         bandFloor={bandFloor}
         submitVerdict={submitVerdictAction}
         uploadPhoto={uploadPhotoAction}
+        renderPhotoStep={(file, onReady) => (
+          <PhotoBlur file={file} onReady={onReady} />
+        )}
         itemBandWearStat={itemBandWearStatQuery}
       />
     </Layout>

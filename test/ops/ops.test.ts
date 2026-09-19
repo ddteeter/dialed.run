@@ -2,7 +2,11 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import { cronCheckpoints } from "../../src/db/schema-core";
-import { checkHealth, handleQueueBatch, handleScheduled } from "../../src/modules/ops";
+import {
+  checkHealth,
+  handleQueueBatch,
+  handleScheduled,
+} from "../../src/modules/ops";
 
 function fakeBatch(queue: string): MessageBatch {
   return {
@@ -36,9 +40,7 @@ describe("ops (000 §10)", () => {
     await handleScheduled(controller);
     await handleScheduled(controller); // law 1: safely re-runnable
     const { env } = await import("../../src/env");
-    const rows = await drizzle(env.DIALED_CORE)
-      .select()
-      .from(cronCheckpoints);
+    const rows = await drizzle(env.DIALED_CORE).select().from(cronCheckpoints);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.cronName).toBe("daily-digest");
   });

@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { NamePieces } from "../../src/modules/onboarding/components/NamePieces";
-import type { NameableItem, NamedResult } from "../../src/modules/onboarding/naming";
+import type {
+  NameableItem,
+  NamedResult,
+} from "../../src/modules/onboarding/naming";
 
 /**
  * Screen P2.5 (design §AC), whose argument is that a category cannot
@@ -94,9 +97,9 @@ describe("NamePieces", () => {
     renderScreen();
 
     expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(5);
-    expect(screen.getByRole("button", { name: /Everything else/ })).toHaveTextContent(
-      "Everything else · 1 more",
-    );
+    expect(
+      screen.getByRole("button", { name: /Everything else/ }),
+    ).toHaveTextContent("Everything else · 1 more");
   });
 
   it("never gates: Next is live with nothing named", async () => {
@@ -278,7 +281,9 @@ describe("NamePieces", () => {
   it("shows no disclosure when everything fits", () => {
     renderScreen({ items: SIX.slice(0, 3) });
 
-    expect(screen.queryByRole("button", { name: /Everything else/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Everything else/ }),
+    ).toBeNull();
   });
 
   it("reveals the rest behind the fold", async () => {

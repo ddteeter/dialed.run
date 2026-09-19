@@ -175,13 +175,13 @@ did not happen, marks where the fix is, and stays still while you fix it.
 
 Two failures, two different things:
 
-| | Field failure | Form failure |
-|---|---|---|
-| Means | The form is intact; the fix is inside it | Nothing was saved; the fix is not inside it |
-| Cause | zod issue on one or more fields | Network died, 500, expired session |
-| Marked at | The fields | The submit button |
-| Fields marked | Yes | **No** — never mark a field for a 500 |
-| Recovery | Edit and re-submit | `Try again` re-submits the same values |
+|               | Field failure                            | Form failure                                |
+| ------------- | ---------------------------------------- | ------------------------------------------- |
+| Means         | The form is intact; the fix is inside it | Nothing was saved; the fix is not inside it |
+| Cause         | zod issue on one or more fields          | Network died, 500, expired session          |
+| Marked at     | The fields                               | The submit button                           |
+| Fields marked | Yes                                      | **No** — never mark a field for a 500       |
+| Recovery      | Edit and re-submit                       | `Try again` re-submits the same values      |
 
 They currently look identical. That is the bug this section closes.
 
@@ -192,7 +192,7 @@ every implementation lands in the same place:
 
 - **1 field error** → field message only. Focus moves to that field.
 - **2+ field errors** → summary block at the top of the form (`Nothing saved.
-  Three fields need a fix.` + one focus button per field) **and** every field
+Three fields need a fix.` + one focus button per field) **and** every field
   message. Focus moves to the summary.
 - **Form failure** → the failure band above the submit button. No summary, no
   field marks.
@@ -206,12 +206,12 @@ Every form renders exactly one `<FormStatus />`: a permanently-mounted
 `role="status" aria-live="polite"` region. It is empty until a submit resolves,
 then it receives **one sentence, every time, on every outcome**:
 
-| Outcome | Sentence |
-|---|---|
-| 1 field error | `Nothing saved. One field needs a fix.` |
-| n field errors | `Nothing saved. {n} fields need a fix.` |
-| Form failure | `Nothing saved. Your connection dropped.` |
-| Success | `Run logged.` |
+| Outcome        | Sentence                                  |
+| -------------- | ----------------------------------------- |
+| 1 field error  | `Nothing saved. One field needs a fix.`   |
+| n field errors | `Nothing saved. {n} fields need a fix.`   |
+| Form failure   | `Nothing saved. Your connection dropped.` |
+| Success        | `Run logged.`                             |
 
 Then focus moves (field, summary, or the retry button). Announce, then move —
 never move without announcing.
@@ -235,8 +235,8 @@ never carried by color alone.
 
 #### Motion: none
 
-The Motion Doctrine already answers this — *Offline / error: nothing,
-deliberately static*, and `NEVER` bans overshoot. So:
+The Motion Doctrine already answers this — _Offline / error: nothing,
+deliberately static_, and `NEVER` bans overshoot. So:
 
 - The error does **not** animate in. No fade, no slide, no height transition.
 - **No shake.** A shake is a spring wearing a costume.
@@ -292,7 +292,7 @@ are, not the top of the form.
   yellow means "the fix is here" and it isn't.
 - Kicker in Archivo Black, uppercase, 11px: `NOTHING SAVED`.
 - One sentence naming what happened in the user's terms: `Your connection
-  dropped.` / `Our end failed. Nothing about your run changed.`
+dropped.` / `Our end failed. Nothing about your run changed.`
 - A `Try again` button that re-submits the same values. Values are never cleared
   on a form failure.
 - **Never a toast.** A toast takes the retry with it when it leaves.
@@ -310,19 +310,19 @@ the pending payload, and returns to the filled form.
   grid cell, so width is fixed by the longer label.
 - **Pending = breathing brackets flanking the label** (`[ Logging ]`, 900ms
   opacity loop) — the product's one waiting device. No spinner, ever. The
-  brackets are the device; the label text stays plain, since bracket *notation*
+  brackets are the device; the label text stays plain, since bracket _notation_
   is reserved for measured values.
 - **Inputs go `readOnly` while in flight, never `disabled`** — keeps focus,
   keeps the value announced.
 - Label pairs are fixed. Verb, no ellipsis, no "Please wait":
 
-| Idle | Pending |
-|---|---|
-| `Log run` | `Logging` |
-| `Save` | `Saving` |
-| `Add to closet` | `Adding` |
-| `Retire` | `Retiring` |
-| `Send` | `Sending` |
+| Idle            | Pending    |
+| --------------- | ---------- |
+| `Log run`       | `Logging`  |
+| `Save`          | `Saving`   |
+| `Add to closet` | `Adding`   |
+| `Retire`        | `Retiring` |
+| `Send`          | `Sending`  |
 
 - On success the button returns to idle and the **screen** moves on. No green
   check state, no success toast on a form that navigates.

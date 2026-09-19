@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
-import { ImportUploadError, MAX_IMPORT_BYTES } from "../../src/modules/runs/imports";
+import {
+  ImportUploadError,
+  MAX_IMPORT_BYTES,
+} from "../../src/modules/runs/imports";
 import {
   importIdInput,
   importUploadFrom,
@@ -31,7 +34,9 @@ const draft = {
 describe("manualRunInput", () => {
   it("takes a run draft with an idempotency key, and without one", () => {
     const key = newUlid();
-    expect(manualRunInput.parse({ ...draft, idempotencyKey: key })).toMatchObject({
+    expect(
+      manualRunInput.parse({ ...draft, idempotencyKey: key }),
+    ).toMatchObject({
       idempotencyKey: key,
     });
     expect(manualRunInput.parse(draft).idempotencyKey).toBeUndefined();
@@ -64,16 +69,24 @@ describe("the id inputs", () => {
 
 describe("manualTempInput", () => {
   it("takes the ends of the habitable range", () => {
-    expect(manualTempInput.parse({ runId: "01RUN", tempC: -60 }).tempC).toBe(-60);
+    expect(manualTempInput.parse({ runId: "01RUN", tempC: -60 }).tempC).toBe(
+      -60,
+    );
     expect(manualTempInput.parse({ runId: "01RUN", tempC: 60 }).tempC).toBe(60);
   });
 
   it("refuses a temperature nobody ran in", () => {
     // Outside this range is a typo or a unit mix-up (°F typed into a °C
     // field), and it would poison the fallback it exists to feed.
-    expect(() => manualTempInput.parse({ runId: "01RUN", tempC: -61 })).toThrow();
-    expect(() => manualTempInput.parse({ runId: "01RUN", tempC: 61 })).toThrow();
-    expect(() => manualTempInput.parse({ runId: "01RUN", tempC: "10" })).toThrow();
+    expect(() =>
+      manualTempInput.parse({ runId: "01RUN", tempC: -61 }),
+    ).toThrow();
+    expect(() =>
+      manualTempInput.parse({ runId: "01RUN", tempC: 61 }),
+    ).toThrow();
+    expect(() =>
+      manualTempInput.parse({ runId: "01RUN", tempC: "10" }),
+    ).toThrow();
   });
 });
 
@@ -89,7 +102,9 @@ describe("stravaCallbackSearch", () => {
     // so a redirect carrying `?code=` with nothing after it would blow up
     // the route rather than reach `stravaCallbackOutcome`, whose whole job
     // is to answer "no" politely.
-    expect(stravaCallbackSearch.parse({ code: "" })).toStrictEqual({ code: "" });
+    expect(stravaCallbackSearch.parse({ code: "" })).toStrictEqual({
+      code: "",
+    });
     expect(() => stravaCallbackInput.parse({ code: "" })).toThrow();
   });
 
@@ -104,14 +119,17 @@ describe("stravaCallbackSearch", () => {
 
 describe("stravaCallbackInput", () => {
   it("takes a callback with everything, and one with nothing", () => {
-    expect(
-      stravaCallbackInput.parse({ code: "c", state: "s" }),
-    ).toStrictEqual({ code: "c", state: "s" });
+    expect(stravaCallbackInput.parse({ code: "c", state: "s" })).toStrictEqual({
+      code: "c",
+      state: "s",
+    });
     // Strava sends `error=access_denied` with no code or state when the
     // user declines, so every field has to be optional.
-    expect(stravaCallbackInput.parse({ error: "access_denied" })).toStrictEqual({
-      error: "access_denied",
-    });
+    expect(stravaCallbackInput.parse({ error: "access_denied" })).toStrictEqual(
+      {
+        error: "access_denied",
+      },
+    );
     expect(stravaCallbackInput.parse({})).toStrictEqual({});
   });
 

@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
+import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
+import { fileReportAction } from "../../modules/safety/functions";
 import { shouldAskForVerdict } from "../../modules/feed/route-decisions";
 import {
   entryDetailQuery,
@@ -24,9 +26,12 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
     );
     return {
       entry,
+      viewerId: session.user.id,
       units: await viewerUnitsQuery(),
-      shouldPromptVerdict: await shouldAskForVerdict(entry, session.user.id, () =>
-        verdictPromptQuery({ data: { entryId: params.entryId } }),
+      shouldPromptVerdict: await shouldAskForVerdict(
+        entry,
+        session.user.id,
+        () => verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
     };
   },
@@ -35,17 +40,29 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
 
 function EntryDetailPage() {
   const { entryId } = Route.useParams();
-  const { entry, shouldPromptVerdict, units } = Route.useLoaderData();
+  const { entry, shouldPromptVerdict, units, viewerId } = Route.useLoaderData();
 
   return (
     <Layout>
       <EntryDetail
         entry={entry}
-        entryId={entryId}
         units={units}
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
         toggleUseful={toggleUsefulAction}
+        reportAffordance={
+          <ReportAffordance
+            subject={{
+              type: "entry",
+              id: entryId,
+              label: entry.runTitle,
+              authorId: entry.userId,
+              authorName: entry.authorDisplayName,
+            }}
+            viewerId={viewerId}
+            fileReport={fileReportAction}
+          />
+        }
       />
     </Layout>
   );

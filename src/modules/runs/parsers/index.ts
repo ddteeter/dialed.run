@@ -54,9 +54,7 @@ export function importExtensionOf(path: string): ImportExtension | undefined {
 export function extensionFromKey(r2Key: string): ImportExtension {
   const extension = importExtensionOf(r2Key);
   if (extension === undefined) {
-    throw new RunParseError(
-      `import: unsupported file extension in ${r2Key}`,
-    );
+    throw new RunParseError(`import: unsupported file extension in ${r2Key}`);
   }
   return extension;
 }

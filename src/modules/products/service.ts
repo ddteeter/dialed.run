@@ -12,6 +12,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { brands, products } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
+import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
 export type BrandRow = typeof brands.$inferSelect;
@@ -100,7 +101,11 @@ export async function createOrGetBrand(
         .values({ id: newUlid(), name: name.trim(), normalized, seeded: false })
         .onConflictDoNothing(BRAND_IDENTITY_CONFLICT),
     () =>
-      db.select().from(brands).where(eq(brands.normalized, normalized)).limit(1),
+      db
+        .select()
+        .from(brands)
+        .where(eq(brands.normalized, normalized))
+        .limit(1),
   );
 }
 
@@ -115,13 +120,15 @@ export async function searchBrands(
 ): Promise<BrandRow[]> {
   const likePattern = prefixPattern(prefix);
   if (likePattern === undefined) return [];
-  return db
-    .select()
-    .from(brands)
-    // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
-    .where(like(brands.normalized, likePattern))
-    .orderBy(brands.name)
-    .limit(limit);
+  return (
+    db
+      .select()
+      .from(brands)
+      // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
+      .where(like(brands.normalized, likePattern))
+      .orderBy(brands.name)
+      .limit(limit)
+  );
 }
 
 export interface CreateProductInput {
@@ -157,7 +164,7 @@ export async function createOrGetProduct(
           extractionStatus: "none",
           status: "active",
           createdBy: input.createdBy,
-          createdAt: Math.floor(Date.now() / 1000),
+          createdAt: nowSeconds(),
         })
         .onConflictDoNothing(PRODUCT_IDENTITY_CONFLICT),
     () =>

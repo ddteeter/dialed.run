@@ -22,6 +22,7 @@ import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import { followeeIdsOf } from "./follows";
+import { publicPhotoStatus, publiclyVisibleEntry } from "../safety";
 
 export interface FeedCursor {
   createdAt: number;
@@ -30,13 +31,15 @@ export interface FeedCursor {
 
 const PAGE_SIZE = 20;
 
-
 function feedCursorPredicate(cursor: FeedCursor) {
   const sameInstantEarlierId = and(
     eq(outfitEntries.createdAt, cursor.createdAt),
     lt(outfitEntries.id, cursor.id),
   );
-  return or(lt(outfitEntries.createdAt, cursor.createdAt), sameInstantEarlierId);
+  return or(
+    lt(outfitEntries.createdAt, cursor.createdAt),
+    sameInstantEarlierId,
+  );
 }
 
 export function followingFeedStatement(
@@ -47,7 +50,7 @@ export function followingFeedStatement(
 ) {
   const scope = and(
     inArray(outfitEntries.userId, [...userIds]),
-    eq(outfitEntries.isPublic, true),
+    publiclyVisibleEntry(),
     cursor ? feedCursorPredicate(cursor) : undefined,
   );
   return database
@@ -88,6 +91,7 @@ export interface FeedPage {
 async function hydrateEntries(
   database: DrizzleD1Database,
   entryRows: (typeof outfitEntries.$inferSelect)[],
+  viewerId: string,
 ): Promise<FeedItem[]> {
   // Equivalent mutant: an empty page produces empty reads and an empty
   // map either way. What the return saves is six queries and a batch on
@@ -98,19 +102,36 @@ async function hydrateEntries(
   const runIds = entryRows.map((e) => e.runId);
   const userIds = [...new Set(entryRows.map((e) => e.userId))];
 
-  const runsQuery = database.select().from(runs).where(inArray(runs.id, runIds));
+  const runsQuery = database
+    .select()
+    .from(runs)
+    .where(inArray(runs.id, runIds));
   const authorsQuery = database
-    .select({ userId: userProfiles.userId, displayName: userProfiles.displayName })
+    .select({
+      userId: userProfiles.userId,
+      displayName: userProfiles.displayName,
+    })
     .from(userProfiles)
     .where(inArray(userProfiles.userId, userIds));
   const itemsQuery = database
     .select()
     .from(outfitEntryItems)
     .where(inArray(outfitEntryItems.entryId, entryIds));
+  // A photo the classifier has not passed is shown to its author and to
+  // nobody else, so the condition is per-entry rather than per-page: one
+  // feed mixes the viewer's own entries with everyone else's. In SQL,
+  // because a row a stranger may not see is a row D1 should not scan.
+  const ownEntryIds = entryRows
+    .filter((entry) => entry.userId === viewerId)
+    .map((entry) => entry.id);
+  const showable = or(
+    eq(entryPhotos.screenStatus, publicPhotoStatus),
+    inArray(entryPhotos.entryId, ownEntryIds),
+  );
   const photosQuery = database
     .select()
     .from(entryPhotos)
-    .where(inArray(entryPhotos.entryId, entryIds))
+    .where(and(inArray(entryPhotos.entryId, entryIds), showable))
     .orderBy(entryPhotos.entryId, entryPhotos.position);
   const tagsQuery = database
     .select()
@@ -154,8 +175,13 @@ async function hydrateEntries(
       // Equivalent mutant on the optional chain: every entry's author is
       // in the batch that fetched them, so the lookup always hits. It is
       // here because `Map#get` is typed as possibly missing.
-      // Stryker disable next-line OptionalChaining
-      authorDisplayName: authorsById.get(entry.userId)?.displayName ?? undefined,
+      // Block pair rather than `next-line`: prettier wraps this property
+      // onto a second line and the `?.` lives there, so `next-line` was
+      // pointing at the key and covering nothing.
+      // Stryker disable OptionalChaining
+      authorDisplayName:
+        authorsById.get(entry.userId)?.displayName ?? undefined,
+      // Stryker restore OptionalChaining
       runId: entry.runId,
       runTitle: run?.title ?? "Run",
       distanceM: run?.distanceM ?? 0,
@@ -183,13 +209,20 @@ export async function followingFeed(
   const database = drizzle(env.DIALED_CORE);
   const followeeIds = await followeeIdsOf(viewerId);
   const userIds = [viewerId, ...followeeIds];
-  const rows = await followingFeedStatement(database, userIds, cursor, limit + 1);
+  const rows = await followingFeedStatement(
+    database,
+    userIds,
+    cursor,
+    limit + 1,
+  );
   const page = rows.slice(0, limit);
-  const items = await hydrateEntries(database, page);
+  const items = await hydrateEntries(database, page, viewerId);
   const last = page.at(-1);
   return {
     items,
     nextCursor:
-      last && rows.length > limit ? { createdAt: last.createdAt, id: last.id } : undefined,
+      last && rows.length > limit
+        ? { createdAt: last.createdAt, id: last.id }
+        : undefined,
   };
 }

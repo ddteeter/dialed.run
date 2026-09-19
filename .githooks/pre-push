@@ -14,7 +14,78 @@
 # UNLESS core.hooksPath already points at another hooks directory, which they
 # will not overwrite. In that case call the line below from the pre-push hook
 # you already have, and this file stays inert.
-node "./node_modules/guardrails-core/dist/cli.mjs" gate --mode=push || {
+#
+# ---- The machine-wide lock -------------------------------------------------
+#
+# This repo is worked in eight worktrees at once, each with an agent that can
+# push, and `gate --mode=push` is the heaviest thing any of them runs: it
+# carries the stryker analyzer (rung `push`, see guardrails.config.json).
+#
+# Stryker's `concurrency` bounds ONE run's workers. It says nothing about the
+# number of runs, so it is the wrong axis for this: it made the common case
+# slower -- one agent using half the machine -- without bounding the bad case
+# at all. Four agents pushing at once is four dry runs, each forced
+# single-threaded by stryker's vitest runner and each ~50s that cannot yield,
+# contending for four performance cores, plus ~20 GB resident on a 24 GB
+# machine. That is not hypothetical: `stryker.conf.json`'s
+# //dryRunTimeoutMinutes records a push that failed after an hour with
+# "Something went wrong in the initial test run" because a concurrent suite in
+# another worktree starved this one past its ceiling.
+#
+# So the bound belongs on the resource that is actually shared -- the machine.
+# One gate at a time, at full concurrency, rather than N gates each throttled.
+#
+# Serializing LOWERS the mean wait. Three queued runs finish at roughly
+# 15/30/45 minutes; three thrashing runs all finish past 50. The worst case is
+# worse and every other number is better -- and the state is legible, which a
+# silent 3x slowdown was not.
+#
+# Why a file-descriptor lock and not a `mkdir` one: these hold the lock on an
+# fd, so an agent killed mid-gate releases it. There is no stale-lock class to
+# clean up -- which is the failure mode a lock would otherwise ADD to a machine
+# full of agents that get interrupted. `-k` keeps the file, which the lockf man
+# page says is what guarantees lock ORDERING: without it waiters race on unlink
+# and re-acquire, and the agent that waited longest is not the one that gets in.
+#
+# The hour is a ceiling, not a budget: a genuinely wedged gate should eventually
+# say so rather than block a push forever. Both lockers are asked to report that
+# as 75 (EX_TEMPFAIL -- lockf's default, and what `flock -E` is passed), because
+# an hour of waiting must not be reported as "resolve violations".
+#
+# The probe before it exists only to print. Both lockers are silent while they
+# block, and a quiet 25-minute wait looks exactly like a hang -- the same
+# confusion `exit 143` already causes here. The probe can lose a race and skip
+# the message; nothing but the message depends on it.
+#
+# `lockf` is BSD (macOS), `flock` is util-linux. If neither is present the gate
+# still runs, unserialized: a contributor on such a platform should get the
+# checks, not a hook that dies with "command not found" and has that reported
+# as a violation.
+LOCK="$HOME/.dialed-gate.lock"
+GATE="node ./node_modules/guardrails-core/dist/cli.mjs gate --mode=push"
+WAITING="guardrails: another worktree is running the gate — waiting for the lock (up to 60m)…"
+
+if command -v lockf >/dev/null 2>&1; then
+  lockf -k -s -t 0 "$LOCK" true 2>/dev/null || echo "$WAITING" >&2
+  lockf -k -s -t 3600 "$LOCK" /bin/sh -c "$GATE"
+  status=$?
+elif command -v flock >/dev/null 2>&1; then
+  flock -n "$LOCK" true 2>/dev/null || echo "$WAITING" >&2
+  flock -w 3600 -E 75 "$LOCK" /bin/sh -c "$GATE"
+  status=$?
+else
+  echo "guardrails: neither lockf nor flock found — running the gate unserialized." >&2
+  /bin/sh -c "$GATE"
+  status=$?
+fi
+
+if [ $status -eq 75 ]; then
+  echo "guardrails: waited an hour for the gate lock and gave up — another worktree is still running it." >&2
+  echo "guardrails: push again when it finishes, or check $LOCK if you believe nothing is holding it." >&2
+  exit 1
+fi
+
+if [ $status -ne 0 ]; then
   echo "guardrails: push blocked — resolve violations or run 'guardrails verify'." >&2
   exit 1
-}
+fi

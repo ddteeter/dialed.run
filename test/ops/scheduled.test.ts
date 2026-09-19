@@ -4,13 +4,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   cronCheckpoints,
+  entryPhotos,
   imports,
+  outfitEntries,
+  products,
+  reports,
+  reviewQueue,
   runs,
   stravaRevocations,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../../src/modules/products";
 
 /**
  * The daily digest is a cron whose entire product is a list of things a
@@ -26,13 +36,10 @@ import { handleScheduled } from "../../src/modules/ops";
 
 const HOUR = 3600;
 const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
+const ENRICHMENT_RETRY = { cron: "30 * * * *" } as ScheduledController;
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
-}
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 async function insertImport(
@@ -81,6 +88,15 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   await db.delete(imports);
   await db.delete(stravaRevocations);
   await db.delete(runs);
+  // The moderation tables belong on this list too: the digest counts the
+  // review queue's depth, so a row left behind by one test appears as
+  // "2 item(s) awaiting moderation review" in the next one's anomalies —
+  // which fails every assertion in the file that expects a quiet digest,
+  // and points at the digest rather than at the leak.
+  await db.delete(reviewQueue);
+  await db.delete(reports);
+  await db.delete(entryPhotos);
+  await db.delete(outfitEntries);
 }
 
 beforeEach(async () => {
@@ -133,6 +149,126 @@ describe("the cron heartbeat", () => {
     } as ScheduledController);
 
     expect(outcome).toStrictEqual({ cronName: "weather-retry", anomalies: [] });
+  });
+
+  it("dispatches the screening-retry schedule to the screening sweep", async () => {
+    // The case label is the whole wiring: `wrangler.jsonc` fires a cron
+    // expression, `crons.ts` maps it to a name, and this switch turns the
+    // name into work. A wrong label here means the sweep silently never
+    // runs and every flagged photo stays pending forever — which looks
+    // exactly like a classifier that is simply slow.
+    // A photo waiting to be screened, so the sweep has something to say.
+    const userId = newUlid();
+    const runId = await insertRun({ userId });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+    await coreDb()
+      .insert(entryPhotos)
+      .values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/p`,
+        position: 0,
+      });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // **The name is not the assertion.** `cronName` comes from the
+    // registry lookup, not from the case label, so it reads
+    // "screening-retry" whether or not this switch does anything — which
+    // is what the sweep silently never running would look like. The
+    // anomaly is the proof that work happened.
+    expect(outcome.cronName).toBe("screening-retry");
+    // Matched loosely on purpose. Which sentence comes back depends on
+    // whether a classifier key is configured — "photos await screening;
+    // OPENAI_API_KEY is not set" without one, "still pending after a
+    // screening sweep" with one that cannot answer — and both prove the
+    // same thing here: the sweep ran. The exact wording is pinned in
+    // `test/safety/retry.test.ts`, which owns it.
+    expect(outcome.anomalies).toEqual([expect.stringContaining("screening")]);
+  });
+
+  it("says so when the sweep finds reports that were never acted on", async () => {
+    // The gap this covers is a crash between `fileReport`'s insert and its
+    // hide. Reproduced by writing the reports directly, which is what that
+    // half-finished state looks like on disk.
+    const author = newUlid();
+    const runId = await insertRun({ userId: author });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId: author,
+      runId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+    for (let n = 0; n < 3; n += 1) {
+      await coreDb().insert(reports).values({
+        id: newUlid(),
+        reporterId: newUlid(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        createdAt: nowSeconds(),
+      });
+    }
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // The digest is the only place a solo operator would ever learn this
+    // happened, so the line has to be there and has to say what it was.
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("had not been hidden"),
+    );
+    const [row] = await coreDb()
+      .select({ status: outfitEntries.moderationStatus })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(row?.status).toBe("hidden_pending_review");
+  });
+
+  it("says so when it takes a stale review claim back", async () => {
+    // A claim stamped long enough ago that its lease has run out. Written
+    // directly because the only other way to reach this state is to wait
+    // half an hour.
+    const queueId = newUlid();
+    await coreDb()
+      .insert(reviewQueue)
+      .values({
+        id: queueId,
+        subjectType: "entry",
+        subjectId: newUlid(),
+        source: "reports",
+        status: "reviewing",
+        resolvedBy: newUlid(),
+        claimedAt: nowSeconds() - 3600,
+        createdAt: nowSeconds() - 3600,
+      });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("went stale"),
+    );
+    const [row] = await coreDb()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    expect(row?.status).toBe("pending");
   });
 
   it("files a cron it does not recognise under `unknown`, and says so", async () => {
@@ -221,7 +357,12 @@ describe("stalled imports are re-dispatched, and reported", () => {
     // system already did.
     const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
     const old = nowSeconds() - HOUR;
-    for (const status of ["processing", "done", "failed", "duplicate"] as const) {
+    for (const status of [
+      "processing",
+      "done",
+      "failed",
+      "duplicate",
+    ] as const) {
       await insertImport({ status, createdAt: old });
     }
 
@@ -366,3 +507,376 @@ describe("everything the digest found, in one report", () => {
     );
   });
 });
+
+/**
+A product in the given extraction state, created `ageSeconds` ago.
+*/
+async function insertProduct(
+  status: typeof products.$inferInsert.extractionStatus,
+  ageSeconds: number,
+): Promise<string> {
+  const db = coreDb();
+  const brand = await createOrGetBrand(db, `Sweep ${newUlid()}`);
+  const product = await createOrGetProduct(db, {
+    brandId: brand.id,
+    name: `Tee ${newUlid()}`,
+    sourceUrl: "https://shop.example.com/p",
+    createdBy: newUlid(),
+  });
+  await db
+    .update(products)
+    .set({ extractionStatus: status, createdAt: nowSeconds() - ageSeconds })
+    .where(eq(products.id, product.id));
+  return product.id;
+}
+
+describe("stalled enrichments are re-dispatched on their own hourly sweep", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("re-enqueues a product that has sat pending past the grace window", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("pending", 20 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(outcome.cronName).toBe("enrichment-retry");
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+  });
+
+  it("leaves a product inside the grace window alone", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 5 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on a product at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 15 * 60 + 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-drives a failed product too, so an outage heals itself", async () => {
+    // **Composition comes only from the model now**, so a job that
+    // exhausted its retries while OpenAI was unreachable dead-lettered
+    // and marked the product `failed` — and `requestEnrichment` only claims
+    // `failed` on a *new paste*, so nothing would look at it again. The row
+    // cannot tell "this page states no composition" from "the model was
+    // down", and the costs are asymmetric: re-fetching a page that has
+    // nothing is cheap, abandoning a product is forever.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("failed", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+    // And claimed: the consumer treats only `pending` as work, so a
+    // re-dispatch that left the row `failed` was a message it acked and
+    // ignored. The flip is what makes the re-drive real (PR #72 review).
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("claims the row even when the send then fails, so the next sweep owns it", async () => {
+    vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
+      new Error("queue down"),
+    );
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const productId = await insertProduct("failed", HOUR);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("leaves a failed product inside the grace window alone, like a pending one", async () => {
+    // The consumer may still be on it: a job that failed a minute ago is
+    // being retried by the queue, and a sweep that flipped it back to
+    // pending would race that retry.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 5 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on a failed product at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 15 * 60 + 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops re-driving a failed product after its first day", async () => {
+    // Unbounded, a page that 404s — or 403s even through the proxy, at a
+    // credit a try — is re-fetched every hour for the life of the row.
+    // Past a day it is abandoned, which the digest reports instead.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("failed", 25 * HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("failed");
+  });
+
+  it("re-drives a failed product right up to the day, not one second past it", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 24 * HOUR - 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps re-driving a pending product past the day, because pending is a claim", async () => {
+    // `pending` means the row owes an extraction and nothing has said
+    // otherwise; only `failed` has a verdict to stop on.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 3 * 24 * HOUR);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves alone the states that are not enrichment's to finish", async () => {
+    // `none` was never asked for, and `done` succeeded. Re-driving either
+    // would be work the system already did, or never owed.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    for (const status of ["none", "done"] as const) {
+      await insertProduct(status, HOUR);
+    }
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("still reports the backlog when the queue send itself fails", async () => {
+    vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
+      new Error("queue down"),
+    );
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertProduct("pending", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ surface: "enrichment-redispatch" }),
+      expect.objectContaining({ message: "queue down" }),
+    );
+  });
+});
+
+async function enriched(composition: string | undefined): Promise<void> {
+  const id = await insertProduct("done", HOUR);
+  if (composition === undefined) return;
+  await coreDb()
+    .update(products)
+    .set({ fabricComposition: composition })
+    .where(eq(products.id, id));
+}
+
+describe("the abandoned-enrichment check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("reports a failed product the sweep has stopped re-driving", async () => {
+    // Law 6: a terminal failure lands somewhere a human sees. Until there
+    // is an admin surface for dead-lettered work, this line is it.
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertProduct("failed", 25 * HOUR);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) abandoned by enrichment: failed, and past the sweep's day of retries",
+    ]);
+  });
+
+  it("says nothing about a failed product the sweep still owns", async () => {
+    await insertProduct("failed", 2 * HOUR);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("says nothing about an old product that finished", async () => {
+    const id = await insertProduct("done", 3 * 24 * HOUR);
+    // With a composition, so the yield check has nothing to say either.
+    await coreDb()
+      .update(products)
+      .set({ fabricComposition: "100% merino wool" })
+      .where(eq(products.id, id));
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+});
+
+describe("the extraction-yield check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("says nothing while most enriched products have a composition", async () => {
+    // The digest surfaces anomalies and nothing else. A line that appears
+    // every day is a metric, and a metric in an alert channel is how an
+    // alert channel gets ignored.
+    await enriched("100% merino wool");
+    await enriched("88% polyester, 12% elastane");
+    await enriched(undefined);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("speaks up when most of them do not", async () => {
+    // Some pages state no composition — one in twenty-two on the eval
+    // corpus. *Most* of them meaning it is the shape of a budget that
+    // stopped reaching the spec, or a model that got worse.
+    await enriched("100% merino wool");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 3 enriched product(s) have no composition (67%)",
+    ]);
+  });
+
+  it("speaks at exactly the threshold, not one past it", async () => {
+    // Half is the bound, and half is loud enough to say so: `<` and `<=`
+    // differ on exactly this input and on no other.
+    await enriched("100% merino wool");
+    await enriched("88% polyester");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 4 enriched product(s) have no composition (50%)",
+    ]);
+  });
+
+  it("says nothing at all before anything has been enriched", async () => {
+    // Nought of nought is not a hundred per cent.
+    await insertProduct("pending", HOUR);
+    const outcome = await handleScheduled(DIGEST);
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+});
+
+describe("the digest reports what is waiting on a person (106 §2)", () => {
+  beforeEach(async () => {
+    await coreDb().delete(reviewQueue);
+  });
+
+  it("says nothing on a day with an empty queue", async () => {
+    const result = await handleScheduled(DIGEST);
+
+    // A digest that speaks every day is one nobody reads. Zero waiting is
+    // the ordinary case and gets no line.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+
+  it("reports a single waiting item, not just a backlog", async () => {
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    // Deliberately unlike the other digest checks, which fire past a
+    // threshold. This queue's promise is "a person reads it within a day",
+    // so the failure is a queue nobody opened rather than one that grew —
+    // and a threshold would hide exactly that.
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("1 item(s) awaiting moderation review"),
+    );
+  });
+
+  it("counts the queue, not the reports behind it", async () => {
+    await queueItem();
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("2 item(s)"),
+    );
+  });
+
+  it("ignores decisions already made", async () => {
+    await queueItem("approved");
+    await queueItem("removed");
+
+    const result = await handleScheduled(DIGEST);
+
+    // Resolved rows stay in the table for the record; counting them would
+    // make the digest louder every day forever.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+});
+
+/**
+One row in front of a reviewer, in the given state.
+*/
+async function queueItem(
+  status: "pending" | "approved" | "removed" = "pending",
+): Promise<void> {
+  await coreDb().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType: "entry",
+    subjectId: newUlid(),
+    source: "reports",
+    status,
+    createdAt: nowSeconds(),
+  });
+}

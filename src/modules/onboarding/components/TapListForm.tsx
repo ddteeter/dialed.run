@@ -37,8 +37,10 @@ const ENOUGH_TO_START = 6;
  * `tap-list-form.dom.test.tsx` asserts both states so a later restyle
  * cannot quietly reintroduce a coloured tick.
  */
-const CHIP_ON = "relative flex items-center gap-1.5 rounded-full bg-night px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-chalk has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
-const CHIP_OFF = "relative flex items-center gap-1.5 rounded-full border border-night/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-night/70 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
+const CHIP_ON =
+  "relative flex items-center gap-1.5 rounded-full bg-night px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-chalk has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
+const CHIP_OFF =
+  "relative flex items-center gap-1.5 rounded-full border border-night/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.03em] text-night/70 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-night";
 
 /**
  * Screen O3 — "tap what you own", the one list.
@@ -167,7 +169,9 @@ export function TapListForm({
             verbatim (rule 6); the whole-UI copy pass owns the plural. */}
         <Mono>Closet: {ticked.size} pieces</Mono>
         <Mono className="text-night/50">
-          {ticked.size >= ENOUGH_TO_START ? "Enough to start" : "Tap what you own"}
+          {ticked.size >= ENOUGH_TO_START
+            ? "Enough to start"
+            : "Tap what you own"}
         </Mono>
       </div>
 
@@ -235,4 +239,3 @@ function TapChip({
     </label>
   );
 }
-

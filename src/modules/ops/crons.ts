@@ -21,6 +21,12 @@
 const cronRegistry = [
   { schedule: "0 12 * * *", name: "daily-digest" },
   { schedule: "0 * * * *", name: "weather-retry" },
+  // Half past, so the two hourly sweeps never share a firing.
+  { schedule: "30 * * * *", name: "enrichment-retry" },
+  // Quarter past, for the same reason: three hourly sweeps, three slots.
+  // Task 106's photo screening reconciles rows still marked `pending`
+  // (law 8c) — the durable marker is why this is a cron and not a queue.
+  { schedule: "15 * * * *", name: "screening-retry" },
 ] as const;
 
 export type CronName = (typeof cronRegistry)[number]["name"];

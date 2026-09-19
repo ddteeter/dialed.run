@@ -14,7 +14,6 @@ import { createItem, getOwnedItem } from "../../src/modules/closet/service";
 import { maxPhotoBytes } from "../../src/lib/photo-constraints";
 import {
   extensionFor,
-  fitWithin,
   getItemPhotoObject,
   isPhotoSize,
   photoSizes,
@@ -24,8 +23,8 @@ import {
   uploadItemPhoto,
   uploadPhotoFromForm,
   validatePhoto,
-  withReleased,
 } from "../../src/modules/closet/photos";
+import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -223,8 +222,14 @@ describe("fitWithin", () => {
     // The `&&` matters in both directions: an image inside the box on one
     // axis and outside on the other still has to be scaled, whichever axis
     // that is.
-    expect(fitWithin(4000, 3000, 200)).toStrictEqual({ width: 200, height: 150 });
-    expect(fitWithin(3000, 4000, 200)).toStrictEqual({ width: 150, height: 200 });
+    expect(fitWithin(4000, 3000, 200)).toStrictEqual({
+      width: 200,
+      height: 150,
+    });
+    expect(fitWithin(3000, 4000, 200)).toStrictEqual({
+      width: 150,
+      height: 200,
+    });
     expect(fitWithin(100, 400, 200)).toStrictEqual({ width: 50, height: 200 });
     expect(fitWithin(400, 100, 200)).toStrictEqual({ width: 200, height: 50 });
   });
@@ -256,7 +261,7 @@ describe("unquoteEtag", () => {
     // R2's `onlyIf` rejects a quoted value outright — so this runs on
     // exactly the requests the conditional GET exists for.
     expect(unquoteEtag('"abc123"')).toBe("abc123");
-    expect(unquoteEtag("  \"abc123\"  ")).toBe("abc123");
+    expect(unquoteEtag('  "abc123"  ')).toBe("abc123");
   });
 
   it("strips the weak-comparison prefix, and only from the front", () => {
@@ -312,7 +317,6 @@ async function itemWithPhoto(): Promise<{
 }
 
 describe("what the pipeline stores and refuses", () => {
-
   it("labels the original with the type it was uploaded as", async () => {
     // Served straight back on the download path. Without the metadata R2
     // answers `application/octet-stream` and the browser offers to save a
@@ -518,11 +522,7 @@ describe("uploadPhotoFromForm", () => {
       name: "No file shirt",
     });
 
-    const result = await uploadPhotoFromForm(
-      client,
-      userId,
-      formFor(item.id),
-    );
+    const result = await uploadPhotoFromForm(client, userId, formFor(item.id));
     expect(result).toStrictEqual({
       ok: false,
       error: "No photo file provided.",
@@ -567,7 +567,6 @@ describe("uploadPhotoFromForm", () => {
 
     expect(result).toStrictEqual({ ok: false, error: "Photo file is empty." });
   });
-
 });
 
 describe("reasonFrom", () => {
@@ -590,8 +589,6 @@ describe("reasonFrom", () => {
     // The id comes off the wire as a string; parsing it is what stops a
     // crafted form reaching another runner's item.
     const form = formFor("not-a-ulid");
-    await expect(
-      uploadPhotoFromForm(db(), newUlid(), form),
-    ).rejects.toThrow();
+    await expect(uploadPhotoFromForm(db(), newUlid(), form)).rejects.toThrow();
   });
 });
