@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "../../src/env";
 import { checkHealth } from "../../src/modules/ops";
+import { nowSeconds } from "../../src/lib/now";
 
 /**
  * `/health` is read by whatever restarts or pages when this app is down,
@@ -72,7 +73,7 @@ describe("checkHealth when something is down", () => {
 
 describe("what a healthy report says", () => {
   it("stamps `at` in epoch seconds, not milliseconds", async () => {
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     const report = await checkHealth();
 

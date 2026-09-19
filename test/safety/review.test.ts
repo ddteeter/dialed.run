@@ -23,7 +23,14 @@ import {
   resolveReview,
 } from "../../src/modules/safety";
 
-import { makeEntry, makeRun, makeUser, NOW, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  NOW,
+  resetSafetyTables,
+} from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -62,12 +69,14 @@ async function reportedPhoto(): Promise<string> {
   const runId = await makeRun({ userId: author });
   const entryId = await makeEntry({ userId: author, runId, isPublic: true });
   const photoId = newUlid();
-  await core().insert(entryPhotos).values({
-    id: photoId,
-    entryId,
-    photoKey: `entries/${author}/${entryId}/${photoId}`,
-    position: 0,
-  });
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id: photoId,
+      entryId,
+      photoKey: `entries/${author}/${entryId}/${photoId}`,
+      position: 0,
+    });
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
     await fileReport({
       reporterId: await makeUser(),
@@ -94,16 +103,14 @@ async function photoStatusOf(photoId: string): Promise<string> {
  * raises one.
  */
 async function enqueueClassifierRow(): Promise<void> {
-  await core()
-    .insert(reviewQueue)
-    .values({
-      id: newUlid(),
-      subjectType: "photo",
-      subjectId: newUlid(),
-      source: "classifier",
-      status: "pending",
-      createdAt: Math.floor(Date.now() / 1000),
-    });
+  await core().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType: "photo",
+    subjectId: newUlid(),
+    source: "classifier",
+    status: "pending",
+    createdAt: nowSeconds(),
+  });
 }
 
 async function statusOf(entryId: string): Promise<string> {
@@ -229,14 +236,16 @@ describe("resolving a decision", () => {
 
   it("hides a removed product so it drops out of autocomplete", async () => {
     const productId = newUlid();
-    await core().insert(products).values({
-      id: productId,
-      brandId: newUlid(),
-      name: "Some Shoe",
-      normalizedName: "some shoe",
-      createdBy: await makeUser(),
-      createdAt: NOW,
-    });
+    await core()
+      .insert(products)
+      .values({
+        id: productId,
+        brandId: newUlid(),
+        name: "Some Shoe",
+        normalizedName: "some shoe",
+        createdBy: await makeUser(),
+        createdAt: NOW,
+      });
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport({
@@ -285,7 +294,7 @@ describe("what a decision writes", () => {
 
   it("stamps a resolution time, so a queue row records when it was settled", async () => {
     const { queueId } = await queuedEntry();
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     await resolveReview(queueId, await makeUser(), "approve");
 
@@ -310,7 +319,7 @@ describe("what a decision writes", () => {
   });
 
   it("records the queue row's own creation time", async () => {
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
     await queuedEntry();
 
     const [queued] = await pendingReviewQueue();
@@ -325,14 +334,16 @@ describe("what a decision writes", () => {
 
   it("approving a product puts it back in autocomplete", async () => {
     const productId = newUlid();
-    await core().insert(products).values({
-      id: productId,
-      brandId: newUlid(),
-      name: "Some Shoe",
-      normalizedName: "some shoe",
-      createdBy: await makeUser(),
-      createdAt: NOW,
-    });
+    await core()
+      .insert(products)
+      .values({
+        id: productId,
+        brandId: newUlid(),
+        name: "Some Shoe",
+        normalizedName: "some shoe",
+        createdBy: await makeUser(),
+        createdAt: NOW,
+      });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport({
         reporterId: await makeUser(),
@@ -566,12 +577,14 @@ describe("the queue itself", () => {
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId, isPublic: true });
     for (const position of [1, 0]) {
-      await core().insert(entryPhotos).values({
-        id: newUlid(),
-        entryId,
-        photoKey: `entries/${author}/${entryId}/${String(position)}`,
-        position,
-      });
+      await core()
+        .insert(entryPhotos)
+        .values({
+          id: newUlid(),
+          entryId,
+          photoKey: `entries/${author}/${entryId}/${String(position)}`,
+          position,
+        });
     }
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport({
@@ -600,14 +613,16 @@ describe("the queue itself", () => {
       .set({ displayName: "mark_t" })
       .where(eq(userProfiles.userId, subject));
     const productId = newUlid();
-    await core().insert(products).values({
-      id: productId,
-      brandId: newUlid(),
-      name: "Some Shoe",
-      normalizedName: "some shoe",
-      createdBy: await makeUser(),
-      createdAt: NOW,
-    });
+    await core()
+      .insert(products)
+      .values({
+        id: productId,
+        brandId: newUlid(),
+        name: "Some Shoe",
+        normalizedName: "some shoe",
+        createdBy: await makeUser(),
+        createdAt: NOW,
+      });
     for (const [subjectType, subjectId] of [
       ["profile", subject],
       ["product", productId],
@@ -645,14 +660,16 @@ describe("the queue itself", () => {
       .update(userProfiles)
       .set({ displayName: "mark_t" })
       .where(eq(userProfiles.userId, subject));
-    await core().insert(products).values({
-      id: subject,
-      brandId: newUlid(),
-      name: "Some Shoe",
-      normalizedName: "some shoe",
-      createdBy: await makeUser(),
-      createdAt: NOW,
-    });
+    await core()
+      .insert(products)
+      .values({
+        id: subject,
+        brandId: newUlid(),
+        name: "Some Shoe",
+        normalizedName: "some shoe",
+        createdBy: await makeUser(),
+        createdAt: NOW,
+      });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport({
         reporterId: await makeUser(),

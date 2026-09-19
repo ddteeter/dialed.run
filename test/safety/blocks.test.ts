@@ -11,6 +11,7 @@ import {
 } from "../../src/modules/safety";
 
 import { makeUser, resetSafetyTables } from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 describe("blocking", () => {
   beforeEach(resetSafetyTables);
@@ -147,7 +148,7 @@ describe("the W2 roster", () => {
     expect(roster[0]?.displayName).toBe("j_holloway");
     // In seconds, bounded both ways — the roster is ordered by it, and a
     // millisecond value sorts one block above every other forever.
-    const now = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     expect(roster[0]?.blockedAt).toBeGreaterThanOrEqual(now - 5);
     expect(roster[0]?.blockedAt).toBeLessThanOrEqual(now + 5);
   });

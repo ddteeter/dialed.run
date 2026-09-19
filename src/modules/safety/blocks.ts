@@ -105,9 +105,7 @@ export async function hiddenCounterpartIds(
       blockedId: blocks.blockedId,
     })
     .from(blocks)
-    .where(
-      or(eq(blocks.blockerId, viewerId), eq(blocks.blockedId, viewerId)),
-    );
+    .where(or(eq(blocks.blockerId, viewerId), eq(blocks.blockedId, viewerId)));
   // Whichever end is not the viewer is the counterpart. A self-block cannot
   // exist (blockRunner refuses it), so this never returns the viewer.
   return rows.map((row) =>

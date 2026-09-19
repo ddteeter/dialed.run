@@ -12,6 +12,7 @@ import {
 import { denyDomain, isDeniedDomain } from "../../src/modules/safety";
 
 import { makeUser, resetSafetyTables } from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -58,7 +59,7 @@ describe("the denylist itself", () => {
   });
 
   it("stamps when a domain was denied, in seconds", async () => {
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
     await denyDomain("spam.example", await makeUser());
 
     const [row] = await core()
@@ -129,7 +130,12 @@ describe("saving a garment with a denied link", () => {
     // Checked on the way in at BOTH doors. A link already stored is one
     // already rendered to someone.
     await expect(
-      updateItem(core(), userId, item.id, garmentWith("https://spam.example/x")),
+      updateItem(
+        core(),
+        userId,
+        item.id,
+        garmentWith("https://spam.example/x"),
+      ),
     ).rejects.toThrow(DeniedLinkError);
   });
 

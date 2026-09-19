@@ -169,12 +169,14 @@ describe("the cron heartbeat", () => {
       isPublic: true,
       createdAt: nowSeconds(),
     });
-    await coreDb().insert(entryPhotos).values({
-      id: newUlid(),
-      entryId,
-      photoKey: `entries/${userId}/${entryId}/p`,
-      position: 0,
-    });
+    await coreDb()
+      .insert(entryPhotos)
+      .values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/p`,
+        position: 0,
+      });
 
     const outcome = await handleScheduled({
       cron: "15 * * * *",
@@ -242,16 +244,18 @@ describe("the cron heartbeat", () => {
     // directly because the only other way to reach this state is to wait
     // half an hour.
     const queueId = newUlid();
-    await coreDb().insert(reviewQueue).values({
-      id: queueId,
-      subjectType: "entry",
-      subjectId: newUlid(),
-      source: "reports",
-      status: "reviewing",
-      resolvedBy: newUlid(),
-      claimedAt: nowSeconds() - 3600,
-      createdAt: nowSeconds() - 3600,
-    });
+    await coreDb()
+      .insert(reviewQueue)
+      .values({
+        id: queueId,
+        subjectType: "entry",
+        subjectId: newUlid(),
+        source: "reports",
+        status: "reviewing",
+        resolvedBy: newUlid(),
+        claimedAt: nowSeconds() - 3600,
+        createdAt: nowSeconds() - 3600,
+      });
 
     const outcome = await handleScheduled({
       cron: "15 * * * *",
@@ -353,7 +357,12 @@ describe("stalled imports are re-dispatched, and reported", () => {
     // system already did.
     const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
     const old = nowSeconds() - HOUR;
-    for (const status of ["processing", "done", "failed", "duplicate"] as const) {
+    for (const status of [
+      "processing",
+      "done",
+      "failed",
+      "duplicate",
+    ] as const) {
       await insertImport({ status, createdAt: old });
     }
 

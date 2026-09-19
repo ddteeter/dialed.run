@@ -10,6 +10,7 @@ import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
 import { isEntryPubliclyVisible } from "../safety";
+import { nowSeconds } from "../../lib/now";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -60,7 +61,7 @@ export async function toggleUsefulReaction(
       entryId,
       userId,
       kind: "useful",
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
   return { useful: true };

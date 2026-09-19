@@ -8,12 +8,10 @@ import { and, count, desc, eq } from "drizzle-orm";
 import { notifications } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { NotificationsDb } from "./db";
+import { nowSeconds } from "../../lib/now";
 
 export type NotificationKind =
-  | "kit_reminder"
-  | "import_failed"
-  | "strava_reminder"
-  | "strava_broken";
+  "kit_reminder" | "import_failed" | "strava_reminder" | "strava_broken";
 
 /**
  * What this notification is *about* — the thing it links to, and the key
@@ -69,7 +67,7 @@ export function notificationInsert(
       subjectId: draft.subjectId,
       body: draft.body,
       read: false,
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     })
     .onConflictDoNothing();
 }
@@ -100,7 +98,9 @@ export async function unreadNotificationCount(
   const rows = await db
     .select({ n: count() })
     .from(notifications)
-    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    .where(
+      and(eq(notifications.userId, userId), eq(notifications.read, false)),
+    );
   // Unreachable fallback: `count()` always answers with exactly one row.
   // It is here because `noUncheckedIndexedAccess` types `rows[0]` as
   // possibly undefined, which is the compiler being right about arrays in
@@ -116,5 +116,7 @@ export async function markAllNotificationsRead(
   await db
     .update(notifications)
     .set({ read: true })
-    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    .where(
+      and(eq(notifications.userId, userId), eq(notifications.read, false)),
+    );
 }

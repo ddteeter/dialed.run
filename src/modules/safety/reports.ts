@@ -227,7 +227,12 @@ export async function distinctReporterCount(
     db(),
     reports,
     reports.reporterId,
-    subjectMatches(reports.subjectType, reports.subjectId, subjectType, subjectId),
+    subjectMatches(
+      reports.subjectType,
+      reports.subjectId,
+      subjectType,
+      subjectId,
+    ),
   );
   // The UNIQUE index already guarantees one row per reporter, so the row
   // count *is* the distinct count. Deduplicating here as well would be a
@@ -261,7 +266,12 @@ export async function reportedSubjectIdsFor(
   reporterId: string,
   subjectType: ReportSubjectType,
 ): Promise<string[]> {
-  return columnWhere(db(), reports, reports.subjectId, reportedBy(reporterId, subjectType));
+  return columnWhere(
+    db(),
+    reports,
+    reports.subjectId,
+    reportedBy(reporterId, subjectType),
+  );
 }
 
 /**

@@ -219,7 +219,10 @@ async function subjectsFor(
         .from(entryPhotos)
         .where(inArray(entryPhotos.id, subjectIds)),
       database
-        .select({ entryId: entryPhotos.entryId, photoKey: entryPhotos.photoKey })
+        .select({
+          entryId: entryPhotos.entryId,
+          photoKey: entryPhotos.photoKey,
+        })
         .from(entryPhotos)
         .where(inArray(entryPhotos.entryId, subjectIds))
         .orderBy(asc(entryPhotos.position)),
@@ -572,5 +575,3 @@ function onDecision<T extends string>(
 ): T {
   return decision === "approve" ? approved : removed;
 }
-
-

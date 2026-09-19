@@ -54,6 +54,7 @@ import {
 import type { ProductAttributeDefaults } from "../products";
 import { ownedBy } from "../../lib/owned";
 import { isDeniedDomain } from "../safety";
+import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
 type Layer = z.infer<typeof layerSchema>;
@@ -237,7 +238,7 @@ export async function createItem(
     idempotencyKey,
     retired: false,
     visibility: "ok",
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: nowSeconds(),
   });
   return getOwnedItem(db, userId, id);
 }
@@ -387,9 +388,7 @@ export async function deleteOrRetireItem(
       .where(ownedItemWhere(userId, itemId));
     return { action: "retired" };
   }
-  await db
-    .delete(wardrobeItems)
-    .where(ownedItemWhere(userId, itemId));
+  await db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId));
   return { action: "deleted" };
 }
 
@@ -436,8 +435,6 @@ export function effectiveTempRange(
 
 // ---- Performance (D-27 filters; per-item verdict summary) ------------------
 
-
-
 export interface PerformanceSummary {
   verdictCount: number;
   dialedCount: number;
@@ -472,7 +469,10 @@ export function classifyPerformance(
   // so the line reads as arithmetic rather than as a comparison against a
   // missing value.
   // Stryker disable next-line ConditionalExpression
-  if (lastWornAt !== undefined && nowSeconds - lastWornAt > RETIRE_CANDIDATE_S) {
+  if (
+    lastWornAt !== undefined &&
+    nowSeconds - lastWornAt > RETIRE_CANDIDATE_S
+  ) {
     buckets.push("retire_candidate");
   }
   return buckets;
@@ -571,7 +571,10 @@ function addPairCounts(
  * `lib/top-by-count` — the profile's "most worn" is the same one, and both
  * had their own loop.
  */
-export function topPairIds(counts: Map<string, number>, limit: number): string[] {
+export function topPairIds(
+  counts: Map<string, number>,
+  limit: number,
+): string[] {
   return topByCount(counts, limit).map(([itemId]) => itemId);
 }
 
@@ -591,7 +594,7 @@ export async function computeUserPerformance(
   const { summaries, entryItems } = summarizeByItem(rows);
   const coOccurrence = buildCoOccurrence(entryItems);
 
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  const now = nowSeconds();
   const result = new Map<string, ItemPerformance>();
   for (const [itemId, summary] of summaries) {
     const pairsWith = topPairIds(
@@ -600,7 +603,7 @@ export async function computeUserPerformance(
     );
     result.set(itemId, {
       summary,
-      buckets: classifyPerformance(summary, nowSeconds),
+      buckets: classifyPerformance(summary, now),
       pairsWith,
     });
   }

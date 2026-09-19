@@ -13,14 +13,11 @@
  * them from a diff.
  */
 import { newUlid } from "../../src/lib/ids";
-import {
-  outfitEntries,
-  runs,
-  userProfiles,
-} from "../../src/db/schema-core";
+import { outfitEntries, runs, userProfiles } from "../../src/db/schema-core";
 import { storageStateFor } from "../support/accounts";
 import { expect, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
+import { nowSeconds } from "../../src/lib/now";
 
 test.use({ storageState: storageStateFor("safety") });
 
@@ -41,7 +38,7 @@ test("report a runner, block them, and take the block back", async ({
   const strangerName = `Demo Stranger ${suffix}`;
   const runId = newUlid();
   const entryId = newUlid();
-  const startedAt = Math.floor(Date.now() / 1000) - 3 * 3600;
+  const startedAt = nowSeconds() - 3 * 3600;
 
   // One stranger with one public entry. Scoped to ids generated here —
   // never a bare delete of these tables.
@@ -77,16 +74,16 @@ test("report a runner, block them, and take the block back", async ({
   await hydrated(page);
 
   await scene(page, "W1 · anyone can report, and it costs them nothing");
-  await expect(
-    page.getByRole("heading", { name: strangerName }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: strangerName })).toBeVisible();
   await page.getByRole("button", { name: "Report" }).click();
 
   await scene(page, "Reasons are sentences a runner would say");
   await expect(
     page.getByRole("radio", { name: "Harassment aimed at someone" }),
   ).toBeVisible();
-  await page.getByRole("radio", { name: "Harassment aimed at someone" }).click();
+  await page
+    .getByRole("radio", { name: "Harassment aimed at someone" })
+    .click();
 
   await scene(page, "Three promises, and the code keeps all three");
   await expect(page.getByText(/A person reads it within a day/)).toBeVisible();
@@ -96,7 +93,9 @@ test("report a runner, block them, and take the block back", async ({
   await expect(page.getByText(/never told who/)).toBeVisible();
 
   await scene(page, "Blocking rides with the report, not a second request");
-  await page.getByRole("checkbox", { name: `Block ${strangerName} as well` }).click();
+  await page
+    .getByRole("checkbox", { name: `Block ${strangerName} as well` })
+    .click();
   await page.getByRole("button", { name: "Send report" }).click();
   // Wait for the report to land before navigating. Without this the goto
   // below raced the server function: the block row was written, but after
@@ -118,9 +117,7 @@ test("report a runner, block them, and take the block back", async ({
   await expect(
     page.getByRole("heading", { name: /what blocking does/i }),
   ).toBeVisible();
-  await expect(
-    page.getByText(/verdicts count in anonymous/),
-  ).toBeVisible();
+  await expect(page.getByText(/verdicts count in anonymous/)).toBeVisible();
 
   await scene(page, "They are on the list, and they were never told");
   await expect(page.getByText(strangerName)).toBeVisible();

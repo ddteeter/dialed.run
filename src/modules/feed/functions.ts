@@ -40,12 +40,17 @@ import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
 import { toggleUsefulReaction } from "./reactions";
 import { searchByDisplayName } from "./search";
+import { nowSeconds } from "../../lib/now";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const entryId = await attachKit({ userId, runId: data.runId, itemIds: data.itemIds });
+    const entryId = await attachKit({
+      userId,
+      runId: data.runId,
+      itemIds: data.itemIds,
+    });
     return { entryId };
   });
 
@@ -53,11 +58,7 @@ export const pickerGroupsQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => pickerGroupsInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const conditions = await conditionsAt(
-      data.lat,
-      data.lng,
-      Math.floor(Date.now() / 1000),
-    );
+    const conditions = await conditionsAt(data.lat, data.lng, nowSeconds());
     return pickerGroups(userId, conditions);
   });
 
@@ -65,7 +66,7 @@ export const prefillQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => coordinatesInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return prefillAt(userId, data.lat, data.lng, Math.floor(Date.now() / 1000));
+    return prefillAt(userId, data.lat, data.lng, nowSeconds());
   });
 
 // ---- The verdict (A3) -------------------------------------------------------
@@ -161,7 +162,7 @@ export const yourConditionsQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => coordinatesInput.parse(input))
   .handler(async ({ data }) => {
     await requireUserId();
-    return consensusAt(data.lat, data.lng, Math.floor(Date.now() / 1000));
+    return consensusAt(data.lat, data.lng, nowSeconds());
   });
 
 // ---- Units (D-6) --------------------------------------------------------------
@@ -179,10 +180,12 @@ export const viewerUnitsQuery = createServerFn({ method: "GET" }).handler(
 
 // ---- Profiles (G/H) -----------------------------------------------------------
 
-export const ownProfileQuery = createServerFn({ method: "GET" }).handler(async () => {
-  const userId = await requireUserId();
-  return ownProfile(userId);
-});
+export const ownProfileQuery = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const userId = await requireUserId();
+    return ownProfile(userId);
+  },
+);
 
 export const otherProfileQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => userIdInput.parse(input))

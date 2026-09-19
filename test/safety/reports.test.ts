@@ -16,6 +16,7 @@ import {
 } from "../../src/modules/safety";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -71,7 +72,7 @@ describe("the distinct-reporter threshold", () => {
 
   it("stamps when a report was filed, in seconds", async () => {
     const entryId = await reportableEntry();
-    const before = Math.floor(Date.now() / 1000);
+    const before = nowSeconds();
 
     await fileReport({
       reporterId: await makeUser(),

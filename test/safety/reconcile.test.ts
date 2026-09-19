@@ -41,14 +41,16 @@ async function reportedButNotHidden(): Promise<string> {
   const entryId = await makeEntry({ userId: author, runId, isPublic: true });
 
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-    await core().insert(reports).values({
-      id: newUlid(),
-      reporterId: await makeUser(),
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "explicit",
-      createdAt: nowSeconds(),
-    });
+    await core()
+      .insert(reports)
+      .values({
+        id: newUlid(),
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        createdAt: nowSeconds(),
+      });
   }
   return entryId;
 }
@@ -80,14 +82,16 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId, isPublic: true });
     for (let n = 0; n < autoHideReporterThreshold - 1; n += 1) {
-      await core().insert(reports).values({
-        id: newUlid(),
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "explicit",
-        createdAt: nowSeconds(),
-      });
+      await core()
+        .insert(reports)
+        .values({
+          id: newUlid(),
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "explicit",
+          createdAt: nowSeconds(),
+        });
     }
 
     expect(await reconcileUnhiddenReports()).toStrictEqual({
@@ -192,7 +196,6 @@ async function queuedAndClaimed(): Promise<string> {
 }
 
 describe("review claims expire", () => {
-
   it("holds the lease for thirty minutes", () => {
     // Pinned as a number, not as `30 * 60`.
     //

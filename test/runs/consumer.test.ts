@@ -24,6 +24,7 @@ import { unreadNotificationCount } from "../../src/modules/notifications";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
+import { nowSeconds } from "../../src/lib/now";
 
 function fakeMessage(body: unknown) {
   let wasAcked = false;
@@ -73,8 +74,7 @@ function fakeBatch(messages: readonly { body: unknown }[]) {
 function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
   exceptions: { error: unknown; context: Record<string, string> }[];
 } {
-  const exceptions: { error: unknown; context: Record<string, string> }[] =
-    [];
+  const exceptions: { error: unknown; context: Record<string, string> }[] = [];
   return {
     db: coreDb(),
     importBucket: env.IMPORTS,
@@ -100,7 +100,7 @@ async function seedImport(
     userId,
     r2Key,
     status: "pending",
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: nowSeconds(),
   });
   return importId;
 }
@@ -138,7 +138,10 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
 
     await handleImportsBatch(batch, deps);
-    await handleImportsBatch(fakeBatch([{ body: { type: "import", importId } }]).batch, deps);
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
 
     const runRows = await deps.db
       .select()
@@ -216,7 +219,9 @@ describe("handleImportsBatch (102 §4, §8)", () => {
       .from(runs)
       .where(eq(runs.id, importRow?.runId ?? ""));
     expect(runRow?.weatherStatus).toBe("pending");
-    expect(deps.exceptions.some((e) => e.context.surface === "attachObservation")).toBe(true);
+    expect(
+      deps.exceptions.some((e) => e.context.surface === "attachObservation"),
+    ).toBe(true);
   });
 
   it("an invalid queue message is acked, never retried", async () => {
@@ -289,7 +294,7 @@ function reminderJob(
     athleteId: overrides.athleteId ?? "111",
     objectId: overrides.objectId ?? newUlid(),
     aspectType: "create",
-    eventTime: Math.floor(Date.now() / 1000),
+    eventTime: nowSeconds(),
   };
 }
 
@@ -303,7 +308,7 @@ async function connectAthlete(
     athleteId,
     accessToken: "access",
     refreshToken: "refresh",
-    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    expiresAt: nowSeconds() + 3600,
     status: "ok",
   });
   return userId;
@@ -384,9 +389,7 @@ describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
       { body: { type: "import", importId: newUlid() } },
     ]);
 
-    await expect(
-      handleImportsDlqBatch(batch, deps),
-    ).resolves.toBeUndefined();
+    await expect(handleImportsDlqBatch(batch, deps)).resolves.toBeUndefined();
 
     expect(wrapped[0]?.wasAcked).toBe(true);
     expect(deps.exceptions).toHaveLength(1);
@@ -433,13 +436,19 @@ describe("the import consumer's quieter paths", () => {
     const db = coreDb();
     const userId = newUlid();
     const importId = await seedImport(db, userId, validTcx, "tcx");
-    const [row] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [row] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     await env.IMPORTS.delete(row?.r2Key ?? "");
 
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
     await handleImportsBatch(batch, makeDeps());
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.status).toBe("failed");
     expect(after?.failureReason).toMatch(/didn't parse/);
   });
@@ -455,13 +464,16 @@ describe("the import consumer's quieter paths", () => {
       userId,
       r2Key,
       status: "pending",
-      createdAt: Math.floor(Date.now() / 1000),
+      createdAt: nowSeconds(),
     });
 
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
     await handleImportsBatch(batch, makeDeps());
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.status).toBe("failed");
     expect(after?.failureReason).toMatch(/didn't parse/);
   });
@@ -472,7 +484,9 @@ describe("the import consumer's quieter paths", () => {
     const db = coreDb();
     const userId = newUlid();
     const importId = await seedImport(db, userId, malformedTcx, "tcx");
-    const { batch: first } = fakeBatch([{ body: { type: "import", importId } }]);
+    const { batch: first } = fakeBatch([
+      { body: { type: "import", importId } },
+    ]);
     await handleImportsBatch(first, makeDeps());
     await db
       .update(imports)
@@ -484,7 +498,10 @@ describe("the import consumer's quieter paths", () => {
     ]);
     await handleImportsBatch(second, makeDeps());
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.failureReason).toBe("the original reason");
   });
 
@@ -496,7 +513,10 @@ describe("the import consumer's quieter paths", () => {
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
     await handleImportsBatch(batch, makeDeps());
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.status).toBe("done");
     expect(after?.runId).toBeTruthy();
     expect(await unreadNotificationCount(db, userId)).toBe(1);
@@ -537,7 +557,7 @@ async function seedRevocation(accessToken = "token"): Promise<string> {
   await coreDb().insert(stravaRevocations).values({
     id,
     accessToken,
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: nowSeconds(),
   });
   return id;
 }
@@ -716,7 +736,10 @@ describe("what the consumer tells the runner", () => {
       .where(eq(notifications.userId, userId));
     expect(notification?.kind).toBe("kit_reminder");
     expect(notification?.body).toMatch(/kit/i);
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(notification?.subjectId).toBe(after?.runId);
   });
 });
@@ -753,7 +776,6 @@ describe("claim, then work", () => {
     expect(statusWhenOpened).toStrictEqual(["processing"]);
   });
 
-
   it("reclaims a row left in processing by a consumer that died", async () => {
     // Law 2's other half: `processing` is claimable, because at-least-once
     // delivery is the recovery path for a worker that crashed mid-job.
@@ -768,7 +790,10 @@ describe("claim, then work", () => {
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
     await handleImportsBatch(batch, makeDeps());
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.status).toBe("done");
   });
 
@@ -784,7 +809,10 @@ describe("claim, then work", () => {
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
     await handleImportsBatch(batch, makeDeps());
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.status).toBe("duplicate");
     expect(after?.runId).toBeNull();
   });
@@ -811,7 +839,10 @@ describe("weather attachment is only attempted where it can help", () => {
       }),
     );
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(after?.status).toBe("done");
     expect(attached).toStrictEqual([]);
   });
@@ -833,7 +864,10 @@ describe("weather attachment is only attempted where it can help", () => {
       }),
     );
 
-    const [after] = await db.select().from(imports).where(eq(imports.id, importId));
+    const [after] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
     expect(attached).toStrictEqual([after?.runId]);
   });
 });

@@ -21,6 +21,7 @@ import {
   retryPendingScreenings,
 } from "../safety";
 
+import { nowSeconds } from "../../lib/now";
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
 /**
@@ -45,10 +46,10 @@ export async function handleScheduled(
   const cronName = cronNameFor(controller.cron) ?? "unknown";
   await db
     .insert(cronCheckpoints)
-    .values({ cronName, lastRunAt: Math.floor(Date.now() / 1000) })
+    .values({ cronName, lastRunAt: nowSeconds() })
     .onConflictDoUpdate({
       target: cronCheckpoints.cronName,
-      set: { lastRunAt: Math.floor(Date.now() / 1000) },
+      set: { lastRunAt: nowSeconds() },
     });
 
   switch (cronName) {
@@ -105,7 +106,6 @@ export async function handleScheduled(
     }
   }
 }
-
 
 /**
  * Re-dispatch a batch of rows to the imports queue, one message each.
@@ -189,9 +189,7 @@ async function stalledPending(
   return db
     .select({ id: marker.id })
     .from(marker.table)
-    .where(
-      and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)),
-    )
+    .where(and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)))
     .limit(100);
 }
 
@@ -302,7 +300,7 @@ const ENRICHMENT_RETRY_WINDOW_S = 24 * 60 * 60;
 The instant (epoch seconds) before which a `failed` product is abandoned.
 */
 function abandonedBefore(): number {
-  return Math.floor(Date.now() / 1000) - ENRICHMENT_RETRY_WINDOW_S;
+  return nowSeconds() - ENRICHMENT_RETRY_WINDOW_S;
 }
 
 /**
@@ -310,7 +308,7 @@ function abandonedBefore(): number {
  * rows the sweep still owes a retry.
  */
 function failedAndOwed(): SQL | undefined {
-  const staleBefore = Math.floor(Date.now() / 1000) - ENRICHMENT_STALL_GRACE_S;
+  const staleBefore = nowSeconds() - ENRICHMENT_STALL_GRACE_S;
   return and(
     eq(products.extractionStatus, "failed"),
     lt(products.createdAt, staleBefore),
@@ -332,9 +330,7 @@ function failedAndOwed(): SQL | undefined {
 async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
   const depth = await pendingReviewCount();
   if (depth === 0) return;
-  anomalies.push(
-    `${String(depth)} item(s) awaiting moderation review`,
-  );
+  anomalies.push(`${String(depth)} item(s) awaiting moderation review`);
 }
 
 /**
@@ -347,10 +343,12 @@ async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
  * include the future.
  */
 function secondsAgo(seconds: number): number {
-  return Math.floor(Date.now() / 1000) - seconds;
+  return nowSeconds() - seconds;
 }
 
-async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> {
+async function redispatchStalledEnrichments(
+  anomalies: string[],
+): Promise<void> {
   // Two reads rather than one with an OR. The `pending` half is exactly
   // the question `stalledPending` already asks, and the `failed` half has
   // a bound it does not — so each is asked of the helper that fits, and
@@ -366,7 +364,12 @@ async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> 
     },
     ENRICHMENT_STALL_GRACE_S,
   );
-  const failedIds = await columnWhere(db, products, products.id, failedAndOwed());
+  const failedIds = await columnWhere(
+    db,
+    products,
+    products.id,
+    failedAndOwed(),
+  );
   // The claim (law 2), before the send: the consumer treats only `pending`
   // as work. Re-checked against the status rather than trusting the read,
   // so a row that finished in between is not un-finished.
@@ -374,7 +377,10 @@ async function redispatchStalledEnrichments(anomalies: string[]): Promise<void> 
     .update(products)
     .set({ extractionStatus: "pending" })
     .where(
-      and(inArray(products.id, failedIds), eq(products.extractionStatus, "failed")),
+      and(
+        inArray(products.id, failedIds),
+        eq(products.extractionStatus, "failed"),
+      ),
     );
   const stalled = [...pending, ...failedIds.map((id) => ({ id }))];
   // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
@@ -509,6 +515,8 @@ async function checkWeatherBacklog(anomalies: string[]): Promise<void> {
     .from(runs)
     .where(or(eq(runs.weatherStatus, "failed"), stuckPending));
   if (stuck.length > 0) {
-    anomalies.push(`weather backlog: ${String(stuck.length)} run(s) failed/stuck pending`);
+    anomalies.push(
+      `weather backlog: ${String(stuck.length)} run(s) failed/stuck pending`,
+    );
   }
 }

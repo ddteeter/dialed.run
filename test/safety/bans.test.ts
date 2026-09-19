@@ -14,6 +14,7 @@ import {
 } from "../../src/modules/safety";
 
 import { makeUser, NOW, resetSafetyTables } from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -26,14 +27,16 @@ function core() {
  */
 async function signedInUser(sessions = 2): Promise<string> {
   const userId = await makeUser();
-  await core().insert(user).values({
-    id: userId,
-    name: "Test Runner",
-    email: `${userId}@example.test`,
-    emailVerified: false,
-    createdAt: new Date(NOW * 1000),
-    updatedAt: new Date(NOW * 1000),
-  });
+  await core()
+    .insert(user)
+    .values({
+      id: userId,
+      name: "Test Runner",
+      email: `${userId}@example.test`,
+      emailVerified: false,
+      createdAt: new Date(NOW * 1000),
+      updatedAt: new Date(NOW * 1000),
+    });
   for (let n = 0; n < sessions; n += 1) {
     await core()
       .insert(session)
@@ -90,7 +93,7 @@ describe("banning", () => {
     // The moment itself, in seconds. The notice quotes the reason back
     // and any appeal reads this column; a millisecond value dates the
     // ban to the year 57000 and still passes a one-sided check.
-    const now = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     const [row] = await core()
       .select({ bannedAt: userProfiles.bannedAt })
       .from(userProfiles)
@@ -103,7 +106,11 @@ describe("banning", () => {
     const banned = await signedInUser(2);
     const bystander = await signedInUser(2);
 
-    await banUser({ userId: banned, reason: "spam", bannedBy: await makeUser() });
+    await banUser({
+      userId: banned,
+      reason: "spam",
+      bannedBy: await makeUser(),
+    });
 
     expect(await sessionCountOf(bystander)).toBe(2);
     const bystanderState = await banStateOf(bystander);

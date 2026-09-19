@@ -24,6 +24,7 @@ import {
 } from "../../src/modules/safety";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -67,20 +68,21 @@ function flagging(overrides: Partial<CategoryScores>): Classify {
 /**
 A classifier that is down — the path this lane most needs to get right.
 */
-const unavailable: Classify = () =>
-  Promise.reject(new Error("moderation 503"));
+const unavailable: Classify = () => Promise.reject(new Error("moderation 503"));
 
 async function entryPhotoRow(): Promise<string> {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
   const entryId = await makeEntry({ userId, runId, isPublic: true });
   const photoId = newUlid();
-  await core().insert(entryPhotos).values({
-    id: photoId,
-    entryId,
-    photoKey: `entries/${userId}/${entryId}/${photoId}`,
-    position: 0,
-  });
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id: photoId,
+      entryId,
+      photoKey: `entries/${userId}/${entryId}/${photoId}`,
+      position: 0,
+    });
   return photoId;
 }
 
@@ -113,7 +115,12 @@ describe("screening a photo", () => {
     const photoId = await entryPhotoRow();
 
     const outcome = await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       answering({ flagged: false, scores: scores({ sexual: 0.01 }) }),
     );
 
@@ -130,7 +137,7 @@ describe("screening a photo", () => {
     expect(JSON.parse(record?.scores ?? "{}")).toMatchObject({ sexual: 0.01 });
     // In seconds, bounded both ways: a re-tune reads these rows by date,
     // and a millisecond value is still "recent" to a one-sided check.
-    const now = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     expect(record?.createdAt).toBeGreaterThanOrEqual(now - 5);
     expect(record?.createdAt).toBeLessThanOrEqual(now + 5);
   });
@@ -139,7 +146,12 @@ describe("screening a photo", () => {
     const photoId = await entryPhotoRow();
 
     const outcome = await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       answering({ flagged: true, scores: scores({ sexual: 0.99 }) }),
     );
 
@@ -157,7 +169,12 @@ describe("screening a photo", () => {
     // This is the sports-bra case the packet is about, and the whole
     // reason `decide` exists.
     const outcome = await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       answering({ flagged: true, scores: scores({ sexual: 0.4 }) }),
     );
 
@@ -168,8 +185,16 @@ describe("screening a photo", () => {
   it("flags exactly at the threshold, not only above it", async () => {
     const photoId = await entryPhotoRow();
     const outcome = await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
-      answering({ flagged: false, scores: scores({ sexual: thresholds.sexual }) }),
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
+      answering({
+        flagged: false,
+        scores: scores({ sexual: thresholds.sexual }),
+      }),
     );
     expect(outcome).toBe("flagged");
   });
@@ -209,7 +234,12 @@ describe("when the classifier is down", () => {
     // Law 5 and the packet's "fail open for the owner": a Workers-AI-shaped
     // outage must never block someone logging their own run.
     const outcome = await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       unavailable,
     );
 
@@ -219,7 +249,12 @@ describe("when the classifier is down", () => {
   it("leaves the photo pending — invisible to the public, not passed", async () => {
     const photoId = await entryPhotoRow();
     await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       unavailable,
     );
 
@@ -232,7 +267,12 @@ describe("when the classifier is down", () => {
   it("records no verdict it does not have", async () => {
     const photoId = await entryPhotoRow();
     await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       unavailable,
     );
 
@@ -246,7 +286,12 @@ describe("when the classifier is down", () => {
   it("stays in the retry sweep's queue", async () => {
     const photoId = await entryPhotoRow();
     await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       unavailable,
     );
 
@@ -264,7 +309,12 @@ describe("the pending sweep's reading list", () => {
     const decided = await entryPhotoRow();
     const waiting = await entryPhotoRow();
     await screenPhoto(
-      { scope: "entry", photoId: decided, bytes: new Uint8Array([1]), contentType: "image/jpeg" },
+      {
+        scope: "entry",
+        photoId: decided,
+        bytes: new Uint8Array([1]),
+        contentType: "image/jpeg",
+      },
       answering({ flagged: false, scores: scores() }),
     );
 
@@ -299,9 +349,9 @@ describe("a garment row with nothing to screen", () => {
     // or tries to fetch an R2 object at key `null`.
     const missing = z.null().parse(JSON.parse("null"));
     expect(pendingGarmentFrom({ id: "g-1", photoKey: missing })).toEqual([]);
-    expect(
-      pendingGarmentFrom({ id: "g-1", photoKey: "garments/u/g" }),
-    ).toEqual([{ scope: "garment", photoId: "g-1", photoKey: "garments/u/g" }]);
+    expect(pendingGarmentFrom({ id: "g-1", photoKey: "garments/u/g" })).toEqual(
+      [{ scope: "garment", photoId: "g-1", photoKey: "garments/u/g" }],
+    );
   });
 });
 
@@ -316,7 +366,12 @@ describe("what the classifier puts in front of a person (D-65)", () => {
 
     expect(
       await screenPhoto(
-        { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+        {
+          scope: "entry",
+          photoId,
+          bytes: new Uint8Array([1]),
+          contentType: "image/webp",
+        },
         flagging({ sexual: 1 }),
       ),
     ).toBe("flagged");
@@ -333,7 +388,12 @@ describe("what the classifier puts in front of a person (D-65)", () => {
 
     expect(
       await screenPhoto(
-        { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+        {
+          scope: "entry",
+          photoId,
+          bytes: new Uint8Array([1]),
+          contentType: "image/webp",
+        },
         borderline({ sexual: reviewFloors.sexual }),
       ),
     ).toBe("review");
@@ -349,7 +409,12 @@ describe("what the classifier puts in front of a person (D-65)", () => {
   it("queues nothing for a photo that passes", async () => {
     const photoId = await entryPhotoRow();
     await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/webp",
+      },
       answering({ flagged: false, scores: scores() }),
     );
     expect(await isQueuedForReview("photo", photoId)).toBe(false);
@@ -361,7 +426,12 @@ describe("what the classifier puts in front of a person (D-65)", () => {
     // the rows worth re-reading.
     const photoId = await entryPhotoRow();
     await screenPhoto(
-      { scope: "entry", photoId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+      {
+        scope: "entry",
+        photoId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/webp",
+      },
       borderline({ violence: reviewFloors.violence }),
     );
     const [screening] = await core()
@@ -376,19 +446,26 @@ describe("what the classifier puts in front of a person (D-65)", () => {
     // of an operator to settle a question nobody asked — see D-69.
     const userId = await makeUser();
     const itemId = newUlid();
-    await core().insert(wardrobeItems).values({
-      id: itemId,
-      userId,
-      category: "top",
-      type: "tee",
-      name: "Tee",
-      photoKey: `items/${userId}/${itemId}/original`,
-      origin: "manual",
-      createdAt: 1,
-    });
+    await core()
+      .insert(wardrobeItems)
+      .values({
+        id: itemId,
+        userId,
+        category: "top",
+        type: "tee",
+        name: "Tee",
+        photoKey: `items/${userId}/${itemId}/original`,
+        origin: "manual",
+        createdAt: 1,
+      });
 
     await screenPhoto(
-      { scope: "garment", photoId: itemId, bytes: new Uint8Array([1]), contentType: "image/webp" },
+      {
+        scope: "garment",
+        photoId: itemId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/webp",
+      },
       flagging({ sexual: 1 }),
     );
 
