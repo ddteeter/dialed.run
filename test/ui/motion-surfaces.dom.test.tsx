@@ -51,10 +51,11 @@ describe("Tab switch: the indicator slides under the label", () => {
   });
 
   it("moves it to the right fifth for every tab", async () => {
+    // Four tabs at five positions: the third seat is `+ Add`, which is a
+    // launcher and never takes the indicator, so the offsets skip 200%.
     for (const [path, offset] of [
       ["/feed", "0% 0"],
       ["/closet", "100% 0"],
-      ["/runs/new", "200% 0"],
       ["/call", "300% 0"],
       ["/feed/me", "400% 0"],
     ] as const) {
@@ -65,6 +66,24 @@ describe("Tab switch: the indicator slides under the label", () => {
       ]);
       unmount();
     }
+  });
+
+  it("does not follow the runner into the log flow", async () => {
+    // Round 12: "+ Add is a launcher, not a tab: the indicator never
+    // travels to it." Logging a run is a task laid over wherever you
+    // were, so the bar does not claim you have gone somewhere.
+    await renderAt(<TabBar />, "/runs/new");
+
+    expect(indicator()).toBeNull();
+    expect(screen.getByRole("link", { name: "+ Add" })).toHaveClass(
+      "text-muted",
+    );
+    // The seat is still in the bar — it is the indicator that stays away,
+    // not the way in.
+    expect(screen.getByRole("link", { name: "+ Add" })).toHaveAttribute(
+      "href",
+      "/runs/new",
+    );
   });
 
   it("marks the active label and leaves the rest muted", async () => {
@@ -106,6 +125,16 @@ describe("Tab switch: the indicator slides under the label", () => {
     // A route, not a prefix: `/feed` must not claim `/feedback`.
     expect(activeTabIndex("/feedback", tabs)).toBeUndefined();
     expect(activeTabIndex("/runs/manual", tabs)).toBeUndefined();
+  });
+
+  it("gives a launcher no seat, however well it owns the path", () => {
+    // The launcher is skipped before ownership is even asked, so a path
+    // it would otherwise win outright still lights nothing.
+    const bar = [{ to: "/feed" }, { to: "/runs/new", launcher: true }];
+    expect(activeTabIndex("/runs/new", bar)).toBeUndefined();
+    expect(activeTabIndex("/runs/new/anything", bar)).toBeUndefined();
+    // And it takes nothing from the tabs that are tabs.
+    expect(activeTabIndex("/feed", bar)).toBe(0);
   });
 });
 

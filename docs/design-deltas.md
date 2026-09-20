@@ -175,6 +175,14 @@ round (D-26…D-33).
     equal columns, which is what the indicator is measured in? Nothing is
     blocked either way.
 
+    **Half-answered by round 12 (2026-09-20).** `NAV`'s `+ Add (bar
+launcher)` row rules that _"+ Add is a launcher, not a tab: the
+    indicator never travels to it, and the tab beneath stays selected"_ —
+    so the bar carries four tabs at five seats, and the launcher takes
+    none of them. The indicator half shipped in task 114; the selected-tab
+    half is D-80, with the navigation lane. The two open questions above
+    are untouched by that ruling and still stand.
+
 ## Answered in rounds 10–11 (imported 2026-09-18)
 
 Both rounds came back together and cleared **four queue items, the P2.5
