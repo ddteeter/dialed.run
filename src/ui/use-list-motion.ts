@@ -137,6 +137,25 @@ export function departedKeys<TItem>(
   return gone;
 }
 
+/**
+ * The held order, with every row that still exists taken from `items`.
+ *
+ * **A held row is a position, not a snapshot.** The hook holds departing
+ * rows so they have a height to collapse; holding the *survivors* too
+ * means the list stops showing what the caller gave it. The closet found
+ * that the hard way: retiring a garment changes a flag and no id, so the
+ * grid re-rendered the pre-retire copy and the `[Retired]` badge never
+ * appeared.
+ */
+export function refreshed<TItem>(
+  held: readonly TItem[],
+  items: readonly TItem[],
+  keyOf: (item: TItem) => string,
+): readonly TItem[] {
+  const live = new Map(items.map((item) => [keyOf(item), item]));
+  return held.map((item) => live.get(keyOf(item)) ?? item);
+}
+
 const NOTHING: ReadonlySet<string> = new Set<string>();
 
 function positionsOf(root: Element): Map<Element, Point> {
@@ -176,9 +195,14 @@ export function useListMotion<TItem>(
   leaving: ReadonlySet<string>;
   listRef: RefObject<HTMLUListElement | null>;
 } {
+  // Three lists, and they are three different facts. `source` is the last
+  // one the caller asked for, which is what says whether anything
+  // changed; `held` is the order being rendered, which lags by one
+  // collapse so a departing row keeps its place; `next` is what to show
+  // once that collapse is over.
   const [source, setSource] = useState<readonly TItem[]>(items);
   const [next, setNext] = useState<readonly TItem[]>(items);
-  const [shown, setShown] = useState<readonly TItem[]>(items);
+  const [held, setHeld] = useState<readonly TItem[]>(items);
   const [leaving, setLeaving] = useState<ReadonlySet<string>>(NOTHING);
 
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -193,13 +217,13 @@ export function useListMotion<TItem>(
   if (hasDifferentKeys(source, items, keyOf)) {
     setSource(items);
     setNext(items);
-    const gone = departedKeys(shown, items, keyOf);
+    const gone = departedKeys(held, items, keyOf);
     if (gone.size === 0) {
       // Nothing left, so nothing to hold: rows that arrived appear at
       // once and the rows around them travel. The baseline the reflow
       // needs is the layout still on screen as this render runs, which is
       // exactly what the last commit recorded.
-      setShown(items);
+      setHeld(items);
       setLeaving(NOTHING);
       pending.current = last.current;
     } else {
@@ -215,7 +239,7 @@ export function useListMotion<TItem>(
       // the one the survivors are actually travelling from.
       const root = listRef.current;
       if (root !== null) pending.current = positionsOf(root);
-      setShown(next);
+      setHeld(next);
       setLeaving(NOTHING);
     }, DURATION.move);
     return () => {
@@ -238,6 +262,11 @@ export function useListMotion<TItem>(
     if (from === undefined) return;
     play(movesBetween(from, after), shouldReduceMotion());
   });
+
+  // Nothing leaving means nothing to hold: the caller's own array is the
+  // answer, so a change that keeps every id — a garment being retired —
+  // reaches the screen instead of being pinned to the last one that moved.
+  const shown = leaving.size === 0 ? items : refreshed(held, items, keyOf);
 
   return { shown, leaving, listRef };
 }

@@ -23,24 +23,32 @@ import {
  */
 
 /**
- * A rect for a row whose position the test controls through `data-y`.
+ * A layout: every row is 100px tall, stacked in the order it is rendered.
  *
  * happy-dom lays nothing out — every rect is zeroes — so a FLIP measured
  * against it computes no movement at all and every assertion below would
- * pass against a hook that did nothing.
+ * pass against a hook that did nothing. Derived from the row's position
+ * among its siblings rather than from a prop on it, because that is what
+ * makes it a *layout*: it changes when the DOM changes and at no other
+ * moment, which is the whole question the hook's timing turns on. Tied to
+ * the row's own data instead, a survivor appears to move the instant the
+ * caller's array changes — before the row it is waiting on has collapsed.
  */
+const ROW_HEIGHT = 100;
+
 function layOut(): void {
   Object.defineProperty(HTMLLIElement.prototype, "getBoundingClientRect", {
     configurable: true,
     value(this: HTMLLIElement) {
-      return { x: 0, y: Number(this.dataset.y ?? "0") };
+      const siblings = [...(this.parentElement?.children ?? [])];
+      return { x: 0, y: siblings.indexOf(this) * ROW_HEIGHT };
     },
   });
 }
 
 interface Row {
   id: string;
-  y: number;
+  label: string;
 }
 
 function Harness({
@@ -58,28 +66,24 @@ function Harness({
         <li
           key={row.id}
           data-testid={row.id}
-          data-y={String(row.y)}
           className="collapsing-row"
           data-leaving={leaving.has(row.id) ? "true" : undefined}
-        />
+        >
+          {row.label}
+        </li>
       ))}
     </ul>
   );
 }
 
-const THREE: readonly Row[] = [
-  { id: "a", y: 0 },
-  { id: "b", y: 100 },
-  { id: "c", y: 200 },
-];
+const row = (id: string, label = id): Row => ({ id, label });
+
+const THREE: readonly Row[] = [row("a"), row("b"), row("c")];
 
 /**
 `b` retired and hidden: `c` moves up into its place.
 */
-const WITHOUT_B: readonly Row[] = [
-  { id: "a", y: 0 },
-  { id: "c", y: 100 },
-];
+const WITHOUT_B: readonly Row[] = [row("a"), row("c")];
 
 /**
  * The spy the rows are animated through, replaced per test.
@@ -303,11 +307,7 @@ describe("useListMotion", () => {
     // The list is compared row by row, not by how many rows it has: a
     // filter that trades one garment for another is still a change, and a
     // length check alone would sit through it.
-    const swapped: readonly Row[] = [
-      { id: "a", y: 0 },
-      { id: "d", y: 100 },
-      { id: "c", y: 200 },
-    ];
+    const swapped: readonly Row[] = [row("a"), row("d"), row("c")];
     const { rerender } = render(<Harness items={THREE} />);
 
     rerender(<Harness items={swapped} />);
@@ -349,6 +349,32 @@ describe("useListMotion", () => {
       expect(screen.getByTestId("b")).toBeInTheDocument();
     });
     expect(screen.getByTestId("b")).not.toHaveAttribute("data-leaving");
+  });
+
+  it("shows the caller's rows, not the copy it was holding", () => {
+    // The bug a demo found and no unit test would have: retiring a garment
+    // changes a flag and no id, so the list is unchanged as far as the
+    // keys go — and a hook rendering its own snapshot showed the piece
+    // without its [Retired] badge.
+    const { rerender } = render(<Harness items={THREE} />);
+
+    rerender(<Harness items={[row("a"), row("b", "b!"), row("c")]} />);
+
+    expect(screen.getByTestId("b")).toHaveTextContent("b!");
+  });
+
+  it("keeps a surviving row live while another one is leaving", async () => {
+    const { rerender } = render(<Harness items={THREE} />);
+
+    rerender(<Harness items={[row("a"), row("c", "c!")]} />);
+
+    // `b` is still on screen, collapsing, with the copy that was held —
+    // and `c` already shows what the caller last said about it.
+    expect(screen.getByTestId("b")).toBeInTheDocument();
+    expect(screen.getByTestId("c")).toHaveTextContent("c!");
+    await waitFor(() => {
+      expect(screen.queryByTestId("b")).toBeNull();
+    });
   });
 
   it("arms no timer while the list is standing still", () => {

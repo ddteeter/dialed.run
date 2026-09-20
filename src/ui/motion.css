@@ -419,12 +419,21 @@
   }
 }
 
+/**
+ * The window a digit rolls inside.
+ *
+ * **`clip-path`, not `overflow: hidden`** — and that is an accessibility
+ * decision, not a stylistic one. `overflow` only applies to a box that is
+ * not a non-replaced inline, so clipping this way costs a
+ * `display: inline-block`; and the accessible-name algorithm inserts a
+ * space on each side of a node whose display is not inline. Measured: the
+ * feed's button announced as "Useful [ 1 ]" instead of "Useful [1]", which
+ * no unit test sees because `textContent` is unaffected. `clip-path`
+ * applies to an inline box and leaves the name alone.
+ */
 @utility digit-slot {
   position: relative;
-  display: inline-block;
-  overflow: hidden;
-  height: 1lh;
-  vertical-align: bottom;
+  clip-path: inset(0);
 }
 
 @utility digit-in-up {
