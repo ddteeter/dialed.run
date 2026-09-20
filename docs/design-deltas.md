@@ -30,6 +30,20 @@ round (D-26…D-33).
 **Round 3** shipped the Motion Doctrine and the Icon Pack, imported 2026-09-06.
 **Round 4** shipped 2026-09-07 and cleared most of this queue: see
 "Answered in round 4" below.
+**Round 12** shipped the navigation types, imported 2026-09-20 by task 117.
+Two files changed and nothing else: `motion.js` gains `NAV_TYPES` (five
+types) and `NAV` (26 edges at three widths), two NEVER entries, and one
+clause on `REDUCED_MOTION`; `Motion Doctrine.dc.html` gains section 04b to
+draw them. The doctrine now covers what happens *between* screens as well
+as on one.
+
+**The `NAV` header carries an ownership rule, and it changes how a lane
+behaves.** _"NAV lists every shipped edge, not just the Flow Map's. A lane
+meeting a new edge assigns a type by analogy to the nearest row, adds the
+row here in the same PR, and flags it."_ So an untyped edge is **not** a
+blocker and not a design-delta question — it is a row the lane writes and
+design reviews after the fact. The new NEVER entry says the same thing
+from the other side: _"never a sixth type."_
 
 ## Open queue (nothing blocks v1 lanes)
 

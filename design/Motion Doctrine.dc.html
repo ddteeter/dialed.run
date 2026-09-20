@@ -23,6 +23,11 @@
   @keyframes dr-arrive { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   @keyframes dr-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   @keyframes dr-roll { from { transform: translateY(1.15em); } to { transform: translateY(0); } }
+  @keyframes nv-push { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes nv-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes nv-dim { from { opacity: 1; } to { opacity: 0.6; } }
+  @keyframes nv-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes nv-out { from { opacity: 1; } to { opacity: 0; } }
   @keyframes dr-bounce { 0% { transform: translateY(24px); opacity: 0; } 55% { transform: translateY(-9px); opacity: 1; } 75% { transform: translateY(4px); } 88% { transform: translateY(-2px); } 100% { transform: translateY(0); } }
   @keyframes dr-collapse { from { max-height: 44px; opacity: 1; } to { max-height: 0; opacity: 0; } }
 </style>
@@ -194,11 +199,73 @@
     </div>
   </section>
 
+  <section id="navigation" style="padding: 72px 48px; border-bottom: 1px solid #DCDBD2;">
+    <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">04b / Screen to screen</span>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">Round 12. Section 04 is what happens on a screen. This is what happens between them — the layer web apps skip and native apps don't.</p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">Import NAV_TYPES and NAV. The router reads the type from the edge, never from the destination.</p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;"><strong>+ Add is a launcher, not a tab.</strong> The indicator never travels to it; the tab beneath stays selected while the flow is up.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 32px; min-width: 0;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C41E6A;">LAW 04</span>
+          <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 720px;">Every navigation has a direction, and the direction is the transition.</h2>
+          <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4E4E44; max-width: 720px; text-wrap: pretty;">Forward comes from the trailing edge. Back leaves the way it came. A flow rises from the bar and drops back to it. A swap into a pane has no direction, so it gets no travel. Five types cover every shipped edge, including the ones the Flow Map never drew; a lane meeting a new edge types it by analogy and adds the row in the same PR.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2;">
+          <sc-for list="{{ navTypes }}" as="t" hint-placeholder-count="5">
+            <div style="background: #FFFFFF; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+              <div style="height: 44px; display: flex; align-items: center;">{{ t.demo }}</div>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 15px; letter-spacing: -0.005em; text-transform: uppercase;">{{ t.name }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #009F8C;">{{ t.spec }}</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #0B0B0E; text-wrap: pretty;">{{ t.move }}</span>
+              <span style="font-size: 12.5px; line-height: 1.45; color: #6E6E64; text-wrap: pretty;">{{ t.why }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #DCDBD2; border: 1px solid #DCDBD2; min-width: 0;">
+          <div style="background: #F4F3EF; padding: 12px 22px; display: grid; grid-template-columns: minmax(0, 1fr) 64px 64px 64px; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">
+            <span>EDGE</span><span style="text-align: center;">390</span><span style="text-align: center;">620</span><span style="text-align: center;">1040</span>
+          </div>
+          <sc-for list="{{ nav }}" as="n" hint-placeholder-count="26">
+            <div style="background: #FFFFFF; padding: 14px 22px; display: grid; grid-template-columns: minmax(0, 1fr) 64px 64px 64px; gap: 12px; align-items: center;">
+              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                <span style="font-size: 14px; font-weight: 600; line-height: 1.3;">{{ n.edge }}</span>
+                <span style="font-size: 12.5px; line-height: 1.45; color: #6E6E64; text-wrap: pretty;">{{ n.note }}</span>
+              </div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-align: center; padding: 6px 0; border: 1px solid #DCDBD2; border-radius: 100px; color: {{ n.c0 }};">{{ n.a0 }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-align: center; padding: 6px 0; border: 1px solid #DCDBD2; border-radius: 100px; color: {{ n.c1 }};">{{ n.a1 }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-align: center; padding: 6px 0; border: 1px solid #DCDBD2; border-radius: 100px; color: {{ n.c2 }};">{{ n.a2 }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; padding-top: 12px; border-top: 1px solid #DCDBD2;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C41E6A;">WHY THE PHONE SLIDES AND THE DESKTOP DOESN'T</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4E4E44;">On a phone the new screen replaces the old one, so travel says where the old one went. At 620+ the Desktop Contract keeps the shell and swaps a column or opens a panel — the old content didn't go anywhere, so sliding it would claim a geometry the layout doesn't have.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C41E6A;">THE CALL IS TWO MOVES, NOT ONE</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4E4E44;">Arriving at K is a plain push or panel. The brackets open only once it has landed. Chaining them would make the reveal a navigation effect; it's the payoff, and it waits for the room to be quiet.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C41E6A;">REDUCED MOTION</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4E4E44;">Every type becomes <strong>swap</strong> at instant. Cut stays cut. Never zero — the runner still needs to see the screen change.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section style="padding: 72px 48px; background: #0B0B0E; color: #F4F3EF;">
     <div style="max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 56px;">
       <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7A70;">05 / Settled, don't re-litigate</div>
       <div style="display: flex; flex-direction: column; gap: 30px; min-width: 0;">
-        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 680px;">Ten things we don't do, and why.</h2>
+        <h2 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 680px;">Twelve things we don't do, and why.</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1px; background: #24242B; border: 1px solid #24242B;">
           <sc-for list="{{ never }}" as="n" hint-placeholder-count="10">
             <div style="background: #0B0B0E; padding: 20px 22px; display: flex; flex-direction: column; gap: 7px;">
@@ -339,7 +406,7 @@ class Component extends DCLogic {
     if (!d) {
       return {
         demoSnap, demoBounce, demoClose, demoStagger, demoBreathe, demoRoll,
-        durations: [], curves: [], surfaces: [], never: [],
+        durations: [], curves: [], surfaces: [], never: [], navTypes: [], nav: [],
         reducedRule: '', reducedNever: '', cssVars: '',
         replay: () => this.setState(s => ({ run: s.run + 1 }))
       };
@@ -373,6 +440,25 @@ class Component extends DCLogic {
           ? s.duration.replace('custom ', '') + 'MS · ' + s.easing.toUpperCase()
           : d.DURATION[s.duration] + 'MS · EASE-' + s.easing.toUpperCase())
       })),
+      navTypes: Object.keys(d.NAV_TYPES).map(k => {
+        const t = d.NAV_TYPES[k];
+        const spec = t.duration === '—' ? 'NO MOTION' : d.DURATION[t.duration] + 'MS · EASE-' + t.easing.toUpperCase();
+        const dur = t.duration === '—' ? 0 : d.DURATION[t.duration];
+        const frame = (kids) => React.createElement('div', { key: this.state.run, style: { position: 'relative', width: 72, height: 44, border: '1px solid #DCDBD2', overflow: 'hidden', background: '#F4F3EF' } }, ...kids);
+        const box = (style) => React.createElement('div', { style: Object.assign({ position: 'absolute', inset: 0, background: '#0B0B0E' }, style) });
+        const demos = {
+          push: frame([box({ animation: `nv-dim ${dur}ms ${E.snap} both` }), box({ background: '#FF2D8A', animation: `nv-push ${dur}ms ${E.snap} both` })]),
+          rise: frame([box({}), box({ background: '#FF2D8A', animation: `nv-rise ${dur}ms ${E.snap} both` })]),
+          swap: frame([box({}), box({ background: '#FF2D8A', animation: `nv-in ${dur}ms ${E.snap} both` })]),
+          panel: frame([box({ animation: `nv-dim ${dur}ms ${E.snap} both` }), box({ background: '#FF2D8A', left: '55%', animation: `nv-push ${dur}ms ${E.snap} both` })]),
+          cut: frame([box({ background: '#FF2D8A' })]),
+        };
+        return { name: k, spec, move: t.move, why: t.why, demo: demos[k] };
+      }),
+      nav: d.NAV.map(n => {
+        const col = a => a === 'cut' ? '#7A7A70' : a === 'swap' ? '#009F8C' : '#0B0B0E';
+        return { edge: n.edge, note: n.note, a0: n.at[0].toUpperCase(), a1: n.at[1].toUpperCase(), a2: n.at[2].toUpperCase(), c0: col(n.at[0]), c1: col(n.at[1]), c2: col(n.at[2]) };
+      }),
       never: d.NEVER.map(n => ({ label: n[0], why: n[1] })),
       reducedRule: d.REDUCED_MOTION.rule,
       reducedNever: d.REDUCED_MOTION.never,
