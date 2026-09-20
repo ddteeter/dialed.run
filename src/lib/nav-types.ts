@@ -63,8 +63,13 @@ interface Edge {
  * Membership is "renders a flow step", not "is about a run": the import
  * status screen is progress on a job and reads as a destination, which is
  * why it is not here and why leaving A1 for it counts as leaving the flow.
+ *
+ * `_PATHS` because `ui/FlowStep` exports a `LOG_FLOW` of its own and they
+ * are not the same fact: that one is the *order* of the three steps
+ * (`{ intake: 1, attach: 2, verdict: 3 }`), this one is the four routes
+ * that render them. Two intake routes, one intake step.
  */
-const LOG_FLOW = [
+const LOG_FLOW_PATHS = [
   "/runs/new",
   "/runs/manual",
   "/feed/attach/$runId",
@@ -85,7 +90,7 @@ const LOG_FLOW = [
  * got there.
  */
 export function isLogFlowPath(pathname: string): boolean {
-  return isAnyMatch(LOG_FLOW, pathname);
+  return isAnyMatch(LOG_FLOW_PATHS, pathname);
 }
 
 /**
@@ -130,7 +135,7 @@ const NAV: readonly Edge[] = [
   // Log flow step". So the router does nothing between steps and
   // `ui/FlowStep` owns the move; the two would otherwise animate the same
   // navigation twice.
-  { from: LOG_FLOW, to: LOG_FLOW, type: "cut" },
+  { from: LOG_FLOW_PATHS, to: LOG_FLOW_PATHS, type: "cut" },
 
   // NAV: "Log flow end (P3) → where you were" — "The drop half of rise."
   //
@@ -139,12 +144,12 @@ const NAV: readonly Edge[] = [
   // (the entry, or the run). One rule for the whole class rather than a
   // row per destination: the flow layer drops away, and what is revealed
   // is the result. See docs/designs/117-navigation-types.md, question 1.
-  { from: LOG_FLOW, to: "*", type: "rise", reversed: true },
+  { from: LOG_FLOW_PATHS, to: "*", type: "rise", reversed: true },
 
   // NAV: "+ Add (bar launcher) → Log a run" and "Closet C → Add garment
   // (F)" — "Same rise as Log a run — both are 'put something in the
   // closet'." A flow is a task laid on top of where you were.
-  { from: "*", to: [...LOG_FLOW, "/closet/new"], type: "rise" },
+  { from: "*", to: [...LOG_FLOW_PATHS, "/closet/new"], type: "rise" },
 
   // NAV: "Tab bar → Feed / Closet / Call / You" — "Indicator slides. Content
   // cuts." The tab bar is a destination, not a journey.

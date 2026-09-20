@@ -8,7 +8,11 @@ import {
   viewTransitionTypes,
   viewTransitionTypesFor,
 } from "../../src/lib/nav-types";
-import { repoPath, withoutComments } from "../architecture/source-text";
+import {
+  isInstrumented,
+  repoPath,
+  withoutComments,
+} from "../architecture/source-text";
 
 /**
  * The port of design round 12's `NAV` against the table it came from, and
@@ -310,6 +314,11 @@ describe("the table covers the app", () => {
   for (const [globPath, source] of Object.entries(sources)) {
     const path = repoPath(globPath);
     if (path === "src/lib/nav-types.ts") continue;
+    // Stryker instruments in a sandbox copy, and instrumentation wraps
+    // every string literal in a ternary — so `to: "/feed"` stops looking
+    // like a navigation. Those files are not the repo; skip them rather
+    // than read a mutant's idea of where the app can go.
+    if (isInstrumented(source)) continue;
     for (const to of navigationsIn(source)) {
       destinations.set(to, [...(destinations.get(to) ?? []), path]);
     }
@@ -318,9 +327,33 @@ describe("the table covers the app", () => {
   it("found the navigations, so nothing below is vacuous", () => {
     // If the scanner stops matching, every assertion under it passes over
     // an empty set. The repo had 24 distinct destinations when this was
-    // written; the floor is deliberately loose, the zero-check is not.
-    expect(destinations.size).toBeGreaterThanOrEqual(20);
-    expect(destinations.has("/runs/new")).toBe(true);
+    // written, and a stryker sandbox hides however many files that run
+    // instruments — so the floor is well under it and the point is that it
+    // is not zero.
+    expect(destinations.size).toBeGreaterThan(10);
+  });
+
+  it("cuts between whatever TabBar's tabs actually are", () => {
+    // `NAV`'s tab row is four paths, and `ui/TabBar` holds the real list.
+    // Two lists that can disagree without anything failing are a rival
+    // truth rather than a duplicate (CLAUDE.md §Derive, don't mirror), so
+    // this reads the real one: add a tab, move one, and the pair is
+    // checked here rather than drifting.
+    const tabBar = sources["../../src/ui/TabBar.tsx"] ?? "";
+    if (isInstrumented(tabBar)) return;
+
+    // Every bar entry except the launcher, which owns no path at all.
+    const tabs = withoutComments(tabBar)
+      .split("\n")
+      .filter((line) => line.includes("to:") && !line.includes("launcher"))
+      .flatMap((line) => navigationsIn(line));
+
+    expect(tabs).toEqual(["/feed", "/closet", "/call", "/feed/me"]);
+    for (const from of tabs) {
+      for (const to of tabs) {
+        expect([from, to, typeOf(from, to)]).toEqual([from, to, "cut"]);
+      }
+    }
   });
 
   it("types every destination a component navigates to", () => {
