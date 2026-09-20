@@ -76,6 +76,17 @@ at all. It becomes `breathe`, the product's one waiting device.
 - Existing demos re-recorded; the closet demo gains a "Show retired"
   beat so the reflow and the collapse are on film.
 
+## After the fact: design round 12
+
+Round 12 (navigation types) landed while this was in review. Nothing in it
+contradicts what this lane built — tab switch is still `cut` with a sliding
+indicator — with one exception it rules on directly: `+ Add` is a bar
+launcher rather than a tab, so the indicator must never travel to it. The
+indicator half is in this PR; the other half (the tab beneath stays
+selected) needs the bar to remember the last real tab and is one behaviour
+with round 12's `rise`, so it is D-80 and belongs to the navigation lane.
+Owner accepted the interim, pre-launch.
+
 ## Open questions
 
 1. **Surface 9, Toast / banner, is already answered — and the answer is

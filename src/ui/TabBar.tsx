@@ -55,19 +55,32 @@ const ACTIVE_LABEL_CLASS = "tab-label text-ink no-underline";
 const RESTING_LABEL_CLASS = "tab-label text-muted no-underline";
 
 /**
- * The five tabs, in order. The indicator's position is this array's index,
- * so the order here is load-bearing twice over.
+ * The five bar entries, in order. The indicator's position is this array's
+ * index, so the order here is load-bearing twice over.
+ *
+ * **`+ Add` is a launcher, not a tab** (design round 12, `NAV`'s
+ * `+ Add (bar launcher) -> Log a run` row): logging a run is a task laid
+ * on top of wherever you were, not a place in the bar you travel to. So
+ * the indicator never travels to it.
+ *
+ * The rest of that row is not built here. It says the tab *beneath* stays
+ * selected, which means remembering the last tab you were actually on —
+ * `/runs/new` does not say — and it is one behaviour with the `rise` the
+ * same row specifies. Both belong to the navigation lane; D-80 carries
+ * them. Until then no tab is lit during the flow, which is what the bar
+ * already does on `/runs/manual`: incomplete rather than wrong.
  */
 const TABS = [
   { to: "/feed", label: "Feed" },
   { to: "/closet", label: "Closet" },
-  { to: "/runs/new", label: "+ Add" },
+  { to: "/runs/new", label: "+ Add", launcher: true },
   { to: "/call", label: "Call" },
   // Points at lane 104's own profile route until a `you/` lane exists.
   { to: "/feed/me", label: "You" },
 ] as const satisfies readonly {
   to: NonNullable<LinkProps["to"]>;
   label: string;
+  launcher?: boolean;
 }[];
 
 /**
@@ -94,7 +107,7 @@ function isOwnerOf(route: string, pathname: string): boolean {
 
 export function activeTabIndex(
   pathname: string,
-  tabs: readonly { to: string }[] = TABS,
+  tabs: readonly { to: string; launcher?: boolean }[] = TABS,
 ): number | undefined {
   let found: number | undefined;
   // `""` owns every path — "/feed".startsWith("/") — so the first tab that
@@ -109,6 +122,9 @@ export function activeTabIndex(
   // predicate already answers leaves nothing to suppress.
   let deepest = "";
   for (const [index, tab] of tabs.entries()) {
+    // A launcher owns no path. Standing on `/runs/new` is being inside a
+    // flow, not being on a tab, so nothing in the bar claims the seat.
+    if (tab.launcher === true) continue;
     if (!isOwnerOf(tab.to, pathname)) continue;
     if (!isOwnerOf(deepest, tab.to)) continue;
     found = index;
