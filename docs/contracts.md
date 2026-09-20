@@ -77,7 +77,22 @@ est_temp_low_c   real     -- attribute-derived guess, NULLABLE
 est_temp_high_c  real     -- NULLABLE
 brand            text     -- NULLABLE
 name             text     -- required; the only required descriptive field
-size, color      text     -- NULLABLE
+size, color      text     -- NULLABLE. `color` is the COLOURWAY the runner
+                          -- typed ("Obsidian"), free text, never parsed.
+color_name       text     -- NULLABLE enum, 13 locked names in two classes
+                          -- (AH): black white grey navy brown beige |
+                          -- red orange yellow green blue purple pink.
+                          -- No "multi", no "other", and hi-viz is NOT one
+                          -- of them — it is a reason, not a colour.
+color_hex        text     -- NULLABLE '#rrggbb', lowercase. Level 2 of AH;
+                          -- optional beside an optional name. Enrichment
+                          -- may propose the NAME, never a hex.
+visibility_level text     -- NULLABLE enum: plain | reflective | hi_viz.
+                          -- **Not `visibility` below.** This is the
+                          -- garment property (AH); that one is the
+                          -- moderation state. Only hi_viz exempts a
+                          -- garment from the colour tiebreak; reflective
+                          -- does not, because the base colour still shows.
 photo_key        text     -- R2 key, NULLABLE
 product_url      text     -- NULLABLE, https-only, user-entered
 product_id       text     -- NULLABLE FK -> products; links this garment to a
@@ -348,6 +363,12 @@ const garmentBase = z.object({
   brand: z.string().max(60).optional(),
   size: z.string().max(20).optional(),
   color: z.string().max(30).optional(),
+  // AH, additive 2026-09-19. The classes are the source and the enum is
+  // derived from them — `colorClass()` reads them rather than restating
+  // the split, because the Call's tiebreak keys off the class.
+  colorName: colorNameSchema.optional(),
+  colorHex: colorHexSchema.optional(),
+  visibilityLevel: garmentVisibilitySchema.optional(),
   productUrl: z.string().url().startsWith("https://").optional(),
   productId: z.string().optional(),
   estTempLowC: z.number().optional(),
