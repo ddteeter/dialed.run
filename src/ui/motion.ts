@@ -55,3 +55,24 @@ export const TRAVEL = { element: 24, frame: 8 } as const;
 Stagger only where the order IS the information (dressing order).
 */
 export const STAGGER = { step: 30, maxItems: 4 } as const;
+
+/**
+ * Whether this viewer has asked for reduced motion.
+ *
+ * The CSS half of the doctrine reads the media query directly (see
+ * `motion.css`); this is for the two moves that cannot, because they are
+ * measured at runtime — the closet's reflow and anything else that hands
+ * keyframes to `Element.animate`. A move that skipped this would keep
+ * travelling for a viewer who asked it not to, and nothing would say so.
+ *
+ * `matchMedia` is absent on the server and in some test environments, and
+ * absent means "no preference expressed" rather than "reduce".
+ */
+export function shouldReduceMotion(): boolean {
+  // `typeof`, not `?.`: the DOM types declare `matchMedia` as always
+  // present, so an optional chain here is a branch the compiler insists
+  // cannot be taken and the linter agrees with it. The server and some
+  // test environments disagree.
+  if (typeof globalThis.matchMedia !== "function") return false;
+  return globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}

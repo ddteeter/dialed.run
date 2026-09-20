@@ -80,7 +80,7 @@ describe("ImportStatus: while it is still working", () => {
       <ImportStatus importId="01IMPORT" getStatus={() => pending.promise} />,
     );
 
-    expect(document.querySelector(".animate-pulse")).not.toBeNull();
+    expect(document.querySelector(".breathe")).not.toBeNull();
     pending.resolve(importRow());
   });
 
@@ -95,7 +95,7 @@ describe("ImportStatus: while it is still working", () => {
       );
 
       expect(await screen.findByText("Reading your run…")).toBeVisible();
-      expect(document.querySelector(".animate-pulse")).not.toBeNull();
+      expect(document.querySelector(".breathe")).not.toBeNull();
     },
   );
 

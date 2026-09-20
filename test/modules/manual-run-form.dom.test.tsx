@@ -367,3 +367,18 @@ describe("ManualRunForm: what it refuses", () => {
     ).toHaveAttribute("novalidate");
   });
 });
+
+/**
+ * The log flow's three screens are three routes, so the move that carries
+ * "which way you are travelling" has to be on each of them — and a screen
+ * that quietly loses its wrapper animates nothing, with nothing to say so.
+ */
+describe("ManualRunForm: the log flow", () => {
+  it("is step one of the log flow, and enters from an edge", async () => {
+    await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
+
+    const step = document.querySelector("[data-flow-direction]");
+    expect(step).not.toBeNull();
+    expect(step?.className).toMatch(/^flow-step-(forward|back)$/);
+  });
+});

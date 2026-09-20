@@ -381,9 +381,7 @@ describe("Feed: your conditions", () => {
 
     await openConditions();
 
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
-      0,
-    );
+    expect(container.querySelectorAll(".breathe").length).toBeGreaterThan(0);
     pending.resolve(result);
   });
 
@@ -403,16 +401,43 @@ describe("Feed: your conditions", () => {
     const following = screen.getByRole("button", { name: "Following" });
     const conditions = screen.getByRole("button", { name: "Your conditions" });
     expect(following).toHaveClass("border-cold-text");
+    expect(following).toHaveAttribute("aria-current", "page");
     expect(conditions).toHaveClass("text-muted");
+    expect(conditions).not.toHaveAttribute("aria-current");
+    // Both sides carry the 90ms colour flip (design/motion.js, "Tab
+    // switch"): it is the half of the move that survives reduced motion,
+    // so it cannot live only on the tab that happens to be active.
+    expect(following).toHaveClass("tab-label");
+    expect(conditions).toHaveClass("tab-label");
 
     await user.click(conditions);
 
     expect(screen.getByRole("button", { name: "Your conditions" })).toHaveClass(
       "border-cold-text",
     );
+    expect(
+      screen.getByRole("button", { name: "Your conditions" }),
+    ).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Following" })).toHaveClass(
       "text-muted",
     );
+    expect(
+      screen.getByRole("button", { name: "Following" }),
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  it("presses a feed row to ink", async () => {
+    await renderWithRouter(
+      <Feed
+        units={{ temp: "f", distance: "mi" }}
+        items={[feedItem()]}
+        conditionsFor={noConditions}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /A runner/ }).closest("li");
+    expect(row).toHaveClass("row-press");
+    expect(row?.className).not.toContain("scale");
   });
 
   it("asks again when the query changes underneath it", async () => {

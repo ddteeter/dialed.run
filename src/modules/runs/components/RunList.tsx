@@ -44,9 +44,9 @@ export function RunList({ runs }: Readonly<{ runs: readonly RunRow[] }>) {
           <Link
             to="/runs/$runId"
             params={{ runId: run.id }}
-            className="flex flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-3 no-underline"
+            className="row-press flex flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-3 no-underline"
           >
-            <span className="font-semibold text-ink">{run.title}</span>
+            <span className="font-semibold">{run.title}</span>
             <Mono className="text-quiet">
               <Bracketed>{weatherBadge(run)}</Bracketed>
               {" · "}

@@ -51,10 +51,17 @@ export function Feed({
             onClick={() => {
               setTab(value);
             }}
+            aria-current={tab === value ? "page" : undefined}
+            // The 90ms colour flip is the tab switch's other half
+            // (design/motion.js). The indicator itself does not slide
+            // here: these two labels are different widths, so a sliding
+            // rule needs either equal columns or a runtime measurement,
+            // and the first is a composition change — queued as a design
+            // delta rather than invented.
             className={
               tab === value
-                ? "border-b-2 border-cold-text px-3 py-2 font-semibold"
-                : "px-3 py-2 text-muted"
+                ? "tab-label border-b-2 border-cold-text px-3 py-2 font-semibold"
+                : "tab-label px-3 py-2 text-muted"
             }
           >
             {value === "following" ? "Following" : "Your conditions"}
@@ -89,12 +96,12 @@ function FollowingTab({
       {items.map((item) => (
         <li
           key={item.entryId}
-          className="rounded-card border border-hairline p-4"
+          className="row-press rounded-card border border-hairline p-4"
         >
           <Link
             to="/feed/entry/$entryId"
             params={{ entryId: item.entryId }}
-            className="flex flex-col gap-2 text-ink no-underline"
+            className="flex flex-col gap-2 no-underline"
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold">

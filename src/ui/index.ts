@@ -1,4 +1,6 @@
 export { Bracketed } from "./Bracketed";
+export { Digits } from "./Digits";
+export { FlowStep, LOG_FLOW } from "./FlowStep";
 export { Icon, ICONS, TAB_BAR } from "./icons";
 export { DURATION, EASING, STAGGER, TRAVEL } from "./motion";
 export { Layout } from "./Layout";
@@ -26,4 +28,5 @@ export { TabBar } from "./TabBar";
 export { classifyFailure, useFormSubmit } from "./use-form-submit";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export { useIdempotencyKey } from "./use-idempotency-key";
+export { useListMotion } from "./use-list-motion";
 export { Wordmark } from "./Wordmark";
