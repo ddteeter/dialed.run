@@ -9,6 +9,19 @@ import { DURATION } from "./motion";
 type Roll = "up" | "down";
 
 /**
+ * Down only when the value went down.
+ *
+ * Total, and deliberately so: "did not move" answers `up` rather than
+ * being a third case nobody renders. Same shape as `FlowStep`'s
+ * `directionBetween` — the interesting half is the one that reverses, and
+ * writing it that way is what makes the comparison observable rather than
+ * a fact about a guard somewhere else.
+ */
+export function rollFrom(previous: number, next: number): Roll {
+  return next < previous ? "down" : "up";
+}
+
+/**
  * The four class names, written out.
  *
  * Not built as `digit-in-${roll}`: Tailwind finds class names by scanning
@@ -23,6 +36,8 @@ const ROLL_CLASS: Readonly<
   up: { arriving: "digit-in-up", leaving: "digit-out-up" },
   down: { arriving: "digit-in-down", leaving: "digit-out-down" },
 };
+
+const SLOT = "digit-slot";
 
 /**
  * A count that rolls when it changes (design/motion.js, "Numbers &
@@ -46,62 +61,58 @@ export function Digits({
   value: number;
   className?: string | undefined;
 }>): JSX.Element {
-  const [shown, setShown] = useState<{
-    value: number;
-    previous: number | undefined;
-    roll: Roll;
-  }>({ value, previous: undefined, roll: "up" });
+  const [seen, setSeen] = useState(value);
+  const [leaving, setLeaving] = useState<number | undefined>();
 
   // Derived during render rather than in an effect, so the arriving digit
   // carries its animation on the frame it first paints. An effect would
   // show the new number in place and roll it afterwards, which reads as
   // the value changing twice.
-  if (shown.value !== value) {
-    setShown({
-      value,
-      previous: shown.value,
-      roll: value > shown.value ? "up" : "down",
-    });
+  if (seen !== value) {
+    setSeen(value);
+    setLeaving(seen);
   }
 
   // Dropped on a timer rather than on `animationend`.
   //
   // The event is the obvious hook and it is the wrong one: it never fires
-  // where there is no animation to end — a browser with `prefers-reduced-
-  // motion` honoured by a 90ms swap still fires it, but a test DOM, a
-  // print stylesheet, or a viewer whose browser dropped the class does
-  // not, and the old value would then sit under the new one forever.
+  // where there is no animation to end — a browser honouring
+  // `prefers-reduced-motion` with a 90ms swap still fires it, but a test
+  // DOM, a print stylesheet, or a viewer whose browser dropped the class
+  // does not, and the old value would then sit under the new one forever.
   // Law 5: the count is the primary thing, the roll is not.
   useEffect(() => {
-    if (shown.previous === undefined) return;
+    if (leaving === undefined) return;
     const timer = globalThis.setTimeout(() => {
-      setShown((current) => ({ ...current, previous: undefined }));
+      setLeaving(undefined);
     }, DURATION.quick);
     return () => {
       globalThis.clearTimeout(timer);
     };
-  }, [shown.previous]);
+  }, [leaving]);
 
-  const roll = ROLL_CLASS[shown.roll];
-  const isRolling = shown.previous !== undefined;
+  // `?? value` rather than a resting pair of empty class names: a digit
+  // that is not moving has no direction, and inventing one gave the
+  // resting object a `leaving` field nothing ever read — a mutant with no
+  // reader is a mutant no test can kill. Asked from where it is, a still
+  // digit answers "up" and the answer is then thrown away below.
+  const roll = ROLL_CLASS[rollFrom(leaving ?? value, value)];
 
   return (
     <span className={className === undefined ? SLOT : `${SLOT} ${className}`}>
-      {shown.previous === undefined ? undefined : (
+      {leaving === undefined ? undefined : (
         <span aria-hidden="true" className={`digit-leaving ${roll.leaving}`}>
-          {String(shown.previous)}
+          {String(leaving)}
         </span>
       )}
       {/* Keyed by the value so a second change restarts the animation:
           re-applying a class name a node already carries does not. */}
       <span
-        key={String(shown.value)}
-        className={isRolling ? roll.arriving : ""}
+        key={String(value)}
+        className={leaving === undefined ? "" : roll.arriving}
       >
-        {String(shown.value)}
+        {String(value)}
       </span>
     </span>
   );
 }
-
-const SLOT = "digit-slot";

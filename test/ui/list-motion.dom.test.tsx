@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DURATION, EASING, shouldReduceMotion } from "../../src/ui/motion";
 import {
   departedKeys,
+  hasDifferentKeys,
   movesBetween,
   reflowFrames,
   reflowTiming,
@@ -42,10 +43,17 @@ interface Row {
   y: number;
 }
 
-function Harness({ items }: Readonly<{ items: readonly Row[] }>) {
+function Harness({
+  items,
+  detached = false,
+}: Readonly<{ items: readonly Row[]; detached?: boolean }>) {
   const { shown, leaving, listRef } = useListMotion(items, (row) => row.id);
   return (
-    <ul ref={listRef}>
+    // The leaving set is the hook's other half of the contract, and a
+    // caller only ever asks it about rows it is rendering — so a stale
+    // entry for a row that has already gone is invisible unless the size
+    // itself is on the element.
+    <ul ref={detached ? undefined : listRef} data-leaving-count={leaving.size}>
       {shown.map((row) => (
         <li
           key={row.id}
@@ -99,6 +107,22 @@ afterEach(() => {
   // the reflective form does not.
   Reflect.deleteProperty(HTMLLIElement.prototype, "animate");
 });
+
+/**
+ * A DOM with no Web Animations API.
+ *
+ * Deleting the property is not enough and that is the trap: **happy-dom
+ * implements `Element.prototype.animate`**, so a `delete` on the subclass
+ * only uncovers the real one and the code under test sees a function
+ * either way. The guard then looks tested and is not.
+ */
+function withoutAnimations(): void {
+  Object.defineProperty(HTMLLIElement.prototype, "animate", {
+    configurable: true,
+    writable: true,
+    value: undefined,
+  });
+}
 
 describe("movesBetween", () => {
   it("inverts the delta for everything that moved", () => {
@@ -163,16 +187,40 @@ describe("reflowFrames and reflowTiming", () => {
   });
 });
 
+const keyOf = (row: Readonly<{ id: string }>): string => row.id;
+
+describe("hasDifferentKeys", () => {
+  it("compares the rows, not the arrays", () => {
+    const rows = [{ id: "a" }, { id: "b" }];
+    // A fresh array of the same rows is what the caller hands over on
+    // every render; reacting to that would reset the collapse timer
+    // forever and the row would never finish leaving.
+    expect(hasDifferentKeys(rows, [{ id: "a" }, { id: "b" }], keyOf)).toBe(
+      false,
+    );
+    expect(hasDifferentKeys(rows, [{ id: "a" }], keyOf)).toBe(true);
+    expect(hasDifferentKeys([{ id: "a" }], rows, keyOf)).toBe(true);
+    // Same count, different rows — the case a length check sits through.
+    expect(hasDifferentKeys(rows, [{ id: "a" }, { id: "c" }], keyOf)).toBe(
+      true,
+    );
+    // And order is part of it: a reordered list reflows.
+    expect(hasDifferentKeys(rows, [{ id: "b" }, { id: "a" }], keyOf)).toBe(
+      true,
+    );
+  });
+});
+
 describe("departedKeys", () => {
   it("names what left, and nothing else", () => {
     const rows = [{ id: "a" }, { id: "b" }, { id: "c" }];
-    expect([
-      ...departedKeys(rows, [{ id: "a" }, { id: "c" }], (row) => row.id),
-    ]).toEqual(["b"]);
-    expect(departedKeys(rows, rows, (row) => row.id).size).toBe(0);
+    expect([...departedKeys(rows, [{ id: "a" }, { id: "c" }], keyOf)]).toEqual([
+      "b",
+    ]);
+    expect(departedKeys(rows, rows, keyOf).size).toBe(0);
     // An arrival is not a departure: showing retired items adds rows and
     // takes none away.
-    expect(departedKeys([{ id: "a" }], rows, (row) => row.id).size).toBe(0);
+    expect(departedKeys([{ id: "a" }], rows, keyOf).size).toBe(0);
   });
 });
 
@@ -239,7 +287,7 @@ describe("useListMotion", () => {
   });
 
   it("survives a browser with no Web Animations API", async () => {
-    Reflect.deleteProperty(HTMLLIElement.prototype, "animate");
+    withoutAnimations();
     const { rerender } = render(<Harness items={THREE} />);
 
     rerender(<Harness items={WITHOUT_B} />);
@@ -249,6 +297,105 @@ describe("useListMotion", () => {
       expect(screen.queryByTestId("b")).toBeNull();
     });
     expect(screen.getByTestId("c")).toBeInTheDocument();
+  });
+
+  it("notices a row being swapped for a different one of the same count", async () => {
+    // The list is compared row by row, not by how many rows it has: a
+    // filter that trades one garment for another is still a change, and a
+    // length check alone would sit through it.
+    const swapped: readonly Row[] = [
+      { id: "a", y: 0 },
+      { id: "d", y: 100 },
+      { id: "c", y: 200 },
+    ];
+    const { rerender } = render(<Harness items={THREE} />);
+
+    rerender(<Harness items={swapped} />);
+
+    expect(screen.getByTestId("b")).toHaveAttribute("data-leaving", "true");
+    await waitFor(() => {
+      expect(screen.queryByTestId("b")).toBeNull();
+    });
+    expect(screen.getByTestId("d")).toBeInTheDocument();
+  });
+
+  it("stops calling rows leavers once they have left", async () => {
+    const { rerender } = render(<Harness items={THREE} />);
+
+    rerender(<Harness items={WITHOUT_B} />);
+    expect(screen.getByRole("list")).toHaveAttribute("data-leaving-count", "1");
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("b")).toBeNull();
+    });
+    expect(screen.getByRole("list")).toHaveAttribute("data-leaving-count", "0");
+  });
+
+  it("un-marks a row that comes back before it has finished leaving", async () => {
+    // Pressing the filter twice in quick succession. The row is already
+    // on its way out when it is asked to stay, and a set that still calls
+    // it a leaver collapses a row that is back in the list.
+    const { rerender } = render(<Harness items={THREE} />);
+
+    rerender(<Harness items={WITHOUT_B} />);
+    expect(screen.getByTestId("b")).toHaveAttribute("data-leaving", "true");
+    rerender(<Harness items={THREE} />);
+
+    expect(screen.getByTestId("b")).not.toHaveAttribute("data-leaving");
+    expect(screen.getByRole("list")).toHaveAttribute("data-leaving-count", "0");
+    // And it stays: the collapse timer must not resurrect the mark when
+    // it fires on a row that is no longer going anywhere.
+    await waitFor(() => {
+      expect(screen.getByTestId("b")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("b")).not.toHaveAttribute("data-leaving");
+  });
+
+  it("arms no timer while the list is standing still", () => {
+    const armed = vi.spyOn(globalThis, "setTimeout");
+    try {
+      const { rerender } = render(<Harness items={THREE} />);
+      rerender(<Harness items={[...THREE]} />);
+      expect(
+        armed.mock.calls.filter(([, delay]) => delay === DURATION.move),
+      ).toHaveLength(0);
+    } finally {
+      armed.mockRestore();
+    }
+  });
+
+  it("cancels the collapse when the list unmounts mid-flight", () => {
+    const armed = vi.spyOn(globalThis, "setTimeout");
+    const cancelled = vi.spyOn(globalThis, "clearTimeout");
+    try {
+      const { rerender, unmount } = render(<Harness items={THREE} />);
+      rerender(<Harness items={WITHOUT_B} />);
+      const collapse = armed.mock.results.find(
+        (_, index) => armed.mock.calls[index]?.[1] === DURATION.move,
+      );
+      expect(collapse).toBeDefined();
+
+      unmount();
+
+      expect(cancelled).toHaveBeenCalledWith(collapse?.value);
+    } finally {
+      armed.mockRestore();
+      cancelled.mockRestore();
+    }
+  });
+
+  it("does nothing, and throws nothing, when the ref never reached a list", async () => {
+    // The caller owns the ref, so "they forgot it" is a state this has to
+    // survive rather than a state it can rule out — and measuring a list
+    // that is not there is the way it would not.
+    const { rerender } = render(<Harness items={THREE} detached />);
+
+    rerender(<Harness items={WITHOUT_B} detached />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("b")).toBeNull();
+    });
+    expect(spy.animate).not.toHaveBeenCalled();
   });
 
   it("collapses the reflow when the viewer asked for reduced motion", async () => {

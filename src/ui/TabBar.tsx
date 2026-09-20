@@ -28,9 +28,13 @@ function Tab({
 }>): JSX.Element {
   return (
     <li className="text-center">
+      {/* No `aria-current` here: `Link` sets `aria-current="page"` on the
+          route it is on, and a prop passed here was silently overwritten
+          by it — which is exactly how a mutant that emptied the string
+          survived a test asserting the attribute. What this owns is the
+          colour, which `Link`'s own active handling does not touch. */}
       <Link
         to={to}
-        aria-current={active ? "page" : undefined}
         className={active ? ACTIVE_LABEL_CLASS : RESTING_LABEL_CLASS}
       >
         <Mono step="sm">{label}</Mono>
@@ -69,27 +73,46 @@ const TABS = [
 /**
  * Which tab owns a path, or `undefined` when none does.
  *
- * **Longest match wins, and that is the whole reason this is a function.**
- * `/feed/me` is a descendant of `/feed`, so a first-match-wins scan lights
- * the Feed tab while the runner is looking at their own profile. It is
- * also why the test for it is a route and not a prefix: `/feed` must not
- * claim `/feedback`, were one ever to exist.
+ * **The deepest owner wins, and that is the whole reason this is a
+ * function.** `/feed/me` is a descendant of `/feed`, so a first-match-wins
+ * scan lights the Feed tab while the runner is looking at their own
+ * profile.
  *
  * A path no tab owns — `/runs/manual`, `/onboarding/name` — returns
  * `undefined` and the indicator is not rendered at all. A tab bar that
  * kept pointing at wherever you were last is a tab bar that lies.
  */
+/**
+ * Whether `route` owns `pathname` — it is the path, or an ancestor of it.
+ *
+ * A route and not a prefix: `/feed` must not claim `/feedback`, were one
+ * ever to exist.
+ */
+function isOwnerOf(route: string, pathname: string): boolean {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
 export function activeTabIndex(
   pathname: string,
   tabs: readonly { to: string }[] = TABS,
 ): number | undefined {
   let found: number | undefined;
-  let matched = 0;
+  // `""` owns every path — "/feed".startsWith("/") — so the first tab that
+  // matches always wins the seat, and after that a tab only takes it from
+  // the incumbent by being *inside* it.
+  //
+  // Depth rather than string length, which is what this compared first.
+  // The two agree on every input, because two distinct routes of equal
+  // length cannot both own one pathname — one would have to be a prefix
+  // of the other. That made `<` and `<=` indistinguishable: an equivalent
+  // mutant with no test that could ever exist. Asking the question the
+  // predicate already answers leaves nothing to suppress.
+  let deepest = "";
   for (const [index, tab] of tabs.entries()) {
-    if (pathname !== tab.to && !pathname.startsWith(`${tab.to}/`)) continue;
-    if (tab.to.length < matched) continue;
+    if (!isOwnerOf(tab.to, pathname)) continue;
+    if (!isOwnerOf(deepest, tab.to)) continue;
     found = index;
-    matched = tab.to.length;
+    deepest = tab.to;
   }
   return found;
 }

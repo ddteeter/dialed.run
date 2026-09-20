@@ -6,10 +6,11 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { Digits } from "../../src/ui/Digits";
+import { Digits, rollFrom } from "../../src/ui/Digits";
 import { FlowStep, LOG_FLOW, directionBetween } from "../../src/ui/FlowStep";
+import { DURATION } from "../../src/ui/motion";
 import { Sheet } from "../../src/ui/Sheet";
 import { Skeleton } from "../../src/ui/Skeleton";
 import { TabBar, activeTabIndex } from "../../src/ui/TabBar";
@@ -88,12 +89,18 @@ describe("Tab switch: the indicator slides under the label", () => {
     );
   });
 
-  it("gives a descendant path to the longest tab that matches it", () => {
+  it("gives a descendant path to the deepest tab that owns it", () => {
     const tabs = [{ to: "/feed" }, { to: "/closet" }, { to: "/feed/me" }];
     // The reason this is a function: `/feed/me` is a descendant of
     // `/feed`, so first-match-wins lights the Feed tab while the runner
     // is looking at their own profile.
     expect(activeTabIndex("/feed/me", tabs)).toBe(2);
+    // And the other order, which is the one the real array happens not to
+    // have: the seat goes to the deepest owner, not to whichever matched
+    // last. Without that, the answer depends on how the tabs are listed.
+    expect(
+      activeTabIndex("/feed/me", [{ to: "/feed/me" }, { to: "/feed" }]),
+    ).toBe(0);
     expect(activeTabIndex("/feed/entry/01H", tabs)).toBe(0);
     expect(activeTabIndex("/feed", tabs)).toBe(0);
     // A route, not a prefix: `/feed` must not claim `/feedback`.
@@ -103,10 +110,9 @@ describe("Tab switch: the indicator slides under the label", () => {
 });
 
 describe("Log flow step: direction carries which way you are going", () => {
-  it("is forward from nothing, forward up the flow, back down it", () => {
+  it("is forward up the flow and back down it", () => {
     // "Direction tells you which way you are travelling through the flow,
     // so Back feels like back."
-    expect(directionBetween(undefined, LOG_FLOW.verdict)).toBe("forward");
     expect(directionBetween(LOG_FLOW.intake, LOG_FLOW.attach)).toBe("forward");
     expect(directionBetween(LOG_FLOW.verdict, LOG_FLOW.attach)).toBe("back");
     // Arriving at the step you were already on — `/runs/new` to
@@ -122,18 +128,14 @@ describe("Log flow step: direction carries which way you are going", () => {
   it("enters from the trailing edge, and reverses when you go back", async () => {
     // Each step is its own route, so the component remembers across
     // mounts rather than across renders. The sequence is the test.
-    const first = render(
-      <FlowStep step={LOG_FLOW.intake}>intake</FlowStep>,
-    );
+    const first = render(<FlowStep step={LOG_FLOW.intake}>intake</FlowStep>);
     expect(screen.getByText("intake")).toHaveClass("flow-step-forward");
     await waitFor(() => {
       expect(screen.getByText("intake")).toBeInTheDocument();
     });
     first.unmount();
 
-    const second = render(
-      <FlowStep step={LOG_FLOW.verdict}>verdict</FlowStep>,
-    );
+    const second = render(<FlowStep step={LOG_FLOW.verdict}>verdict</FlowStep>);
     const forward = screen.getByText("verdict");
     expect(forward).toHaveAttribute("data-flow-direction", "forward");
     expect(forward).toHaveClass("flow-step-forward");
@@ -148,15 +150,63 @@ describe("Log flow step: direction carries which way you are going", () => {
     expect(back).toHaveClass("flow-step-back");
     expect(back).not.toHaveClass("flow-step-forward");
   });
+
+  it("remembers a step that changed under it, not only the one it mounted with", () => {
+    // The step is recorded from an effect that depends on it. With a
+    // constant dependency list the effect runs once on mount and a screen
+    // that swapped steps in place would leave the *next* one measuring
+    // against a step nobody is on any more.
+    const mounted = render(<FlowStep step={LOG_FLOW.intake}>one</FlowStep>);
+    mounted.rerender(<FlowStep step={LOG_FLOW.verdict}>one</FlowStep>);
+    mounted.unmount();
+
+    render(<FlowStep step={LOG_FLOW.attach}>two</FlowStep>);
+
+    expect(screen.getByText("two")).toHaveAttribute(
+      "data-flow-direction",
+      "back",
+    );
+  });
 });
 
 describe("Numbers & temps: the digits roll", () => {
+  it("rolls down only when the value went down", () => {
+    expect(rollFrom(0, 1)).toBe("up");
+    expect(rollFrom(9, 10)).toBe("up");
+    expect(rollFrom(1, 0)).toBe("down");
+    expect(rollFrom(10, 9)).toBe("down");
+    // Total on purpose: a value that did not move does not roll
+    // backwards, so "no change" answers the same way as an increment
+    // rather than being a third case nothing renders.
+    expect(rollFrom(4, 4)).toBe("up");
+  });
+
   it("shows the count and nothing else until it changes", () => {
     const { container } = render(<Digits value={7} />);
     expect(container.textContent).toBe("7");
-    // No animation on first paint: a page load is not a change.
-    expect(container.querySelector(".digit-in-up")).toBeNull();
-    expect(container.querySelector(".digit-slot")).toBeInTheDocument();
+    // No animation on first paint: a page load is not a change. The class
+    // attribute is empty rather than absent or arbitrary — an arriving
+    // class here would roll every count on every page load.
+    expect(container.querySelector(":scope > span > span")).toHaveAttribute(
+      "class",
+      "",
+    );
+    expect(container.firstElementChild).toHaveAttribute("class", "digit-slot");
+  });
+
+  it("schedules nothing while the count is standing still", () => {
+    // The effect's guard, which is otherwise invisible: without it a
+    // timer is armed on every mount of every count in the app, to do
+    // nothing when it fires.
+    const armed = vi.spyOn(globalThis, "setTimeout");
+    try {
+      render(<Digits value={7} />);
+      expect(
+        armed.mock.calls.filter(([, delay]) => delay === DURATION.quick),
+      ).toHaveLength(0);
+    } finally {
+      armed.mockRestore();
+    }
   });
 
   it("rolls up on an increment and down on a decrement", async () => {
@@ -195,11 +245,33 @@ describe("Numbers & temps: the digits roll", () => {
     });
   });
 
+  it("cancels the drop when it is unmounted mid-roll", () => {
+    // A timer outliving its component is a leak, and here it would also
+    // set state on something that is gone.
+    const armed = vi.spyOn(globalThis, "setTimeout");
+    const cancelled = vi.spyOn(globalThis, "clearTimeout");
+    try {
+      const { rerender, unmount } = render(<Digits value={4} />);
+      rerender(<Digits value={5} />);
+      const rolls = armed.mock.results.filter(
+        (_, index) => armed.mock.calls[index]?.[1] === DURATION.quick,
+      );
+      expect(rolls).toHaveLength(1);
+
+      unmount();
+
+      expect(cancelled).toHaveBeenCalledWith(rolls[0]?.value);
+    } finally {
+      armed.mockRestore();
+      cancelled.mockRestore();
+    }
+  });
+
   it("takes the caller's class alongside its own slot", () => {
     const { container } = render(<Digits value={2} className="text-quiet" />);
-    expect(container.firstElementChild).toHaveClass(
-      "digit-slot",
-      "text-quiet",
+    expect(container.firstElementChild).toHaveAttribute(
+      "class",
+      "digit-slot text-quiet",
     );
   });
 });

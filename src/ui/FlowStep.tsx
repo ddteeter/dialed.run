@@ -10,16 +10,23 @@ export type FlowDirection = "forward" | "back";
  * Forward unless the step number went down.
  *
  * "Direction tells you which way you are travelling through the flow, so
- * Back feels like back" (design/motion.js, "Log flow step"). Arriving with
- * no previous step is forward — a runner opening A1 from the tab bar is
- * starting the flow, not returning to it — and so is arriving at the step
- * you were already on, which is what `/runs/new` -> `/runs/manual` is.
+ * Back feels like back" (design/motion.js, "Log flow step"). Arriving at
+ * the step you were already on is forward, which is what `/runs/new` ->
+ * `/runs/manual` is.
+ *
+ * **"No previous step" is the caller's to answer, not this function's.**
+ * It used to take `number | undefined` and lead with a `previous !==
+ * undefined` guard, which reads as careful and is unkillable: every
+ * comparison against `undefined` is false, so the guard and the comparison
+ * agree on the only input that reaches it. The caller passes the step
+ * itself instead — a runner opening A1 from the tab bar is starting the
+ * flow, not returning to it.
  */
 export function directionBetween(
-  previous: number | undefined,
+  previous: number,
   step: number,
 ): FlowDirection {
-  return previous !== undefined && step < previous ? "back" : "forward";
+  return step < previous ? "back" : "forward";
 }
 
 const STEP_CLASS: Readonly<Record<FlowDirection, string>> = {
@@ -54,7 +61,7 @@ export const LOG_FLOW = { intake: 1, attach: 2, verdict: 3 } as const;
  * client's first render agrees with that, because a fresh document starts
  * with nothing here.
  */
-const flow: { lastStep: number | undefined } = { lastStep: undefined };
+const flow: { lastStep?: number } = {};
 
 /**
  * One step of the log flow (A1 -> A2 -> A3), entering from the edge it
@@ -75,7 +82,7 @@ export function FlowStep({
   step: number;
   children: ReactNode;
 }>): JSX.Element {
-  const direction = directionBetween(flow.lastStep, step);
+  const direction = directionBetween(flow.lastStep ?? step, step);
 
   useEffect(() => {
     flow.lastStep = step;
