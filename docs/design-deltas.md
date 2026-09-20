@@ -148,7 +148,7 @@ round (D-26…D-33).
     rather than an oversight — flagging it so the next round does not
     "fix" it back.
 
-18. **The Feed's segmented control cannot slide its indicator.** Undesigned
+18. **Two tab surfaces, one sliding indicator.** Undesigned
     surface shipped by task 114 under the placeholder protocol. The
     doctrine's "Tab switch" move is "the active indicator slides under the
     label", and the bottom tab bar now does exactly that — five equal
@@ -160,9 +160,20 @@ round (D-26…D-33).
     different widths, so a sliding rule needs either equal columns — a
     composition change on a drawn screen — or a runtime measurement of each
     label, which is a resize observer for a 90ms move. They ship with the
-    label's colour flip and the static rule they already had. **The ask is
-    one line**: are E1's two tabs a segmented control across the full width,
-    or labels at their natural size? Nothing is blocked.
+    label's colour flip and the static rule they already had.
+
+    The tab bar's own composition changed to make the slide possible, and
+    that is the second half of this ask: the five tabs were a
+    `justify-between` row of natural-width labels and are now five equal
+    columns with the label centred in each. No board draws the mobile tab
+    bar, so nothing was contradicted — but it is a layout decision a lane
+    made for a motion reason, which is exactly the kind the placeholder
+    protocol wants seen rather than discovered in a demo.
+
+    **The ask is two lines.** Are E1's two tabs a segmented control across
+    the full width, or labels at their natural size? And are the five tabs
+    equal columns, which is what the indicator is measured in? Nothing is
+    blocked either way.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 
