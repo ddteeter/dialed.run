@@ -1,9 +1,11 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import {
   outfitEntries,
   outfitEntryItems,
+  products,
   runs,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -408,5 +410,41 @@ describe("closet: §AH's structured colour", () => {
     expect(updated.colorName).toBeNull();
     expect(updated.colorHex).toBeNull();
     expect(updated.visibilityLevel).toBeNull();
+  });
+});
+
+describe("closet: §AG's composition reaches garment detail", () => {
+  it("quotes the linked product's label, and nothing for a generic piece", async () => {
+    // Read on detail and nowhere else, so this is the only place the
+    // branch that fetches it is decided.
+    const userId = newUlid();
+    const client = db();
+    const brand = await createOrGetBrand(client, "Arc'teryx");
+    const product = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Norvan Shell",
+      createdBy: userId,
+    });
+    await client
+      .update(products)
+      .set({ fabricComposition: "100% nylon, GORE-TEX" })
+      .where(eq(products.id, product.id));
+
+    const linked = await createItem(client, userId, {
+      category: "top",
+      name: "Norvan Shell",
+      productId: product.id,
+    });
+    const generic = await createItem(client, userId, {
+      category: "top",
+      name: "Green L/S Crew",
+    });
+
+    const linkedDetail = await getItemDetail(client, userId, linked.id);
+    expect(linkedDetail.composition?.verbatim).toBe("100% nylon, GORE-TEX");
+
+    // A generic piece has no product, so it has nobody's label to quote.
+    const genericDetail = await getItemDetail(client, userId, generic.id);
+    expect(genericDetail.composition).toBeUndefined();
   });
 });

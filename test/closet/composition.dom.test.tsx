@@ -140,3 +140,52 @@ describe("CompositionBlock (design round 10 §AG)", () => {
     expect(screen.getByText("100% mesh")).toBeVisible();
   });
 });
+
+describe("CompositionBlock: the branch boundary", () => {
+  it("treats exactly two parts as labelled, and exactly one as the line", () => {
+    // `parts.length > 1` is the whole rule, and off-by-one in either
+    // direction is a different screen: `>= 1` turns every one-line
+    // composition into a table, `> 2` buries a two-part shell.
+    const two = {
+      verbatim: "Body 100% nylon. Trim 100% nylon",
+      parts: [
+        { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
+        { part: "Trim", materials: [{ material: "nylon", pct: 100 }] },
+      ],
+      brand: "Janji",
+    };
+    const { unmount } = render(<CompositionBlock composition={two} />);
+    expect(screen.getAllByRole("term")).toHaveLength(2);
+    unmount();
+
+    render(
+      <CompositionBlock
+        composition={{ ...two, parts: two.parts.slice(0, 1) }}
+      />,
+    );
+    // One part is the verbatim line, not a one-row table.
+    expect(screen.queryAllByRole("term")).toEqual([]);
+    expect(screen.getByText("Body 100% nylon. Trim 100% nylon")).toBeVisible();
+  });
+
+  it("omits the label row for an unlabelled part rather than printing a blank", () => {
+    // A brand can publish two splits without naming them. An empty <dt>
+    // is a line the reader has to account for.
+    render(
+      <CompositionBlock
+        composition={{
+          verbatim: "60% nylon, 40% elastane",
+          parts: [
+            { materials: [{ material: "nylon", pct: 60 }] },
+            { part: "Cuff", materials: [{ material: "elastane", pct: 40 }] },
+          ],
+          brand: "Janji",
+        }}
+      />,
+    );
+
+    expect(screen.getAllByRole("term")).toHaveLength(1);
+    expect(screen.getByText("Cuff")).toBeVisible();
+    expect(screen.getByText("60% nylon")).toBeVisible();
+  });
+});

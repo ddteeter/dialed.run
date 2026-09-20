@@ -684,3 +684,50 @@ describe("GarmentDetail: colour on the identity line (§AH rule 08)", () => {
     expect(screen.getByText("mid · hi-viz · black · Obsidian")).toBeVisible();
   });
 });
+
+describe("GarmentDetail: composition (§AG)", () => {
+  it("renders the block under the range when the product has one", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ name: "Norvan Shell", brand: "Arc'teryx" }),
+        composition: {
+          verbatim: "100% nylon, GORE-TEX",
+          parts: [],
+        },
+      }),
+    );
+
+    expect(screen.getByText("Made of")).toBeVisible();
+    expect(screen.getByText("100% nylon, GORE-TEX")).toBeVisible();
+  });
+
+  it("credits the garment's own brand, which is the label in the runner's hand", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ name: "Harrier", brand: "Tracksmith" }),
+        composition: { verbatim: "100% merino wool", parts: [] },
+      }),
+    );
+
+    expect(screen.getByText("As labelled by Tracksmith")).toBeVisible();
+  });
+
+  it("omits the attribution for a piece with no brand rather than inventing one", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ name: "Green L/S Crew" }),
+        composition: { verbatim: "100% cotton", parts: [] },
+      }),
+    );
+
+    expect(screen.getByText("100% cotton")).toBeVisible();
+    expect(screen.queryByText(/as labelled/i)).toBeNull();
+  });
+
+  it("says nothing when the product has no composition at all", async () => {
+    // A generic piece has no product, so it has nobody's label to quote —
+    // and "no block" is not an "Unknown" row.
+    await renderWithRouter(garment({ composition: undefined }));
+    expect(screen.queryByText("Made of")).toBeNull();
+  });
+});

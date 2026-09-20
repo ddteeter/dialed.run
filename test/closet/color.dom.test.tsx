@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import type { Garment } from "../../src/lib/contracts";
 import {
   chromaticColorNames,
   colorClass,
@@ -165,5 +166,239 @@ describe("colour on the garment form", () => {
 
     expect(screen.getByLabelText("Colorway")).toHaveValue("Obsidian");
     expect(screen.getByRole("radio", { name: "Black" })).toBeChecked();
+  });
+});
+
+describe("the shade sheet, wired into the form", () => {
+  it("shows the chosen hex on the affordance, so level 2 is legible from level 1", async () => {
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} />);
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+
+    // Before: the affordance names itself and nothing else.
+    expect(screen.getByRole("button", { name: "Exact shade" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    await user.type(screen.getByLabelText("Hex"), "#1f2a44");
+    await user.click(screen.getByRole("button", { name: "Use this" }));
+
+    // After: it carries the value, so the runner can see it without
+    // reopening the sheet.
+    expect(
+      screen.getByRole("button", { name: "Exact shade · #1f2a44" }),
+    ).toBeVisible();
+  });
+
+  it("gives the hex back when it is cleared", async () => {
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} />);
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    await user.type(screen.getByLabelText("Hex"), "#1f2a44");
+    await user.click(screen.getByRole("button", { name: "Use this" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "Exact shade · #1f2a44" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(screen.getByRole("button", { name: "Exact shade" })).toBeVisible();
+  });
+
+  it("closes without keeping a half-typed hex, and opens again after", async () => {
+    // Escape closes the dialog natively, so the form has to hear about it
+    // — otherwise its own `shadeOpen` stays true, the effect's dependency
+    // never changes, and the sheet cannot be reopened at all. Reopening is
+    // the only thing that tells the two apart.
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} />);
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    await user.type(screen.getByLabelText("Hex"), "#1f2");
+
+    // `dialog.close()` is what Escape does in a browser; happy-dom does
+    // not wire the key, so the close is driven directly. Either way the
+    // `close` event is what `Sheet` reports through `onClose`.
+    const dialog = document.querySelector("dialog");
+    expect(dialog).not.toBeNull();
+    act(() => {
+      dialog?.close();
+    });
+
+    expect(dialog?.open).toBe(false);
+    expect(screen.getByRole("button", { name: "Exact shade" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    expect(dialog?.open).toBe(true);
+  });
+
+  it("names the three visibility chips in the artboard's own words", () => {
+    render(<GarmentForm {...formProps} />);
+    for (const label of ["Plain", "Reflective trim", "Hi-viz"]) {
+      expect(screen.getByRole("radio", { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it("labels the two colour fields apart", () => {
+    // Two fields on one form both saying "Color" is the collision the
+    // colourway rename exists to avoid.
+    render(<GarmentForm {...formProps} />);
+    expect(screen.getByLabelText("Colorway")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Color" })).toBeInTheDocument();
+  });
+
+  it("sends the colour through to the save, lowercased", async () => {
+    const save = vi.fn(() => Promise.resolve({ id: "01ITEM" }));
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} save={save} />);
+
+    await user.type(screen.getByLabelText("Model / name"), "Norvan Shell");
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+    await user.click(screen.getByRole("radio", { name: "Hi-viz" }));
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    await user.type(screen.getByLabelText("Hex"), "#1F2A44");
+    await user.click(screen.getByRole("button", { name: "Use this" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        colorName: "navy",
+        colorHex: "#1f2a44",
+        visibilityLevel: "hi_viz",
+      }),
+    );
+  });
+
+  it("sends nothing for a colour the runner never answered", async () => {
+    // "" is not an answer, and a strictObject rejects it — the absent
+    // field has to be absent rather than empty.
+    // Captured through a typed closure rather than a bare `vi.fn()`,
+    // whose `mock.calls` would be `[][]` — an empty tuple has no element
+    // to read, and the alternative is a cast.
+    let sent: Garment | undefined;
+    const save = (garment: Garment) => {
+      sent = garment;
+      return Promise.resolve({ id: "01ITEM" });
+    };
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} save={save} />);
+
+    await user.type(screen.getByLabelText("Model / name"), "Harrier");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(sent).toBeDefined();
+    // Key *absence*, not an undefined value: `garmentSchema` is a
+    // strictObject and an explicit `colorName: undefined` is a different
+    // object from one without the key.
+    for (const key of ["colorName", "colorHex", "visibilityLevel"]) {
+      expect(Object.hasOwn(sent ?? {}, key)).toBe(false);
+    }
+  });
+});
+
+describe("the hex regex, at its edges", () => {
+  it("wants exactly six digits — not five, not seven", () => {
+    expect(colorHexSchema.safeParse("#1f2a4").success).toBe(false);
+    expect(colorHexSchema.safeParse("#1f2a445").success).toBe(false);
+  });
+
+  it("is anchored at both ends", () => {
+    // Unanchored, "the colour is #1f2a44 ok?" would store as a colour.
+    expect(colorHexSchema.safeParse("x#1f2a44").success).toBe(false);
+    expect(colorHexSchema.safeParse("#1f2a44x").success).toBe(false);
+  });
+
+  it("rejects hex digits it does not recognise", () => {
+    expect(colorHexSchema.safeParse("#1f2g44").success).toBe(false);
+  });
+});
+
+describe("the visibility values", () => {
+  it("is exactly the three the artboard draws", () => {
+    expect(garmentVisibilitySchema.options).toEqual([
+      "plain",
+      "reflective",
+      "hi_viz",
+    ]);
+  });
+});
+
+describe("the form remembers what was already chosen", () => {
+  it("starts with the sheet shut", async () => {
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} />);
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+
+    // A sheet that opens itself is a modal nobody asked for, over a form
+    // the runner is still filling in. Asserted on the dialog's own `open`
+    // state, because a `<dialog>` renders its children either way — what
+    // changes is whether they are shown.
+    expect(document.querySelector("dialog")?.open).toBe(false);
+  });
+
+  it("closes the sheet once a shade is used", async () => {
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} />);
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    await user.type(screen.getByLabelText("Hex"), "#1f2a44");
+    await user.click(screen.getByRole("button", { name: "Use this" }));
+
+    expect(document.querySelector("dialog")?.open).toBe(false);
+  });
+
+  it("closes the sheet once a shade is cleared", async () => {
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} />);
+    await user.click(screen.getByRole("radio", { name: "Navy" }));
+    await user.click(screen.getByRole("button", { name: "Exact shade" }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(document.querySelector("dialog")?.open).toBe(false);
+  });
+
+  it("checks the colour the garment already carries", () => {
+    // An edit starts from what is stored, and a chip that does not show
+    // the stored choice invites the runner to re-answer a question they
+    // have already answered.
+    render(
+      <GarmentForm
+        {...formProps}
+        initial={{ colorName: "green", visibilityLevel: "reflective" }}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: "Green" })).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: "Reflective trim" }),
+    ).toBeChecked();
+  });
+
+  it("checks nothing when the garment carries no colour", () => {
+    render(<GarmentForm {...formProps} />);
+
+    for (const label of ["Green", "Navy", "Plain", "Hi-viz"]) {
+      expect(screen.getByRole("radio", { name: label })).not.toBeChecked();
+    }
+  });
+
+  it("names both chip groups, which is what the error summary reads back", () => {
+    render(<GarmentForm {...formProps} />);
+    expect(screen.getByRole("group", { name: "Visibility" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Color" })).toBeVisible();
+  });
+
+  it("calls a bad stored hex by its name when the save fails", async () => {
+    // `colorHex` has no field of its own on this form — it lives in the
+    // sheet — so the summary is the only place its label is ever read. A
+    // blank label there is a row pointing at nothing.
+    const user = userEvent.setup();
+    render(<GarmentForm {...formProps} initial={{ colorHex: "nope" }} />);
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText(/Hex — Use a six-digit hex like #1f2a44\./),
+    ).toBeVisible();
   });
 });

@@ -136,3 +136,43 @@ describe("garmentFormSchema", () => {
     expect(result.data).not.toHaveProperty("layer");
   });
 });
+
+function parsed(overrides: Partial<GarmentFormValues>) {
+  const result = garmentFormSchema.safeParse({ ...VALID, ...overrides });
+  if (!result.success) throw new Error(result.error.issues[0]?.message);
+  return result.data;
+}
+
+describe("§AH's colour fields, through the form schema", () => {
+  it("lowercases and trims a pasted hex, so one colour has one spelling", () => {
+    // The field takes a paste as readily as a sample, and brands publish
+    // `#1F2A44` with whatever whitespace the clipboard brought.
+    expect(
+      parsed({ colorName: "navy", colorHex: "  #1F2A44  " }).colorHex,
+    ).toBe("#1f2a44");
+  });
+
+  it("leaves an unanswered colour absent rather than empty", () => {
+    const garment = parsed({
+      colorName: "",
+      colorHex: "",
+      visibilityLevel: "",
+    });
+    expect(Object.hasOwn(garment, "colorName")).toBe(false);
+    expect(Object.hasOwn(garment, "colorHex")).toBe(false);
+    expect(Object.hasOwn(garment, "visibilityLevel")).toBe(false);
+  });
+
+  it("carries each answer through on its own", () => {
+    // The three are independent: a name without a shade, a visibility
+    // without either.
+    expect(parsed({ colorName: "green" }).colorName).toBe("green");
+    expect(parsed({ visibilityLevel: "hi_viz" }).visibilityLevel).toBe(
+      "hi_viz",
+    );
+  });
+
+  it("refuses a hex that is not one, with the schema's own sentence", () => {
+    expect(() => parsed({ colorHex: "nope" })).toThrow(/six-digit hex/);
+  });
+});

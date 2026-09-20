@@ -493,7 +493,7 @@ export function ChoiceList<TOption extends string>({
   options,
   optionLabels,
   optionNotes,
-  layout = "rows",
+  layout,
   value,
   field,
   onChange,
@@ -517,7 +517,10 @@ export function ChoiceList<TOption extends string>({
      */
     optionNotes?: Readonly<Record<TOption, string>> | undefined;
     /**
-     * `rows` stacks one full-width option per line; `chips` wraps them.
+     * `chips` wraps the options; omitted, they stack one per line.
+     *
+     * No `= "rows"` default: the stacked layout is what you get by not
+     * asking, so naming it twice would be a value nothing reads.
      *
      * A layout prop rather than a second component, because the control is
      * identical — a radio group with a legend, all options readable
@@ -531,8 +534,15 @@ export function ChoiceList<TOption extends string>({
      * thirteen accents in one viewport"*, and hue means verdict
      * everywhere else in this app.
      */
-    layout?: "rows" | "chips" | undefined;
-    value: TOption | undefined;
+    layout?: "chips" | undefined;
+    /**
+     * `""` is "not answered", the same spelling `ChoiceField` uses for a
+     * `<select>` with no choice made — an unanswered control reaches the
+     * DOM as an empty string, and converting it to `undefined` at every
+     * call site was four lines that did nothing: `"" === option` is false
+     * for every option, which is exactly what `undefined` means here.
+     */
+    value: TOption | "" | undefined;
     onChange: (value: TOption) => void;
   }
 >): JSX.Element {

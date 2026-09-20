@@ -344,9 +344,13 @@ export async function getProductComposition(
  * `verbatim` is a separate column and still shows.
  */
 function parseParts(raw: string | null): readonly FabricPart[] {
-  if (raw === null) return [];
   try {
-    const parsed: unknown = JSON.parse(raw);
+    // No null guard: `String(null)` is `"null"`, which parses to `null`,
+    // which the schema rejects — the same empty list the guard returned.
+    // It was written, and mutation testing showed it unobservable: no
+    // input distinguishes the two, so it was a branch no test could ever
+    // reach for a reason no reader could ever check.
+    const parsed: unknown = JSON.parse(String(raw));
     const result = fabricPartsSchema.safeParse(parsed);
     return result.success ? result.data : [];
   } catch {

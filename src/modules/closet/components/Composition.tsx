@@ -80,10 +80,13 @@ export function CompositionBlock({
         <dl className="m-0 flex flex-col gap-2">
           {parts.map((part, index) => (
             <div
-              // The brand's order is the order, so a part's position is
-              // part of its identity — two "PANELS" rows are legal and are
-              // not the same row.
-              key={`${part.part ?? ""}-${String(index)}`}
+              // The index, because the brand's order *is* the order: this
+              // list is parsed once per render and never sorted, filtered
+              // or appended to, so position is stable and is the only
+              // thing that distinguishes two "PANELS" rows from each
+              // other. A key built from the label would collide on
+              // exactly that case.
+              key={index}
               className="flex flex-col gap-1"
             >
               {part.part === undefined ? undefined : (

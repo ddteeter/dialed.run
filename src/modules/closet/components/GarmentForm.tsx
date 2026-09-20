@@ -421,9 +421,7 @@ export function GarmentForm({
           layout="chips"
           options={garmentVisibilitySchema.options}
           optionLabels={VISIBILITY_LABELS}
-          value={
-            values.visibilityLevel === "" ? undefined : values.visibilityLevel
-          }
+          value={values.visibilityLevel}
           field={form.field}
           error={form.fieldErrors.visibilityLevel}
           onChange={(picked) => {
@@ -437,7 +435,7 @@ export function GarmentForm({
           layout="chips"
           options={colorNameSchema.options}
           optionLabels={COLOR_LABELS}
-          value={values.colorName === "" ? undefined : values.colorName}
+          value={values.colorName}
           field={form.field}
           error={form.fieldErrors.colorName}
           onChange={(picked) => {
