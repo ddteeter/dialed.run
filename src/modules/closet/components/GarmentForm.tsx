@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react";
 
-import type { Garment } from "../../../lib/contracts";
+import type {
+  ColorName,
+  Garment,
+  GarmentVisibility,
+} from "../../../lib/contracts";
 import {
+  colorNameSchema,
   fabricSchema,
   garmentCategories,
   garmentCategoryLabels,
+  garmentVisibilitySchema,
   layerSchema,
   weightSchema,
 } from "../../../lib/contracts";
@@ -17,6 +23,7 @@ import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
   ChoiceField,
+  ChoiceList,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -28,6 +35,7 @@ import {
   useFormSubmit,
 } from "../../../ui";
 import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
+import { ShadeSheet } from "./ShadeSheet";
 
 type Category = (typeof garmentCategories)[number];
 
@@ -67,8 +75,48 @@ const LABELS = {
   weight: "Weight",
   fabric: "Fabric",
   size: "Size",
-  color: "Color",
+  // The free text the runner types — a brand's own name for a shade, like
+  // "Obsidian". §AH keeps it exactly as it was and calls it the colourway;
+  // `colorName` below is the structured reading beside it. Two fields
+  // labelled "Color" on one form is the collision that rename avoids.
+  color: "Colorway",
+  colorName: "Color",
+  colorHex: "Hex",
+  visibilityLevel: "Visibility",
   productUrl: "Product link",
+};
+
+/**
+ * The thirteen, sentence-cased for the chip.
+ *
+ * Written out with `satisfies`, like `garmentCategoryLabels` and the three
+ * maps above, rather than computed from the schema's options. The
+ * correspondence is what matters and `satisfies` is what enforces it — add
+ * a fourteenth name to the enum, or remove one, and this stops compiling.
+ * A `.map()` over `options` would need a cast to come back as a complete
+ * `Record`, which is worse: a cast cannot fail, so it would silently
+ * answer `undefined` for a name nobody labelled.
+ */
+const COLOR_LABELS = {
+  black: "Black",
+  white: "White",
+  grey: "Grey",
+  navy: "Navy",
+  brown: "Brown",
+  beige: "Beige",
+  red: "Red",
+  orange: "Orange",
+  yellow: "Yellow",
+  green: "Green",
+  blue: "Blue",
+  purple: "Purple",
+  pink: "Pink",
+} as const satisfies Record<ColorName, string>;
+
+const VISIBILITY_LABELS: Record<GarmentVisibility, string> = {
+  plain: "Plain",
+  reflective: "Reflective trim",
+  hi_viz: "Hi-viz",
 };
 
 /**
@@ -96,6 +144,9 @@ const EMPTY_VALUES: GarmentFormValues = {
   category: "top",
   size: "",
   color: "",
+  colorName: "",
+  colorHex: "",
+  visibilityLevel: "",
   productUrl: "",
   layer: "",
   weight: "",
@@ -122,6 +173,15 @@ export interface GarmentFormProps {
   submitLabel: string;
   pendingLabel: string;
   successMessage: string;
+  /**
+   * The garment's own photo, when it has one — the shade sampler reads a
+   * pixel out of it.
+   *
+   * Handed in rather than derived, because the add form has no photo yet
+   * (a piece is photographed on detail, after it exists) and the edit form
+   * does. §AH: no photo, no sampler — the hex field stands alone.
+   */
+  photoUrl?: string | undefined;
 }
 
 /**
@@ -152,12 +212,14 @@ export function GarmentForm({
   submitLabel,
   pendingLabel,
   successMessage,
+  photoUrl,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
     ...initial,
   });
   const fields = fieldsForCategory(values.category);
+  const [shadeOpen, setShadeOpen] = useState(false);
 
   const form = useFormSubmit({
     schema: garmentFormSchema,
@@ -348,6 +410,76 @@ export function GarmentForm({
             }}
           />
         ) : undefined}
+        {/* §AH: the fourth and fifth attributes, inside the group that is
+            already collapsed. F stays identity-first and the tap count on
+            the happy path does not move. Not gated on `fields.*` — every
+            category has a colour, including the ones with no layer and no
+            fabric. */}
+        <ChoiceList
+          name="visibilityLevel"
+          legend={LABELS.visibilityLevel}
+          layout="chips"
+          options={garmentVisibilitySchema.options}
+          optionLabels={VISIBILITY_LABELS}
+          value={
+            values.visibilityLevel === "" ? undefined : values.visibilityLevel
+          }
+          field={form.field}
+          error={form.fieldErrors.visibilityLevel}
+          onChange={(picked) => {
+            update("visibilityLevel", picked);
+          }}
+        />
+        <ChoiceList
+          name="colorName"
+          legend={LABELS.colorName}
+          hint="Pick the nearest. A print is its main color."
+          layout="chips"
+          options={colorNameSchema.options}
+          optionLabels={COLOR_LABELS}
+          value={values.colorName === "" ? undefined : values.colorName}
+          field={form.field}
+          error={form.fieldErrors.colorName}
+          onChange={(picked) => {
+            update("colorName", picked);
+          }}
+        />
+        {/* §AH: "Level 2 without level 1 isn't possible — the sheet is
+            reached from a chosen name." So the affordance does not exist
+            until a name does, rather than existing and refusing. */}
+        {values.colorName === "" ? undefined : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setShadeOpen(true);
+              }}
+              className="cursor-pointer self-start border-none bg-transparent p-0 text-quiet underline underline-offset-4"
+            >
+              <Mono step="sm">
+                Exact shade
+                {values.colorHex === "" ? "" : ` · ${values.colorHex}`}
+              </Mono>
+            </button>
+            <ShadeSheet
+              open={shadeOpen}
+              colorName={COLOR_LABELS[values.colorName]}
+              value={values.colorHex}
+              photoUrl={photoUrl}
+              onUse={(picked) => {
+                update("colorHex", picked);
+                setShadeOpen(false);
+              }}
+              onClear={() => {
+                update("colorHex", "");
+                setShadeOpen(false);
+              }}
+              onClose={() => {
+                setShadeOpen(false);
+              }}
+            />
+          </>
+        )}
       </fieldset>
 
       {estimate ? (

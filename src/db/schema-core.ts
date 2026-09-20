@@ -208,7 +208,48 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     brand: text("brand"),
     name: text("name").notNull(),
     size: text("size"),
+    // The colourway the runner typed — "Obsidian". Stays exactly what it
+    // was: design round 11 §AH keeps it as the row's caption beside the
+    // structured name below, untouched and never parsed into one.
     color: text("color"),
+    // §AH's thirteen locked names, two classes (lib/contracts.ts derives
+    // the enum from the classes). Nullable and never backfilled — mapping
+    // "Obsidian" to black is the parser round 5 refused.
+    colorName: text("color_name", {
+      enum: [
+        "black",
+        "white",
+        "grey",
+        "navy",
+        "brown",
+        "beige",
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+      ],
+    }),
+    // §AH level 2. Six-digit lowercase hex with the '#'. Optional beside
+    // an optional name: a runner who gives one gets a coarser Call, not a
+    // different one. Enrichment may propose the *name*; it never proposes
+    // a hex.
+    colorHex: text("color_hex"),
+    // **Not `visibility`.** That column is four lines down and means the
+    // moderation state; this is §AH's garment property — how much a piece
+    // is built to be seen. One word, two facts, one table: the collision
+    // is real and naming this one `visibility` would have overwritten a
+    // trust-and-safety field with nothing failing loudly.
+    //
+    // All three values matter. `hi_viz` exempts a garment from the colour
+    // tiebreak entirely (§AH rule 04, "safety because the runner said so,
+    // never because a hex is bright"); `reflective` does not, because the
+    // base colour is still what shows.
+    visibilityLevel: text("visibility_level", {
+      enum: ["plain", "reflective", "hi_viz"],
+    }),
     photoKey: text("photo_key"),
     productUrl: text("product_url"),
     productId: text("product_id"),

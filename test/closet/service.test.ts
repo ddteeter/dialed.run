@@ -351,3 +351,62 @@ describe("tap-list", () => {
     ).toEqual(["Beanie", "Short sleeve tee"]);
   });
 });
+
+describe("closet: §AH's structured colour", () => {
+  it("stores the name, the hex and the visibility alongside the colourway", async () => {
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Norvan Shell",
+      // The colourway the runner typed, kept exactly as typed.
+      color: "Obsidian",
+      colorName: "black",
+      colorHex: "#1f2a44",
+      visibilityLevel: "hi_viz",
+    });
+
+    expect(item.color).toBe("Obsidian");
+    expect(item.colorName).toBe("black");
+    expect(item.colorHex).toBe("#1f2a44");
+    expect(item.visibilityLevel).toBe("hi_viz");
+  });
+
+  it("nothing is parsed: a colourway alone leaves the structured name null", async () => {
+    // Mapping "Obsidian" to black is the parser round 5 refused, and this
+    // is what would catch someone adding one.
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Harrier",
+      color: "Obsidian",
+    });
+
+    expect(item.color).toBe("Obsidian");
+    expect(item.colorName).toBeNull();
+    expect(item.colorHex).toBeNull();
+    expect(item.visibilityLevel).toBeNull();
+  });
+
+  it("clears a colour the runner removed, rather than keeping the old one", async () => {
+    // Drizzle drops an `undefined` set-value on an UPDATE, so a column
+    // meant to be cleared silently keeps what it had. `orSqlNull` is what
+    // stops that, and it is invisible without a test that clears.
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Norvan Shell",
+      colorName: "navy",
+      colorHex: "#1f2a44",
+      visibilityLevel: "reflective",
+    });
+
+    const updated = await updateItem(db(), userId, item.id, {
+      category: "top",
+      name: "Norvan Shell",
+    });
+
+    expect(updated.colorName).toBeNull();
+    expect(updated.colorHex).toBeNull();
+    expect(updated.visibilityLevel).toBeNull();
+  });
+});

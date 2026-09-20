@@ -140,6 +140,30 @@ function estimateForGarment(
   });
 }
 
+/**
+ * Everything §AH collects about colour, as one group.
+ *
+ * Grouped rather than inlined because they *are* a group — a colourway,
+ * the name it maps to, the exact shade, and how much the piece is built to
+ * be seen — and because four more `orSqlNull` lines in the middle of
+ * `garmentRowValues` made one half of that literal a clone of the other
+ * half. Naming the group is the better answer to that than a suppression.
+ *
+ * All four are independent: a runner can give the colourway without the
+ * name, the name without the shade, and the visibility without either.
+ * `orSqlNull` is what lets clearing one on an edit actually clear it —
+ * drizzle drops an `undefined` set-value, so the column would keep what it
+ * had.
+ */
+function colorColumns(garment: Garment) {
+  return {
+    color: orSqlNull(garment.color),
+    colorName: orSqlNull(garment.colorName),
+    colorHex: orSqlNull(garment.colorHex),
+    visibilityLevel: orSqlNull(garment.visibilityLevel),
+  };
+}
+
 /** Shared insert/update column values — every write path builds the row
  * exactly the same way from a validated Garment. */
 function garmentRowValues(garment: Garment) {
@@ -160,7 +184,7 @@ function garmentRowValues(garment: Garment) {
     brand: orSqlNull(garment.brand),
     name: garment.name,
     size: orSqlNull(garment.size),
-    color: orSqlNull(garment.color),
+    ...colorColumns(garment),
     productUrl: orSqlNull(garment.productUrl),
     productId: orSqlNull(garment.productId),
   };

@@ -29,6 +29,8 @@ import {
   garmentSchema,
   layerSchema,
   weightSchema,
+  colorNameSchema,
+  garmentVisibilitySchema,
 } from "../../lib/contracts";
 import { hasGarmentAttribute } from "../../lib/garment-fields";
 
@@ -43,6 +45,9 @@ const formValues = z.object({
   category: z.enum(garmentCategories),
   size: z.string(),
   color: z.string(),
+  colorName: z.union([colorNameSchema, unanswered]),
+  colorHex: z.string(),
+  visibilityLevel: z.union([garmentVisibilitySchema, unanswered]),
   productUrl: z.string(),
   layer: z.union([layerSchema, unanswered]),
   weight: z.union([weightSchema, unanswered]),
@@ -95,6 +100,18 @@ function toGarmentInput(values: z.output<typeof formValues>): unknown {
     brand: optional(values.brand),
     size: optional(values.size),
     color: optional(values.color),
+    // §AH, on `garmentBase` rather than in `attributes`: every category
+    // has a colour, including the ones with no layer and no fabric.
+    ...(values.colorName !== "" && { colorName: values.colorName }),
+    // Lowercased on the way in, because the field accepts a paste as well
+    // as a sample and brands publish `#1F2A44`. The schema's regex is
+    // lowercase-only so there is exactly one stored spelling of a colour.
+    ...(optional(values.colorHex) !== undefined && {
+      colorHex: values.colorHex.trim().toLowerCase(),
+    }),
+    ...(values.visibilityLevel !== "" && {
+      visibilityLevel: values.visibilityLevel,
+    }),
     productUrl: optional(values.productUrl),
     category,
     ...attributes,
