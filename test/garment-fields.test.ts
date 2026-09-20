@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { garmentSchema } from "../src/lib/contracts";
+import { wardrobeItems } from "../src/db/schema-core";
+import {
+  colorNames,
+  garmentSchema,
+  garmentVisibilities,
+} from "../src/lib/contracts";
 import type { GarmentCategory } from "../src/lib/garment-fields";
 import {
   allGarmentTypes,
@@ -165,5 +170,28 @@ describe("garmentFieldSpec", () => {
     // Uniqueness is a property of the table, not of this list — which is
     // why the list does not deduplicate. The invariant is pinned above.
     expect(new Set(allGarmentTypes).size).toBe(allGarmentTypes.length);
+  });
+});
+
+describe("the schema column reads the contract's list, not a copy of it", () => {
+  /**
+   * `wardrobe_items.color_name` used to spell all thirteen names out again
+   * and nothing compared the two, so a fourteenth name in `lib/contracts`
+   * would have left the column silently accepting twelve. The column now
+   * takes the tuple, which makes the compiler the comparison — and these
+   * assert that it is still the *same* tuple rather than a lookalike.
+   *
+   * Cheap to keep because drizzle exposes `enumValues` as data. A drizzle
+   * text enum emits no CHECK, so this is the only thing standing between
+   * the two lists.
+   */
+  it("uses the thirteen colour names, in order", () => {
+    expect(wardrobeItems.colorName.enumValues).toEqual(colorNames);
+  });
+
+  it("uses the three visibility levels, in order", () => {
+    expect(wardrobeItems.visibilityLevel.enumValues).toEqual(
+      garmentVisibilities,
+    );
   });
 });

@@ -6,6 +6,8 @@
  * ids as plain text columns (FK constraints arrive with that migration).
  */
 import { sql } from "drizzle-orm";
+
+import { colorNames, garmentVisibilities } from "../lib/contracts";
 import {
   index,
   integer,
@@ -215,23 +217,7 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // §AH's thirteen locked names, two classes (lib/contracts.ts derives
     // the enum from the classes). Nullable and never backfilled — mapping
     // "Obsidian" to black is the parser round 5 refused.
-    colorName: text("color_name", {
-      enum: [
-        "black",
-        "white",
-        "grey",
-        "navy",
-        "brown",
-        "beige",
-        "red",
-        "orange",
-        "yellow",
-        "green",
-        "blue",
-        "purple",
-        "pink",
-      ],
-    }),
+    colorName: text("color_name", { enum: colorNames }),
     // §AH level 2. Six-digit lowercase hex with the '#'. Optional beside
     // an optional name: a runner who gives one gets a coarser Call, not a
     // different one. Enrichment may propose the *name*; it never proposes
@@ -247,9 +233,7 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // tiebreak entirely (§AH rule 04, "safety because the runner said so,
     // never because a hex is bright"); `reflective` does not, because the
     // base colour is still what shows.
-    visibilityLevel: text("visibility_level", {
-      enum: ["plain", "reflective", "hi_viz"],
-    }),
+    visibilityLevel: text("visibility_level", { enum: garmentVisibilities }),
     photoKey: text("photo_key"),
     productUrl: text("product_url"),
     productId: text("product_id"),

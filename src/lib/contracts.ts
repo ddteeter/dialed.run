@@ -94,10 +94,22 @@ export const chromaticColorNames = [
   "pink",
 ] as const;
 
-export const colorNameSchema = z.enum([
+/**
+ * The thirteen as one ordered tuple — the single list everything else
+ * reads, including `wardrobe_items.color_name`'s drizzle enum.
+ *
+ * Exported as the tuple rather than only as a schema because `text(…, {
+ * enum })` wants the values and cannot take a zod type. Before this, the
+ * schema column spelled all thirteen out again and nothing compared the
+ * two: adding a fourteenth name here would have left the column silently
+ * accepting twelve.
+ */
+export const colorNames = [
   ...neutralColorNames,
   ...chromaticColorNames,
-]);
+] as const;
+
+export const colorNameSchema = z.enum(colorNames);
 export type ColorName = z.infer<typeof colorNameSchema>;
 
 /**
@@ -144,11 +156,9 @@ export const colorHexSchema = z
  * is bright." `reflective` is **not** exempt: "the base colour is what
  * shows."
  */
-export const garmentVisibilitySchema = z.enum([
-  "plain",
-  "reflective",
-  "hi_viz",
-]);
+export const garmentVisibilities = ["plain", "reflective", "hi_viz"] as const;
+
+export const garmentVisibilitySchema = z.enum(garmentVisibilities);
 export type GarmentVisibility = z.infer<typeof garmentVisibilitySchema>;
 
 export const layerSchema = z.enum(["base", "mid", "outer"]);

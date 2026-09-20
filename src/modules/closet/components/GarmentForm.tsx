@@ -89,13 +89,24 @@ const LABELS = {
 /**
  * The thirteen, sentence-cased for the chip.
  *
- * Written out with `satisfies`, like `garmentCategoryLabels` and the three
- * maps above, rather than computed from the schema's options. The
- * correspondence is what matters and `satisfies` is what enforces it — add
- * a fourteenth name to the enum, or remove one, and this stops compiling.
- * A `.map()` over `options` would need a cast to come back as a complete
- * `Record`, which is worse: a cast cannot fail, so it would silently
- * answer `undefined` for a name nobody labelled.
+ * **Not a re-hash of the database.** The *keys* are the contract's thirteen
+ * names and `satisfies` is what holds them to it — add a fourteenth to
+ * `colorNames`, or remove one, and this stops compiling. The *values* are
+ * display copy that exists nowhere else: the column stores `hi_viz`, the
+ * chip says "Hi-viz", and nothing in D1 knows the difference.
+ *
+ * **And the labels do not belong in the database**, for three reasons that
+ * all point the same way. They are user-facing copy, which `docs/product.md`
+ * §UI lexicon owns and which changes on a design round rather than on a
+ * migration. The set is locked at thirteen and not user-extensible, so a
+ * lookup table would be a join for a constant. And this renders in the
+ * client bundle, so sourcing it from D1 means a query to draw a form.
+ *
+ * Written out rather than derived by capitalising `colorNames`, because
+ * `Object.fromEntries` comes back as `Record<string, string>` and needs a
+ * cast to narrow — and a cast cannot fail, so it would answer `undefined`
+ * for a name nobody labelled. `garmentCategoryLabels` in `lib/contracts.ts`
+ * made the same trade for the same reason.
  */
 const COLOR_LABELS = {
   black: "Black",
@@ -113,6 +124,11 @@ const COLOR_LABELS = {
   pink: "Pink",
 } as const satisfies Record<ColorName, string>;
 
+/**
+ * Same split as `COLOR_LABELS`: the keys are `garmentVisibilities`, held
+ * there by the annotation; the words are this screen's, and `hi_viz` is a
+ * column value that no runner should ever read.
+ */
 const VISIBILITY_LABELS: Record<GarmentVisibility, string> = {
   plain: "Plain",
   reflective: "Reflective trim",
