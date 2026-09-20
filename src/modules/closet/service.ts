@@ -46,9 +46,8 @@ import { estimateTempRange } from "../../lib/thermal";
 import { enqueueEnrichment } from "../enrichment";
 import { captureException } from "../ops";
 import {
-  getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
-  getProductComposition,
+  getProductForDetail,
   createOrGetBrand,
   resolveProduct,
 } from "../products";
@@ -797,28 +796,26 @@ export async function getItemDetail(
   itemId: string,
 ): Promise<ItemDetail> {
   const item = await getOwnedItem(db, userId, itemId);
-  const [productDefaults, composition, performanceByItem] = await Promise.all([
+  const [product, performanceByItem] = await Promise.all([
     // Equivalent mutant: looking a null product up answers undefined
     // anyway. The check says the intent — an unlinked item has no defaults
     // — and saves the query.
     // Stryker disable next-line ConditionalExpression
     item.productId === null
       ? Promise.resolve(undefined)
-      : getProductAttributeDefaults(db, item.productId),
-    // Same shape, same reason: a generic piece has no product, so it has
-    // nobody's label to quote.
-    // Stryker disable next-line ConditionalExpression
-    item.productId === null
-      ? Promise.resolve(undefined)
-      : getProductComposition(db, item.productId),
+      : getProductForDetail(db, item.productId),
     computeUserPerformance(db, userId),
   ]);
+  // One read for both, because §AG's composition and the attribute
+  // defaults are the same row asked for by the same id — two calls were
+  // two round trips and a second copy of the branch above.
+  const productDefaults = product?.defaults;
   const view = toItemView(
     item,
     productDefaults,
     performanceByItem.get(item.id),
   );
-  return { ...view, productDefaults, composition };
+  return { ...view, productDefaults, composition: product?.composition };
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
   getProductComposition,
+  getProductForDetail,
   productsForBrand,
   resolveProduct,
   searchBrands,
@@ -422,5 +423,59 @@ describe("products: composition, on the way back out", () => {
 
   it("answers undefined for a product that does not exist", async () => {
     expect(await getProductComposition(db(), newUlid())).toBeUndefined();
+  });
+});
+
+describe("products: one read for garment detail", () => {
+  it("answers the attribute defaults and the composition together", async () => {
+    // Garment detail wants both from the same row, and asking twice was
+    // two round trips plus a second copy of the "is there a product?"
+    // branch at the call site.
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: `Detail ${newUlid()}`,
+      productName: "A Jacket",
+      createdBy: newUlid(),
+    });
+    await client
+      .update(products)
+      .set({
+        weight: "light",
+        fabric: "synthetic",
+        windResistant: true,
+        waterResistant: false,
+        fabricComposition: "100% nylon",
+      })
+      .where(eq(products.id, product.id));
+
+    const detail = await getProductForDetail(client, product.id);
+
+    expect(detail?.defaults.weight).toBe("light");
+    expect(detail?.defaults.fabric).toBe("synthetic");
+    // `true` and `false` are both answers; only null is "not stated".
+    expect(detail?.defaults.windResistant).toBe(true);
+    expect(detail?.defaults.waterResistant).toBe(false);
+    expect(detail?.composition.verbatim).toBe("100% nylon");
+  });
+
+  it("reads an unstated flag as undefined, not as false", async () => {
+    // The distinction the closet depends on: null means the product did
+    // not say, which is what lets the garment's own column stand. Reading
+    // it as `false` would answer a question nobody asked.
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: `Unstated ${newUlid()}`,
+      productName: "A Jacket",
+      createdBy: newUlid(),
+    });
+
+    const detail = await getProductForDetail(client, product.id);
+
+    expect(detail?.defaults.windResistant).toBeUndefined();
+    expect(detail?.defaults.waterResistant).toBeUndefined();
+  });
+
+  it("answers nothing for a product that does not exist", async () => {
+    expect(await getProductForDetail(db(), newUlid())).toBeUndefined();
   });
 });

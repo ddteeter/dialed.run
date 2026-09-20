@@ -13,6 +13,7 @@ export type {
   BrandRow,
   ProductAttributeDefaults,
   ProductComposition,
+  ProductForDetail,
   ProductRow,
 } from "./service";
 export {
@@ -22,6 +23,7 @@ export {
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
   getProductComposition,
+  getProductForDetail,
   resolveProduct,
   searchBrands,
   searchProducts,

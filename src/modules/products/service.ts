@@ -325,11 +325,47 @@ export async function getProductComposition(
   db: Db,
   productId: string,
 ): Promise<ProductComposition | undefined> {
+  const product = await getProductForDetail(db, productId);
+  return product?.composition;
+}
+
+/**
+ * Everything garment detail needs from a product, in one read.
+ *
+ * Two functions asking the same primary key for the same row is two round
+ * trips for one answer — and it was also a second `productId === null`
+ * branch at the call site, which is a mutant nothing can kill twice for
+ * the same reason it cannot kill it once (a null lookup answers nothing
+ * either way). One read, one branch.
+ *
+ * Still not the bulk shape: §AG keeps composition off the closet grid, and
+ * the grid reads `getProductAttributeDefaultsBulk`, which does not select
+ * it.
+ */
+export interface ProductForDetail {
+  readonly defaults: ProductAttributeDefaults;
+  readonly composition: ProductComposition;
+}
+
+export async function getProductForDetail(
+  db: Db,
+  productId: string,
+): Promise<ProductForDetail | undefined> {
   const row = await firstRowWhere(db, products, eq(products.id, productId));
   if (row === undefined) return;
   return {
-    verbatim: row.fabricComposition ?? undefined,
-    parts: parseParts(row.fabricParts),
+    defaults: {
+      weight: row.weight,
+      fabric: row.fabric,
+      // Null means "not stated"; the columns read as booleans otherwise.
+      windResistant: row.windResistant ?? undefined,
+      waterResistant: row.waterResistant ?? undefined,
+      categoryHint: row.categoryHint,
+    },
+    composition: {
+      verbatim: row.fabricComposition ?? undefined,
+      parts: parseParts(row.fabricParts),
+    },
   };
 }
 
