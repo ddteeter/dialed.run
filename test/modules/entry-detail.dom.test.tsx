@@ -334,6 +334,19 @@ describe("EntryDetail: the useful reaction", () => {
         "[5]",
       );
     });
+    // The whole label, not a fragment of it: the count rolls now, so it is
+    // two spans where it was one text node, and the space before the
+    // bracket is the caller's.
+    //
+    // Not asserted as the *accessible name*, which is what actually broke
+    // — Chromium announced "Useful [ 5 ]" while the slot clipped with
+    // `overflow: hidden`, because the name algorithm spaces a node whose
+    // display is not inline. happy-dom has no layout and inserts those
+    // spaces either way, so a name query here would pin its quirk rather
+    // than the rule. `e2e/feed` is what guards it, in a real browser.
+    expect(screen.getByRole("button", { name: /Useful/ }).textContent).toBe(
+      "Useful [5]",
+    );
     expect(toggleUseful).toHaveBeenCalledWith({ data: { entryId: "01ENTRY" } });
   });
 

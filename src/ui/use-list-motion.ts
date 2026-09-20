@@ -263,10 +263,14 @@ export function useListMotion<TItem>(
     play(movesBetween(from, after), shouldReduceMotion());
   });
 
-  // Nothing leaving means nothing to hold: the caller's own array is the
-  // answer, so a change that keeps every id — a garment being retired —
-  // reaches the screen instead of being pinned to the last one that moved.
-  const shown = leaving.size === 0 ? items : refreshed(held, items, keyOf);
+  // Always the held order with live rows, never a held *copy* of them: a
+  // change that keeps every id — a garment being retired — reaches the
+  // screen instead of being pinned to the last one that moved. No
+  // `leaving.size === 0 ? items : …` in front of it, because with nothing
+  // leaving the held order and the caller's are the same keys in the same
+  // order, so the two branches return the same rows and no input could
+  // ever tell them apart.
+  const shown = refreshed(held, items, keyOf);
 
   return { shown, leaving, listRef };
 }

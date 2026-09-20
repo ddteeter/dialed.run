@@ -377,6 +377,41 @@ describe("useListMotion", () => {
     });
   });
 
+  it("does not bring back a row the last filter already removed", async () => {
+    // Two filters in a row. The list the hook renders has to follow the
+    // one the caller is asking for, or the second collapse measures
+    // against the first list and a row that left comes back with it.
+    const { rerender } = render(<Harness items={THREE} />);
+    rerender(<Harness items={WITHOUT_B} />);
+    await waitFor(() => {
+      expect(screen.queryByTestId("b")).toBeNull();
+    });
+
+    rerender(<Harness items={[row("a")]} />);
+
+    expect(screen.queryByTestId("b")).toBeNull();
+    expect(screen.getByTestId("c")).toHaveAttribute("data-leaving", "true");
+    await waitFor(() => {
+      expect(screen.queryByTestId("c")).toBeNull();
+    });
+    expect(screen.getByTestId("a")).toBeInTheDocument();
+  });
+
+  it("lets a row that arrived leave again", async () => {
+    // The arriving branch has to move the held order along too, or the
+    // next departure is measured against a list the row was never in and
+    // it vanishes instead of collapsing.
+    const { rerender } = render(<Harness items={WITHOUT_B} />);
+
+    rerender(<Harness items={THREE} />);
+    rerender(<Harness items={WITHOUT_B} />);
+
+    expect(screen.getByTestId("b")).toHaveAttribute("data-leaving", "true");
+    await waitFor(() => {
+      expect(screen.queryByTestId("b")).toBeNull();
+    });
+  });
+
   it("arms no timer while the list is standing still", () => {
     const armed = vi.spyOn(globalThis, "setTimeout");
     try {
