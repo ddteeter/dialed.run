@@ -14,6 +14,7 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-align: cubic-bezier(0.6, 0, 0.2, 1);
   --travel-element: 24px;
+  --travel-frame: 8px;
 }
 
 /* Reduced motion is a real mode, not an off switch: moves collapse to a
@@ -165,11 +166,18 @@
  * travel is the whole information.
  *
  * Only the entering half exists. A1, A2 and A3 are three routes, so the
- * step being left unmounts the moment the next one mounts, and the only
- * way to hold it on screen is a root view transition — which the
- * doctrine's own View Transitions note rules out ("name only two things:
- * the bracket frame and the persistent tab bar") and which would animate
- * the tab switch above as well.
+ * step being left unmounts the moment the next one mounts, and holding it
+ * on screen would take a root view transition. Round 12 supplies exactly
+ * that machinery — see NAVIGATION below — and still does not spend it
+ * here: the NAV row for `+ Add` says "Steps inside: Log flow step", which
+ * assigns the move between steps to *this* surface rather than to a
+ * navigation type. So the router types an intra-flow step `cut` and these
+ * two utilities remain the whole of it; animating both would play two
+ * moves on one navigation.
+ *
+ * What round 12 *did* change is the way in. Entering the flow from the bar
+ * is a `rise`, not a step, so `FlowStep` no longer animates its own
+ * arrival — see `ui/FlowStep.tsx`.
  *
  * `--travel-element` is 24px, TRAVEL.element, and law 3's ceiling for
  * anything that is not a container.
@@ -475,4 +483,241 @@
 @utility digit-leaving {
   position: absolute;
   inset: 0;
+}
+
+/* ------------------------------------------------------------------
+ * NAVIGATION · design round 12's NAV_TYPES, section 04b of the doctrine.
+ *
+ * "Every navigation has a direction, and the direction is the
+ * transition." Which type an edge is, is decided in
+ * `src/lib/nav-types.ts` and handed to `document.startViewTransition` as
+ * a type by `src/router.tsx`; this file is only what each type looks
+ * like.
+ *
+ * **Plain CSS, not `@utility`.** Everywhere else in this file the rule is
+ * the opposite — a class Tailwind does not know is dropped in silence —
+ * but `::view-transition-*` are pseudo-elements on the document root and
+ * no element ever carries them as a class. There is nothing for Tailwind
+ * to know, so there is nothing for it to drop.
+ *
+ * **`cut` has no rules here, and that is the implementation.** It is
+ * spelled as `false` from the resolver, so the router calls the update
+ * directly and the browser never takes a snapshot. A `cut` written as a
+ * 0ms transition would still pay for two snapshots of the whole viewport.
+ * ------------------------------------------------------------------ */
+
+/**
+ * The one named element.
+ *
+ * The doctrine's View Transitions note permits two — "the bracket frame
+ * and the persistent tab bar" — and round 12's new NEVER entry bans every
+ * other name outright ("a garment photo flying from grid to detail is the
+ * hero morph again"). Naming the bar is what makes `rise` true: lifted out
+ * of the root snapshot, it is its own group, so the flow rises over a bar
+ * that stays put. Measured: every log-flow screen renders `Layout`, so the
+ * bar is on both sides of the transition and has somewhere to stay.
+ *
+ * **The bracket frame is deliberately not named, and this is not the
+ * permission going unused.** `ui/Bracketed` is an inline text device, not
+ * a frame: `EntryDetail` alone renders seven. `view-transition-name` must
+ * be unique in the document, and duplicates do not degrade — they abort
+ * the whole transition. Naming it would take every move on the screen down
+ * with it. Fewer names than the doctrine allows is always safe; more is
+ * the thing it forbids.
+ *
+ * A `data-slot` hook rather than a utility class, matching
+ * `[data-slot="tab-indicator"]` next door: this is a name the transition
+ * machinery reads, not a style a component chooses.
+ */
+[data-slot="tab-bar"] {
+  view-transition-name: tab-bar;
+}
+
+/* PUSH — "Incoming slides in from the trailing edge, TRAVEL.frame.
+ * Outgoing holds and dims to 0.6. Back reverses both." `move`, `snap`.
+ *
+ * Direction is the breadcrumb. The outgoing screen does not travel: it
+ * stays where it is and dims, so the incoming one reads as arriving on top
+ * of it rather than shoving it off the edge. Law 3 caps the travel at one
+ * bracket width for a frame, which is `--travel-frame`, 8px — small enough
+ * that the dimmed sliver behind is most of what says "there is a screen
+ * under this one". */
+@keyframes nav-push-in {
+  from {
+    translate: var(--travel-frame) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-push-out {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: var(--travel-frame) 0;
+  }
+}
+
+@keyframes nav-dim {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+@keyframes nav-undim {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes nav-rise {
+  from {
+    translate: 0 100%;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-drop {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 100%;
+  }
+}
+
+@keyframes nav-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+:root:active-view-transition-type(nav-push)::view-transition-new(root) {
+  animation: nav-push-in var(--dur-move) var(--ease-snap) both;
+}
+
+:root:active-view-transition-type(nav-push)::view-transition-old(root) {
+  animation: nav-dim var(--dur-move) var(--ease-snap) both;
+}
+
+/* "Back reverses both": the screen you are returning to un-dims and holds,
+ * and the one you are leaving is the one that travels — out the same edge
+ * it came in by. */
+:root:active-view-transition-type(nav-push):active-view-transition-type(
+    nav-back
+  )::view-transition-new(root) {
+  animation: nav-undim var(--dur-move) var(--ease-snap) both;
+}
+
+:root:active-view-transition-type(nav-push):active-view-transition-type(
+    nav-back
+  )::view-transition-old(root) {
+  animation: nav-push-out var(--dur-move) var(--ease-snap) both;
+}
+
+/* RISE — "Incoming rises from the bottom edge its own height. Dismiss
+ * drops on ease-exit at quick. The screen beneath does not move." `move`,
+ * `snap`.
+ *
+ * A container, so law 3 lets it travel its own height: `100%`, the same
+ * licence `sheet-motion` takes, and for the same reason — a flow is a task
+ * laid on top of where you were, and it goes back to the bar it came from.
+ *
+ * The screen beneath holding still is written as `animation: none` rather
+ * than left out: without it the old snapshot takes the UA's default
+ * fade-out and the thing the flow is laid over dissolves underneath it. */
+:root:active-view-transition-type(nav-rise)::view-transition-new(root) {
+  animation: nav-rise var(--dur-move) var(--ease-snap) both;
+}
+
+:root:active-view-transition-type(nav-rise)::view-transition-old(root) {
+  animation: none;
+}
+
+/* The drop half. Faster than the arrival and on the leaving curve, exactly
+ * as the sheet is: "leaving should be faster than arriving — you already
+ * know what you saw." */
+:root:active-view-transition-type(nav-rise):active-view-transition-type(
+    nav-back
+  )::view-transition-old(root) {
+  animation: nav-drop var(--dur-quick) var(--ease-exit) both;
+}
+
+:root:active-view-transition-type(nav-rise):active-view-transition-type(
+    nav-back
+  )::view-transition-new(root) {
+  animation: none;
+}
+
+/* SWAP — "Incoming fades in over the outgoing, which holds until covered.
+ * No travel on either." `move`, `snap`.
+ *
+ * **Not a crossfade, and the difference is the `animation: none`.** Both
+ * snapshots are painted, new above old; letting the old one fade out as
+ * well would show the page's ground through the middle of the move. The
+ * outgoing holds at full opacity until the incoming has covered it.
+ *
+ * Symmetric by construction, so back needs no rules of its own: neither
+ * screen is "forward" — that is what makes them siblings. */
+:root:active-view-transition-type(nav-swap)::view-transition-new(root) {
+  animation: nav-fade-in var(--dur-move) var(--ease-snap) both;
+}
+
+:root:active-view-transition-type(nav-swap)::view-transition-old(root) {
+  animation: none;
+}
+
+/* PANEL — "Panel slides in from its own edge, TRAVEL.frame; the page dims
+ * to 0.6. Close: ease-exit at quick." Same physics as Sheet / drawer, so
+ * that a phone sheet and a desktop panel are one thing to the runner.
+ *
+ * **No rules, deliberately, and this is the note that stops the next lane
+ * writing them by accident.** At 390 the type has two rows and neither is
+ * a route navigation: *Garment detail → Retire / delete confirm*, which
+ * NAV itself marks "not yet built" and which belongs to the closet lane,
+ * and *Anywhere → Report / block*, which is already `ReportSheet` — and
+ * `panel` is *defined* as the sheet's physics, so that row ships as
+ * `sheet-motion` above. The 620 and 1040 columns are panels against a
+ * Desktop Contract layout that does not exist; task 115 builds those
+ * layouts and inherits those columns. */
+
+/* REDUCED MOTION — round 12 extends the rule: "Every navigation type
+ * becomes swap at instant. Cut stays cut. Never zero."
+ *
+ * Written out here rather than inherited from the collapsed duration
+ * variables, for the reason the top of this file gives: an 8px slide at
+ * 90ms is still a slide, and a rise that travels its own height at 90ms is
+ * a lurch. Every type gets the swap treatment — the outgoing holds, the
+ * incoming fades — so what survives is the confirmation that the screen
+ * changed, which is the half the rule refuses to give up.
+ *
+ * `cut` needs nothing: it never starts a transition, so there is nothing
+ * here to collapse. */
+@media (prefers-reduced-motion: reduce) {
+  :root:active-view-transition-type(nav-push)::view-transition-new(root),
+  :root:active-view-transition-type(nav-rise)::view-transition-new(root),
+  :root:active-view-transition-type(nav-swap)::view-transition-new(root),
+  :root:active-view-transition-type(nav-panel)::view-transition-new(root) {
+    animation: nav-fade-in var(--dur-instant) linear both;
+  }
+
+  :root:active-view-transition-type(nav-push)::view-transition-old(root),
+  :root:active-view-transition-type(nav-rise)::view-transition-old(root),
+  :root:active-view-transition-type(nav-swap)::view-transition-old(root),
+  :root:active-view-transition-type(nav-panel)::view-transition-old(root) {
+    animation: none;
+  }
 }

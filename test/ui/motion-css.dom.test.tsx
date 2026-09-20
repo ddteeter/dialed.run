@@ -401,3 +401,247 @@ describe("the ported Motion Doctrine (design/motion.js)", () => {
     ]);
   });
 });
+
+/**
+ * One row of `NAV_TYPES` (design round 12, section 04b).
+ */
+interface NavType {
+  move: string;
+  duration: string;
+  easing: string;
+}
+
+const NAV_TYPES = new Map<string, NavType>();
+/**
+ * The doctrine's own order, which is the order the section is drawn in.
+ */
+const NAV_TYPE_NAMES: string[] = [];
+
+/**
+ * `duration: 'move'` and friends — one field, one simple pattern.
+ *
+ * One read per field rather than a single pattern spanning the whole row:
+ * several `[^']+` groups in sequence is what backtracks.
+ */
+function field(row: string, name: string): string {
+  return new RegExp(`${name}: '([^']*)'`).exec(row)?.[1] ?? "";
+}
+
+/**
+ * A bare type name, which is what a row's text before its first colon is.
+ */
+const TYPE_NAME = /^\w+$/u;
+
+const navTypesBody = bodyAt(
+  doctrine,
+  doctrine.indexOf("{", doctrine.indexOf("export const NAV_TYPES = {")),
+);
+for (const row of navTypesBody.split("},")) {
+  const name = row.trim().split(":", 1)[0]?.trim() ?? "";
+  if (!TYPE_NAME.test(name)) continue;
+  NAV_TYPE_NAMES.push(name);
+  NAV_TYPES.set(name, {
+    move: field(row, "move"),
+    duration: field(row, "duration"),
+    easing: field(row, "easing"),
+  });
+}
+
+/**
+ * `export const TRAVEL = { element: 24, frame: 8 };`
+ *
+ * Read through `bodyAt` like every other declaration here rather than with
+ * a regex that has to find the closing brace itself.
+ */
+const TRAVEL = new Map<string, string>();
+const travelBody = bodyAt(
+  doctrine,
+  doctrine.indexOf("{", doctrine.indexOf("export const TRAVEL = {")),
+);
+for (const pair of travelBody.split(",")) {
+  const [key, value] = pair.split(":", 2);
+  if (key === undefined || value === undefined) continue;
+  TRAVEL.set(key.trim(), value.trim());
+}
+
+/**
+ * The navigation section, split at its reduced-motion block.
+ *
+ * These rules are plain CSS rather than `@utility` — a `::view-transition-*`
+ * pseudo-element is never a class on an element, so there is nothing for
+ * Tailwind to know or to drop — which means the `utilities` map above
+ * cannot see them and they need their own reader.
+ */
+const navCss = css.slice(css.indexOf("* NAVIGATION · design round 12"));
+const navReducedAt = navCss.indexOf("@media (prefers-reduced-motion");
+const navFull = navCss.slice(0, navReducedAt);
+const navReduced = navCss.slice(navReducedAt);
+
+/**
+ * The declarations for one type's incoming or outgoing snapshot.
+ *
+ * A selector mentioning `nav-back` is the reversed half, so the two are
+ * asked for separately: "what does a push do" and "what does a push do on
+ * the way back" are different questions with different answers.
+ */
+function navRule(
+  source: string,
+  type: string,
+  pseudo: "new" | "old",
+  isBack = false,
+): string {
+  // Walked rather than matched: a selector pattern has to find its own
+  // closing delimiter, and every shape of that backtracks on a file this
+  // size. The selector is simply whatever lies between the previous brace
+  // and this one.
+  let cursor = 0;
+  for (;;) {
+    const open = source.indexOf("{", cursor);
+    if (open === -1) return "";
+    cursor = open + 1;
+    const after = Math.max(
+      source.lastIndexOf("}", open),
+      source.lastIndexOf("{", open - 1),
+    );
+    const selector = source.slice(after + 1, open);
+    if (!selector.includes(`nav-${type})`)) continue;
+    if (!selector.includes(`view-transition-${pseudo}(root)`)) continue;
+    if (selector.includes("nav-back") !== isBack) continue;
+    return bodyAt(source, open);
+  }
+}
+
+describe("the navigation types (design round 12)", () => {
+  it("parsed the round, so nothing below is vacuous", () => {
+    expect(NAV_TYPE_NAMES).toEqual(["push", "rise", "swap", "panel", "cut"]);
+    expect(TRAVEL.get("frame")).toBe("8");
+    expect(navFull.length).toBeGreaterThan(0);
+    expect(navReducedAt).toBeGreaterThan(0);
+  });
+
+  it("declares TRAVEL.frame, which is what a frame may travel", () => {
+    // Law 3: "Max 24px for an element, one bracket width for a frame."
+    // `push` and `panel` both name it, and it was the one TRAVEL value the
+    // port had never needed until now.
+    expect(css).toContain(`--travel-frame: ${TRAVEL.get("frame") ?? "?"}px;`);
+    expect(NAV_TYPES.get("push")?.move).toContain("TRAVEL.frame");
+    expect(navFull).toContain("var(--travel-frame)");
+  });
+
+  it("gives each built type the duration and curve NAV_TYPES names", () => {
+    for (const type of ["push", "rise", "swap"]) {
+      const entry = NAV_TYPES.get(type);
+      const rule = navRule(navFull, type, "new");
+      expect([type, rule === ""]).toEqual([type, false]);
+      expect([
+        type,
+        rule.includes(`var(--dur-${entry?.duration ?? "?"})`),
+      ]).toEqual([type, true]);
+      expect([
+        type,
+        rule.includes(`var(--ease-${entry?.easing ?? "?"})`),
+      ]).toEqual([type, true]);
+    }
+  });
+
+  it("dims the screen a push leaves, and never slides it", () => {
+    // "Incoming slides in from the trailing edge, TRAVEL.frame. Outgoing
+    // holds and dims to 0.6." The outgoing half is the one a port drops.
+    expect(NAV_TYPES.get("push")?.move).toContain("dims to 0.6");
+    expect(keyframes.get("nav-dim")).toContain("opacity: 0.6");
+    expect(navRule(navFull, "push", "old")).toContain("nav-dim");
+    expect(navRule(navFull, "push", "new")).toContain("nav-push-in");
+
+    // "Back reverses both": the returning screen un-dims, the leaving one
+    // travels. Reversed, not replayed.
+    expect(NAV_TYPES.get("push")?.move).toContain("Back reverses both");
+    expect(navRule(navFull, "push", "new", true)).toContain("nav-undim");
+    expect(navRule(navFull, "push", "old", true)).toContain("nav-push-out");
+  });
+
+  it("leaves the screen beneath a rise exactly where it is", () => {
+    // "Incoming rises from the bottom edge its own height … The screen
+    // beneath does not move." Written out rather than omitted: without a
+    // rule the old snapshot takes the UA's default fade and the thing the
+    // flow is laid over dissolves under it.
+    expect(NAV_TYPES.get("rise")?.move).toContain(
+      "The screen beneath does not move",
+    );
+    expect(navRule(navFull, "rise", "old")).toContain("animation: none");
+    // A container, so law 3 lets it travel its own height.
+    expect(keyframes.get("nav-rise")).toContain("translate: 0 100%");
+
+    // "Dismiss drops on ease-exit at quick" — faster than the arrival, on
+    // the curve for something leaving, exactly as the sheet is.
+    expect(NAV_TYPES.get("rise")?.move).toContain(
+      "Dismiss drops on ease-exit at quick",
+    );
+    const dismiss = navRule(navFull, "rise", "old", true);
+    expect(dismiss).toContain("nav-drop");
+    expect(dismiss).toContain("var(--dur-quick)");
+    expect(dismiss).toContain("var(--ease-exit)");
+  });
+
+  it("holds the outgoing screen through a swap, which is not a crossfade", () => {
+    // "Incoming fades in over the outgoing, which holds until covered. No
+    // travel on either." A crossfade would show the ground through the
+    // middle of the move.
+    expect(NAV_TYPES.get("swap")?.move).toContain("holds until covered");
+    expect(navRule(navFull, "swap", "old")).toContain("animation: none");
+    expect(navRule(navFull, "swap", "new")).toContain("nav-fade-in");
+    // No travel on either half.
+    expect(isTravelling(navRule(navFull, "swap", "new"))).toBe(false);
+  });
+
+  it("writes no rule for cut, because cut is the absence of one", () => {
+    // "Nothing. Next frame is the new screen." It is spelled as `false`
+    // from the resolver, so no snapshot is ever taken — a cut written as a
+    // 0ms transition would still pay for two.
+    expect(NAV_TYPES.get("cut")?.move).toBe(
+      "Nothing. Next frame is the new screen.",
+    );
+    expect(navCss).not.toContain("nav-cut");
+  });
+
+  it("names only the tab bar, and nothing else in the app", () => {
+    // Round 12's new NEVER entry: "Only the bracket frame and the tab bar
+    // are named." The bracket frame is an inline device with several
+    // instances per screen and a duplicate name aborts the whole
+    // transition, so one name is all that is safe — and fewer names than
+    // the doctrine allows can never be the thing it forbids.
+    expect(doctrine).toContain("Shared-element transitions between screens");
+    expect(css.match(/view-transition-name:/g)).toHaveLength(1);
+    expect(css).toContain("view-transition-name: tab-bar;");
+  });
+
+  it("collapses every type to a swap at instant, and cut to nothing", () => {
+    // Round 12 extends the rule: "Every navigation type becomes swap at
+    // instant. Cut stays cut. Never zero."
+    expect(doctrine).toContain("Every navigation type becomes swap at instant");
+
+    for (const type of NAV_TYPE_NAMES) {
+      // `cut` never starts a transition, so it has nothing to collapse.
+      if (type === "cut") continue;
+      const arriving = navRule(navReduced, type, "new");
+      const leaving = navRule(navReduced, type, "old");
+      // Every type, including `panel` — which has no full-motion rule at
+      // 390 but must not be left out of the collapse when task 115 gives
+      // it one.
+      expect([type, arriving === ""]).toEqual([type, false]);
+      expect([type, leaving === ""]).toEqual([type, false]);
+      // The swap treatment: the outgoing holds, the incoming fades.
+      expect([type, leaving.includes("animation: none")]).toEqual([type, true]);
+      expect([type, isAnimating(arriving, "opacity:")]).toEqual([type, true]);
+      // …at instant, and never travelling.
+      expect([type, arriving.includes("var(--dur-instant)")]).toEqual([
+        type,
+        true,
+      ]);
+      expect([type, isTravelling(arriving)]).toEqual([type, false]);
+    }
+
+    // "Never zero" — the collapse is to 90ms, which is a move the runner
+    // can still see.
+    expect(navReduced).not.toMatch(/\d{1,5}ms/);
+  });
+});

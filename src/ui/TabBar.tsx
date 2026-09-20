@@ -1,6 +1,7 @@
 import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
-import type { JSX } from "react";
+import { useEffect, type JSX } from "react";
 
+import { isLogFlowPath } from "../lib/nav-types";
 import { Mono } from "./Mono";
 
 /**
@@ -63,12 +64,8 @@ const RESTING_LABEL_CLASS = "tab-label text-muted no-underline";
  * on top of wherever you were, not a place in the bar you travel to. So
  * the indicator never travels to it.
  *
- * The rest of that row is not built here. It says the tab *beneath* stays
- * selected, which means remembering the last tab you were actually on —
- * `/runs/new` does not say — and it is one behaviour with the `rise` the
- * same row specifies. Both belong to the navigation lane; D-80 carries
- * them. Until then no tab is lit during the flow, which is what the bar
- * already does on `/runs/manual`: incomplete rather than wrong.
+ * The rest of that row is built now, in the lane that owns `rise` — see
+ * `lastOnTab` below. D-80 closes with it.
  */
 const TABS = [
   { to: "/feed", label: "Feed" },
@@ -145,15 +142,64 @@ export function activeTabIndex(
  * alternative is measuring each label at runtime, which is a resize
  * observer for a move that is 90ms long.
  */
+/**
+ * The last tab the runner was actually standing on (D-80).
+ *
+ * Module scope and a one-field object, for the reasons `ui/FlowStep`'s
+ * `flow.lastStep` gives and this shares: the bar is remounted by every
+ * route, so component state cannot outlive a navigation, and assigning to
+ * a bare module variable from inside a function is a lint error.
+ *
+ * **Written only from an effect**, which is what makes it safe on a server
+ * that shares module scope between requests: effects do not run there, so
+ * SSR always renders "no tab lit" and one runner's bar can never be
+ * another's. The client's first render agrees, because a fresh document
+ * starts with nothing here — a cold load of `/runs/new` genuinely does not
+ * know which tab you came from, and says so by lighting none.
+ */
+const bar: { lastOnTab?: number | undefined } = {};
+
+/**
+ * Which seat is lit: the tab that owns this path, or — inside the log flow
+ * — the tab the runner was last actually on.
+ *
+ * **Inside the flow, path ownership is the wrong question.** Two of the
+ * four steps live under `/feed` (`/feed/attach/…`, `/feed/verdict/…`), so
+ * `activeTabIndex` lights Feed for them, which is Feed claiming a screen
+ * the runner reached from Closet. The launcher row says the tab *beneath*
+ * stays selected, and beneath means where they were.
+ *
+ * A pure function taking the memory as an argument rather than reading it,
+ * so the case that matters most is reachable from a test: `undefined` is a
+ * cold load straight into `/runs/new`, where the bar genuinely does not
+ * know which tab the runner came from and says so by lighting none.
+ */
+export function tabToLight(
+  pathname: string,
+  lastOnTab: number | undefined,
+): number | undefined {
+  return isLogFlowPath(pathname) ? lastOnTab : activeTabIndex(pathname);
+}
+
 export function TabBar() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const active = activeTabIndex(pathname);
+  const active = tabToLight(pathname, bar.lastOnTab);
+
+  useEffect(() => {
+    // Only a real tab is worth recording. Inside the flow `active` is
+    // already the remembered value, and writing it back would keep the
+    // flow's own screens alive in the memory after the runner had left.
+    if (active !== undefined && !isLogFlowPath(pathname)) {
+      bar.lastOnTab = active;
+    }
+  }, [pathname, active]);
 
   return (
     <nav
       aria-label="Primary"
+      data-slot="tab-bar"
       className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="relative m-0 grid list-none grid-cols-5 p-0 py-4">

@@ -4,11 +4,19 @@
  * §1; no dedicated product.md screen ID, same as auth in
  * ../auth/auth.demo.spec.ts).
  *
- * Journey: sign up -> log a run by hand (title, timing, distance, effort) ->
- * the weather module hasn't merged yet (D-24 / 102↔103 pending), so
- * conditions never resolve and the run lands on the manual-temp fallback ->
- * type a temperature -> the fallback clears -> the run shows in the runs
- * list with its weather status.
+ * Journey: open the closet -> launch the log flow from the bar -> log a run
+ * by hand (title, timing, distance, effort) -> the weather module hasn't
+ * merged yet (D-24 / 102↔103 pending), so conditions never resolve and the
+ * run lands on the manual-temp fallback -> type a temperature -> the
+ * fallback clears -> the run shows in the runs list with its weather status.
+ *
+ * **It opens on the closet rather than on `/runs/new`, and that is the
+ * point of the first beat** (task 117). A `page.goto` is a document load,
+ * which is a first paint — NAV types it `cut`, so a demo that jumps
+ * straight to a screen records none of the move that gets it there. Going
+ * in through the bar records two things at once: the `rise` that lays the
+ * flow over where the runner was, and D-80's other half — the Closet tab
+ * stays lit underneath, because `+ Add` is a launcher and not a tab.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -42,8 +50,27 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   // them (D-58), so a recorded run takes minutes where CI's takes seconds.
   // A timeout here is for catching a hang.
   testInfo.setTimeout(60_000);
-  await page.goto("/runs/new");
+  await page.goto("/closet");
   await hydrated(page);
+
+  await scene(page, "Logging a run is laid over wherever you were");
+  await page.getByRole("link", { name: "+ Add" }).click();
+  await hydrated(page);
+  // The launcher takes no seat of its own, and the indicator stays under
+  // the second of five — the closet, where the runner came from.
+  //
+  // The indicator rather than `aria-current`: `Link` owns that attribute
+  // and sets it on the route the runner is actually on, which is
+  // `/runs/new`. Holding the *highlight* is what the launcher row asks
+  // for; claiming they are on a page they are not would be a different
+  // thing, and a worse one for a screen reader.
+  // Before D-80 the bar rendered no indicator at all here, so its mere
+  // presence is the change; that it is the closet's is the label beside it.
+  await expect(page.locator('[data-slot="tab-indicator"] span')).toBeVisible();
+  await expect(page.getByRole("link", { name: "Closet" })).toHaveClass(
+    /text-ink/u,
+  );
+
   await scene(page, "Weather is never typed — manual is the fallback");
   await page.getByRole("link", { name: "enter it manually" }).click();
   await hydrated(page);

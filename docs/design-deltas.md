@@ -34,7 +34,7 @@ round (D-26…D-33).
 Two files changed and nothing else: `motion.js` gains `NAV_TYPES` (five
 types) and `NAV` (26 edges at three widths), two NEVER entries, and one
 clause on `REDUCED_MOTION`; `Motion Doctrine.dc.html` gains section 04b to
-draw them. The doctrine now covers what happens *between* screens as well
+draw them. The doctrine now covers what happens _between_ screens as well
 as on one.
 
 **The `NAV` header carries an ownership rule, and it changes how a lane
@@ -194,8 +194,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     indicator never travels to it, and the tab beneath stays selected"_ —
     so the bar carries four tabs at five seats, and the launcher takes
     none of them. The indicator half shipped in task 114; the selected-tab
-    half is D-80, with the navigation lane. The two open questions above
-    are untouched by that ruling and still stand.
+    half shipped in task 117 with the `rise` it is one behaviour with, and
+    D-80 is closed. The two open questions above are untouched by that
+    ruling and still stand.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 

@@ -13,7 +13,7 @@ import { FlowStep, LOG_FLOW, directionBetween } from "../../src/ui/FlowStep";
 import { DURATION } from "../../src/ui/motion";
 import { Sheet } from "../../src/ui/Sheet";
 import { Skeleton } from "../../src/ui/Skeleton";
-import { TabBar, activeTabIndex } from "../../src/ui/TabBar";
+import { TabBar, activeTabIndex, tabToLight } from "../../src/ui/TabBar";
 
 /**
  * The surfaces whose move lives in a component rather than only in CSS.
@@ -68,13 +68,12 @@ describe("Tab switch: the indicator slides under the label", () => {
     }
   });
 
-  it("does not follow the runner into the log flow", async () => {
+  it("never travels to the launcher's own seat", async () => {
     // Round 12: "+ Add is a launcher, not a tab: the indicator never
-    // travels to it." Logging a run is a task laid over wherever you
-    // were, so the bar does not claim you have gone somewhere.
-    await renderAt(<TabBar />, "/runs/new");
+    // travels to it." The third seat is at 200%, and no path produces it.
+    const { unmount } = await renderAt(<TabBar />, "/runs/new");
 
-    expect(indicator()).toBeNull();
+    expect(indicator()).not.toHaveStyle({ translate: "200% 0" });
     expect(screen.getByRole("link", { name: "+ Add" })).toHaveClass(
       "text-muted",
     );
@@ -84,6 +83,37 @@ describe("Tab switch: the indicator slides under the label", () => {
       "href",
       "/runs/new",
     );
+    unmount();
+  });
+
+  it("holds the tab beneath while the flow is up (D-80)", async () => {
+    // The other half of the launcher row: "the tab beneath stays
+    // selected". The runner was in the closet; logging a run is laid over
+    // it, so the closet is still where they are.
+    const closet = await renderAt(<TabBar />, "/closet");
+    expect(indicator()).toHaveStyle({ translate: "100% 0" });
+    closet.unmount();
+
+    // Every step of the flow, including the two that live under `/feed` —
+    // where path ownership would otherwise hand the seat to a tab the
+    // runner never tapped.
+    for (const path of [
+      "/runs/new",
+      "/runs/manual",
+      "/feed/attach/run_1",
+      "/feed/verdict/entry_1",
+    ]) {
+      const step = await renderAt(<TabBar />, path);
+      expect([path, indicator()?.getAttribute("style")]).toEqual([
+        path,
+        "translate: 100% 0;",
+      ]);
+      step.unmount();
+    }
+
+    // And it is given back the moment the flow ends somewhere real.
+    await renderAt(<TabBar />, "/feed/entry/entry_1");
+    expect(indicator()).toHaveStyle({ translate: "0% 0" });
   });
 
   it("marks the active label and leaves the rest muted", async () => {
@@ -100,12 +130,26 @@ describe("Tab switch: the indicator slides under the label", () => {
 
   it("shows no indicator at all on a path no tab owns", async () => {
     // A tab bar still pointing at wherever you were last is a tab bar
-    // that lies. `/runs/manual` is inside the log flow, not on a tab.
-    await renderAt(<TabBar />, "/runs/manual");
+    // that lies. Onboarding is outside the bar entirely — and outside the
+    // log flow, so the memory does not apply to it either.
+    await renderAt(<TabBar />, "/onboarding/name");
     expect(indicator()).toBeNull();
     expect(screen.getByRole("link", { name: "+ Add" })).toHaveClass(
       "text-muted",
     );
+  });
+
+  it("lights nothing on a cold load straight into the flow", () => {
+    // The memory is per-document, so a runner who opened `/runs/new` from
+    // a link has no tab beneath — and the honest answer is none, not a
+    // guess. Asserted through the pure function, because "no tab has been
+    // visited yet" is a state a rendered sequence cannot get back to.
+    expect(tabToLight("/runs/new", undefined)).toBeUndefined();
+    expect(tabToLight("/feed/verdict/entry_1", undefined)).toBeUndefined();
+    // …and the remembered tab is used only inside the flow. A post detail
+    // is a real place, owned by Feed, whatever was remembered.
+    expect(tabToLight("/feed/entry/entry_1", 1)).toBe(0);
+    expect(tabToLight("/runs/new", 1)).toBe(1);
   });
 
   it("gives a descendant path to the deepest tab that owns it", () => {
@@ -138,6 +182,27 @@ describe("Tab switch: the indicator slides under the label", () => {
   });
 });
 
+/**
+ * A route change, modelled faithfully.
+ *
+ * Each step is its own route, so the outgoing step unmounts and the
+ * incoming one mounts — but in **one commit**, which is the part an
+ * `unmount()` followed by a fresh `render()` gets wrong. Keying the element
+ * on the step is what reproduces it: React renders the new step (reading
+ * the record), then runs the deleted subtree's cleanup, then the new
+ * subtree's effect.
+ *
+ * The distinction is load-bearing now that leaving the flow clears the
+ * record. Detached, every step would read `entering`.
+ */
+function step(at: number): ReactElement {
+  return (
+    <FlowStep key={at} step={at}>
+      step {at}
+    </FlowStep>
+  );
+}
+
 describe("Log flow step: direction carries which way you are going", () => {
   it("is forward up the flow and back down it", () => {
     // "Direction tells you which way you are travelling through the flow,
@@ -154,30 +219,49 @@ describe("Log flow step: direction carries which way you are going", () => {
     expect(LOG_FLOW.attach).toBeLessThan(LOG_FLOW.verdict);
   });
 
-  it("enters from the trailing edge, and reverses when you go back", async () => {
-    // Each step is its own route, so the component remembers across
-    // mounts rather than across renders. The sequence is the test.
-    const first = render(<FlowStep step={LOG_FLOW.intake}>intake</FlowStep>);
-    expect(screen.getByText("intake")).toHaveClass("flow-step-forward");
-    await waitFor(() => {
-      expect(screen.getByText("intake")).toBeInTheDocument();
-    });
-    first.unmount();
+  it("does not move on the way in — the router's rise is the arrival", () => {
+    // Round 12: "+ Add is a launcher … a flow is a task laid on top of
+    // where you were." A1 used to play the step slide here as well, which
+    // is two moves on one navigation.
+    render(step(LOG_FLOW.intake));
 
-    const second = render(<FlowStep step={LOG_FLOW.verdict}>verdict</FlowStep>);
-    const forward = screen.getByText("verdict");
+    const entered = screen.getByText(/step 1/u);
+    expect(entered).toHaveAttribute("data-flow-direction", "entering");
+    expect(entered).not.toHaveClass("flow-step-forward");
+    expect(entered).not.toHaveClass("flow-step-back");
+  });
+
+  it("enters from the trailing edge, and reverses when you go back", () => {
+    const flow = render(step(LOG_FLOW.intake));
+
+    flow.rerender(step(LOG_FLOW.verdict));
+    const forward = screen.getByText(/step 3/u);
     expect(forward).toHaveAttribute("data-flow-direction", "forward");
     expect(forward).toHaveClass("flow-step-forward");
-    await waitFor(() => {
-      expect(screen.getByText("verdict")).toBeInTheDocument();
-    });
-    second.unmount();
+    expect(forward).not.toHaveClass("flow-step-back");
 
-    render(<FlowStep step={LOG_FLOW.attach}>attach</FlowStep>);
-    const back = screen.getByText("attach");
+    flow.rerender(step(LOG_FLOW.attach));
+    const back = screen.getByText(/step 2/u);
     expect(back).toHaveAttribute("data-flow-direction", "back");
     expect(back).toHaveClass("flow-step-back");
     expect(back).not.toHaveClass("flow-step-forward");
+  });
+
+  it("forgets the flow once the runner leaves it", () => {
+    // The bug this closes: finish at the verdict, go somewhere else, then
+    // tap `+ Add` again. The record still said 3, so the intake slid in
+    // backwards as if the runner had returned to it.
+    const flow = render(step(LOG_FLOW.intake));
+    flow.rerender(step(LOG_FLOW.verdict));
+    expect(screen.getByText(/step 3/u)).toHaveClass("flow-step-forward");
+    flow.unmount();
+
+    render(step(LOG_FLOW.intake));
+
+    expect(screen.getByText(/step 1/u)).toHaveAttribute(
+      "data-flow-direction",
+      "entering",
+    );
   });
 
   it("remembers a step that changed under it, not only the one it mounted with", () => {
@@ -185,11 +269,18 @@ describe("Log flow step: direction carries which way you are going", () => {
     // constant dependency list the effect runs once on mount and a screen
     // that swapped steps in place would leave the *next* one measuring
     // against a step nobody is on any more.
+    //
+    // No `key` here, deliberately: this is the same element being given a
+    // new step, which is the case the dependency list exists for.
     const mounted = render(<FlowStep step={LOG_FLOW.intake}>one</FlowStep>);
     mounted.rerender(<FlowStep step={LOG_FLOW.verdict}>one</FlowStep>);
-    mounted.unmount();
 
-    render(<FlowStep step={LOG_FLOW.attach}>two</FlowStep>);
+    mounted.rerender(
+      <>
+        <FlowStep step={LOG_FLOW.verdict}>one</FlowStep>
+        <FlowStep step={LOG_FLOW.attach}>two</FlowStep>
+      </>,
+    );
 
     expect(screen.getByText("two")).toHaveAttribute(
       "data-flow-direction",
