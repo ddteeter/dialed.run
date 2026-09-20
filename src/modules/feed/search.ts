@@ -42,12 +42,20 @@ export async function searchByDisplayName(
   // of them. Raised by the repo-wide format pass on PR #73 — the
   // directive was still there, still looked right, and had quietly
   // stopped covering the `.filter`.
+  //
+  // The `restore` sits after the closing brace because Stryker reads
+  // directives from a node's *leading* comments, and a comment on the last
+  // line before `}` leads no node — it is the previous statement's
+  // trailing comment. Inside, it never ran and the `disable` reached end of
+  // file: measured, `isNamed`'s ConditionalExpression came back `Ignored`
+  // by this runaway rather than by its own directive below. Out here it
+  // leads `isNamed`, which is a node. (guardrails 0.6.0 sanction-placement)
   // Stryker disable ConditionalExpression,MethodExpression
   return rows
     .filter(isNamed)
     .map((r) => ({ userId: r.userId, displayName: r.displayName }));
-  // Stryker restore ConditionalExpression,MethodExpression
 }
+// Stryker restore ConditionalExpression,MethodExpression
 
 function isNamed(row: {
   userId: string;

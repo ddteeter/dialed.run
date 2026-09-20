@@ -36,18 +36,59 @@ block — instead of as a wall of `no-coverage` mutants. If you are looking at
 `no-coverage` violations, the project has claimed that file. Cover it; do not
 reach for a negation to make it stop.
 
+## When stryker will not start at all
+
+`guardrails/stryker-dry-run-failed` is not a mutation finding and not a
+misconfiguration. It means one or more tests failed in stryker's **initial**
+run, before a single mutant was tested — so the suite is red on its own terms
+and there is no mutation verdict to act on.
+
+Run the suite directly; it reproduces the failure far faster than stryker will.
+The violation names the failing tests. Re-running is also a legitimate first
+response here, and only here: a dry run is the one analyzer failure where a
+flaky test, rather than a defect, is a common cause.
+
 ## The loop
 
-1. **Scope the run to the file you are working on.** A whole-repo run is minutes;
-   one file is seconds. `npx stryker run --mutate '<path>' --reporters json`,
+1. **Clear the last report, then scope the run to the files you are working on.**
+   A whole-repo run is minutes; a few files is seconds.
+
+   ```sh
+   rm -rf reports/mutation
+   npx stryker run --mutate "src/a.ts,src/b.ts" --reporters json
+   ```
+
    then read `reports/mutation/mutation.json`.
+
+   **`--mutate` takes a comma-separated file list**, not just one path. On a
+   real paydown that is the difference between ~30 seconds and 20-odd minutes,
+   and it is not obvious from the flag's name.
+
+   **The `rm -rf` is not housekeeping — do it first, every time.** Stryker's
+   report path is fixed, gitignored and persists across runs, and a hand-rolled
+   `npx stryker run` does not clear it. The gate's own invocation deletes the
+   report before it runs for exactly this reason; your invocation has no such
+   protection. So if your scoped run crashes, is killed, or never reaches its
+   reporter, `reports/mutation/mutation.json` still holds **the previous run's**
+   results — a wider file set, quoting source you have since edited — and
+   nothing marks it as stale. An hour spent killing mutants that no longer
+   exist is the normal outcome.
+
+   A second, quieter version of the same trap: the gate passes `--incremental`
+   on every run, so `reports/stryker-incremental.json` exists even in a repo
+   that never set `incremental` itself. If your `stryker.conf.json` _does_ set
+   `incremental: true`, your hand-rolled run will read that cache and merge
+   verdicts from a different file set into your report. Delete it too when a
+   scoped run's results look wider than the scope you asked for.
+
 2. **Classify every survivor** as killable or equivalent (below). Most are
    killable. Expect roughly **1 in 5** to be equivalent — if you are proving
    equivalence far more often than that, you are giving up too early.
 3. **Kill the killable ones**, re-run, repeat until zero.
 4. **Only then** consider an exemption for what is left.
 
-Delete `reports/` and `.stryker-tmp/` when you are done.
+Delete `reports/` and `.stryker-tmp/` when you are done, too — but the run that
+matters is the one you cleared _before_.
 
 ## Is it killable or equivalent?
 
@@ -182,6 +223,14 @@ below.
    also collapses a `}` / `catch {` pair and relocates a comment placed there,
    defeating the directive — such sites need `// prettier-ignore`.
 
+   Both halves of this are now **mechanically checked**: `sanctions-check` fails
+   when a granted region `disable` has no `restore` covering it (reporting the
+   range it really covers, to end of file), and when a `restore` is followed by
+   `}` / `else` / `catch` / end-of-file rather than a statement. The check exists
+   because the site is correct when written and wrong later — the formatter moves
+   the comment, or an edit moves the statement — so review is not the moment that
+   catches it.
+
 4. **Verify the directive took effect, and measure its collateral.** Re-run and
    confirm the mutant moved to `Ignored` rather than staying `Survived` — a
    directive that silently failed to attach is easy to miss. Then check what
@@ -201,6 +250,23 @@ diff-auditor treats it as one. It requires an entry in
 - the exact `file|kind|text` key,
 - the equivalence argument, or what you tried and why it cannot work,
 - what stops being checked once it is granted.
+
+Do not hand-write the key — `guardrails sanction` derives it for you. Run it
+(`--from=<manifest>` to work from a blocking manifest, or with no flag to read
+the working diff) and it prints, for every suppression that would need a grant:
+the exact key from the auditor's own lexer, the real `count`, a ready-to-paste
+`sanctionedSuppressions` entry, what stops being checked, and how many grants of
+that shape the repo already holds. It writes nothing — there is no `--apply`,
+deliberately. The entry it prints is what you take to the developer, and the
+precedent count is the number that should start that conversation rather than
+end it.
+
+The counted entry is always the proposal. Where the file's path or header
+**reads as** generated, an `ALSO CONSIDER` block offers the whole-file
+`sanctionedFiles` grant underneath it — as a question for you to answer, not a
+finding about the file. Establish that a generator really writes the file
+before preferring it; if a person maintains the file, ignore the block and take
+the counted entry.
 
 **Nothing downstream will catch a self-grant for you.** `sanctions-check`
 prints every newly-added key and exits 0 — by design, since the human reviewing
