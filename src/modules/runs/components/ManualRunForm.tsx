@@ -207,7 +207,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
           </FormField>
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm font-semibold">
+      <label className="flex items-center gap-2 text-body font-semibold">
         <input
           type="checkbox"
           checked={indoor}

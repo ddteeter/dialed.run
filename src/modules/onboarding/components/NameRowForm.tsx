@@ -129,7 +129,7 @@ export function NameRowForm({
           <option key={option} value={option} />
         ))}
       </datalist>
-      <span className="text-xs text-night/50">Brand alone is enough.</span>
+      <span className="text-micro text-muted">Brand alone is enough.</span>
 
       <FormFailureBand
         failure={form.failure}

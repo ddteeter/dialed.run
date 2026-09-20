@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ToggleField } from "../../../ui";
+import { Mono, ToggleField } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
   browserPipeline,
@@ -166,13 +166,13 @@ export function PhotoBlur({
         }}
         field={blurFieldProps}
       />
-      <p className="text-xs text-night/60">
+      <p className="text-micro text-quiet">
         Happens on your device, before upload.
       </p>
 
       {isOn ? (
         <>
-          <p aria-live="polite" className="text-sm">
+          <p aria-live="polite" className="text-small">
             {/* `phase` narrows to "ran" | "unavailable" here, which is
                 exactly what blurSummary wants. It used to be re-derived
                 with a `phase === "ran" ? "ran" : "unavailable"`, and that
@@ -211,8 +211,8 @@ export function PhotoBlur({
               }}
             />
           )}
-          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
-            Tap to blur
+          <p className="m-0 text-muted">
+            <Mono step="sm">Tap to blur</Mono>
           </p>
         </>
       ) : undefined}

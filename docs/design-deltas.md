@@ -81,6 +81,37 @@ round (D-26…D-33).
     schema or a product call, it goes to the owner and lives in
     `docs/deferred.md`.
 
+14. **T1 has no role for an accent used as text.** The table's fifteen rows
+    cover pink and hi-viz as _surfaces_ (`--action`, `--failure`) and pink
+    and teal as _body text_ (`--cold-text`, `--dialed-text`, both darker
+    cuts that clear contrast on paper). Two shipped surfaces need neither:
+    `NowGoRun`'s section eyebrow is hi-viz _text_ on ink, and
+    `EntryDetail`'s matched panel is a teal wash behind a teal border. Both
+    now spell the raw palette colour (`text-hi-viz`, `bg-teal/10`), which
+    is the placeholder protocol rather than an answer — the wash in
+    particular is an opacity, and T1's own note on `--quiet` is "full
+    strength, never opacity". **The ask is two rows**: an accent-as-text
+    value and an accent-tint value, per ground. Nothing is blocked.
+
+15. **Three values the contract sends somewhere visible, for confirmation.**
+    Each is a COLLAPSE the lane applied as written; listing them so design
+    sees the result rather than discovering it in a demo.
+    - The coverage swatch's `2px` corner became `RADIUS.none`, because
+      RADIUS.none's own comment names "coverage cells". It reads squarer.
+    - `NowGoRun`'s ink block took T1's dark-column `--hairline` (`#2A2A31`)
+      for its two borders, where it had been drawing paper at 30% and 15%.
+      That is the value the dark artboards were generated from, and on
+      `#0B0B0E` it is much quieter than the drawing.
+    - The `[dialed.run]` wordmark's `.run` was a raw `#8B8B93`, which is
+      T1's **dark** muted. On paper the role resolves to `#7A7A70`.
+
+16. **§AH's F strip says VISIBILITY and our column cannot.**
+    `wardrobe_items.visibility` already exists and means the moderation
+    state — `text().notNull().default("ok")`, written by `closet/service.ts`,
+    sitting next to `retired`. The hi-viz attribute ships as `hi_viz`
+    (owner, 2026-09-19). **The ask is the label**: the artboard and the
+    schema should not disagree about a word this load-bearing.
+
 ## Answered in rounds 10–11 (imported 2026-09-18)
 
 Both rounds came back together and cleared **four queue items, the P2.5

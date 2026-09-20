@@ -1,5 +1,6 @@
 import type { JSX, ReactNode, RefObject } from "react";
 
+import { Mono } from "./Mono";
 import type { FieldProps, FormFailure, SummaryRow } from "./use-form-submit";
 
 /**
@@ -76,7 +77,7 @@ export function FieldMessage({
   return (
     <span
       id={`${name}-message`}
-      className="self-start bg-hi-viz px-[10px] py-[7px] text-[13px] leading-snug text-night"
+      className="self-start bg-failure px-3 py-2 text-small text-ink"
     >
       {error}
     </span>
@@ -99,26 +100,30 @@ export function FormField({
   const isInvalid = error !== undefined;
   return (
     <div className="flex flex-col gap-2">
-      <label
-        htmlFor={name}
-        className="font-mono text-[11px] uppercase tracking-[0.1em] text-night/50"
-      >
-        {label}
+      <label htmlFor={name} className="text-muted">
+        <Mono step="sm">{label}</Mono>
       </label>
-      {/* Weight is the signal: 1px rule -> 2px ink. The padding drops by
-          1px so the box does not grow when it gains the heavier border. */}
+      {/* Weight is the signal: 1px rule -> 2px ink, and the box does not
+          grow when it gains the heavier one.
+
+          That used to be a 1px padding compensation — `px-[13px] py-[11px]`
+          against `px-[14px] py-[12px]` — which the 4px grid cannot express:
+          SPACE is "a 4px step, nothing else. 1px and 2px exist only as
+          border widths." So the second pixel is an inset ring instead. A
+          ring is a box-shadow, so it occupies no space at all and there is
+          nothing left to compensate for. */}
       <div
         data-invalid={isInvalid ? "true" : undefined}
         className={
           isInvalid
-            ? "flex min-h-12 items-center rounded-lg border-2 border-night bg-chalk px-[13px] py-[11px]"
-            : "flex min-h-12 items-center rounded-lg border border-night/15 bg-chalk px-[14px] py-[12px]"
+            ? "flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
+            : "flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
         }
       >
         {children}
       </div>
       {hint !== undefined && !isInvalid ? (
-        <span className="text-xs leading-snug text-night/50">{hint}</span>
+        <span className="text-micro text-muted">{hint}</span>
       ) : undefined}
       <FieldMessage name={name} error={error} />
     </div>
@@ -211,15 +216,11 @@ export function FormErrorSummary({
     <div
       ref={summaryRef}
       tabIndex={-1}
-      className="flex flex-col gap-2.5 border border-night p-4 outline-none"
+      className="flex flex-col gap-3 border border-ink p-4 outline-none"
     >
-      <span className="font-display text-[11px] uppercase tracking-[0.12em]">
-        Nothing saved
-      </span>
-      <span className="text-[15px] leading-snug">
-        {rows.length} fields need a fix.
-      </span>
-      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+      <Mono step="xs">Nothing saved</Mono>
+      <span className="text-body">{rows.length} fields need a fix.</span>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {rows.map((row) => (
           <li key={row.name}>
             <button
@@ -227,7 +228,7 @@ export function FormErrorSummary({
               onClick={() => {
                 onFocusField(row.name);
               }}
-              className="cursor-pointer border-none bg-transparent p-0 text-left text-sm underline underline-offset-[3px]"
+              className="cursor-pointer border-none bg-transparent p-0 text-left text-body underline underline-offset-4"
             >
               {row.label} — {row.message}
             </button>
@@ -258,16 +259,14 @@ export function FormFailureBand({
 }>): JSX.Element | undefined {
   if (failure === undefined) return undefined;
   return (
-    <div className="flex flex-col items-start gap-3 border border-night p-4">
-      <span className="font-display text-[11px] uppercase tracking-[0.12em]">
-        Nothing saved
-      </span>
-      <span className="text-[15px] leading-snug">{failure.message}</span>
+    <div className="flex flex-col items-start gap-3 border border-ink p-4">
+      <Mono step="xs">Nothing saved</Mono>
+      <span className="text-body">{failure.message}</span>
       <button
         ref={retryRef}
         type="button"
         onClick={onRetry}
-        className="cursor-pointer rounded-lg border border-night bg-night px-4 py-2.5 text-sm font-bold text-chalk"
+        className="cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
       >
         Try again
       </button>
@@ -300,7 +299,7 @@ export function SubmitButton({
       type="submit"
       aria-disabled={pending || undefined}
       aria-busy={pending || undefined}
-      className={`grid min-h-[52px] place-items-center rounded-[10px] border-none bg-pink px-6 py-4 font-display text-base uppercase tracking-[-0.01em] text-night ${
+      className={`grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase  text-ink ${
         pending ? "cursor-default" : "cursor-pointer"
       }`}
     >
@@ -316,7 +315,7 @@ export function SubmitButton({
           {label}
         </span>
         <span
-          className="flex gap-[0.4em] [grid-area:1/1]"
+          className="flex gap-1 [grid-area:1/1]"
           style={{ visibility: pending ? undefined : "hidden" }}
         >
           <span className="breathe" aria-hidden="true">
@@ -401,7 +400,7 @@ export function ChoiceField<TOption extends string>({
           );
           onChange(picked ?? "");
         }}
-        className="rounded-md border border-night/20 bg-white px-3 py-2 font-normal"
+        className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
       >
         <option value="">—</option>
         {options.map((option) => (
@@ -441,7 +440,7 @@ export function ToggleField({
   onChange: (isOn: boolean) => void;
 }>): JSX.Element {
   return (
-    <label className="flex items-center gap-2 text-sm font-semibold">
+    <label className="flex items-center gap-2 text-body font-semibold">
       <input
         {...field(name)}
         type="checkbox"
@@ -510,13 +509,13 @@ export function ChoiceList<TOption extends string>({
 >): JSX.Element {
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-      <legend className="mb-2 p-0 font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
-        {legend}
+      <legend className="mb-2 p-0 text-muted">
+        <Mono step="sm">{legend}</Mono>
       </legend>
       {options.map((option) => (
         <label
           key={option}
-          className="flex items-center gap-3 rounded-lg border border-night/15 bg-chalk px-[14px] py-[12px] text-sm font-semibold"
+          className="flex items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3 text-body font-semibold"
         >
           <input
             {...field(name)}
@@ -529,14 +528,14 @@ export function ChoiceList<TOption extends string>({
           />
           {optionLabels[option]}
           {optionNotes === undefined ? undefined : (
-            <span className="ml-auto font-mono text-[13px] font-normal tabular-nums text-night/60">
+            <Mono step="md" className="ml-auto tabular-nums text-quiet">
               {optionNotes[option]}
-            </span>
+            </Mono>
           )}
         </label>
       ))}
       {hint !== undefined && error === undefined ? (
-        <span className="text-xs leading-snug text-night/50">{hint}</span>
+        <span className="text-micro text-muted">{hint}</span>
       ) : undefined}
       <FieldMessage name={name} error={error} />
     </fieldset>

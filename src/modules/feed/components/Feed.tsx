@@ -33,14 +33,17 @@ export function Feed({
   const [tab, setTab] = useState<"following" | "conditions">("following");
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl uppercase leading-none">Feed</h1>
-        <Link to="/feed/search" className="text-sm font-semibold text-pink">
+        <h1 className="font-display text-title uppercase">Feed</h1>
+        <Link
+          to="/feed/search"
+          className="text-body font-semibold text-cold-text"
+        >
           Find runners
         </Link>
       </div>
-      <div className="flex gap-1 border-b border-night/15">
+      <div className="flex gap-1 border-b border-hairline">
         {(["following", "conditions"] as const).map((value) => (
           <button
             key={value}
@@ -50,8 +53,8 @@ export function Feed({
             }}
             className={
               tab === value
-                ? "border-b-2 border-pink px-3 py-2 font-semibold"
-                : "px-3 py-2 text-night/50"
+                ? "border-b-2 border-cold-text px-3 py-2 font-semibold"
+                : "px-3 py-2 text-muted"
             }
           >
             {value === "following" ? "Following" : "Your conditions"}
@@ -73,9 +76,9 @@ function FollowingTab({
 }: Readonly<{ items: FeedItem[]; units: Units }>) {
   if (items.length === 0) {
     return (
-      <div className="flex flex-col gap-3 py-12 text-center text-night/60">
+      <div className="flex flex-col gap-3 py-12 text-center text-quiet">
         <p>Nobody you follow has posted yet.</p>
-        <Link to="/feed/search" className="font-semibold text-pink">
+        <Link to="/feed/search" className="font-semibold text-cold-text">
           Search for runners to follow
         </Link>
       </div>
@@ -86,19 +89,19 @@ function FollowingTab({
       {items.map((item) => (
         <li
           key={item.entryId}
-          className="rounded-xl border border-night/10 p-4"
+          className="rounded-card border border-hairline p-4"
         >
           <Link
             to="/feed/entry/$entryId"
             params={{ entryId: item.entryId }}
-            className="flex flex-col gap-2 text-night no-underline"
+            className="flex flex-col gap-2 text-ink no-underline"
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold">
                 {item.authorDisplayName ?? "A runner"}
               </span>
               {item.conditions ? (
-                <Mono className="text-xs text-teal">
+                <Mono className="text-dialed-text">
                   {formatTempRange(
                     item.conditions.span.minTempC,
                     item.conditions.span.maxTempC,
@@ -107,13 +110,13 @@ function FollowingTab({
                 </Mono>
               ) : undefined}
             </div>
-            <Mono className="text-xs text-night/60">
+            <Mono className="text-quiet">
               {formatDistance(item.distanceM, units.distance)}
             </Mono>
             {item.caption ? (
-              <p className="m-0 text-sm">{item.caption}</p>
+              <p className="m-0 text-small">{item.caption}</p>
             ) : undefined}
-            <Mono className="text-xs text-night/40">
+            <Mono className="text-muted">
               useful [{String(item.usefulCount)}]
             </Mono>
           </Link>
@@ -169,7 +172,7 @@ function ConditionsTab({
   }
   if (state === undefined) {
     return (
-      <p className="py-12 text-center text-night/60">
+      <p className="py-12 text-center text-quiet">
         Enable location to see what other runners are wearing right now.
       </p>
     );
@@ -177,7 +180,7 @@ function ConditionsTab({
   const result = state;
   if (result.total === 0) {
     return (
-      <p className="py-12 text-center text-night/60">
+      <p className="py-12 text-center text-quiet">
         Nobody near you has logged these conditions yet. You&rsquo;ll be the
         first.
       </p>
@@ -185,7 +188,7 @@ function ConditionsTab({
   }
   return (
     <div className="flex flex-col gap-3">
-      <Bracketed className="text-sm">
+      <Bracketed step="md">
         {String(result.total)} {result.total === 1 ? "runner" : "runners"}{" "}
         logged
         {result.widened ? " (widened window)" : ""}
@@ -196,7 +199,7 @@ function ConditionsTab({
           .map((group) => (
             <li key={group} className="flex items-center justify-between">
               <span>{uiGroupLabels[group]}</span>
-              <Mono className="text-teal">
+              <Mono className="text-dialed-text">
                 {String(result.groups[group])}/{String(result.total)}
               </Mono>
             </li>

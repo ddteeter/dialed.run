@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { Bracketed, ListSection } from "../../../ui";
+import { Bracketed, ListSection, Mono } from "../../../ui";
 import type { BlockedRunner } from "../blocks";
 import { useSettled } from "./use-settled";
 
@@ -40,10 +40,10 @@ export function BlockedRunners({
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-night/60">
-          What blocking does
+        <h2 className="text-quiet">
+          <Mono step="xs">What blocking does</Mono>
         </h2>
-        <ul className="flex flex-col gap-2 text-sm">
+        <ul className="flex flex-col gap-2 text-body">
           <li>
             <Bracketed>blocked</Bracketed> They can&apos;t see your entries,
             your closet, or find you in search
@@ -57,7 +57,7 @@ export function BlockedRunners({
             conditions numbers — those name nobody
           </li>
         </ul>
-        <p className="text-xs text-night/60">
+        <p className="text-micro text-quiet">
           They&apos;re not told. Blocking is quiet on purpose.
         </p>
       </section>
@@ -68,29 +68,28 @@ export function BlockedRunners({
           items={visible}
           count
           whenEmpty={
-            <p className="text-sm text-night/60">Nobody. That&apos;s normal.</p>
+            <p className="text-small text-quiet">Nobody. That&apos;s normal.</p>
           }
         >
           {(runner) => (
             <li
               key={runner.userId}
-              className="flex items-center justify-between gap-3 text-sm"
+              className="flex items-center justify-between gap-3 text-body"
             >
               <span>{runner.displayName ?? "A runner"}</span>
               <button
                 type="button"
-                className="text-xs font-semibold uppercase tracking-wide"
                 onClick={() => {
                   settle(runner.userId);
                   void unblock({ data: { userId: runner.userId } });
                 }}
               >
-                Unblock
+                <Mono step="xs">Unblock</Mono>
               </button>
             </li>
           )}
         </ListSection>
-        <p className="text-xs text-night/60">
+        <p className="text-micro text-quiet">
           Nothing here is a list anyone else can see.
         </p>
       </section>

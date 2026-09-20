@@ -31,7 +31,7 @@ function weatherBadge(run: RunRow): string {
 export function RunList({ runs }: Readonly<{ runs: readonly RunRow[] }>) {
   if (runs.length === 0) {
     return (
-      <p className="text-night/70">
+      <p className="text-quiet">
         Drop in a GPX and we&rsquo;ll figure out the weather for you.
       </p>
     );
@@ -44,10 +44,10 @@ export function RunList({ runs }: Readonly<{ runs: readonly RunRow[] }>) {
           <Link
             to="/runs/$runId"
             params={{ runId: run.id }}
-            className="flex flex-col gap-1 rounded-md border border-night/15 bg-white px-4 py-3 no-underline"
+            className="flex flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-3 no-underline"
           >
-            <span className="font-semibold text-night">{run.title}</span>
-            <Mono className="text-xs text-night/60">
+            <span className="font-semibold text-ink">{run.title}</span>
+            <Mono className="text-quiet">
               <Bracketed>{weatherBadge(run)}</Bracketed>
               {" · "}
               {(run.distanceM / 1000).toFixed(2)} KM

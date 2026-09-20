@@ -27,11 +27,11 @@ function StravaPage() {
   return (
     <BelledLayout unreadCount={unreadCount}>
       <Page title="Strava" width="narrow">
-        <p className="text-sm text-night/50">
+        <p className="text-small text-muted">
           We never store your Strava activity data — connecting only turns on a
           reminder to log your kit after a run.
         </p>
-        <p className="text-sm text-night/50">
+        <p className="text-small text-muted">
           If that seems like more work than it needs to be, we agree. Take it up
           with Strava&rsquo;s terms of use.
         </p>

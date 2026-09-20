@@ -240,10 +240,10 @@ describe("VerdictForm: the scale", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
 
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
     expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
     expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
   });
@@ -256,7 +256,7 @@ describe("VerdictForm: the scale", () => {
 
     const other = screen.getByRole("button", { name: "Way cold" });
     expect(other).toHaveClass("border");
-    expect(other).not.toHaveClass("bg-night");
+    expect(other).not.toHaveClass("bg-ink");
   });
 
   it("starts from the verdict the entry already has", async () => {
@@ -265,7 +265,7 @@ describe("VerdictForm: the scale", () => {
     await renderWithRouter(form({ entry: { verdict: 0 } }));
 
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
     expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
   });
@@ -486,7 +486,7 @@ describe("VerdictForm: tags and sharing", () => {
     await renderWithRouter(form());
     const chafed = screen.getByRole("button", { name: "chafed" });
     expect(chafed).toHaveClass("border");
-    expect(chafed).not.toHaveClass("bg-night");
+    expect(chafed).not.toHaveClass("bg-ink");
   });
 
   it("toggles a tag on and back off", async () => {
@@ -499,12 +499,12 @@ describe("VerdictForm: tags and sharing", () => {
 
     await user.click(chafed);
     expect(screen.getByRole("button", { name: "chafed" })).toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
 
     await user.click(screen.getByRole("button", { name: "chafed" }));
     expect(screen.getByRole("button", { name: "chafed" })).not.toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
@@ -525,7 +525,7 @@ describe("VerdictForm: tags and sharing", () => {
     );
 
     expect(screen.getByRole("button", { name: "chafed" })).toHaveClass(
-      "bg-night",
+      "bg-ink",
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));

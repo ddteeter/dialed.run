@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 @import "./ui/tokens.css";
 @import "./ui/motion.css";
@@ -6,20 +6,148 @@
 @plugin "@tailwindcss/typography";
 
 /*
- * Brand tokens wired as Tailwind theme tokens so utilities like
- * bg-chalk / text-night / text-pink / text-teal / bg-hi-viz work.
- * `inline` keeps src/ui/tokens.css the single runtime source of truth.
+ * The two design contracts, mapped onto Tailwind's theme.
+ *
+ * `inline` keeps `src/ui/tokens.css` the single runtime source of truth:
+ * a utility compiles to `var(--muted)` rather than to the hex, so task
+ * 111 can swap the whole light column for the dark one by redefining
+ * those variables and touching no component.
+ *
+ * **Every namespace below is cleared with `*: initial` before it is
+ * redefined, and that is the point of this lane.** Tailwind's defaults are
+ * a complete second scale — `text-sm` is 14px, `rounded-md` is 6px, `sm:`
+ * is 640px — and none of those values exist in `design/tokens.js`. Four
+ * lanes reached for them because they were there. Cleared, they are not
+ * there: `text-sm` stops compiling rather than being blacklisted in a rule
+ * a later lane can forget.
  */
 @theme inline {
-  --color-pink: var(--course-pink);
-  --color-hi-viz: var(--hi-viz);
+  /* ---- colour · Theme.dc.html T1 ---------------------------------- */
+  --color-*: initial;
+
+  --color-ground: var(--ground);
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-tint: var(--tint);
+  --color-hairline: var(--hairline);
+  --color-hairline-2: var(--hairline-2);
+  --color-muted: var(--muted);
+  --color-quiet: var(--quiet);
+  --color-placeholder: var(--placeholder);
+  --color-photo: var(--photo);
+  --color-dialed-text: var(--dialed-text);
+  --color-cold-text: var(--cold-text);
+  --color-unread: var(--unread);
+  --color-action: var(--action);
+  --color-failure: var(--failure);
+  /* The two palette colours T1 names in prose rather than in the table.
+   * Teal: "Teal as a surface is #00E0C6 on both" (T2 rule 01) — teal as
+   * *text* is --dialed-text, a darker cut that clears contrast on paper.
+   * Hi-viz: --failure is the band and --unread is the low-strength wash,
+   * but the table has no role for hi-viz *as text*, which one onboarding
+   * eyebrow uses. Both are in docs/design-deltas.md's open queue rather
+   * than invented here. */
   --color-teal: var(--split-teal);
-  --color-night: var(--night-run);
-  --color-chalk: var(--chalk);
+  --color-hi-viz: var(--hi-viz);
+
+  /* ---- type · tokens.js TYPE -------------------------------------- */
+  /* Tailwind pairs `--text-x--line-height` and `--text-x--letter-spacing`
+   * with the size, so one `text-body` carries all three. That is what
+   * makes tokens.js law 1 — "tracking is a function of size, not context"
+   * — enforced by the framework instead of by review, and it is why
+   * --tracking-* and --leading-* are cleared without replacement below: a
+   * step's tracking is not separately addressable, so there is nothing to
+   * override with "tighter for this card". */
+  --text-*: initial;
+  --tracking-*: initial;
+  --leading-*: initial;
+
+  --text-display: 32px;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.035em;
+
+  --text-title: 24px;
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.03em;
+
+  --text-heading: 19px;
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.025em;
+
+  --text-lead: 17px;
+  --text-lead--line-height: 1.5;
+  --text-lead--letter-spacing: 0em;
+
+  --text-body: 15px;
+  --text-body--line-height: 1.5;
+  --text-body--letter-spacing: 0em;
+
+  --text-small: 13px;
+  --text-small--line-height: 1.45;
+  --text-small--letter-spacing: 0em;
+
+  --text-micro: 12px;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0em;
+
+  /* ---- mono ramp · tokens.js MONO --------------------------------- */
+  /* Four steps, four trackings. `Mono` carried one hardcoded 0.08em,
+   * which is a value no step has, and 17 call sites wrote their own
+   * rather than use it. `<Mono step>` reaches these. */
+  --text-mono-xs: 10px;
+  --text-mono-xs--line-height: 1.3;
+  --text-mono-xs--letter-spacing: 0.1em;
+
+  --text-mono-sm: 11px;
+  --text-mono-sm--line-height: 1.4;
+  --text-mono-sm--letter-spacing: 0.06em;
+
+  --text-mono-md: 13px;
+  --text-mono-md--line-height: 1.45;
+  --text-mono-md--letter-spacing: 0.02em;
+
+  --text-mono-lg: 22px;
+  --text-mono-lg--line-height: 1.2;
+  --text-mono-lg--letter-spacing: 0.02em;
+
+  /* ---- families and weights · tokens.js FAMILY / WEIGHT ------------ */
+  /* WEIGHT: "Only these weights exist. Never light, never 500 in text."
+   * Clearing the namespace is what makes that true — `font-medium` was on
+   * one element and nothing said no. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   --font-sans: var(--font-family-interface);
   --font-display: var(--font-family-display);
   --font-mono: var(--font-family-mono);
+
+  /* ---- radius · tokens.js RADIUS ---------------------------------- */
+  /* Five, plus none. `rounded-none` stays a static utility, and it is not
+   * an absence of styling: square is the brand's tell for "this is a
+   * statement, not a control" — notices, tints, the failure band,
+   * coverage cells, verdict slots. */
+  --radius-*: initial;
+  --radius-tight: 4px;
+  --radius-field: 8px;
+  --radius-card: 12px;
+  --radius-sheet: 20px;
+  --radius-pill: 999px;
+
+  /* ---- breakpoints · tokens.js BREAKPOINT ------------------------- */
+  /* Two thresholds, three layouts. What changes at each is task 115; that
+   * they are the only two is this lane's. */
+  --breakpoint-*: initial;
+  --breakpoint-wide: 720px;
+  --breakpoint-desk: 1040px;
+
+  /* ---- measures · tokens.js MEASURE ------------------------------- */
+  /* "Nothing pins a width that isn't in MEASURE." */
+  --container-*: initial;
+  --container-panel: 390px;
+  --container-column: 620px;
+  --container-page: 1180px;
 }
 
 html,
@@ -29,8 +157,8 @@ body,
 }
 
 body {
-  background-color: var(--chalk);
-  color: var(--night-run);
+  background-color: var(--ground);
+  color: var(--ink);
   font-family: var(--font-family-interface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

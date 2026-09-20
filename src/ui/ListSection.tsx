@@ -1,6 +1,7 @@
 import type { JSX, ReactNode } from "react";
 
 import { Bracketed } from "./Bracketed";
+import { Mono } from "./Mono";
 
 /**
  * A titled list that is absent rather than empty.
@@ -57,13 +58,15 @@ export function ListSection<TItem>({
 }>): JSX.Element | undefined {
   const heading =
     count === true ? (
-      <h2 className="text-sm font-semibold uppercase">
+      <h2>
         <Bracketed>
           {String(items.length)} {title}
         </Bracketed>
       </h2>
     ) : (
-      <h2 className="text-sm font-semibold uppercase">{title}</h2>
+      <h2>
+        <Mono step="xs">{title}</Mono>
+      </h2>
     );
 
   if (items.length === 0) {

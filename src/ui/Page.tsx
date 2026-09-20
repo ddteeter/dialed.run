@@ -26,8 +26,8 @@ type PageWidth = "wide" | "narrow";
  * were already in use — this names them rather than inventing a third.
  */
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
-  wide: "max-w-xl",
-  narrow: "max-w-sm",
+  wide: "max-w-column",
+  narrow: "max-w-panel",
 };
 
 export function Page({
@@ -70,9 +70,7 @@ export function Page({
         // with a single child puts it exactly where a block-level `h1`
         // sits. `m-0` because the column's `gap-6` owns the spacing.
         <div className="flex items-center justify-between">
-          <h1 className="m-0 font-display text-3xl uppercase leading-none">
-            {title}
-          </h1>
+          <h1 className="m-0 font-display text-display uppercase">{title}</h1>
           {headingAction}
         </div>
       )}

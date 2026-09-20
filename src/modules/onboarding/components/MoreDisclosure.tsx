@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { Mono } from "../../../ui";
 
 /**
  * "Everything else · N more" — the fold O3 and P2.5 both use.
@@ -29,9 +30,9 @@ export function MoreDisclosure({
       type="button"
       aria-expanded={expanded}
       onClick={onToggle}
-      className="cursor-pointer self-start rounded-full border border-dashed border-night/30 bg-transparent px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.04em] text-night/60"
+      className="cursor-pointer self-start rounded-pill border border-dashed border-hairline-2 bg-transparent px-4 py-2 text-quiet"
     >
-      Everything else · {remaining} more
+      <Mono step="sm">Everything else · {remaining} more</Mono>
       <span aria-hidden="true"> ▾</span>
     </button>
   );

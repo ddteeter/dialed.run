@@ -86,7 +86,7 @@ function ImportStatusInner({
   // Stryker disable next-line LogicalOperator,ConditionalExpression
   if (query.isError || query.data === undefined) {
     return (
-      <p className="text-sm font-semibold text-pink">
+      <p className="text-small font-semibold text-cold-text">
         We lost track of that import. Try uploading again.
       </p>
     );
@@ -95,7 +95,7 @@ function ImportStatusInner({
   const importRow = query.data;
   if (hasStalledImport(importRow.status, budgetSpent ? POLL_BUDGET_MS : 0)) {
     return (
-      <p className="text-sm text-night/70">
+      <p className="text-small text-quiet">
         This is taking longer than usual. We&rsquo;ll keep working on it — check
         back shortly.
       </p>
@@ -107,21 +107,21 @@ function ImportStatusInner({
       return (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-24 w-full" />
-          <Mono className="text-xs text-night/60">Reading your run…</Mono>
+          <Mono className="text-quiet">Reading your run…</Mono>
         </div>
       );
     }
     case "done": {
       return (
         <div className="flex flex-col gap-3">
-          <p className="font-semibold text-night">
+          <p className="font-semibold text-ink">
             Your run is in. Add your kit next.
           </p>
           {importRow.runId === null ? undefined : (
             <Link
               to="/runs/$runId"
               params={{ runId: importRow.runId }}
-              className="rounded-md bg-night px-4 py-2 text-center font-semibold text-chalk"
+              className="rounded-pill bg-ink px-4 py-2 text-center font-semibold text-ground"
             >
               Open the run
             </Link>
@@ -132,14 +132,14 @@ function ImportStatusInner({
     case "duplicate": {
       return (
         <div className="flex flex-col gap-3">
-          <p className="font-semibold text-night">
+          <p className="font-semibold text-ink">
             Looks like you already logged this run.
           </p>
           {importRow.runId === null ? undefined : (
             <Link
               to="/runs/$runId"
               params={{ runId: importRow.runId }}
-              className="rounded-md border border-night/20 px-4 py-2 text-center font-semibold text-night"
+              className="rounded-pill border border-hairline px-4 py-2 text-center font-semibold text-ink"
             >
               Open the existing run
             </Link>
@@ -150,14 +150,14 @@ function ImportStatusInner({
     case "failed": {
       return (
         <div className="flex flex-col gap-3">
-          <Bracketed className="text-pink">Import failed</Bracketed>
-          <p className="text-night/70">
+          <Bracketed className="text-cold-text">Import failed</Bracketed>
+          <p className="text-quiet">
             {importRow.failureReason ??
               "That file didn't parse. Try the original export from your watch."}
           </p>
           <Link
             to="/runs/new"
-            className="rounded-md bg-night px-4 py-2 text-center font-semibold text-chalk"
+            className="rounded-pill bg-ink px-4 py-2 text-center font-semibold text-ground"
           >
             Try another file
           </Link>

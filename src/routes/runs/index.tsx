@@ -24,14 +24,14 @@ function RunsIndexPage() {
         headingAction={
           <Link
             to="/runs/new"
-            className="rounded-md bg-night px-4 py-2 font-semibold text-chalk"
+            className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
           >
             + Add
           </Link>
         }
       >
         <RunList runs={runs} />
-        <Link to="/runs/strava" className="text-sm text-night/50 underline">
+        <Link to="/runs/strava" className="text-body text-muted underline">
           Strava reminders
         </Link>
       </Page>

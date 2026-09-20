@@ -42,7 +42,7 @@ export function Sheet({
       }}
       aria-label={label}
       onClose={onClose}
-      className="fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-3xl bg-chalk p-6 text-night backdrop:bg-night/60 sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:m-0 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+      className="fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:inset-x-auto wide:bottom-auto wide:top-1/2 wide:left-1/2 wide:m-0 wide:w-full wide:max-w-panel wide:-translate-x-1/2 wide:-translate-y-1/2 wide:rounded-sheet"
     >
       {children}
     </dialog>

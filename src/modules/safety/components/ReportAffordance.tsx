@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import { ReportSheet, type ReportSubject } from "./ReportSheet";
+import { Mono } from "../../../ui";
 
 /**
  * The "Report" control and the sheet it opens, as one thing a route can
@@ -52,12 +53,12 @@ export function ReportAffordance({
     <>
       <button
         type="button"
-        className="text-xs font-semibold uppercase tracking-wide text-night/60"
+        className="text-quiet"
         onClick={() => {
           setIsOpen(true);
         }}
       >
-        Report
+        <Mono step="xs">Report</Mono>
       </button>
       <ReportSheet
         open={isOpen}

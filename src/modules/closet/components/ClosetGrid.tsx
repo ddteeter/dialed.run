@@ -60,13 +60,13 @@ export function ClosetGrid({
   if (listing.totalCount === 0) {
     return (
       <div className="px-6 py-12 text-center">
-        <p className="text-base text-night/70">
+        <p className="text-body text-quiet">
           Nothing in here yet. Add the five things you actually reach for — the
           rest can wait.
         </p>
         <Link
           to="/closet/new"
-          className="mt-6 inline-block rounded-md bg-night px-4 py-2 font-semibold text-chalk"
+          className="mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
         >
           Add a piece
         </Link>
@@ -75,10 +75,10 @@ export function ClosetGrid({
   }
 
   return (
-    <div className="flex flex-col gap-8 px-4 py-6 sm:px-6">
+    <div className="flex flex-col gap-8 px-4 py-6 wide:px-6">
       {listing.genericCount > 0 ? (
-        <p className="rounded-md bg-night/5 px-4 py-3 text-sm text-night/70">
-          <Mono className="text-xs">
+        <p className="rounded-none bg-tint px-4 py-3 text-small text-quiet">
+          <Mono>
             {listing.genericCount} of {listing.totalCount}
           </Mono>{" "}
           pieces are still generic. Name the ones you reach for.
@@ -90,33 +90,31 @@ export function ClosetGrid({
         if (items.length === 0) return;
         return (
           <section key={group} className="flex flex-col gap-3">
-            <h2 className="font-display text-lg uppercase tracking-[-0.01em]">
-              {label}
-            </h2>
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            <h2 className="font-display text-heading">{label}</h2>
+            <ul className="grid grid-cols-2 gap-3 wide:grid-cols-3 desk:grid-cols-4">
               {items.map((view) => (
                 <li key={view.item.id}>
                   <Link
                     to="/closet/$itemId"
                     params={{ itemId: view.item.id }}
-                    className="flex flex-col gap-1 rounded-lg border border-night/10 bg-white p-3 no-underline"
+                    className="flex flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
                   >
-                    <span className="text-sm font-semibold text-night">
+                    <span className="text-body font-semibold text-ink">
                       {itemLabel(view)}
                       {view.isGeneric ? (
                         <>
                           {" "}
-                          <Bracketed className="text-[10px]">Generic</Bracketed>
+                          <Bracketed step="xs">Generic</Bracketed>
                         </>
                       ) : undefined}
                       {view.item.retired ? (
                         <>
                           {" "}
-                          <Bracketed className="text-[10px]">Retired</Bracketed>
+                          <Bracketed step="xs">Retired</Bracketed>
                         </>
                       ) : undefined}
                     </span>
-                    <Bracketed className="text-xs text-teal">
+                    <Bracketed className="text-dialed-text">
                       {tempLabel(view)}
                     </Bracketed>
                   </Link>
@@ -133,9 +131,11 @@ export function ClosetGrid({
           onClick={() => {
             setShowRetired((value) => !value);
           }}
-          className="self-start font-mono text-xs uppercase tracking-[0.08em] text-night/50"
+          className="self-start text-muted"
         >
-          {showRetired ? "Hide" : "Show"} retired ({retiredCount})
+          <Mono step="sm">
+            {showRetired ? "Hide" : "Show"} retired ({retiredCount})
+          </Mono>
         </button>
       ) : undefined}
     </div>

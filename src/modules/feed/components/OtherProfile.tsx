@@ -54,14 +54,14 @@ export function OtherProfile({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-2xl uppercase leading-none">
+          <h1 className="font-display text-title uppercase">
             {profile.displayName ?? "A runner"}
           </h1>
           {profile.cityLabel === null ? undefined : (
-            <p className="m-0 text-sm text-night/60">{profile.cityLabel}</p>
+            <p className="m-0 text-small text-quiet">{profile.cityLabel}</p>
           )}
         </div>
         <button
@@ -72,8 +72,8 @@ export function OtherProfile({
           }}
           className={
             isFollowing
-              ? "rounded-md border border-night/20 px-4 py-2 font-semibold disabled:opacity-40"
-              : "rounded-md bg-night px-4 py-2 font-semibold text-chalk disabled:opacity-40"
+              ? "rounded-pill border border-hairline px-4 py-2 font-semibold disabled:opacity-40"
+              : "rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-40"
           }
         >
           {isFollowing ? "Following" : "Follow"}
@@ -83,23 +83,23 @@ export function OtherProfile({
       {reportAffordance}
 
       {profile.recentPublicEntries.length === 0 ? (
-        <p className="text-sm text-night/60">No public entries yet.</p>
+        <p className="text-small text-quiet">No public entries yet.</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {profile.recentPublicEntries.map((entry) => (
             <li
               key={entry.entryId}
-              className="rounded-xl border border-night/10 p-4"
+              className="rounded-card border border-hairline p-4"
             >
               <Link
                 to="/feed/entry/$entryId"
                 params={{ entryId: entry.entryId }}
-                className="flex flex-col gap-1 text-night no-underline"
+                className="flex flex-col gap-1 text-ink no-underline"
               >
                 {entry.caption === null ? undefined : (
-                  <p className="m-0 text-sm">{entry.caption}</p>
+                  <p className="m-0 text-small">{entry.caption}</p>
                 )}
-                <Mono className="text-xs text-night/40">
+                <Mono className="text-muted">
                   {new Date(entry.createdAt * 1000).toLocaleDateString()}
                 </Mono>
               </Link>

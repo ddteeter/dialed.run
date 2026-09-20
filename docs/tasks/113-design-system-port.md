@@ -65,7 +65,7 @@ immediately.
 **This is the point of the lane, so do not miss it.** Tailwind v4 pairs
 `--text-<name>--line-height` and `--text-<name>--letter-spacing` with the
 size, so a single `text-body` utility applies all three. That makes
-`tokens.js` law 1 — *"tracking is a function of size, not context"* —
+`tokens.js` law 1 — _"tracking is a function of size, not context"_ —
 enforced by the framework instead of by review. It is also why `Mono`'s
 hardcoded `tracking-[0.08em]` caused 17 bypasses: one primitive could only
 ever carry one tracking, and the scale has four.
@@ -111,7 +111,7 @@ ever carry one tracking, and the scale has four.
 
 - The dark column (111), motion (114), accessibility (112), desktop (115).
 - Any layout change. If a collapsed value visibly moves something, that is
-  expected — a *reflow* is fine, a *redesign* is not.
+  expected — a _reflow_ is fine, a _redesign_ is not.
 - Landing the eslint rule yourself.
 
 ## Test expectations
@@ -149,9 +149,9 @@ follows is the shape and the traps, not a substitute for the artboards.
 ## §AG — composition on garment detail
 
 - **Garment detail only.** Not the closet grid, not a filter, not the Call.
-  Design's reason: *"the closet is for finding. Four-line compositions under
+  Design's reason: _"the closet is for finding. Four-line compositions under
   every card make the grid a spec sheet and bury the range, which is the
-  number that decides what you wear."*
+  number that decides what you wear."_
 - `fabric_parts` → labelled rows in the brand's order. `fabric_composition`
   → verbatim, one line. Both null → no block at all.
 - **Values are the brand's text.** No normalising "elastane" to "spandex",
@@ -176,8 +176,8 @@ surfaces; leave the rule.
 - **Thirteen locked names, two classes** (the rule keys off the class):
   Neutral — black, white, grey, navy, brown, beige. Colour — red, orange,
   yellow, green, blue, purple, pink. No "multi", no "other".
-- **Chips are words, not swatches** — *"thirteen swatches is thirteen
-  accents in one viewport."* Do not render colour chips as colour.
+- **Chips are words, not swatches** — _"thirteen swatches is thirteen
+  accents in one viewport."_ Do not render colour chips as colour.
 - **F**: colour is the fifth attribute inside the already-collapsed group,
   so the happy-path tap count does not move. The existing free-text
   colourway ("Obsidian") stays as the row's caption, untouched.
@@ -188,7 +188,7 @@ surfaces; leave the rule.
   the photo reading the pixel under the ring: no magnifier, no drag. No
   photo → no sampler, the field stands alone. **Level 2 is unreachable
   without level 1** — the sheet is opened from a chosen name.
-- Enrichment may propose the *name* as an editable claim (F2c). **It never
+- Enrichment may propose the _name_ as an editable claim (F2c). **It never
   proposes a hex.**
 
 ### Two traps, both found while scoping this
@@ -197,15 +197,15 @@ surfaces; leave the rule.
    attribute strip reads `WEIGHT · FABRIC · WIND · VISIBILITY · COLOUR`,
    where VISIBILITY is a garment property feeding the hi-viz exemption. But
    `wardrobe_items.visibility` **already exists** — `text("visibility")
-   .notNull().default("ok")`, sitting next to `retired`, and it is the
+.notNull().default("ok")`, sitting next to `retired`, and it is the
    moderation state. `closet/service.ts` writes `"ok"`. **Naming the new
    attribute `visibility` would overwrite a trust-and-safety field**, and
    nothing would fail loudly. Pick a different name (`hiViz`,
    `highVisibility`) and say so in the PR; raise the collision in
    design-deltas so the artboard's label and our column stop disagreeing.
-2. **Hi-viz is not one of the thirteen.** It is *"invisible to the test —
+2. **Hi-viz is not one of the thirteen.** It is _"invisible to the test —
    not Neutral, not Colour, not counted. It's safety because the runner said
-   so, never because a hex is bright."* So it is a separate flag, not a
+   so, never because a hex is bright."_ So it is a separate flag, not a
    colour value, and the enum must not grow a fourteenth entry for it.
 
 ### Schema

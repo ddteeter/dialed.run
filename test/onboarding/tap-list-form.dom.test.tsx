@@ -324,12 +324,12 @@ describe("TapListForm", () => {
       screen.getByRole("checkbox", { name: "Beanie" }).parentElement;
 
     expect(chip()).toHaveClass("border");
-    expect(chip()).not.toHaveClass("bg-night");
+    expect(chip()).not.toHaveClass("bg-ink");
 
     await user.click(screen.getByRole("checkbox", { name: "Beanie" }));
 
-    expect(chip()).toHaveClass("bg-night");
-    expect(chip()).toHaveClass("text-chalk");
+    expect(chip()).toHaveClass("bg-ink");
+    expect(chip()).toHaveClass("text-ground");
     expect(chip()?.className).not.toMatch(/pink|teal|hi-viz/);
   });
 

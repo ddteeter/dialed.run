@@ -6,6 +6,7 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
+  Mono,
   Sheet,
   SubmitButton,
   TextField,
@@ -164,8 +165,8 @@ export function ReportSheet({
           onFocusField={form.focusField}
         />
 
-        <h2 className="text-lg font-semibold">Report this entry</h2>
-        <p className="text-xs text-night/60">{subject.label}</p>
+        <h2 className="text-lead font-semibold">Report this entry</h2>
+        <p className="text-micro text-quiet">{subject.label}</p>
 
         {/* Yes, this is valid TSX, and it is not a trick. A JSX element
             takes explicit type arguments exactly as a call does
@@ -195,9 +196,9 @@ export function ReportSheet({
           autoComplete="off"
         />
 
-        <section className="flex flex-col gap-1 text-xs text-night/60">
-          <h3 className="font-semibold uppercase tracking-wide">
-            What happens next
+        <section className="flex flex-col gap-1 text-micro text-quiet">
+          <h3>
+            <Mono step="xs">What happens next</Mono>
           </h3>
           <p>
             A person reads it within a day. The entry is hidden from your feed

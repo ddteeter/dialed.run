@@ -17,8 +17,8 @@ describe("Page", () => {
     const { container } = render(<Page title="Runs">body</Page>);
 
     const column = container.firstElementChild;
-    expect(column).toHaveClass("max-w-xl");
-    expect(column).not.toHaveClass("max-w-sm");
+    expect(column).toHaveClass("max-w-column");
+    expect(column).not.toHaveClass("max-w-panel");
   });
 
   it("narrows for a short form", () => {
@@ -29,8 +29,8 @@ describe("Page", () => {
     );
 
     const column = container.firstElementChild;
-    expect(column).toHaveClass("max-w-sm");
-    expect(column).not.toHaveClass("max-w-xl");
+    expect(column).toHaveClass("max-w-panel");
+    expect(column).not.toHaveClass("max-w-column");
   });
 
   it("keeps the column's own layout whichever width it is", () => {

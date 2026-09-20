@@ -3,14 +3,14 @@
 ## Goal
 
 Make the app meet `design/Accessibility Contract.dc.html` — WCAG 2.2 AA,
-delivered unrequested in round 9 and headed *"every lane / what each lane has
-to test before a PR is done"*.
+delivered unrequested in round 9 and headed _"every lane / what each lane has
+to test before a PR is done"_.
 
 Most of it is already decided somewhere: colour-is-never-the-only-channel is
 §AB and Form Contract §2, the reduced-motion collapse is the Motion
 Doctrine's, the live-region rules are §AF. The contract's own framing is
-*"the rules below are already half-stated across five files; this is the one
-place they all are"*. **What is new is not the rules but the requirement to
+_"the rules below are already half-stated across five files; this is the one
+place they all are"_. **What is new is not the rules but the requirement to
 meet and test them**, plus a handful we do not meet today.
 
 ## Why it is a lane and not a checklist item
@@ -81,7 +81,7 @@ contract collects existing decisions, and several are already satisfied.
    day strips, the three-slot mark and weighting bars each need a text
    alternative that says the whole thing in one sentence. Decorative
    placeholders and icons are `aria-hidden`. Note `CoverageMark` is
-   *deliberately* `aria-hidden` today because every caller prints the level
+   _deliberately_ `aria-hidden` today because every caller prints the level
    beside it — **verify that claim caller by caller** before adding a label,
    or you will produce "partial, partial".
 10. **Contrast.** Body text 4.5:1; headline scale (≥24px Archivo Black) 3:1;
@@ -91,7 +91,7 @@ contract collects existing decisions, and several are already satisfied.
 
 - Dark mode (task 111). Check contrast against T1's light column only.
 - Desktop (its own lane). The top bar's focus order is that lane's problem.
-- Motion *adoption* — adding moves to surfaces that have none. This lane only
+- Motion _adoption_ — adding moves to surfaces that have none. This lane only
   guarantees that whatever animates respects reduced motion.
 - Any behaviour change. If meeting the contract seems to require one, stop
   and ask.
@@ -103,12 +103,12 @@ contract collects existing decisions, and several are already satisfied.
   text after an action, `aria-hidden` on decorative marks.
 - A route-level test that every route renders exactly one `h1`.
 - Everything under `src/ui/**/*.tsx` and `src/modules/**/*.tsx` is already in
-  the mutation ratchet at 100%. New markup needs assertions that *observe*
+  the mutation ratchet at 100%. New markup needs assertions that _observe_
   it, not tests that merely execute it.
 - **`axe-core` / `jest-axe` are approved** (owner, 2026-09-17) as a dev
   dependency. Use them for requirements 4, 5, 6 and 10, where a checker is
   simply better than hand-written assertions. Two cautions: axe cannot see a
-  44×44 *hit area* (it checks target size only where the role implies it, so
+  44×44 _hit area_ (it checks target size only where the role implies it, so
   keep an explicit assertion), and an axe pass is not the contract — nothing
   in axe knows that opacity may not encode meaning or that success is silent
   unless the runner acted. **Automate what it covers; assert the rest.**

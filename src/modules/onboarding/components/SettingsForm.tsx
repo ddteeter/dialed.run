@@ -80,8 +80,8 @@ export function SettingsForm({
       />
 
       <section className="flex flex-col gap-3">
-        <h2 className="m-0 font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
-          You
+        <h2 className="m-0 text-muted">
+          <Mono step="sm">You</Mono>
         </h2>
         <CalibrationRow
           thermalLevel={current.thermalLevel}
@@ -98,8 +98,8 @@ export function SettingsForm({
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="m-0 font-mono text-[11px] uppercase tracking-[0.1em] text-night/50">
-          Every new entry
+        <h2 className="m-0 text-muted">
+          <Mono step="sm">Every new entry</Mono>
         </h2>
         <ToggleField
           name="shareDefault"
@@ -108,9 +108,7 @@ export function SettingsForm({
           isOn={shareDefault}
           onChange={setShareDefault}
         />
-        <p className="m-0 text-xs leading-snug text-night/50">
-          You can flip it per run.
-        </p>
+        <p className="m-0 text-micro text-muted">You can flip it per run.</p>
       </section>
 
       <FormFailureBand
@@ -151,13 +149,15 @@ function CalibrationRow({
   const answer = thermalScale.find((entry) => entry.value === thermalLevel);
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-night/15 bg-chalk px-[14px] py-[12px]">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-semibold">How you run warm or cold</span>
+    <div className="flex items-center justify-between gap-3 rounded-field border border-hairline bg-ground px-4 py-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-body font-semibold">
+          How you run warm or cold
+        </span>
         {answer === undefined ? (
-          <span className="text-xs text-night/50">Not answered yet.</span>
+          <span className="text-micro text-muted">Not answered yet.</span>
         ) : (
-          <span className="text-xs text-night/50">
+          <span className="text-micro text-muted">
             Currently {answer.label},{" "}
             <Mono>{thermalOffsetLabel(answer.value, tempUnit)}</Mono> offset
           </span>
@@ -165,9 +165,9 @@ function CalibrationRow({
       </div>
       <Link
         to="/onboarding/calibrate"
-        className="shrink-0 rounded-full border border-night/20 px-3.5 py-2 text-xs font-semibold"
+        className="shrink-0 rounded-pill border border-hairline px-4 py-2"
       >
-        Recalibrate
+        <Mono step="xs">Recalibrate</Mono>
       </Link>
     </div>
   );

@@ -17,7 +17,7 @@ export function Layout({
   useHydrated();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-chalk text-night">
+    <div className="flex min-h-dvh flex-col bg-ground text-ink">
       <header className="flex items-center justify-end px-5 pt-4">
         {bell ?? <div aria-hidden="true" data-slot="notification-bell" />}
       </header>

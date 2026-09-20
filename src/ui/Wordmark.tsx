@@ -1,5 +1,4 @@
-const WORDMARK_CLASS =
-  "inline-flex items-baseline font-display lowercase tracking-[-0.045em]";
+const WORDMARK_CLASS = "inline-flex items-baseline font-display lowercase";
 
 /**
  * The [dialed.run] lockup: pink brackets, "dialed" in Archivo Black in the
@@ -12,11 +11,13 @@ export function Wordmark({
     <span
       className={className ? `${WORDMARK_CLASS} ${className}` : WORDMARK_CLASS}
     >
-      <span className="text-pink">[</span>
+      <span className="text-cold-text">[</span>
       <span>dialed</span>
-      {/* Grey from the brand artboards (design/Brand Brief.dc.html). */}
-      <span className="text-[#8B8B93]">.run</span>
-      <span className="text-pink">]</span>
+      {/* T1's --muted. The brand board draws #8B8B93, which is the *dark*
+          column's muted; on paper the role resolves to #7A7A70 and keeps
+          its contrast. CLAUDE.md §Design truth: the contract wins. */}
+      <span className="text-muted">.run</span>
+      <span className="text-cold-text">]</span>
     </span>
   );
 }

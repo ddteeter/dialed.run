@@ -9,7 +9,7 @@ export function WeatherAttribution() {
       href="https://www.visualcrossing.com/weather-data"
       target="_blank"
       rel="noreferrer"
-      className="font-mono text-[10px] uppercase tracking-[0.08em] text-night/40 no-underline"
+      className="text-micro text-muted no-underline"
     >
       Weather by Visual Crossing
     </a>

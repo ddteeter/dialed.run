@@ -10,7 +10,7 @@ and the contract is what keeps that from meaning "design 65 screens twice".
 **Desktop is a reading and closet-admin surface.** Every act of logging — a
 run, a verdict, a garment — is the phone flow, unchanged, in a centred panel
 at phone width. Exactly one job earns a wide layout it did not have: clearing
-a backlog of verdicts, *"because a keyboard and a table beat six sheets."*
+a backlog of verdicts, _"because a keyboard and a table beat six sheets."_
 
 Read the contract before the packet. It confirms the doctrine holds across
 all eight v1 areas and names the four places it bends — **none of them a
@@ -38,9 +38,9 @@ and its focus order is only checkable once the focus rules exist (112).
   destinations, same order, as four text links. Same active rule: pink
   underline, no crossfade — `motion.js`'s tab-switch treatment applies
   unchanged.
-- **Not a sidebar.** The contract is explicit: *"the left rail is the Desk's
+- **Not a sidebar.** The contract is explicit: _"the left rail is the Desk's
   chrome and is what marks a screen as operator-only. The product never grows
-  one."* A sidebar here would make the runner app look like the admin tool.
+  one."_ A sidebar here would make the runner app look like the admin tool.
 - **The bell** leaves the per-screen header and sits right in the bar, S2
   states unchanged. It opens the S1 list **as a centred panel, not a
   dropdown.**
@@ -59,19 +59,19 @@ and its focus order is only checkable once the focus rules exist (112).
 ### 2. The four bends
 
 1. **A1 upload and F add-garment** show a drop zone in the photo well at
-   width: *"Drop a photo, or shoot it on your phone later."* Copy and one
+   width: _"Drop a photo, or shoot it on your phone later."_ Copy and one
    state change; **the layout is untouched.** Face-blur runs the same WASM
    path on the dropped file — do not fork it.
 2. **Onboarding** runs O1 → O3 → O4 → O5 in the centred panel. O2
-   (shoot-the-closet) stays a phone act and O5 adds one line: *"Photos come
-   from your phone — we'll remind you."* The O6 ladder loses no rung.
+   (shoot-the-closet) stays a phone act and O5 adds one line: _"Photos come
+   from your phone — we'll remind you."_ The O6 ladder loses no rung.
 3. **DS2, the verdict backlog** — see below.
 4. **Headers** — covered in DS1 above.
 
 ### 3. DS2 — the one wide layout
 
 A row per imported run with no outfit. **Each row is A3's three inputs laid
-flat** — outfit, verdict, save — *not a new form*. Editing an outfit still
+flat** — outfit, verdict, save — _not a new form_. Editing an outfit still
 opens A2 in the panel.
 
 Keyboard, and this is the reason the surface exists: `↑`/`↓` moves rows,
@@ -82,7 +82,7 @@ in a panel. Reached from "Clear the queue ›" on X, or the S1 verdict prompt.
 
 - `BREAKPOINT.wide` 720, `BREAKPOINT.desk` 1040. **Two thresholds, three
   layouts. Never a third breakpoint.**
-- `MEASURE.panel` 390 — every "centred at phone width" surface is *exactly*
+- `MEASURE.panel` 390 — every "centred at phone width" surface is _exactly_
   this wide. `MEASURE.column` 620 for reading. `MEASURE.page` 1180 for the
   shell's content max-width.
 - Between wide and desk: `min(100% − 2×SPACE[6], MEASURE.column)`. **Never a
@@ -93,12 +93,12 @@ in a panel. Reached from "Clear the queue ›" on X, or the S1 verdict prompt.
 
 ### 5. What must not happen
 
-- **The Call does not go wide.** *"A wide Call would be a dashboard, and a
-  dashboard is the opposite of an answer."* It is the centred panel plus its
+- **The Call does not go wide.** _"A wide Call would be a dashboard, and a
+  dashboard is the opposite of an answer."_ It is the centred panel plus its
   summary card in the feed rail. (There is no Call in v1 — this binds the
   teaser and Epic 200 both.)
-- **No second wide form.** Duplicating the log flow *"would double the
-  surface that has to stay in sync for the least-used path."*
+- **No second wide form.** Duplicating the log flow _"would double the
+  surface that has to stay in sync for the least-used path."_
 - **Type does not shrink at width.** `tokens.js` law 3. Desktop gets more
   room, not smaller text.
 

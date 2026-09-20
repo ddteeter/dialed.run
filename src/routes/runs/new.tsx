@@ -23,9 +23,9 @@ function NewRunPage() {
     <BelledLayout unreadCount={unreadCount}>
       <Page title="Log a run">
         <UploadForm upload={startFileImport} />
-        <p className="text-center text-sm text-night/50">
+        <p className="text-center text-small text-muted">
           or{" "}
-          <Link to="/runs/manual" className="font-semibold text-pink">
+          <Link to="/runs/manual" className="font-semibold text-cold-text">
             enter it manually
           </Link>
         </p>

@@ -171,7 +171,7 @@ describe("the submit button is never disabled", () => {
     expect(button).toHaveFocus();
     // Pink is action, and the submit button is the action. The cursor is
     // the visual half of aria-disabled: it must stop inviting a click.
-    expect(button).toHaveClass("bg-pink");
+    expect(button).toHaveClass("bg-action");
     expect(button).toHaveClass("cursor-default");
     expect(button).not.toHaveClass("cursor-pointer");
 
@@ -305,11 +305,18 @@ describe("the mark, the message and the hint", () => {
     expect(box).not.toBeNull();
     expect(box()).not.toHaveAttribute("data-invalid");
     // Weight is the signal: a 1px rule at rest, 2px ink when marked, and
-    // the padding drops by 1px so the box does not grow. Asserted because
-    // "marked, not reddened" is the rule most easily lost in a port, and
-    // because pink is action in this palette and never failure.
+    // the box does not grow. Asserted because "marked, not reddened" is the
+    // rule most easily lost in a port, and because pink is action in this
+    // palette and never failure.
+    //
+    // The second pixel is an inset ring rather than a heavier border: a
+    // ring is a box-shadow and takes no space, so the padding stays on the
+    // 4px grid on both sides instead of being compensated by 1px, which
+    // SPACE has no step for.
     expect(box()).toHaveClass("border");
-    expect(box()).not.toHaveClass("border-2");
+    expect(box()).toHaveClass("border-hairline");
+    expect(box()).not.toHaveClass("inset-ring-1");
+    expect(box()).toHaveClass("px-4", "py-3");
 
     await user.type(screen.getByLabelText("Brand"), "Patagonia");
     await user.click(screen.getByRole("button", { name: /save/i }));
@@ -317,7 +324,9 @@ describe("the mark, the message and the hint", () => {
     await waitFor(() => {
       expect(box()).toHaveAttribute("data-invalid", "true");
     });
-    expect(box()).toHaveClass("border-2");
+    expect(box()).toHaveClass("inset-ring-1", "inset-ring-ink", "border-ink");
+    // The padding is the same on both sides, which is the no-growth half.
+    expect(box()).toHaveClass("px-4", "py-3");
     expect(screen.getByText("Give it a name.")).toBeVisible();
   });
 
@@ -396,8 +405,12 @@ describe("the details that go missing silently", () => {
     );
     // Not just "no text" — no *element*. An empty <span> renders nothing
     // and still takes a line's worth of gap in a flex column, which is how
-    // a field with no hint ends up taller than its neighbours.
-    expect(container.querySelectorAll("span")).toHaveLength(0);
+    // a field with no hint ends up taller than its neighbours. So the
+    // assertion is on the column's own children — the label and the box,
+    // and neither a hint nor a message — rather than on a span count,
+    // which the label's own <Mono> now makes non-zero either way.
+    expect(container.firstElementChild?.children).toHaveLength(2);
+    expect(container.querySelector("#solo-message")).toBeNull();
     expect(container.firstElementChild).toHaveTextContent(/^Solo$/);
   });
 
@@ -1257,7 +1270,7 @@ describe("ChoiceList", () => {
 
     const message = screen.getByText("Pick one to carry on.");
     expect(message).toBeVisible();
-    expect(message).toHaveClass("bg-hi-viz");
+    expect(message).toHaveClass("bg-failure");
     expect(message).toHaveAttribute("id", "thermal-message");
   });
 
