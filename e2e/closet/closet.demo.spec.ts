@@ -1,5 +1,6 @@
 /**
- * Covers: C (the closet), F (add a garment) — one journey, one video.
+ * Covers: C (the closet), F (add a garment), §AG (what a garment is made
+ * of), §AH (colour as a constraint) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -10,9 +11,20 @@
  * is not what this screen is for), browse the categorized closet, then
  * retire one item and confirm it moves behind the retired toggle instead
  * of disappearing (CLAUDE.md: retire, don't delete).
+ *
+ * Round 11's colour rides on the second piece, because that is where it
+ * lives on screen: the fifth attribute inside F's already-collapsed group,
+ * then the exact shade behind it. Round 10's composition rides on the same
+ * piece's detail page — it belongs to the *product*, written by enrichment
+ * reading a brand's page, so the demo seeds the product row the save
+ * created rather than pretending a runner typed it.
  */
+import { eq } from "drizzle-orm";
+
+import { products } from "../../src/db/schema-core";
 import { storageStateFor } from "../support/accounts";
 import { expect, scene, test } from "../support/demo";
+import { withLocalDb } from "../support/local-db";
 
 // Signed in already: the account is created by the `demo-setup` project, so
 // this video opens on the closet rather than on a signup form.
@@ -63,16 +75,72 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Weight").selectOption("light");
   await page.getByLabel("Wind resistant").check();
+
+  // §AH. Colour is the fifth attribute, inside the group that is already
+  // open — so the happy path's tap count does not move. Chips are words,
+  // never swatches: thirteen swatches would be thirteen accents in one
+  // viewport, and hue already means verdict everywhere in this app.
+  await scene(page, "§AH · colour is words, and it is the fifth attribute");
+  await page.getByRole("radio", { name: "Reflective trim" }).check();
+  await page.getByRole("radio", { name: "Black" }).check();
+
+  // Level 2, and unreachable without level 1: the affordance does not
+  // exist until a name has been chosen.
+  await scene(page, "§AH · the exact shade, reached from a chosen name");
+  await page.getByRole("button", { name: "Exact shade" }).click();
+  await page.getByLabel("Hex").fill("#1F2A44");
+  await page.getByRole("button", { name: "Use this" }).click();
+  await expect(
+    page.getByRole("button", { name: "Exact shade · #1f2a44" }),
+  ).toBeVisible();
+
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(
     page.getByRole("heading", { name: "Patagonia Houdini Jacket" }),
   ).toBeVisible();
+
+  // §AH rule 08: the name on the identity line, beside the colourway, as
+  // words. No swatch here either.
+  await scene(page, "§AH · the name on the identity line, never a swatch");
+  await expect(page.getByText(/reflective trim · black/)).toBeVisible();
+
+  // §AG. Composition belongs to the product, not to the runner's copy —
+  // enrichment writes it from a brand's page, so the demo writes the row
+  // enrichment would have. Seeded through Drizzle and the real schema.
+  await withLocalDb(async ({ core }) => {
+    await core
+      .update(products)
+      .set({
+        fabricComposition: "100% nylon, GORE-TEX",
+        fabricParts: JSON.stringify([
+          { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
+          {
+            part: "Underarm",
+            materials: [
+              { material: "polyester", pct: 87 },
+              { material: "elastane", pct: 13 },
+            ],
+          },
+        ]),
+      })
+      .where(eq(products.name, "Houdini Jacket"));
+  });
+
+  await scene(page, "§AG · made of — the brand's words, on detail alone");
+  await page.reload();
+  await hydrated(page);
+  await expect(page.getByText("Made of")).toBeVisible();
+  await expect(page.getByText("Body")).toBeVisible();
+  await expect(page.getByText("87% polyester · 13% elastane")).toBeVisible();
+  await expect(page.getByText("As labelled by Patagonia")).toBeVisible();
 
   // Browse the closet: both pieces show real brand + model, grouped by
   // the derived UI group (an "outer" layer groups on its own, ahead of
   // its base category).
   await scene(page, "C · grouped by derived group — outer sits above top");
   await page.getByRole("link", { name: "Closet" }).click();
+  // §AG rule 03: the closet is for finding. No composition on the grid.
+  await expect(page.getByText("Made of")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Shoes", level: 2 }),
   ).toBeVisible();
