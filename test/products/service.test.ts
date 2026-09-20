@@ -9,6 +9,8 @@ import {
   createOrGetProduct,
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
+  getProductComposition,
+  getProductForDetail,
   productsForBrand,
   resolveProduct,
   searchBrands,
@@ -17,6 +19,7 @@ import {
 import { brands, products } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
 import { nowSeconds } from "../../src/lib/now";
+import { orSqlNull } from "../../src/lib/sql-null";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -336,5 +339,143 @@ describe("productsForBrand", () => {
       [],
     );
     expect(real.reads()).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * A product whose composition columns hold exactly what was passed —
+ * `undefined` clears the column, via `orSqlNull`, because drizzle drops an
+ * undefined set-value on an UPDATE and the column would silently keep its
+ * old value.
+ */
+async function productWith(
+  parts: string | undefined,
+  verbatim: string | undefined,
+) {
+  const client = db();
+  const { product } = await resolveProduct(client, {
+    brandName: `Comp ${newUlid()}`,
+    productName: "A Jacket",
+    createdBy: newUlid(),
+  });
+  await client
+    .update(products)
+    .set({
+      fabricParts: orSqlNull(parts),
+      fabricComposition: orSqlNull(verbatim),
+    })
+    .where(eq(products.id, product.id));
+  return getProductComposition(client, product.id);
+}
+
+describe("products: composition, on the way back out", () => {
+  it("parses the stored parts, in the order they were written", async () => {
+    const composition = await productWith(
+      JSON.stringify([
+        { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
+        { part: "Underarm", materials: [{ material: "elastane", pct: 13 }] },
+      ]),
+      "Body: 100% nylon. Underarm: 13% elastane",
+    );
+
+    expect(composition?.parts.map((part) => part.part)).toEqual([
+      "Body",
+      "Underarm",
+    ]);
+    expect(composition?.verbatim).toBe(
+      "Body: 100% nylon. Underarm: 13% elastane",
+    );
+  });
+
+  it("reads a malformed parts column as no parts, and still shows verbatim", async () => {
+    // The column is `text`, so a read is a trust boundary even though the
+    // write was ours. A row from an older deploy must not be what stops
+    // garment detail rendering — the verbatim sentence is a separate
+    // column and survives.
+    const composition = await productWith("{not json", "100% merino");
+
+    expect(composition?.parts).toEqual([]);
+    expect(composition?.verbatim).toBe("100% merino");
+  });
+
+  it("reads well-formed JSON of the wrong shape as no parts", async () => {
+    // `JSON.parse` succeeding says nothing about the shape. This is the
+    // case a `as FabricPart[]` cast would have waved through, and it is
+    // the one that reaches a component expecting `materials` to exist.
+    const composition = await productWith(
+      JSON.stringify([{ part: "Body", materials: "nylon" }]),
+      "100% nylon",
+    );
+
+    expect(composition?.parts).toEqual([]);
+  });
+
+  it("reads a null parts column as no parts", async () => {
+    const composition = await productWith(undefined, "100% cotton");
+    expect(composition?.parts).toEqual([]);
+    expect(composition?.verbatim).toBe("100% cotton");
+  });
+
+  it("gives undefined verbatim rather than null, so the component has one absent", async () => {
+    const composition = await productWith(undefined, undefined);
+    expect(composition?.verbatim).toBeUndefined();
+  });
+
+  it("answers undefined for a product that does not exist", async () => {
+    expect(await getProductComposition(db(), newUlid())).toBeUndefined();
+  });
+});
+
+describe("products: one read for garment detail", () => {
+  it("answers the attribute defaults and the composition together", async () => {
+    // Garment detail wants both from the same row, and asking twice was
+    // two round trips plus a second copy of the "is there a product?"
+    // branch at the call site.
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: `Detail ${newUlid()}`,
+      productName: "A Jacket",
+      createdBy: newUlid(),
+    });
+    await client
+      .update(products)
+      .set({
+        weight: "light",
+        fabric: "synthetic",
+        windResistant: true,
+        waterResistant: false,
+        fabricComposition: "100% nylon",
+      })
+      .where(eq(products.id, product.id));
+
+    const detail = await getProductForDetail(client, product.id);
+
+    expect(detail?.defaults.weight).toBe("light");
+    expect(detail?.defaults.fabric).toBe("synthetic");
+    // `true` and `false` are both answers; only null is "not stated".
+    expect(detail?.defaults.windResistant).toBe(true);
+    expect(detail?.defaults.waterResistant).toBe(false);
+    expect(detail?.composition.verbatim).toBe("100% nylon");
+  });
+
+  it("reads an unstated flag as undefined, not as false", async () => {
+    // The distinction the closet depends on: null means the product did
+    // not say, which is what lets the garment's own column stand. Reading
+    // it as `false` would answer a question nobody asked.
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: `Unstated ${newUlid()}`,
+      productName: "A Jacket",
+      createdBy: newUlid(),
+    });
+
+    const detail = await getProductForDetail(client, product.id);
+
+    expect(detail?.defaults.windResistant).toBeUndefined();
+    expect(detail?.defaults.waterResistant).toBeUndefined();
+  });
+
+  it("answers nothing for a product that does not exist", async () => {
+    expect(await getProductForDetail(db(), newUlid())).toBeUndefined();
   });
 });

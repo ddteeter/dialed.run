@@ -1,9 +1,11 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import {
   outfitEntries,
   outfitEntryItems,
+  products,
   runs,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -349,5 +351,100 @@ describe("tap-list", () => {
     expect(
       created.map((item) => item.name).toSorted((a, b) => a.localeCompare(b)),
     ).toEqual(["Beanie", "Short sleeve tee"]);
+  });
+});
+
+describe("closet: §AH's structured colour", () => {
+  it("stores the name, the hex and the visibility alongside the colourway", async () => {
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Norvan Shell",
+      // The colourway the runner typed, kept exactly as typed.
+      color: "Obsidian",
+      colorName: "black",
+      colorHex: "#1f2a44",
+      visibilityLevel: "hi_viz",
+    });
+
+    expect(item.color).toBe("Obsidian");
+    expect(item.colorName).toBe("black");
+    expect(item.colorHex).toBe("#1f2a44");
+    expect(item.visibilityLevel).toBe("hi_viz");
+  });
+
+  it("nothing is parsed: a colourway alone leaves the structured name null", async () => {
+    // Mapping "Obsidian" to black is the parser round 5 refused, and this
+    // is what would catch someone adding one.
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Harrier",
+      color: "Obsidian",
+    });
+
+    expect(item.color).toBe("Obsidian");
+    expect(item.colorName).toBeNull();
+    expect(item.colorHex).toBeNull();
+    expect(item.visibilityLevel).toBeNull();
+  });
+
+  it("clears a colour the runner removed, rather than keeping the old one", async () => {
+    // Drizzle drops an `undefined` set-value on an UPDATE, so a column
+    // meant to be cleared silently keeps what it had. `orSqlNull` is what
+    // stops that, and it is invisible without a test that clears.
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Norvan Shell",
+      colorName: "navy",
+      colorHex: "#1f2a44",
+      visibilityLevel: "reflective",
+    });
+
+    const updated = await updateItem(db(), userId, item.id, {
+      category: "top",
+      name: "Norvan Shell",
+    });
+
+    expect(updated.colorName).toBeNull();
+    expect(updated.colorHex).toBeNull();
+    expect(updated.visibilityLevel).toBeNull();
+  });
+});
+
+describe("closet: §AG's composition reaches garment detail", () => {
+  it("quotes the linked product's label, and nothing for a generic piece", async () => {
+    // Read on detail and nowhere else, so this is the only place the
+    // branch that fetches it is decided.
+    const userId = newUlid();
+    const client = db();
+    const brand = await createOrGetBrand(client, "Arc'teryx");
+    const product = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Norvan Shell",
+      createdBy: userId,
+    });
+    await client
+      .update(products)
+      .set({ fabricComposition: "100% nylon, GORE-TEX" })
+      .where(eq(products.id, product.id));
+
+    const linked = await createItem(client, userId, {
+      category: "top",
+      name: "Norvan Shell",
+      productId: product.id,
+    });
+    const generic = await createItem(client, userId, {
+      category: "top",
+      name: "Green L/S Crew",
+    });
+
+    const linkedDetail = await getItemDetail(client, userId, linked.id);
+    expect(linkedDetail.composition?.verbatim).toBe("100% nylon, GORE-TEX");
+
+    // A generic piece has no product, so it has nobody's label to quote.
+    const genericDetail = await getItemDetail(client, userId, generic.id);
+    expect(genericDetail.composition).toBeUndefined();
   });
 });

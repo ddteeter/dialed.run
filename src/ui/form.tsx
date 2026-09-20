@@ -332,6 +332,18 @@ export function SubmitButton({
 }
 
 /**
+ * A chosen chip is marked in ink, never in hue — the same rule the tap
+ * list follows, and for the same reason: hue means verdict everywhere in
+ * this app, and a pink "selected" chip beside a teal bracket is a third
+ * accent that means nothing.
+ */
+const OPTION_CHIP_CLASS =
+  "relative flex cursor-pointer items-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+
+const CHIP_INPUT_CLASS =
+  "absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0";
+
+/**
  * What every "pick one of a set" control needs, whatever it looks like.
  *
  * `ChoiceField` and `ChoiceList` are deliberately different controls — a
@@ -481,6 +493,7 @@ export function ChoiceList<TOption extends string>({
   options,
   optionLabels,
   optionNotes,
+  layout,
   value,
   field,
   onChange,
@@ -503,37 +516,77 @@ export function ChoiceList<TOption extends string>({
      * visible on purpose.
      */
     optionNotes?: Readonly<Record<TOption, string>> | undefined;
-    value: TOption | undefined;
+    /**
+     * `chips` wraps the options; omitted, they stack one per line.
+     *
+     * No `= "rows"` default: the stacked layout is what you get by not
+     * asking, so naming it twice would be a value nothing reads.
+     *
+     * A layout prop rather than a second component, because the control is
+     * identical — a radio group with a legend, all options readable
+     * together — and only the shape differs. Round 11 §AH needs `chips`
+     * for thirteen colour names, where thirteen stacked rows would bury
+     * the rest of the form; `rows` stays the default so the five-answer
+     * groups O1 was built for do not move.
+     *
+     * **A chip is still words, never a swatch.** Design's reason, and the
+     * one thing a future caller must not undo: *"thirteen swatches is
+     * thirteen accents in one viewport"*, and hue means verdict
+     * everywhere else in this app.
+     */
+    layout?: "chips" | undefined;
+    /**
+     * `""` is "not answered", the same spelling `ChoiceField` uses for a
+     * `<select>` with no choice made — an unanswered control reaches the
+     * DOM as an empty string, and converting it to `undefined` at every
+     * call site was four lines that did nothing: `"" === option` is false
+     * for every option, which is exactly what `undefined` means here.
+     */
+    value: TOption | "" | undefined;
     onChange: (value: TOption) => void;
   }
 >): JSX.Element {
+  const isChips = layout === "chips";
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
       <legend className="mb-2 p-0 text-muted">
         <Mono step="sm">{legend}</Mono>
       </legend>
-      {options.map((option) => (
-        <label
-          key={option}
-          className="flex items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3 text-body font-semibold"
-        >
-          <input
-            {...field(name)}
-            type="radio"
-            value={option}
-            checked={value === option}
-            onChange={() => {
-              onChange(option);
-            }}
-          />
-          {optionLabels[option]}
-          {optionNotes === undefined ? undefined : (
-            <Mono step="md" className="ml-auto tabular-nums text-quiet">
-              {optionNotes[option]}
-            </Mono>
-          )}
-        </label>
-      ))}
+      <div className={isChips ? "flex flex-wrap gap-2" : "contents"}>
+        {options.map((option) => (
+          <label
+            key={option}
+            className={
+              isChips
+                ? OPTION_CHIP_CLASS
+                : "flex items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3 text-body font-semibold"
+            }
+          >
+            <input
+              {...field(name)}
+              type="radio"
+              value={option}
+              checked={value === option}
+              onChange={() => {
+                onChange(option);
+              }}
+              // A chip's own box is the mark, so the control fills it
+              // rather than sitting beside it — and `sr-only` is not the
+              // way to do that: it clips the input to a 1px corner, so a
+              // pointer aimed at the chip lands on the label text instead
+              // of on the radio. `TapListForm` found that with Playwright,
+              // which clicks the control and not the label.
+              className={isChips ? CHIP_INPUT_CLASS : undefined}
+            />
+            {optionLabels[option]}
+            {optionNotes === undefined ? undefined : (
+              <Mono step="md" className="ml-auto tabular-nums text-quiet">
+                {optionNotes[option]}
+              </Mono>
+            )}
+          </label>
+        ))}
+      </div>
       {hint !== undefined && error === undefined ? (
         <span className="text-micro text-muted">{hint}</span>
       ) : undefined}

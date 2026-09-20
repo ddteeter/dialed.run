@@ -46,12 +46,12 @@ import { estimateTempRange } from "../../lib/thermal";
 import { enqueueEnrichment } from "../enrichment";
 import { captureException } from "../ops";
 import {
-  getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
+  getProductForDetail,
   createOrGetBrand,
   resolveProduct,
 } from "../products";
-import type { ProductAttributeDefaults } from "../products";
+import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/owned";
 import { isDeniedDomain } from "../safety";
 import { nowSeconds } from "../../lib/now";
@@ -139,6 +139,30 @@ function estimateForGarment(
   });
 }
 
+/**
+ * Everything §AH collects about colour, as one group.
+ *
+ * Grouped rather than inlined because they *are* a group — a colourway,
+ * the name it maps to, the exact shade, and how much the piece is built to
+ * be seen — and because four more `orSqlNull` lines in the middle of
+ * `garmentRowValues` made one half of that literal a clone of the other
+ * half. Naming the group is the better answer to that than a suppression.
+ *
+ * All four are independent: a runner can give the colourway without the
+ * name, the name without the shade, and the visibility without either.
+ * `orSqlNull` is what lets clearing one on an edit actually clear it —
+ * drizzle drops an `undefined` set-value, so the column would keep what it
+ * had.
+ */
+function colorColumns(garment: Garment) {
+  return {
+    color: orSqlNull(garment.color),
+    colorName: orSqlNull(garment.colorName),
+    colorHex: orSqlNull(garment.colorHex),
+    visibilityLevel: orSqlNull(garment.visibilityLevel),
+  };
+}
+
 /** Shared insert/update column values — every write path builds the row
  * exactly the same way from a validated Garment. */
 function garmentRowValues(garment: Garment) {
@@ -159,7 +183,7 @@ function garmentRowValues(garment: Garment) {
     brand: orSqlNull(garment.brand),
     name: garment.name,
     size: orSqlNull(garment.size),
-    color: orSqlNull(garment.color),
+    ...colorColumns(garment),
     productUrl: orSqlNull(garment.productUrl),
     productId: orSqlNull(garment.productId),
   };
@@ -758,6 +782,12 @@ export async function listItems(
 
 export interface ItemDetail extends ClosetItemView {
   productDefaults: ProductAttributeDefaults | undefined;
+  /**
+   * Design round 10 §AG. Read here and not in `listItems`, because the
+   * block is garment-detail only and a list that holds the text is one
+   * `.map` from rendering it.
+   */
+  composition: ProductComposition | undefined;
 }
 
 export async function getItemDetail(
@@ -766,22 +796,26 @@ export async function getItemDetail(
   itemId: string,
 ): Promise<ItemDetail> {
   const item = await getOwnedItem(db, userId, itemId);
-  const [productDefaults, performanceByItem] = await Promise.all([
+  const [product, performanceByItem] = await Promise.all([
     // Equivalent mutant: looking a null product up answers undefined
     // anyway. The check says the intent — an unlinked item has no defaults
     // — and saves the query.
     // Stryker disable next-line ConditionalExpression
     item.productId === null
       ? Promise.resolve(undefined)
-      : getProductAttributeDefaults(db, item.productId),
+      : getProductForDetail(db, item.productId),
     computeUserPerformance(db, userId),
   ]);
+  // One read for both, because §AG's composition and the attribute
+  // defaults are the same row asked for by the same id — two calls were
+  // two round trips and a second copy of the branch above.
+  const productDefaults = product?.defaults;
   const view = toItemView(
     item,
     productDefaults,
     performanceByItem.get(item.id),
   );
-  return { ...view, productDefaults };
+  return { ...view, productDefaults, composition: product?.composition };
 }
 
 /**

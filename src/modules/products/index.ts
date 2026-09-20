@@ -9,13 +9,21 @@ export {
   ExtractionConflictError,
   type ApplyReport,
 } from "./apply-extraction";
-export type { BrandRow, ProductAttributeDefaults, ProductRow } from "./service";
+export type {
+  BrandRow,
+  ProductAttributeDefaults,
+  ProductComposition,
+  ProductForDetail,
+  ProductRow,
+} from "./service";
 export {
   createOrGetBrand,
   productsForBrand,
   createOrGetProduct,
   getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
+  getProductComposition,
+  getProductForDetail,
   resolveProduct,
   searchBrands,
   searchProducts,

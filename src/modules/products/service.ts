@@ -10,6 +10,8 @@ import { and, eq, inArray, like } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { brands, products } from "../../db/schema-core";
+import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
+import { firstRowWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
 import { nowSeconds } from "../../lib/now";
@@ -289,6 +291,107 @@ export async function getProductAttributeDefaults(
 ): Promise<ProductAttributeDefaults | undefined> {
   const defaults = await getProductAttributeDefaultsBulk(db, [productId]);
   return defaults.get(productId);
+}
+
+/**
+ * What a product is made of, for garment detail and nowhere else.
+ *
+ * Deliberately **not** folded into `ProductAttributeDefaults`: that shape
+ * is read in bulk for the closet grid, and §AG's whole point is that
+ * composition does not appear there. Widening the bulk read would ship the
+ * text to a screen forbidden to render it, one careless `.map` away from
+ * the spec sheet design refused.
+ */
+export interface ProductComposition {
+  /**
+   * As published, character for character.
+   */
+  readonly verbatim: string | undefined;
+  /**
+   * In the brand's order, never re-sorted by percentage.
+   */
+  readonly parts: readonly FabricPart[];
+}
+
+/**
+ * `firstRowWhere` rather than a two-column projection, which is the trade
+ * its own docstring already argues: there is no covering index to answer a
+ * primary-key lookup from, and one row by primary key is one row read
+ * whichever way it is written. What the projection bought was a smaller
+ * payload; what it cost was an eleventh copy of a shape `src/modules`
+ * already holds twenty of.
+ */
+export async function getProductComposition(
+  db: Db,
+  productId: string,
+): Promise<ProductComposition | undefined> {
+  const product = await getProductForDetail(db, productId);
+  return product?.composition;
+}
+
+/**
+ * Everything garment detail needs from a product, in one read.
+ *
+ * Two functions asking the same primary key for the same row is two round
+ * trips for one answer — and it was also a second `productId === null`
+ * branch at the call site, which is a mutant nothing can kill twice for
+ * the same reason it cannot kill it once (a null lookup answers nothing
+ * either way). One read, one branch.
+ *
+ * Still not the bulk shape: §AG keeps composition off the closet grid, and
+ * the grid reads `getProductAttributeDefaultsBulk`, which does not select
+ * it.
+ */
+export interface ProductForDetail {
+  readonly defaults: ProductAttributeDefaults;
+  readonly composition: ProductComposition;
+}
+
+export async function getProductForDetail(
+  db: Db,
+  productId: string,
+): Promise<ProductForDetail | undefined> {
+  const row = await firstRowWhere(db, products, eq(products.id, productId));
+  if (row === undefined) return;
+  return {
+    defaults: {
+      weight: row.weight,
+      fabric: row.fabric,
+      // Null means "not stated"; the columns read as booleans otherwise.
+      windResistant: row.windResistant ?? undefined,
+      waterResistant: row.waterResistant ?? undefined,
+      categoryHint: row.categoryHint,
+    },
+    composition: {
+      verbatim: row.fabricComposition ?? undefined,
+      parts: parseParts(row.fabricParts),
+    },
+  };
+}
+
+/**
+ * The column is `text`, so this is a trust boundary even though we wrote
+ * it: a row from an older deploy, or one edited by hand against the local
+ * D1, is `unknown` until the schema says otherwise.
+ *
+ * A row that fails to parse reads as "no parts" rather than throwing.
+ * Composition is reading material beside a garment; a malformed cache of
+ * someone else's hang tag must not be what stops the screen rendering.
+ * `verbatim` is a separate column and still shows.
+ */
+function parseParts(raw: string | null): readonly FabricPart[] {
+  try {
+    // No null guard: `String(null)` is `"null"`, which parses to `null`,
+    // which the schema rejects — the same empty list the guard returned.
+    // It was written, and mutation testing showed it unobservable: no
+    // input distinguishes the two, so it was a branch no test could ever
+    // reach for a reason no reader could ever check.
+    const parsed: unknown = JSON.parse(String(raw));
+    const result = fabricPartsSchema.safeParse(parsed);
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
 }
 
 /**

@@ -1373,3 +1373,89 @@ describe("ChoiceList", () => {
     expect(screen.getByText("Pick one to carry on.")).toBeVisible();
   });
 });
+
+/**
+ * `FieldProps` carries two "not set" values that `unicorn/no-useless-undefined`
+ * will not let a literal express, so they are named once here.
+ */
+const TRUE_WHEN_INVALID = undefined;
+const NO_DESCRIPTION = undefined;
+
+describe("ChoiceList's chip layout (§AH)", () => {
+  const OPTIONS = ["navy", "red"] as const;
+  const LABELS = { navy: "Navy", red: "Red" };
+
+  function chips(extra: { layout?: "chips" } = {}) {
+    return render(
+      <ChoiceList
+        name="colorName"
+        legend="Color"
+        options={OPTIONS}
+        optionLabels={LABELS}
+        value="navy"
+        field={(name) => ({
+          name,
+          readOnly: false,
+          "aria-invalid": TRUE_WHEN_INVALID,
+          "aria-describedby": NO_DESCRIPTION,
+          onInput: () => {
+            // Nothing to record: these tests drive the layout, not submit.
+          },
+        })}
+        onChange={() => {
+          // The layout is what is under test; the choice is fixed above.
+        }}
+        {...extra}
+      />,
+    );
+  }
+
+  it("stacks by default, so the groups O1 was built for do not move", () => {
+    chips();
+    const chip = screen.getByRole("radio", { name: "Navy" }).closest("label");
+    expect(chip?.parentElement).toHaveClass("contents");
+    expect(chip?.parentElement).not.toHaveClass("flex-wrap");
+    // The row treatment itself: a full-width bordered box, which is how
+    // O1's five answers are read together.
+    expect(chip).toHaveClass(
+      "rounded-field",
+      "border",
+      "border-hairline",
+      "bg-ground",
+      "text-body",
+    );
+    expect(chip).not.toHaveClass("rounded-pill");
+  });
+
+  it("wraps when asked, because thirteen rows would bury the form", () => {
+    chips({ layout: "chips" });
+    const row = screen
+      .getByRole("radio", { name: "Navy" })
+      .closest("label")?.parentElement;
+    expect(row).toHaveClass("flex", "flex-wrap", "gap-2");
+  });
+
+  it("marks the chosen chip in ink, never in hue", () => {
+    // Hue means verdict everywhere in this app; "thirteen swatches is
+    // thirteen accents in one viewport".
+    chips({ layout: "chips" });
+    const chip = screen.getByRole("radio", { name: "Navy" }).closest("label");
+    expect(chip).toHaveClass("rounded-pill", "has-[:checked]:bg-ink");
+    expect(chip?.className).not.toMatch(/bg-(action|teal|failure|unread)/);
+  });
+
+  it("lets the control fill the chip, so a tap lands on the radio", () => {
+    // `sr-only` clips the input to a 1px corner and the pointer hits the
+    // label text instead — the bug Playwright found on the tap list.
+    chips({ layout: "chips" });
+    const input = screen.getByRole("radio", { name: "Navy" });
+    expect(input).toHaveClass("absolute", "inset-0", "h-full", "w-full");
+    expect(input).not.toHaveClass("sr-only");
+  });
+
+  it("keeps the row treatment off the chips", () => {
+    chips({ layout: "chips" });
+    const chip = screen.getByRole("radio", { name: "Navy" }).closest("label");
+    expect(chip).not.toHaveClass("rounded-field");
+  });
+});

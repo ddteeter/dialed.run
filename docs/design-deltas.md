@@ -108,9 +108,21 @@ round (D-26…D-33).
 16. **§AH's F strip says VISIBILITY and our column cannot.**
     `wardrobe_items.visibility` already exists and means the moderation
     state — `text().notNull().default("ok")`, written by `closet/service.ts`,
-    sitting next to `retired`. The hi-viz attribute ships as `hi_viz`
-    (owner, 2026-09-19). **The ask is the label**: the artboard and the
-    schema should not disagree about a word this load-bearing.
+    sitting next to `retired`. The attribute ships as `visibility_level`,
+    carrying all three of the board's chips (owner, 2026-09-19); the packet
+    had described it as a hi-viz flag, and AH1 draws PLAIN / REFLECTIVE
+    TRIM / HI-VIZ with rule 04 making only the last one exempt. **The ask
+    is the label**: the artboard and the schema should not disagree about a
+    word this load-bearing, on a table that now carries both.
+
+17. **"Colour" on the boards, "Color" in the app.** The artboards spell it
+    British throughout; the app's one existing user-facing label said
+    "Color" and `docs/product.md`'s lexicon does not mention colour at all.
+    Shipped American, and the free-text field became "Colorway" so two
+    fields on one form do not carry the same word (owner, 2026-09-19).
+    Copy is the artboard's domain, so this is a deliberate divergence
+    rather than an oversight — flagging it so the next round does not
+    "fix" it back.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 

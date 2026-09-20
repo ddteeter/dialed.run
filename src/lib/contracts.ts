@@ -59,6 +59,108 @@ export const garmentCategoryLabels = {
   accessory: "Accessory",
 } as const satisfies Record<(typeof garmentCategories)[number], string>;
 
+/**
+ * The thirteen colour names, in their two classes — design round 11 §AH.
+ *
+ * **The classes are the source and the enum is derived**, because the rule
+ * keys off the class and a hand-written second list is what drifts. §AH's
+ * own rule 01: *"Two classes. Neutral: black, white, grey, navy, brown,
+ * beige. Colour: red, orange, yellow, green, blue, purple, pink. Thirteen
+ * names, locked; no 'multi', no 'other'."*
+ *
+ * Berlin-Kay's eleven, plus navy and beige "because that's what's on the
+ * hang tag". Hi-viz is deliberately **not** a fourteenth: it is not a
+ * colour, it is a reason, and `garmentVisibilitySchema` below holds it.
+ *
+ * The Call's tiebreak that reads these — the name rule and the OKLCH
+ * refinement — is Epic 200 and is not built. What ships is collection and
+ * display.
+ */
+export const neutralColorNames = [
+  "black",
+  "white",
+  "grey",
+  "navy",
+  "brown",
+  "beige",
+] as const;
+export const chromaticColorNames = [
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "pink",
+] as const;
+
+/**
+ * The thirteen as one ordered tuple — the single list everything else
+ * reads, including `wardrobe_items.color_name`'s drizzle enum.
+ *
+ * Exported as the tuple rather than only as a schema because `text(…, {
+ * enum })` wants the values and cannot take a zod type. Before this, the
+ * schema column spelled all thirteen out again and nothing compared the
+ * two: adding a fourteenth name here would have left the column silently
+ * accepting twelve.
+ */
+export const colorNames = [
+  ...neutralColorNames,
+  ...chromaticColorNames,
+] as const;
+
+export const colorNameSchema = z.enum(colorNames);
+export type ColorName = z.infer<typeof colorNameSchema>;
+
+/**
+ * Which class a name belongs to, read off the arrays above rather than
+ * written a second time.
+ *
+ * Neutrals pair with anything; two *different* chromatic names are what
+ * fails a kit. Nothing in v1 calls this — Epic 200 does — but the
+ * classification is part of the contract the names are collected under,
+ * and deriving it here is what stops the Call lane restating the split.
+ */
+export function colorClass(name: ColorName): "neutral" | "chromatic" {
+  return (neutralColorNames as readonly string[]).includes(name)
+    ? "neutral"
+    : "chromatic";
+}
+
+/**
+ * A six-digit hex, lowercased, with the `#`.
+ *
+ * Level 2 of §AH, and optional at both levels: a runner who gives only a
+ * name gets a coarser Call, not a different one. Three-digit shorthand is
+ * rejected rather than expanded — the field is filled by sampling a photo
+ * or by pasting what a brand published, and neither produces `#abc`.
+ */
+export const colorHexSchema = z
+  .string()
+  .regex(/^#[0-9a-f]{6}$/, "Use a six-digit hex like #1f2a44.");
+
+/**
+ * How much a garment is built to be seen — §AH's VISIBILITY attribute.
+ *
+ * **Not `visibility`**, which `wardrobe_items` already has and which means
+ * the moderation state (`ok` / `pending` / `pass` / `flagged` /
+ * `hidden_pending_review`, written by `closet/service.ts` and owned by
+ * lane 106). Two facts, one word, one table: naming this one `visibility`
+ * would have overwritten a trust-and-safety field and nothing would have
+ * failed loudly. The artboard's label still says VISIBILITY; that is
+ * raised in `docs/design-deltas.md`.
+ *
+ * Three values, and all three are load-bearing. §AH rule 04: a `hi_viz`
+ * garment is *invisible* to the colour rule — "not Neutral, not Colour,
+ * not counted. It's safety because the runner said so, never because a hex
+ * is bright." `reflective` is **not** exempt: "the base colour is what
+ * shows."
+ */
+export const garmentVisibilities = ["plain", "reflective", "hi_viz"] as const;
+
+export const garmentVisibilitySchema = z.enum(garmentVisibilities);
+export type GarmentVisibility = z.infer<typeof garmentVisibilitySchema>;
+
 export const layerSchema = z.enum(["base", "mid", "outer"]);
 export const weightSchema = z.enum(["light", "mid", "heavy"]);
 export const fabricSchema = z.enum([
@@ -90,6 +192,17 @@ const garmentBase = z.strictObject({
   brand: z.string().max(60, "Keep the brand under 60 characters.").optional(),
   size: z.string().max(20, "Keep the size under 20 characters.").optional(),
   color: z.string().max(30, "Keep the color under 30 characters.").optional(),
+  /**
+   * §AH, and additive: the free-text `color` above is the *colourway* the
+   * runner typed ("Obsidian") and stays exactly as it was, as the row's
+   * caption. These two are the structured reading beside it.
+   *
+   * Nothing is parsed and nothing is backfilled — mapping "Obsidian" to
+   * black is the parser round 5 rejected.
+   */
+  colorName: colorNameSchema.optional(),
+  colorHex: colorHexSchema.optional(),
+  visibilityLevel: garmentVisibilitySchema.optional(),
   productUrl: httpsUrlSchema.optional(),
   productId: z.string().optional(),
   estTempLowC: z.number().optional(),
@@ -360,6 +473,17 @@ export const fabricCompositionSchema = z.object({
   parts: z.array(fabricPartSchema).optional(),
 });
 export type FabricComposition = z.infer<typeof fabricCompositionSchema>;
+
+/**
+ * What `products.fabric_parts` holds, on the way back out.
+ *
+ * The column is `text`, so a read is a trust boundary like any other even
+ * though the write was ours: a row written by an older deploy, or by hand
+ * against the local D1, is `unknown` until this says otherwise.
+ * `JSON.parse(x) as FabricPart[]` is the violation CLAUDE.md names.
+ */
+export const fabricPartsSchema = z.array(fabricPartSchema);
+export type FabricPart = z.infer<typeof fabricPartSchema>;
 
 /**
 What the extraction ladder emits; every field independently optional.

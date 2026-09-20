@@ -67,6 +67,7 @@ function detail(overrides: Partial<Detail> = {}): Detail {
       isGeneric: false,
     }),
     productDefaults: undefined,
+    composition: undefined,
     pairedItems: [],
     ...overrides,
   };
@@ -597,5 +598,136 @@ describe("GarmentDetail: the photo upload", () => {
       "accept",
       "image/jpeg,image/png,image/webp",
     );
+  });
+});
+
+describe("GarmentDetail: colour on the identity line (§AH rule 08)", () => {
+  it("carries the name and the colourway as words, never a swatch", async () => {
+    // "Not the closet grid, not a filter, no swatch." Hue means verdict
+    // everywhere in this app, so a navy dot beside a teal bracket would be
+    // a third accent that means nothing.
+    const { container } = await renderWithRouter(
+      garment({
+        item: wardrobeItem({
+          name: "Norvan Shell",
+          colorName: "navy",
+          color: "Obsidian",
+        }),
+      }),
+    );
+
+    expect(screen.getByText(/navy · Obsidian/)).toBeVisible();
+    expect(container.querySelector("[data-swatch]")).toBeNull();
+    expect(container.getHTML()).not.toMatch(/background-color/);
+  });
+
+  it("shows either one alone", async () => {
+    // A runner can pick a name without typing a colourway, or the reverse
+    // — the two fields are independent and neither implies the other.
+    await renderWithRouter(
+      garment({ item: wardrobeItem({ colorName: "grey" }) }),
+    );
+    expect(screen.getByText("grey")).toBeVisible();
+  });
+
+  it("shows the colourway alone when nothing was classified", async () => {
+    await renderWithRouter(
+      garment({ item: wardrobeItem({ color: "Obsidian" }) }),
+    );
+    expect(screen.getByText("Obsidian")).toBeVisible();
+  });
+
+  it("names hi-viz and reflective trim, and stays quiet about plain", async () => {
+    // All three are stored, because the Call's rule has to tell "plain"
+    // from "not answered". Only two of them are worth a line on a screen.
+    await renderWithRouter(
+      garment({ item: wardrobeItem({ visibilityLevel: "hi_viz" }) }),
+    );
+    expect(screen.getByText("hi-viz")).toBeVisible();
+  });
+
+  it("names reflective trim", async () => {
+    await renderWithRouter(
+      garment({ item: wardrobeItem({ visibilityLevel: "reflective" }) }),
+    );
+    expect(screen.getByText("reflective trim")).toBeVisible();
+  });
+
+  it("says nothing for a plain garment", async () => {
+    const { container } = await renderWithRouter(
+      garment({ item: wardrobeItem({ visibilityLevel: "plain" }) }),
+    );
+    expect(container).not.toHaveTextContent("plain");
+    // And with nothing else known, the chip row is absent rather than empty.
+    expect(container.querySelectorAll("p")).toHaveLength(2);
+  });
+
+  it("keeps the order the identity line is read in", async () => {
+    // Visibility, then the classified name, then the runner's own word:
+    // most-general to most-specific, so the line narrows as it is read.
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({
+          colorName: "black",
+          color: "Obsidian",
+          visibilityLevel: "hi_viz",
+        }),
+        effective: {
+          weight: "mid",
+          fabric: undefined,
+          windResistant: undefined,
+          waterResistant: undefined,
+        },
+      }),
+    );
+
+    expect(screen.getByText("mid · hi-viz · black · Obsidian")).toBeVisible();
+  });
+});
+
+describe("GarmentDetail: composition (§AG)", () => {
+  it("renders the block under the range when the product has one", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ name: "Norvan Shell", brand: "Arc'teryx" }),
+        composition: {
+          verbatim: "100% nylon, GORE-TEX",
+          parts: [],
+        },
+      }),
+    );
+
+    expect(screen.getByText("Made of")).toBeVisible();
+    expect(screen.getByText("100% nylon, GORE-TEX")).toBeVisible();
+  });
+
+  it("credits the garment's own brand, which is the label in the runner's hand", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ name: "Harrier", brand: "Tracksmith" }),
+        composition: { verbatim: "100% merino wool", parts: [] },
+      }),
+    );
+
+    expect(screen.getByText("As labelled by Tracksmith")).toBeVisible();
+  });
+
+  it("omits the attribution for a piece with no brand rather than inventing one", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ name: "Green L/S Crew" }),
+        composition: { verbatim: "100% cotton", parts: [] },
+      }),
+    );
+
+    expect(screen.getByText("100% cotton")).toBeVisible();
+    expect(screen.queryByText(/as labelled/i)).toBeNull();
+  });
+
+  it("says nothing when the product has no composition at all", async () => {
+    // A generic piece has no product, so it has nobody's label to quote —
+    // and "no block" is not an "Unknown" row.
+    await renderWithRouter(garment({ composition: undefined }));
+    expect(screen.queryByText("Made of")).toBeNull();
   });
 });

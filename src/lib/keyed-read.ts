@@ -1,6 +1,24 @@
 import { and, inArray } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
+
+/**
+ * Wider than `DrizzleD1Database`'s default so both handle spellings the
+ * repo produces fit.
+ *
+ * `runs/core-db.ts` exports `CoreDb = ReturnType<typeof coreDb>`, which is
+ * `Record<string, never>`; `modules/products` declares `Db = ReturnType<typeof
+ * drizzle>`, which is `Record<string, unknown>`. Nothing chose that
+ * difference — they are two ways of writing "a handle on dialed-core with
+ * no schema attached" — but it made these helpers callable from one and
+ * not the other, which is how `getProductComposition` came to hand-roll a
+ * primary-key lookup the file next door already had.
+ *
+ * The narrower type is assignable to this, so every existing caller still
+ * fits. The real fix is one `CoreDb` the whole repo imports; that is a
+ * rename across ~20 signatures and belongs to nobody's current packet.
+ */
+type Handle = DrizzleD1Database<Record<string, unknown>>;
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 /**
@@ -22,7 +40,7 @@ import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
  * so. Passing it makes the choice louder here than it was inline.
  */
 export async function columnWhere<TColumn extends SQLiteColumn>(
-  database: DrizzleD1Database,
+  database: Handle,
   table: SQLiteTable,
   column: TColumn,
   where: SQL | undefined,
@@ -43,7 +61,7 @@ export async function columnWhere<TColumn extends SQLiteColumn>(
  * them.
  */
 export async function hasRowWhere(
-  database: DrizzleD1Database,
+  database: Handle,
   table: SQLiteTable,
   column: SQLiteColumn,
   where: SQL | undefined,
@@ -78,7 +96,7 @@ export async function hasRowWhere(
  * `columnWhere`).
  */
 export async function firstColumnWhere<TColumn extends SQLiteColumn>(
-  database: DrizzleD1Database,
+  database: Handle,
   table: SQLiteTable,
   column: TColumn,
   where: SQL | undefined,
@@ -101,7 +119,7 @@ export async function firstColumnWhere<TColumn extends SQLiteColumn>(
  * had written it out identically.
  */
 export async function firstRowWhere<TTable extends SQLiteTable>(
-  database: DrizzleD1Database,
+  database: Handle,
   table: TTable,
   where: SQL | undefined,
 ): Promise<TTable["$inferSelect"] | undefined> {
@@ -135,7 +153,7 @@ export async function firstRowWhere<TTable extends SQLiteTable>(
  * grant plus a comment rather than a silent line.
  */
 export async function columnSetAmong<TColumn extends SQLiteColumn>(
-  database: DrizzleD1Database,
+  database: Handle,
   table: SQLiteTable,
   column: TColumn,
   membershipColumn: SQLiteColumn,

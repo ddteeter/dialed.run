@@ -156,7 +156,7 @@ describe("GarmentForm: identity leads", () => {
     expect(screen.getByLabelText(/Brand/)).toHaveValue("");
     expect(screen.getByLabelText(/Model \/ name/)).toHaveValue("");
     expect(screen.getByLabelText("Size")).toHaveValue("");
-    expect(screen.getByLabelText("Color")).toHaveValue("");
+    expect(screen.getByLabelText("Colorway")).toHaveValue("");
     expect(screen.getByLabelText("Product link")).toHaveValue("");
     expect(screen.getByLabelText("Layer")).toHaveValue("");
     expect(screen.getByLabelText("Weight")).toHaveValue("");
@@ -196,7 +196,7 @@ describe("GarmentForm: identity leads", () => {
 
     await user.type(screen.getByLabelText(/Model \/ name/), "Harrier");
     await user.type(screen.getByLabelText("Size"), "M");
-    await user.type(screen.getByLabelText("Color"), "Navy");
+    await user.type(screen.getByLabelText("Colorway"), "Navy");
     await user.type(
       screen.getByLabelText("Product link"),
       "https://example.com/harrier",
@@ -262,7 +262,7 @@ describe("GarmentForm: the failure path D-17 was about", () => {
     expect(named("Wind resistant")).toBe("windResistant");
     expect(named("Water resistant")).toBe("waterResistant");
     expect(named("Size")).toBe("size");
-    expect(named("Color")).toBe("color");
+    expect(named("Colorway")).toBe("color");
     expect(named("Product link")).toBe("productUrl");
   });
 

@@ -38,5 +38,6 @@ export {
   tapListFor,
   tapListSelectionSchema,
 } from "./tap-list";
+export { photoUrlFor } from "./photo-url";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoKeyFor, photoSizes } from "./photos";

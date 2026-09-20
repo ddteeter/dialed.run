@@ -2,9 +2,11 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 
+import type { GarmentVisibility } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
 import { Bracketed, Mono, ProductLink } from "../../../ui";
 import { garmentLabel } from "../label";
+import { CompositionBlock } from "./Composition";
 import type {
   EffectiveAttributes,
   WardrobeItemRow,
@@ -35,14 +37,43 @@ type Detail = Awaited<ReturnType<typeof getItemDetail>> & {
  * docs/design-deltas.md); showing where the thing went beats announcing
  * that something happened.
  */
-function attributeChips(effective: EffectiveAttributes): string[] {
+/**
+ * The identity line — §AH rule 08, "garment detail carries the name on the
+ * identity line — LONG SLEEVE · NAVY · OBSIDIAN — the way AG carries
+ * composition. Not the closet grid, not a filter, **no swatch.**"
+ *
+ * The colour name and the colourway are both words here, and that is the
+ * rule rather than an omission: hue means verdict everywhere in this app,
+ * so a navy dot beside a teal bracket would be a third accent that means
+ * nothing. `colorName` is the structured one and `color` is what the
+ * runner typed; a piece can carry either, both, or neither.
+ *
+ * `plain` visibility is not shown. All three values are stored because the
+ * Call's rule needs to tell "plain" from "not answered", but "plain" on a
+ * detail screen is a line that says nothing — the two worth reading are
+ * the two that change how a garment is seen.
+ */
+function attributeChips(
+  effective: EffectiveAttributes,
+  item: WardrobeItemRow,
+): string[] {
   const chips: string[] = [];
   if (effective.weight) chips.push(effective.weight);
   if (effective.fabric) chips.push(effective.fabric);
   if (effective.windResistant) chips.push("wind resistant");
   if (effective.waterResistant) chips.push("water resistant");
+  if (item.visibilityLevel && item.visibilityLevel !== "plain") {
+    chips.push(VISIBILITY_WORDS[item.visibilityLevel]);
+  }
+  if (item.colorName) chips.push(item.colorName);
+  if (item.color) chips.push(item.color);
   return chips;
 }
+
+const VISIBILITY_WORDS = {
+  reflective: "reflective trim",
+  hi_viz: "hi-viz",
+} as const satisfies Record<Exclude<GarmentVisibility, "plain">, string>;
 
 export function GarmentDetail({
   detail,
@@ -64,8 +95,15 @@ export function GarmentDetail({
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [uploading, setUploading] = useState(false);
 
-  const { item, tempRange, performance, pairedItems, effective, isGeneric } =
-    detail;
+  const {
+    item,
+    tempRange,
+    performance,
+    pairedItems,
+    effective,
+    isGeneric,
+    composition,
+  } = detail;
   // Same name for the heading and the photo's accessible name.
   const label = garmentLabel({
     name: item.name,
@@ -155,11 +193,25 @@ export function GarmentDetail({
         )}
       </p>
 
-      {attributeChips(effective).length > 0 ? (
+      {attributeChips(effective, item).length > 0 ? (
         <p className="text-small text-quiet">
-          {attributeChips(effective).join(" · ")}
+          {attributeChips(effective, item).join(" · ")}
         </p>
       ) : undefined}
+
+      {/* §AG: below the range, and on this screen only. `brand` is the
+          garment's own, which is what the runner sees on the label in
+          their hand; a piece with no brand gets no "as labelled by" line
+          rather than an invented one. */}
+      {composition === undefined ? undefined : (
+        <CompositionBlock
+          composition={{
+            verbatim: composition.verbatim,
+            parts: composition.parts,
+            brand: item.brand ?? undefined,
+          }}
+        />
+      )}
 
       <p className="text-small text-quiet">
         <Mono>
