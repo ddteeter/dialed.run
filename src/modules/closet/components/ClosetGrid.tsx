@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
+import type { JSX } from "react";
 import { useState } from "react";
 
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, Mono, useListMotion } from "../../../ui";
 import type { UiGroup } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
 import { garmentLabel } from "../label";
@@ -30,6 +31,75 @@ function itemLabel(view: ClosetItemView): string {
 function tempLabel(view: ClosetItemView): string {
   if (!view.tempRange) return "Untested"; // uppercased by <Bracketed> in CSS
   return formatTempRange(view.tempRange) ?? "Untested";
+}
+
+const itemKey = (view: ClosetItemView): string => view.item.id;
+
+/**
+ * One derived-UI group of the grid, and the two list surfaces the
+ * doctrine gives it.
+ *
+ * Its own component because `useListMotion` is a hook and the groups are a
+ * `map` — but also because the group is the unit that animates: a garment
+ * only ever reflows among its own kind, and a group whose last piece was
+ * retired should close up rather than leave a heading over nothing.
+ *
+ * It renders `shown` rather than `items` so a row that has stopped
+ * matching the filter is still on screen while it collapses. That is the
+ * whole of "retire, don't delete" expressed as a move: the row folds shut
+ * where it stood instead of blinking out.
+ */
+function ClosetGroup({
+  label,
+  items,
+}: Readonly<{
+  label: string;
+  items: readonly ClosetItemView[];
+}>): JSX.Element | undefined {
+  const { shown, leaving, listRef } = useListMotion(items, itemKey);
+  if (shown.length === 0) return undefined;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-display text-heading">{label}</h2>
+      <ul
+        ref={listRef}
+        className="grid grid-cols-2 gap-3 wide:grid-cols-3 desk:grid-cols-4"
+      >
+        {shown.map((view) => (
+          <li
+            key={view.item.id}
+            className="collapsing-row"
+            data-leaving={leaving.has(view.item.id) ? "true" : undefined}
+          >
+            <Link
+              to="/closet/$itemId"
+              params={{ itemId: view.item.id }}
+              className="row-press flex flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
+            >
+              <span className="text-body font-semibold">
+                {itemLabel(view)}
+                {view.isGeneric ? (
+                  <>
+                    {" "}
+                    <Bracketed step="xs">Generic</Bracketed>
+                  </>
+                ) : undefined}
+                {view.item.retired ? (
+                  <>
+                    {" "}
+                    <Bracketed step="xs">Retired</Bracketed>
+                  </>
+                ) : undefined}
+              </span>
+              <Bracketed className="text-dialed-text">
+                {tempLabel(view)}
+              </Bracketed>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 export interface ClosetGridProps {
@@ -85,45 +155,13 @@ export function ClosetGrid({
         </p>
       ) : undefined}
 
-      {GROUP_ORDER.map(({ group, label }) => {
-        const items = visible.filter((view) => view.uiGroup === group);
-        if (items.length === 0) return;
-        return (
-          <section key={group} className="flex flex-col gap-3">
-            <h2 className="font-display text-heading">{label}</h2>
-            <ul className="grid grid-cols-2 gap-3 wide:grid-cols-3 desk:grid-cols-4">
-              {items.map((view) => (
-                <li key={view.item.id}>
-                  <Link
-                    to="/closet/$itemId"
-                    params={{ itemId: view.item.id }}
-                    className="flex flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
-                  >
-                    <span className="text-body font-semibold text-ink">
-                      {itemLabel(view)}
-                      {view.isGeneric ? (
-                        <>
-                          {" "}
-                          <Bracketed step="xs">Generic</Bracketed>
-                        </>
-                      ) : undefined}
-                      {view.item.retired ? (
-                        <>
-                          {" "}
-                          <Bracketed step="xs">Retired</Bracketed>
-                        </>
-                      ) : undefined}
-                    </span>
-                    <Bracketed className="text-dialed-text">
-                      {tempLabel(view)}
-                    </Bracketed>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+      {GROUP_ORDER.map(({ group, label }) => (
+        <ClosetGroup
+          key={group}
+          label={label}
+          items={visible.filter((view) => view.uiGroup === group)}
+        />
+      ))}
 
       {retiredCount > 0 ? (
         <button

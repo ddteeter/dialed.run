@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
@@ -232,8 +232,48 @@ describe("ClosetGrid: retired items behind a toggle", () => {
     ).toBeVisible();
 
     // And back — the toggle is a toggle, not a one-way reveal.
+    //
+    // Awaited, because the row no longer vanishes on the click: the
+    // doctrine's "retire a garment" move holds it in the list for one
+    // `move` while it collapses its own height, and only then is it
+    // unmounted. A synchronous `queryBy` here asserts that the collapse
+    // does not happen.
     await user.click(screen.getByRole("button", { name: /Hide retired/ }));
-    expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
+    });
+  });
+
+  it("marks the row that is leaving, and only that one", async () => {
+    // "Row collapses its own height. No drift, no fade — collapse says
+    // removed from the list" (design/motion.js, "Retire a garment"). The
+    // mark is what the CSS transitions against, so a row that leaves
+    // unmarked simply vanishes.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, retired])} initialShowRetired />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Hide retired/ }));
+
+    const leaving = screen.getByRole("link", { name: /Old tee/ }).closest("li");
+    expect(leaving).toHaveClass("collapsing-row");
+    expect(leaving).toHaveAttribute("data-leaving", "true");
+    const staying = screen.getByRole("link", { name: /Harrier/ }).closest("li");
+    expect(staying).toHaveClass("collapsing-row");
+    expect(staying).not.toHaveAttribute("data-leaving");
+  });
+
+  it("presses a row to ink rather than scaling it", async () => {
+    // "Background flips to ink. No scale — scale-on-press is a spring in
+    // disguise and it makes crisp type shimmer."
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+
+    const row = screen.getByRole("link", { name: /Harrier/ });
+    expect(row).toHaveClass("row-press");
+    // The label inherits, so the press can invert it; a `text-ink` here
+    // would leave ink type on an ink ground for the length of the press.
+    expect(row.firstElementChild).not.toHaveClass("text-ink");
   });
 
   it("opens already showing them when the caller asks", async () => {

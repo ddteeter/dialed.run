@@ -259,6 +259,42 @@ describe("VerdictForm: the scale", () => {
     expect(other).not.toHaveClass("bg-ink");
   });
 
+  it("closes the brackets onto the chosen verdict, and locks after", async () => {
+    // "The single most important input in the product. The bracket
+    // closing is the receipt" (design/motion.js, "Verdict commit").
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+
+    const chosen = screen.getByRole("button", { name: "Dialed" });
+    const brackets = [...chosen.querySelectorAll("span")];
+    expect(brackets.map((span) => span.textContent)).toEqual(["[", "]"]);
+    expect(brackets[0]).toHaveClass("bracket-close-start");
+    expect(brackets[1]).toHaveClass("bracket-close-end");
+    // Decoration, not notation: they must not join the name a screen
+    // reader announces, which is why the button is still found by
+    // "Dialed" above.
+    for (const span of brackets) {
+      expect(span).toHaveAttribute("aria-hidden", "true");
+    }
+    // "…then the row locks": the ink is delayed by one reveal, and that
+    // delay is only on the chosen row — on the resting one it would make
+    // un-choosing linger for a receipt that did not happen.
+    expect(chosen).toHaveClass("verdict-lock");
+    expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
+      "verdict-lock",
+    );
+  });
+
+  it("gives an unchosen verdict no brackets to close", async () => {
+    await renderWithRouter(form());
+
+    expect(
+      screen.getByRole("button", { name: "Dialed" }).querySelectorAll("span"),
+    ).toHaveLength(0);
+  });
+
   it("starts from the verdict the entry already has", async () => {
     // Including 0: dialed is a verdict, and an editor that forgot it would
     // show the form as unanswered.
@@ -1209,5 +1245,20 @@ describe("the photo step W3 hangs off", () => {
     // given a photo to.
     expect(step.seen).toEqual([]);
     expect(screen.queryByText(/^step for/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The log flow's three screens are three routes, so the move that carries
+ * "which way you are travelling" has to be on each of them — and a screen
+ * that quietly loses its wrapper animates nothing, with nothing to say so.
+ */
+describe("VerdictForm: the log flow", () => {
+  it("is step three of the log flow, and enters from an edge", async () => {
+    await renderWithRouter(form());
+
+    const step = document.querySelector("[data-flow-direction]");
+    expect(step).not.toBeNull();
+    expect(step?.className).toMatch(/^flow-step-(forward|back)$/);
   });
 });

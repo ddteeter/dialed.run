@@ -27,6 +27,29 @@
 }
 
 /**
+ * The collapse, as a keyframe.
+ *
+ * Shrinking the durations above is only half of REDUCED_MOTION's rule —
+ * "every move collapses to a **90ms opacity change**" — and it is the
+ * half that does nothing for a move that travels: a 24px slide at 90ms is
+ * still a 24px slide. So every utility below that translates carries its
+ * own `prefers-reduced-motion` block swapping the travel for this, and
+ * the block is written out per surface rather than inherited, because a
+ * surface that forgets it fails silently and looks correct.
+ *
+ * "Never reduce to zero" is about the duration, not the opacity: a move
+ * the user cannot see is a move that did not confirm anything.
+ */
+@keyframes reduced-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/**
  * The breathing brackets — the product's one waiting device
  * (docs/product.md §Forms & failure, "Submitting: the button"). No
  * spinners, ever; the doctrine's NEVER list bans them, and this is what it
@@ -53,15 +76,403 @@
   }
 }
 
-.breathe {
+/**
+ * `@utility`, not a bare class, so Tailwind knows the name.
+ *
+ * A class Tailwind does not know is dropped in silence — no error, no
+ * warning, an unstyled element and a green suite — and `src/styles.css`'s
+ * `@theme inline` block is the whole of the protection against that until
+ * D-78's `no-unknown-classes` rule lands. A hand-written rule sits
+ * outside that index, which is why the measurement in
+ * `docs/proposals/082-tailwind-unknown-class-lint.md` reports `breathe`
+ * as unknown twice. Registered here, every move in this file is in the
+ * same index as every colour and every type step.
+ *
+ * Reduced motion collapses to static, not to a faster loop: a pulse is a
+ * pulse at any speed, and the label still says what is happening. This is
+ * the one surface where that is right, because a wait has no arrival to
+ * confirm — it is the absence of one.
+ */
+@utility breathe {
   animation: breathe var(--dur-breathe) linear infinite;
-}
 
-/* Reduced motion collapses to static, not to a faster loop: a pulse is a
- * pulse at any speed. The label still says what is happening. */
-@media (prefers-reduced-motion: reduce) {
-  .breathe {
+  @media (prefers-reduced-motion: reduce) {
     animation: none;
     opacity: 1;
   }
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Tab switch — `instant`, `snap`.
+ *
+ * "No transition on content. Active indicator slides under the label."
+ * The why is a budget: "a crossfade would add 200ms to the most-used
+ * gesture in the app", so nothing here touches the panel — only the rule
+ * under the label moves, and the label's own colour flips with it.
+ *
+ * The indicator is pink, which is the Desktop Contract's rule rather than
+ * a measurement: "the four tabs become four text links in the bar, same
+ * order, same active rule (pink underline, no crossfade — motion.js 'Tab
+ * switch' applies unchanged)".
+ *
+ * Under reduced motion the indicator stops travelling and jumps. It does
+ * not collapse to an opacity change, because a tab switch is the one move
+ * whose confirmation does not depend on it: the panel beneath has already
+ * changed, and the label's colour flip is a 90ms change of its own.
+ * ------------------------------------------------------------------ */
+@utility tab-indicator {
+  transition: translate var(--dur-instant) var(--ease-snap);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition-property: none;
+  }
+}
+
+@utility tab-label {
+  transition: color var(--dur-instant) var(--ease-snap);
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Row press — `instant`, `snap`.
+ *
+ * "Background flips to ink. **No scale** — scale-on-press is a spring in
+ * disguise and it makes crisp type shimmer." Nothing here touches
+ * `scale` or `transform`, and nothing should: law 1 is that things
+ * arrive rather than settle, and a press that grows has to come back.
+ *
+ * No reduced-motion block, and that is deliberate rather than an
+ * oversight — there is nothing to collapse. The move is a colour change
+ * at `instant`, which is already the 90ms the rule collapses everything
+ * else *to*, and it travels nowhere.
+ * ------------------------------------------------------------------ */
+@utility row-press {
+  transition:
+    background-color var(--dur-instant) var(--ease-snap),
+    color var(--dur-instant) var(--ease-snap);
+
+  &:active {
+    background-color: var(--ink);
+    color: var(--ground);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Log flow step — `move`, `snap`.
+ *
+ * "Step slides in from the trailing edge, previous step slides out …
+ * direction tells you which way you are travelling through the flow, so
+ * Back feels like back." Hence two utilities and not one: the sign of the
+ * travel is the whole information.
+ *
+ * Only the entering half exists. A1, A2 and A3 are three routes, so the
+ * step being left unmounts the moment the next one mounts, and the only
+ * way to hold it on screen is a root view transition — which the
+ * doctrine's own View Transitions note rules out ("name only two things:
+ * the bracket frame and the persistent tab bar") and which would animate
+ * the tab switch above as well.
+ *
+ * `--travel-element` is 24px, TRAVEL.element, and law 3's ceiling for
+ * anything that is not a container.
+ * ------------------------------------------------------------------ */
+@keyframes flow-step-forward {
+  from {
+    translate: var(--travel-element) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes flow-step-back {
+  from {
+    translate: calc(-1 * var(--travel-element)) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@utility flow-step-forward {
+  animation: flow-step-forward var(--dur-move) var(--ease-snap) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-arrive var(--dur-instant) linear both;
+  }
+}
+
+@utility flow-step-back {
+  animation: flow-step-back var(--dur-move) var(--ease-snap) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-arrive var(--dur-instant) linear both;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Verdict commit — `reveal`, `align`.
+ *
+ * "Brackets close onto the chosen verdict, then the row locks. The single
+ * most important input in the product. The bracket closing is the
+ * receipt." `ease-align` is the curve that is held slightly at the end —
+ * the bracket clicking into alignment — and `reveal` is the only place
+ * besides the recommendation payoff that is allowed 320ms.
+ *
+ * "Then" is a delay and not a second gesture: the row's ink arrives one
+ * `reveal` after the brackets start closing, so the receipt reads before
+ * the lock does. Both halves inherit the collapse from the variable, so
+ * under reduced motion the whole sequence is 180ms rather than 640.
+ * ------------------------------------------------------------------ */
+@keyframes bracket-close-start {
+  from {
+    translate: calc(-1 * var(--travel-element)) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes bracket-close-end {
+  from {
+    translate: var(--travel-element) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@utility bracket-close-start {
+  animation: bracket-close-start var(--dur-reveal) var(--ease-align) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-arrive var(--dur-instant) linear both;
+  }
+}
+
+@utility bracket-close-end {
+  animation: bracket-close-end var(--dur-reveal) var(--ease-align) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-arrive var(--dur-instant) linear both;
+  }
+}
+
+@utility verdict-lock {
+  transition:
+    background-color var(--dur-instant) var(--ease-snap) var(--dur-reveal),
+    color var(--dur-instant) var(--ease-snap) var(--dur-reveal);
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Sheet / drawer — `move`, `snap`, exiting at `quick` on
+ * `ease-exit`.
+ *
+ * "Travels from its own edge. Exits on ease-exit at quick … leaving
+ * should be faster than arriving — you already know what you saw."
+ *
+ * A container, so law 3 lets it travel its own height: `100%`, not
+ * `--travel-element`. `Sheet` is the native `<dialog>`, which means the
+ * exit only exists if `display` and `overlay` are transitioned as
+ * discrete properties — without `allow-discrete` the element is
+ * `display: none` on the frame `close()` lands and nothing animates out.
+ * `@starting-style` is the other half: it is the state the dialog
+ * transitions *from* on the frame it is first rendered.
+ *
+ * No fade in either direction. A sheet arriving is a thing entering the
+ * room, not a thing materialising in it — the travel is the whole move,
+ * and it is only under reduced motion that opacity carries it instead.
+ * ------------------------------------------------------------------ */
+@utility sheet-motion {
+  translate: 0 100%;
+  transition:
+    translate var(--dur-quick) var(--ease-exit),
+    display var(--dur-quick) var(--ease-exit) allow-discrete,
+    overlay var(--dur-quick) var(--ease-exit) allow-discrete;
+
+  &[open] {
+    translate: 0 0;
+    transition-duration: var(--dur-move);
+    transition-timing-function: var(--ease-snap);
+  }
+
+  @starting-style {
+    &[open] {
+      translate: 0 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    translate: 0 0;
+    opacity: 0;
+    transition:
+      opacity var(--dur-instant) linear,
+      display var(--dur-instant) linear allow-discrete,
+      overlay var(--dur-instant) linear allow-discrete;
+
+    &[open] {
+      translate: 0 0;
+      opacity: 1;
+    }
+
+    @starting-style {
+      &[open] {
+        translate: 0 0;
+        opacity: 0;
+      }
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Retire a garment — `move`, `exit`.
+ *
+ * "Row collapses its own height. **No drift, no fade** — collapse says
+ * 'removed from the list'. A fade says 'still there, just hidden'." So
+ * opacity is untouched here and the only thing that changes is the
+ * track's size; `ease-exit` accelerates away, which is the one curve for
+ * something leaving.
+ *
+ * `grid-template-rows: 1fr -> 0fr` rather than `height`, because the row
+ * does not know its own height and `auto` does not animate. The collapsing
+ * element needs `overflow: hidden` on the child track, which
+ * `collapsing-row` supplies — a `<li>` that shrinks without it simply
+ * spills its content over the row below.
+ *
+ * Under reduced motion the row still collapses rather than fading: the
+ * doctrine's collapse-to-opacity is for moves that *travel*, and this one
+ * does not — nothing changes position, the track just ends. What the
+ * variable gives it is 90ms instead of 220.
+ * ------------------------------------------------------------------ */
+@utility collapsing-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--dur-move) var(--ease-exit);
+
+  > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  &[data-leaving="true"] {
+    grid-template-rows: 0fr;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * SURFACE · Numbers & temps — `quick`, `snap`.
+ *
+ * "Mono digits roll vertically. **Never crossfade** — Plex Mono is
+ * tabular, so a roll reads as a meter changing, a fade reads as a bug."
+ * Two directions, because a count going down that rolled up would read as
+ * the wrong number arriving.
+ *
+ * The travel is one line box (`1lh`) rather than `--travel-element`: the
+ * digit leaves through the top of its own slot and the next one comes up
+ * behind it, so the distance is the slot, and a 24px roll in a 11px mono
+ * step would overshoot the window it rolls inside.
+ *
+ * REDUCED_MOTION names this surface directly — "digit rolls become
+ * instant swaps" — so the roll is dropped rather than shortened, and the
+ * 90ms that remains is the opacity change the rule asks for everywhere.
+ * ------------------------------------------------------------------ */
+@keyframes digit-in-up {
+  from {
+    translate: 0 1lh;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes digit-out-up {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 -1lh;
+  }
+}
+
+@keyframes digit-in-down {
+  from {
+    translate: 0 -1lh;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes digit-out-down {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 1lh;
+  }
+}
+
+@keyframes reduced-depart {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/**
+ * The window a digit rolls inside.
+ *
+ * **`clip-path`, not `overflow: hidden`** — and that is an accessibility
+ * decision, not a stylistic one. `overflow` only applies to a box that is
+ * not a non-replaced inline, so clipping this way costs a
+ * `display: inline-block`; and the accessible-name algorithm inserts a
+ * space on each side of a node whose display is not inline. Measured: the
+ * feed's button announced as "Useful [ 1 ]" instead of "Useful [1]", which
+ * no unit test sees because `textContent` is unaffected. `clip-path`
+ * applies to an inline box and leaves the name alone.
+ */
+@utility digit-slot {
+  position: relative;
+  clip-path: inset(0);
+}
+
+@utility digit-in-up {
+  animation: digit-in-up var(--dur-quick) var(--ease-snap) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-arrive var(--dur-instant) linear both;
+  }
+}
+
+@utility digit-in-down {
+  animation: digit-in-down var(--dur-quick) var(--ease-snap) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-arrive var(--dur-instant) linear both;
+  }
+}
+
+@utility digit-out-up {
+  animation: digit-out-up var(--dur-quick) var(--ease-snap) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-depart var(--dur-instant) linear both;
+  }
+}
+
+@utility digit-out-down {
+  animation: digit-out-down var(--dur-quick) var(--ease-snap) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: reduced-depart var(--dur-instant) linear both;
+  }
+}
+
+/**
+ * The departing digit sits on top of the arriving one rather than beside
+ * it, so the slot never doubles in width mid-roll.
+ */
+@utility digit-leaving {
+  position: absolute;
+  inset: 0;
 }

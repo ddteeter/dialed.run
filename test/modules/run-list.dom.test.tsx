@@ -118,6 +118,17 @@ describe("RunList", () => {
     );
   });
 
+  it("presses a row to ink, with no scale on it", async () => {
+    // design/motion.js, "Row press": the background flips and nothing
+    // grows — "scale-on-press is a spring in disguise".
+    await renderWithRouter(<RunList runs={[run()]} />);
+    const row = screen.getByRole("link", { name: /Evening run/ });
+    expect(row).toHaveClass("row-press");
+    expect(row.className).not.toContain("scale");
+    // The title inherits so the press can invert it.
+    expect(row.firstElementChild).not.toHaveClass("text-ink");
+  });
+
   it("keeps the badge in normal case so a reader announces it as words", async () => {
     // Uppercased in CSS by <Bracketed>: several screen readers spell short
     // all-caps tokens out letter by letter.

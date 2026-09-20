@@ -55,14 +55,38 @@ round (D-26…D-33).
     Epic 200 opens, incl. multi-part fabric display on garment/product
     detail (D-34) if composition surfaces there. The Call tab's own glyph
     is deliberately deferred to the same moment (see round 4, item 7).
-12. **Motion Doctrine adoption.** Not a design ask — an implementation debt.
-    Shipped v1 surfaces predate the doctrine and animate either not at all or
-    ad hoc; lanes adopt the per-surface map opportunistically, audited at the
-    launch gate (workflow.md checklist #5).
+12. **Motion Doctrine adoption.** **CLOSED 2026-09-20 by task 114.** Nine of
+    the map's twelve surfaces are built and two were already satisfied; the
+    three that are not are not adoptions anybody skipped. **Recommendation
+    reveal** is the Call epic's payoff and there is no Call in v1 — it is
+    the only stagger the doctrine permits, which is what makes it tempting,
+    and it stays with the epic (item 11). **Offline / error** is satisfied
+    by stillness, and now has a test that fails if a later lane animates a
+    failure surface. **Toast / banner** is answered, and the answer
+    is no. Round 4's §AF ("Feedback with nowhere to land", item 17 below)
+    decides it outright: _"no toast, ever. The control that did the thing
+    says what happened, in its own place, for a fixed hold."_ Its own move
+    is a 90ms opacity swap on the control, which reduced motion leaves
+    alone because 90ms opacity is already the floor. **v1 has no control
+    that needs it** — nothing copies a link or leaves the device — so the
+    map's row stays unbuilt rather than being given a home it does not
+    have. `docs/product.md` §Forms & failure says the same from the other
+    side ("a toast takes the retry away with it when it leaves"), and D-9
+    is closed as "answered by design, not by a toast".
+
+    One thing this delta's own wording got wrong, recorded because it
+    changed the work: it said shipped surfaces animate "not at all or ad
+    hoc". There was no ad hoc — zero raw ms values and zero cubic-beziers
+    anywhere in `src` — so the lane was purely additive. The one exception
+    was `Skeleton`, which ran on Tailwind's `animate-pulse`: a 2s loop on a
+    foreign curve that kept animating under `prefers-reduced-motion`. It is
+    the breathing brackets now, like every other wait.
+
     RESOLVED 2026-09-06 for demos: they record full motion — the fixture's
     motion-strip and the demo project's reduced-motion emulation were removed,
     because demo videos are a primary review surface and must show the
     doctrine's real behaviour.
+
 13. **Does a garment carry a type?** **Answered: yes**, by the owner on
     2026-09-07. `garmentSchema` now carries an optional per-category `type`,
     named for the pack's glyphs so a garment's icon _is_ its type. The
@@ -123,6 +147,33 @@ round (D-26…D-33).
     Copy is the artboard's domain, so this is a deliberate divergence
     rather than an oversight — flagging it so the next round does not
     "fix" it back.
+
+18. **Two tab surfaces, one sliding indicator.** Undesigned
+    surface shipped by task 114 under the placeholder protocol. The
+    doctrine's "Tab switch" move is "the active indicator slides under the
+    label", and the bottom tab bar now does exactly that — five equal
+    columns, a pink underline one fifth wide, `instant`/`snap`, on the
+    Desktop Contract's rule ("same active rule (pink underline, no
+    crossfade — motion.js 'Tab switch' applies unchanged)").
+
+    E1's in-page tabs cannot. "Following" and "Your conditions" are
+    different widths, so a sliding rule needs either equal columns — a
+    composition change on a drawn screen — or a runtime measurement of each
+    label, which is a resize observer for a 90ms move. They ship with the
+    label's colour flip and the static rule they already had.
+
+    The tab bar's own composition changed to make the slide possible, and
+    that is the second half of this ask: the five tabs were a
+    `justify-between` row of natural-width labels and are now five equal
+    columns with the label centred in each. No board draws the mobile tab
+    bar, so nothing was contradicted — but it is a layout decision a lane
+    made for a motion reason, which is exactly the kind the placeholder
+    protocol wants seen rather than discovered in a demo.
+
+    **The ask is two lines.** Are E1's two tabs a segmented control across
+    the full width, or labels at their natural size? And are the five tabs
+    equal columns, which is what the indicator is measured in? Nothing is
+    blocked either way.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 

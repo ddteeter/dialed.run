@@ -192,9 +192,7 @@ describe("AttachKit: before the picker opens", () => {
     expect(
       screen.getByRole("heading", { name: "Attach the kit" }),
     ).toBeVisible();
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
-      0,
-    );
+    expect(container.querySelectorAll(".breathe").length).toBeGreaterThan(0);
   });
 
   it("asks for a prefill at the coordinates it was given", async () => {
@@ -301,7 +299,7 @@ describe("AttachKit: before the picker opens", () => {
     );
 
     await screen.findByRole("button", { name: "That’s it" });
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    expect(container.querySelectorAll(".breathe")).toHaveLength(0);
   });
 });
 
@@ -610,9 +608,7 @@ describe("AttachKit: the picker", () => {
       await screen.findByRole("button", { name: "Choose your kit" }),
     );
 
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
-      0,
-    );
+    expect(container.querySelectorAll(".breathe").length).toBeGreaterThan(0);
   });
 });
 
@@ -664,5 +660,21 @@ describe("AttachKit: when it cannot save", () => {
       expect(screen.queryByText("Couldn't save that. Try again.")).toBeNull();
     });
     pending.resolve({ entryId: "01NEW" });
+  });
+});
+
+/**
+ * The log flow's three screens are three routes, so the move that carries
+ * "which way you are travelling" has to be on each of them — and a screen
+ * that quietly loses its wrapper animates nothing, with nothing to say so.
+ */
+describe("AttachKit: the log flow", () => {
+  it("is step two of the log flow, and enters from an edge", async () => {
+    withoutGeolocation();
+    await renderWithRouter(attach());
+
+    const step = document.querySelector("[data-flow-direction]");
+    expect(step).not.toBeNull();
+    expect(step?.className).toMatch(/^flow-step-(forward|back)$/);
   });
 });

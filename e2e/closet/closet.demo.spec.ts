@@ -167,12 +167,28 @@ test("add garments with product identity -> browse the closet -> retire, don't d
 
   // And they are genuinely retired: hiding them takes the shoes out of the
   // default view, where the jacket stays.
-  await scene(page, "And genuinely retired: hiding takes it out of view");
+  //
+  // This is also where two of the doctrine's moves are on film (task 114):
+  // the retired row collapses its own height rather than blinking out —
+  // "collapse says removed from the list; a fade says still there, just
+  // hidden" — and what remains reflows into the space instead of fading
+  // and re-entering. The demo project records with `reducedMotion:
+  // "no-preference"` on purpose, so both are visible at recorded pace.
+  await scene(page, "Hiding it: the row collapses, the rest reflow");
   await page.getByRole("button", { name: "Hide retired (1)" }).click();
   await expect(page.getByRole("link", { name: /Nike Pegasus 41/ })).toHaveCount(
     0,
   );
   await expect(
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
+  ).toBeVisible();
+
+  // And back, which is the same move the other way: the rows that were
+  // already there travel to their new places, and the one arriving does
+  // not re-enter — "the garments did not go anywhere".
+  await scene(page, "And back — they travel, they do not reappear");
+  await page.getByRole("button", { name: "Show retired (1)" }).click();
+  await expect(
+    page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();
 });

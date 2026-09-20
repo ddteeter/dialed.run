@@ -76,7 +76,7 @@ describe("Skeleton", () => {
   it("renders a block at the caller-specified dimensions", () => {
     const html = renderToString(<Skeleton className="h-4 w-24" />);
     expect(html).toContain("h-4 w-24");
-    expect(html).toContain("animate-pulse");
+    expect(html).toContain("breathe");
   });
 });
 

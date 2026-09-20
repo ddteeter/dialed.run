@@ -9,7 +9,7 @@ import {
   formatDuration,
   formatTempRange,
 } from "../../../lib/measures";
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, Digits, Mono } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
 import { ListSection } from "../../../ui";
 
@@ -204,7 +204,10 @@ export function EntryDetail({
             : "self-start rounded-pill border border-hairline px-4 py-2 text-body font-semibold disabled:opacity-40"
         }
       >
-        Useful <Mono className="ml-1">[{String(useful.count)}]</Mono>
+        Useful{" "}
+        <Mono className="ml-1">
+          [<Digits value={useful.count} />]
+        </Mono>
       </button>
 
       <Link to="/feed" className="text-body font-semibold text-cold-text">

@@ -1,6 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { FlowStep, LOG_FLOW } from "../../../ui";
+
 /**
  * The upload action, handed in rather than imported.
  *
@@ -42,25 +44,27 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed border-hairline-2 bg-panel px-6 py-10 text-center">
-        <span className="font-semibold text-ink">
-          Drop a .FIT, .gpx, or .tcx file
-        </span>
-        <span className="text-micro text-muted">up to 25 MB</span>
-        <input
-          type="file"
-          accept=".fit,.gpx,.tcx"
-          disabled={isUploading}
-          className="sr-only"
-          onChange={(event) => {
-            void onChange(event.target.files);
-          }}
-        />
-      </label>
-      {error === undefined ? undefined : (
-        <p className="text-small font-semibold text-cold-text">{error}</p>
-      )}
-    </div>
+    <FlowStep step={LOG_FLOW.intake}>
+      <div className="flex flex-col gap-3">
+        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed border-hairline-2 bg-panel px-6 py-10 text-center">
+          <span className="font-semibold text-ink">
+            Drop a .FIT, .gpx, or .tcx file
+          </span>
+          <span className="text-micro text-muted">up to 25 MB</span>
+          <input
+            type="file"
+            accept=".fit,.gpx,.tcx"
+            disabled={isUploading}
+            className="sr-only"
+            onChange={(event) => {
+              void onChange(event.target.files);
+            }}
+          />
+        </label>
+        {error === undefined ? undefined : (
+          <p className="text-small font-semibold text-cold-text">{error}</p>
+        )}
+      </div>
+    </FlowStep>
   );
 }

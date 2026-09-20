@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { formatTemp } from "../../../lib/temperature";
 import type { Units } from "../../../lib/contracts";
-import { Bracketed, Mono, Skeleton } from "../../../ui";
+import { Bracketed, FlowStep, LOG_FLOW, Mono, Skeleton } from "../../../ui";
 import { uiGroupLabels } from "../groups";
 import type { PickerGroup } from "../picker";
 import type { PrefillCandidate } from "../prefill";
@@ -134,70 +134,72 @@ export function AttachKit({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
-      <h1 className="font-display text-title uppercase">Attach the kit</h1>
+    <FlowStep step={LOG_FLOW.attach}>
+      <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
+        <h1 className="font-display text-title uppercase">Attach the kit</h1>
 
-      {!showPicker && prefill === undefined ? (
-        <Skeleton className="h-32 w-full" />
-      ) : undefined}
+        {!showPicker && prefill === undefined ? (
+          <Skeleton className="h-32 w-full" />
+        ) : undefined}
 
-      {!showPicker && prefill && prefill !== "none" ? (
-        <div className="flex flex-col gap-3 rounded-card border border-hairline p-4">
-          <Bracketed className="text-dialed-text">
-            Most likely · from{" "}
-            {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
-            {Math.round(prefill.feelsLikeDeltaC)}° off
-          </Bracketed>
-          <button
-            type="button"
-            onClick={() => {
-              void submit(prefill.itemIds);
-            }}
-            className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
-          >
-            That&rsquo;s it
-          </button>
+        {!showPicker && prefill && prefill !== "none" ? (
+          <div className="flex flex-col gap-3 rounded-card border border-hairline p-4">
+            <Bracketed className="text-dialed-text">
+              Most likely · from{" "}
+              {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
+              {Math.round(prefill.feelsLikeDeltaC)}° off
+            </Bracketed>
+            <button
+              type="button"
+              onClick={() => {
+                void submit(prefill.itemIds);
+              }}
+              className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
+            >
+              That&rsquo;s it
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowPicker(true);
+              }}
+              className="text-body font-semibold text-cold-text"
+            >
+              Choose different items
+            </button>
+          </div>
+        ) : undefined}
+
+        {!showPicker && prefill === "none" ? (
           <button
             type="button"
             onClick={() => {
               setShowPicker(true);
             }}
-            className="text-body font-semibold text-cold-text"
+            className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
           >
-            Choose different items
+            Choose your kit
           </button>
-        </div>
-      ) : undefined}
+        ) : undefined}
 
-      {!showPicker && prefill === "none" ? (
-        <button
-          type="button"
-          onClick={() => {
-            setShowPicker(true);
-          }}
-          className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
-        >
-          Choose your kit
-        </button>
-      ) : undefined}
+        {showPicker ? (
+          <PickerOrSkeleton
+            groups={groups}
+            selected={selected}
+            onToggle={(itemId) => {
+              setSelected((prev) => toggledIn(prev, itemId));
+            }}
+            onSubmit={() => {
+              void submit([...selected]);
+            }}
+          />
+        ) : undefined}
 
-      {showPicker ? (
-        <PickerOrSkeleton
-          groups={groups}
-          selected={selected}
-          onToggle={(itemId) => {
-            setSelected((prev) => toggledIn(prev, itemId));
-          }}
-          onSubmit={() => {
-            void submit([...selected]);
-          }}
-        />
-      ) : undefined}
-
-      {error === undefined ? undefined : (
-        <p className="text-small font-semibold text-cold-text">{error}</p>
-      )}
-    </div>
+        {error === undefined ? undefined : (
+          <p className="text-small font-semibold text-cold-text">{error}</p>
+        )}
+      </div>
+    </FlowStep>
   );
 }
 
