@@ -195,6 +195,24 @@ async function queuedAndClaimed(): Promise<string> {
   return queued.id;
 }
 
+/**
+ * The `claimed_at` the claim actually stamped.
+ *
+ * The boundary test below needs the stored value because that is what
+ * `releaseStaleClaims` compares against — a second `nowSeconds()` call is
+ * a different number whenever the two land in different seconds.
+ */
+async function claimedAt(queueId: string): Promise<number> {
+  const [row] = await core()
+    .select({ claimedAt: reviewQueue.claimedAt })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.id, queueId));
+  if (row?.claimedAt === undefined || row.claimedAt === null) {
+    throw new Error("the row is not claimed");
+  }
+  return row.claimedAt;
+}
+
 describe("review claims expire", () => {
   it("holds the lease for thirty minutes", () => {
     // Pinned as a number, not as `30 * 60`.
@@ -233,9 +251,22 @@ describe("review claims expire", () => {
   it("holds the row for exactly the lease and not a second less", async () => {
     // `lt`, not `lte`: on the boundary the reviewer has held it for the
     // lease and not longer, so the row stays theirs.
-    await queuedAndClaimed();
+    //
+    // **Anchored to the stored `claimed_at`, not to a second clock read.**
+    // The predicate is `claimed_at < now - lease`, so `nowSeconds() +
+    // lease` only lands on the boundary when the clock read inside
+    // `queuedAndClaimed` and the one here fall in the same wall-clock
+    // second. They usually do — and when they do not, this test fails a
+    // plain `npm test` with no mutation testing involved, which is what
+    // took one of seventeen mutation shards red on `main` after #80 while
+    // the other sixteen passed on the same commit. Its two siblings are
+    // safe by construction (`+ lease + 1` stays past the boundary whatever
+    // the clock does), so only the exact-boundary case was fragile, which
+    // is where it is easiest to miss. Reading the value back puts this
+    // exactly on the boundary rather than accidentally near it.
+    const queueId = await queuedAndClaimed();
     expect(
-      await releaseStaleClaims(nowSeconds() + claimLeaseSeconds),
+      await releaseStaleClaims((await claimedAt(queueId)) + claimLeaseSeconds),
     ).toStrictEqual({ released: 0 });
   });
 
