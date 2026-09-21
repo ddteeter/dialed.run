@@ -258,7 +258,11 @@ export function TabBar() {
 
   return (
     <nav
-      aria-label="Primary"
+      // "Main", not "Primary": the Accessibility Contract's Tab bar row
+      // names it, and a contract is the truth for values. The old name had
+      // been here since the bar was written and was drift rather than a
+      // decision (D-82).
+      aria-label="Main"
       data-slot="tab-bar"
       className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)]"
     >

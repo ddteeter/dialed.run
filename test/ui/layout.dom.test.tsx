@@ -82,7 +82,9 @@ describe("TabBar", () => {
     // where you are", so it is not an anchor that could claim to be.
     await renderWithRouter(<TabBar />);
 
-    const nav = screen.getByRole("navigation", { name: "Primary" });
+    // The contract's own name for the bar, which is what a screen reader
+    // announces on reaching it.
+    const nav = screen.getByRole("navigation", { name: "Main" });
     expect(nav).toBeInTheDocument();
 
     const launcher = screen.getByRole("button", { name: "Add" });

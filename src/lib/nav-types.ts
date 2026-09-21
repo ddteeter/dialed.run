@@ -256,6 +256,13 @@ function isAnyMatch(
  * At runtime the two are treated alike, because an untyped edge must still
  * be safe: stillness is never wrong-looking.
  */
+function rowFor(from: string, to: string, isBack: boolean): Edge | undefined {
+  const [start, end] = isBack ? [to, from] : [from, to];
+  return NAV.find(
+    (edge) => isAnyMatch(edge.from, start) && isAnyMatch(edge.to, end),
+  );
+}
+
 export function navTypeFor(
   from: string | undefined,
   to: string,
@@ -265,23 +272,7 @@ export function navTypeFor(
   // `cut` — "There is no 'from'. Arrive, then the screen's own reveal (if
   // any) runs." Same screen, new search params or hash: nothing moved.
   if (from === undefined || from === to) return "cut";
-
-  const [start, end] = isBack ? [to, from] : [from, to];
-  return NAV.find(
-    (edge) => isAnyMatch(edge.from, start) && isAnyMatch(edge.to, end),
-  )?.type;
-}
-
-/**
- * Whether this edge plays its type backwards — the row's own direction
- * exclusive-or the runner's.
- */
-function isReversed(from: string, to: string, isBack: boolean): boolean {
-  const [start, end] = isBack ? [to, from] : [from, to];
-  const row = NAV.find(
-    (edge) => isAnyMatch(edge.from, start) && isAnyMatch(edge.to, end),
-  );
-  return (row?.reversed ?? false) !== isBack;
+  return rowFor(from, to, isBack)?.type;
 }
 
 /**
@@ -299,13 +290,16 @@ export function viewTransitionTypes(
   // Mutable, because that is the shape TanStack's `ViewTransitionOptions`
   // declares and it hands the array straight to `startViewTransition`.
 ): string[] | undefined {
-  const type = navTypeFor(from, to, isBack);
-  if (type === undefined || type === "cut" || from === undefined) {
-    return undefined;
-  }
-  return isReversed(from, to, isBack)
-    ? [`nav-${type}`, "nav-back"]
-    : [`nav-${type}`];
+  if (from === undefined || from === to) return undefined;
+
+  // The row itself, not its type: `reversed` is on the row, and looking it
+  // up twice left an optional chain that could never be taken.
+  const row = rowFor(from, to, isBack);
+  if (row === undefined || row.type === "cut") return undefined;
+
+  return (row.reversed ?? false) === isBack
+    ? [`nav-${row.type}`]
+    : [`nav-${row.type}`, "nav-back"];
 }
 
 /**

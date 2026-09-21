@@ -101,6 +101,12 @@ describe("which type an edge resolves to", () => {
     // A new search param or hash on the screen you are already on. Nothing
     // moved, so nothing should move.
     expect(typeOf("/closet", "/closet")).toBe("cut");
+    // On a screen a row *would* claim, which is the case that says this is
+    // a guard rather than a coincidence: without it, a garment detail
+    // re-reading its own search params would push over itself.
+    expect(typeOf("/closet/g1", "/closet/g1")).toBe("cut");
+    expect(navTypeFor("/closet/g1", "/closet/g1", false)).toBe("cut");
+    expect(typeOf("/runs/new", "/runs/new")).toBe("cut");
   });
 
   it("rises into a flow and drops out of it", () => {
@@ -357,9 +363,12 @@ const FROMS = [
   "/auth/login",
   "/notifications",
   "/runs",
-  "/runs/new",
   "/onboarding/name",
 ];
+
+// Deliberately not a log-flow screen. The flow's exit row claims every
+// destination (`to: "*"`), so asking from inside the flow would call every
+// path in the app typed and this test would pass over an empty table.
 
 describe("the table covers the app", () => {
   const destinations = new Map<string, string[]>();
@@ -472,6 +481,18 @@ describe("viewTransitionTypesFor", () => {
     expect(viewTransitionTypesFor({ toLocation: at("/runs/new", 0) })).toBe(
       false,
     );
+  });
+
+  it("reads an equal index as forward, because a replace is not a back", () => {
+    // `router.navigate({ replace: true })` leaves the history index where
+    // it was. The runner did not go back — nothing was popped — so the
+    // edge is the one written in the table, not its reverse.
+    expect(
+      viewTransitionTypesFor({
+        fromLocation: at("/closet", 3),
+        toLocation: at("/closet/g1", 3),
+      }),
+    ).toEqual(["nav-push"]);
   });
 
   it("passes the pathnames through, not the hrefs", () => {
