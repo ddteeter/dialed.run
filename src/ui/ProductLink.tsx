@@ -59,6 +59,7 @@ export function ProductLink({
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
       <a
+        data-target="inline"
         href={url}
         rel="ugc nofollow noopener"
         target="_blank"

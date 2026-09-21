@@ -38,9 +38,9 @@ const ENOUGH_TO_START = 6;
  * cannot quietly reintroduce a coloured tick.
  */
 const CHIP_ON =
-  "relative flex items-center rounded-pill bg-ink px-3 py-2 text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+  "target relative flex items-center justify-center rounded-pill bg-ink px-3 py-2 text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 const CHIP_OFF =
-  "relative flex items-center rounded-pill border border-hairline px-3 py-2 text-quiet has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+  "target relative flex items-center justify-center rounded-pill border border-hairline px-3 py-2 text-quiet has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 
 /**
  * Screen O3 — "tap what you own", the one list.
@@ -136,7 +136,7 @@ export function TapListForm({
       <FormStatus>{form.status}</FormStatus>
 
       <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-        <legend className="mb-2 p-0 text-muted">
+        <legend className="mb-2 p-0 text-label">
           <Mono step="sm">Common in your climate · tap to add</Mono>
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -184,7 +184,7 @@ export function TapListForm({
       <button
         type="button"
         onClick={onSkip}
-        className="cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
+        className="target cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
       >
         Skip for now
       </button>

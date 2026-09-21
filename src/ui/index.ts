@@ -20,6 +20,8 @@ export {
   FormFailureBand,
   FormField,
   FormStatus,
+  inFlight,
+  PendingLabel,
   SubmitButton,
   TextField,
   ToggleField,

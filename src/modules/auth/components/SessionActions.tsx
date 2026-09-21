@@ -18,11 +18,14 @@ export function SessionActions({
     <div className="flex items-center gap-4">
       <Link
         to="/auth/signup"
-        className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
+        className="target inline-flex items-center rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
       >
         Sign up
       </Link>
-      <Link to="/auth/login" className="font-semibold text-cold-text">
+      <Link
+        to="/auth/login"
+        className="target inline-flex items-center font-semibold text-cold-text"
+      >
         Log in
       </Link>
     </div>
@@ -34,7 +37,7 @@ export function SessionActions({
         onClick={() => {
           void signOut();
         }}
-        className="font-semibold text-cold-text"
+        className="target font-semibold text-cold-text"
       >
         Sign out
       </button>

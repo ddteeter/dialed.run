@@ -53,7 +53,7 @@ export function ReportAffordance({
     <>
       <button
         type="button"
-        className="text-quiet"
+        className="target text-quiet"
         onClick={() => {
           setIsOpen(true);
         }}

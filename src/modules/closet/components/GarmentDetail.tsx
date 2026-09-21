@@ -4,7 +4,13 @@ import { useState } from "react";
 
 import type { GarmentVisibility } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
-import { Bracketed, Mono, ProductLink } from "../../../ui";
+import {
+  Bracketed,
+  inFlight,
+  Mono,
+  PendingLabel,
+  ProductLink,
+} from "../../../ui";
 import { garmentLabel } from "../label";
 import { CompositionBlock } from "./Composition";
 import type {
@@ -139,6 +145,10 @@ export function GarmentDetail({
   }
 
   async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    // The guard the `disabled` attribute used to be. `aria-disabled` on an
+    // input does not stop the picker opening (rule 07 keeps it reachable
+    // on purpose), so a second photo chosen mid-upload has to die here.
+    if (uploading) return;
     // Equivalent mutant on the optional index: a `change` from a file
     // input always carries a `FileList`, empty when the picker was
     // dismissed. The `?.` is the compiler's, because the DOM types the
@@ -243,12 +253,20 @@ export function GarmentDetail({
         </p>
       ) : undefined}
 
-      <label className="flex flex-col gap-1 text-body font-semibold">
-        Photo
+      <label className="target flex flex-col gap-1 text-body font-semibold">
+        {/* "Add a photo" is design's round-13 rest label for this control;
+            it had been the bare field caption "Photo", which names the
+            field rather than the action and left the in-flight state with
+            nowhere to appear. */}
+        <PendingLabel
+          label="Add a photo"
+          pendingLabel="Uploading"
+          pending={uploading}
+        />
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          disabled={uploading}
+          {...inFlight(uploading)}
           onChange={(event) => {
             void handlePhotoChange(event);
           }}
@@ -262,7 +280,7 @@ export function GarmentDetail({
         <Link
           to="/closet/edit/$itemId"
           params={{ itemId: item.id }}
-          className="rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
+          className="target inline-flex items-center rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
         >
           Edit
         </Link>
@@ -271,7 +289,7 @@ export function GarmentDetail({
           onClick={() => {
             void handleRetireToggle();
           }}
-          className="rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
+          className="target rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
         >
           {item.retired ? "Unretire" : "Retire"}
         </button>
@@ -280,7 +298,7 @@ export function GarmentDetail({
           onClick={() => {
             void handleDelete();
           }}
-          className="rounded-pill border border-hairline px-3 py-2 text-body font-semibold text-cold-text"
+          className="target rounded-pill border border-hairline px-3 py-2 text-body font-semibold text-cold-text"
         >
           Delete
         </button>

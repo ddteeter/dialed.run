@@ -148,14 +148,14 @@ function NextAndSkip({
       <button
         type="button"
         onClick={onDone}
-        className="grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
+        className="target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
       >
         Next
       </button>
       <button
         type="button"
         onClick={onDone}
-        className="cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
+        className="target cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
       >
         Skip for now
       </button>
@@ -212,7 +212,7 @@ function PieceRow({
           <button
             type="button"
             onClick={onStartNaming}
-            className="shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-2"
+            className="target shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-2"
           >
             <Mono step="xs">Name it</Mono>
           </button>

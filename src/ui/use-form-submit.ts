@@ -342,6 +342,22 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   return {
     formRef,
     submit,
+    /**
+     * Put a sentence in the screen's status region.
+     *
+     * **The screen's, not the form's** — Accessibility Contract rule 08 is
+     * *"one `role="status"` region per screen"*, and `FormStatus` is the
+     * one this form already mounts. The verdict screen had two: the form's,
+     * and a second `aria-live` paragraph inside `PhotoBlur` for W3's three
+     * face-sentences. Two regions firing means one of them is lost, which
+     * is the failure the contract's "never twice" is about.
+     *
+     * So a non-form announcement borrows the form's region rather than
+     * opening its own, and it travels as a prop the way every other piece
+     * of behaviour does here. `submit` clears the region on entry, so a
+     * blur sentence never outlives the save it preceded.
+     */
+    announce: setStatus,
     pending,
     fieldErrors,
     failure,

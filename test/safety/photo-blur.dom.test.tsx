@@ -583,3 +583,154 @@ describe("the blur toggle itself", () => {
     expect(toggle).not.toHaveAttribute("readonly");
   });
 });
+
+/**
+ * A caller that does not care which bytes come back.
+ *
+ * Named rather than written inline five times: `() => {}` trips
+ * `unicorn/no-useless-undefined` when it returns one, and five copies of
+ * the comment that silences it is five chances to write a different one.
+ */
+function noop(): void {
+  // These cases assert what is announced, not what is uploaded.
+}
+
+/**
+ * Rule 08 · **announce once, politely** — one `role="status"` per screen.
+ *
+ * *"The three sentences (looking / blurred one / couldn't look) go to the
+ * status region."* They used to go to a second `aria-live` paragraph
+ * *here*, on a screen that already mounts the verdict form's — two regions
+ * firing at once, which is how one of them is lost. The contract's
+ * screen-reader pass for this exact screen asks for *"never silence,
+ * never twice"*.
+ *
+ * There is no "Copied" and no autosave anywhere in v1 — nothing copies a
+ * link or leaves the device — so these three sentences are the whole of
+ * rule 08's non-form half, and the fix is that they borrow the region the
+ * screen already has. `test/modules/verdict-form.dom.test.tsx` counts the
+ * regions; these say what reaches the one that is left.
+ */
+describe("the sentences go to the screen's region, not one of their own", () => {
+  it("opens no live region here", async () => {
+    // The paragraph is still on screen and still says what happened — it
+    // is copy on the artboard. What it is not any more is an announcer.
+    const { pipeline } = fakePipeline();
+    const { container } = render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("No face found. Posting as-is.")).toBeVisible();
+    });
+    expect(container.querySelectorAll("[aria-live]")).toHaveLength(0);
+    expect(container.querySelectorAll('[role="status"]')).toHaveLength(0);
+  });
+
+  it("hands over both sentences, in order", async () => {
+    // Both, because the contract's pass is "hear 'checking', then either
+    // 'we blurred one' or 'we couldn't look'". Asserting only the last
+    // would pass on a component that stayed silent until it finished,
+    // which is the silence the rule rules out.
+    const announced: string[] = [];
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={noop}
+        onAnnounce={(sentence) => {
+          announced.push(sentence);
+        }}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(announced.length).toBeGreaterThan(1);
+    });
+    expect(announced[0]).toBe("Checking this photo");
+    expect(announced.at(-1)).toBe("No face found. Posting as-is.");
+  });
+
+  it("draws the ellipsis it does not announce", () => {
+    // The one place in the app where the drawn and announced strings
+    // differ on purpose, and design's reason (round 14): a status region
+    // reads the ellipsis out, which is punctuation being spoken rather
+    // than a wait being conveyed.
+    const announced: string[] = [];
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={noop}
+        onAnnounce={(sentence) => {
+          announced.push(sentence);
+        }}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    expect(screen.getByText("Checking this photo…")).toBeVisible();
+    expect(announced).toContain("Checking this photo");
+    expect(announced).not.toContain("Checking this photo…");
+  });
+
+  it("announces once per change, never once per render", async () => {
+    // "Never twice." The effect keys on the sentence, so a re-render that
+    // changes nothing must not re-announce — a region written again with
+    // the same string is a reader hearing it again.
+    const announce = vi.fn();
+    const { pipeline } = fakePipeline();
+    const element = (
+      <PhotoBlur
+        file={PHOTO}
+        onReady={noop}
+        onAnnounce={announce}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />
+    );
+    const { rerender } = render(element);
+    await waitFor(() => {
+      expect(announce).toHaveBeenCalledTimes(2);
+    });
+
+    rerender(element);
+
+    expect(announce).toHaveBeenCalledTimes(2);
+  });
+
+  it("says nothing at all when blur is off", async () => {
+    // "Success is silent unless the runner did something." Turning blur
+    // off is the runner declining the feature, and there is no outcome to
+    // report — the copy beside the toggle already says the original is
+    // what gets uploaded.
+    const announce = vi.fn();
+    const { pipeline } = fakePipeline();
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={noop}
+        onAnnounce={announce}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: /Blur faces/ }),
+      ).not.toBeChecked();
+    });
+    expect(announce).not.toHaveBeenCalled();
+  });
+});

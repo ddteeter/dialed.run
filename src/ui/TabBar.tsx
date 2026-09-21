@@ -109,12 +109,17 @@ function Launcher({
  * The label's colour is the half of the tab switch that is not the
  * indicator, and it flips on the same 90ms.
  *
- * Inactive labels are `--muted` rather than a lighter grey: the
- * Accessibility Contract's round note moved them from #9A9A90 to #6E6E64
- * because "2.8:1 was fine for a glyph, not for the word beside it".
+ * Inactive labels are `--label`, which is #6E6E64 — the value the
+ * Accessibility Contract's Tab bar row has always named ("2.8:1 was fine
+ * for a glyph, not for the word beside it"). This said `--muted` until
+ * round 13, because #6E6E64 had no T1 row to point at, and #7A7A70 is
+ * 3.90:1: the bar was asking for 4.6 and shipping 3.9 with a comment
+ * claiming otherwise.
  */
-const ACTIVE_LABEL_CLASS = "tab-label text-ink no-underline";
-const RESTING_LABEL_CLASS = "tab-label text-muted no-underline";
+const ACTIVE_LABEL_CLASS =
+  "tab-label target flex items-center justify-center text-ink no-underline";
+const RESTING_LABEL_CLASS =
+  "tab-label target flex items-center justify-center text-label no-underline";
 
 /**
  * The five bar entries, in order. The indicator's position is this array's
@@ -266,7 +271,11 @@ export function TabBar() {
       data-slot="tab-bar"
       className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)]"
     >
-      <ul className="relative m-0 grid list-none grid-cols-5 p-0 py-4">
+      {/* No `py-4` any more: the padding moved into each seat, where rule
+          03 wants it ("pad the target, not the glyph"). The bar was 16 + 15
+          + 16 = 47px tall with a 15px hit area inside it; it is 44px tall
+          and all of it is the target. */}
+      <ul className="relative m-0 grid list-none grid-cols-5 p-0">
         {TABS.map((tab, index) =>
           // `in`, not `tab.launcher`: `as const satisfies` keeps each entry
           // at its literal type, and only one of them has the field at all.

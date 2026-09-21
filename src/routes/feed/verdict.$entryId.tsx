@@ -46,8 +46,8 @@ function VerdictPage() {
         bandFloor={bandFloor}
         submitVerdict={submitVerdictAction}
         uploadPhoto={uploadPhotoAction}
-        renderPhotoStep={(file, onReady) => (
-          <PhotoBlur file={file} onReady={onReady} />
+        renderPhotoStep={(file, onReady, announce) => (
+          <PhotoBlur file={file} onReady={onReady} onAnnounce={announce} />
         )}
         itemBandWearStat={itemBandWearStatQuery}
       />

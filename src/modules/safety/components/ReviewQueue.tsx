@@ -139,6 +139,7 @@ export function ReviewQueue({
             </span>
             <div className="flex gap-2">
               <button
+                className="target"
                 type="button"
                 onClick={() => {
                   decide(row.id, "approve");
@@ -147,6 +148,7 @@ export function ReviewQueue({
                 <Mono step="xs">Approve</Mono>
               </button>
               <button
+                className="target"
                 type="button"
                 onClick={() => {
                   decide(row.id, "remove");

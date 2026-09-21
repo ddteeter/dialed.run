@@ -74,7 +74,7 @@ function ClosetGroup({
             <Link
               to="/closet/$itemId"
               params={{ itemId: view.item.id }}
-              className="row-press flex flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
+              className="target row-press flex flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
             >
               <span className="text-body font-semibold">
                 {itemLabel(view)}
@@ -136,7 +136,7 @@ export function ClosetGrid({
         </p>
         <Link
           to="/closet/new"
-          className="mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
+          className="target mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
         >
           Add a piece
         </Link>
@@ -169,7 +169,7 @@ export function ClosetGrid({
           onClick={() => {
             setShowRetired((value) => !value);
           }}
-          className="self-start text-muted"
+          className="target self-start text-muted"
         >
           <Mono step="sm">
             {showRetired ? "Hide" : "Show"} retired ({retiredCount})

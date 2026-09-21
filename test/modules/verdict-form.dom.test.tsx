@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -139,7 +140,11 @@ function form(
     itemBandWearStat?: (input: {
       data: { itemId: string; bandFloorC: number };
     }) => Promise<{ worn: number; total: number }>;
-    renderPhotoStep?: (file: File, onReady: (ready: File) => void) => ReactNode;
+    renderPhotoStep?: (
+      file: File,
+      onReady: (ready: File) => void,
+      announce: (sentence: string) => void,
+    ) => ReactNode;
   } = {},
 ) {
   return (
@@ -1105,15 +1110,65 @@ describe("VerdictForm: the details that go missing silently", () => {
 function recordingStep() {
   const seen: File[] = [];
   let release: ((ready: File) => void) | undefined;
-  const render = (file: File, onReady: (ready: File) => void) => {
+  // Captured, never called during render. `announce` writes the form's
+  // state, and a child that writes its parent's state while rendering is
+  // an infinite loop — which is exactly why `PhotoBlur` announces from an
+  // effect, and why a fixture that does otherwise proves nothing about it.
+  let say: ((sentence: string) => void) | undefined;
+  const render = (
+    file: File,
+    onReady: (ready: File) => void,
+    announce: (sentence: string) => void,
+  ) => {
     seen.push(file);
     release = onReady;
+    say = announce;
     return <p>step for {file.name}</p>;
   };
-  return { seen, render, hand: (ready: File) => release?.(ready) };
+  return {
+    seen,
+    render,
+    hand: (ready: File) => release?.(ready),
+    announce: (sentence: string) => {
+      say?.(sentence);
+    },
+  };
 }
 
 describe("the photo step W3 hangs off", () => {
+  it("has one status region on the screen, and lends it to the step", async () => {
+    // Rule 08: *"one `role=\"status\"` region per screen"*. This screen
+    // used to have two — the form's, and a second `aria-live` paragraph
+    // inside `PhotoBlur` for W3's three sentences — and two regions
+    // firing at once means one of them is lost.
+    //
+    // The count is the assertion that matters: a step that opened its own
+    // region would still announce, and still be wrong.
+    const user = userEvent.setup();
+    const step = recordingStep();
+    const { container } = await renderWithRouter(
+      form({
+        uploadPhoto: vi.fn(() => Promise.resolve({ key: "k" })),
+        renderPhotoStep: step.render,
+      }),
+    );
+
+    await user.upload(fileInput(), jpeg());
+
+    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
+
+    act(() => {
+      step.announce("We blurred one face.");
+    });
+
+    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "We blurred one face.",
+      );
+    });
+  });
+
   it("holds the picked file instead of uploading it", async () => {
     const user = userEvent.setup();
     const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));

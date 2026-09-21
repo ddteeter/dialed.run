@@ -3,7 +3,15 @@ import { useEffect, useState } from "react";
 
 import { formatTemp } from "../../../lib/temperature";
 import type { Units } from "../../../lib/contracts";
-import { Bracketed, FlowStep, LOG_FLOW, Mono, Skeleton } from "../../../ui";
+import {
+  Bracketed,
+  FlowStep,
+  inFlight,
+  LOG_FLOW,
+  Mono,
+  PendingLabel,
+  Skeleton,
+} from "../../../ui";
 import { uiGroupLabels } from "../groups";
 import type { PickerGroup } from "../picker";
 import type { PrefillCandidate } from "../prefill";
@@ -101,6 +109,18 @@ export function AttachKit({
   const [showPicker, setShowPicker] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | undefined>();
+  /**
+   * The in-flight half of design's round-13 table, which this screen did
+   * not have.
+   *
+   * `disabled={selected.size === 0}` covered only "not yet"; while the
+   * attach was actually running the button sat at full strength with
+   * nothing stopping a second press — and `attachKit` **creates an
+   * entry**, so two presses are two entries. Rule 07 removes the attribute
+   * that used to stop the first kind of press, so this is what stops the
+   * second.
+   */
+  const [attaching, setAttaching] = useState(false);
 
   useEffect(() => {
     if (coords === undefined) return;
@@ -124,12 +144,18 @@ export function AttachKit({
   }, [showPicker, groups, coords, pickerGroupsFor]);
 
   async function submit(itemIds: string[]) {
+    if (attaching) return;
     setError(undefined);
+    setAttaching(true);
     try {
       const { entryId } = await attachKit({ data: { runId, itemIds } });
       await navigate({ to: "/feed/verdict/$entryId", params: { entryId } });
     } catch {
       setError("Couldn't save that. Try again.");
+      // Only on the failing path: the success path navigates away, and
+      // clearing the flag first would reopen the button for the frame
+      // before the route changes.
+      setAttaching(false);
     }
   }
 
@@ -154,7 +180,7 @@ export function AttachKit({
               onClick={() => {
                 void submit(prefill.itemIds);
               }}
-              className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
+              className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
             >
               That&rsquo;s it
             </button>
@@ -163,7 +189,7 @@ export function AttachKit({
               onClick={() => {
                 setShowPicker(true);
               }}
-              className="text-body font-semibold text-cold-text"
+              className="target text-body font-semibold text-cold-text"
             >
               Choose different items
             </button>
@@ -176,7 +202,7 @@ export function AttachKit({
             onClick={() => {
               setShowPicker(true);
             }}
-            className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
+            className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
           >
             Choose your kit
           </button>
@@ -184,6 +210,7 @@ export function AttachKit({
 
         {showPicker ? (
           <PickerOrSkeleton
+            attaching={attaching}
             groups={groups}
             selected={selected}
             onToggle={(itemId) => {
@@ -204,11 +231,13 @@ export function AttachKit({
 }
 
 function PickerOrSkeleton({
+  attaching,
   groups,
   selected,
   onToggle,
   onSubmit,
 }: Readonly<{
+  attaching: boolean;
   groups: PickerGroup[] | undefined;
   selected: Set<string>;
   onToggle: (itemId: string) => void;
@@ -217,6 +246,7 @@ function PickerOrSkeleton({
   if (!groups) return <Skeleton className="h-64 w-full" />;
   return (
     <Picker
+      attaching={attaching}
       groups={groups}
       selected={selected}
       onToggle={onToggle}
@@ -226,11 +256,19 @@ function PickerOrSkeleton({
 }
 
 function Picker({
+  attaching,
   groups,
   selected,
   onToggle,
   onSubmit,
 }: Readonly<{
+  /**
+   * Drilled through two components rather than read from a context,
+   * because it is one boolean with one reader — the submit button at the
+   * bottom of this list — and a context for it would be a second way to
+   * ask "is the attach running" alongside the state that answers it.
+   */
+  attaching: boolean;
   groups: PickerGroup[];
   selected: Set<string>;
   onToggle: (itemId: string) => void;
@@ -264,7 +302,7 @@ function Picker({
             {visible.map((item) => (
               <label
                 key={item.id}
-                className="flex items-center gap-2 text-body"
+                className="target flex items-center gap-2 text-body"
               >
                 <input
                   type="checkbox"
@@ -290,13 +328,26 @@ function Picker({
           </fieldset>
         );
       })}
+      {/* **Two unavailable states, one button** (design, round 13). *Not
+          yet* — nothing selected — is drawn at full strength and stays
+          silent on press: "the count is the sentence: it says what is
+          missing on the button the runner is looking at", so `Attach 0
+          items` is the whole message and there is no band to add. *In
+          flight* swaps the label. Neither dims, because rule 02 bans
+          opacity as a meaning channel, and neither uses `disabled`,
+          because rule 07 bans dropping a control out of the tab order. */}
       <button
         type="button"
         onClick={onSubmit}
-        disabled={selected.size === 0}
-        className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground disabled:opacity-40"
+        {...inFlight(attaching || selected.size === 0)}
+        aria-busy={attaching || undefined}
+        className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
       >
-        Attach {String(selected.size)} {selected.size === 1 ? "item" : "items"}
+        <PendingLabel
+          pending={attaching}
+          pendingLabel="Attaching"
+          label={`Attach ${String(selected.size)} ${selected.size === 1 ? "item" : "items"}`}
+        />
       </button>
     </div>
   );

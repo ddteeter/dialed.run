@@ -100,7 +100,11 @@ export function FormField({
   const isInvalid = error !== undefined;
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={name} className="text-muted">
+      {/* `--label`, not `--muted`: the mono caption inside the field IS
+          the label (the contract's Forms row says so in as many words), and
+          T1's round-13 row bans --muted from being a control's only label
+          on paper. */}
+      <label htmlFor={name} className="text-label">
         <Mono step="sm">{label}</Mono>
       </label>
       {/* Weight is the signal: 1px rule -> 2px ink, and the box does not
@@ -114,10 +118,15 @@ export function FormField({
           nothing left to compensate for. */}
       <div
         data-invalid={isInvalid ? "true" : undefined}
+        // `field-box` (ui/a11y.css) is the focus half: the box is the
+        // control's visible boundary, so the ring lands on it rather than
+        // on the borderless input inset inside it. It also removes the
+        // ring from that input, which is what five `outline-none`
+        // utilities used to do without saying where the ring had gone.
         className={
           isInvalid
-            ? "flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
-            : "flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
+            ? "field-box flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
+            : "field-box flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
         }
       >
         {children}
@@ -189,7 +198,7 @@ export function TextField({
         onChange={(event) => {
           onChange(event.target.value);
         }}
-        className="w-full border-none bg-transparent outline-none"
+        className="w-full border-none bg-transparent"
       />
     </FormField>
   );
@@ -216,7 +225,7 @@ export function FormErrorSummary({
     <div
       ref={summaryRef}
       tabIndex={-1}
-      className="flex flex-col gap-3 border border-ink p-4 outline-none"
+      className="flex flex-col gap-3 border border-ink p-4"
     >
       <Mono step="xs">Nothing saved</Mono>
       <span className="text-body">{rows.length} fields need a fix.</span>
@@ -228,7 +237,7 @@ export function FormErrorSummary({
               onClick={() => {
                 onFocusField(row.name);
               }}
-              className="cursor-pointer border-none bg-transparent p-0 text-left text-body underline underline-offset-4"
+              className="target cursor-pointer border-none bg-transparent p-0 text-left text-body underline underline-offset-4"
             >
               {row.label} — {row.message}
             </button>
@@ -266,7 +275,7 @@ export function FormFailureBand({
         ref={retryRef}
         type="button"
         onClick={onRetry}
-        className="cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
+        className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
       >
         Try again
       </button>
@@ -275,15 +284,94 @@ export function FormFailureBand({
 }
 
 /**
+ * The two attributes a control wears while its work is in flight.
+ *
+ * **Never the `disabled` attribute** — it drops the element from the tab
+ * order and hides why it is unavailable (Accessibility Contract rule 07,
+ * Form Contract §5). The guard against a second press lives in the
+ * handler, and this only reports the state.
+ *
+ * A named pair rather than two attributes typed at nine call sites,
+ * because the failure mode is writing one of them: `aria-disabled` alone
+ * says "unavailable" and never says why, `aria-busy` alone says "working"
+ * and still invites the second press. They are one fact and this is one
+ * gate for it.
+ *
+ * `|| undefined` rather than the boolean: React renders `aria-busy="false"`
+ * for `false`, and a control that is *not* busy should carry no claim at
+ * all rather than a claim in the negative.
+ */
+export function inFlight(isPending: boolean): {
+  "aria-disabled": true | undefined;
+  "aria-busy": true | undefined;
+} {
+  return {
+    "aria-disabled": isPending || undefined,
+    "aria-busy": isPending || undefined,
+  };
+}
+
+/**
+ * A control's label, and what it says instead while it is working.
+ *
+ * **The control does not resize.** Both labels occupy one grid cell, so
+ * the width is fixed by the longer of the two and nothing shifts when it
+ * flips — which is what lets a button change what it says mid-press
+ * without moving the thing underneath it.
+ *
+ * Pending is the brackets breathing. The label text stays plain, because
+ * bracket *notation* is reserved for measured values and a pending verb is
+ * not one; the brackets here are the waiting device, which is why they are
+ * `aria-hidden` and the verb is not.
+ *
+ * Extracted from `SubmitButton` when design's round 13 ruled that the
+ * eight controls which used to dim themselves to 40% get this treatment
+ * instead — *"pending verbs are the rest verb in -ing, in brackets,
+ * breathing. Never 'Loading', 'Please wait', 'Processing'."* Nine copies
+ * of a grid-stacked label swap is exactly the clone the `dupes` gate is
+ * for, and the second copy is where the brackets stop breathing.
+ */
+export function PendingLabel({
+  label,
+  pendingLabel,
+  pending,
+}: Readonly<{
+  label: ReactNode;
+  pendingLabel: string;
+  pending: boolean;
+}>): JSX.Element {
+  return (
+    <span className="grid place-items-center">
+      <span
+        className="[grid-area:1/1]"
+        // `undefined`, not `"visible"`: an explicit "visible" and an
+        // omitted property render identically, so the literal would be a
+        // mutant no test could ever distinguish. Only the hiding half is
+        // a real decision, and it is the half that is asserted.
+        style={{ visibility: pending ? "hidden" : undefined }}
+      >
+        {label}
+      </span>
+      <span
+        className="flex gap-1 [grid-area:1/1]"
+        style={{ visibility: pending ? undefined : "hidden" }}
+      >
+        <span className="breathe" aria-hidden="true">
+          [
+        </span>
+        {pendingLabel}
+        <span className="breathe" aria-hidden="true">
+          ]
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/**
  * Never the `disabled` attribute: a disabled button drops focus and stops
  * announcing, so the guard against a double submit lives in the handler
  * (`useFormSubmit`) and this only reports the state.
- *
- * The button does not resize. Both labels occupy one grid cell, so the
- * width is fixed by the longer of the two and nothing shifts when it
- * flips. Pending is the brackets breathing — the label text stays plain,
- * because bracket *notation* is reserved for measured values and this is a
- * verb.
  */
 export function SubmitButton({
   label,
@@ -297,36 +385,16 @@ export function SubmitButton({
   return (
     <button
       type="submit"
-      aria-disabled={pending || undefined}
-      aria-busy={pending || undefined}
-      className={`grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase  text-ink ${
+      {...inFlight(pending)}
+      className={`target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase  text-ink ${
         pending ? "cursor-default" : "cursor-pointer"
       }`}
     >
-      <span className="grid place-items-center">
-        <span
-          className="[grid-area:1/1]"
-          // `undefined`, not `"visible"`: an explicit "visible" and an
-          // omitted property render identically, so the literal would be a
-          // mutant no test could ever distinguish. Only the hiding half is
-          // a real decision, and it is the half that is asserted.
-          style={{ visibility: pending ? "hidden" : undefined }}
-        >
-          {label}
-        </span>
-        <span
-          className="flex gap-1 [grid-area:1/1]"
-          style={{ visibility: pending ? undefined : "hidden" }}
-        >
-          <span className="breathe" aria-hidden="true">
-            [
-          </span>
-          {pendingLabel}
-          <span className="breathe" aria-hidden="true">
-            ]
-          </span>
-        </span>
-      </span>
+      <PendingLabel
+        label={label}
+        pendingLabel={pendingLabel}
+        pending={pending}
+      />
     </button>
   );
 }
@@ -338,7 +406,7 @@ export function SubmitButton({
  * accent that means nothing.
  */
 const OPTION_CHIP_CLASS =
-  "relative flex cursor-pointer items-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+  "target relative flex cursor-pointer items-center justify-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 
 const CHIP_INPUT_CLASS =
   "absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0";
@@ -452,7 +520,7 @@ export function ToggleField({
   onChange: (isOn: boolean) => void;
 }>): JSX.Element {
   return (
-    <label className="flex items-center gap-2 text-body font-semibold">
+    <label className="target flex items-center gap-2 text-body font-semibold">
       <input
         {...field(name)}
         type="checkbox"
@@ -549,7 +617,8 @@ export function ChoiceList<TOption extends string>({
   const isChips = layout === "chips";
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-      <legend className="mb-2 p-0 text-muted">
+      {/* A legend is the group's only label, so --label (T1, round 13). */}
+      <legend className="mb-2 p-0 text-label">
         <Mono step="sm">{legend}</Mono>
       </legend>
       <div className={isChips ? "flex flex-wrap gap-2" : "contents"}>
@@ -559,7 +628,7 @@ export function ChoiceList<TOption extends string>({
             className={
               isChips
                 ? OPTION_CHIP_CLASS
-                : "flex items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3 text-body font-semibold"
+                : "target flex items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3 text-body font-semibold"
             }
           >
             <input

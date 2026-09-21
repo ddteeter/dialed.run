@@ -6,6 +6,7 @@
 export function WeatherAttribution() {
   return (
     <a
+      data-target="inline"
       href="https://www.visualcrossing.com/weather-data"
       target="_blank"
       rel="noreferrer"

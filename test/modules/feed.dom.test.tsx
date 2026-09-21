@@ -402,7 +402,10 @@ describe("Feed: your conditions", () => {
     const conditions = screen.getByRole("button", { name: "Your conditions" });
     expect(following).toHaveClass("border-cold-text");
     expect(following).toHaveAttribute("aria-current", "page");
-    expect(conditions).toHaveClass("text-muted");
+    // `--label` (#6E6E64, 4.64:1), not `--muted` (3.90:1): an inactive
+    // tab label is a control's only label, which T1's round-13 row bans
+    // --muted from being on paper.
+    expect(conditions).toHaveClass("text-label");
     expect(conditions).not.toHaveAttribute("aria-current");
     // Both sides carry the 90ms colour flip (design/motion.js, "Tab
     // switch"): it is the half of the move that survives reduced motion,
@@ -419,7 +422,7 @@ describe("Feed: your conditions", () => {
       screen.getByRole("button", { name: "Your conditions" }),
     ).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Following" })).toHaveClass(
-      "text-muted",
+      "text-label",
     );
     expect(
       screen.getByRole("button", { name: "Following" }),

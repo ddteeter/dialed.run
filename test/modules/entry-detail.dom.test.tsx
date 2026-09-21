@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -218,7 +219,12 @@ describe("EntryDetail: the optional blocks", () => {
     expect(container.querySelectorAll("ul")).toHaveLength(0);
     // One paragraph — the author line. No caption, no tag row.
     expect(container.querySelectorAll("p")).toHaveLength(1);
-    expect(container.querySelectorAll(".grid")).toHaveLength(0);
+    // The photo grid and the tag row, named by the class that makes each
+    // one what it is. `.grid` alone used to stand for the photo grid and
+    // stopped being able to: `PendingLabel` stacks a control's two labels
+    // in one grid cell, so the Useful button contains a `.grid` on every
+    // entry whether or not there is a photo.
+    expect(container.querySelectorAll(".grid-cols-2")).toHaveLength(0);
     expect(container.querySelectorAll(".flex-wrap")).toHaveLength(0);
   });
 
@@ -334,19 +340,31 @@ describe("EntryDetail: the useful reaction", () => {
         "[5]",
       );
     });
-    // The whole label, not a fragment of it: the count rolls now, so it is
-    // two spans where it was one text node, and the space before the
-    // bracket is the caller's.
+    // The whole resting label, not a fragment of it: the count rolls now,
+    // so it is two spans where it was one text node, and the space before
+    // the bracket is the caller's.
     //
-    // Not asserted as the *accessible name*, which is what actually broke
-    // — Chromium announced "Useful [ 5 ]" while the slot clipped with
-    // `overflow: hidden`, because the name algorithm spaces a node whose
-    // display is not inline. happy-dom has no layout and inserts those
-    // spaces either way, so a name query here would pin its quirk rather
-    // than the rule. `e2e/feed` is what guards it, in a real browser.
-    expect(screen.getByRole("button", { name: /Useful/ }).textContent).toBe(
-      "Useful [5]",
-    );
+    // **`[Noting]` is in the DOM beside it and is not part of this.** The
+    // two labels are stacked in one grid cell and swapped by `visibility`
+    // (`PendingLabel`), which is what keeps the button from resizing
+    // mid-press — so the pending verb is always present and always hidden
+    // at rest. `toBeVisible` reads the visibility style, which is the
+    // mechanism; `textContent` cannot, because it has no opinion about
+    // layout at all.
+    //
+    // Not asserted as the *accessible name* either, which is what actually
+    // broke — Chromium announced "Useful [ 5 ]" while the slot clipped
+    // with `overflow: hidden`, because the name algorithm spaces a node
+    // whose display is not inline. happy-dom has no layout and inserts
+    // those spaces either way, so a name query here would pin its quirk
+    // rather than the rule. `e2e/feed` is what guards it, in a real
+    // browser, and it is what proves the hidden verb stays out of the
+    // name.
+    expect(screen.getByText("Useful").parentElement).toBeVisible();
+    expect(screen.getByText("Noting")).not.toBeVisible();
+    expect(
+      screen.getByText("Useful").closest("span")?.textContent,
+    ).toBe("Useful [5]");
     expect(toggleUseful).toHaveBeenCalledWith({ data: { entryId: "01ENTRY" } });
   });
 
@@ -385,6 +403,35 @@ describe("EntryDetail: the useful reaction", () => {
     expect(button).not.toHaveClass("bg-teal");
   });
 
+  it("does nothing on a second press while the first is in flight", async () => {
+    // The guard rule 07 makes necessary. `aria-disabled` keeps the button
+    // focusable and announcing, so unlike `disabled` it does not stop the
+    // press — the handler has to. Without the guard this toggle spends a
+    // round trip undoing the reaction the first press is still making.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ useful: boolean }>();
+    const toggleUseful = vi.fn(() => pending.promise);
+    await renderWithRouter(
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
+        entry={entry()}
+        shouldPromptVerdict={false}
+        recordPrompted={nothing}
+        toggleUseful={toggleUseful}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /Useful/ });
+
+    await user.click(button);
+    await waitFor(() => {
+      expectBusy(button);
+    });
+    await user.click(button);
+    await user.click(button);
+
+    expect(toggleUseful).toHaveBeenCalledTimes(1);
+  });
+
   it("locks the button while it works", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<{ useful: boolean }>();
@@ -401,12 +448,12 @@ describe("EntryDetail: the useful reaction", () => {
 
     await user.click(button);
     await waitFor(() => {
-      expect(button).toBeDisabled();
+      expectBusy(button);
     });
 
     pending.resolve({ useful: true });
     await waitFor(() => {
-      expect(button).not.toBeDisabled();
+      expectAvailable(button);
     });
   });
 });

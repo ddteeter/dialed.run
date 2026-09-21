@@ -38,12 +38,14 @@ export function Feed({
         <h1 className="font-display text-title uppercase">Feed</h1>
         <Link
           to="/feed/search"
-          className="text-body font-semibold text-cold-text"
+          className="target inline-flex items-center text-body font-semibold text-cold-text"
         >
           Find runners
         </Link>
       </div>
-      <div className="flex gap-1 border-b border-hairline">
+      {/* `gap-2`, not `gap-1`: rule 03's other half is 8px between
+          adjacent hit areas, and these two are now 44 tall and touching. */}
+      <div className="flex gap-2 border-b border-hairline">
         {(["following", "conditions"] as const).map((value) => (
           <button
             key={value}
@@ -60,8 +62,8 @@ export function Feed({
             // delta rather than invented.
             className={
               tab === value
-                ? "tab-label border-b-2 border-cold-text px-3 py-2 font-semibold"
-                : "tab-label px-3 py-2 text-muted"
+                ? "tab-label target border-b-2 border-cold-text px-3 py-2 font-semibold"
+                : "tab-label target px-3 py-2 text-label"
             }
           >
             {value === "following" ? "Following" : "Your conditions"}
@@ -85,7 +87,11 @@ function FollowingTab({
     return (
       <div className="flex flex-col gap-3 py-12 text-center text-quiet">
         <p>Nobody you follow has posted yet.</p>
-        <Link to="/feed/search" className="font-semibold text-cold-text">
+        <Link
+          data-target="inline"
+          to="/feed/search"
+          className="font-semibold text-cold-text"
+        >
           Search for runners to follow
         </Link>
       </div>
@@ -101,7 +107,7 @@ function FollowingTab({
           <Link
             to="/feed/entry/$entryId"
             params={{ entryId: item.entryId }}
-            className="flex flex-col gap-2 no-underline"
+            className="target flex flex-col gap-2 no-underline"
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold">

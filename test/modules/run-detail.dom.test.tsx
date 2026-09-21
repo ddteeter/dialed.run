@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { RunDetail } from "../../src/modules/runs/components/RunDetail";
 import type { RunRow } from "../../src/modules/runs/service";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
  * The run screen, and D-24's manual-temp fallback.
@@ -187,6 +188,27 @@ describe("RunDetail: typing a temperature", () => {
     expect(prevented).toBe(true);
   });
 
+  it("does nothing on a second press while the first is in flight", async () => {
+    // The guard rule 07 makes necessary. `aria-disabled` keeps the button
+    // focusable and announcing, so unlike `disabled` it does not stop the
+    // press — the handler has to, and this one writes a temperature.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    const recordManualTemp = vi.fn(() => pending.promise);
+    await renderWithRouter(
+      <RunDetail run={run()} recordManualTemp={recordManualTemp} />,
+    );
+    const button = screen.getByRole("button", { name: "Save temperature" });
+
+    await user.click(button);
+    await waitFor(() => {
+      expectBusy(button);
+    });
+    await user.click(button);
+
+    expect(recordManualTemp).toHaveBeenCalledTimes(1);
+  });
+
   it("locks the button while it saves", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<undefined>();
@@ -197,12 +219,12 @@ describe("RunDetail: typing a temperature", () => {
 
     await user.click(button);
     await waitFor(() => {
-      expect(button).toBeDisabled();
+      expectBusy(button);
     });
 
     pending.resolve(undefined);
     await waitFor(() => {
-      expect(button).not.toBeDisabled();
+      expectAvailable(button);
     });
   });
 
@@ -221,7 +243,7 @@ describe("RunDetail: typing a temperature", () => {
 
     const message = await screen.findByText(/try/i);
     expect(message).toBeVisible();
-    expect(button).not.toBeDisabled();
+    expectAvailable(button);
 
     // And the message clears on the next attempt rather than sitting next
     // to a running save.

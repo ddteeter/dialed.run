@@ -165,7 +165,7 @@ function CalibrationRow({
       </div>
       <Link
         to="/onboarding/calibrate"
-        className="shrink-0 rounded-pill border border-hairline px-4 py-2"
+        className="target inline-flex items-center shrink-0 rounded-pill border border-hairline px-4 py-2"
       >
         <Mono step="xs">Recalibrate</Mono>
       </Link>

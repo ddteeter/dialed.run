@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { FlowStep, LOG_FLOW } from "../../../ui";
+import { FlowStep, inFlight, LOG_FLOW, PendingLabel } from "../../../ui";
 
 /**
  * The upload action, handed in rather than imported.
@@ -29,6 +29,10 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
     // Stryker disable next-line OptionalChaining
     const file = files?.[0];
     if (file === undefined) return;
+    // The guard the `disabled` attribute used to be. `aria-disabled` on an
+    // input does not stop the picker opening (rule 07 keeps it reachable
+    // on purpose), so a second file chosen mid-upload has to die here.
+    if (isUploading) return;
     setError(undefined);
     setIsUploading(true);
     try {
@@ -46,15 +50,30 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
   return (
     <FlowStep step={LOG_FLOW.intake}>
       <div className="flex flex-col gap-3">
-        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed border-hairline-2 bg-panel px-6 py-10 text-center">
+        {/* The ring is on the label, not the input. `sr-only` clips the
+            input to a 1px corner, so an outline on it is invisible —
+            tabbing to this control used to show nothing at all, which is
+            rule 06's "never removed" failing by construction rather than
+            by an `outline-none`. */}
+        <label className="target flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed border-hairline-2 bg-panel px-6 py-10 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
+          {/* Design's round-13 table names this control's rest label
+              "Choose a file" and its in-flight label "[ Reading ]". The
+              drawn copy is kept as the rest label, because it carries the
+              accepted formats and copy is the artboard's domain — the
+              boards were not redrawn this round. The pending half is
+              design's own. */}
           <span className="font-semibold text-ink">
-            Drop a .FIT, .gpx, or .tcx file
+            <PendingLabel
+              label="Drop a .FIT, .gpx, or .tcx file"
+              pendingLabel="Reading"
+              pending={isUploading}
+            />
           </span>
           <span className="text-micro text-muted">up to 25 MB</span>
           <input
             type="file"
             accept=".fit,.gpx,.tcx"
-            disabled={isUploading}
+            {...inFlight(isUploading)}
             className="sr-only"
             onChange={(event) => {
               void onChange(event.target.files);

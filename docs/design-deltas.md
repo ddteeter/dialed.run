@@ -31,6 +31,11 @@ round (D-26…D-33).
 **Round 4** shipped 2026-09-07 and cleared most of this queue: see
 "Answered in round 4" below.
 **Round 12** shipped the navigation types, imported 2026-09-20 by task 117.
+**Round 13** shipped the accessibility answers, imported 2026-09-20 by task
+112 — a new T1 role, a retired teal, and the unavailable-control table. See
+"Answered in round 13" below.
+**Round 14** shipped the same day, correcting one row of round 13 and
+settling two copy questions the build had already answered its own way.
 Two files changed and nothing else: `motion.js` gains `NAV_TYPES` (five
 types) and `NAV` (26 edges at three widths), two NEVER entries, and one
 clause on `REDUCED_MOTION`; `Motion Doctrine.dc.html` gains section 04b to
@@ -219,63 +224,86 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     in Chromium — the launcher's accessible name is computed from re-nested
     markup, which happy-dom cannot see.
 
-20. **T1 has no row at the value the Tab bar row asks for, and two roles
-    miss rule 02's floor.** Raised by task 112, which measured every T1
-    light pairing rather than spot-checking. Cite this as **the label grey**.
+## Answered in round 14 (imported 2026-09-20)
 
-    `--muted #7A7A70` is **3.90:1** on `--ground #F4F3EF` (4.33:1 on
-    `--panel`). Rule 02 says #7A7A70 on paper is _"decoration-only — never
-    the sole label of a control"_ — and `--muted` is the colour of every
-    form field's label, every radio-group legend, and the tab bar's
-    inactive labels. The Tab bar row calls for **#6E6E64 (4.64:1
-    measured)**; T1 has no row at that value, so the build reached for
-    `--muted` and the bar ships at 3.90. **The ask is a named T1 role for a
-    grey that is a control's only label**, so `--muted` can go back to
-    being captions and metadata.
+Three small ones, raised by task 112 as round 13's answers met the code.
+One file changed — `Accessibility Contract.dc.html` — and all three
+answers went the lane's way, which is worth recording: each was a place
+where the build had already made a judgement and wanted it confirmed
+rather than a question it could not answer.
 
-    `--dialed-text #009F8C` is **2.98:1** on ground, and is used nine times
-    as meaning-carrying text — `[Noted]`, the matched band, two feed
-    verdicts, four matched-state marks. `styles.css` records the intent as
-    _"a darker cut that clears contrast on paper"_, which it does not.
-    **The ask is a darker cut, or a ruling that teal-as-text is decoration
-    and those nine sites are wrong.** Hue is verdict, so the value is
-    design's and not a lane's.
+**The synchronous pending verb — a slip, corrected.** `Use this` in the
+shade sheet had been given `[ Saving ]`; it is synchronous, and the row
+now reads _"Use this — synchronous; the hex travels with the form. No
+in-flight state (round 14 corrects a round 13 slip)."_ `Attach N items`
+_"stays as built"_ — it is genuinely async and the lane added the state it
+was missing.
 
-    Dark clears both (`--muted` 5.81:1) — this is a paper-only problem, and
-    it is not task 111's.
+**The file input's name — the drawn copy stands.** _"'Drop a .FIT, .gpx,
+or .tcx file' is the rest label and the only home for the formats;
+`[ Reading ]` in flight. `Add a photo` stays for the photo input."_ So the
+two file inputs resolve the table differently on purpose: one had a drawn
+name worth keeping and the other had only a field caption.
 
-21. **What "unavailable" looks like once `disabled` is gone.** Rule 07
-    retires the HTML attribute; rule 02's _"opacity never encodes
-    meaning"_ retires the 40–50% dimming that nine controls wear with it.
-    Both halves of today's treatment go and nothing is drawn to replace
-    them. Cite this as **the unavailable control**.
+**The face-detection sentence — the build is right, and gains a rule.**
+X3 now reads _"Hear 'Checking this photo'"_ rather than _"Looking for
+faces"_, because _"'Checking this photo' doesn't promise a face search the
+detector can't guarantee; the two outcomes carry the specificity."_ With
+one clause the lane had not thought to ask about: **no trailing ellipsis
+in the announced string — the status region reads it, the ellipsis is
+drawn only.** So `PhotoBlur` holds one constant and renders it two ways,
+which is the one place in the app where what is drawn and what is
+announced deliberately differ.
 
-    Eight are **in flight** — `Useful`, `Follow`/`Following`, `Save
-temperature`, `Connect`/`Reconnect`/`Disconnect Strava`, and the two
-    file inputs. The Form Contract already answers this shape for submit
-    buttons and the build follows it (label swaps to a breathing-brackets
-    pending label, no dimming). **Is that the answer for these eight, and
-    if so what is each pending verb** — that is copy, so it is design's.
+## Answered in round 13 (imported 2026-09-20)
 
-    One is **not yet** — `Attach N items`, while nothing is selected.
-    Under rule 07 it stays tabbable and pressing it does nothing and says
-    nothing, which X3's keyboard list explicitly allows (_"nothing visible
-    except the failure band, if any"_) and this screen has no band.
-    **The ask is whether silence is right**, or whether a not-yet control
-    owes a sentence — and where it sits.
+Round 13 is the accessibility round, and it exists because task 112
+measured rather than spot-checked. Three questions went out with the
+lane's own recommendation attached; all three came back, and two of them
+changed a contract value. Eight design files changed: `Theme.dc.html` and
+`Accessibility Contract.dc.html` carry the rulings, and the other six are
+the retired teal swapped through the artboards.
 
-22. **Does rule 03's 44×44 reach a link inside a sentence?** Cite this as
-    **the inline target**. Every standalone target pads to 44 with no
-    composition change. Twelve do not: they are links set in running prose
-    — _"Already have an account? **Sign in**"_, _"Know someone? **Find
-    runners**"_, _"No file? **Log it manually**"_, `Back to feed`, `Import
-from Strava`, `Continue to Strava`. Padding those grows the line box,
-    so seven drawn screens reflow for a hit-area reason.
+**The label grey — answered, and it is a new T1 row.** `--label #6E6E64`
+(4.64:1 on paper), for _"a grey that is a control's only label: field
+captions, radiogroup legends, inactive tab labels"_. `--muted #7A7A70`
+keeps its hex and gains the sentence that was missing: _"never a control's
+only label on paper (3.9:1) — that is --label"_. The dark column folds
+`--label` into `--muted`, which already clears at 5.81:1, so this is a
+paper-only role and task 111 inherits it with nothing to decide.
 
-    WCAG 2.2 AA exempts exactly this case (2.5.8's inline exception), which
-    is why the lane reads 03 as standalone targets and has **not** reflowed
-    anything. **The ask is one line** confirming that, or asking for the
-    padding to be drawn.
+**Teal as text moves, and the nine call sites were right.** `--dialed-text`
+is cut from `#009F8C` (2.98:1) to **`#00776A`** (4.87:1 measured on
+ground). Design's framing is worth keeping: the sites were not wrong to
+say "dialed" in teal — _the hex was wrong_. `#009F8C` is retired outright,
+which is why six artboard files changed in a round about contrast.
+
+**The unavailable control — the dim is gone, and the label carries it.**
+Rule 07 already retired the `disabled` attribute; rule 02 retires the
+40–50% opacity that went with it, and **nothing replaces it**. In its
+place the contract gains a table, _"round 13 · unavailable, spelled
+out"_, naming both states for all nine controls:
+
+- **In flight** — the label swaps to breathing brackets with `aria-busy`,
+  the treatment the Form Contract already gave submit buttons. The verbs
+  are design's: `[ Noting ]`, `[ Following ]` · `[ Unfollowing ]`,
+  `[ Saving ]`, `[ Connecting ]` · `[ Reconnecting ]` ·
+  `[ Disconnecting ]`, `[ Uploading ]`, `[ Reading ]`, `[ Attaching ]`.
+  The rule behind them: _"the rest verb in -ing, in brackets, breathing.
+  Never 'Loading', 'Please wait', 'Processing'."_
+- **Not yet** — `Attach 0 items`, drawn at full strength, `aria-disabled`,
+  silent on press. _"The count is the sentence: it says what is missing on
+  the button the runner is looking at."_ No band, no new copy.
+
+**The inline target — 03 means standalone targets.** Rule 03 gains the
+clause: _"a link set in a sentence takes WCAG 2.5.8's inline exception and
+does not grow the line."_ So nothing reflows, which is what the lane
+recommended and what the boards were drawn to.
+
+**Two of the nine pending verbs describe a state the control does not
+have**, which is a lane finding rather than a design one and is recorded
+in `docs/deferred.md`: `Use this` in the shade sheet is synchronous, and
+`Attach N items` had no in-flight state at all until this lane added one.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 

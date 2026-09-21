@@ -3,6 +3,7 @@
 @import "./ui/tokens.css";
 @import "./ui/motion.css";
 @import "./ui/ink.css";
+@import "./ui/a11y.css";
 @plugin "@tailwindcss/typography";
 
 /*
@@ -32,6 +33,7 @@
   --color-hairline: var(--hairline);
   --color-hairline-2: var(--hairline-2);
   --color-muted: var(--muted);
+  --color-label: var(--label);
   --color-quiet: var(--quiet);
   --color-placeholder: var(--placeholder);
   --color-photo: var(--photo);

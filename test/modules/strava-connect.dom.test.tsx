@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
 import { RETRY_GENERIC } from "../../src/lib/copy";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
  * Connect / reconnect / disconnect (102 §6).
@@ -105,9 +106,26 @@ describe("StravaConnect: not yet connected", () => {
     await user.click(screen.getByRole("button", { name: "Connect Strava" }));
 
     expect(await screen.findByText(RETRY_GENERIC)).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Connect Strava" }),
-    ).not.toBeDisabled();
+    expectAvailable(screen.getByRole("button", { name: "Connect Strava" }));
+  });
+
+  it("does nothing on a second press while the first is in flight", async () => {
+    // The guard rule 07 makes necessary, and these three buttons share one
+    // `isBusy` — so it is a press on *any* of them that has to die, not
+    // just a second press on this one.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<string | undefined>();
+    const getAuthorizeUrl = vi.fn(() => pending.promise);
+    connectScreen(getAuthorizeUrl);
+    const button = screen.getByRole("button", { name: "Connect Strava" });
+
+    await user.click(button);
+    await waitFor(() => {
+      expectBusy(button);
+    });
+    await user.click(button);
+
+    expect(getAuthorizeUrl).toHaveBeenCalledTimes(1);
   });
 
   it("locks the button while it fetches", async () => {
@@ -118,12 +136,12 @@ describe("StravaConnect: not yet connected", () => {
 
     await user.click(button);
     await waitFor(() => {
-      expect(button).toBeDisabled();
+      expectBusy(button);
     });
 
     pending.resolve(undefined);
     await waitFor(() => {
-      expect(button).not.toBeDisabled();
+      expectAvailable(button);
     });
   });
 
@@ -214,7 +232,7 @@ describe("StravaConnect: connected", () => {
     await user.click(button);
 
     expect(await screen.findByText(RETRY_GENERIC)).toBeVisible();
-    expect(button).not.toBeDisabled();
+    expectAvailable(button);
     expect(location.reload).not.toHaveBeenCalled();
   });
 
@@ -259,6 +277,30 @@ describe("StravaConnect: connected", () => {
     expect(container.querySelectorAll("p")).toHaveLength(1);
   });
 
+  it("does nothing on a second press while the disconnect is in flight", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    const disconnect = vi.fn(() => pending.promise);
+    render(
+      <StravaConnect
+        configured
+        status="ok"
+        getAuthorizeUrl={noUrl}
+        disconnect={disconnect}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Disconnect" });
+
+    await user.click(button);
+    await waitFor(() => {
+      expectBusy(button);
+    });
+    await user.click(button);
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    pending.resolve(undefined);
+  });
+
   it("locks the button while it disconnects", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<undefined>();
@@ -274,7 +316,7 @@ describe("StravaConnect: connected", () => {
 
     await user.click(button);
     await waitFor(() => {
-      expect(button).toBeDisabled();
+      expectBusy(button);
     });
     pending.resolve(undefined);
   });

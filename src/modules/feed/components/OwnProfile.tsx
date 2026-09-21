@@ -107,7 +107,7 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
             <Link
               to="/feed/entry/$entryId"
               params={{ entryId: entry.entryId }}
-              className="text-body font-semibold text-ink no-underline"
+              className="target inline-flex items-center text-body font-semibold text-ink no-underline"
             >
               {entry.verdict === null ? "No verdict yet" : "Entry"}
             </Link>

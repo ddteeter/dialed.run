@@ -29,7 +29,7 @@ export function GoogleButton() {
         onClick={() => {
           void start();
         }}
-        className="rounded-pill border border-hairline bg-panel px-4 py-2 font-semibold"
+        className="target rounded-pill border border-hairline bg-panel px-4 py-2 font-semibold"
       >
         Continue with Google
       </button>

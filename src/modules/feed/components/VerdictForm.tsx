@@ -33,10 +33,10 @@ import {
  * revert is instant.
  */
 const VERDICT_CHOSEN =
-  "verdict-lock flex items-center gap-1 rounded-card bg-ink px-4 py-3 text-left font-semibold text-ground";
+  "verdict-lock target flex items-center gap-1 rounded-card bg-ink px-4 py-3 text-left font-semibold text-ground";
 
 const VERDICT_RESTING =
-  "flex items-center gap-1 rounded-card border border-hairline px-4 py-3 text-left";
+  "target flex items-center gap-1 rounded-card border border-hairline px-4 py-3 text-left";
 import { submitVerdictInput } from "../inputs";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
@@ -69,7 +69,22 @@ const LABELS = {
  * It is handed the picked file and a callback for the bytes that should
  * actually be sent, which are not the same bytes.
  */
-type PhotoStep = (file: File, onReady: (ready: File) => void) => ReactNode;
+/**
+ * The blur step, rendered by the route because it lives in
+ * `modules/safety`.
+ *
+ * `announce` is the third argument because of rule 08: the step has three
+ * sentences of its own to say and the screen is allowed **one**
+ * `role="status"` region, which this form already mounts. Handing the
+ * writer down is what stops the step opening a second one — which is
+ * exactly what it used to do, and what made one of the two announcements
+ * unreadable.
+ */
+type PhotoStep = (
+  file: File,
+  onReady: (ready: File) => void,
+  announce: (sentence: string) => void,
+) => ReactNode;
 
 export function VerdictForm({
   entry,
@@ -310,7 +325,7 @@ export function VerdictForm({
           onClick={() => {
             void navigate({ to: "/feed/entry/$entryId", params: { entryId } });
           }}
-          className="rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
+          className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
         >
           Done
         </button>
@@ -348,6 +363,21 @@ export function VerdictForm({
                 <button
                   key={choice.value}
                   type="button"
+                  // The chosen one was announced to nobody. Visually it is
+                  // an ink inversion plus a pair of brackets, and the
+                  // brackets are `aria-hidden` (they are a move, not a
+                  // word) — so a reader heard five identical buttons and
+                  // no indication of which was picked. Rule 01 is "remove
+                  // every colour and the meaning survives", and here it
+                  // did not.
+                  //
+                  // `aria-pressed`, not a `radiogroup`: the contract asks
+                  // for five radios with arrow-key navigation, which is a
+                  // behaviour change this lane may not make. A
+                  // single-select toggle group is honest about what the
+                  // control does today and announces the state; the
+                  // radiogroup is D-84.
+                  aria-pressed={isChosen}
                   onClick={() => {
                     setVerdict(choice.value);
                   }}
@@ -451,9 +481,13 @@ export function VerdictForm({
 
           {pending === undefined
             ? undefined
-            : pending.step(pending.file, (ready) => {
-                void handlePhotoReady(ready);
-              })}
+            : pending.step(
+                pending.file,
+                (ready) => {
+                  void handlePhotoReady(ready);
+                },
+                form.announce,
+              )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -470,8 +504,8 @@ export function VerdictForm({
                 }}
                 className={
                   tags.has(tag)
-                    ? "rounded-pill bg-ink px-3 py-1 text-ground"
-                    : "rounded-pill border border-hairline px-3 py-1"
+                    ? "target rounded-pill bg-ink px-3 py-1 text-ground"
+                    : "target rounded-pill border border-hairline px-3 py-1"
                 }
               >
                 <Mono step="xs">{tag.replaceAll("_", " ")}</Mono>
@@ -480,7 +514,7 @@ export function VerdictForm({
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-body">
+        <label className="target flex items-center gap-2 text-body">
           <input
             type="checkbox"
             checked={isPublic}

@@ -38,9 +38,19 @@ import {
  * Nothing here animates: the Motion Doctrine's per-surface map does not
  * list this screen, so it stays still until design asks otherwise.
  */
+/**
+ * What the screen says while the detector is still loading.
+ *
+ * A constant because it is said twice in two shapes — drawn with a
+ * trailing ellipsis, announced without one — and two literals a character
+ * apart is exactly the pair that drifts.
+ */
+const CHECKING = "Checking this photo";
+
 export function PhotoBlur({
   file,
   onReady,
+  onAnnounce,
   pipeline = browserPipeline,
   storage,
 }: Readonly<{
@@ -51,6 +61,21 @@ export function PhotoBlur({
    * original as a silent fallback for a blur that failed.
    */
   onReady: (ready: File) => void;
+  /**
+   * Puts a sentence in the **screen's** status region.
+   *
+   * W3's three sentences are named in the Accessibility Contract's
+   * per-surface table — *"the three sentences (looking / blurred one /
+   * couldn't look) go to the status region"* — and rule 08 allows the
+   * screen exactly one. This screen's belongs to the verdict form, so it
+   * arrives as a prop rather than being opened here: a second
+   * `aria-live` beside the first means one of the two is lost, which is
+   * what the contract's *"never silence, never twice"* rules out.
+   *
+   * Optional, because a photo can be blurred outside a form — and a
+   * caller that cannot offer a region should not get a private one.
+   */
+  onAnnounce?: ((sentence: string) => void) | undefined;
   pipeline?: BlurPipeline;
   /**
   Injected in tests; production reads `localStorage`.
@@ -154,6 +179,47 @@ export function PhotoBlur({
   const detected = regions.filter((r) => r.source === "detected").length;
   const tapped = regions.length - detected;
 
+  // `phase` narrows to "ran" | "unavailable" here, which is exactly what
+  // blurSummary wants. It used to be re-derived with a
+  // `phase === "ran" ? "ran" : "unavailable"`, and that ternary was a
+  // mutant no input could distinguish.
+  const outcome =
+    phase === "checking"
+      ? CHECKING
+      : blurSummary({ detector: phase, detected, tapped });
+
+  /**
+   * What the screen says about this photo, in one place.
+   *
+   * Hoisted out of the markup so it can be both rendered and announced
+   * without the two drifting — the sentence a reader hears and the
+   * sentence on screen are the same string, by construction.
+   *
+   * `undefined` with blur off: there is no outcome to report, because
+   * nothing was looked at. Rule 08's "success is silent unless the runner
+   * did something" — and declining the feature is not an outcome.
+   */
+  const summary = isOn ? outcome : undefined;
+
+  /**
+   * The same sentence, with the waiting device on it.
+   *
+   * **The ellipsis is drawn and never announced** (design, round 14): a
+   * status region reads it out, and "checking this photo dot dot dot" is
+   * the punctuation being spoken rather than the wait being conveyed.
+   * X3's expected reading is "Checking this photo", with no trailing
+   * character.
+   */
+  const shown = summary === CHECKING ? `${CHECKING}…` : summary;
+
+  // Announced from an effect rather than during render: setting state in
+  // another component while this one renders is the one thing React will
+  // not have. The sentence is the dependency, so the region is written
+  // once per change and not once per render — "never twice".
+  useEffect(() => {
+    if (summary !== undefined) onAnnounce?.(summary);
+  }, [summary, onAnnounce]);
+
   return (
     <div className="flex flex-col gap-3">
       <ToggleField
@@ -172,15 +238,12 @@ export function PhotoBlur({
 
       {isOn ? (
         <>
-          <p aria-live="polite" className="text-small">
-            {/* `phase` narrows to "ran" | "unavailable" here, which is
-                exactly what blurSummary wants. It used to be re-derived
-                with a `phase === "ran" ? "ran" : "unavailable"`, and that
-                ternary was a mutant no input could distinguish. */}
-            {phase === "checking"
-              ? "Checking this photo…"
-              : blurSummary({ detector: phase, detected, tapped })}
-          </p>
+          {/* Visible copy, and **not a live region any more**. It was a
+              second `aria-live` on a screen that already had the form's,
+              which rule 08 forbids and which loses one of the two
+              announcements. The sentence still reaches a reader — through
+              `onAnnounce`, into the one region the screen has. */}
+          <p className="text-small">{shown}</p>
           {/* Rendered only once there is a decoded photo. A canvas on
               screen while the copy still says "checking" is a blank
               rectangle that accepts taps it cannot place — and the guard
