@@ -75,6 +75,60 @@ export const SURFACES = [
     why: 'Collapse says "removed from the list". A fade says "still there, just hidden".' },
 ];
 
+/**
+ * Navigation — screen-to-screen. Round 12.
+ * One law: every navigation has a direction, and the direction is the transition.
+ * Forward comes from the trailing edge; back leaves the way it came; a flow rises
+ * from the bar and drops back to it; a swap into a pane has no direction and so
+ * gets no travel. Five types. A screen that isn't reached by one of these isn't reachable.
+ *
+ * Ownership: NAV lists every shipped edge, not just the Flow Map's. A lane meeting a new
+ * edge assigns a type by analogy to the nearest row, adds the row here in the same PR,
+ * and flags it. Design reviews the row, not the release.
+ */
+export const NAV_TYPES = {
+  push:  { move: 'Incoming slides in from the trailing edge, TRAVEL.frame. Outgoing holds and dims to 0.6. Back reverses both.', duration: 'move', easing: 'snap',
+           why: 'Direction is the breadcrumb. Back feels like back because the screen physically goes back.' },
+  rise:  { move: 'Incoming rises from the bottom edge its own height. Dismiss drops on ease-exit at quick. The screen beneath does not move.', duration: 'move', easing: 'snap',
+           why: 'A flow is a task laid on top of where you were. It goes back to the bar it came from, so the bar stays put.' },
+  swap:  { move: 'Incoming fades in over the outgoing, which holds until covered. No travel on either.', duration: 'move', easing: 'snap',
+           why: 'Desktop panes and tab content have no spatial relationship. Faking one with a slide is a lie about the layout. A quicker fade reads as a flash on anything pane-sized.' },
+  panel: { move: 'Panel slides in from its own edge, TRAVEL.frame; the page dims to 0.6. Close: ease-exit at quick.', duration: 'move', easing: 'snap',
+           why: 'Same physics as Sheet / drawer, so a phone sheet and a desktop panel are one thing to the runner.' },
+  cut:   { move: 'Nothing. Next frame is the new screen.', duration: '—', easing: '—',
+           why: 'Tabs, and anything returning to where the runner already is. Motion here is tax.' },
+};
+
+/** Every shipped edge, at the three widths. Column = 390 / 620 / 1040. See the ownership rule above. */
+export const NAV = [
+  { edge: 'Tab bar → Feed / Closet / Call / You', at: ['cut', 'cut', 'cut'], note: 'Indicator slides (Tab switch). Content cuts. Call as a tab is a cut; its reveal runs on arrival like any first paint.' },
+  { edge: '+ Add (bar launcher) → Log a run (A1…Q)', at: ['rise', 'panel', 'panel'], note: '+ Add is a launcher, not a tab: a button (aria-haspopup="dialog"), never a link, never current. The indicator never travels to it, and the tab beneath stays selected — visually, and as aria-current="true" (item, not page; Accessibility Contract). Steps inside: Log flow step. Supersedes the indicator behaviour in #84.' },
+  { edge: 'Log flow end (P3) → where you were', at: ['rise', 'panel', 'panel'], note: 'The drop half of rise / the close half of panel. The screen beneath was there all along.' },
+  { edge: 'First load (/) → Sign in', at: ['cut', 'cut', 'cut'], note: 'First paint.' },
+  { edge: 'Sign in ↔ Sign up', at: ['swap', 'swap', 'swap'], note: 'Siblings, no hierarchy — neither is “forward”.' },
+  { edge: 'Sign out → Sign in', at: ['cut', 'cut', 'cut'], note: 'The session ended. Stillness, same as offline.' },
+  { edge: 'Closet C → Add garment (F)', at: ['rise', 'panel', 'panel'], note: 'Same rise as Log a run — both are “put something in the closet”.' },
+  { edge: 'Closet C → Garment detail (Y1/Y2)', at: ['push', 'swap', 'swap'], note: 'At 620+ detail is a reflow in the column; the grid is gone, so nothing to slide from.' },
+  { edge: 'Garment detail → Edit garment', at: ['push', 'swap', 'swap'], note: 'Edit stays a full route. No composition change.' },
+  { edge: 'Garment detail → Retire / delete confirm', at: ['panel', 'panel', 'panel'], note: 'The confirm only. Sheet on phone, panel on desktop, one type. Not yet built.' },
+  { edge: 'Feed X / Profile → Post detail (D)', at: ['push', 'swap', 'swap'], note: '' },
+  { edge: 'Feed / Post → Someone’s profile (H)', at: ['push', 'swap', 'swap'], note: '' },
+  { edge: 'Feed → Find runners', at: ['push', 'swap', 'swap'], note: '' },
+  { edge: 'Runs list → Run detail', at: ['push', 'swap', 'swap'], note: 'By analogy to Closet → Garment detail. Runs list has no screen ID yet — the type holds whatever it becomes.' },
+  { edge: 'Import status (T2/T3) → Run detail', at: ['push', 'swap', 'swap'], note: '' },
+  { edge: 'Anywhere → Report / block (W1)', at: ['panel', 'panel', 'panel'], note: '' },
+  { edge: 'Feed rail / bell → The Call (K)', at: ['push', 'panel', 'panel'], note: 'Arrival is a push. The reveal that follows is Recommendation reveal and starts only after the push lands.' },
+  { edge: 'Bell → Notifications (S1/S2/M)', at: ['push', 'panel', 'panel'], note: 'Panel top-aligned under the bell (Desktop Contract). Never a dropdown.' },
+  { edge: 'S1 prompt → Verdict (A3) · Backlog (DS2)', at: ['push', 'panel', 'swap'], note: 'DS2 is a wide surface at 1040 — a swap in the main region.' },
+  { edge: 'You G → Settings index → detail (U1/U2/N)', at: ['push', 'swap', 'swap'], note: '' },
+  { edge: 'Settings / Runs list / Onboarding → Strava (T1–T3)', at: ['push', 'swap', 'swap'], note: 'Inside onboarding on desktop, it swaps within the panel.' },
+  { edge: 'Strava OAuth return → T2', at: ['cut', 'cut', 'cut'], note: 'A document load from another origin. There is no outgoing screen; first-paint rules apply.' },
+  { edge: 'Settings → Re-calibrate', at: ['push', 'swap', 'swap'], note: '' },
+  { edge: 'Onboarding O1 → O6', at: ['push', 'panel', 'panel'], note: 'Steps within are pushes on phone; on desktop the panel stays and steps swap inside it.' },
+  { edge: 'Deep link / notification tap → any', at: ['cut', 'cut', 'cut'], note: 'There is no “from”. Arrive, then the screen’s own reveal (if any) runs.' },
+  { edge: 'First paint of any screen', at: ['cut', 'cut', 'cut'], note: 'Content is there. Pending states breathe; nothing “loads in”.' },
+];
+
 /** Things we do not do, and the reason, so nobody re-litigates them. */
 export const NEVER = [
   ['Bounce, spring, overshoot', 'Contradicts the name. Nothing in the product is uncertain about where it lands.'],
@@ -87,11 +141,13 @@ export const NEVER = [
   ['Animated empty-state illustrations', 'An empty closet needs a next step, not a performance.'],
   ['Anything over 400ms', 'The product exists to end a decision faster than thinking about it.'],
   ['Hover-only motion', 'Touch-first. If it only exists on hover, it does not exist.'],
+  ['Shared-element transitions between screens', 'A garment photo flying from grid to detail is the hero morph again, one screen later. Only the bracket frame and the tab bar are named.'],
+  ['A navigation with no type', 'If an edge isn\'t in NAV it isn\'t typed yet. Pick one of the five by analogy, add the row, ship; never a sixth type.'],
 ];
 
 /** Accessibility: reduced motion is a real mode, not an off switch. */
 export const REDUCED_MOTION = {
-  rule: 'Every move collapses to a 90ms opacity change. Bracket breathe goes static. Digit rolls become instant swaps.',
+  rule: 'Every move collapses to a 90ms opacity change. Bracket breathe goes static. Digit rolls become instant swaps. Every navigation type becomes swap at instant.',
   never: 'Never reduce to zero — the user still needs confirmation that their input registered.',
 };
 

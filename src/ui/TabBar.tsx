@@ -1,6 +1,12 @@
-import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
-import type { JSX } from "react";
+import {
+  Link,
+  useNavigate,
+  useRouterState,
+  type LinkProps,
+} from "@tanstack/react-router";
+import { useEffect, type JSX } from "react";
 
+import { isLogFlowPath } from "../lib/nav-types";
 import { Mono } from "./Mono";
 
 /**
@@ -21,24 +27,80 @@ function Tab({
   to,
   label,
   active,
+  held,
 }: Readonly<{
   to: NonNullable<LinkProps["to"]>;
   label: string;
   active: boolean;
+  /**
+   * Lit because a flow is laid over this tab, rather than because the
+   * runner is on it.
+   */
+  held: boolean;
 }>): JSX.Element {
   return (
     <li className="text-center">
-      {/* No `aria-current` here: `Link` sets `aria-current="page"` on the
-          route it is on, and a prop passed here was silently overwritten
-          by it — which is exactly how a mutant that emptied the string
-          survived a test asserting the attribute. What this owns is the
-          colour, which `Link`'s own active handling does not touch. */}
+      {/* `aria-current` is `Link`'s on the route it is on: it spreads
+          `"page"` last, so a prop passed for the *active* tab is silently
+          overwritten — which is how a mutant that emptied the string once
+          survived a test asserting the attribute. A held tab is not
+          active, so nothing is spread over it and this is ours to set.
+
+          `"true"` and never `"page"`, per the Accessibility Contract's
+          round-12 row: the held tab is the current item in the set, and
+          the runner is not on it. Claiming the page would send somebody
+          to the wrong screen. */}
       <Link
         to={to}
+        aria-current={held ? "true" : undefined}
         className={active ? ACTIVE_LABEL_CLASS : RESTING_LABEL_CLASS}
       >
         <Mono step="sm">{label}</Mono>
       </Link>
+    </li>
+  );
+}
+
+/**
+ * The bar's one launcher: `+ Add`.
+ *
+ * **A button, never a link** (Accessibility Contract, round 12) — "a
+ * launcher cannot be where you are". An anchor announces a destination
+ * and can be marked current; this opens the log flow *over* wherever the
+ * runner already is, which is what `aria-haspopup="dialog"` says. It is
+ * the reason the contract's "five `<a aria-current>`" now reads as four
+ * links and one button.
+ *
+ * It still navigates, because the flow is three routes rather than a
+ * `<dialog>` — `rise` is what makes that read as a layer
+ * (`src/lib/nav-types.ts`). `haspopup` describes what the runner gets,
+ * not which element implements it.
+ */
+function Launcher({
+  to,
+  label,
+}: Readonly<{
+  to: NonNullable<LinkProps["to"]>;
+  label: string;
+}>): JSX.Element {
+  const navigate = useNavigate();
+
+  return (
+    <li className="text-center">
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        // The glyph is decoration and the word is the name. Without this
+        // the button announces as "plus Add", and the contract's expected
+        // reading is "Add, button, dialog".
+        aria-label={label.replace("+ ", "")}
+        className={`${RESTING_LABEL_CLASS} bg-transparent p-0`}
+        onClick={() => {
+          void navigate({ to });
+        }}
+      >
+        <Mono step="sm">{label}</Mono>
+      </button>
     </li>
   );
 }
@@ -63,12 +125,8 @@ const RESTING_LABEL_CLASS = "tab-label text-muted no-underline";
  * on top of wherever you were, not a place in the bar you travel to. So
  * the indicator never travels to it.
  *
- * The rest of that row is not built here. It says the tab *beneath* stays
- * selected, which means remembering the last tab you were actually on —
- * `/runs/new` does not say — and it is one behaviour with the `rise` the
- * same row specifies. Both belong to the navigation lane; D-80 carries
- * them. Until then no tab is lit during the flow, which is what the bar
- * already does on `/runs/manual`: incomplete rather than wrong.
+ * The rest of that row is built now, in the lane that owns `rise` — see
+ * `lastOnTab` below. D-80 closes with it.
  */
 const TABS = [
   { to: "/feed", label: "Feed" },
@@ -145,26 +203,85 @@ export function activeTabIndex(
  * alternative is measuring each label at runtime, which is a resize
  * observer for a move that is 90ms long.
  */
+/**
+ * The last tab the runner was actually standing on (D-80).
+ *
+ * Module scope and a one-field object, for the reasons `ui/FlowStep`'s
+ * `flow.lastStep` gives and this shares: the bar is remounted by every
+ * route, so component state cannot outlive a navigation, and assigning to
+ * a bare module variable from inside a function is a lint error.
+ *
+ * **Written only from an effect**, which is what makes it safe on a server
+ * that shares module scope between requests: effects do not run there, so
+ * SSR always renders "no tab lit" and one runner's bar can never be
+ * another's. The client's first render agrees, because a fresh document
+ * starts with nothing here — a cold load of `/runs/new` genuinely does not
+ * know which tab you came from, and says so by lighting none.
+ */
+const bar: { lastOnTab?: number | undefined } = {};
+
+/**
+ * Which seat is lit: the tab that owns this path, or — inside the log flow
+ * — the tab the runner was last actually on.
+ *
+ * **Inside the flow, path ownership is the wrong question.** Two of the
+ * four steps live under `/feed` (`/feed/attach/…`, `/feed/verdict/…`), so
+ * `activeTabIndex` lights Feed for them, which is Feed claiming a screen
+ * the runner reached from Closet. The launcher row says the tab *beneath*
+ * stays selected, and beneath means where they were.
+ *
+ * A pure function taking the memory as an argument rather than reading it,
+ * so the case that matters most is reachable from a test: `undefined` is a
+ * cold load straight into `/runs/new`, where the bar genuinely does not
+ * know which tab the runner came from and says so by lighting none.
+ */
+export function tabToLight(
+  pathname: string,
+  lastOnTab: number | undefined,
+): number | undefined {
+  return isLogFlowPath(pathname) ? lastOnTab : activeTabIndex(pathname);
+}
+
 export function TabBar() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const active = activeTabIndex(pathname);
+  const active = tabToLight(pathname, bar.lastOnTab);
+
+  useEffect(() => {
+    // Only a real tab is worth recording. Nothing here needs to ask whether
+    // the runner is inside the flow, and a guard that did would be
+    // unkillable: inside it `active` *is* the remembered value, so writing
+    // it back is the value it already had.
+    if (active !== undefined) bar.lastOnTab = active;
+  }, [active]);
 
   return (
     <nav
-      aria-label="Primary"
+      // "Main", not "Primary": the Accessibility Contract's Tab bar row
+      // names it, and a contract is the truth for values. The old name had
+      // been here since the bar was written and was drift rather than a
+      // decision (D-82).
+      aria-label="Main"
+      data-slot="tab-bar"
       className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="relative m-0 grid list-none grid-cols-5 p-0 py-4">
-        {TABS.map((tab, index) => (
-          <Tab
-            key={tab.to}
-            to={tab.to}
-            label={tab.label}
-            active={index === active}
-          />
-        ))}
+        {TABS.map((tab, index) =>
+          // `in`, not `tab.launcher`: `as const satisfies` keeps each entry
+          // at its literal type, and only one of them has the field at all.
+          "launcher" in tab ? (
+            <Launcher key={tab.to} to={tab.to} label={tab.label} />
+          ) : (
+            <Tab
+              key={tab.to}
+              to={tab.to}
+              label={tab.label}
+              active={index === active}
+              held={index === active && isLogFlowPath(pathname)}
+            />
+          ),
+        )}
         {active === undefined ? undefined : (
           // A list item, because a `<ul>` may hold nothing else — and
           // absolutely positioned, so it is out of the grid's flow and

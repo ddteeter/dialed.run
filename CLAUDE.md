@@ -421,8 +421,8 @@ wrong: the columns already existed. Check before you defer.
 
 ## Guardrails (the enforcement loop)
 
-This repo runs agentic-guardrails-scaffolding (pinned v0.3.1; CLI bin
-`agentic-guardrails` — invoked here via the npm scripts Phase 0 wires up):
+This repo runs agentic-guardrails-scaffolding (pinned v0.6.0; CLI bin
+`guardrails-core` — invoked here via the npm scripts Phase 0 wires up):
 
 - **Stop gate**: when you try to end a turn, the configured stop-gate hook
   runs eslint + tsc on your diff. If it blocks with a pointer to a manifest,

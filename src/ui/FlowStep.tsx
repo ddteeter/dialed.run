@@ -7,6 +7,19 @@ import type { JSX, ReactNode } from "react";
 export type FlowDirection = "forward" | "back";
 
 /**
+ * How this step was arrived at — the two directions, plus the one that is
+ * not a direction at all.
+ *
+ * `entering` is design round 12's correction to what task 114 shipped. The
+ * `NAV` row for `+ Add` types the way *into* the flow as a `rise` — "a task
+ * laid on top of where you were" — and only the steps inside it as "Log
+ * flow step". A1 was playing the step's trailing-edge slide on an arrival
+ * the router now owns, which is two moves on one navigation. So entering
+ * carries no class: the rise is the move.
+ */
+export type FlowArrival = FlowDirection | "entering";
+
+/**
  * Forward unless the step number went down.
  *
  * "Direction tells you which way you are travelling through the flow, so
@@ -29,9 +42,11 @@ export function directionBetween(
   return step < previous ? "back" : "forward";
 }
 
-const STEP_CLASS: Readonly<Record<FlowDirection, string>> = {
+const STEP_CLASS: Readonly<Record<FlowArrival, string | undefined>> = {
   forward: "flow-step-forward",
   back: "flow-step-back",
+  // The router's `rise` is the arrival. Nothing to add.
+  entering: undefined,
 };
 
 /**
@@ -57,17 +72,34 @@ export const LOG_FLOW = { intake: 1, attach: 2, verdict: 3 } as const;
  * routes: A2 cannot remember what A1 was, since A1 is unmounted before A2
  * mounts. It is written **only from an effect**, which is what keeps it
  * safe on the server — effects do not run there, so a request can never
- * see another request's step, and SSR always renders `forward`. The
+ * see another request's step, and SSR always renders `entering`. The
  * client's first render agrees with that, because a fresh document starts
  * with nothing here.
+ *
+ * **Cleared when the flow is left, which is the half that was missing.**
+ * It used to persist for the life of the document, so a runner who
+ * finished at the verdict and later tapped `+ Add` again arrived at A1
+ * with a remembered step of 3 — and the intake slid in backwards, as if
+ * they had gone back to it. Clearing on unmount makes "no previous step"
+ * mean what it says.
+ *
+ * The guard is what makes that safe during a step change rather than an
+ * exit. React runs a deleted subtree's passive cleanup before the new
+ * subtree's passive effects, but both happen after the new step has
+ * already *rendered* and read this — so the value is still the old step
+ * when it matters, and the outgoing step must only clear a record that is
+ * still its own.
  */
-const flow: { lastStep?: number } = {};
+// `| undefined` explicitly: `exactOptionalPropertyTypes` distinguishes an
+// absent field from one holding `undefined`, and clearing writes the value.
+const flow: { lastStep?: number | undefined } = {};
 
 /**
  * One step of the log flow (A1 -> A2 -> A3), entering from the edge it
- * came from.
+ * came from — or, on the way in from the bar, not moving at all, because
+ * the router's `rise` is the arrival.
  *
- * Only the entering half of the doctrine's move exists; the reason is in
+ * Only the entering half of the step's own move exists; the reason is in
  * `motion.css` beside the keyframes.
  */
 export function FlowStep({
@@ -82,14 +114,19 @@ export function FlowStep({
   step: number;
   children: ReactNode;
 }>): JSX.Element {
-  const direction = directionBetween(flow.lastStep ?? step, step);
+  const previous = flow.lastStep;
+  const arrival: FlowArrival =
+    previous === undefined ? "entering" : directionBetween(previous, step);
 
   useEffect(() => {
     flow.lastStep = step;
+    return () => {
+      if (flow.lastStep === step) flow.lastStep = undefined;
+    };
   }, [step]);
 
   return (
-    <div className={STEP_CLASS[direction]} data-flow-direction={direction}>
+    <div className={STEP_CLASS[arrival]} data-flow-direction={arrival}>
       {children}
     </div>
   );

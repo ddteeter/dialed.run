@@ -154,6 +154,26 @@ test("add garments with product identity -> browse the closet -> retire, don't d
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toBeVisible();
 
+  // Into a piece and back out of it (task 117). `NAV` types
+  // Closet -> Garment detail a `push`, and "back reverses both", so this
+  // records the same move running the other way — which the Closet tab
+  // link would not, because a tab is a `cut`.
+  //
+  // Browser back rather than a link, because that is the gesture the
+  // reversal is read from: the router compares history indexes, and a
+  // link to the same place is a forward navigation to it.
+  await scene(page, "Back leaves the way it came");
+  await page.getByRole("link", { name: /Nike Pegasus 41/ }).click();
+  await hydrated(page);
+  await expect(
+    page.getByRole("heading", { name: /Nike Pegasus 41/ }),
+  ).toBeVisible();
+  await page.goBack();
+  await hydrated(page);
+  await expect(
+    page.getByRole("heading", { name: "Shoes", level: 2 }),
+  ).toBeVisible();
+
   // Retire, don't delete. Retiring lands back on the closet with retired
   // items already shown, so the shoes are visibly still there and marked —
   // the point of the product rule, and the answer to "where did it go?".

@@ -99,6 +99,10 @@ describe("TabBar", () => {
     for (const label of ["Feed", "Closet", "+ Add", "Call", "You"]) {
       expect(html).toContain(label);
     }
+    // First paint already carries the launcher's shape, so a runner on a
+    // slow connection does not meet a link that becomes a button
+    // (Accessibility Contract, round 12).
+    expect(html).toContain('aria-haspopup="dialog"');
   });
 });
 

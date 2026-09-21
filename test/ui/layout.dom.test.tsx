@@ -72,14 +72,27 @@ describe("Layout", () => {
 });
 
 describe("TabBar", () => {
-  it("is a labelled nav with the five tabs, pointing where they point", async () => {
+  it("is a labelled nav of four links and one launcher", async () => {
     // Each tab is a separately typed <Link> so TanStack can check the path
     // literal against the generated route tree. A shared `to: string`
     // would compile and silently stop being checked.
+    //
+    // Four, not five: the Accessibility Contract's round-12 row makes
+    // `+ Add` a `<button aria-haspopup="dialog">` — "a launcher cannot be
+    // where you are", so it is not an anchor that could claim to be.
     await renderWithRouter(<TabBar />);
 
-    const nav = screen.getByRole("navigation", { name: "Primary" });
+    // The contract's own name for the bar, which is what a screen reader
+    // announces on reaching it.
+    const nav = screen.getByRole("navigation", { name: "Main" });
     expect(nav).toBeInTheDocument();
+
+    const launcher = screen.getByRole("button", { name: "Add" });
+    expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
+    // Never current, in any state: there is no page for it to be on.
+    expect(launcher).not.toHaveAttribute("aria-current");
+    // The seat is still one of five, so the bar still announces "2 of 5".
+    expect(nav.querySelectorAll("li")).toHaveLength(5);
 
     const destinations = Object.fromEntries(
       screen
@@ -102,7 +115,6 @@ describe("TabBar", () => {
     expect(destinations).toStrictEqual({
       Feed: "/feed",
       Closet: "/closet",
-      "+ Add": "/runs/new",
       // Call landed with lane 105 — this pin is what made the repoint a
       // deliberate edit rather than a silent one. You is still a
       // placeholder at lane 104's profile route until a `you/` lane exists.

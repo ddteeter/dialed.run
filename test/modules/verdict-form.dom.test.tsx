@@ -1252,6 +1252,11 @@ describe("the photo step W3 hangs off", () => {
  * The log flow's three screens are three routes, so the move that carries
  * "which way you are travelling" has to be on each of them — and a screen
  * that quietly loses its wrapper animates nothing, with nothing to say so.
+ *
+ * The wrapper is what is asserted, not a particular class. Round 12 made
+ * the *arrival* a third state: entering the flow from the bar is the
+ * router's `rise`, so `FlowStep` deliberately adds no class there, and a
+ * screen rendered on its own — as here — is always entering.
  */
 describe("VerdictForm: the log flow", () => {
   it("is step three of the log flow, and enters from an edge", async () => {
@@ -1259,6 +1264,9 @@ describe("VerdictForm: the log flow", () => {
 
     const step = document.querySelector("[data-flow-direction]");
     expect(step).not.toBeNull();
-    expect(step?.className).toMatch(/^flow-step-(forward|back)$/);
+    // Mounted with no step before it, so this is the way in: the class is
+    // absent precisely because the rise is the move.
+    expect(step).toHaveAttribute("data-flow-direction", "entering");
+    expect(step?.className).toBe("");
   });
 });

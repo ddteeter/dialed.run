@@ -91,9 +91,25 @@ Key decisions embedded here:
 - **View layer**: five-tab shell (`ui/Layout`): Feed · Closet · +Add · Call
   (teaser until the call epic) · You. Mobile-first for logging, desktop-first
   for the closet — both responsive, no separate builds.
+- **Navigation is typed at the edge, not at the screen** (design round 12,
+  task 117). `src/lib/nav-types.ts` holds the `NAV` table and answers
+  `(from, to, isBack)` with the view-transition types the browser gets;
+  `src/router.tsx` passes that function to `defaultViewTransition` and holds
+  no logic, because nothing can import it (`routeTree.gen` pulls every route,
+  a route pulls server functions). No component knows a navigation type, and
+  `cut` is spelled `false`, which skips the transition rather than running an
+  empty one. `src/ui/motion.css` says what each type looks like.
 - **Offline is deliberately out of scope for v1** (decision D-07). Nothing may
   preclude a later service-worker/PWA layer: no reliance on in-memory session
   state across navigations, all mutations idempotent where the contract allows.
+
+  Two module-scope records do survive client-side navigation — `FlowStep`'s
+  last step and `TabBar`'s last tab — and they are inside this rule rather
+  than exceptions to it. Both are written only from an effect, so the server
+  never sees one; both carry presentation and never correctness; and both
+  degrade to their SSR answer (no move, no tab lit) on a cold load, which is
+  what a service worker would serve. Nothing reads them to decide what to
+  write.
 
 ## Module dependency graph (enforced by dependency-cruiser)
 

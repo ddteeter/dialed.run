@@ -30,6 +30,20 @@ round (D-26…D-33).
 **Round 3** shipped the Motion Doctrine and the Icon Pack, imported 2026-09-06.
 **Round 4** shipped 2026-09-07 and cleared most of this queue: see
 "Answered in round 4" below.
+**Round 12** shipped the navigation types, imported 2026-09-20 by task 117.
+Two files changed and nothing else: `motion.js` gains `NAV_TYPES` (five
+types) and `NAV` (26 edges at three widths), two NEVER entries, and one
+clause on `REDUCED_MOTION`; `Motion Doctrine.dc.html` gains section 04b to
+draw them. The doctrine now covers what happens _between_ screens as well
+as on one.
+
+**The `NAV` header carries an ownership rule, and it changes how a lane
+behaves.** _"NAV lists every shipped edge, not just the Flow Map's. A lane
+meeting a new edge assigns a type by analogy to the nearest row, adds the
+row here in the same PR, and flags it."_ So an untyped edge is **not** a
+blocker and not a design-delta question — it is a row the lane writes and
+design reviews after the fact. The new NEVER entry says the same thing
+from the other side: _"never a sixth type."_
 
 ## Open queue (nothing blocks v1 lanes)
 
@@ -180,8 +194,30 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     indicator never travels to it, and the tab beneath stays selected"_ —
     so the bar carries four tabs at five seats, and the launcher takes
     none of them. The indicator half shipped in task 114; the selected-tab
-    half is D-80, with the navigation lane. The two open questions above
-    are untouched by that ruling and still stand.
+    half shipped in task 117 with the `rise` it is one behaviour with, and
+    D-80 is closed. The two open questions above are untouched by that
+    ruling and still stand.
+
+19. **The tab held beneath the log flow is lit, and silent.**
+    **ANSWERED 2026-09-20**, in the Accessibility Contract (a new row under
+    Tab bar) and mirrored in `motion.js`'s NAV launcher row.
+
+    The held tab is `aria-current="true"` — the current item in the set,
+    not the current page, because the runner is not on it. No tab is
+    `"page"` during the flow; the flow screen announces itself. The bar's
+    own name does not change and there are no new words.
+
+    **It forced a behaviour clause the bar lane has to pick up**: `+ Add`
+    is a `<button aria-haspopup="dialog">`, never a link and never
+    current — a launcher cannot be where you are. So the row above it,
+    "five `<a aria-current="page">`", now reads as four links and one
+    button.
+
+    Expected: _"Closet, link, current, 2 of 5"_ · _"Add, button, dialog"_.
+
+    Built by task 117 in the PR that asked; D-81 closes with it. Verified
+    in Chromium — the launcher's accessible name is computed from re-nested
+    markup, which happy-dom cannot see.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 

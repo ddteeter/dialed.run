@@ -129,6 +129,17 @@ export function parseJson(json: string): unknown {
    * A block pair rather than `next-line`: the mutated line opens with
    * `} catch`, and `next-line` does not attach to a line beginning with a
    * closing brace.
+   *
+   * **The `restore` sits outside the function, and it has to.** Stryker
+   * reads directives from a node's *leading* comments
+   * (`DirectiveBookkeeper.processStrykerDirectives`), and a comment on the
+   * last line before a closing brace leads no node at all -- it is the
+   * previous statement's trailing comment. Written inside, it was never
+   * processed and the `disable` above ran to end of file: measured, two
+   * `BlockStatement` mutants in `readableText` below came back `Ignored`
+   * and the file's 100% was over 62 mutants, not 64. Out here it leads the
+   * next declaration, which is a node, so it attaches. Found by
+   * guardrails 0.6.0's sanction-placement check.
    */
   // Stryker disable BlockStatement
   try {
@@ -137,8 +148,8 @@ export function parseJson(json: string): unknown {
   } catch {
     return undefined;
   }
-  // Stryker restore BlockStatement
 }
+// Stryker restore BlockStatement
 
 /**
  * A text node as a reader would see it: entities resolved, whitespace
