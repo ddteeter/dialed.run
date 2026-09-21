@@ -219,6 +219,64 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     in Chromium — the launcher's accessible name is computed from re-nested
     markup, which happy-dom cannot see.
 
+20. **T1 has no row at the value the Tab bar row asks for, and two roles
+    miss rule 02's floor.** Raised by task 112, which measured every T1
+    light pairing rather than spot-checking. Cite this as **the label grey**.
+
+    `--muted #7A7A70` is **3.90:1** on `--ground #F4F3EF` (4.33:1 on
+    `--panel`). Rule 02 says #7A7A70 on paper is _"decoration-only — never
+    the sole label of a control"_ — and `--muted` is the colour of every
+    form field's label, every radio-group legend, and the tab bar's
+    inactive labels. The Tab bar row calls for **#6E6E64 (4.64:1
+    measured)**; T1 has no row at that value, so the build reached for
+    `--muted` and the bar ships at 3.90. **The ask is a named T1 role for a
+    grey that is a control's only label**, so `--muted` can go back to
+    being captions and metadata.
+
+    `--dialed-text #009F8C` is **2.98:1** on ground, and is used nine times
+    as meaning-carrying text — `[Noted]`, the matched band, two feed
+    verdicts, four matched-state marks. `styles.css` records the intent as
+    _"a darker cut that clears contrast on paper"_, which it does not.
+    **The ask is a darker cut, or a ruling that teal-as-text is decoration
+    and those nine sites are wrong.** Hue is verdict, so the value is
+    design's and not a lane's.
+
+    Dark clears both (`--muted` 5.81:1) — this is a paper-only problem, and
+    it is not task 111's.
+
+21. **What "unavailable" looks like once `disabled` is gone.** Rule 07
+    retires the HTML attribute; rule 02's _"opacity never encodes
+    meaning"_ retires the 40–50% dimming that nine controls wear with it.
+    Both halves of today's treatment go and nothing is drawn to replace
+    them. Cite this as **the unavailable control**.
+
+    Eight are **in flight** — `Useful`, `Follow`/`Following`, `Save
+temperature`, `Connect`/`Reconnect`/`Disconnect Strava`, and the two
+    file inputs. The Form Contract already answers this shape for submit
+    buttons and the build follows it (label swaps to a breathing-brackets
+    pending label, no dimming). **Is that the answer for these eight, and
+    if so what is each pending verb** — that is copy, so it is design's.
+
+    One is **not yet** — `Attach N items`, while nothing is selected.
+    Under rule 07 it stays tabbable and pressing it does nothing and says
+    nothing, which X3's keyboard list explicitly allows (_"nothing visible
+    except the failure band, if any"_) and this screen has no band.
+    **The ask is whether silence is right**, or whether a not-yet control
+    owes a sentence — and where it sits.
+
+22. **Does rule 03's 44×44 reach a link inside a sentence?** Cite this as
+    **the inline target**. Every standalone target pads to 44 with no
+    composition change. Twelve do not: they are links set in running prose
+    — _"Already have an account? **Sign in**"_, _"Know someone? **Find
+    runners**"_, _"No file? **Log it manually**"_, `Back to feed`, `Import
+from Strava`, `Continue to Strava`. Padding those grows the line box,
+    so seven drawn screens reflow for a hit-area reason.
+
+    WCAG 2.2 AA exempts exactly this case (2.5.8's inline exception), which
+    is why the lane reads 03 as standalone targets and has **not** reflowed
+    anything. **The ask is one line** confirming that, or asking for the
+    padding to be drawn.
+
 ## Answered in rounds 10–11 (imported 2026-09-18)
 
 Both rounds came back together and cleared **four queue items, the P2.5
