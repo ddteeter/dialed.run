@@ -18,6 +18,12 @@ import { TabBar } from "../../src/ui/TabBar";
  * `html[data-hydrated="true"]`, which every e2e spec waits on before it
  * drives a controlled input. In the workers pool there is no document to
  * stamp, so the one line the whole browser suite depends on had no test.
+ *
+ * **Both bars are mounted and one is hidden by CSS** (task 115), so this
+ * file sees two of several things that a runner only ever sees one of.
+ * happy-dom applies no stylesheet, so which one is showing is Playwright's
+ * question; what is asked here is that the pair exists and that nothing
+ * has quietly become three.
  */
 
 /**
@@ -43,18 +49,54 @@ describe("Layout", () => {
     });
   });
 
-  it("renders the caller's bell when it is given one", async () => {
+  it("renders the caller's bell in both seats", async () => {
     await renderWithRouter(
       <Layout bell={<button type="button">Notifications</button>}>page</Layout>,
     );
 
+    // Two, and deliberately: the bell sits in the top bar at width and in
+    // the per-screen header below it (Desktop Contract bend 4), and those
+    // are two elements because `data-ground="ink"` cannot be applied per
+    // breakpoint — an attribute has no `wide:` and the roles it redefines
+    // are inherited. Only one is ever displayed.
+    const bells = screen.getAllByRole("button", { name: "Notifications" });
+    // One in the bar and one in the header below it, in that DOM order —
+    // asked of each bell rather than of the bar, so there is no element
+    // that might not be there to assert against.
     expect(
-      screen.getByRole("button", { name: "Notifications" }),
-    ).toBeInTheDocument();
+      bells.map((bell) => bell.closest("[data-slot='top-bar']") !== null),
+    ).toStrictEqual([true, false]);
     // The placeholder gives way rather than sitting beside it.
     expect(
       document.querySelector("[data-slot='notification-bell']"),
     ).toBeNull();
+  });
+
+  it("hides each bar at the width the other one owns", async () => {
+    await renderWithRouter(<Layout>page</Layout>);
+
+    // DS1: one bar at a time. `wide:hidden` on the phone bar and its
+    // header, `hidden wide:block` on the top bar — so below 720 the
+    // contract's bar is not merely off-screen, it is not laid out, and
+    // above it neither is the footer.
+    expect(document.querySelector("[data-slot='tab-bar']")).toHaveClass(
+      "wide:hidden",
+    );
+    expect(document.querySelector("[data-slot='top-bar']")).toHaveClass(
+      "hidden",
+      "wide:block",
+    );
+  });
+
+  it("bounds the content at the page measure", async () => {
+    await renderWithRouter(<Layout>page</Layout>);
+
+    // DS4: "content max 1180 inside SPACE[6] gutters". It lives on the
+    // shell rather than on each screen so a reflowed column lines up
+    // inside the page instead of against the window edge — and the
+    // bottom padding that clears the fixed tab bar goes away with it.
+    const content = screen.getByText("page");
+    expect(content).toHaveClass("max-w-page", "pb-24", "wide:pb-0");
   });
 
   it("holds the slot open with an inert placeholder when it is not", async () => {

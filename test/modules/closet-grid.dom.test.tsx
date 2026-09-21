@@ -47,6 +47,12 @@ const genericTop = itemView({
   item: wardrobeItem({ id: "01GEN", name: "Long sleeve top" }),
 });
 
+const retiredTee = itemView({
+  item: wardrobeItem({ id: "01RTD", name: "Old tee", retired: true }),
+  isGeneric: false,
+  uiGroup: "tops",
+});
+
 describe("ClosetGrid: the empty closet", () => {
   it("asks for five things rather than showing an empty grid", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([])} />);
@@ -147,6 +153,40 @@ describe("ClosetGrid: what a piece says about itself", () => {
     expect(
       screen.getByRole("link", { name: /Old tee/ }).firstElementChild,
     ).toHaveTextContent(/^Nike Old tee \[Retired\]$/);
+  });
+});
+
+describe("ClosetGrid: the second column", () => {
+  it("puts the closet's two controls in a rail, and the grid beside it", async () => {
+    // DS4 lets exactly three screens go two-column at desk, and C is one
+    // of them. What C calls the filter rail, this closet has as the
+    // generic nudge and the retired toggle — so the rail holds those and
+    // invents nothing. Below desk the same markup is one column, which is
+    // DS3's "the filter rail becomes the phone's chips above the grid".
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, genericTop, retiredTee])} />,
+    );
+
+    const rail = document.querySelector("[data-slot='closet-rail']");
+    expect(rail).not.toBeNull();
+    expect(rail).toContainElement(
+      screen.getByRole("button", { name: /retired/i }),
+    );
+    // The nudge is the rail's other tenant, and the grid is not in it.
+    expect(rail?.textContent).toContain("pieces are still generic");
+    expect(rail?.querySelectorAll("a")).toHaveLength(0);
+  });
+
+  it("lets the garment grid fill rather than counting columns", async () => {
+    // DS3's reflow rule for a grid of garments: "auto-fill,
+    // minmax(180px, 1fr)". One rule instead of a count per breakpoint,
+    // which is also why the grid needs no telling that the rail has taken
+    // a third of the row.
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+
+    expect(screen.getByRole("list")).toHaveClass(
+      "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
+    );
   });
 });
 

@@ -29,7 +29,7 @@ function TapListPage() {
   };
 
   return (
-    <Page title="Start your closet" width="narrow">
+    <Page title="Start your closet" width="panel">
       <TapListForm
         entries={starter.entries}
         fold={starter.fold}

@@ -15,7 +15,8 @@ import { FlowStep, LOG_FLOW, directionBetween } from "../../src/ui/FlowStep";
 import { DURATION } from "../../src/ui/motion";
 import { Sheet } from "../../src/ui/Sheet";
 import { Skeleton } from "../../src/ui/Skeleton";
-import { TabBar, activeTabIndex, tabToLight } from "../../src/ui/TabBar";
+import { TabBar } from "../../src/ui/TabBar";
+import { activeTabIndex, tabToLight } from "../../src/ui/tabs";
 
 /**
  * The surfaces whose move lives in a component rather than only in CSS.
@@ -625,6 +626,11 @@ describe("the two surfaces that were already right", () => {
     // property, which is the property the travel needs. The wide layout
     // centres on margin instead so the two cannot collide.
     expect(dialog.className).not.toMatch(/translate-[xy]/);
-    expect(dialog).toHaveClass("wide:m-auto");
+    // Horizontally centred; vertically it is DS3's panel and top-aligned,
+    // which is why this is `mx-auto` and not the `m-auto` it was before
+    // task 115 — "a flow's first step and its fifth should start at the
+    // same y", and `m-auto` centres the panel on its own height.
+    expect(dialog).toHaveClass("wide:mx-auto");
+    expect(dialog).not.toHaveClass("wide:m-auto");
   });
 });

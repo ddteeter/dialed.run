@@ -178,4 +178,34 @@ describe("Sheet", () => {
     render(<Controlled initiallyOpen />);
     expect(sheet()).toHaveAttribute("aria-label", "Pick a kit");
   });
+
+  it("becomes DS3's panel at width: top-aligned, 390, and no scrim", () => {
+    render(<Controlled initiallyOpen />);
+    const dialog = sheet();
+
+    // "It sits SPACE[12] below the bar, top-aligned, **never vertically
+    // centred** — a flow's first step and its fifth should start at the
+    // same y." `top` is the bar's own height, read from the variable the
+    // bar sets itself, so neither measures the other.
+    expect(dialog).toHaveClass(
+      "wide:bottom-auto",
+      "wide:top-[var(--bar-height)]",
+      "wide:mt-12",
+    );
+    // Width 390 and sheet radius — the panel rule's other two numbers,
+    // both from MEASURE and RADIUS rather than from the board.
+    expect(dialog).toHaveClass("wide:max-w-panel", "wide:rounded-sheet");
+    // DS5, "modals with scrims": "a dimmed backdrop is a third grey and
+    // turns the phone screen into a dialog". The wash stays on the phone,
+    // where the sheet really is a layer over a screen.
+    expect(dialog).toHaveClass("backdrop:bg-ink/60", "wide:backdrop:bg-ground");
+  });
+
+  it("keeps the bottom edge it travels from on the phone", () => {
+    // The move is unchanged at either width — `translate: 0 100%` is the
+    // element's own height, not the viewport's, so the panel arrives from
+    // just below itself rather than from the bottom of a monitor.
+    render(<Controlled initiallyOpen />);
+    expect(sheet()).toHaveClass("bottom-0", "rounded-t-sheet", "sheet-motion");
+  });
 });

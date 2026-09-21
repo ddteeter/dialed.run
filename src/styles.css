@@ -42,6 +42,7 @@
   --color-unread: var(--unread);
   --color-action: var(--action);
   --color-failure: var(--failure);
+  --color-accent-ink: var(--accent-ink);
   /* The two palette colours T1 names in prose rather than in the table.
    * Teal: "Teal as a surface is #00E0C6 on both" (T2 rule 01) — teal as
    * *text* is --dialed-text, a darker cut that clears contrast on paper.

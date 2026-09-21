@@ -82,6 +82,19 @@
   --action: var(--course-pink);
   /* Does not change with the ground. Text on it is always ink. */
   --failure: var(--hi-viz);
+  /* The ink those two rows mean, as a role rather than as prose.
+   *
+   * "Text on any accent surface is ink #0B0B0E" — **the fixed colour, not
+   * the role**, which is how `test/ui/contrast.dom.test.tsx` already reads
+   * it. `--ink` says that correctly everywhere except the one place an
+   * accent can sit inside an inverted block, where `--ink` is chalk and a
+   * pink pill would be chalk on pink. The top bar is the first surface in
+   * the product to be that place (DS1's "Log a run").
+   *
+   * So it is deliberately NOT redefined below: "does not change with the
+   * ground" is a sentence about this value, and a role that is absent from
+   * the inverted block is a role that does not change. */
+  --accent-ink: var(--night-run);
 
   /* ------------------------------------------------------------------
    * FAMILY — tokens.js. Three families, each with one job: Archivo Black
@@ -97,6 +110,20 @@
   /* IBM Plex Mono 400/500 — every measured value */
   --font-family-mono:
     "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ------------------------------------------------------------------
+   * The top bar's height — derived, not drawn.
+   *
+   * No board gives it a number this file may copy: DS1a draws 60px, and
+   * `tokens.js`'s PRECEDENCE block says a size on a board that is not in
+   * the scale is a COLLAPSE entry rather than a token. But it *is* the sum
+   * of two things that are contracts — one 44px target (Accessibility
+   * Contract 03) with SPACE[2] above and below — so it is derived here
+   * once and read twice: `ui/TopBar` sets the bar to it, and `ui/Sheet`
+   * starts the panel `SPACE[12]` below it (Desktop Contract DS3). Neither
+   * measures the other.
+   * ------------------------------------------------------------------ */
+  --bar-height: calc(44px + 2 * 8px);
 
   /* Light-first; T1's dark column is task 111. */
   color-scheme: light;

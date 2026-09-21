@@ -24,7 +24,7 @@ export const Route = createFileRoute("/onboarding/done")({
 
 function DonePage() {
   return (
-    <Page width="narrow">
+    <Page width="panel">
       <NowGoRun />
     </Page>
   );

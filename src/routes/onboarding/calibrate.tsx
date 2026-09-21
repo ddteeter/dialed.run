@@ -27,7 +27,7 @@ function CalibratePage() {
   const navigate = useNavigate();
 
   return (
-    <Page title="One question does most of the work" width="narrow">
+    <Page title="One question does most of the work" width="panel">
       <CalibrateForm
         defaults={defaults}
         locate={geolocate}

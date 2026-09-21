@@ -63,7 +63,12 @@ function ClosetGroup({
       <h2 className="font-display text-heading">{label}</h2>
       <ul
         ref={listRef}
-        className="grid grid-cols-2 gap-3 wide:grid-cols-3 desk:grid-cols-4"
+        // DS3's reflow rule for a grid of garments, verbatim: "grids of
+        // runs or garments go from 2 tracks to `auto-fill, minmax(180px,
+        // 1fr)`". One rule instead of three fixed counts, which also
+        // means the grid does not have to be told that the filter rail
+        // has taken a third of the row from it at desk.
+        className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
       >
         {shown.map((view) => (
           <li
@@ -115,6 +120,13 @@ export interface ClosetGridProps {
 /**
  * Screen C: the closet grid, grouped by the derived UI groups, with the
  * quiet enrichment nudge (D-27/D-28) and retired items behind a toggle.
+ *
+ * **One of the two screens the Desktop Contract lets go two-column**
+ * (DS4: "only at desk, only for Feed X, Closet C and the verdict
+ * backlog"; round 15 kept Closet and dropped Feed for v1). What C calls
+ * the filter rail, this closet has as two controls — the generic nudge
+ * and the retired toggle — so the rail holds those and invents nothing.
+ * When the closet grows real filters they have a place to go.
  */
 export function ClosetGrid({
   listing,
@@ -145,37 +157,53 @@ export function ClosetGrid({
   }
 
   return (
-    <div className="flex flex-col gap-8 px-4 py-6 wide:px-6">
-      {listing.genericCount > 0 ? (
-        <p className="rounded-none bg-tint px-4 py-3 text-small text-quiet">
-          <Mono>
-            {listing.genericCount} of {listing.totalCount}
-          </Mono>{" "}
-          pieces are still generic. Name the ones you reach for.
-        </p>
-      ) : undefined}
+    // DS3's Closet row: "filter rail left, garment grid right. **Below
+    // 1040 the filter rail becomes the phone's filter chips above a
+    // reflowed grid**" — which is what a single-column flex layout below
+    // `desk:` already is, so the rail costs one grid declaration and no
+    // second arrangement of the same parts.
+    //
+    // The ratio is DS4's ("1.55fr / 1fr, gap SPACE[6]") with the columns
+    // in C's order. A ratio, not a width: nothing here pins a number that
+    // is not in MEASURE.
+    <div className="flex flex-col gap-8 px-4 py-6 wide:px-6 desk:grid desk:grid-cols-[1fr_1.55fr] desk:items-start desk:gap-6">
+      <div
+        data-slot="closet-rail"
+        className="flex flex-col gap-4 desk:sticky desk:top-6"
+      >
+        {listing.genericCount > 0 ? (
+          <p className="rounded-none bg-tint px-4 py-3 text-small text-quiet">
+            <Mono>
+              {listing.genericCount} of {listing.totalCount}
+            </Mono>{" "}
+            pieces are still generic. Name the ones you reach for.
+          </p>
+        ) : undefined}
 
-      {GROUP_ORDER.map(({ group, label }) => (
-        <ClosetGroup
-          key={group}
-          label={label}
-          items={visible.filter((view) => view.uiGroup === group)}
-        />
-      ))}
+        {retiredCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              setShowRetired((value) => !value);
+            }}
+            className="target self-start text-muted"
+          >
+            <Mono step="sm">
+              {showRetired ? "Hide" : "Show"} retired ({retiredCount})
+            </Mono>
+          </button>
+        ) : undefined}
+      </div>
 
-      {retiredCount > 0 ? (
-        <button
-          type="button"
-          onClick={() => {
-            setShowRetired((value) => !value);
-          }}
-          className="target self-start text-muted"
-        >
-          <Mono step="sm">
-            {showRetired ? "Hide" : "Show"} retired ({retiredCount})
-          </Mono>
-        </button>
-      ) : undefined}
+      <div className="flex flex-col gap-8">
+        {GROUP_ORDER.map(({ group, label }) => (
+          <ClosetGroup
+            key={group}
+            label={label}
+            items={visible.filter((view) => view.uiGroup === group)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

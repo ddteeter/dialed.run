@@ -27,7 +27,7 @@ function BlockedPage() {
 
   return (
     <Layout>
-      <Page title="Blocked runners" width="narrow">
+      <Page title="Blocked runners" width="panel">
         <BlockedRunners blocked={blocked} unblock={unblockRunnerAction} />
       </Page>
     </Layout>

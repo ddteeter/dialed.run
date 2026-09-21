@@ -22,7 +22,7 @@ export function StravaCallbackResult({
   result,
 }: Readonly<{ result: { ok: true } | { ok: false; reason: string } }>) {
   return (
-    <Page width="narrow" title={result.ok ? "Connected" : "Not connected"}>
+    <Page width="panel" title={result.ok ? "Connected" : "Not connected"}>
       <p className="text-quiet">
         {result.ok
           ? "Strava is connected. We'll remind you to log your kit after a run."

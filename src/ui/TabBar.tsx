@@ -8,6 +8,7 @@ import { useEffect, type JSX } from "react";
 
 import { isLogFlowPath } from "../lib/nav-types";
 import { Mono } from "./Mono";
+import { TABS, bar, tabToLight } from "./tabs";
 
 /**
  * One tab.
@@ -75,6 +76,10 @@ function Tab({
  * `<dialog>` — `rise` is what makes that read as a layer
  * (`src/lib/nav-types.ts`). `haspopup` describes what the runner gets,
  * not which element implements it.
+ *
+ * **The wide bar has its own**, saying "Log a run" (round 15). Same
+ * control, same role, a different word because the seat is a different
+ * size — see `TopBar`.
  */
 function Launcher({
   to,
@@ -122,84 +127,11 @@ const RESTING_LABEL_CLASS =
   "tab-label target flex items-center justify-center text-label no-underline";
 
 /**
- * The five bar entries, in order. The indicator's position is this array's
- * index, so the order here is load-bearing twice over.
- *
- * **`+ Add` is a launcher, not a tab** (design round 12, `NAV`'s
- * `+ Add (bar launcher) -> Log a run` row): logging a run is a task laid
- * on top of wherever you were, not a place in the bar you travel to. So
- * the indicator never travels to it.
- *
- * The rest of that row is built now, in the lane that owns `rise` — see
- * `lastOnTab` below. D-80 closes with it.
- */
-const TABS = [
-  { to: "/feed", label: "Feed" },
-  { to: "/closet", label: "Closet" },
-  { to: "/runs/new", label: "+ Add", launcher: true },
-  { to: "/call", label: "Call" },
-  // Points at lane 104's own profile route until a `you/` lane exists.
-  { to: "/feed/me", label: "You" },
-] as const satisfies readonly {
-  to: NonNullable<LinkProps["to"]>;
-  label: string;
-  launcher?: boolean;
-}[];
-
-/**
- * Which tab owns a path, or `undefined` when none does.
- *
- * **The deepest owner wins, and that is the whole reason this is a
- * function.** `/feed/me` is a descendant of `/feed`, so a first-match-wins
- * scan lights the Feed tab while the runner is looking at their own
- * profile.
- *
- * A path no tab owns — `/runs/manual`, `/onboarding/name` — returns
- * `undefined` and the indicator is not rendered at all. A tab bar that
- * kept pointing at wherever you were last is a tab bar that lies.
- */
-/**
- * Whether `route` owns `pathname` — it is the path, or an ancestor of it.
- *
- * A route and not a prefix: `/feed` must not claim `/feedback`, were one
- * ever to exist.
- */
-function isOwnerOf(route: string, pathname: string): boolean {
-  return pathname === route || pathname.startsWith(`${route}/`);
-}
-
-export function activeTabIndex(
-  pathname: string,
-  tabs: readonly { to: string; launcher?: boolean }[] = TABS,
-): number | undefined {
-  let found: number | undefined;
-  // `""` owns every path — "/feed".startsWith("/") — so the first tab that
-  // matches always wins the seat, and after that a tab only takes it from
-  // the incumbent by being *inside* it.
-  //
-  // Depth rather than string length, which is what this compared first.
-  // The two agree on every input, because two distinct routes of equal
-  // length cannot both own one pathname — one would have to be a prefix
-  // of the other. That made `<` and `<=` indistinguishable: an equivalent
-  // mutant with no test that could ever exist. Asking the question the
-  // predicate already answers leaves nothing to suppress.
-  let deepest = "";
-  for (const [index, tab] of tabs.entries()) {
-    // A launcher owns no path. Standing on `/runs/new` is being inside a
-    // flow, not being on a tab, so nothing in the bar claims the seat.
-    if (tab.launcher === true) continue;
-    if (!isOwnerOf(tab.to, pathname)) continue;
-    if (!isOwnerOf(deepest, tab.to)) continue;
-    found = index;
-    deepest = tab.to;
-  }
-  return found;
-}
-
-/**
- * The five-tab shell footer (docs/product.md §Navigation). Every tab points
- * at its own route; D-31 is what is left here, and wants its own change
- * because a tab bar growing glyphs is worth a demo of its own.
+ * The five-tab shell footer (docs/product.md §Navigation), **below 720
+ * only**. From `BREAKPOINT.wide` up the Desktop Contract replaces it with
+ * one top bar and `ui/TopBar` draws that instead — "same four
+ * destinations, same order", which is `./tabs`'s job to guarantee rather
+ * than this file's.
  *
  * **The active indicator slides; the content does not transition**
  * (design/motion.js, "Tab switch"). The tabs are an equal-width grid
@@ -207,46 +139,11 @@ export function activeTabIndex(
  * one fifth of the track and travel in whole multiples of itself — the
  * alternative is measuring each label at runtime, which is a resize
  * observer for a move that is 90ms long.
+ *
+ * Round 15 confirmed that reading and split the doctrine's row in two:
+ * sliding is *this* bar's, because equal columns make it free. The top
+ * bar's four natural-width links carry a static underline.
  */
-/**
- * The last tab the runner was actually standing on (D-80).
- *
- * Module scope and a one-field object, for the reasons `ui/FlowStep`'s
- * `flow.lastStep` gives and this shares: the bar is remounted by every
- * route, so component state cannot outlive a navigation, and assigning to
- * a bare module variable from inside a function is a lint error.
- *
- * **Written only from an effect**, which is what makes it safe on a server
- * that shares module scope between requests: effects do not run there, so
- * SSR always renders "no tab lit" and one runner's bar can never be
- * another's. The client's first render agrees, because a fresh document
- * starts with nothing here — a cold load of `/runs/new` genuinely does not
- * know which tab you came from, and says so by lighting none.
- */
-const bar: { lastOnTab?: number | undefined } = {};
-
-/**
- * Which seat is lit: the tab that owns this path, or — inside the log flow
- * — the tab the runner was last actually on.
- *
- * **Inside the flow, path ownership is the wrong question.** Two of the
- * four steps live under `/feed` (`/feed/attach/…`, `/feed/verdict/…`), so
- * `activeTabIndex` lights Feed for them, which is Feed claiming a screen
- * the runner reached from Closet. The launcher row says the tab *beneath*
- * stays selected, and beneath means where they were.
- *
- * A pure function taking the memory as an argument rather than reading it,
- * so the case that matters most is reachable from a test: `undefined` is a
- * cold load straight into `/runs/new`, where the bar genuinely does not
- * know which tab the runner came from and says so by lighting none.
- */
-export function tabToLight(
-  pathname: string,
-  lastOnTab: number | undefined,
-): number | undefined {
-  return isLogFlowPath(pathname) ? lastOnTab : activeTabIndex(pathname);
-}
-
 export function TabBar() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -269,7 +166,7 @@ export function TabBar() {
       // decision (D-82).
       aria-label="Main"
       data-slot="tab-bar"
-      className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)] wide:hidden"
     >
       {/* No `py-4` any more: the padding moved into each seat, where rule
           03 wants it ("pad the target, not the glyph"). The bar was 16 + 15

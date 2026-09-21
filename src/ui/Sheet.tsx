@@ -15,10 +15,24 @@ import type { ReactNode } from "react";
  * element's `open` attribute is the state the CSS is written against and
  * `showModal`/`close` already set it.
  *
- * The wide layout centres on `inset-0` + `margin: auto` rather than on
- * `top-1/2 left-1/2 -translate-1/2`. Tailwind v4 compiles those into the
- * `translate` property, which is the property the travel needs; the two
- * cannot both own it.
+ * **At width it is DS3's panel, not a centred dialog.** The Desktop
+ * Contract's panel rule is precise and three of its clauses are here:
+ * width 390 (`max-w-panel`), sheet radius, and *"it sits SPACE[12] below
+ * the bar, **top-aligned, never vertically centred** — a flow's first step
+ * and its fifth should start at the same y"*. A sheet that centred itself
+ * would move the panel up and down as the step's content grew, which is
+ * the jitter that clause exists to forbid.
+ *
+ * And **no scrim**: `backdrop:bg-ground`, because DS5 lists "modals with
+ * scrims" among the things desktop must not become — *"a dimmed backdrop
+ * is a third grey and turns the phone screen into a dialog"*. The ink/60
+ * wash stays on the phone, where the sheet really is a layer over a
+ * screen.
+ *
+ * Horizontal centring is `inset-x-0` + `mx-auto` rather than `left-1/2
+ * -translate-x-1/2`. Tailwind v4 compiles the latter into the `translate`
+ * property, which is the property the travel needs; the two cannot both
+ * own it.
  */
 export function Sheet({
   open,
@@ -55,7 +69,7 @@ export function Sheet({
       }}
       aria-label={label}
       onClose={onClose}
-      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:top-0 wide:right-0 wide:bottom-0 wide:left-0 wide:m-auto wide:h-fit wide:w-full wide:max-w-panel wide:rounded-sheet"
+      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-w-panel wide:rounded-sheet wide:backdrop:bg-ground"
     >
       {children}
     </dialog>
