@@ -252,6 +252,33 @@ describe("Tab switch: the indicator slides under the label", () => {
     expect(screen.getByRole("button", { name: "Add" })).not.toHaveAttribute(
       "aria-current",
     );
+
+    // Exactly one tab is held — the one they came from. "Current item in
+    // the set" means one item, and a bar that marked all four would say
+    // nothing while looking correct.
+    for (const name of ["Feed", "Call", "You"]) {
+      expect([
+        name,
+        screen.getByRole("link", { name }).hasAttribute("aria-current"),
+      ]).toEqual([name, false]);
+    }
+  });
+
+  it("marks no tab as current while the runner is on one of them", async () => {
+    // The other half of "exactly one": on a tab's own page the router owns
+    // the attribute and nothing else may claim it.
+    await renderWalking(<TabBar />, ["/closet"]);
+
+    for (const name of ["Feed", "Call", "You"]) {
+      expect([
+        name,
+        screen.getByRole("link", { name }).hasAttribute("aria-current"),
+      ]).toEqual([name, false]);
+    }
+    expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("opens the flow from the launcher, which is not a link", async () => {
@@ -267,10 +294,22 @@ describe("Tab switch: the indicator slides under the label", () => {
     // gets, not which element implements it. The navigation is not awaited
     // by the handler, so the assertion waits for the router rather than
     // the click.
+    //
+    // The indicator's *position* is the wrong thing to assert here: the
+    // closet's seat is where it already was, so it reads the same whether
+    // the click did anything or not. What only happens once the flow is up
+    // is the tab being held rather than occupied.
     await waitFor(() => {
-      expect(indicator()).toHaveStyle({ translate: "100% 0" });
+      expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
     });
     await go("/closet");
+    expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("lights nothing on a cold load straight into the flow", () => {

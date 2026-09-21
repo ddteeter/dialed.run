@@ -183,9 +183,15 @@ const NAV: readonly Edge[] = [
       "/feed/u/$userId",
       "/feed/search",
       "/runs",
+      // `/runs/$runId` claims `/runs/strava` too — a param segment matches
+      // any one segment, and both are pushes, so listing Strava as well
+      // said nothing the table did not already say. Measured: emptying it
+      // changed no answer. The rows above it that share that shape survive
+      // because they are *earlier* and disagree — `/runs/new` and
+      // `/runs/manual` rise, `/runs/strava-callback` cuts — and first match
+      // wins.
       "/runs/$runId",
       "/runs/import/$importId",
-      "/runs/strava",
       "/notifications",
       "/onboarding/name",
       "/onboarding/calibrate",
