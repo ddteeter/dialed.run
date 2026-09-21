@@ -34,7 +34,7 @@ function ClosetPage() {
         <h1 className="font-display text-title uppercase">The Closet</h1>
         <Link
           to="/closet/new"
-          className="rounded-pill bg-ink px-3 py-2 text-body font-semibold text-ground"
+          className="target inline-flex items-center rounded-pill bg-ink px-3 py-2 text-body font-semibold text-ground"
         >
           Add
         </Link>

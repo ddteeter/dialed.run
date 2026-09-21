@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -139,7 +140,11 @@ function form(
     itemBandWearStat?: (input: {
       data: { itemId: string; bandFloorC: number };
     }) => Promise<{ worn: number; total: number }>;
-    renderPhotoStep?: (file: File, onReady: (ready: File) => void) => ReactNode;
+    renderPhotoStep?: (
+      file: File,
+      onReady: (ready: File) => void,
+      announce: (sentence: string) => void,
+    ) => ReactNode;
   } = {},
 ) {
   return (
@@ -231,6 +236,41 @@ describe("VerdictForm: the scale", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Nothing saved. One field needs a fix.",
     );
+  });
+
+  it("says which one is chosen, in words rather than in ink", async () => {
+    // Rule 01: "remove every colour and the meaning survives." It did not.
+    // The chosen verdict was an ink inversion plus a pair of brackets, and
+    // the brackets are `aria-hidden` because they are a move rather than a
+    // word — so a reader heard five identically-named buttons and no
+    // indication of which was picked.
+    //
+    // `aria-pressed` rather than a `radiogroup`: the contract asks for
+    // five radios with arrow-key navigation, which is a behaviour change
+    // this lane may not make. A single-select toggle group is honest about
+    // what the control does today. The radiogroup is D-84.
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    const pressed = () =>
+      screen
+        // `queryAll`, because "nothing is pressed yet" is a state this
+        // asserts and `getAllByRole` throws on an empty match.
+        .queryAllByRole("button", { pressed: true })
+        .map((button) => button.textContent);
+
+    expect(pressed()).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+
+    expect(pressed()).toEqual(["[Dialed]"]);
+
+    // And it moves rather than accumulating — two pressed verdicts would
+    // be a distribution, which is a different fact from "how you called
+    // it".
+    await user.click(screen.getByRole("button", { name: "Way cold" }));
+
+    expect(pressed()).toEqual(["[Way cold]"]);
   });
 
   it("marks the chosen one, and only that one", async () => {
@@ -1105,15 +1145,65 @@ describe("VerdictForm: the details that go missing silently", () => {
 function recordingStep() {
   const seen: File[] = [];
   let release: ((ready: File) => void) | undefined;
-  const render = (file: File, onReady: (ready: File) => void) => {
+  // Captured, never called during render. `announce` writes the form's
+  // state, and a child that writes its parent's state while rendering is
+  // an infinite loop — which is exactly why `PhotoBlur` announces from an
+  // effect, and why a fixture that does otherwise proves nothing about it.
+  let say: ((sentence: string) => void) | undefined;
+  const render = (
+    file: File,
+    onReady: (ready: File) => void,
+    announce: (sentence: string) => void,
+  ) => {
     seen.push(file);
     release = onReady;
+    say = announce;
     return <p>step for {file.name}</p>;
   };
-  return { seen, render, hand: (ready: File) => release?.(ready) };
+  return {
+    seen,
+    render,
+    hand: (ready: File) => release?.(ready),
+    announce: (sentence: string) => {
+      say?.(sentence);
+    },
+  };
 }
 
 describe("the photo step W3 hangs off", () => {
+  it("has one status region on the screen, and lends it to the step", async () => {
+    // Rule 08: *"one `role=\"status\"` region per screen"*. This screen
+    // used to have two — the form's, and a second `aria-live` paragraph
+    // inside `PhotoBlur` for W3's three sentences — and two regions
+    // firing at once means one of them is lost.
+    //
+    // The count is the assertion that matters: a step that opened its own
+    // region would still announce, and still be wrong.
+    const user = userEvent.setup();
+    const step = recordingStep();
+    const { container } = await renderWithRouter(
+      form({
+        uploadPhoto: vi.fn(() => Promise.resolve({ key: "k" })),
+        renderPhotoStep: step.render,
+      }),
+    );
+
+    await user.upload(fileInput(), jpeg());
+
+    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
+
+    act(() => {
+      step.announce("We blurred one face.");
+    });
+
+    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "We blurred one face.",
+      );
+    });
+  });
+
   it("holds the picked file instead of uploading it", async () => {
     const user = userEvent.setup();
     const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));

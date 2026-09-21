@@ -115,7 +115,7 @@ describe("Tab switch: the indicator slides under the label", () => {
 
     expect(indicator()).not.toHaveStyle({ translate: "200% 0" });
     expect(screen.getByRole("button", { name: "Add" })).toHaveClass(
-      "text-muted",
+      "text-label",
     );
     // The seat is still in the bar — it is the indicator that stays away,
     // not the way in. A button rather than a link, per the Accessibility
@@ -206,7 +206,7 @@ describe("Tab switch: the indicator slides under the label", () => {
     expect(resting).not.toHaveAttribute("aria-current");
     // Both carry the transition: the colour flip is the half of the move
     // that survives reduced motion, so it cannot live on one side only.
-    expect(resting).toHaveClass("tab-label", "text-muted");
+    expect(resting).toHaveClass("tab-label", "text-label");
   });
 
   it("shows no indicator at all on a path no tab owns", async () => {
@@ -216,7 +216,7 @@ describe("Tab switch: the indicator slides under the label", () => {
     await renderAt(<TabBar />, "/onboarding/name");
     expect(indicator()).toBeNull();
     expect(screen.getByRole("button", { name: "Add" })).toHaveClass(
-      "text-muted",
+      "text-label",
     );
   });
 

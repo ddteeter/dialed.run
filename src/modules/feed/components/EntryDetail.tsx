@@ -9,7 +9,7 @@ import {
   formatDuration,
   formatTempRange,
 } from "../../../lib/measures";
-import { Bracketed, Digits, Mono } from "../../../ui";
+import { Bracketed, Digits, inFlight, Mono, PendingLabel } from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
 import { ListSection } from "../../../ui";
 
@@ -90,6 +90,11 @@ export function EntryDetail({
   }, [shouldPromptVerdict, entryId, recordPrompted]);
 
   async function onToggleUseful() {
+    // The guard the `disabled` attribute used to be. `aria-disabled` keeps
+    // the button focusable and announcing (rule 07), so a second press
+    // still lands — and this one toggles, so a double press would spend a
+    // round trip undoing the first.
+    if (pending) return;
     setPending(true);
     try {
       const result = await toggleUseful({ data: { entryId } });
@@ -108,7 +113,7 @@ export function EntryDetail({
         <Link
           to="/feed/verdict/$entryId"
           params={{ entryId }}
-          className="flex items-center justify-between rounded-card border border-dialed-text bg-teal/10 px-4 py-3 text-body font-semibold text-ink no-underline"
+          className="target flex items-center justify-between rounded-card border border-dialed-text bg-teal/10 px-4 py-3 text-body font-semibold text-ink no-underline"
         >
           You didn&rsquo;t log a verdict for this run. Add one?
         </Link>
@@ -194,23 +199,37 @@ export function EntryDetail({
 
       <button
         type="button"
-        disabled={pending}
+        {...inFlight(pending)}
         onClick={() => {
           void onToggleUseful();
         }}
         className={
           useful.reacted
-            ? "self-start rounded-pill bg-teal px-4 py-2 text-body font-semibold text-ink disabled:opacity-40"
-            : "self-start rounded-pill border border-hairline px-4 py-2 text-body font-semibold disabled:opacity-40"
+            ? "target self-start rounded-pill bg-teal px-4 py-2 text-body font-semibold text-ink"
+            : "target self-start rounded-pill border border-hairline px-4 py-2 text-body font-semibold"
         }
       >
-        Useful{" "}
-        <Mono className="ml-1">
-          [<Digits value={useful.count} />]
-        </Mono>
+        {/* The count travels with the label rather than sitting beside it,
+            so the whole thing swaps for `[ Noting ]` — a rolling counter
+            next to a pending verb would be two states at once. */}
+        <PendingLabel
+          pending={pending}
+          pendingLabel="Noting"
+          label={
+            <>
+              Useful{" "}
+              <Mono className="ml-1">
+                [<Digits value={useful.count} />]
+              </Mono>
+            </>
+          }
+        />
       </button>
 
-      <Link to="/feed" className="text-body font-semibold text-cold-text">
+      <Link
+        to="/feed"
+        className="target inline-flex items-center text-body font-semibold text-cold-text"
+      >
         Back to feed
       </Link>
     </div>

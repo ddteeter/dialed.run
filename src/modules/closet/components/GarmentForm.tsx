@@ -468,7 +468,7 @@ export function GarmentForm({
               onClick={() => {
                 setShadeOpen(true);
               }}
-              className="cursor-pointer self-start border-none bg-transparent p-0 text-quiet underline underline-offset-4"
+              className="target cursor-pointer self-start border-none bg-transparent p-0 text-quiet underline underline-offset-4"
             >
               <Mono step="sm">
                 Exact shade

@@ -30,7 +30,7 @@ export function StravaCallbackResult({
       </p>
       <Link
         to="/runs/strava"
-        className="self-start rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
+        className="target inline-flex items-center self-start rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
       >
         Back to Strava settings
       </Link>

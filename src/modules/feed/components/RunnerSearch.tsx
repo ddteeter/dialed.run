@@ -58,7 +58,7 @@ export function RunnerSearch({
             <Link
               to="/feed/u/$userId"
               params={{ userId: result.userId }}
-              className="font-semibold text-ink no-underline"
+              className="target inline-flex items-center font-semibold text-ink no-underline"
             >
               {result.displayName}
             </Link>

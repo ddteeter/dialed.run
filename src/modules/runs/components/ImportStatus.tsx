@@ -121,7 +121,7 @@ function ImportStatusInner({
             <Link
               to="/runs/$runId"
               params={{ runId: importRow.runId }}
-              className="rounded-pill bg-ink px-4 py-2 text-center font-semibold text-ground"
+              className="target flex items-center justify-center rounded-pill bg-ink px-4 py-2 text-center font-semibold text-ground"
             >
               Open the run
             </Link>
@@ -139,7 +139,7 @@ function ImportStatusInner({
             <Link
               to="/runs/$runId"
               params={{ runId: importRow.runId }}
-              className="rounded-pill border border-hairline px-4 py-2 text-center font-semibold text-ink"
+              className="target flex items-center justify-center rounded-pill border border-hairline px-4 py-2 text-center font-semibold text-ink"
             >
               Open the existing run
             </Link>
@@ -157,7 +157,7 @@ function ImportStatusInner({
           </p>
           <Link
             to="/runs/new"
-            className="rounded-pill bg-ink px-4 py-2 text-center font-semibold text-ground"
+            className="target flex items-center justify-center rounded-pill bg-ink px-4 py-2 text-center font-semibold text-ground"
           >
             Try another file
           </Link>

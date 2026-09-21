@@ -75,13 +75,13 @@ export function NowGoRun(): JSX.Element {
         <div className="flex flex-col gap-3">
           <Link
             to="/runs/new"
-            className="rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-ink"
+            className="target flex items-center justify-center rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-ink"
           >
             I have a run to upload
           </Link>
           <Link
             to="/"
-            className="rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ground"
+            className="target flex items-center justify-center rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ground"
           >
             Done for now
           </Link>
@@ -130,7 +130,7 @@ function StravaOffer(): JSX.Element {
         </div>
         <Link
           to="/runs/strava"
-          className="shrink-0 rounded-pill border border-hairline px-4 py-2"
+          className="target inline-flex items-center shrink-0 rounded-pill border border-hairline px-4 py-2"
         >
           <Mono step="xs">Connect</Mono>
         </Link>

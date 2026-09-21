@@ -79,7 +79,7 @@ export function NotificationList({
         onClick={() => {
           void onMarkAllRead();
         }}
-        className="self-start rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
+        className="target self-start rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
       >
         Mark all read
       </button>

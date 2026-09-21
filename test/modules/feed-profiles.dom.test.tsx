@@ -14,6 +14,7 @@ import { z } from "zod";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
 import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";
 import { RunnerSearch } from "../../src/modules/feed/components/RunnerSearch";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 import type {
   OtherProfile as OtherProfileData,
   OwnProfile as OwnProfileData,
@@ -449,6 +450,75 @@ describe("OtherProfile", () => {
     expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
   });
 
+  it("does nothing on a second press while the first is in flight", async () => {
+    // The guard rule 07 makes necessary. `aria-disabled` keeps the button
+    // focusable and announcing, so unlike `disabled` it does not stop the
+    // press — the handler has to. Without the guard the second press fires
+    // the *opposite* endpoint against a state the server has not confirmed.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    const follow = vi.fn(() => pending.promise);
+    const unfollow = vi.fn(nothing);
+    await renderWithRouter(
+      <OtherProfile
+        profile={otherProfile()}
+        isFollowing={false}
+        follow={follow}
+        unfollow={unfollow}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Follow" });
+
+    await user.click(button);
+    await waitFor(() => {
+      expectBusy(button);
+    });
+    await user.click(button);
+
+    expect(follow).toHaveBeenCalledTimes(1);
+    expect(unfollow).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [false, "Follow", "Following"],
+    [true, "Following", "Unfollowing"],
+  ])(
+    "swaps the label for its own pending verb (following: %s)",
+    async (isFollowing, rest, verb) => {
+      // Design's round-13 table, and the reason both halves are asserted:
+      // "Follow · Following" at rest becomes "[ Following ] ·
+      // [ Unfollowing ]" in flight, so the two directions do **not** share
+      // a verb — and "Following" is the rest label of one and the pending
+      // verb of the other. A test that checked only one direction would
+      // pass on a button that said "Following" whatever it was doing.
+      const user = userEvent.setup();
+      const pending = Promise.withResolvers<undefined>();
+      await renderWithRouter(
+        <OtherProfile
+          profile={otherProfile()}
+          isFollowing={isFollowing}
+          follow={() => pending.promise}
+          unfollow={() => pending.promise}
+        />,
+      );
+      const button = screen.getByRole("button", { name: rest });
+
+      // At rest the verb is in the DOM and hidden — that is what keeps the
+      // button from resizing mid-press — so visibility is the assertion,
+      // not presence.
+      expect(screen.getByText(verb)).not.toBeVisible();
+
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText(verb)).toBeVisible();
+      });
+      expect(screen.getByText(rest)).not.toBeVisible();
+
+      pending.resolve(undefined);
+    },
+  );
+
   it("locks the button while it works", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<undefined>();
@@ -464,12 +534,12 @@ describe("OtherProfile", () => {
 
     await user.click(button);
     await waitFor(() => {
-      expect(button).toBeDisabled();
+      expectBusy(button);
     });
 
     pending.resolve(undefined);
     await waitFor(() => {
-      expect(button).not.toBeDisabled();
+      expectAvailable(button);
     });
   });
 });

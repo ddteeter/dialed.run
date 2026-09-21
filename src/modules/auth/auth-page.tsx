@@ -110,7 +110,11 @@ export function AuthCrossLink({
   return (
     <>
       {prompt}{" "}
-      <Link to={to} className="font-semibold text-cold-text">
+      <Link
+        data-target="inline"
+        to={to}
+        className="font-semibold text-cold-text"
+      >
         {label}
       </Link>
     </>

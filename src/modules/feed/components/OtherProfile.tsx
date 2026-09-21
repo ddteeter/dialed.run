@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { Mono } from "../../../ui";
+import { inFlight, Mono, PendingLabel } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 
 /**
@@ -36,6 +36,11 @@ export function OtherProfile({
   const { userId } = profile;
 
   async function toggleFollow() {
+    // The guard the `disabled` attribute used to be. `aria-disabled` keeps
+    // the button focusable and announcing, so nothing stops a second press
+    // arriving — and a second press mid-flight would fire the opposite
+    // endpoint against a state the server has not confirmed yet.
+    if (pending) return;
     setPending(true);
     try {
       // The call and the flip are paired per direction: following and
@@ -66,17 +71,24 @@ export function OtherProfile({
         </div>
         <button
           type="button"
-          disabled={pending}
+          {...inFlight(pending)}
           onClick={() => {
             void toggleFollow();
           }}
           className={
             isFollowing
-              ? "rounded-pill border border-hairline px-4 py-2 font-semibold disabled:opacity-40"
-              : "rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-40"
+              ? "target rounded-pill border border-hairline px-4 py-2 font-semibold"
+              : "target rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
           }
         >
-          {isFollowing ? "Following" : "Follow"}
+          {/* Two rest labels and two pending verbs, because they are two
+              actions: design's table spells it
+              "Follow · Following" / "[ Following ] · [ Unfollowing ]". */}
+          <PendingLabel
+            label={isFollowing ? "Following" : "Follow"}
+            pendingLabel={isFollowing ? "Unfollowing" : "Following"}
+            pending={pending}
+          />
         </button>
       </div>
 
@@ -94,7 +106,7 @@ export function OtherProfile({
               <Link
                 to="/feed/entry/$entryId"
                 params={{ entryId: entry.entryId }}
-                className="flex flex-col gap-1 text-ink no-underline"
+                className="target flex flex-col gap-1 text-ink no-underline"
               >
                 {entry.caption === null ? undefined : (
                   <p className="m-0 text-small">{entry.caption}</p>

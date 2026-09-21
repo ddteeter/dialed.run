@@ -30,7 +30,7 @@ export function MoreDisclosure({
       type="button"
       aria-expanded={expanded}
       onClick={onToggle}
-      className="cursor-pointer self-start rounded-pill border border-dashed border-hairline-2 bg-transparent px-4 py-2 text-quiet"
+      className="target cursor-pointer self-start rounded-pill border border-dashed border-hairline-2 bg-transparent px-4 py-2 text-quiet"
     >
       <Mono step="sm">Everything else · {remaining} more</Mono>
       <span aria-hidden="true"> ▾</span>

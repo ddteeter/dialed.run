@@ -17,6 +17,11 @@ import {
 } from "../../src/modules/feed/components/AttachKit";
 import type { PickerGroup } from "../../src/modules/feed/picker";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
+import {
+  expectAvailable,
+  expectBusy,
+  expectUnavailable,
+} from "../ui/unavailable";
 
 /**
  * Attach the kit (screen A2) — and the prefill idea, which is the feature.
@@ -499,11 +504,15 @@ describe("AttachKit: the picker", () => {
     expect(screen.queryByText("Tops")).toBeNull();
   });
 
-  it("will not attach nothing", async () => {
+  it("will not attach nothing, and stays reachable while it refuses", async () => {
+    // Design's round-13 "not yet": full strength, `aria-disabled`, silent
+    // on press. "The count is the sentence: it says what is missing on the
+    // button the runner is looking at" — so `Attach 0 items` is the whole
+    // message and there is nothing else to announce.
     await openPicker([group()]);
-    expect(
+    expectUnavailable(
       await screen.findByRole("button", { name: /Attach 0 items/ }),
-    ).toBeDisabled();
+    );
   });
 
   it("counts the selection, in the singular at one", async () => {
@@ -534,7 +543,7 @@ describe("AttachKit: the picker", () => {
     await screen.findByText("Tops");
 
     await user.click(screen.getByLabelText(/Houdini/));
-    expect(screen.getByRole("button", { name: "Attach 1 item" })).toBeEnabled();
+    expectAvailable(screen.getByRole("button", { name: "Attach 1 item" }));
 
     await user.click(screen.getByLabelText(/Tights/));
     expect(
@@ -549,9 +558,42 @@ describe("AttachKit: the picker", () => {
     await user.click(screen.getByLabelText(/Houdini/));
     await user.click(screen.getByLabelText(/Houdini/));
 
-    expect(
-      screen.getByRole("button", { name: /Attach 0 items/ }),
-    ).toBeDisabled();
+    expectUnavailable(screen.getByRole("button", { name: /Attach 0 items/ }));
+  });
+
+  it("attaches once, however many times the button is pressed", async () => {
+    // The guard rule 07 makes necessary, and the one with the worst
+    // failure in the app: `attachKit` **creates an entry**, so without it
+    // a double press is two entries against one run. `disabled` used to
+    // cover only "nothing selected" — while the attach was actually
+    // running the button sat at full strength with nothing stopping a
+    // second press.
+    const pending = Promise.withResolvers<{ entryId: string }>();
+    const attachKit = vi.fn(() => pending.promise);
+    withLocation({ latitude: 1, longitude: 2 });
+    const user = userEvent.setup();
+    await renderWithRouter(
+      attach({
+        pickerGroupsFor: () => Promise.resolve([group()]),
+        attachKit,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Choose your kit" }),
+    );
+    await screen.findByText("Tops");
+    await user.click(screen.getByLabelText(/Houdini/));
+    const button = screen.getByRole("button", { name: "Attach 1 item" });
+
+    await user.click(button);
+    await waitFor(() => {
+      expectBusy(button);
+    });
+    await user.click(button);
+    await user.click(button);
+
+    expect(attachKit).toHaveBeenCalledTimes(1);
+    pending.resolve({ entryId: "01NEW" });
   });
 
   it("attaches what was chosen", async () => {

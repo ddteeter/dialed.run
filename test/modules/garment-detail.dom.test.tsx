@@ -16,6 +16,7 @@ import type {
   WardrobeItemRow,
 } from "../../src/modules/closet/service";
 import { itemView, wardrobeItem } from "./closet-fixtures";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 type Detail = Awaited<ReturnType<typeof getItemDetail>> & {
   pairedItems: WardrobeItemRow[];
@@ -530,7 +531,34 @@ describe("GarmentDetail: the photo upload", () => {
 
     expect(await screen.findByText("Photo file is empty.")).toBeVisible();
     // Released, so they can pick another.
-    expect(fileInput()).not.toBeDisabled();
+    expectAvailable(fileInput());
+  });
+
+  it("ignores a second photo chosen while the first is still uploading", async () => {
+    // The guard rule 07 makes necessary. `aria-disabled` does not stop a
+    // file picker opening the way `disabled` did, so the second photo has
+    // to die in the handler rather than at the markup.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ ok: true }>();
+    const uploadPhoto = vi.fn(() => pending.promise);
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail()}
+        retire={nothing}
+        unretire={nothing}
+        remove={nothing}
+        uploadPhoto={uploadPhoto}
+      />,
+    );
+
+    await user.upload(fileInput(), jpeg());
+    await waitFor(() => {
+      expectBusy(fileInput());
+    });
+    await user.upload(fileInput(), jpeg());
+
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    pending.resolve({ ok: true });
   });
 
   it("locks the input while it uploads", async () => {
@@ -549,11 +577,11 @@ describe("GarmentDetail: the photo upload", () => {
     await user.upload(fileInput(), jpeg());
 
     await waitFor(() => {
-      expect(fileInput()).toBeDisabled();
+      expectBusy(fileInput());
     });
     pending.resolve({ ok: true });
     await waitFor(() => {
-      expect(fileInput()).not.toBeDisabled();
+      expectAvailable(fileInput());
     });
   });
 

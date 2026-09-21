@@ -1,6 +1,8 @@
 import { RETRY_GENERIC } from "../../../lib/copy";
 import { useState } from "react";
 
+import { inFlight, PendingLabel } from "../../../ui";
+
 /**
  * The server functions, handed in rather than imported.
  *
@@ -33,7 +35,13 @@ export function StravaConnect({
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
+  // The guard the `disabled` attribute used to be, shared by both
+  // handlers: `aria-disabled` keeps these three buttons focusable and
+  // announcing (rule 07), so a second press still arrives — and all three
+  // share one `isBusy`, which means a press on any of them mid-flight
+  // would start a second round trip against the same connection.
   async function loadAuthorizeUrl() {
+    if (isBusy) return;
     setError(undefined);
     setIsBusy(true);
     try {
@@ -52,6 +60,7 @@ export function StravaConnect({
   }
 
   async function onDisconnect() {
+    if (isBusy) return;
     setError(undefined);
     setIsBusy(true);
     try {
@@ -76,19 +85,26 @@ export function StravaConnect({
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          disabled={isBusy}
+          {...inFlight(isBusy)}
           onClick={() => {
             void loadAuthorizeUrl();
           }}
-          className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-50"
+          className="target rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
         >
-          Connect Strava
+          <PendingLabel
+            label="Connect Strava"
+            pendingLabel="Connecting"
+            pending={isBusy}
+          />
         </button>
         {error === undefined ? undefined : (
           <p className="text-small font-semibold text-cold-text">{error}</p>
         )}
         {authorizeUrl === undefined ? undefined : (
-          <a href={authorizeUrl} className="text-body text-muted underline">
+          <a
+            href={authorizeUrl}
+            className="target inline-flex items-center text-body text-muted underline"
+          >
             Continue to Strava
           </a>
         )}
@@ -106,24 +122,32 @@ export function StravaConnect({
       {status === "broken" ? (
         <button
           type="button"
-          disabled={isBusy}
+          {...inFlight(isBusy)}
           onClick={() => {
             void loadAuthorizeUrl();
           }}
-          className="rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-50"
+          className="target rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
         >
-          Reconnect Strava
+          <PendingLabel
+            label="Reconnect Strava"
+            pendingLabel="Reconnecting"
+            pending={isBusy}
+          />
         </button>
       ) : undefined}
       <button
         type="button"
-        disabled={isBusy}
+        {...inFlight(isBusy)}
         onClick={() => {
           void onDisconnect();
         }}
-        className="rounded-pill border border-hairline px-4 py-2 font-semibold text-ink disabled:opacity-50"
+        className="target rounded-pill border border-hairline px-4 py-2 font-semibold text-ink"
       >
-        Disconnect
+        <PendingLabel
+          label="Disconnect"
+          pendingLabel="Disconnecting"
+          pending={isBusy}
+        />
       </button>
       {error === undefined ? undefined : (
         <p className="text-small font-semibold text-cold-text">{error}</p>

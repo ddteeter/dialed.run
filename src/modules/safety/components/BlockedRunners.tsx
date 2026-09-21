@@ -78,6 +78,7 @@ export function BlockedRunners({
             >
               <span>{runner.displayName ?? "A runner"}</span>
               <button
+                className="target"
                 type="button"
                 onClick={() => {
                   settle(runner.userId);

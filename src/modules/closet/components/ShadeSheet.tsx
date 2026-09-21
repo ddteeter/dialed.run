@@ -168,7 +168,7 @@ export function ShadeSheet({
         {photoUrl === undefined ? undefined : (
           <button
             type="button"
-            className="cursor-pointer border-none bg-transparent p-0"
+            className="target cursor-pointer border-none bg-transparent p-0"
             onClick={(event) => {
               const sampled = sampleFromTarget(
                 event.currentTarget,
@@ -188,7 +188,10 @@ export function ShadeSheet({
           </button>
         )}
 
-        <label className="flex flex-col gap-2 text-muted" htmlFor="colorHex">
+        <label
+          className="target flex flex-col gap-2 text-label"
+          htmlFor="colorHex"
+        >
           <Mono step="sm">Hex</Mono>
           <span className="flex items-center gap-3">
             <input
@@ -239,7 +242,7 @@ export function ShadeSheet({
             onClick={() => {
               if (parsed.success) onUse(parsed.data);
             }}
-            className="cursor-pointer rounded-pill border-none bg-action px-6 py-3 font-display text-body uppercase text-ink"
+            className="target cursor-pointer rounded-pill border-none bg-action px-6 py-3 font-display text-body uppercase text-ink"
           >
             Use this
           </button>
@@ -249,7 +252,7 @@ export function ShadeSheet({
               setHex("");
               onClear();
             }}
-            className="cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold"
+            className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold"
           >
             Clear
           </button>

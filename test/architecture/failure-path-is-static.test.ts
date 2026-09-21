@@ -119,9 +119,16 @@ describe("the failure path is deliberately static", () => {
       const source = sources[`../../${surface}`] ?? "";
       if (isInstrumented(source)) continue;
       // The pending state is the exception, and it is the doctrine's own:
-      // the brackets breathe while a submission is in flight.
+      // the brackets breathe while work is in flight.
+      //
+      // It is `PendingLabel` that holds them now, not `SubmitButton`.
+      // Design's round 13 gave the same treatment to eight controls that
+      // used to dim to 40% instead, so the device was extracted — and the
+      // exception has to follow the brackets rather than stay on the
+      // component that used to own them, or the rule would exempt a button
+      // that no longer moves and catch the one that does.
       const reporting = components(withoutComments(source)).filter(
-        ([name]) => name !== "SubmitButton",
+        ([name]) => name !== "PendingLabel",
       );
       for (const [name, body] of reporting) {
         expect([surface, name, moveIn(body)]).toEqual([
@@ -136,7 +143,12 @@ describe("the failure path is deliberately static", () => {
   it("keeps the breathing brackets on the pending state, where they belong", () => {
     const form = withoutComments(sources["../../src/ui/form.tsx"] ?? "");
     if (isInstrumented(form)) return;
+    const pending = components(form).find(([name]) => name === "PendingLabel");
+    expect(pending?.[1]).toContain('className="breathe"');
+    // And `SubmitButton` no longer draws them itself — it delegates, which
+    // is what keeps nine controls from growing nine sets of brackets.
     const submit = components(form).find(([name]) => name === "SubmitButton");
-    expect(submit?.[1]).toContain('className="breathe"');
+    expect(submit?.[1]).not.toContain('className="breathe"');
+    expect(submit?.[1]).toContain("<PendingLabel");
   });
 });

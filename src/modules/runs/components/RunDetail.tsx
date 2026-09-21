@@ -2,7 +2,7 @@ import { RETRY_SAVE } from "../../../lib/copy";
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, inFlight, Mono, PendingLabel } from "../../../ui";
 import type { RunRow } from "../service";
 
 /**
@@ -32,6 +32,10 @@ function ManualTempFallback({
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The guard the `disabled` attribute used to be. `aria-disabled` keeps
+    // the button focusable and announcing (rule 07), so the second press
+    // still arrives and has to die here rather than at the markup.
+    if (isSubmitting) return;
     setError(undefined);
     setIsSubmitting(true);
     try {
@@ -58,7 +62,7 @@ function ManualTempFallback({
         We couldn&rsquo;t resolve conditions automatically. You can type a
         temperature — it won&rsquo;t train the model.
       </p>
-      <label className="flex items-center gap-2 text-body font-semibold">
+      <label className="target flex items-center gap-2 text-body font-semibold">
         Temp (°C)
         <input
           type="number"
@@ -72,12 +76,20 @@ function ManualTempFallback({
       {error === undefined ? undefined : (
         <p className="text-small font-semibold text-cold-text">{error}</p>
       )}
+      {/* `aria-disabled`, never `disabled` (rule 07) — and no dimming,
+          because rule 02 bans opacity as a meaning channel. What says the
+          work is happening is the label, per design's round-13 table. The
+          guard is in `submit` below, where a second press has to die. */}
       <button
         type="submit"
-        disabled={isSubmitting}
-        className="self-start rounded-pill bg-ink px-4 py-2 font-semibold text-ground disabled:opacity-50"
+        {...inFlight(isSubmitting)}
+        className="target self-start rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
       >
-        Save temperature
+        <PendingLabel
+          label="Save temperature"
+          pendingLabel="Saving"
+          pending={isSubmitting}
+        />
       </button>
     </form>
   );

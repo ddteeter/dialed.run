@@ -1,0 +1,123 @@
+/**
+ * The two rules of `design/Accessibility Contract.dc.html` that are the
+ * same rule on every surface: **06 · focus is visible and square** and
+ * **03 · 44px targets**.
+ *
+ * They are here rather than in each component for the reason the contract
+ * gives them: *"never removed"* and *"every tappable thing"* are statements
+ * about the whole app, and a rule written once cannot be forgotten by the
+ * thirty-first component. It also keeps the adoption sweep to class names —
+ * a plain `className="…"` attribute is not mutated, so the markup half of
+ * this lane adds no mutants, and the CSS half is asserted against this file
+ * by `test/ui/a11y-css.dom.test.tsx` the way `motion.css` is asserted
+ * against the doctrine.
+ */
+
+/* ------------------------------------------------------------------
+ * 06 · FOCUS IS VISIBLE AND SQUARE
+ *
+ * "2px solid outline, offset 2px, in the text colour of the ground (ink on
+ * paper, paper on ink). Never removed, never replaced by a colour change
+ * alone. Pill buttons get a pill outline; everything else gets the brand's
+ * square corners."
+ *
+ * **Both halves are derived rather than restated**, which is the only
+ * reason this is four declarations instead of a table:
+ *
+ * - `var(--ink)` IS "the text colour of the ground". T1 defines `--ink` as
+ *   "primary text, always ground's opposite", and `tokens.css`'s
+ *   `[data-ground="ink"]` block already swaps it for the inverted header
+ *   blocks. So ink-on-paper and paper-on-ink is one declaration, and task
+ *   111's dark column inherits it with nothing to change here.
+ * - `outline` follows the element's own `border-radius`. A `rounded-pill`
+ *   button therefore gets a pill outline and everything else gets whatever
+ *   corner the brand already gave it, with no second list of which is
+ *   which — the thing that would drift the moment a control changed shape.
+ *
+ * `:focus-visible` rather than `:focus`, so a pointer press does not leave
+ * a ring behind; the keyboard pass in the contract's X3 list is what this
+ * is for.
+ *
+ * **Unlayered and not wrapped in `:where()`, deliberately.** Tailwind's
+ * utilities live in `@layer utilities`, and an unlayered rule beats a
+ * layered one whatever the specificity — so an `outline-none` utility
+ * cannot quietly win. That is "never removed" enforced by the cascade
+ * rather than by review, and it is why `outline-none` does not appear
+ * anywhere in `src/` any more: the one legitimate case has its own rule
+ * below, and `test/architecture/focus-is-never-removed.test.ts` fails on a
+ * new one.
+ * ------------------------------------------------------------------ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/**
+ * The one control whose ring belongs to something else.
+ *
+ * A `FormField` draws a bordered box and puts a borderless, transparent
+ * input inside it — the box *is* the control's visible boundary, and the
+ * input is inset from it by `px-4 py-3`. A ring on the input would be a
+ * rectangle floating inside the field, marking a boundary the runner
+ * cannot see; a ring on the box marks the one they can.
+ *
+ * **So the ring moves, and is never removed** — which is a different fact
+ * from the `outline-none` these two rules replaced. Five inputs carried
+ * that utility (`TextField`, and `ManualRunForm`'s four hand-built
+ * fields), and it said "no ring" with nothing at all saying where the ring
+ * had gone. Here the two halves are one declaration block: you cannot take
+ * the ring off the input without the ancestor that puts it back.
+ *
+ * `:has()` rather than `:focus-within`, because the second rule needs the
+ * descendant selector anyway and one mechanism is better than two.
+ */
+@utility field-box {
+  &:has(:focus-visible) {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  & :focus-visible {
+    outline: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * 03 · 44PX TARGETS
+ *
+ * "Every tappable thing has a 44×44 hit area, including MONO.xs chips
+ * (10px, the type floor — nothing is drawn smaller) — pad the target, not
+ * the glyph."
+ *
+ * **Padding, not sizing.** `min-height`/`min-width` grow the box only when
+ * the content has not already filled it, so a full-width submit button and
+ * a 10px mono chip take the same declaration and only one of them moves.
+ * Nothing here touches `font-size`: the glyph is the drawing's and the
+ * target is ours.
+ *
+ * A `<button>` centres its own content vertically, so it needs nothing
+ * else. An `<a>` or a `<label>` does not — those call sites add
+ * `inline-flex items-center justify-center` beside this, at the site,
+ * where a reviewer can see that the element grew a layout box.
+ *
+ * **Standalone targets only.** A link set inside a sentence takes WCAG
+ * 2.2's own inline exception (2.5.8), because padding it to 44 grows the
+ * line box and reflows a drawn screen for a hit-area reason. That reading
+ * is queued to design as *the inline target*; veto it and twelve links
+ * gain this class.
+ *
+ * `@utility`, not a bare class, for the reason `motion.css` gives at
+ * length: a class Tailwind does not know is dropped in silence, and
+ * `styles.css`'s `@theme` block is the whole of the protection until
+ * D-78's `no-unknown-classes` rule lands.
+ * ------------------------------------------------------------------ */
+@utility target {
+  min-height: 44px;
+  min-width: 44px;
+}

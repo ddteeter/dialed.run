@@ -25,7 +25,7 @@ export function NotificationBell({
     <Link
       to="/notifications"
       aria-label="Notifications"
-      className="flex items-center gap-1 no-underline"
+      className="target flex items-center gap-1 no-underline"
     >
       <Icon name="bell" size={20} />
       {unreadCount > 0 && <Bracketed>{unreadCount}</Bracketed>}

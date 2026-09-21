@@ -11,6 +11,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
  * Screen A1's file drop.
@@ -123,6 +124,24 @@ describe("UploadForm", () => {
     expect(screen.queryByText(/didn't upload/)).toBeNull();
   });
 
+  it("ignores a second file chosen while the first is still uploading", async () => {
+    // The guard rule 07 makes necessary, and an input is the sharp case:
+    // `aria-disabled` does not stop a file picker opening the way
+    // `disabled` did, so the second file has to die in the handler.
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ importId: string }>();
+    const upload = vi.fn(() => pending.promise);
+    await renderWithRouter(<UploadForm upload={upload} />);
+
+    await user.upload(fileInput(), gpx());
+    await waitFor(() => {
+      expectBusy(fileInput());
+    });
+    await user.upload(fileInput(), gpx());
+
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
   it("locks the input while it works", async () => {
     // A second file chosen mid-upload would race the first. On success the
     // screen changes, so the release that matters is the failure one,
@@ -136,7 +155,7 @@ describe("UploadForm", () => {
     await user.upload(fileInput(), gpx());
 
     await waitFor(() => {
-      expect(fileInput()).toBeDisabled();
+      expectBusy(fileInput());
     });
 
     pending.resolve({ importId: "01IMPORT" });
@@ -158,7 +177,7 @@ describe("UploadForm", () => {
       await screen.findByText("That didn't upload. Try again."),
     ).toBeVisible();
     // Released, not stuck: the retry is choosing the file again.
-    expect(fileInput()).not.toBeDisabled();
+    expectAvailable(fileInput());
   });
 
   it("clears the last failure as soon as a new file is chosen", async () => {
@@ -183,7 +202,7 @@ describe("UploadForm", () => {
     await waitFor(() => {
       expect(screen.queryByText(/didn't upload/)).toBeNull();
     });
-    expect(fileInput()).toBeDisabled();
+    expectBusy(fileInput());
     pending.resolve({ importId: "01IMPORT" });
   });
 

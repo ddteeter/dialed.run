@@ -166,7 +166,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
             onChange={(event) => {
               setStartedAt(event.target.value);
             }}
-            className="w-full border-none bg-transparent outline-none"
+            className="w-full border-none bg-transparent"
           />
         </FormField>
         <div className="flex gap-4">
@@ -185,7 +185,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
                 onChange={(event) => {
                   setMinutes(event.target.value);
                 }}
-                className="w-full border-none bg-transparent outline-none"
+                className="w-full border-none bg-transparent"
               />
             </FormField>
           </div>
@@ -205,12 +205,12 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
                 onChange={(event) => {
                   setDistanceKm(event.target.value);
                 }}
-                className="w-full border-none bg-transparent outline-none"
+                className="w-full border-none bg-transparent"
               />
             </FormField>
           </div>
         </div>
-        <label className="flex items-center gap-2 text-body font-semibold">
+        <label className="target flex items-center gap-2 text-body font-semibold">
           <input
             type="checkbox"
             checked={indoor}
@@ -238,7 +238,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
               const { value } = event.target;
               setEffort(isEffort(value) ? value : "");
             }}
-            className="w-full border-none bg-transparent outline-none"
+            className="w-full border-none bg-transparent"
           >
             <option value="">Not set</option>
             {EFFORTS.map((value) => (

@@ -54,16 +54,26 @@
   --hairline: #dcdbd2;
   /* Empty verdict slots, empty coverage bands. */
   --hairline-2: #c9c8be;
-  /* Mono captions, secondary metadata. */
+  /* Mono captions, secondary metadata. Decoration only: 3.90:1 on paper,
+   * so T1's own row says "never a control's only label on paper — that is
+   * --label". */
   --muted: #7a7a70;
+  /* Round 13. The grey a control's only label is written in: field
+   * captions, radiogroup legends, inactive tab labels. 4.64:1 on ground,
+   * which is what --muted could not do and what the Accessibility
+   * Contract's Tab bar row had been asking for since it was written. */
+  --label: #6e6e64;
   /* Secondary prose — and the warm-verdict grey, per §AB. */
   --quiet: #4e4e44;
   /* Input placeholders and disabled labels. */
   --placeholder: #9a9a90;
   /* Where a photo will be. Hatch is one step darker. */
   --photo: #e3e2d8;
-  /* Dialed verdict, matched state. Teal as a *surface* stays --split-teal. */
-  --dialed-text: #009f8c;
+  /* Dialed verdict, matched state. Teal as a *surface* stays --split-teal.
+   * Round 13 cut this from #009F8C, which was 2.98:1 on paper across nine
+   * meaning-carrying uses — the "darker cut that clears contrast" this
+   * role is described as, finally measured. 4.87:1. */
+  --dialed-text: #00776a;
   /* Cold verdict as text, inline action links. Pink as a surface is --action. */
   --cold-text: #c21a6b;
   /* Hi-viz at low strength behind unread rows. Hi-viz itself never dims. */
@@ -119,6 +129,10 @@
   --muted: #8b8b93;
   --quiet: #b9b8ae;
   --placeholder: #6e6e74;
+  /* T1's dark column folds --label into --muted, which already clears
+   * (5.81:1 on ink). Written as the role rather than as #8B8B93 so the
+   * fold is the code rather than a comment about it. */
+  --label: var(--muted);
   --photo: #24242b;
   --dialed-text: var(--split-teal);
   --cold-text: var(--course-pink);

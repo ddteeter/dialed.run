@@ -25,7 +25,11 @@ function NewRunPage() {
         <UploadForm upload={startFileImport} />
         <p className="text-center text-small text-muted">
           or{" "}
-          <Link to="/runs/manual" className="font-semibold text-cold-text">
+          <Link
+            to="/runs/manual"
+            data-target="inline"
+            className="font-semibold text-cold-text"
+          >
             enter it manually
           </Link>
         </p>
