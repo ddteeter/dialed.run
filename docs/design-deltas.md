@@ -189,10 +189,15 @@ from the other side: _"never a sixth type."_
     made for a motion reason, which is exactly the kind the placeholder
     protocol wants seen rather than discovered in a demo.
 
-    **The ask is two lines.** Are E1's two tabs a segmented control across
-    the full width, or labels at their natural size? And are the five tabs
-    equal columns, which is what the indicator is measured in? Nothing is
-    blocked either way.
+    **CLOSED 2026-09-20 by round 15.** Both lines answered, and both the
+    way the build had already gone. E1's two tabs are _"labels, not a
+    segmented control; the active one carries a static underline and only
+    the colour moves"_ — so nothing on a drawn screen reflows. The five
+    equal columns stand, and `motion.js`'s "Tab switch" row now says so
+    itself rather than leaving one sentence to cover two bars: the phone
+    bar slides because equal columns make it free, and natural-width
+    labels — E1's two and the top bar's four — carry a static underline.
+    See "Answered in round 15" below.
 
     **Half-answered by round 12 (2026-09-20).** `NAV`'s `+ Add (bar
 launcher)` row rules that _"+ Add is a launcher, not a tab: the
@@ -223,6 +228,40 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     Built by task 117 in the PR that asked; D-81 closes with it. Verified
     in Chromium — the launcher's accessible name is computed from re-nested
     markup, which happy-dom cannot see.
+
+## Answered in round 15 (imported 2026-09-20)
+
+Five questions from task 115, all composition, all answered the lane's
+way. Three files changed: `Desktop Contract.dc.html`, `Remaining
+Screens.dc.html` and `motion.js`.
+
+**Search is a link, and there is no theme control in the bar.** DS1a's
+240px field is withdrawn — _"a field is an input surface with states
+nobody drew"_ — and replaced by the pack's search glyph at every width,
+named "Search runners", opening `/feed/search` in the 390 panel per DS3.
+The AUTO/LIGHT/DARK segment takes no seat: _"no theme control in the bar
+until dark mode ships; an inert segment fails rule 07 and an absent one
+fails nothing."_ It stays on You, where its source line already lives. DS4's
+desk row now reads _"Bar is identical to Wide — no field, no segment."_
+
+**The pill says "Log a run" at width and `+ Add` on the phone bar**, as two
+elements each hidden at the other width, each with its own accessible
+name. Design called the duplication deliberate rather than tolerated: _"the
+phone seat is a glyph-sized launcher, the bar has room for the verb."_ The
+readings are "Add, button, dialog" and "Log a run, button, dialog".
+
+**Feed is one column at desk in v1.** Two of X's three rail cards are the
+Call, so DS3's Feed row now says the rail _"arrives whole with Epic 200 or
+not at all. A rail with one live card and a hole is the dashboard DS5
+forbids."_ DS5's third-column entry gains the qualifier "(post-Epic 200)".
+Closet and the backlog keep their second column.
+
+**The top bar's underline is static**, which closes item 18 above and
+settles the one place `motion.js` and the Desktop Contract could be read
+against each other. The four links are natural width; the active one
+carries its own 2px border-bottom (`--action` on ink, `--cold-text` on
+paper) and does not travel; the colour still flips at `instant`/`snap`.
+Sliding stays the phone bar's.
 
 ## Answered in round 14 (imported 2026-09-20)
 

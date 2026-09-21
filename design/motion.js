@@ -49,7 +49,7 @@ export const STAGGER = { step: 30, maxItems: 4 };
 
 /** Per-surface map. If a surface isn't here, it doesn't animate yet — ask. */
 export const SURFACES = [
-  { surface: 'Tab switch', move: 'No transition on content. Active indicator slides under the label.', duration: 'instant', easing: 'snap',
+  { surface: 'Tab switch', move: 'No transition on content. Phone bar: five equal columns, the indicator slides under the label. Top bar (≥720) and E1\'s tabs: natural-width labels, the active one carries a static underline; only the colour flips.', duration: 'instant', easing: 'snap',
     why: 'The tab bar is a destination, not a journey. A crossfade would add 200ms to the most-used gesture in the app.' },
   { surface: 'Log flow step', move: 'Step slides in from the trailing edge, previous step slides out.', duration: 'move', easing: 'snap',
     why: 'Direction tells you which way you are travelling through the flow, so Back feels like back.' },
