@@ -54,7 +54,7 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   await hydrated(page);
 
   await scene(page, "Logging a run is laid over wherever you were");
-  await page.getByRole("link", { name: "+ Add" }).click();
+  await page.getByRole("button", { name: "Add" }).click();
   await hydrated(page);
   // The launcher takes no seat of its own, and the indicator stays under
   // the second of five — the closet, where the runner came from.
@@ -70,6 +70,24 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   await expect(page.getByRole("link", { name: "Closet" })).toHaveClass(
     /text-ink/u,
   );
+
+  // The half of that a unit test cannot see. `getByRole` resolves
+  // Chromium's real accessibility tree, and the launcher's name is computed
+  // from re-nested markup — the shape that shipped "Useful [ 1 ]" in task
+  // 114 and was caught only here.
+  //
+  // Expected reading, per the Accessibility Contract's round-12 row:
+  // "Closet, link, current, 2 of 5" · "Add, button, dialog".
+  await expect(page.getByRole("link", { name: "Closet" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "Add" })).toHaveAttribute(
+    "aria-haspopup",
+    "dialog",
+  );
+  // "No tab is `page` during the flow; the flow screen announces itself."
+  await expect(page.locator('nav [aria-current="page"]')).toHaveCount(0);
 
   await scene(page, "Weather is never typed — manual is the fallback");
   await page.getByRole("link", { name: "enter it manually" }).click();

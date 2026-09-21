@@ -215,7 +215,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 
     Expected: _"Closet, link, current, 2 of 5"_ · _"Add, button, dialog"_.
 
-    Built by task 117; D-81 closes with it.
+    Built by task 117 in the PR that asked; D-81 closes with it. Verified
+    in Chromium — the launcher's accessible name is computed from re-nested
+    markup, which happy-dom cannot see.
 
 ## Answered in rounds 10–11 (imported 2026-09-18)
 

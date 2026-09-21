@@ -114,14 +114,15 @@ describe("Tab switch: the indicator slides under the label", () => {
     const { unmount } = await renderAt(<TabBar />, "/runs/new");
 
     expect(indicator()).not.toHaveStyle({ translate: "200% 0" });
-    expect(screen.getByRole("link", { name: "+ Add" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Add" })).toHaveClass(
       "text-muted",
     );
     // The seat is still in the bar — it is the indicator that stays away,
-    // not the way in.
-    expect(screen.getByRole("link", { name: "+ Add" })).toHaveAttribute(
-      "href",
-      "/runs/new",
+    // not the way in. A button rather than a link, per the Accessibility
+    // Contract: a launcher cannot be where you are.
+    expect(screen.getByRole("button", { name: "Add" })).toHaveAttribute(
+      "aria-haspopup",
+      "dialog",
     );
     unmount();
   });
@@ -214,9 +215,62 @@ describe("Tab switch: the indicator slides under the label", () => {
     // log flow, so the memory does not apply to it either.
     await renderAt(<TabBar />, "/onboarding/name");
     expect(indicator()).toBeNull();
-    expect(screen.getByRole("link", { name: "+ Add" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Add" })).toHaveClass(
       "text-muted",
     );
+  });
+
+  it("announces the held tab as the current item, never the current page", async () => {
+    // The Accessibility Contract's round-12 row. Expected reading:
+    // "Closet, link, current, 2 of 5" · "Add, button, dialog".
+    const go = await renderWalking(<TabBar />, ["/closet", "/runs/new"]);
+
+    // On its own page the tab is the current *page*, which is the
+    // router's own attribute and not ours.
+    expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await go("/runs/new");
+
+    // Held under the flow: the current item in the set. The runner is not
+    // on the closet, and saying "page" would send them to the wrong
+    // screen.
+    expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    // "No tab is `page` during the flow; the flow screen announces
+    // itself."
+    for (const link of screen.getAllByRole("link")) {
+      expect([link.textContent, link.getAttribute("aria-current")]).not.toEqual(
+        [link.textContent, "page"],
+      );
+    }
+    // And the launcher is never either.
+    expect(screen.getByRole("button", { name: "Add" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("opens the flow from the launcher, which is not a link", async () => {
+    const go = await renderWalking(<TabBar />, ["/closet", "/runs/new"]);
+    expect(screen.queryByRole("link", { name: "Add" })).toBeNull();
+
+    act(() => {
+      screen.getByRole("button", { name: "Add" }).click();
+    });
+
+    // It still navigates — the flow is three routes, and `rise` is what
+    // makes that read as a layer. `haspopup` describes what the runner
+    // gets, not which element implements it. The navigation is not awaited
+    // by the handler, so the assertion waits for the router rather than
+    // the click.
+    await waitFor(() => {
+      expect(indicator()).toHaveStyle({ translate: "100% 0" });
+    });
+    await go("/closet");
   });
 
   it("lights nothing on a cold load straight into the flow", () => {
