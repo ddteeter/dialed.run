@@ -238,6 +238,41 @@ describe("VerdictForm: the scale", () => {
     );
   });
 
+  it("says which one is chosen, in words rather than in ink", async () => {
+    // Rule 01: "remove every colour and the meaning survives." It did not.
+    // The chosen verdict was an ink inversion plus a pair of brackets, and
+    // the brackets are `aria-hidden` because they are a move rather than a
+    // word — so a reader heard five identically-named buttons and no
+    // indication of which was picked.
+    //
+    // `aria-pressed` rather than a `radiogroup`: the contract asks for
+    // five radios with arrow-key navigation, which is a behaviour change
+    // this lane may not make. A single-select toggle group is honest about
+    // what the control does today. The radiogroup is D-84.
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    const pressed = () =>
+      screen
+        // `queryAll`, because "nothing is pressed yet" is a state this
+        // asserts and `getAllByRole` throws on an empty match.
+        .queryAllByRole("button", { pressed: true })
+        .map((button) => button.textContent);
+
+    expect(pressed()).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+
+    expect(pressed()).toEqual(["[Dialed]"]);
+
+    // And it moves rather than accumulating — two pressed verdicts would
+    // be a distribution, which is a different fact from "how you called
+    // it".
+    await user.click(screen.getByRole("button", { name: "Way cold" }));
+
+    expect(pressed()).toEqual(["[Way cold]"]);
+  });
+
   it("marks the chosen one, and only that one", async () => {
     const user = userEvent.setup();
     await renderWithRouter(form());
