@@ -86,6 +86,20 @@ async function renderTable(
 
 const body = () => screen.getAllByRole("rowgroup")[1];
 const rowsOf = () => screen.getAllByRole("row").slice(1);
+const slot = (name: RegExp) => screen.getByRole("button", { name });
+
+/**
+ * A promise this test resolves when it chooses, so the in-flight state is
+ * reachable at all — a pending state visible only for a tick is one a test
+ * races. `Promise.withResolvers` is the platform's own spelling and the
+ * one eslint insists on.
+ */
+function deferred(): {
+  promise: Promise<unknown>;
+  resolve: (value: unknown) => void;
+} {
+  return Promise.withResolvers<unknown>();
+}
 
 describe("VerdictBacklog: what a row offers", () => {
   it("lays A3's three inputs flat, and is a real table while it does it", async () => {
@@ -343,6 +357,137 @@ describe("VerdictBacklog: saving", () => {
   });
 });
 
+describe("VerdictBacklog: what each state is drawn as", () => {
+  it("gives the three hues the meanings T2 gives them, by sign not by key", async () => {
+    // "Same hue meanings as T2" — pink cold, teal dialed, grey warm. Read
+    // from the *value*, so the hue stays tied to the meaning and not to
+    // how many keys the table happens to offer.
+    await renderTable([row()]);
+
+    for (const name of [/^Way cold/, /^A bit cold/]) {
+      expect(slot(name)).toHaveClass("border-hairline-2", "text-muted");
+      // The slot is square, mono and padded, in every state — "square is
+      // the tell for a statement rather than a control", and mono is the
+      // tell that the digit is a measured thing. `target` is rule 03 and
+      // lives at the site rather than in the treatment.
+      expect(slot(name)).toHaveClass(
+        "target",
+        "rounded-none",
+        "font-mono",
+        "text-mono-sm",
+      );
+    }
+
+    fireEvent.click(slot(/^Way cold/));
+    expect(slot(/^Way cold/)).toHaveClass(
+      "border-action",
+      "bg-action",
+      "text-accent-ink",
+    );
+
+    fireEvent.click(slot(/^Dialed/));
+    expect(slot(/^Dialed/)).toHaveClass("border-teal", "bg-teal");
+    // …and the one just deselected goes back to resting, so the hue is
+    // not merely added.
+    expect(slot(/^Way cold/)).toHaveClass("border-hairline-2");
+
+    fireEvent.click(slot(/^Way warm/));
+    expect(slot(/^Way warm/)).toHaveClass(
+      "border-quiet",
+      "bg-quiet",
+      "text-ground",
+    );
+  });
+
+  it("writes the conditions as one measured line", async () => {
+    // Feels-like, the condition, the wind — in that order, mono, with the
+    // brand's separator. The row and the rail render the same line, which
+    // is why it is a function rather than two pieces of markup.
+    await renderTable([row()]);
+
+    expect(screen.getAllByText("37° · Clear · WIND 9")).toHaveLength(2);
+  });
+
+  it("says how long and how far, in the viewer's own units", async () => {
+    await renderTable([row()]);
+
+    expect(screen.getByText(/40:00 · 5\.0mi/)).toBeInTheDocument();
+  });
+
+  it("draws a resting row with a hairline and no wash", async () => {
+    await renderTable([row()]);
+
+    const [only] = rowsOf();
+    expect(only).toHaveClass("row-press", "border-b", "border-hairline");
+    expect(only).not.toHaveClass("bg-tint");
+  });
+
+  it("spells out every key it claims, beside what it does", async () => {
+    // The legend is the surface's instruction manual: a table driven by
+    // keys that does not say which keys is a table nobody can drive.
+    await renderTable([row()]);
+
+    const legend = screen.getByText("Keys").parentElement;
+    expect(legend?.textContent).toContain("↑↓row");
+    expect(legend?.textContent).toContain("1–5verdict");
+    expect(legend?.textContent).toContain("↵save & next");
+    expect(legend?.textContent).toContain("Taboutfit");
+  });
+
+  it("says nothing before anything has happened, and is not waiting", async () => {
+    await renderTable([row()]);
+
+    // The live region exists from first paint — a region that appears
+    // with its first message is a region a reader never hears. It starts
+    // empty rather than with a placeholder sentence, and it is not in its
+    // waiting state.
+    const status = screen.getByRole("status");
+    expect(status).toBeInTheDocument();
+    expect(screen.getByText("Saving")).not.toBeVisible();
+    // Empty, not merely "not one of the messages": a region seeded with a
+    // sentence announces it to a reader the moment the screen mounts.
+    // The resting half is `PendingLabel`'s first span.
+    expect(status.firstElementChild?.firstElementChild).toHaveTextContent("");
+  });
+
+  it("breathes while a row is in flight, and names the row it saved", async () => {
+    // The pending half of `PendingLabel`, which nothing reached: the
+    // announcement is the receipt, and "Saved" with no day in it is a
+    // receipt for whichever row you like.
+    const pending = deferred();
+    const saveRow = vi.fn().mockReturnValue(pending.promise);
+    await renderTable([row(), bare], saveRow);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.keyDown(body() ?? document.body, { key: "3" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+
+    // **`toBeVisible`, not `textContent`.** `PendingLabel` stacks both
+    // halves in one grid cell and swaps them by `visibility`, so the
+    // region's text contains "Saving" whatever `pending` is — an
+    // assertion on the text passes against a component that never
+    // switches. Visibility is the mechanism, so visibility is what is
+    // asked.
+    await waitFor(() => {
+      expect(screen.getByText("Saving")).toBeVisible();
+    });
+    // The breathing bracket is the app's one waiting device, and it is
+    // `aria-hidden` — the word beside it is what a reader hears.
+    expect(
+      screen.getByRole("status").querySelector(".breathe"),
+    ).not.toBeNull();
+
+    pending.resolve({ entryId: "01NEW" });
+    await waitFor(() => {
+      expect(screen.getByText("Saving")).not.toBeVisible();
+    });
+    // The day is in the receipt: "Saved" with no day in it is a receipt
+    // for whichever row you like.
+    expect(screen.getByText(/^Saved /)).toBeVisible();
+    expect(screen.getByRole("status").textContent).toContain("Sep 2");
+  });
+});
+
 describe("VerdictBacklog: the rail", () => {
   it("shows the selected run's conditions, and follows the selection", async () => {
     await renderTable([row(), bare]);
@@ -388,6 +533,35 @@ describe("VerdictBacklog: nothing to clear", () => {
     expect(
       document.querySelector("[data-slot='backlog-rail']"),
     ).not.toBeNull();
+  });
+
+  it("leaves a key it does not claim to the browser", async () => {
+    // Both halves matter and neither is visible. `actionForKey` answering
+    // `undefined` has to *return* — falling through would read `.kind` off
+    // nothing and throw — and the table must not `preventDefault` a key it
+    // is not handling, or Tab stops reaching the outfit cell, which is the
+    // one navigation the contract names by key.
+    await renderTable([row(), bare]);
+
+    const tab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(body() ?? document.body, tab);
+    expect(tab.defaultPrevented).toBe(false);
+    // …and nothing moved.
+    expect(rowsOf()[0]).toHaveAttribute("aria-current", "true");
+
+    // A key it does claim is taken: `↓` must not also scroll the page.
+    const down = new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(body() ?? document.body, down);
+    expect(down.defaultPrevented).toBe(true);
+    expect(rowsOf()[1]).toHaveAttribute("aria-current", "true");
   });
 
   it("does nothing on a key with no row under it", async () => {
