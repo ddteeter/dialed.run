@@ -246,11 +246,51 @@ function isAnyMatch(
  * forward move again — pressing back out of a post detail and into the
  * verdict that made it rises the flow back up.
  *
- * An edge no row claims is `cut`, and that is the safe answer rather than a
- * guess: stillness is never wrong-looking, and the doctrine's position on
- * unearned motion is that it is tax. A new edge reaching this default is a
- * row somebody owes the table, which `test/lib/nav-types.test.ts` fails on
- * by name so it cannot go unnoticed.
+ * **`undefined` is "no row claims this edge", which is not the same as
+ * `cut`** even though both end up still. Keeping them apart is what makes
+ * the table's `cut` rows worth writing: they say the doctrine ruled on this
+ * edge and ruled for stillness, where `undefined` says nobody has looked.
+ * `test/lib/nav-types.test.ts` holds every destination the app can reach to
+ * the first answer, so a lane adding a screen is told to type its edge —
+ * the `NAV` header's ownership rule, made to fail rather than remembered.
+ * At runtime the two are treated alike, because an untyped edge must still
+ * be safe: stillness is never wrong-looking.
+ */
+export function navTypeFor(
+  from: string | undefined,
+  to: string,
+  isBack: boolean,
+): NavType | undefined {
+  // No outgoing screen at all: a first paint or a deep link. NAV types both
+  // `cut` — "There is no 'from'. Arrive, then the screen's own reveal (if
+  // any) runs." Same screen, new search params or hash: nothing moved.
+  if (from === undefined || from === to) return "cut";
+
+  const [start, end] = isBack ? [to, from] : [from, to];
+  return NAV.find(
+    (edge) => isAnyMatch(edge.from, start) && isAnyMatch(edge.to, end),
+  )?.type;
+}
+
+/**
+ * Whether this edge plays its type backwards — the row's own direction
+ * exclusive-or the runner's.
+ */
+function isReversed(from: string, to: string, isBack: boolean): boolean {
+  const [start, end] = isBack ? [to, from] : [from, to];
+  const row = NAV.find(
+    (edge) => isAnyMatch(edge.from, start) && isAnyMatch(edge.to, end),
+  );
+  return (row?.reversed ?? false) !== isBack;
+}
+
+/**
+ * The view-transition type names this edge activates, or `undefined` for no
+ * transition at all.
+ *
+ * `undefined` rather than TanStack's `false`: "no transition" is a fact
+ * about the edge, and `false` is how one framework spells it. The spelling
+ * is applied once, at the boundary below.
  */
 export function viewTransitionTypes(
   from: string | undefined,
@@ -258,25 +298,14 @@ export function viewTransitionTypes(
   isBack: boolean,
   // Mutable, because that is the shape TanStack's `ViewTransitionOptions`
   // declares and it hands the array straight to `startViewTransition`.
-  //
-  // `undefined` rather than TanStack's `false` for a cut: "no transition"
-  // is a fact about the edge, and `false` is how one framework spells it.
-  // The spelling is applied once, at the boundary below.
 ): string[] | undefined {
-  // No outgoing screen at all: a first paint or a deep link. NAV types both
-  // `cut` — "There is no 'from'. Arrive, then the screen's own reveal (if
-  // any) runs." Same screen, new search params or hash: nothing moved.
-  if (from === undefined || from === to) return undefined;
-
-  const [start, end] = isBack ? [to, from] : [from, to];
-  const row = NAV.find(
-    (edge) => isAnyMatch(edge.from, start) && isAnyMatch(edge.to, end),
-  );
-  if (row === undefined || row.type === "cut") return undefined;
-
-  return (row.reversed ?? false) === isBack
-    ? [`nav-${row.type}`]
-    : [`nav-${row.type}`, "nav-back"];
+  const type = navTypeFor(from, to, isBack);
+  if (type === undefined || type === "cut" || from === undefined) {
+    return undefined;
+  }
+  return isReversed(from, to, isBack)
+    ? [`nav-${type}`, "nav-back"]
+    : [`nav-${type}`];
 }
 
 /**
@@ -299,6 +328,10 @@ interface NavLocation {
  * file cannot be imported by any test — `routeTree.gen` pulls every route,
  * and a route pulls server functions — so a decision living there is a
  * decision no test and no mutant can reach. Here it is both.
+ *
+ * No outgoing location is a first paint, and a first paint is a cut, so it
+ * is answered before the history indexes are compared rather than by
+ * inventing an index to compare against.
  */
 export function viewTransitionTypesFor({
   fromLocation,
@@ -307,16 +340,11 @@ export function viewTransitionTypesFor({
   readonly fromLocation?: NavLocation | undefined;
   readonly toLocation: NavLocation;
 }): string[] | false {
-  return (
-    viewTransitionTypes(
-      fromLocation?.pathname,
-      toLocation.pathname,
-      // No previous entry is a first paint, which is a cut either way — so
-      // the fallback only has to avoid claiming the arrival went backwards.
-      // `0` would: it is a real index, and the first navigation of a
-      // session would read as a step back out of it.
-      toLocation.state.__TSR_index <
-        (fromLocation?.state.__TSR_index ?? -Infinity),
-    ) ?? false
-  );
+  return fromLocation === undefined
+    ? false
+    : (viewTransitionTypes(
+        fromLocation.pathname,
+        toLocation.pathname,
+        toLocation.state.__TSR_index < fromLocation.state.__TSR_index,
+      ) ?? false);
 }

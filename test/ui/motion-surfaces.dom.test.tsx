@@ -1,10 +1,12 @@
 import {
+  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -34,6 +36,44 @@ async function renderAt(element: ReactElement, path: string) {
   });
   await router.load();
   return render(<RouterProvider router={router} />);
+}
+
+/**
+ * A router the test can walk, rather than one screen per render.
+ *
+ * `renderAt` mounts the bar fresh each time, which is what a full page load
+ * does — and that is the wrong shape for anything about the bar's *memory*,
+ * which exists precisely to survive a navigation. Here the bar stays
+ * mounted and the location moves underneath it, as it does in the app.
+ */
+async function renderWalking(element: ReactElement, paths: readonly string[]) {
+  const rootRoute = createRootRoute({
+    component: () => (
+      <>
+        {element}
+        <Outlet />
+      </>
+    ),
+  });
+  const children = paths.map((path) =>
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path,
+      // The bar is what is under test; the screen under it is not.
+      component: () => <></>,
+    }),
+  );
+  const router = createRouter({
+    routeTree: rootRoute.addChildren(children),
+    history: createMemoryHistory({ initialEntries: [paths[0] ?? "/"] }),
+  });
+  await router.load();
+  render(<RouterProvider router={router} />);
+  return async (to: string) => {
+    await act(async () => {
+      await router.navigate({ to, reloadDocument: false });
+    });
+  };
 }
 
 function indicator(): HTMLElement | null {
@@ -114,6 +154,46 @@ describe("Tab switch: the indicator slides under the label", () => {
     // And it is given back the moment the flow ends somewhere real.
     await renderAt(<TabBar />, "/feed/entry/entry_1");
     expect(indicator()).toHaveStyle({ translate: "0% 0" });
+  });
+
+  it("keeps the memory current as the runner moves between tabs", async () => {
+    // The record is written from an effect that depends on which tab is
+    // lit. With a constant dependency list it fires once per mount — and
+    // the bar is mounted for the whole session on a client navigation, so
+    // the tab beneath the flow would be whichever one they opened the app
+    // on, for as long as the tab stayed open.
+    const go = await renderWalking(<TabBar />, [
+      "/closet",
+      "/feed",
+      "/runs/new",
+    ]);
+    expect(indicator()).toHaveStyle({ translate: "100% 0" });
+
+    await go("/feed");
+    expect(indicator()).toHaveStyle({ translate: "0% 0" });
+
+    await go("/runs/new");
+    // The feed, which is where they last were — not the closet they opened
+    // the app on.
+    expect(indicator()).toHaveStyle({ translate: "0% 0" });
+  });
+
+  it("does not forget the tab when the runner passes somewhere the bar does not own", async () => {
+    // Onboarding owns no seat, so there is nothing to record — and
+    // recording it anyway would write `undefined` over a perfectly good
+    // memory, leaving the flow with no tab beneath it.
+    const go = await renderWalking(<TabBar />, [
+      "/closet",
+      "/onboarding/name",
+      "/runs/new",
+    ]);
+    expect(indicator()).toHaveStyle({ translate: "100% 0" });
+
+    await go("/onboarding/name");
+    expect(indicator()).toBeNull();
+
+    await go("/runs/new");
+    expect(indicator()).toHaveStyle({ translate: "100% 0" });
   });
 
   it("marks the active label and leaves the rest muted", async () => {
@@ -261,6 +341,34 @@ describe("Log flow step: direction carries which way you are going", () => {
     expect(screen.getByText(/step 1/u)).toHaveAttribute(
       "data-flow-direction",
       "entering",
+    );
+  });
+
+  it("clears only its own record, never one a later step has claimed", () => {
+    // The two steps overlap for one commit on every route change: the new
+    // one mounts before the old one's cleanup runs. A cleanup that cleared
+    // unconditionally would wipe the record the *incoming* step had just
+    // written, and the step after it would read the flow as unentered.
+    const flow = render(step(LOG_FLOW.intake));
+    flow.rerender(
+      <>
+        {step(LOG_FLOW.intake)}
+        {step(LOG_FLOW.verdict)}
+      </>,
+    );
+    // The intake leaves; the verdict stays and its record must survive.
+    flow.rerender(<>{step(LOG_FLOW.verdict)}</>);
+
+    flow.rerender(
+      <>
+        {step(LOG_FLOW.verdict)}
+        {step(LOG_FLOW.attach)}
+      </>,
+    );
+
+    expect(screen.getByText(/step 2/u)).toHaveAttribute(
+      "data-flow-direction",
+      "back",
     );
   });
 

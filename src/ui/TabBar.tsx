@@ -188,13 +188,12 @@ export function TabBar() {
   const active = tabToLight(pathname, bar.lastOnTab);
 
   useEffect(() => {
-    // Only a real tab is worth recording. Inside the flow `active` is
-    // already the remembered value, and writing it back would keep the
-    // flow's own screens alive in the memory after the runner had left.
-    if (active !== undefined && !isLogFlowPath(pathname)) {
-      bar.lastOnTab = active;
-    }
-  }, [pathname, active]);
+    // Only a real tab is worth recording. Nothing here needs to ask whether
+    // the runner is inside the flow, and a guard that did would be
+    // unkillable: inside it `active` *is* the remembered value, so writing
+    // it back is the value it already had.
+    if (active !== undefined) bar.lastOnTab = active;
+  }, [active]);
 
   return (
     <nav

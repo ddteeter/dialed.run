@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import doctrine from "../../design/motion.js?raw";
-import navSource from "../../src/lib/nav-types.ts?raw";
 import {
   NAV_TYPES,
   isLogFlowPath,
+  navTypeFor,
   viewTransitionTypes,
   viewTransitionTypesFor,
 } from "../../src/lib/nav-types";
@@ -119,6 +119,9 @@ describe("which type an edge resolves to", () => {
     // screen. See docs/designs/117-navigation-types.md, question 1.
     expect(typeOf("/feed/verdict/e1", "/feed/entry/e1")).toBe("rise+back");
     expect(typeOf("/runs/manual", "/runs/r1")).toBe("rise+back");
+    // Uniform for the whole class, including the import screen: watching a
+    // job is a destination, not a step, so reaching it leaves the flow.
+    expect(typeOf("/runs/new", "/runs/import/i1")).toBe("rise+back");
   });
 
   it("leaves the way it came", () => {
@@ -183,12 +186,45 @@ describe("which type an edge resolves to", () => {
       ["/runs/import/i1", "/runs/r1"],
       ["/feed", "/notifications"],
       ["/closet", "/notifications"],
+      ["/feed/me", "/runs"],
       ["/runs", "/runs/strava"],
+      ["/", "/onboarding/name"],
       ["/onboarding/name", "/onboarding/calibrate"],
-      ["/onboarding/taplist", "/onboarding/done"],
+      ["/onboarding/calibrate", "/onboarding/taplist"],
+      ["/onboarding/taplist", "/onboarding/settings"],
+      ["/onboarding/settings", "/onboarding/done"],
     ] as const) {
       expect([from, to, typeOf(from, to)]).toEqual([from, to, "push"]);
     }
+  });
+
+  it("rules on stillness rather than leaving it unclaimed", () => {
+    // These rows all answer `cut`, which is also what an edge nobody has
+    // typed does at runtime — so without something holding them apart the
+    // rows are unwritable and unkillable both. `navTypeFor` keeps them
+    // apart: a row says the doctrine looked, `undefined` says it did not.
+    for (const [from, to] of [
+      ["/closet", "/feed"],
+      ["/feed", "/closet"],
+      ["/feed", "/call"],
+      ["/feed", "/feed/me"],
+      ["/feed/me", "/feed"],
+      ["/call", "/closet"],
+      ["/", "/auth/login"],
+      ["/onboarding/done", "/"],
+      ["/runs/strava", "/runs/strava-callback"],
+    ] as const) {
+      expect([from, to, navTypeFor(from, to, false)]).toEqual([
+        from,
+        to,
+        "cut",
+      ]);
+    }
+
+    // The distinction itself. A screen no row mentions is not "ruled a
+    // cut"; it is a row somebody owes the table.
+    expect(navTypeFor("/feed", "/nowhere", false)).toBeUndefined();
+    expect(navTypeFor("/nowhere", "/elsewhere", false)).toBeUndefined();
   });
 
   it("cuts the OAuth return, which is a document load", () => {
@@ -280,11 +316,12 @@ describe("isLogFlowPath", () => {
  * lane meeting a new edge assigns a type by analogy to the nearest row,
  * adds the row in the same PR, and flags it". A lane that adds a `Link` to
  * a screen nobody has typed fails here, naming the path, rather than
- * shipping a navigation that silently falls through to `cut`.
+ * shipping a navigation nobody ruled on.
  *
- * Source text rather than the resolver, deliberately: `cut` is a real
- * answer *and* the default, so calling the function cannot distinguish "the
- * table says stillness" from "the table has never heard of this".
+ * It asks the resolver rather than reading the table's source, which is
+ * only possible because `navTypeFor` keeps "typed `cut`" and "no row"
+ * apart. They behave alike at runtime and must not be confused here: a row
+ * that cannot be told from its own absence is a row no test can hold.
  */
 const sources = import.meta.glob<string>("../../src/**/*.{ts,tsx}", {
   query: "?raw",
@@ -307,9 +344,24 @@ function navigationsIn(source: string): string[] {
   return found;
 }
 
-describe("the table covers the app", () => {
-  const table = withoutComments(navSource);
+/**
+ * Somewhere a runner can plausibly be standing when they leave for
+ * anywhere: the four tabs, plus the two screens that reach the rest.
+ */
+const FROMS = [
+  "/feed",
+  "/closet",
+  "/call",
+  "/feed/me",
+  "/",
+  "/auth/login",
+  "/notifications",
+  "/runs",
+  "/runs/new",
+  "/onboarding/name",
+];
 
+describe("the table covers the app", () => {
   const destinations = new Map<string, string[]>();
   for (const [globPath, source] of Object.entries(sources)) {
     const path = repoPath(globPath);
@@ -357,9 +409,14 @@ describe("the table covers the app", () => {
   });
 
   it("types every destination a component navigates to", () => {
+    // Every screen in the app is a plausible "from", and the tabs are on
+    // every screen, so the bar is the honest one to ask from.
     const untyped: string[] = [];
     for (const [to, files] of destinations) {
-      if (table.includes(`"${to}"`)) continue;
+      const isTyped = FROMS.some(
+        (from) => navTypeFor(from, to, false) !== undefined,
+      );
+      if (isTyped) continue;
       untyped.push(`${to} (from ${files.join(", ")})`);
     }
 
