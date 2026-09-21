@@ -28,6 +28,7 @@
  * comment rather than faked here.
  */
 import { storageStateFor } from "../support/accounts";
+import { PHONE, bar, launcher } from "../support/bars";
 import { expect, scene, test } from "../support/demo";
 
 // Signed in already: the account is created by the `demo-setup` project, so
@@ -53,8 +54,17 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   await page.goto("/closet");
   await hydrated(page);
 
+  // **Phone width for this beat, deliberately.** Everything below is the
+  // five-tab footer's own behaviour — the held tab, the sliding indicator,
+  // the launcher that takes a seat without owning a path — and from
+  // BREAKPOINT.wide up there is no footer at all (Desktop Contract DS1).
+  // Pinning the width here is what stops the phone layout rotting
+  // silently now that the demo project's canvas is finally the right one
+  // for the top bar.
+  await page.setViewportSize(PHONE);
+
   await scene(page, "Logging a run is laid over wherever you were");
-  await page.getByRole("button", { name: "Add" }).click();
+  await launcher(page).click();
   await hydrated(page);
   // The launcher takes no seat of its own, and the indicator stays under
   // the second of five — the closet, where the runner came from.
@@ -67,7 +77,7 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   // Before D-80 the bar rendered no indicator at all here, so its mere
   // presence is the change; that it is the closet's is the label beside it.
   await expect(page.locator('[data-slot="tab-indicator"] span')).toBeVisible();
-  await expect(page.getByRole("link", { name: "Closet" })).toHaveClass(
+  await expect(bar(page).getByRole("link", { name: "Closet" })).toHaveClass(
     /text-ink/u,
   );
 
@@ -78,16 +88,12 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   //
   // Expected reading, per the Accessibility Contract's round-12 row:
   // "Closet, link, current, 2 of 5" · "Add, button, dialog".
-  await expect(page.getByRole("link", { name: "Closet" })).toHaveAttribute(
-    "aria-current",
-    "true",
-  );
-  await expect(page.getByRole("button", { name: "Add" })).toHaveAttribute(
-    "aria-haspopup",
-    "dialog",
-  );
+  await expect(
+    bar(page).getByRole("link", { name: "Closet" }),
+  ).toHaveAttribute("aria-current", "true");
+  await expect(launcher(page)).toHaveAttribute("aria-haspopup", "dialog");
   // "No tab is `page` during the flow; the flow screen announces itself."
-  await expect(page.locator('nav [aria-current="page"]')).toHaveCount(0);
+  await expect(bar(page).locator('[aria-current="page"]')).toHaveCount(0);
 
   await scene(page, "Weather is never typed — manual is the fallback");
   await page.getByRole("link", { name: "enter it manually" }).click();

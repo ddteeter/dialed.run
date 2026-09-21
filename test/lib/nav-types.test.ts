@@ -395,12 +395,14 @@ describe("the table covers the app", () => {
   });
 
   it("cuts between whatever TabBar's tabs actually are", () => {
-    // `NAV`'s tab row is four paths, and `ui/TabBar` holds the real list.
+    // `NAV`'s tab row is four paths, and `ui/tabs` holds the real list —
+    // it moved out of `TabBar.tsx` in task 115, when the top bar became a
+    // second reader of the same table. This test is what noticed.
     // Two lists that can disagree without anything failing are a rival
     // truth rather than a duplicate (CLAUDE.md §Derive, don't mirror), so
     // this reads the real one: add a tab, move one, and the pair is
     // checked here rather than drifting.
-    const tabBar = sources["../../src/ui/TabBar.tsx"] ?? "";
+    const tabBar = sources["../../src/ui/tabs.ts"] ?? "";
     if (isInstrumented(tabBar)) return;
 
     // Every bar entry except the launcher, which owns no path at all.

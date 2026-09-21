@@ -23,6 +23,7 @@ export async function garmentNamesByIds(
   database: DrizzleD1Database,
   itemIds: readonly string[],
 ): Promise<Map<string, string>> {
+  // fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with backlog.ts's kitsFor, but against a different table for a different key (item ids -> names, not entry ids -> item pairs); see the note above on why a shared helper is not wanted here
   const garments = await forIds(itemIds, () =>
     database
       .select({ id: wardrobeItems.id, name: wardrobeItems.name })

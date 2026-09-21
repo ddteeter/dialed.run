@@ -229,6 +229,56 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     in Chromium — the launcher's accessible name is computed from re-nested
     markup, which happy-dom cannot see.
 
+20. **DS2's four verdict slots are superseded by five.** The Desktop
+    Contract draws _"1 too cold (pink), 2 dialed (teal), 3 too warm (quiet
+    grey), 4 skip-for-now (empty)"_ — three verdicts and a skip, where A3
+    offers the full −2..+2 scale. DS2's own rail note says a verdict saved
+    here _"counts exactly like a verdict from the phone"_, and the two
+    cannot both hold: a coarse key writes into the same column and the
+    same future training signal, so "too cold" would have to mean either
+    −1 or −2 and the table would be recording something the sheet cannot.
+
+    **Owner's call, 2026-09-21: five keys, `1`–`5`, in the scale's own
+    order.** Skip needs no key — leaving a row and pressing `↓` is
+    skipping it, which is also what the empty fourth slot was drawing.
+    Built that way in task 115; `verdictKeys` derives from `verdictScale`,
+    so the table cannot drift from the sheet.
+
+    **The ask is one line.** Redraw DS2's verdict column as five slots
+    (`1`–`5`) and drop the skip slot, or rule the other way and say what
+    `1` and `3` should store. D-91.
+
+21. **Bend 2 is satisfied by construction, and its extra line would be
+    false.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
+    O5 and that O5 gains _"Photos come from your phone — we'll remind
+    you."_ The built flow is O1 (calibrate) → O3 (tap-list) → O4 (name) →
+    **P3** — and P3's own artboard note says it _"replaces O4 and O5"_. So
+    there is no O2 to skip: the closet fills from the tap-list on every
+    device, and every step already renders in the 390 panel.
+
+    The line was therefore not added, for a second reason as well: once
+    bend 1's drop zone lands, "photos come from your phone" is **wrong at
+    width**. **The ask is one line**: confirm the bend is met, or say
+    where the sentence should live now that O5 does not exist. D-92.
+
+22. **The shell carries two of three controls, one hidden at each width.**
+    Undesigned consequence shipped by task 115 under the placeholder
+    protocol — no new glyph, colour or word, but a structural decision a
+    reviewer should see rather than discover.
+
+    `[data-ground="ink"]` is an attribute and the twelve roles it
+    redefines are inherited, so the inverted top bar cannot be the same
+    element as the phone's un-inverted header. `Layout` mounts both bars
+    and CSS hides one. The bell renders twice, the launcher twice (`+ Add`
+    and `Log a run`, which round 15 ruled deliberate), and the `Main`
+    landmark twice. Exactly one of each is in the accessibility tree in a
+    browser. The **destinations** are not duplicated — one table, read by
+    both bars.
+
+    Nothing is blocked and no drawing is contradicted. Flagged because it
+    is the kind of thing that looks like a bug in a screen reader
+    transcript and is not. D-90.
+
 ## Answered in round 15 (imported 2026-09-20)
 
 Five questions from task 115, all composition, all answered the lane's

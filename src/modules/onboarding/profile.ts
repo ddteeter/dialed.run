@@ -64,6 +64,7 @@ export async function completeOnboarding(
  * account that has never reached O1 — and the common one, since the row is
  * created by O1 itself.
  */
+// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline
 export async function hasOnboarded(
   db: DrizzleD1Database,
   userId: string,

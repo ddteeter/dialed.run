@@ -63,6 +63,20 @@ export const submitVerdictInput = z.object({
   itemFlags: z.array(itemFlagInput),
 });
 
+/**
+ * One row of the verdict backlog, saved.
+ *
+ * The same two facts `attachKitInput` and `submitVerdictInput` already
+ * carry, because a row *is* those two screens laid flat — the cap on
+ * `itemIds` and the verdict's own scale are read from the same schemas
+ * rather than restated, so a change to either reaches the table.
+ */
+export const saveBacklogRowInput = z.object({
+  runId: attachKitInput.shape.runId,
+  itemIds: attachKitInput.shape.itemIds,
+  verdict: submitVerdictInput.shape.verdict,
+});
+
 export const bandCountsInput = z.object({
   bandFloorC: z.number(),
   excludeEntryId: ulidSchema.optional(),

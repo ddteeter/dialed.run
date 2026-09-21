@@ -1,7 +1,9 @@
 /**
  * Covers: A3 (log the verdict) — choosing a verdict, flagging a kit item,
  * and attaching a photo, seeing it on the entry, and re-opening the
- * verdict to find all three still there. One journey, one video.
+ * verdict to find all three still there — and DS2, the verdict backlog,
+ * which is the same act done from a table instead of six sheets. One
+ * journey, one video.
  *
  * Why this exists separately from feed.demo.spec.ts: that one is the
  * *reader's* journey (follow, browse, open, mark useful) and its Covers
@@ -207,4 +209,93 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({
     timeout: 15_000,
   });
+
+  // ---- DS2 · the same act, from a table ------------------------------
+  //
+  // "The phone version is six S1 prompts, each opening an A3 sheet — six
+  // round trips for six decisions the runner can make in twelve seconds
+  // once the conditions and their usual kit are side by side."
+  //
+  // Two imported runs with no outfit, which is what the queue is made of.
+  // Two, because one is a sheet: "only reachable when >=2 runs lack a
+  // verdict; with one, the S1 prompt opens A3 in the panel like the
+  // phone."
+  const backlogRuns = [newUlid(), newUlid()];
+  await withLocalDb(async ({ core, weather }) => {
+    const [row] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
+    if (!row) throw new Error("signup did not create a user row");
+
+    for (const [index, id] of backlogRuns.entries()) {
+      // Distinct hours at the same place: an observation is keyed by
+      // rounded lat/lng and hour bucket, so two runs in one hour would be
+      // one row and the second insert a UNIQUE violation.
+      const at = startedAt - (index + 2) * 3600;
+      await core.insert(runs).values({
+        id,
+        userId: row.id,
+        title: `Imported run ${String(index + 1)}`,
+        startedAt: at,
+        durationS: 2400,
+        distanceM: 7000,
+        source: "file",
+        indoor: false,
+        weatherStatus: "attached",
+        lat: latR,
+        lng: lngR,
+      });
+      await weather.insert(weatherObservations).values({
+        id: newUlid(),
+        runId: id,
+        latR,
+        lngR,
+        hourBucket: Math.floor(at / 3600),
+        tempC: 6,
+        feelsLikeC: 4,
+        humidity: 70,
+        windKph: 12,
+        precipMm: 0,
+        condition: "clear",
+        source: "visualcrossing",
+        fetchedAt: at,
+      });
+    }
+  });
+
+  await scene(page, "Two runs with no outfit is a queue, not six sheets");
+  await page.goto("/feed");
+  await hydrated(page);
+  await page.getByRole("link", { name: /Clear the queue/ }).click();
+  await hydrated(page);
+
+  // A row per run, oldest first, and the kit this runner wore in the
+  // nearest conditions — which is the entry judged a moment ago.
+  await expect(page.getByRole("row")).toHaveCount(3);
+  await scene(page, "Same kit, same conditions — take it and judge it");
+  await page.getByRole("button", { name: "Use" }).first().click();
+
+  // The keyboard is the reason the surface exists: 1–5 sets the verdict,
+  // Enter saves and moves on. The scale is A3's own, not a coarser one.
+  await scene(page, "1–5 sets the verdict, Enter saves — A3's own scale");
+  await page.getByRole("row").nth(1).press("3");
+  await expect(
+    page.getByRole("button", { name: /^Dialed —/ }).first(),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("row").nth(1).press("Enter");
+
+  // "Verdicts saved here count exactly like verdicts from the phone."
+  await expect(page.getByText(/1 of 2 saved/)).toBeVisible({
+    timeout: 15_000,
+  });
+  // "It leaves the list on the next visit, not on save — motion has no
+  // 'row flies away'."
+  await expect(page.getByRole("row")).toHaveCount(3);
+
+  await scene(page, "Next visit, and the row it was is gone");
+  await page.reload();
+  await hydrated(page);
+  await expect(page.getByRole("row")).toHaveCount(2);
 });

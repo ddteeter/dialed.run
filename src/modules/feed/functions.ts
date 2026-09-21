@@ -16,10 +16,16 @@ import {
   feedInput,
   itemBandStatInput,
   pickerGroupsInput,
+  saveBacklogRowInput,
   searchInput,
   submitVerdictInput,
   userIdInput,
 } from "./inputs";
+import {
+  saveBacklogRow,
+  unjudgedRunCount,
+  verdictBacklog,
+} from "./backlog";
 import { conditionsAt } from "./conditions";
 import { consensusAt } from "./consensus";
 import {
@@ -40,6 +46,7 @@ import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
 import { toggleUsefulReaction } from "./reactions";
 import { searchByDisplayName } from "./search";
+import { isPublicByDefault } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
 export const attachKitAction = createServerFn({ method: "POST" })
@@ -76,6 +83,27 @@ export const submitVerdictAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await submitVerdict({ userId, ...data });
+  });
+
+// ---- The verdict backlog (DS2) ----------------------------------------------
+
+export const verdictBacklogQuery = createServerFn({ method: "GET" }).handler(
+  async () => verdictBacklog(await requireUserId()),
+);
+
+export const unjudgedRunCountQuery = createServerFn({ method: "GET" }).handler(
+  async () => unjudgedRunCount(await requireUserId()),
+);
+
+export const saveBacklogRowAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => saveBacklogRowInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return saveBacklogRow({
+      userId,
+      ...data,
+      isPublic: await isPublicByDefault(drizzle(env.DIALED_CORE), userId),
+    });
   });
 
 export const verdictBandCountsQuery = createServerFn({ method: "GET" })

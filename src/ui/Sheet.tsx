@@ -29,6 +29,16 @@ import type { ReactNode } from "react";
  * wash stays on the phone, where the sheet really is a layer over a
  * screen.
  *
+ * **Top-aligned means bounded.** A `<dialog>` pinned to `top` with
+ * `h-fit` and nothing else will happily extend past the fold, and its
+ * content below that point cannot be reached — Playwright found this
+ * within a minute of the change, on W1's report sheet: "element is
+ * outside of the viewport", retried for thirty seconds, on a checkbox
+ * that had simply fallen off the bottom. So the panel is capped at the
+ * room it actually has (the viewport, less the bar and the same SPACE[12]
+ * gap at the foot as at the head) and scrolls inside that. Centring hid
+ * this before by shrinking the gap at both ends.
+ *
  * Horizontal centring is `inset-x-0` + `mx-auto` rather than `left-1/2
  * -translate-x-1/2`. Tailwind v4 compiles the latter into the `translate`
  * property, which is the property the travel needs; the two cannot both
@@ -69,7 +79,7 @@ export function Sheet({
       }}
       aria-label={label}
       onClose={onClose}
-      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-w-panel wide:rounded-sheet wide:backdrop:bg-ground"
+      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-6rem)] wide:max-w-panel wide:overflow-y-auto wide:rounded-sheet wide:backdrop:bg-ground"
     >
       {children}
     </dialog>

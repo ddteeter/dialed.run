@@ -1,7 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { WeatherAttribution } from "../../src/modules/weather";
+import { WeatherAttribution } from "../../src/ui";
 
 describe("WeatherAttribution (103, free-tier terms)", () => {
   it("links to Visual Crossing with the required attribution copy", () => {

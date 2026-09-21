@@ -54,3 +54,24 @@ export async function bandContextFor<TCounts>(
   const bandFloor = bandFloorFor(entry.conditions.feelsLikeC);
   return { bandFloor, bandCounts: await countsFor(bandFloor) };
 }
+
+/**
+ * Whether the verdict backlog is worth opening.
+ *
+ * DS2: *"only reachable when ≥2 runs lack a verdict; with one, the S1
+ * prompt opens A3 in the panel like the phone."* A table of one row is a
+ * table pretending to be a sheet, and the whole argument for the surface
+ * is that *"a keyboard and a table beat six sheets"* — which one sheet
+ * does not.
+ *
+ * It is here rather than in `backlog.ts` for this file's own reason: the
+ * Feed route and the backlog route both ask it, and `backlog.ts` reaches
+ * `src/env`, so importing the answer from there would pull
+ * `cloudflare:workers` into the client bundle — which only the production
+ * client build catches.
+ */
+export const BACKLOG_MINIMUM = 2;
+
+export function isBacklogWorthOpening(unjudgedCount: number): boolean {
+  return unjudgedCount >= BACKLOG_MINIMUM;
+}

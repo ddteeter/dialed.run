@@ -37,6 +37,7 @@ import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { hasReacted, usefulCount } from "./reactions";
+import { isPublicByDefault } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
 type EntryTag = (typeof entryTags)[number];
@@ -119,11 +120,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     }
   }
 
-  const [profile] = await database
-    .select({ shareDefault: userProfiles.shareDefault })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, input.userId))
-    .limit(1);
+  const isPublic = await isPublicByDefault(database, input.userId);
 
   const entryId = newUlid();
   // One batch, not two awaits: the entry and the items it contains are the
@@ -137,13 +134,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     id: entryId,
     runId: input.runId,
     userId: input.userId,
-    // Equivalent mutant on the `??`: the column itself defaults to true,
-    // so a runner with no profile row gets a public entry either way. The
-    // default is written here as well because this is where the rule lives
-    // — "public by default, with a per-user preference" — and a schema
-    // default is not a place to read a product decision from.
-    // Stryker disable next-line LogicalOperator
-    isPublic: profile?.shareDefault ?? true,
+    isPublic,
     createdAt: nowSeconds(),
   });
   if (input.itemIds.length === 0) {
