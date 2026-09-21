@@ -2,9 +2,18 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { outfitEntries, outfitEntryItems } from "../../src/db/schema-core";
+import {
+  entryTags,
+  outfitEntries,
+  outfitEntryItems,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { saveBacklogRow, verdictBacklog } from "../../src/modules/feed/backlog";
+import {
+  saveBacklogRow,
+  unjudgedRunCount,
+  verdictBacklog,
+} from "../../src/modules/feed/backlog";
 import {
   makeEntry,
   makeItem,
@@ -123,6 +132,32 @@ describe("which runs are in the backlog", () => {
   });
 });
 
+describe("how many are waiting", () => {
+  it("counts what the table would show, for the feed's link", async () => {
+    // The feed draws "Clear the queue ›" from a count rather than from
+    // the rows: the link needs one number and the table needs everything,
+    // and running the full assembly to decide whether to draw a link
+    // would cost three reads and a weather round trip on every feed load.
+    const userId = await makeUser();
+    expect(await unjudgedRunCount(userId)).toBe(0);
+
+    await runAt(userId, NOW - 2 * DAY, 3);
+    await runAt(userId, NOW - DAY, 5);
+    expect(await unjudgedRunCount(userId)).toBe(2);
+  });
+
+  it("stops counting a run the moment it has an outfit", async () => {
+    // The same rule the table follows, so the link cannot promise a row
+    // the table will not show.
+    const userId = await makeUser();
+    const attached = await runAt(userId, NOW - 2 * DAY, 3);
+    await runAt(userId, NOW - DAY, 5);
+    await makeEntry({ userId, runId: attached });
+
+    expect(await unjudgedRunCount(userId)).toBe(1);
+  });
+});
+
 describe("what the outfit cell is offered", () => {
   it("suggests the kit worn in the nearest conditions, with its names", async () => {
     const userId = await makeUser();
@@ -154,6 +189,37 @@ describe("what the outfit cell is offered", () => {
     // The day the kit was worn, so the cell can say "Same as …?" rather
     // than "a previous run".
     expect(only?.suggestion?.wornAt).toBe(NOW - 10 * DAY);
+  });
+
+  it("keeps a deleted garment's id but drops its chip", async () => {
+    // A garment the runner has since deleted leaves its id on the entry
+    // with no row to name it. The chip is dropped rather than drawn
+    // empty; the id stays, so "Use" still attaches what was actually
+    // worn. Both halves matter, and neither is visible from the other.
+    const userId = await makeUser();
+    const kept = await makeItem({ userId, name: "Janji half-zip" });
+    const gone = await makeItem({ userId, name: "Deleted tee" });
+    const priorRun = await runAt(userId, NOW - 10 * DAY, 4);
+    await makeEntry({
+      userId,
+      runId: priorRun,
+      itemIds: [kept, gone],
+      createdAt: NOW - 10 * DAY,
+    });
+    await coreDb().delete(wardrobeItems).where(eq(wardrobeItems.id, gone));
+
+    await runAt(userId, NOW - DAY, 3);
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows[0]?.suggestion?.itemNames).toStrictEqual(["Janji half-zip"]);
+    // As a set: the read has no ORDER BY and `outfit_entry_items` has no
+    // position column, so the order the ids come back in is SQLite's
+    // business. What matters is that the deleted one is still there.
+    expect(
+      [...(rows[0]?.suggestion?.itemIds ?? [])].toSorted((a, b) =>
+        a.localeCompare(b),
+      ),
+    ).toStrictEqual([kept, gone].toSorted((a, b) => a.localeCompare(b)));
   });
 
   it("offers nothing when the only prior entry had an empty kit", async () => {
@@ -237,6 +303,38 @@ describe("saving a row", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.isPublic).toBe(false);
+  });
+
+  it("saves the verdict and nothing else — no tags, no per-item flags", async () => {
+    // "The table is the three inputs A3 leads with. Tags and per-item
+    // flags stay on the sheet." A row that quietly wrote either would be
+    // the table inventing signal the runner never gave it.
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId });
+    const runId = await runAt(userId, NOW - DAY, 3);
+
+    const { entryId } = await saveBacklogRow({
+      userId,
+      runId,
+      itemIds: [halfZip],
+      verdict: 1,
+      isPublic: true,
+    });
+
+    const tags = await coreDb()
+      .select()
+      .from(entryTags)
+      .where(eq(entryTags.entryId, entryId));
+    expect(tags).toStrictEqual([]);
+
+    const items = await coreDb()
+      .select()
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, entryId));
+    expect(items).toHaveLength(1);
+    // SQL NULL, which is the absence of a per-item signal rather than a
+    // signal of "none".
+    expect(items[0]?.flag).toBeNull();
   });
 
   it("takes the run out of the backlog", async () => {

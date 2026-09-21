@@ -596,6 +596,11 @@
       "key": "src/modules/feed/garment-names.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with backlog.ts's kitsFor, but against a different table for a different key (item ids -> names, not entry ids -> item pairs); see the note above on why a shared helper is not wanted here",
       "reason": "Pair B, both sides. See the matching grant on `modules/feed/backlog.ts`; this file's header has argued the case since it was written. Owner's call, 2026-09-21 (task 115).",
       "count": 1
+    },
+    {
+      "key": "src/modules/feed/backlog.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
+      "reason": "Equivalent mutant, proof at the site: `saveBacklogRow` passes `itemFlags: []` to `submitVerdict`, which filters every flag against the entry's own item ids before building its batch \u2014 so Stryker's `[\"Stryker was here\"]` has no `.itemId`, matches nothing, and produces a byte-identical batch. Removing it rather than granting it was tried: making the parameter optional moved the same literal into `entries.ts`, where it survived for the same reason. Its neighbour `tags: []` IS observable (a bogus tag inserts an `entry_tags` row) and is tested, which is why only one of the two is suppressed. Owner's call, 2026-09-21 (task 115).",
+      "count": 1
     }
   ]
 }

@@ -215,8 +215,15 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
     unjudgedRuns(userId),
     isPublicByDefault(database, userId),
   ]);
-  if (unjudged.length === 0) return { rows: [], isPublicByDefault: isPublic };
 
+  // **No early return for an empty backlog**, deliberately. One would
+  // save `ownHistory` a query — the two weather reads already guard
+  // themselves — but it cannot change the answer, because an empty list
+  // produces no rows through every step below. That is an equivalent
+  // mutant by construction, and the guard is not worth a suppression for
+  // one indexed read on a page nobody reaches empty: the queue is only
+  // linked from the feed when `isBacklogWorthOpening` says two or more.
+  //
   // Conditions for the rows, and conditions for the history the
   // suggestion is drawn from. Two batched reads against DIALED_WEATHER,
   // assembled in code because it is a separate database from DIALED_CORE
@@ -239,8 +246,13 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
     };
   });
 
+  // `best ?? []` rather than a ternary with an empty-array arm: flatMap
+  // drops the empty and keeps the match, and — unlike the ternary — every
+  // mutant of it is observable. Emptying the arm strands a row's
+  // suggestion; replacing it puts a non-match into the id list and the
+  // `.map` below throws on it.
   const kits = await kitsFor(
-    matched.flatMap(({ best }) => (best === undefined ? [] : [best.entry.id])),
+    matched.flatMap(({ best }) => best ?? []).map((best) => best.entry.id),
   );
 
   return {
@@ -324,7 +336,17 @@ export async function saveBacklogRow(input: {
     // The row has neither, and DS2 draws neither: the table is the three
     // inputs A3 leads with. Tags and per-item flags stay on the sheet,
     // which is still one Tab away through the outfit cell.
+    //
+    // `tags: []` is observable and tested — a bogus tag would insert an
+    // `entry_tags` row. `itemFlags: []` is **not**, and the proof is in
+    // `submitVerdict`: it filters every flag against the entry's own item
+    // ids, so a flag for anything else matches no row and the batch is
+    // identical. Making it optional only moved the same literal into
+    // `entries.ts`, where it survived for the same reason; passing it
+    // here keeps the two arguments symmetrical and the exclusion in one
+    // place.
     tags: [],
+    // Stryker disable next-line ArrayDeclaration
     itemFlags: [],
   });
   return { entryId };

@@ -153,6 +153,35 @@ describe("GarmentDetail: the photo well at width", () => {
     expect(line).toHaveClass("hidden", "wide:block");
   });
 
+  it("marks the well while a file is over it, and nothing else moves", async () => {
+    // "Copy and one state change; **the layout is untouched**." The
+    // border is the state change — the box is the same dashed field
+    // either way, and a transparent resting border is what stops the well
+    // shifting 1px when a file arrives over it.
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail}
+        retire={vi.fn()}
+        unretire={vi.fn()}
+        remove={vi.fn()}
+        uploadPhoto={vi.fn()}
+      />,
+    );
+
+    const well = screen
+      .getByText("Drop a photo, or shoot it on your phone later.")
+      .closest("label");
+    expect(well).toHaveClass("target", "border-dashed", "border-transparent");
+    expect(well).not.toHaveClass("border-ink");
+
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array([1])], "kit.png"));
+    fireEvent.dragOver(well ?? document.body, { dataTransfer: transfer });
+
+    expect(well).toHaveClass("border-ink", "border-dashed");
+    expect(well).not.toHaveClass("border-transparent");
+  });
+
   it("takes a dropped file down the same path as a chosen one", async () => {
     // "Face-blur runs the same WASM path on the dropped file — do not
     // fork it." The upload callback is the proof: one handler, reached
