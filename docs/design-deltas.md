@@ -198,6 +198,25 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     D-80 is closed. The two open questions above are untouched by that
     ruling and still stand.
 
+19. **The tab held beneath the log flow is lit, and silent.**
+    **ANSWERED 2026-09-20**, in the Accessibility Contract (a new row under
+    Tab bar) and mirrored in `motion.js`'s NAV launcher row.
+
+    The held tab is `aria-current="true"` — the current item in the set,
+    not the current page, because the runner is not on it. No tab is
+    `"page"` during the flow; the flow screen announces itself. The bar's
+    own name does not change and there are no new words.
+
+    **It forced a behaviour clause the bar lane has to pick up**: `+ Add`
+    is a `<button aria-haspopup="dialog">`, never a link and never
+    current — a launcher cannot be where you are. So the row above it,
+    "five `<a aria-current="page">`", now reads as four links and one
+    button.
+
+    Expected: _"Closet, link, current, 2 of 5"_ · _"Add, button, dialog"_.
+
+    Built by task 117; D-81 closes with it.
+
 ## Answered in rounds 10–11 (imported 2026-09-18)
 
 Both rounds came back together and cleared **four queue items, the P2.5

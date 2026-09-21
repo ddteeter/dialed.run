@@ -102,7 +102,7 @@ export const NAV_TYPES = {
 /** Every shipped edge, at the three widths. Column = 390 / 620 / 1040. See the ownership rule above. */
 export const NAV = [
   { edge: 'Tab bar → Feed / Closet / Call / You', at: ['cut', 'cut', 'cut'], note: 'Indicator slides (Tab switch). Content cuts. Call as a tab is a cut; its reveal runs on arrival like any first paint.' },
-  { edge: '+ Add (bar launcher) → Log a run (A1…Q)', at: ['rise', 'panel', 'panel'], note: '+ Add is a launcher, not a tab: the indicator never travels to it, and the tab beneath stays selected. Steps inside: Log flow step. Supersedes the indicator behaviour in #84.' },
+  { edge: '+ Add (bar launcher) → Log a run (A1…Q)', at: ['rise', 'panel', 'panel'], note: '+ Add is a launcher, not a tab: a button (aria-haspopup="dialog"), never a link, never current. The indicator never travels to it, and the tab beneath stays selected — visually, and as aria-current="true" (item, not page; Accessibility Contract). Steps inside: Log flow step. Supersedes the indicator behaviour in #84.' },
   { edge: 'Log flow end (P3) → where you were', at: ['rise', 'panel', 'panel'], note: 'The drop half of rise / the close half of panel. The screen beneath was there all along.' },
   { edge: 'First load (/) → Sign in', at: ['cut', 'cut', 'cut'], note: 'First paint.' },
   { edge: 'Sign in ↔ Sign up', at: ['swap', 'swap', 'swap'], note: 'Siblings, no hierarchy — neither is “forward”.' },
