@@ -270,14 +270,18 @@ function rowFor(from: string, to: string, isBack: boolean): Edge | undefined {
 }
 
 export function navTypeFor(
-  from: string | undefined,
+  // A real screen, never `undefined`. "There is no outgoing screen" is a
+  // first paint, and that is `viewTransitionTypes`'s to answer — it guards
+  // the case itself rather than delegating, so a `from === undefined` arm
+  // here was a branch nothing could reach. The mutation gate is what said
+  // so: the arm survived every test because no caller could take it.
+  from: string,
   to: string,
   isBack: boolean,
 ): NavType | undefined {
-  // No outgoing screen at all: a first paint or a deep link. NAV types both
-  // `cut` — "There is no 'from'. Arrive, then the screen's own reveal (if
-  // any) runs." Same screen, new search params or hash: nothing moved.
-  if (from === undefined || from === to) return "cut";
+  // Same screen, new search params or hash: nothing moved, and that is a
+  // ruling rather than an absence — hence `cut` and not `undefined`.
+  if (from === to) return "cut";
   return rowFor(from, to, isBack)?.type;
 }
 
