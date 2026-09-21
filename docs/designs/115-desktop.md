@@ -40,16 +40,23 @@ test pins that the two render the same four in the same order.
 - `src/ui/Sheet.tsx` — at width the sheet becomes the panel: top-aligned
   SPACE[12] under the bar, 390, `rounded-sheet`, and **no scrim**
   (`wide:backdrop:bg-ground`) — DS5's "modals with scrims".
-- `src/modules/runs/backlog.ts` + `components/VerdictBacklog.tsx` +
-  `src/routes/runs/backlog.tsx` — DS2. Rows are read in one pass (one history
-  scan shared across rows, not one per row); a row saves through the existing
-  `attachKit` + `submitVerdict`, so it is A3 laid flat rather than a second
-  form. Keyboard: `↑`/`↓`, `1`–`4`, `Enter`, `Tab` into the outfit cell.
-  Reached from "Clear the queue ›" on Feed and from the S1 verdict prompt.
+- `src/modules/feed/backlog.ts` + `runs/components/VerdictBacklog.tsx` +
+  `src/routes/runs/backlog.tsx` — DS2. The reads live in `feed` because
+  outfit entries and the prefill are its; the table is `runs`, which is the
+  packet's ownership, and the two meet at the barrel (type-only exports, so
+  nothing server-side crosses into a client bundle). One history scan for
+  the whole table, not one per row. A row saves through the existing
+  `attachKit` + `submitVerdict`. Keyboard: `↑`/`↓`, **`1`–`5`**, `Enter`,
+  `Tab` into the outfit cell. Reached from "Clear the queue ›" on Feed,
+  which `isBacklogWorthOpening` gates at two.
 - `ClosetGrid` — filter rail left of the grid at `desk:` only.
 
-**Bend 1** is copy plus a `drop` handler on the two file wells (`UploadForm`,
-the garment photo) — the same input, the same WASM blur path, no fork.
+**Bend 1** is `ui/use-file-drop.ts` on the two wells (`UploadForm`, the
+garment photo): a dropped file and a chosen one go to the same callback,
+so the blur and the constraint checks are reached identically. A1's label
+had promised a drop since round 13 and nothing listened — the input is
+`sr-only`, so a file dropped on the box it draws opened in the browser and
+took the runner out of the flow.
 **Bend 2 is already satisfied and its extra line is not warranted**: the built
 onboarding is O1 → O3 → O4 → P3, all four at `width="panel"`. There is no O2
 to skip, and once bend 1 lands "photos come from your phone" is false at
@@ -66,8 +73,16 @@ contract describes was never built, so nothing collapses into two headings.
   negation, per `server-functions-are-glue`).
 - New bindings/queues/crons: **none**
 - Screens: DS1, DS2. Every other surface is DS3's panel or reflow rule and
-  adds no screen. `docs/design-deltas.md` item 18 closes (round 15); three
-  new open items — the O5 line, Feed's desk rail, the two duplicated controls.
+  adds no screen. `docs/design-deltas.md` item 18 **closes** (round 15) and
+  items 20–22 open: DS2's four verdict slots superseded by five, bend 2's
+  extra line, and the duplicated controls. `docs/deferred.md` gains D-89–D-92.
+- **Module boundary moved**: `WeatherAttribution` from `modules/weather` to
+  `ui/`, recorded in `docs/architecture.md`. Not a preference — reaching it
+  through the weather barrel pulled `cloudflare:workers` into the client
+  bundle and broke `npm run build`.
+- One T1 role added: `--accent-ink`, which is the sentence T1 already writes
+  in prose ("text on an accent is always ink", the fixed colour) made
+  addressable, because inside the bar `--ink` is chalk.
 
 ## Test plan
 
@@ -82,13 +97,20 @@ contract describes was never built, so nothing collapses into two headings.
 - `test/ui/page.dom.test.tsx` (extended) — panel centres, column does not.
 - `test/ui/sheet.dom.test.tsx` (extended) — the panel's top alignment and the
   absent scrim.
-- `test/runs/backlog.test.ts` (integration, worker) — only runs with no entry,
+- `test/feed/backlog.test.ts` (integration, worker) — only runs with no entry,
   oldest first, the suggestion, and a save that lands one entry and one
   verdict.
-- `test/runs/verdict-backlog.dom.test.tsx` (unit) — every key, the row that
-  has no suggestion, and the saved row that stays put.
-- `test/architecture/measures.test.ts` (unit) — no `wide:`/`desk:` variant
-  outside the two breakpoints, and no width pinned outside `MEASURE`.
+- `test/modules/verdict-backlog.dom.test.tsx` (unit) — every key, the row that
+  has no suggestion, the two ways Enter is early, and the saved row that stays
+  put. `test/runs/backlog-keys.test.ts` (unit) for the key map, including the
+  keys the table must *not* claim.
+- `test/ui/use-file-drop.dom.test.tsx` (unit) — bend 1's two silent failures:
+  the missing `preventDefault` that stops the drop firing at all, and a drag
+  carrying no file.
+- `test/architecture/measures.test.ts` (unit) — DS4 asked of every class
+  string: no breakpoint but the two, and no width pinned outside `MEASURE`.
+  The first half is not pedantry — 113 cleared `--breakpoint-*`, so an `sm:`
+  compiles to nothing at all and fails silently.
 - e2e: desktop-width assertions added to the **existing** feature specs
   (`e2e/feed`, `e2e/closet`, `e2e/verdict`, `e2e/run-logging`), plus
   phone-width coverage so the mobile layout cannot rot. Demo re-recorded at
@@ -96,8 +118,12 @@ contract describes was never built, so nothing collapses into two headings.
 
 ## Open questions
 
-None outstanding — round 15 answered all five. Two things I am proceeding on
-and flagging: the bell, the launcher and the `<nav>` label exist twice in the
-markup (one hidden at each width, which no single-DOM arrangement avoids once
-the bar must invert), and Feed's desk rail is deferred to Epic 200 with the
-owner's and design's agreement rather than part-built.
+None outstanding. Round 15 answered all five; the verdict scale was a sixth,
+raised while building DS2 and answered by the owner (five keys, 1–5) with the
+drawing sent back to design as item 20. Three things to know rather than
+decide: the bell, the launcher and the `Main` landmark exist twice in the
+markup (one hidden at each width — no single-DOM arrangement avoids it once
+the bar must invert, D-90); Feed's desk rail is deferred to Epic 200 rather
+than part-built (D-89); and bend 2 turned out to be satisfied by construction,
+because the built onboarding has no O2 to skip and no O5 to add a line to
+(D-92).

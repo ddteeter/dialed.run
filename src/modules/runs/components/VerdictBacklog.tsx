@@ -233,6 +233,7 @@ export function VerdictBacklog({
   );
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [saving, setSaving] = useState<string | undefined>();
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   const [said, setSaid] = useState("");
 
   function use(row: BacklogRow, kit: BacklogSuggestion): void {
@@ -256,6 +257,10 @@ export function VerdictBacklog({
       setSaid("Choose how it felt, 1 to 5.");
       return;
     }
+    // A retry starts clean: leaving last attempt's mark on a row that is
+    // being saved again would say "this failed" about something still in
+    // flight.
+    setFailed(without(failed, row.runId));
     setSaving(row.runId);
     try {
       await saveRow({
@@ -265,9 +270,17 @@ export function VerdictBacklog({
       setSaid(`Saved ${dayLabel(row.startedAt)}.`);
       setSelected(rowAfterMove(selected, 1, rows.length));
     } catch {
-      // Law 5, and the Form Contract's own rule: the control that did the
-      // thing says what happened, in its own place. The row stays exactly
-      // as the runner left it, so Enter tries again.
+      // Law 5, and round 4's §AF: "the control that did the thing says
+      // what happened, **in its own place**". So the failure is marked on
+      // the row as well as announced — a table where the only sign is a
+      // line at the foot leaves a runner clearing a queue with no idea
+      // which of fifty rows did not land. The row keeps its kit and its
+      // verdict, so Enter tries again.
+      //
+      // Nothing animates: the failure path is static (task 114's
+      // `failure-path-is-static` test says so for the form components,
+      // and the rule is the doctrine's, not that file's).
+      setFailed(new Set(failed).add(row.runId));
       setSaid(`Could not save ${dayLabel(row.startedAt)}. Try again.`);
     } finally {
       setSaving(undefined);
@@ -332,12 +345,11 @@ export function VerdictBacklog({
                 tabIndex={index === selected ? 0 : -1}
                 aria-current={index === selected ? "true" : undefined}
                 data-saved={saved.has(row.runId) ? "true" : undefined}
+                data-failed={failed.has(row.runId) ? "true" : undefined}
                 onFocus={() => {
                   setSelected(index);
                 }}
-                className={
-                  saved.has(row.runId) ? ROW_SAVED_CLASS : ROW_CLASS
-                }
+                className={rowClass(saved.has(row.runId), failed.has(row.runId))}
               >
                 <td className="px-2 py-2">
                   <span className="block text-body font-semibold">
@@ -429,6 +441,28 @@ export function VerdictBacklog({
 
 const ROW_CLASS = "row-press border-b border-hairline";
 const ROW_SAVED_CLASS = "row-press border-b border-hairline bg-tint";
+/**
+ * The failure mark is **border weight, not hue** — the Form Contract's own
+ * rule, one layer out from a field: "pink is action, never failure", and a
+ * field error is marked by border weight and a hi-viz band. A row cannot
+ * carry a band, so it carries the weight.
+ */
+const ROW_FAILED_CLASS = "row-press border-b-2 border-ink";
+
+function rowClass(isSaved: boolean, hasFailed: boolean): string {
+  if (hasFailed) return ROW_FAILED_CLASS;
+  return isSaved ? ROW_SAVED_CLASS : ROW_CLASS;
+}
+
+/**
+ * `set` without `key`. A `Set` has no non-mutating delete, and mutating
+ * the one in state would not re-render.
+ */
+function without(set: ReadonlySet<string>, key: string): ReadonlySet<string> {
+  const next = new Set(set);
+  next.delete(key);
+  return next;
+}
 
 const LEGEND: readonly { keys: string; does: string }[] = [
   { keys: "↑↓", does: "row" },

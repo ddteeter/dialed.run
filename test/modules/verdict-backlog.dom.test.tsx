@@ -295,6 +295,35 @@ describe("VerdictBacklog: saving", () => {
     expect(
       screen.getByRole("button", { name: /^A bit warm —/ }),
     ).toHaveAttribute("aria-pressed", "true");
+    // Round 4's §AF: the control that did the thing says what happened
+    // **in its own place**. A line at the foot of a fifty-row table does
+    // not say which row. Marked by border weight, never by hue — "pink is
+    // action, never failure".
+    expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
+    expect(rowsOf()[0]).toHaveClass("border-b-2", "border-ink");
+  });
+
+  it("clears the failure mark when the row is tried again", async () => {
+    // Leaving the mark on a row that is being saved again would say "this
+    // failed" about something still in flight.
+    const saveRow = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue({ entryId: "01NEW" });
+    await renderTable([row()], saveRow);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.keyDown(body() ?? document.body, { key: "3" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    await waitFor(() => {
+      expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
+    });
+
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    await waitFor(() => {
+      expect(rowsOf()[0]).toHaveAttribute("data-saved", "true");
+    });
+    expect(rowsOf()[0]).not.toHaveAttribute("data-failed");
   });
 
   it("clicks the slot as well as typing it", async () => {
