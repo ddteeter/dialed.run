@@ -479,6 +479,46 @@ describe("OtherProfile", () => {
     expect(unfollow).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [false, "Follow", "Following"],
+    [true, "Following", "Unfollowing"],
+  ])(
+    "swaps the label for its own pending verb (following: %s)",
+    async (isFollowing, rest, verb) => {
+      // Design's round-13 table, and the reason both halves are asserted:
+      // "Follow · Following" at rest becomes "[ Following ] ·
+      // [ Unfollowing ]" in flight, so the two directions do **not** share
+      // a verb — and "Following" is the rest label of one and the pending
+      // verb of the other. A test that checked only one direction would
+      // pass on a button that said "Following" whatever it was doing.
+      const user = userEvent.setup();
+      const pending = Promise.withResolvers<undefined>();
+      await renderWithRouter(
+        <OtherProfile
+          profile={otherProfile()}
+          isFollowing={isFollowing}
+          follow={() => pending.promise}
+          unfollow={() => pending.promise}
+        />,
+      );
+      const button = screen.getByRole("button", { name: rest });
+
+      // At rest the verb is in the DOM and hidden — that is what keeps the
+      // button from resizing mid-press — so visibility is the assertion,
+      // not presence.
+      expect(screen.getByText(verb)).not.toBeVisible();
+
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText(verb)).toBeVisible();
+      });
+      expect(screen.getByText(rest)).not.toBeVisible();
+
+      pending.resolve(undefined);
+    },
+  );
+
   it("locks the button while it works", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<undefined>();
