@@ -279,6 +279,31 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     is the kind of thing that looks like a bug in a screen reader
     transcript and is not. D-90.
 
+23. **The landing page wears the product shell, and now wears the top
+    bar.** DS5 reserves this screen — _"no footer, no 'about', no pricing
+    in the product bar. The logged-out landing page is a separate page
+    with a separate brief"_ — so it is outside the Desktop Contract and
+    task 115 did not redesign it. But it does wear `Layout`, which means a
+    signed-out visitor has always seen the phone's tab bar there, and from
+    720 up now sees the full top bar: four destinations they cannot reach,
+    a search glyph, a bell and "Log a run".
+
+    **The concrete defect is the wordmark, twice.** The page opens with
+    the bracketed lockup as its hero, and the bar adds a second one a few
+    pixels above it. On the phone there is only the hero, so this is new
+    at width and nowhere else.
+
+    It is not obvious that the shell should simply go: onboarding's "Done
+    for now" links here, so a runner who finishes lands on `/`, and the
+    bar is their way back into the app. `SessionActions` offers a signed-in
+    visitor their email and a sign-out and nothing else.
+
+    **The ask is the brief DS5 already promises.** What does this page look
+    like at 720 and 1040 — does it keep the product bar, lose it, or get a
+    marketing bar of its own; and if it loses it, what does a signed-in
+    visitor use to get back in? Owner's call to send it rather than guess
+    (2026-09-21). D-93.
+
 ## Answered in round 15 (imported 2026-09-20)
 
 Five questions from task 115, all composition, all answered the lane's
