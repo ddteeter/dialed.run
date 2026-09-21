@@ -14,7 +14,7 @@
  * FormData, and the only honest way to know that works is to watch a real
  * file go up and come back as a rendered image.
  */
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import {
   outfitEntries,
@@ -247,21 +247,35 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
         lat: latR,
         lng: lngR,
       });
-      await weather.insert(weatherObservations).values({
-        id: newUlid(),
-        runId: id,
-        latR,
-        lngR,
-        hourBucket: Math.floor(at / 3600),
-        tempC: 6,
-        feelsLikeC: 4,
-        humidity: 70,
-        windKph: 12,
-        precipMm: 0,
-        condition: "clear",
-        source: "visualcrossing",
-        fetchedAt: at,
-      });
+      // Upsert, like the seed above and for the same reason: an
+      // observation is keyed by rounded place and hour, so a second run
+      // of this spec on the same local database would collide rather
+      // than re-seed.
+      await weather
+        .insert(weatherObservations)
+        .values({
+          id: newUlid(),
+          runId: id,
+          latR,
+          lngR,
+          hourBucket: Math.floor(at / 3600),
+          tempC: 6,
+          feelsLikeC: 4,
+          humidity: 70,
+          windKph: 12,
+          precipMm: 0,
+          condition: "clear",
+          source: "visualcrossing",
+          fetchedAt: at,
+        })
+        .onConflictDoUpdate({
+          target: [
+            weatherObservations.latR,
+            weatherObservations.lngR,
+            weatherObservations.hourBucket,
+          ],
+          set: { runId: id, tempC: 6, feelsLikeC: 4 },
+        });
     }
   });
 
@@ -271,9 +285,21 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await page.getByRole("link", { name: /Clear the queue/ }).click();
   await hydrated(page);
 
-  // A row per run, oldest first, and the kit this runner wore in the
-  // nearest conditions — which is the entry judged a moment ago.
-  await expect(page.getByRole("row")).toHaveCount(3);
+  // **Counts are relative, not absolute.** This spec seeds and does not
+  // reset the local database, so a developer running it twice has the
+  // previous run's rows still waiting. What is true either way is that
+  // two more arrived, one of them saves, and the saved one is gone next
+  // visit.
+  //
+  // The wait is not decoration: `count()` does not auto-wait, so reading
+  // it straight after a navigation reads zero rows on a table that has
+  // simply not rendered yet.
+  await expect(
+    page.getByRole("heading", { name: "Needs a verdict" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("row").nth(2)).toBeVisible();
+  const rowsBefore = await page.getByRole("row").count();
+  expect(rowsBefore).toBeGreaterThanOrEqual(3);
   await scene(page, "Same kit, same conditions — take it and judge it");
   await page.getByRole("button", { name: "Use" }).first().click();
 
@@ -287,15 +313,24 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await page.getByRole("row").nth(1).press("Enter");
 
   // "Verdicts saved here count exactly like verdicts from the phone."
-  await expect(page.getByText(/1 of 2 saved/)).toBeVisible({
+  await expect(page.getByText(/1 of \d+ saved/)).toBeVisible({
     timeout: 15_000,
   });
   // "It leaves the list on the next visit, not on save — motion has no
   // 'row flies away'."
-  await expect(page.getByRole("row")).toHaveCount(3);
+  await expect(page.getByRole("row")).toHaveCount(rowsBefore);
 
   await scene(page, "Next visit, and the row it was is gone");
   await page.reload();
   await hydrated(page);
-  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(page.getByRole("row")).toHaveCount(rowsBefore - 1);
+
+  // The seed is this spec's to clear. Without it the backlog grows by two
+  // every local run, and the next spec inherits a queue it did not make.
+  await withLocalDb(async ({ core }) => {
+    await core
+      .delete(outfitEntries)
+      .where(inArray(outfitEntries.runId, backlogRuns));
+    await core.delete(runs).where(inArray(runs.id, backlogRuns));
+  });
 });

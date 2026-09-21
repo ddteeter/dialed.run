@@ -1,7 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { FlowStep, inFlight, LOG_FLOW, PendingLabel } from "../../../ui";
+import {
+  FlowStep,
+  inFlight,
+  LOG_FLOW,
+  PendingLabel,
+  useFileDrop,
+} from "../../../ui";
 
 /**
  * The upload action, handed in rather than imported.
@@ -47,6 +53,10 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
     }
   }
 
+  const drop = useFileDrop((files) => {
+    void onChange(files);
+  });
+
   return (
     <FlowStep step={LOG_FLOW.intake}>
       <div className="flex flex-col gap-3">
@@ -55,7 +65,20 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
             tabbing to this control used to show nothing at all, which is
             rule 06's "never removed" failing by construction rather than
             by an `outline-none`. */}
-        <label className="target flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed border-hairline-2 bg-panel px-6 py-10 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
+        {/* The drop is real now (Desktop Contract bend 1). This label has
+            said "Drop a …" since design's round-13 table named it, and
+            nothing listened: the input is `sr-only`, so a file dropped on
+            the dashed box landed on the document and the browser opened
+            it — leaving the flow. `onFiles` is the same callback the
+            `onChange` below uses, so a dropped file and a chosen one take
+            one path.
+
+            The border is the one state change: the well marks itself while
+            a file is over it, and nothing moves. */}
+        <label
+          {...drop.handlers}
+          className={`target flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed bg-panel px-6 py-10 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink ${drop.isOver ? "border-ink" : "border-hairline-2"}`}
+        >
           {/* Design's round-13 table names this control's rest label
               "Choose a file" and its in-flight label "[ Reading ]". The
               drawn copy is kept as the rest label, because it carries the
