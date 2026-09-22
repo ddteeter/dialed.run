@@ -46,7 +46,6 @@ import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
 import { toggleUsefulReaction } from "./reactions";
 import { searchByDisplayName } from "./search";
-import { isPublicByDefault } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
 export const attachKitAction = createServerFn({ method: "POST" })
@@ -99,11 +98,7 @@ export const saveBacklogRowAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => saveBacklogRowInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return saveBacklogRow({
-      userId,
-      ...data,
-      isPublic: await isPublicByDefault(drizzle(env.DIALED_CORE), userId),
-    });
+    return saveBacklogRow({ userId, ...data });
   });
 
 export const verdictBandCountsQuery = createServerFn({ method: "GET" })

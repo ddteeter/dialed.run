@@ -59,6 +59,18 @@ export interface AttachKitInput {
   userId: string;
   runId: string;
   itemIds: readonly string[];
+  /**
+   * The verdict to stamp as the entry is created, for a caller that has
+   * the kit and the judgement at the same moment.
+   *
+   * The phone flow omits it: it asks for them on two screens (A2 then
+   * A3), so the entry genuinely exists unjudged for as long as the runner
+   * takes. **The verdict backlog does not** — one `Enter` is both, and a
+   * runner who presses it expects both to land or neither. Passing it
+   * here is what makes that one `batch()` instead of two transactions
+   * with a half-state between them.
+   */
+  verdict?: number | undefined;
 }
 
 /**
@@ -92,6 +104,17 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
       input.userId,
       "run already has another user's entry",
     );
+    // A repeat of a judged save — the same `Enter`, replayed. The kit is
+    // left exactly as the first call attached it (this has never replaced
+    // items) and only the verdict is written, so a retry is idempotent in
+    // the way law 8b means: it returns the row the first call made rather
+    // than erroring, and it does not quietly rewrite the outfit.
+    if (input.verdict !== undefined) {
+      await database
+        .update(outfitEntries)
+        .set({ verdict: input.verdict })
+        .where(eq(outfitEntries.id, existing.id));
+    }
     // Already idempotent, and by a natural key: a run has exactly one entry
     // (UNIQUE `entries_run`), so the run id *is* the key and no column is
     // needed — task 108 requirement 1, prefer a natural key over inventing
@@ -128,8 +151,10 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   // kit with no garments in it if the second failed, which renders as an
   // empty entry and cannot be told from a deliberate one.
   //
-  // verdict/caption are nullable-no-default columns: omitting them here
-  // (rather than writing a literal null) inserts SQL NULL either way.
+  // caption is a nullable-no-default column: omitting it here (rather
+  // than writing a literal null) inserts SQL NULL either way. `verdict`
+  // is the same, and is now written explicitly because a caller may have
+  // it — see `AttachKitInput`.
   const insertEntry = database.insert(outfitEntries).values({
     id: entryId,
     runId: input.runId,
@@ -143,6 +168,10 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     // made private stays private. The run itself has no public flag —
     // see `./share-default`.
     isPublic,
+    // Present only for a caller that has both at once. `undefined` is
+    // what the phone flow passes and inserts SQL NULL, which is the
+    // unjudged state `shouldPromptForVerdict` looks for.
+    verdict: input.verdict,
     createdAt: nowSeconds(),
   });
   if (input.itemIds.length === 0) {

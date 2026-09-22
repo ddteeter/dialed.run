@@ -118,21 +118,10 @@ describe("which runs are in the backlog", () => {
     expect(rows[0]?.conditions?.feelsLikeC).toBe(3);
   });
 
-  it("carries the runner's sharing default, so a save need not ask again", async () => {
-    const quiet = await makeUser({ shareDefault: false });
-    await runAt(quiet, NOW - DAY, 3);
-
-    const backlog = await verdictBacklog(quiet);
-    expect(backlog.isPublicByDefault).toBe(false);
-  });
-
   it("answers an empty table without asking the weather anything", async () => {
     const userId = await makeUser();
 
-    expect(await verdictBacklog(userId)).toStrictEqual({
-      rows: [],
-      isPublicByDefault: true,
-    });
+    expect(await verdictBacklog(userId)).toStrictEqual({ rows: [] });
   });
 });
 
@@ -261,6 +250,76 @@ describe("what the outfit cell is offered", () => {
 });
 
 describe("saving a row", () => {
+  it("writes the verdict in the same row it creates, not after it", async () => {
+    // **One transaction, because one keystroke.** This used to be
+    // `attachKit` then `submitVerdict`, which left a window where the run
+    // had an entry and no verdict. Reconciliation would have healed it —
+    // but that is law 8c's answer for when you cannot batch, and here you
+    // can: every read happens first, and a backlog row has no tags and no
+    // flags, so what is left is two inserts.
+    //
+    // The proof is that the entry is never observable unjudged: it is
+    // born with its verdict. Raised on PR #88.
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId });
+    const runId = await runAt(userId, NOW - DAY, 3);
+
+    const { entryId } = await saveBacklogRow({
+      userId,
+      runId,
+      itemIds: [halfZip],
+      verdict: -1,
+    });
+
+    const [entry] = await coreDb()
+      .select()
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(entry?.verdict).toBe(-1);
+    // …and the kit landed with it, which is the other half of the batch.
+    const items = await coreDb()
+      .select({ itemId: outfitEntryItems.itemId })
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, entryId));
+    expect(items.map((item) => item.itemId)).toStrictEqual([halfZip]);
+  });
+
+  it("is idempotent on a replayed Enter, and does not rewrite the kit", async () => {
+    // Law 8b: a repeat returns the row the first call made rather than
+    // erroring. A run has exactly one entry (UNIQUE `entries_run`), so
+    // the run id is the natural key — and the second save writes only the
+    // verdict, leaving the outfit the first one attached.
+    const userId = await makeUser();
+    const first = await makeItem({ userId, name: "Janji half-zip" });
+    const second = await makeItem({ userId, name: "Tracksmith tee" });
+    const runId = await runAt(userId, NOW - DAY, 3);
+
+    const one = await saveBacklogRow({
+      userId,
+      runId,
+      itemIds: [first],
+      verdict: -1,
+    });
+    const two = await saveBacklogRow({
+      userId,
+      runId,
+      itemIds: [second],
+      verdict: 2,
+    });
+
+    expect(two.entryId).toBe(one.entryId);
+    const [entry] = await coreDb()
+      .select()
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, one.entryId));
+    expect(entry?.verdict).toBe(2);
+    const items = await coreDb()
+      .select({ itemId: outfitEntryItems.itemId })
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, one.entryId));
+    expect(items.map((item) => item.itemId)).toStrictEqual([first]);
+  });
+
   it("lands one entry with the kit and the verdict on it", async () => {
     const userId = await makeUser();
     const halfZip = await makeItem({ userId });
@@ -271,7 +330,6 @@ describe("saving a row", () => {
       runId,
       itemIds: [halfZip],
       verdict: -1,
-      isPublic: true,
     });
 
     const [entry] = await coreDb()
@@ -290,6 +348,9 @@ describe("saving a row", () => {
   });
 
   it("honours a runner who keeps their entries private", async () => {
+    // The sharing default is `attachKit`'s to apply as it creates the
+    // entry — the backlog neither asks for it nor carries it, which is
+    // one read fewer per page and one fewer thing to keep in step.
     const quiet = await makeUser({ shareDefault: false });
     const halfZip = await makeItem({ userId: quiet });
     const runId = await runAt(quiet, NOW - DAY, 3);
@@ -299,7 +360,6 @@ describe("saving a row", () => {
       runId,
       itemIds: [halfZip],
       verdict: 0,
-      isPublic: false,
     });
 
     const [entry] = await coreDb()
@@ -322,7 +382,6 @@ describe("saving a row", () => {
       runId,
       itemIds: [halfZip],
       verdict: 1,
-      isPublic: true,
     });
 
     const tags = await coreDb()
@@ -379,7 +438,6 @@ describe("saving a row", () => {
       runId,
       itemIds: [halfZip],
       verdict: 2,
-      isPublic: true,
     });
 
     // "It leaves the list on the next visit, not on save" — this is the

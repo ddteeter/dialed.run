@@ -5,10 +5,9 @@ import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
-import { attachKit, submitVerdict } from "./entries";
+import { attachKit } from "./entries";
 import { garmentNamesByIds } from "./garment-names";
 import { nearestMatch, type BestMatch, type HistoryEntry } from "./prefill";
-import { isPublicByDefault } from "./share-default";
 import { forIds } from "../../lib/for-ids";
 
 /**
@@ -77,17 +76,6 @@ export interface BacklogRow {
 
 export interface Backlog {
   rows: readonly BacklogRow[];
-  /**
-   * The runner's own sharing default, carried once for the page rather
-   * than read per save.
-   *
-   * `attachKit` already applies it when it creates the entry; this is
-   * here because `submitVerdict` takes `isPublic` explicitly and the
-   * backlog row has no sharing control of its own. Reading it per row
-   * would be one query per save to learn something that cannot change
-   * while the table is open.
-   */
-  isPublicByDefault: boolean;
 }
 
 /**
@@ -211,10 +199,7 @@ export async function unjudgedRunCount(userId: string): Promise<number> {
 
 export async function verdictBacklog(userId: string): Promise<Backlog> {
   const database = drizzle(env.DIALED_CORE);
-  const [unjudged, isPublic] = await Promise.all([
-    unjudgedRuns(userId),
-    isPublicByDefault(database, userId),
-  ]);
+  const unjudged = await unjudgedRuns(userId);
 
   // **No early return for an empty backlog**, deliberately. One would
   // save `ownHistory` a query — the two weather reads already guard
@@ -256,7 +241,6 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
   );
 
   return {
-    isPublicByDefault: isPublic,
     rows: matched.map(({ run, conditions, best }) => ({
       runId: run.id,
       startedAt: run.startedAt,
@@ -299,66 +283,39 @@ function suggestionFrom(
 }
 
 /**
- * Save one row: attach the kit, then judge it.
+ * Save one row: the kit and the verdict, together.
  *
- * **Two calls, deliberately the same two the phone makes.** DS2 is
- * emphatic that a row is *"A3's three inputs laid flat — not a new
- * form"*, and *"verdicts saved here count exactly like verdicts from the
- * phone. There is no 'bulk' rule — every row is one A3."* A third write
- * path would be a second thing to keep in sync with the verdict rules,
- * which is what DS5's "no second wide form" is about one layer down.
+ * **One transaction, because one keystroke.** This began as `attachKit`
+ * followed by `submitVerdict` — the same two calls the phone makes — on
+ * the argument that a failure between them lands the run in the unjudged
+ * state the phone flow produces anyway, which the S1 prompt heals. That
+ * argument is true and it is the wrong one: reconciliation is law 8c's
+ * answer for when you *cannot* batch, and here you can. Every read
+ * `attachKit` needs happens before it writes anything, and a backlog row
+ * has no tags and no per-item flags — so `submitVerdict`'s other three
+ * statements are all no-ops and what is left is two inserts that belong
+ * in one `batch()`.
  *
- * **Two transactions, and deliberately so.** `attachKit` and
- * `submitVerdict` each batch their own writes, but the pair is not atomic
- * — D1 has no transaction that spans two calls, and a batch cannot branch
- * on its own results, which both of these do (one reads ownership and the
- * sharing default, the other reads the entry's items).
+ * The user's expectation is the deciding argument, and it was the
+ * owner's: pressing `Enter` once on a row is submitting a kit *and* a
+ * judgement, and half of that landing is not a state anybody asked for.
+ * Raised on PR #88.
  *
- * So this is law 8c's **reconciliation**, which that law prefers over
- * inventing atomicity wherever a durable marker already exists. It does
- * here, and it is not a marker this lane added: an entry with
- * `verdict IS NULL` is exactly what `shouldPromptForVerdict` looks for,
- * and it is the state the phone flow leaves behind every time a runner
- * attaches a kit and closes the tab before judging it. A failure between
- * these two calls lands the run in that state and the S1 verdict prompt
- * picks it up — `test/feed/backlog.test.ts` proves it rather than
- * asserting it in prose.
- *
- * They are one server function rather than two calls from the component
- * so the component cannot invent a third ordering.
+ * So the verdict rides on `attachKit`, which is still the only function
+ * in the codebase that creates an outfit entry — there is no second write
+ * path, only an entry that can be born judged.
  */
 export async function saveBacklogRow(input: {
   userId: string;
   runId: string;
   itemIds: readonly string[];
   verdict: number;
-  isPublic: boolean;
 }): Promise<{ entryId: string }> {
   const entryId = await attachKit({
     userId: input.userId,
     runId: input.runId,
     itemIds: input.itemIds,
-  });
-  await submitVerdict({
-    userId: input.userId,
-    entryId,
     verdict: input.verdict,
-    isPublic: input.isPublic,
-    // The row has neither, and DS2 draws neither: the table is the three
-    // inputs A3 leads with. Tags and per-item flags stay on the sheet,
-    // which is still one Tab away through the outfit cell.
-    //
-    // `tags: []` is observable and tested — a bogus tag would insert an
-    // `entry_tags` row. `itemFlags: []` is **not**, and the proof is in
-    // `submitVerdict`: it filters every flag against the entry's own item
-    // ids, so a flag for anything else matches no row and the batch is
-    // identical. Making it optional only moved the same literal into
-    // `entries.ts`, where it survived for the same reason; passing it
-    // here keeps the two arguments symmetrical and the exclusion in one
-    // place.
-    tags: [],
-    // Stryker disable next-line ArrayDeclaration
-    itemFlags: [],
   });
   return { entryId };
 }
