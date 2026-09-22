@@ -1,4 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+/*
+ * **The fonts are a `<link>` in `src/routes/__root.tsx`, not an `@import`
+ * here.** They used to be the line above this comment, and it cost a
+ * visible reflow on every cold load — the one a reviewer saw jump through
+ * the first second of the feed demo.
+ *
+ * An `@import` inside a stylesheet is invisible to the browser's preload
+ * scanner: it cannot be requested until this file has been fetched *and*
+ * parsed, so the two downloads are strictly serial and the preconnects in
+ * `__root.tsx` warm a connection nothing uses yet. In the head they are
+ * discovered in the initial HTML and race alongside this file, which is
+ * what shrinks the swap window `display=swap` opens.
+ *
+ * Do not move it back. If a font ever needs to be declared in CSS, give it
+ * a `@font-face` here and preload the `woff2` — never an `@import` of a
+ * third-party stylesheet.
+ */
 @import "tailwindcss";
 @import "./ui/tokens.css";
 @import "./ui/motion.css";
