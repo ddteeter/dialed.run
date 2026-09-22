@@ -414,6 +414,51 @@ describe("VerdictForm: per-item flags", () => {
     expect(within(flagGroup(0)).getAllByRole("radio")).toHaveLength(3);
   });
 
+  it("asks nothing when the entry has no garments on it", async () => {
+    // An entry saved with a bare kit — which `attachKit` allows — has
+    // nothing to flag, so the block is absent rather than a heading over
+    // nothing. Without this the `> 0` guard reads the same as `>= 0`.
+    await renderWithRouter(form({ entry: { items: [] } }));
+
+    expect(
+      screen.queryByRole("heading", { name: "Anything specific?" }),
+    ).toBeNull();
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+  });
+
+  it("gives each garment its own radio group, keyed by item id", async () => {
+    // **The `name` is the grouping, and an empty one is a real bug rather
+    // than a cosmetic one.** Radios sharing a name are one group: the
+    // browser's arrow keys traverse it, and that is how a keyboard user
+    // moves between "Fine", "Too much" and "Not enough". Blank the name
+    // and each chip becomes its own group of one — the state still looks
+    // right, because React drives `checked` from props, and the keyboard
+    // stops working. happy-dom cannot show that, so the mechanism is what
+    // is asserted.
+    await renderWithRouter(
+      form({
+        entry: {
+          items: [
+            item("01JTEMA0000000000000000000", "Houdini"),
+            item("01JTEMB0000000000000000000", "Tights"),
+          ],
+        },
+      }),
+    );
+
+    const names = screen
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("name"));
+    expect(names).toStrictEqual([
+      "flag-01JTEMA0000000000000000000",
+      "flag-01JTEMA0000000000000000000",
+      "flag-01JTEMA0000000000000000000",
+      "flag-01JTEMB0000000000000000000",
+      "flag-01JTEMB0000000000000000000",
+      "flag-01JTEMB0000000000000000000",
+    ]);
+  });
+
   it("shows an unflagged item as Fine, chosen", async () => {
     // `"none"` and not `""`: a radio's value is a real string, and an
     // empty one reads as "no value" to the platform — a different thing
