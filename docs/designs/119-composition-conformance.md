@@ -1,0 +1,124 @@
+# 119 · Composition conformance
+
+Diff the built screen against the artboard, mechanically.
+
+## Why
+
+The unit suite checks **values** — type steps, the mono ramp, colour
+contrast, motion durations, the icon manifest — against the contracts in
+`design/`, and the architecture tests check **rules**: 44px targets, focus
+never removed, routes stay glue. Between them they are about 3,500
+assertions and they were all green through four composition defects on one
+control in a single day:
+
+1. the verdict laid out as a vertical stack where round 17 ruled one row;
+2. "Dialed" floating off its neighbours' first baseline;
+3. the brackets stacking as rows of their own;
+4. then the brackets splitting across a wrapping label.
+
+None of those is a value or a rule. They are **composition** — what sits
+where — and nothing checked it. The `ui` vitest project runs in happy-dom,
+which parses CSS and lays nothing out, so every rect there is zero and
+"one row" is not a question it can answer. The class strings were exactly
+as intended.
+
+Two of the four were found by the owner watching a demo video. That does
+not scale, and it is the most expensive possible review surface.
+
+## The opportunity
+
+**The artboards are HTML.** A design spec that is a picture can only be
+compared by eye; one that is a document can be rendered, measured and
+diffed. Round 18's packet made them properly machine-readable:
+
+- `data-screen-label` on 116 screens (already there);
+- `data-annotation` on 187 captions and commentary, so a screen's own copy
+  can be read without the notes _about_ that copy;
+- `data-part` naming regions — `status-bar`, `tab-bar` mechanically, and
+  A3's `header`/`verdict-row`/`flag-chips`/`noted`/`share-toggle`/`submit`,
+  A2's `most-likely`/`kit-list`, Closet's `top-bar`/`rail` by hand;
+- wrappers at 390px, the device width, where they had been 380.
+
+This repo already spelled the region idea `data-slot`, and `top-bar` and
+`tab-bar` matched design's names for free.
+
+## What it compares
+
+Relations, never pixels.
+
+| dimension             | how                                                |
+| --------------------- | -------------------------------------------------- |
+| Which cells, in order | each region child's text, walked node by node      |
+| One band or a stack   | text leaves grouped into rows by top edge          |
+| Colour                | computed `rgb()` mapped back to a **T1 role name** |
+
+The colour mapping is the part worth keeping in mind. The boards are a
+prototype and style with raw hex — 8,728 declarations of it; the app
+compiles to `var(--role)`. Both resolve to the same hex, so `Theme.dc.html`'s
+own T1 table turns each side back into a role and a difference reads
+"board `--action`, app `--ink`" rather than two six-digit numbers.
+Measured before building: **93% of colour uses inside the boards' screen
+frames already map to a T1 role**, so this works today without asking
+design to restyle anything.
+
+### Why not screenshots
+
+Pixel diffing is the obvious answer and it is the wrong one here.
+
+- It pins whatever shipped. It would have baselined the verdict stack as
+  correct, which is the bug this exists because of.
+- The board's data is invented ("SAT AUG 29", "6.2 AT 41°") where ours is
+  real, so most of the frame is noise.
+- It fails as a red blob. This fails as two lists of strings and the row
+  that differs.
+
+Three webfont families, real motion and dynamic data would also make
+stable baselines a permanent tax.
+
+## Two things that are easy to get wrong
+
+**Fonts.** The boards `<link>` Google Fonts and the app self-hosts, so in
+CI the board falls back to a system face. Different metrics mean different
+wrap points, and the signature would report a composition difference that
+is really a font that did not load. `openBoard` injects the app's own
+`fonts.css` pointed at its `/fonts`, and waits on `document.fonts`.
+
+**Cells, not rows.** Grouping text by top edge reads a wrapped cell as two
+rows, and flattening those back out is row-major: a board whose cells wrap
+("WAY" / "COLD") against an app whose cells do not produces
+`WAY A BIT DIALED A BIT WAY COLD COLD` versus `WAY COLD A BIT COLD`. Same
+composition, scrambled by a fold. A cell's text does not care where it
+folded. Rows stay for the one question they genuinely answer — is this one
+band or a stack.
+
+## Known gaps
+
+A harness with no way to record a real difference gets deleted: either the
+check stays red until someone stops reading it, or a feature gets built
+inside a testing PR. Neither. `KNOWN_GAPS` in the spec maps a drawn cell
+to what we currently draw, with the register entry that owns it — and the
+test asserts each gap is **still** a gap, so closing one fails the test and
+tells you to delete the line. It is enumerated and countable, which is what
+separates it from a suppression.
+
+The first screen through found two, both real:
+
+- **D-97** — the board's dialed cell carries the runner's count in the
+  run's temperature band ("7 IN BAND"); we draw the word alone.
+- **D-98** — the chosen cell wears `--ink` where the board draws
+  `--action`, and that may itself conflict with round 16's ruling that
+  DS2's hue follows T2 (dialed is teal). Blocked on design.
+
+## Scope
+
+One screen — A3's verdict row. The harness is the deliverable; screens are
+incremental from here, and design offered to name regions on the ones we
+diff next rather than guessing at all ~60. The order that follows the v1
+loop is A1, A2, C, D, E1, then DS1 and DS2.
+
+## What it does not do
+
+It will not judge aesthetics, compare photography, or fingerprint a screen
+whose data we cannot reproduce. Where design deliberately gave us a
+fallback — Closet's rail, "ships whole or one column" — the divergence is
+correct and needs a per-screen note. That review cost is real and one-time.
