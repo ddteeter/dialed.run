@@ -9,8 +9,9 @@ import { Page } from "../../src/ui/Page";
  * Three things are the props and everything else is fixed: how wide the
  * column is, what the heading says, and whether something sits opposite
  * the heading. The width classes are asserted by name because `width` is
- * a contract — `narrow` is what a short form gets — not because a look is
- * being pinned.
+ * a contract — `panel` is what an act gets, `column` what a reading
+ * surface gets (Desktop Contract DS3) — not because a look is being
+ * pinned.
  */
 describe("Page", () => {
   it("is the reading column by default", () => {
@@ -21,9 +22,9 @@ describe("Page", () => {
     expect(column).not.toHaveClass("max-w-panel");
   });
 
-  it("narrows for a short form", () => {
+  it("narrows to the panel for an act", () => {
     const { container } = render(
-      <Page title="Log a run" width="narrow">
+      <Page title="Log a run" width="panel">
         body
       </Page>,
     );
@@ -33,13 +34,29 @@ describe("Page", () => {
     expect(column).not.toHaveClass("max-w-column");
   });
 
+  it("centres the panel at every width and the column only below 720", () => {
+    // DS3's reflow rule, and the one place the two widths differ beyond a
+    // number: a reflowed screen is "left-aligned inside the page measure,
+    // not centred, so it lines up with the wide screens' primary column",
+    // where a panel is centred wherever it is. `mx-auto` survives on the
+    // column because below 720 the viewport is narrower than 620 and it
+    // does nothing; `wide:mx-0` is what takes it away once it would.
+    const panel = render(<Page width="panel">body</Page>).container
+      .firstElementChild;
+    expect(panel).toHaveClass("mx-auto");
+    expect(panel).not.toHaveClass("wide:mx-0");
+
+    const column = render(<Page width="column">body</Page>).container
+      .firstElementChild;
+    expect(column).toHaveClass("mx-auto", "wide:mx-0");
+  });
+
   it("keeps the column's own layout whichever width it is", () => {
     // The rest of the column is not a prop, and a mutant that emptied the
     // template would take it with the width.
     const { container } = render(<Page title="Runs">body</Page>);
 
     expect(container.firstElementChild).toHaveClass(
-      "mx-auto",
       "flex",
       "w-full",
       "flex-col",

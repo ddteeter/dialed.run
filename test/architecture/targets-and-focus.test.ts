@@ -247,9 +247,9 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
     ).toEqual([
       "src/modules/auth/auth-page.tsx",
       "src/modules/feed/components/Feed.tsx",
-      "src/modules/weather/components/WeatherAttribution.tsx",
       "src/routes/runs/new.tsx",
       "src/ui/ProductLink.tsx",
+      "src/ui/WeatherAttribution.tsx",
     ]);
     for (const element of exempt) expect(element.tag).not.toBe("button");
   });

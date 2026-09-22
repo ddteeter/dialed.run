@@ -24,6 +24,7 @@ import {
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { storageStateFor } from "../support/accounts";
+import { DESK, PHONE, bar, launcher } from "../support/bars";
 import { expect, scene, test } from "../support/demo";
 
 // Signed in already: the account is created by the `demo-setup` project, so
@@ -230,7 +231,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
     // Back to the feed — their public entry now shows up...
-    await page.getByRole("link", { name: "Feed" }).click();
+    await bar(page).getByRole("link", { name: "Feed" }).click();
     await expect(page.getByText(publicCaption)).toBeVisible();
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
@@ -252,6 +253,47 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(
       page.getByRole("button", { name: "Useful [1]" }),
     ).toBeVisible();
+
+    // ---- The shell, at both widths (task 115) --------------------------
+    //
+    // The demo canvas has been 1280x720 since the project was written,
+    // which until now meant recording a phone-width app on a desktop
+    // screen. This is the beat where that stops being true, and it is the
+    // one a reviewer should watch: same screen, same content, two shells.
+    await scene(page, "One bar from 720 up — the tab bar becomes a top bar");
+    await bar(page).getByRole("link", { name: "Feed" }).click();
+    await hydrated(page);
+
+    const topBar = page.locator('[data-slot="top-bar"]');
+    await expect(topBar).toBeVisible();
+    // The wordmark is "the one place the logo appears in the product", and
+    // it links to Feed.
+    await expect(topBar.getByRole("link", { name: "dialed.run home" })).toHaveAttribute(
+      "href",
+      "/feed",
+    );
+    // Four text links in the phone bar's order, plus the pill that says
+    // the verb this seat has room for (round 15).
+    await expect(bar(page).getByRole("link")).toHaveText([
+      "Feed",
+      "Closet",
+      "Call",
+      "You",
+    ]);
+    await expect(
+      topBar.getByRole("button", { name: "Log a run" }),
+    ).toBeVisible();
+    // One bar at a time: the footer is not merely off-screen, it is not
+    // laid out.
+    await expect(page.locator('[data-slot="tab-bar"]')).toBeHidden();
+
+    await scene(page, "…and back to the phone, where the footer returns");
+    await page.setViewportSize(PHONE);
+    await expect(page.locator('[data-slot="tab-bar"]')).toBeVisible();
+    await expect(topBar).toBeHidden();
+    // The same launcher, in its glyph-sized seat and saying so.
+    await expect(launcher(page)).toHaveText("+ Add");
+    await page.setViewportSize(DESK);
   } finally {
     await withLocalDb(async ({ core, weather }) => {
       await core

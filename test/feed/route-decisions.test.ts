@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  BACKLOG_MINIMUM,
   bandContextFor,
+  isBacklogWorthOpening,
   shouldAskForVerdict,
 } from "../../src/modules/feed/route-decisions";
 
@@ -119,5 +121,23 @@ describe("bandContextFor", () => {
     );
     expect(context.bandFloor).toBe(0);
     expect(context.bandCounts).toStrictEqual({ floor: 0 });
+  });
+});
+
+describe("isBacklogWorthOpening", () => {
+  it("opens at two, which is the whole of DS2's argument", () => {
+    // "Only reachable when >=2 runs lack a verdict; with one, the S1
+    // prompt opens A3 in the panel like the phone." Two is the boundary
+    // and the boundary is the rule: a table of one row is a table
+    // pretending to be a sheet, and `>` instead of `>=` would make the
+    // surface need three before it appeared.
+    expect(isBacklogWorthOpening(0)).toBe(false);
+    expect(isBacklogWorthOpening(1)).toBe(false);
+    expect(isBacklogWorthOpening(BACKLOG_MINIMUM)).toBe(true);
+    expect(isBacklogWorthOpening(6)).toBe(true);
+  });
+
+  it("is the number the contract names", () => {
+    expect(BACKLOG_MINIMUM).toBe(2);
   });
 });

@@ -26,7 +26,7 @@ function ReviewPage() {
 
   return (
     <Layout>
-      <Page title="Review queue" width="wide">
+      <Page title="Review queue" width="column">
         <ReviewQueue queue={queue} resolve={resolveReviewAction} />
       </Page>
     </Layout>

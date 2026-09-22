@@ -100,10 +100,47 @@ afterEach(() => {
 
 const noConditions = () => Promise.resolve(undefined);
 
+describe("Feed: the queue", () => {
+  it("offers to clear the queue once there are two runs waiting", async () => {
+    // DS2's entry point — "reached from 'Clear the queue ›' on X". The
+    // count is in the link because a number is what makes it worth the
+    // trip; the link itself is what the contract names.
+    await renderWithRouter(
+      <Feed
+        unjudgedCount={4}
+        items={[]}
+        units={{ temp: "f", distance: "mi" }}
+        conditionsFor={() => Promise.resolve(undefined)}
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: /Clear the queue/ });
+    expect(link).toHaveAttribute("href", "/runs/backlog");
+    expect(link.textContent).toContain("4");
+  });
+
+  it("says nothing when one run is waiting, because one is a sheet", async () => {
+    // "Only reachable when ≥2 runs lack a verdict; with one, the S1 prompt
+    // opens A3 in the panel like the phone." A table of one row is a table
+    // pretending to be a sheet.
+    await renderWithRouter(
+      <Feed
+        unjudgedCount={1}
+        items={[]}
+        units={{ temp: "f", distance: "mi" }}
+        conditionsFor={() => Promise.resolve(undefined)}
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: /Clear the queue/ })).toBeNull();
+  });
+});
+
 describe("Feed: the following tab", () => {
   it("opens on Following, and offers a way to find runners", async () => {
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[feedItem()]}
         conditionsFor={noConditions}
@@ -125,6 +162,7 @@ describe("Feed: the following tab", () => {
     // the whole content of the state.
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={noConditions}
@@ -141,6 +179,7 @@ describe("Feed: the following tab", () => {
   it("renders one card per entry, linked to it", async () => {
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[
           feedItem({ entryId: "01A", authorDisplayName: "Drew" }),
@@ -163,6 +202,7 @@ describe("Feed: the following tab", () => {
   it("shows the distance, the useful count, and a caption where there is one", async () => {
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[feedItem({ caption: "Perfect morning", usefulCount: 3 })]}
         conditionsFor={noConditions}
@@ -177,6 +217,7 @@ describe("Feed: the following tab", () => {
   it("omits the caption line entirely when there is none", async () => {
     const { container } = await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[feedItem()]}
         conditionsFor={noConditions}
@@ -188,6 +229,7 @@ describe("Feed: the following tab", () => {
   it("shows the temperature on an entry that has conditions", async () => {
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[
           feedItem({
@@ -224,6 +266,7 @@ describe("Feed: your conditions", () => {
     const conditionsFor = vi.fn(() => Promise.resolve(result));
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={conditionsFor}
@@ -245,6 +288,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() => Promise.resolve(result)}
@@ -264,6 +308,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() =>
@@ -283,6 +328,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() =>
@@ -302,6 +348,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() =>
@@ -319,6 +366,7 @@ describe("Feed: your conditions", () => {
     withLocation();
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={noConditions}
@@ -337,6 +385,7 @@ describe("Feed: your conditions", () => {
     const conditionsFor = vi.fn(noConditions);
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={conditionsFor}
@@ -355,6 +404,7 @@ describe("Feed: your conditions", () => {
     withLocation({ latitude: 1, longitude: 2 });
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={noConditions}
@@ -373,6 +423,7 @@ describe("Feed: your conditions", () => {
     const pending = Promise.withResolvers<ConsensusResult | undefined>();
     const { container } = await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={() => pending.promise}
@@ -392,6 +443,7 @@ describe("Feed: your conditions", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[]}
         conditionsFor={noConditions}
@@ -432,6 +484,7 @@ describe("Feed: your conditions", () => {
   it("presses a feed row to ink", async () => {
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[feedItem()]}
         conditionsFor={noConditions}
@@ -466,6 +519,7 @@ describe("Feed: your conditions", () => {
             Swap the query
           </button>
           <Feed
+            unjudgedCount={0}
             units={{ temp: "f", distance: "mi" }}
             items={[]}
             conditionsFor={query}
@@ -488,6 +542,7 @@ describe("Feed: your conditions", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <Feed
+        unjudgedCount={0}
         units={{ temp: "f", distance: "mi" }}
         items={[feedItem()]}
         conditionsFor={() => Promise.resolve(result)}

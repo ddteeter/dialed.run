@@ -16,10 +16,16 @@ import {
   feedInput,
   itemBandStatInput,
   pickerGroupsInput,
+  saveBacklogRowInput,
   searchInput,
   submitVerdictInput,
   userIdInput,
 } from "./inputs";
+import {
+  saveBacklogRow,
+  unjudgedRunCount,
+  verdictBacklog,
+} from "./backlog";
 import { conditionsAt } from "./conditions";
 import { consensusAt } from "./consensus";
 import {
@@ -76,6 +82,23 @@ export const submitVerdictAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await submitVerdict({ userId, ...data });
+  });
+
+// ---- The verdict backlog (DS2) ----------------------------------------------
+
+export const verdictBacklogQuery = createServerFn({ method: "GET" }).handler(
+  async () => verdictBacklog(await requireUserId()),
+);
+
+export const unjudgedRunCountQuery = createServerFn({ method: "GET" }).handler(
+  async () => unjudgedRunCount(await requireUserId()),
+);
+
+export const saveBacklogRowAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => saveBacklogRowInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return saveBacklogRow({ userId, ...data });
   });
 
 export const verdictBandCountsQuery = createServerFn({ method: "GET" })

@@ -4,6 +4,7 @@ import { getSession } from "../../modules/auth/functions";
 import { Feed } from "../../modules/feed/components/Feed";
 import {
   followingFeedQuery,
+  unjudgedRunCountQuery,
   viewerUnitsQuery,
   yourConditionsQuery,
 } from "../../modules/feed/functions";
@@ -15,23 +16,25 @@ export const Route = createFileRoute("/feed/")({
     requireSignedIn(await getSession());
   },
   loader: async () => {
-    const [page, units] = await Promise.all([
+    const [page, units, unjudgedCount] = await Promise.all([
       followingFeedQuery({ data: { cursor: undefined } }),
       viewerUnitsQuery(),
+      unjudgedRunCountQuery(),
     ]);
-    return { page, units };
+    return { page, units, unjudgedCount };
   },
   component: FeedPage,
 });
 
 function FeedPage() {
-  const { page, units } = Route.useLoaderData();
+  const { page, units, unjudgedCount } = Route.useLoaderData();
 
   return (
     <Layout>
       <Feed
         items={page.items}
         units={units}
+        unjudgedCount={unjudgedCount}
         conditionsFor={yourConditionsQuery}
       />
     </Layout>

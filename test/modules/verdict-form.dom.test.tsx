@@ -88,18 +88,41 @@ const item = (itemId: string, name: string) => ({
 });
 
 /**
- * The per-item flag pickers, in document order. Queried by role rather
- * than by tag so the elements carry testing-library's own types.
+ * The per-item flag groups, in document order.
+ *
+ * Radio groups since design round 16: a `<select>` beside the kit read as
+ * the verdict control, which is what a reviewer took it for on film. Each
+ * group is legended with its garment's name, so they are found by role
+ * and named rather than by index into a list of comboboxes.
  */
-function flagSelects(): HTMLElement[] {
-  return screen.getAllByRole("combobox");
+function flagGroups(): HTMLElement[] {
+  // `group`, not `radiogroup`: `ChoiceList` renders a real `<fieldset>`
+  // with a `<legend>`, which is how the garment's name becomes the
+  // group's accessible name — and a fieldset's role is `group`.
+  //
+  // **The verdict row is a fieldset too**, since design's round 17 took it
+  // out of its field box, so "every group on the screen" is no longer the
+  // same set as "every flag group". A flag group is one that holds the
+  // three flag chips; the verdict row holds buttons and no radio at all,
+  // which is a property of what the control *is* rather than of where it
+  // happens to sit in the document.
+  return screen
+    .getAllByRole("group")
+    .filter((group) => within(group).queryAllByRole("radio").length > 0);
+}
+
+/**
+The chosen chip inside one item's group.
+*/
+function chosenFlag(group: HTMLElement): HTMLElement {
+  return within(group).getByRole("radio", { checked: true });
 }
 
 /**
 The nth flag picker, or a clear failure rather than an `undefined`.
 */
-function flagSelect(index: number): HTMLElement {
-  const select = flagSelects()[index];
+function flagGroup(index: number): HTMLElement {
+  const select = flagGroups()[index];
   if (select === undefined)
     throw new Error(`no flag select at ${String(index)}`);
   return select;
@@ -204,7 +227,7 @@ describe("VerdictForm: the scale", () => {
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     expect(
-      await screen.findByRole("button", { name: /How it felt/ }),
+      await screen.findByRole("button", { name: /Did it work/ }),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: /Tags/ })).toBeVisible();
     expect(
@@ -366,6 +389,94 @@ describe("VerdictForm: the scale", () => {
   });
 });
 
+describe("VerdictForm: the row, and the box that was around it", () => {
+  /**
+   * Design round 17: *"the five are one row at every width — in the 390
+   * desk panel too; never a stack, never wider than the panel. Neither the
+   * row nor the chips sit inside a field box."*
+   *
+   * The geometry half of that is `e2e/verdict/verdict-row.spec.ts`, in a
+   * real browser — happy-dom lays nothing out, so every rect here is zero
+   * and "one row" is not a question this project can answer. What it *can*
+   * answer is the structure the ruling is about.
+   */
+  it("groups the five with a legend rather than a label pointing nowhere", async () => {
+    // A `<label htmlFor="verdict">` names an id that does not exist —
+    // there is no single control to point at, five buttons being the
+    // control. A fieldset's legend is the group's accessible name, which
+    // is what a reader entering the group actually hears.
+    await renderWithRouter(form({}));
+
+    const group = screen.getByRole("group", { name: /Did it work/i });
+    for (const label of [
+      "Way cold",
+      "A bit cold",
+      "Dialed",
+      "A bit warm",
+      "Way warm",
+    ]) {
+      expect(within(group).getByRole("button", { name: label })).toBeVisible();
+    }
+  });
+
+  it("does not wrap the row in a field box, which was eating the focus ring", async () => {
+    // **The defect, not just the look.** `field-box` (ui/a11y.css) removes
+    // the outline from its descendants — correct when the child is the
+    // borderless input a `FormField` insets, wrong for a button group. It
+    // meant tabbing across the five verdicts showed one static outline
+    // around the whole box and no indication of which button had focus, on
+    // the single control the product turns on. Rule 06's "never removed"
+    // was failing by construction.
+    await renderWithRouter(form({}));
+
+    const group = screen.getByRole("group", { name: /Did it work/i });
+    expect(group).not.toHaveClass("field-box");
+    expect(group.querySelector(".field-box")).toBeNull();
+  });
+
+  it("carries the three rules the cell's class string is holding", async () => {
+    // A class string in a const is mutated, so it has to be asserted —
+    // and each of these is a written rule rather than a look:
+    //
+    // - `uppercase` is CSS, never the label text, so the accessible name
+    //   stays "Way cold" and not "WAY COLD". That is why every other
+    //   assertion in this file can ask for the button by its sentence-case
+    //   name (a11y contract, and the reason `Mono` works the same way).
+    // - `text-center` with `flex-col` is round 17's "never wider than the
+    //   panel" made structural: at 390 a two-word label has to break
+    //   *inside* its own cell, because the row itself cannot.
+    // - `target` is the 44px hit area (accessibility rule 03), which for a
+    //   cell this narrow is the padding and not the glyph.
+    await renderWithRouter(form({}));
+
+    const button = screen.getByRole("button", { name: "Way cold" });
+    expect(button).toHaveClass(
+      "uppercase",
+      "text-center",
+      "flex-col",
+      "target",
+    );
+  });
+
+  it("keeps the scale's order, which is the product rule", async () => {
+    // Way cold -> way warm. A set of five buttons in any order is still
+    // five buttons; the order is what makes the row readable as a scale.
+    await renderWithRouter(form({}));
+
+    const group = screen.getByRole("group", { name: /Did it work/i });
+    const names = within(group)
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(names).toEqual([
+      "Way cold",
+      "A bit cold",
+      "Dialed",
+      "A bit warm",
+      "Way warm",
+    ]);
+  });
+});
+
 describe("VerdictForm: per-item flags", () => {
   it("offers a flag per item, defaulting to none", async () => {
     await renderWithRouter(
@@ -379,33 +490,87 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
+    // "Anything specific?" is the board's question for this block.
     expect(
-      screen.getByRole("heading", { name: "Per-item notes" }),
+      screen.getByRole("heading", { name: "Anything specific?" }),
     ).toBeVisible();
-    expect(screen.getByText("Houdini")).toBeVisible();
-    const selects = flagSelects();
-    expect(selects).toHaveLength(2);
-    expect(
-      within(flagSelect(0))
-        .getAllByRole("option")
-        .map((option) => option.getAttribute("value")),
-    ).toStrictEqual(["", "too_much", "not_enough"]);
+    const groups = flagGroups();
+    expect(groups).toHaveLength(2);
+    // Legended with the garment, so a reader entering the group hears
+    // which piece it is about rather than three unexplained options.
+    expect(groups[0]).toHaveAccessibleName("Houdini");
+    // Three visible choices, not three behind a tap — comparing them is
+    // how a runner picks (`ChoiceList`'s own note).
+    // By accessible name, not `textContent`: the chip's word is on the
+    // `<label>` that wraps the input, so the input itself has no text.
+    for (const name of ["Fine", "Too much", "Not enough"]) {
+      expect(
+        within(flagGroup(0)).getByRole("radio", { name }),
+      ).toBeInTheDocument();
+    }
+    expect(within(flagGroup(0)).getAllByRole("radio")).toHaveLength(3);
   });
 
-  it("shows an unset flag as No flag", async () => {
-    // `?? ""` — a select with a value matching no option shows its first
-    // one anyway, so the fallback is what keeps the control honest.
+  it("asks nothing when the entry has no garments on it", async () => {
+    // An entry saved with a bare kit — which `attachKit` allows — has
+    // nothing to flag, so the block is absent rather than a heading over
+    // nothing. Without this the `> 0` guard reads the same as `>= 0`.
+    await renderWithRouter(form({ entry: { items: [] } }));
+
+    expect(
+      screen.queryByRole("heading", { name: "Anything specific?" }),
+    ).toBeNull();
+    // `flagGroups()`, not every group on the screen: the verdict row is
+    // itself a fieldset now, and it is there whether or not the kit has
+    // anything in it.
+    expect(flagGroups()).toHaveLength(0);
+  });
+
+  it("gives each garment its own radio group, keyed by item id", async () => {
+    // **The `name` is the grouping, and an empty one is a real bug rather
+    // than a cosmetic one.** Radios sharing a name are one group: the
+    // browser's arrow keys traverse it, and that is how a keyboard user
+    // moves between "Fine", "Too much" and "Not enough". Blank the name
+    // and each chip becomes its own group of one — the state still looks
+    // right, because React drives `checked` from props, and the keyboard
+    // stops working. happy-dom cannot show that, so the mechanism is what
+    // is asserted.
+    await renderWithRouter(
+      form({
+        entry: {
+          items: [
+            item("01JTEMA0000000000000000000", "Houdini"),
+            item("01JTEMB0000000000000000000", "Tights"),
+          ],
+        },
+      }),
+    );
+
+    const names = screen
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("name"));
+    expect(names).toStrictEqual([
+      "flag-01JTEMA0000000000000000000",
+      "flag-01JTEMA0000000000000000000",
+      "flag-01JTEMA0000000000000000000",
+      "flag-01JTEMB0000000000000000000",
+      "flag-01JTEMB0000000000000000000",
+      "flag-01JTEMB0000000000000000000",
+    ]);
+  });
+
+  it("shows an unflagged item as Fine, chosen", async () => {
+    // `"none"` and not `""`: a radio's value is a real string, and an
+    // empty one reads as "no value" to the platform — a different thing
+    // from "the runner chose not to flag this". One chip is always on, so
+    // the group never announces as having no answer.
     await renderWithRouter(
       form({
         entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
       }),
     );
-    // The *selected option*, not the value: a select whose value matches
-    // no option shows its first one regardless, so `toHaveValue("")` would
-    // pass for a fallback of any nonsense at all.
-    expect(
-      within(flagSelect(0)).getByRole("option", { selected: true }),
-    ).toHaveTextContent("No flag");
+
+    expect(chosenFlag(flagGroup(0))).toHaveAccessibleName("Fine");
   });
 
   it("starts from the flag the item already carries", async () => {
@@ -425,12 +590,8 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
-    expect(
-      within(flagSelect(0)).getByRole("option", { selected: true }),
-    ).toHaveTextContent("Not enough");
-    expect(
-      within(flagSelect(1)).getByRole("option", { selected: true }),
-    ).toHaveTextContent("No flag");
+    expect(chosenFlag(flagGroup(0))).toHaveAccessibleName("Not enough");
+    expect(chosenFlag(flagGroup(1))).toHaveAccessibleName("Fine");
   });
 
   it("sends a flag it was seeded with, unchanged", async () => {
@@ -476,10 +637,15 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
-    await user.selectOptions(flagSelect(0), "too_much");
+    await user.click(
+      within(flagGroup(0)).getByRole("radio", { name: "Too much" }),
+    );
 
-    expect(flagSelect(0)).toHaveValue("too_much");
-    expect(flagSelect(1)).toHaveValue("");
+    // A fieldset has no value; the chosen chip is the state. Setting one
+    // item's flag must leave the other's alone, which is the bug this
+    // case exists for.
+    expect(chosenFlag(flagGroup(0))).toHaveAccessibleName("Too much");
+    expect(chosenFlag(flagGroup(1))).toHaveAccessibleName("Fine");
   });
 
   it("says nothing about items when the entry has none", async () => {
@@ -509,7 +675,9 @@ describe("VerdictForm: per-item flags", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.selectOptions(flagSelect(0), "too_much");
+    await user.click(
+      within(flagGroup(0)).getByRole("radio", { name: "Too much" }),
+    );
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {
@@ -534,9 +702,12 @@ describe("VerdictForm: per-item flags", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    const select = flagSelect(0);
-    await user.selectOptions(select, "too_much");
-    await user.selectOptions(select, "");
+    // Set it, then put it back — the chip group's "Fine" is how a runner
+    // un-flags, and it must reach the payload as absent rather than as
+    // the string "none".
+    const group = flagGroup(0);
+    await user.click(within(group).getByRole("radio", { name: "Too much" }));
+    await user.click(within(group).getByRole("radio", { name: "Fine" }));
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     await waitFor(() => {

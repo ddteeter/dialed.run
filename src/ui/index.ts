@@ -1,5 +1,6 @@
 export { Bracketed } from "./Bracketed";
 export { Digits } from "./Digits";
+export { FileWell } from "./FileWell";
 export { FlowStep, LOG_FLOW } from "./FlowStep";
 export { Icon, ICONS, TAB_BAR } from "./icons";
 export { DURATION, EASING, STAGGER, TRAVEL } from "./motion";
@@ -15,6 +16,7 @@ export { Skeleton } from "./Skeleton";
 export {
   ChoiceField,
   ChoiceList,
+  FieldGroup,
   FieldMessage,
   FormErrorSummary,
   FormFailureBand,
@@ -31,4 +33,5 @@ export { classifyFailure, useFormSubmit } from "./use-form-submit";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export { useIdempotencyKey } from "./use-idempotency-key";
 export { useListMotion } from "./use-list-motion";
+export { WeatherAttribution } from "./WeatherAttribution";
 export { Wordmark } from "./Wordmark";

@@ -189,10 +189,15 @@ from the other side: _"never a sixth type."_
     made for a motion reason, which is exactly the kind the placeholder
     protocol wants seen rather than discovered in a demo.
 
-    **The ask is two lines.** Are E1's two tabs a segmented control across
-    the full width, or labels at their natural size? And are the five tabs
-    equal columns, which is what the indicator is measured in? Nothing is
-    blocked either way.
+    **CLOSED 2026-09-20 by round 15.** Both lines answered, and both the
+    way the build had already gone. E1's two tabs are _"labels, not a
+    segmented control; the active one carries a static underline and only
+    the colour moves"_ — so nothing on a drawn screen reflows. The five
+    equal columns stand, and `motion.js`'s "Tab switch" row now says so
+    itself rather than leaving one sentence to cover two bars: the phone
+    bar slides because equal columns make it free, and natural-width
+    labels — E1's two and the top bar's four — carry a static underline.
+    See "Answered in round 15" below.
 
     **Half-answered by round 12 (2026-09-20).** `NAV`'s `+ Add (bar
 launcher)` row rules that _"+ Add is a launcher, not a tab: the
@@ -223,6 +228,164 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     Built by task 117 in the PR that asked; D-81 closes with it. Verified
     in Chromium — the launcher's accessible name is computed from re-nested
     markup, which happy-dom cannot see.
+
+20. **DS2's four verdict slots are superseded by five.** The Desktop
+    Contract draws _"1 too cold (pink), 2 dialed (teal), 3 too warm (quiet
+    grey), 4 skip-for-now (empty)"_ — three verdicts and a skip, where A3
+    offers the full −2..+2 scale. DS2's own rail note says a verdict saved
+    here _"counts exactly like a verdict from the phone"_, and the two
+    cannot both hold: a coarse key writes into the same column and the
+    same future training signal, so "too cold" would have to mean either
+    −1 or −2 and the table would be recording something the sheet cannot.
+
+    **Owner's call, 2026-09-21: five keys, `1`–`5`, in the scale's own
+    order.** Skip needs no key — leaving a row and pressing `↓` is
+    skipping it, which is also what the empty fourth slot was drawing.
+    Built that way in task 115; `verdictKeys` derives from `verdictScale`,
+    so the table cannot drift from the sheet.
+
+    **CLOSED by round 16, imported 2026-09-21.** Design redrew DS2's
+    verdict column as five slots carrying A3's words and only the words —
+    no digits, here or on the desk — with `1`–`5` demoted to keyboard
+    shortcuts in the legend and skip a key rather than a slot. The Flow
+    Map already forbade numeric scores in UI, which is the reason the
+    digits could not stay on the face of the control even though the keys
+    do. Built; D-91 closed.
+
+21. **Bend 2 is satisfied by construction, and its extra line would be
+    false.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
+    O5 and that O5 gains _"Photos come from your phone — we'll remind
+    you."_ The built flow is O1 (calibrate) → O3 (tap-list) → O4 (name) →
+    **P3** — and P3's own artboard note says it _"replaces O4 and O5"_. So
+    there is no O2 to skip: the closet fills from the tap-list on every
+    device, and every step already renders in the 390 panel.
+
+    The line was therefore not added, for a second reason as well: once
+    bend 1's drop zone lands, "photos come from your phone" is **wrong at
+    width**. **The ask is one line**: confirm the bend is met, or say
+    where the sentence should live now that O5 does not exist. D-92.
+
+22. **The shell carries two of three controls, one hidden at each width.**
+    Undesigned consequence shipped by task 115 under the placeholder
+    protocol — no new glyph, colour or word, but a structural decision a
+    reviewer should see rather than discover.
+
+    `[data-ground="ink"]` is an attribute and the twelve roles it
+    redefines are inherited, so the inverted top bar cannot be the same
+    element as the phone's un-inverted header. `Layout` mounts both bars
+    and CSS hides one. The bell renders twice, the launcher twice (`+ Add`
+    and `Log a run`, which round 15 ruled deliberate), and the `Main`
+    landmark twice. Exactly one of each is in the accessibility tree in a
+    browser. The **destinations** are not duplicated — one table, read by
+    both bars.
+
+    Nothing is blocked and no drawing is contradicted. Flagged because it
+    is the kind of thing that looks like a bug in a screen reader
+    transcript and is not. D-90.
+
+23. **The landing page wears the product shell, and now wears the top
+    bar.** DS5 reserves this screen — _"no footer, no 'about', no pricing
+    in the product bar. The logged-out landing page is a separate page
+    with a separate brief"_ — so it is outside the Desktop Contract and
+    task 115 did not redesign it. But it does wear `Layout`, which means a
+    signed-out visitor has always seen the phone's tab bar there, and from
+    720 up now sees the full top bar: four destinations they cannot reach,
+    a search glyph, a bell and "Log a run".
+
+    **The concrete defect is the wordmark, twice.** The page opens with
+    the bracketed lockup as its hero, and the bar adds a second one a few
+    pixels above it. On the phone there is only the hero, so this is new
+    at width and nowhere else.
+
+    It is not obvious that the shell should simply go: onboarding's "Done
+    for now" links here, so a runner who finishes lands on `/`, and the
+    bar is their way back into the app. `SessionActions` offers a signed-in
+    visitor their email and a sign-out and nothing else.
+
+    **The ask is the brief DS5 already promises.** What does this page look
+    like at 720 and 1040 — does it keep the product bar, lose it, or get a
+    marketing bar of its own; and if it loses it, what does a signed-in
+    visitor use to get back in? Owner's call to send it rather than guess
+    (2026-09-21). D-93.
+
+## Answered in rounds 16–17 (imported 2026-09-21)
+
+### The verdict row is one row at every width, and never in a field box
+
+Round 17, verbatim: *"the five are one row at every width — in the 390
+desk panel too; never a stack, never wider than the panel. Neither the row
+nor the chips sit inside a field box."* Both halves were wrong in the
+code, and one of them was hiding a defect.
+
+**The stack.** A3's five buttons were `flex flex-col` — a tall column of
+five full-width buttons on the phone, and at desk the same column with a
+screen of empty space beside it. The owner spotted it on film and read the
+ruling as covering both widths, which it does. `grid-cols-5` is now the
+layout, and the labels break inside their own cell because the row cannot.
+
+Worth recording *why* nothing caught it: the `ui` vitest project runs in
+happy-dom, which parses CSS and lays nothing out, so every rect is zero
+and "one row" is not a question it can answer. The class was as intended
+and the suite was green. `e2e/verdict/verdict-row.spec.ts` is the answer —
+real Chromium, both widths, and it was checked against the old stack to
+confirm it fails on it.
+
+**The field box.** Wrapping the group in `FormField` drew the Form
+Contract's 1px-rule boundary around five buttons that each already draw
+their own, which is the "mostly empty box" the owner asked about. It was
+also suppressing the focus ring: `field-box` (`src/ui/a11y.css`) removes
+the outline from its descendants — correct when the child is the
+borderless input a `FormField` insets, wrong for buttons — so tabbing
+across the five verdicts showed one static outline around the whole box
+and no indication of which button had focus. On the single control the
+product turns on, rule 06's *"never removed"* was failing by construction
+rather than by an `outline-none` anyone could grep for.
+
+A3's group was the only `FormField` in the app whose child was not an
+`<input>` or a `<select>`, which is why nothing else was affected.
+`ui/form.tsx` gained `FieldGroup` — legend, hint, message, no box — and
+`ChoiceList` was refactored onto it, so the chips and the row share one
+implementation of the ruling instead of two.
+
+**Also from this round:** A3's legend read "How it felt" where the board
+reads "Did it work?" — which DS2's backlog header had already shipped in
+round 16, so the two mirrored everywhere except the words. Owner
+confirmed 2026-09-21; A3 now reads "Did it work?" and the one string
+lives in `LABELS.verdict`, which the error-summary row reads too.
+
+## Answered in round 15 (imported 2026-09-20)
+
+Five questions from task 115, all composition, all answered the lane's
+way. Three files changed: `Desktop Contract.dc.html`, `Remaining
+Screens.dc.html` and `motion.js`.
+
+**Search is a link, and there is no theme control in the bar.** DS1a's
+240px field is withdrawn — _"a field is an input surface with states
+nobody drew"_ — and replaced by the pack's search glyph at every width,
+named "Search runners", opening `/feed/search` in the 390 panel per DS3.
+The AUTO/LIGHT/DARK segment takes no seat: _"no theme control in the bar
+until dark mode ships; an inert segment fails rule 07 and an absent one
+fails nothing."_ It stays on You, where its source line already lives. DS4's
+desk row now reads _"Bar is identical to Wide — no field, no segment."_
+
+**The pill says "Log a run" at width and `+ Add` on the phone bar**, as two
+elements each hidden at the other width, each with its own accessible
+name. Design called the duplication deliberate rather than tolerated: _"the
+phone seat is a glyph-sized launcher, the bar has room for the verb."_ The
+readings are "Add, button, dialog" and "Log a run, button, dialog".
+
+**Feed is one column at desk in v1.** Two of X's three rail cards are the
+Call, so DS3's Feed row now says the rail _"arrives whole with Epic 200 or
+not at all. A rail with one live card and a hole is the dashboard DS5
+forbids."_ DS5's third-column entry gains the qualifier "(post-Epic 200)".
+Closet and the backlog keep their second column.
+
+**The top bar's underline is static**, which closes item 18 above and
+settles the one place `motion.js` and the Desktop Contract could be read
+against each other. The four links are natural width; the active one
+carries its own 2px border-bottom (`--action` on ink, `--cold-text` on
+paper) and does not travel; the colour still flips at `instant`/`snap`.
+Sliding stays the phone bar's.
 
 ## Answered in round 14 (imported 2026-09-20)
 

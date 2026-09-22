@@ -1,0 +1,184 @@
+import {
+  Link,
+  useNavigate,
+  useRouterState,
+  type LinkProps,
+} from "@tanstack/react-router";
+import type { JSX, ReactNode } from "react";
+
+import { Icon } from "./icons";
+import { LAUNCHER, TABS, bar, tabToLight } from "./tabs";
+import { Wordmark } from "./Wordmark";
+
+/**
+ * DS1 — the one top bar, from `BREAKPOINT.wide` up.
+ *
+ * *"The tab bar becomes a top bar at 720. Same four destinations, same
+ * order, as four text links."* **Not a sidebar**, and the contract is
+ * emphatic about why: *"the left rail is the Desk's chrome and is what
+ * marks a screen as operator-only. The product never grows one."*
+ *
+ * X and C were each drawn with a slightly different bar; DS1 supersedes
+ * both, so this is one bar and not a reconciliation of three.
+ *
+ * **It is the product's first `[data-ground="ink"]` block.** T2 rule 04 —
+ * *"ink bar on paper, paper bar on ink"* — and two things fall out of it
+ * rather than being spelled: the focus ring is `var(--ink)` and so inverts
+ * with the block (`ui/a11y.css`), and `--cold-text` resolves to
+ * `--course-pink` inside it and to #C21A6B outside, which is exactly round
+ * 15's rule for the underline (*"--action on ink, --cold-text on paper"*)
+ * written once.
+ *
+ * The bell is `Layout`'s own node in a second seat, and the list it opens
+ * is still the `/notifications` route — which at width *is* DS3's centred
+ * panel. So D-87's trap (an unread row inside an inverted block, where
+ * `--unread` stays the light column's pale yellow) never arises here: no
+ * notification row is ever a descendant of this bar.
+ */
+
+/**
+ * Full bar height with the rule at its foot, which is what makes the
+ * active underline sit on the bar's own bottom edge rather than under the
+ * word. The resting border is transparent rather than absent so a tab does
+ * not move 2px when it becomes the current one.
+ *
+ * `target` for the 44 hit area; the bar's own height is `--bar-height`,
+ * which is that target plus SPACE[2] either side. Nothing pins DS1a's
+ * 60px — the sum happens to be 60, and `ui/Sheet` reads the same variable
+ * to start the panel SPACE[12] below the bar rather than measuring it.
+ */
+const ACTIVE_LINK_CLASS =
+  "tab-label target flex h-full items-center border-b-2 border-cold-text px-3 text-body font-bold text-ink no-underline";
+const RESTING_LINK_CLASS =
+  "tab-label target flex h-full items-center border-b-2 border-transparent px-3 text-body text-label no-underline";
+
+/**
+ * One of the four. A launcher is not one of them — it owns no path and the
+ * underline never travels to it (round 12) — so it is filtered out by the
+ * absence of a `label` mapping rather than by a flag read twice.
+ */
+function BarTab({
+  to,
+  label,
+  active,
+}: Readonly<{
+  to: NonNullable<LinkProps["to"]>;
+  label: string;
+  active: boolean;
+}>): JSX.Element {
+  return (
+    <li className="flex">
+      <Link to={to} className={active ? ACTIVE_LINK_CLASS : RESTING_LINK_CLASS}>
+        {label}
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * The pink pill, on every screen.
+ *
+ * *"The phone's floating action sits in the tab bar; at width it's the
+ * pink pill in the top bar."* Same control as `TabBar`'s launcher and the
+ * same role — a `<button aria-haspopup="dialog">`, never a link, because
+ * *"a launcher cannot be where you are"* — with the word the wider seat
+ * has room for (round 15). No `aria-label`: the visible text is the name,
+ * which is the whole reason the two seats are two elements.
+ *
+ * `text-accent-ink`, not `text-ink`: inside this block `--ink` is chalk,
+ * and T1's note on `--action` is *"text on it is always ink"* meaning the
+ * fixed #0B0B0E. That is the one thing an accent inside an inverted block
+ * cannot say with a ground-relative role.
+ */
+function BarLauncher({
+  to,
+  label,
+}: Readonly<{ to: NonNullable<LinkProps["to"]>; label: string }>): JSX.Element {
+  const navigate = useNavigate();
+
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      className="target inline-flex items-center justify-center rounded-pill bg-action px-4 text-body font-bold text-accent-ink"
+      onClick={() => {
+        void navigate({ to });
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
+ * What the launcher says here. The phone bar's `+ Add` is a glyph-sized
+ * seat; this one has room for the verb, and design called the pair
+ * deliberate rather than tolerated (round 15).
+ */
+const LAUNCH_LABEL = "Log a run";
+
+export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  // Read, never written. `TabBar` is mounted at every width — `wide:hidden`
+  // is CSS, not a mount — so its effect is the one writer, and two bars
+  // reading one memory is what stops the hidden one remembering a
+  // different tab than the visible one across a resize.
+  const active = tabToLight(pathname, bar.lastOnTab);
+
+  return (
+    <div
+      data-ground="ink"
+      data-slot="top-bar"
+      className="hidden bg-ground px-6 text-ink wide:block"
+    >
+      <div className="mx-auto flex h-[var(--bar-height)] w-full max-w-page items-stretch gap-5 desk:gap-8">
+        {/* The one place the logo appears in the product: "the phone has
+            no wordmark on-screen". It links to Feed, which is the first
+            tab, so it is a shortcut rather than a sixth destination. */}
+        <Link
+          to="/feed"
+          aria-label="dialed.run home"
+          className="target flex items-center no-underline"
+        >
+          <Wordmark className="text-title" />
+        </Link>
+
+        <nav aria-label="Main" className="flex">
+          <ul className="m-0 flex list-none items-stretch gap-1 p-0">
+            {TABS.map((tab, index) =>
+              "launcher" in tab ? undefined : (
+                <BarTab
+                  key={tab.to}
+                  to={tab.to}
+                  label={tab.label}
+                  // The index into `TABS`, not into the four that survive
+                  // the filter: `tabToLight` answers in seats, and the
+                  // launcher holds one.
+                  active={index === active}
+                />
+              ),
+            )}
+          </ul>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-3">
+          {/* Round 15 withdrew DS1a's 240px field: "a field is an input
+              surface with states nobody drew". The glyph opens the search
+              screen the Following empty state already links to, in the
+              panel. */}
+          <Link
+            to="/feed/search"
+            aria-label="Search runners"
+            className="target inline-flex items-center justify-center no-underline"
+          >
+            <Icon name="search" size={20} />
+          </Link>
+          {bell}
+          <BarLauncher to={LAUNCHER.to} label={LAUNCH_LABEL} />
+        </div>
+      </div>
+    </div>
+  );
+}

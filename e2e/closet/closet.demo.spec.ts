@@ -23,6 +23,7 @@ import { eq } from "drizzle-orm";
 
 import { products } from "../../src/db/schema-core";
 import { storageStateFor } from "../support/accounts";
+import { bar } from "../support/bars";
 import { expect, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 
@@ -66,7 +67,7 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   ).toBeVisible();
 
   // Second piece, a different category, same identity-first discipline.
-  await page.getByRole("link", { name: "Closet" }).click();
+  await bar(page).getByRole("link", { name: "Closet" }).click();
   await scene(page, "A second piece, another category, same discipline");
   await page.getByRole("link", { name: "Add", exact: true }).click();
   await page.getByLabel("Brand").fill("Patagonia");
@@ -138,7 +139,7 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   // the derived UI group (an "outer" layer groups on its own, ahead of
   // its base category).
   await scene(page, "C · grouped by derived group — outer sits above top");
-  await page.getByRole("link", { name: "Closet" }).click();
+  await bar(page).getByRole("link", { name: "Closet" }).click();
   // §AG rule 03: the closet is for finding. No composition on the grid.
   await expect(page.getByText("Made of")).toHaveCount(0);
   await expect(

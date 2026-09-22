@@ -5,6 +5,7 @@ import { newUlid } from "../../src/lib/ids";
 import { allowedPhotoTypes } from "../../src/lib/photo-constraints";
 import {
   attachKitInput,
+  saveBacklogRowInput,
   bandCountsInput,
   coordinatesInput,
   entryIdInput,
@@ -255,6 +256,43 @@ describe("uploadPhotoFields", () => {
         entryId: newUlid(),
         contentType: "image/jpeg",
         idempotencyKey: "retry-1",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("saveBacklogRowInput", () => {
+  it("takes a run, a kit and a verdict — and nothing else", () => {
+    // DS2's row is A3's three inputs laid flat, so its schema is those
+    // two screens' own fields rather than a third list. A parsed row that
+    // came back empty would send `attachKit` a kit for no run at all.
+    const parsed = saveBacklogRowInput.safeParse({
+      runId: newUlid(),
+      itemIds: [newUlid()],
+      verdict: -1,
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.verdict).toBe(-1);
+  });
+
+  it("rejects a verdict off the scale, because it reads the scale", () => {
+    // `verdict` is `submitVerdictInput.shape.verdict`, not a copy — so the
+    // table cannot drift from the sheet. −3 is off the −2..+2 end.
+    expect(
+      saveBacklogRowInput.safeParse({
+        runId: newUlid(),
+        itemIds: [],
+        verdict: -3,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a run id that is not a ULID", () => {
+    expect(
+      saveBacklogRowInput.safeParse({
+        runId: "the-monday-one",
+        itemIds: [],
+        verdict: 0,
       }).success,
     ).toBe(false);
   });

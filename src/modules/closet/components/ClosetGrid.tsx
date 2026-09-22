@@ -63,7 +63,12 @@ function ClosetGroup({
       <h2 className="font-display text-heading">{label}</h2>
       <ul
         ref={listRef}
-        className="grid grid-cols-2 gap-3 wide:grid-cols-3 desk:grid-cols-4"
+        // DS3's reflow rule for a grid of garments, verbatim: "grids of
+        // runs or garments go from 2 tracks to `auto-fill, minmax(180px,
+        // 1fr)`". One rule instead of three fixed counts, which also
+        // means the grid does not have to be told that the filter rail
+        // has taken a third of the row from it at desk.
+        className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
       >
         {shown.map((view) => (
           <li
@@ -102,6 +107,32 @@ function ClosetGroup({
   );
 }
 
+/**
+ * Screen C's heading row.
+ *
+ * It moved out of `src/routes/closet/index.tsx` so the empty state can
+ * drop the "Add" beside it without the route branching. `headingAction`
+ * on `Page` could not serve: this screen does not wear `Page`, because
+ * the grid owns its own two-column layout at desk.
+ */
+function ClosetHeading({
+  action,
+}: Readonly<{ action?: boolean }>): JSX.Element {
+  return (
+    <div className="flex items-center justify-between">
+      <h1 className="font-display text-title uppercase">The Closet</h1>
+      {action === true ? (
+        <Link
+          to="/closet/new"
+          className="target inline-flex items-center rounded-pill bg-ink px-3 py-2 text-body font-semibold text-ground"
+        >
+          Add
+        </Link>
+      ) : undefined}
+    </div>
+  );
+}
+
 export interface ClosetGridProps {
   listing: ClosetListing;
   /**
@@ -115,6 +146,19 @@ export interface ClosetGridProps {
 /**
  * Screen C: the closet grid, grouped by the derived UI groups, with the
  * quiet enrichment nudge (D-27/D-28) and retired items behind a toggle.
+ *
+ * **One column at desk, and that is round 16's ruling rather than a
+ * shortcut.** DS4 permits Closet a second column, and C draws a filter
+ * rail — but round 16 redrew that rail as three real filter groups
+ * (GROUP with counts, WORKS AT, COVERAGE) and made it all-or-nothing:
+ * *"it ships whole or Closet stays one column at desk (same rule Feed got
+ * in round 15: one live control and air is the dashboard DS5 forbids)."*
+ *
+ * This closet has no filters. Task 115 built the rail out of the two
+ * controls it does have — the generic nudge and the retired toggle — and
+ * on film that was a third of a 1280 screen holding one small link, which
+ * is exactly what the rule forbids. So the rail comes out and the three
+ * groups are D-94.
  */
 export function ClosetGrid({
   listing,
@@ -127,55 +171,78 @@ export function ClosetGrid({
   );
   const retiredCount = listing.items.filter((view) => view.item.retired).length;
 
+  // **The empty closet offers one Add, not two.** The heading's "Add" and
+  // this one are the same action a few inches apart, and on an empty
+  // closet the centred one is the whole screen's point — so the heading
+  // keeps the title and drops the control. The heading lives here rather
+  // than in the route precisely so this can be decided: a route may not
+  // branch (`server-functions-are-glue`), and "which control a state
+  // shows" is exactly the kind of decision that rule wants somewhere a
+  // test can reach. Owner's read, 2026-09-21.
   if (listing.totalCount === 0) {
     return (
-      <div className="px-6 py-12 text-center">
-        <p className="text-body text-quiet">
-          Nothing in here yet. Add the five things you actually reach for — the
-          rest can wait.
-        </p>
-        <Link
-          to="/closet/new"
-          className="target mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
-        >
-          Add a piece
-        </Link>
+      <div className="flex flex-col gap-6 px-4 pt-6 wide:px-6">
+        <ClosetHeading />
+        <div className="py-12 text-center">
+          <p className="text-body text-quiet">
+            Nothing in here yet. Add the five things you actually reach for —
+            the rest can wait.
+          </p>
+          <Link
+            to="/closet/new"
+            className="target mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
+          >
+            Add a piece
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 px-4 py-6 wide:px-6">
-      {listing.genericCount > 0 ? (
-        <p className="rounded-none bg-tint px-4 py-3 text-small text-quiet">
-          <Mono>
-            {listing.genericCount} of {listing.totalCount}
-          </Mono>{" "}
-          pieces are still generic. Name the ones you reach for.
-        </p>
-      ) : undefined}
+    <div className="flex flex-col gap-6 px-4 py-6 wide:px-6">
+      <ClosetHeading action />
+      <div className="flex flex-col gap-8">
+        {/* The closet's two controls, above the grid at every width — which
+            is where DS3 puts the rail's contents below 1040 anyway. They
+            are not a rail: round 16 made C's rail three real filter
+            groups, all-or-nothing, and until those exist a column holding
+            these two is the thing DS5 calls a dashboard starting. */}
+        <div className="flex flex-col gap-4">
+        {listing.genericCount > 0 ? (
+          <p className="rounded-none bg-tint px-4 py-3 text-small text-quiet">
+            <Mono>
+              {listing.genericCount} of {listing.totalCount}
+            </Mono>{" "}
+            pieces are still generic. Name the ones you reach for.
+          </p>
+        ) : undefined}
 
-      {GROUP_ORDER.map(({ group, label }) => (
-        <ClosetGroup
-          key={group}
-          label={label}
-          items={visible.filter((view) => view.uiGroup === group)}
-        />
-      ))}
+        {retiredCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              setShowRetired((value) => !value);
+            }}
+            className="target self-start text-muted"
+          >
+            <Mono step="sm">
+              {showRetired ? "Hide" : "Show"} retired ({retiredCount})
+            </Mono>
+          </button>
+        ) : undefined}
+        </div>
 
-      {retiredCount > 0 ? (
-        <button
-          type="button"
-          onClick={() => {
-            setShowRetired((value) => !value);
-          }}
-          className="target self-start text-muted"
-        >
-          <Mono step="sm">
-            {showRetired ? "Hide" : "Show"} retired ({retiredCount})
-          </Mono>
-        </button>
-      ) : undefined}
+        <div className="flex flex-col gap-8">
+          {GROUP_ORDER.map(({ group, label }) => (
+            <ClosetGroup
+              key={group}
+              label={label}
+              items={visible.filter((view) => view.uiGroup === group)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

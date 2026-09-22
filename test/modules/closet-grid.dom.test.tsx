@@ -47,6 +47,12 @@ const genericTop = itemView({
   item: wardrobeItem({ id: "01GEN", name: "Long sleeve top" }),
 });
 
+const retiredTee = itemView({
+  item: wardrobeItem({ id: "01RTD", name: "Old tee", retired: true }),
+  isGeneric: false,
+  uiGroup: "tops",
+});
+
 describe("ClosetGrid: the empty closet", () => {
   it("asks for five things rather than showing an empty grid", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([])} />);
@@ -56,8 +62,36 @@ describe("ClosetGrid: the empty closet", () => {
       "href",
       "/closet/new",
     );
-    // No group headings, no toggle — the empty state is the whole screen.
-    expect(screen.queryByRole("heading")).toBeNull();
+    // No group headings — the empty state is the whole screen. The screen
+    // still has its own title, which is the one heading a route must have.
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "The Closet" }),
+    ).toBeVisible();
+  });
+
+  it("offers one Add, not two, when the closet is empty", async () => {
+    // The heading's "Add" and the empty state's "Add a piece" are the same
+    // action a few inches apart, and on an empty closet the centred one is
+    // the whole screen's point. Owner's read on the demo, 2026-09-21.
+    //
+    // This is why the heading lives in this component rather than in the
+    // route: a route may not branch, and "which control a state shows" is
+    // exactly the decision `server-functions-are-glue` wants somewhere a
+    // test can reach.
+    await renderWithRouter(<ClosetGrid listing={listing([])} />);
+
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: /^Add$/ })).toBeNull();
+  });
+
+  it("offers the heading's Add once the closet has something in it", async () => {
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+
+    expect(
+      screen.getByRole("link", { name: /^Add$/ }),
+    ).toHaveAttribute("href", "/closet/new");
+    expect(screen.queryByText(/Nothing in here yet/)).toBeNull();
   });
 
   it("counts the closet, not the visible rows", async () => {
@@ -150,6 +184,37 @@ describe("ClosetGrid: what a piece says about itself", () => {
   });
 });
 
+describe("ClosetGrid: one column at desk", () => {
+  it("puts its two controls above the grid, not in a rail", async () => {
+    // Round 16 redrew C's rail as three real filter groups and made it
+    // all-or-nothing: "it ships whole or Closet stays one column at desk
+    // (same rule Feed got in round 15: one live control and air is the
+    // dashboard DS5 forbids)." This closet has no filters, so there is no
+    // rail — and nothing may reintroduce one until there is (D-94).
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, genericTop, retiredTee])} />,
+    );
+
+    expect(document.querySelector("[data-slot='closet-rail']")).toBeNull();
+    expect(document.querySelector("[class*='desk:grid-cols']")).toBeNull();
+    // The two controls are still there, above the grid.
+    expect(
+      screen.getByRole("button", { name: /retired/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/pieces are still generic/)).toBeInTheDocument();
+  });
+
+  it("lets the garment grid fill rather than counting columns", async () => {
+    // DS3's reflow rule for a grid of garments: "auto-fill,
+    // minmax(180px, 1fr)". One rule instead of a count per breakpoint.
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+
+    expect(screen.getByRole("list")).toHaveClass(
+      "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
+    );
+  });
+});
+
 describe("ClosetGrid: the groups", () => {
   it("renders all six in the contract's order, whatever order the items arrive in", async () => {
     // The headings are what a user navigates by, and the order is the
@@ -173,7 +238,9 @@ describe("ClosetGrid: the groups", () => {
     await renderWithRouter(<ClosetGrid listing={listing(views)} />);
 
     expect(
-      screen.getAllByRole("heading").map((heading) => heading.textContent),
+      screen
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent),
     ).toStrictEqual([
       "Tops",
       "Bottoms",
@@ -187,7 +254,9 @@ describe("ClosetGrid: the groups", () => {
   it("omits a group with nothing in it", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
     expect(
-      screen.getAllByRole("heading").map((heading) => heading.textContent),
+      screen
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent),
     ).toStrictEqual(["Tops"]);
   });
 });

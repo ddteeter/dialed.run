@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { dayLabel } from "../../../lib/dates";
 import { inFlight, Mono, PendingLabel } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 
@@ -59,7 +60,7 @@ export function OtherProfile({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-6 px-5 pt-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="font-display text-title uppercase">
@@ -112,7 +113,7 @@ export function OtherProfile({
                   <p className="m-0 text-small">{entry.caption}</p>
                 )}
                 <Mono className="text-muted">
-                  {new Date(entry.createdAt * 1000).toLocaleDateString()}
+                  {dayLabel(entry.createdAt)}
                 </Mono>
               </Link>
             </li>

@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -127,5 +127,94 @@ describe("GarmentDetail's product link", () => {
     // domain, which only `ProductLink` renders: the screen's other
     // anchors are router links to elsewhere in the app and stay.
     expect(screen.queryByText("janji.com")).not.toBeInTheDocument();
+  });
+});
+
+describe("GarmentDetail: the photo well at width", () => {
+  it("offers the drop zone's copy, which only exists where there is no camera", async () => {
+    // Bend 1: "at width the same panel shows a drop zone in the photo
+    // well — 'Drop a photo, or shoot it on your phone later.'" `wide:`
+    // is what makes it width-only; happy-dom applies no stylesheet, so
+    // what is checkable here is that the line is the contract's and
+    // carries the variant that hides it on a phone.
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail}
+        retire={vi.fn()}
+        unretire={vi.fn()}
+        remove={vi.fn()}
+        uploadPhoto={vi.fn()}
+      />,
+    );
+
+    const line = screen.getByText(
+      "Drop a photo, or shoot it on your phone later.",
+    );
+    expect(line).toHaveClass("hidden", "wide:block");
+  });
+
+  it("marks the well while a file is over it, and nothing else moves", async () => {
+    // "Copy and one state change; **the layout is untouched**." The
+    // border is the state change — the box is the same dashed field
+    // either way, and a transparent resting border is what stops the well
+    // shifting 1px when a file arrives over it.
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail}
+        retire={vi.fn()}
+        unretire={vi.fn()}
+        remove={vi.fn()}
+        uploadPhoto={vi.fn()}
+      />,
+    );
+
+    const well = screen
+      .getByText("Drop a photo, or shoot it on your phone later.")
+      .closest("label");
+    // The same resting treatment A1's well has — a dashed hairline box,
+    // centred, with the input `sr-only` inside it.
+    expect(well).toHaveClass("target", "border-dashed", "border-hairline-2");
+    expect(well).not.toHaveClass("border-ink");
+    expect(well?.querySelector("input")).toHaveClass("sr-only");
+
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array([1])], "kit.png"));
+    fireEvent.dragOver(well ?? document.body, { dataTransfer: transfer });
+
+    expect(well).toHaveClass("border-ink", "border-dashed");
+    expect(well).not.toHaveClass("border-hairline-2");
+  });
+
+  it("takes a dropped file down the same path as a chosen one", async () => {
+    // "Face-blur runs the same WASM path on the dropped file — do not
+    // fork it." The upload callback is the proof: one handler, reached
+    // either way.
+    const uploadPhoto = vi
+      .fn()
+      .mockResolvedValue({ ok: true, photoKey: "k" });
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail}
+        retire={vi.fn()}
+        unretire={vi.fn()}
+        remove={vi.fn()}
+        uploadPhoto={uploadPhoto}
+      />,
+    );
+
+    const well = screen
+      .getByText("Drop a photo, or shoot it on your phone later.")
+      .closest("label");
+    expect(well).not.toBeNull();
+
+    const transfer = new DataTransfer();
+    transfer.items.add(
+      new File([new Uint8Array([1])], "kit.png", { type: "image/png" }),
+    );
+    fireEvent.drop(well ?? document.body, { dataTransfer: transfer });
+
+    await waitFor(() => {
+      expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -193,11 +193,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line LogicalOperator",
-      "reason": "Equivalent mutant on the `??`: the `is_public` column itself defaults to true, so a runner with no profile row gets a public entry either way. The default is written here as well because this is where the product rule lives \u2014 public by default, with a per-user preference \u2014 and a schema default is not a place to read a decision from.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
       "reason": "Two equivalent filters: each per-item update is also scoped by `entryId` in SQL, so a flag for an item the entry does not contain matches no row; and the verdict filter cannot drop a row the query already excluded. Both keep the batch and the loop the size of the real work.",
       "count": 2
@@ -580,6 +575,26 @@
     {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker restore ConditionalExpression",
       "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered \u2014 the push gate caught both as a survived mutant and a no-coverage mutant. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed (store.ts) or decremented (service.ts, whose other five directives still use that text) in the same commit. Verified cold after the change: 793 mutants across the seven files carrying an at-risk directive, 100%, none survived. Owner approved this resolution on PR #73.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/share-default.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with onboarding/profile.ts's hasOnboarded: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (public-by-default vs not-yet-onboarded) that will evolve on its own product timeline",
+      "reason": "Pair A, both sides. Two modules reading one column each out of `user_profiles` for two unrelated product facts \u2014 \"entries are public unless you say otherwise\" and \"this runner has finished onboarding\" \u2014 which happen to share a six-line skeleton. Different defaults, different product lifecycles, and nowhere a shared helper could live that both could import: cross-module imports go through a barrel and `modules/onboarding` has none. Merging them would couple sharing policy to onboarding state. Owner's call, 2026-09-21 (task 115).",
+      "count": 1
+    },
+    {
+      "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
+      "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/backlog.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with garmentNamesByIds, but against a different table for a different key (entry ids -> item pairs, not item ids -> names); a shared helper would need to be generic over its own projection, which garment-names.ts's own header already argues against for the similar case of consensus.ts",
+      "reason": "Pair B, both sides. The `forIds` + `inArray` read shape, over `outfit_entry_items` (entry ids -> item pairs) and over `wardrobe_items` (item ids -> names). A shared helper would have to be generic over its own projection, which is exactly the merge `garment-names.ts`'s own header already refuses for the similar case of `consensus.ts` \u2014 it predicted this grant in prose before the second caller existed. Owner's call, 2026-09-21 (task 115).",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/garment-names.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with backlog.ts's kitsFor, but against a different table for a different key (item ids -> names, not entry ids -> item pairs); see the note above on why a shared helper is not wanted here",
+      "reason": "Pair B, both sides. See the matching grant on `modules/feed/backlog.ts`; this file's header has argued the case since it was written. Owner's call, 2026-09-21 (task 115).",
       "count": 1
     }
   ]

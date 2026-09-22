@@ -33,7 +33,7 @@ function NamePage() {
   }>({ brands: [], models: [] });
 
   return (
-    <Page title="Which ones do you actually reach for?" width="narrow">
+    <Page title="Which ones do you actually reach for?" width="panel">
       <NamePieces
         offer={offer}
         nameGarment={nameGarmentFn}

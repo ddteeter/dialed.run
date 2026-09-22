@@ -84,57 +84,169 @@ export function FieldMessage({
   );
 }
 
+/**
+ * What every labelled field takes, whatever its caption is.
+ *
+ * Written out on each of the three, it was the same four members with one
+ * renamed — which is precisely the shape the clone detector's semantic
+ * mode exists to catch, since a restated set drifts silently: add an
+ * `optional` flag to one and nothing makes the other disagree out loud.
+ * One type, three captions.
+ */
+interface LabelledFieldProps {
+  /**
+   * The control's `name`, which is also how `FormErrorSummary` focuses it
+   * and how `FieldMessage` builds the id the control points at.
+   */
+  name: string;
+  /**
+  One sentence under the control, for what the answer is used for.
+  */
+  hint?: string | undefined;
+  error?: string | undefined;
+  children: ReactNode;
+}
+
+/**
+ * What a labelled field is, minus the two things that differ.
+ *
+ * `FormField` and `FieldGroup` are the same idea — a caption, the control,
+ * an optional hint, and the message when it fails — differing only in the
+ * caption's element and whether the control gets a box. Written out twice
+ * they were 44 duplicated lines and the clone detector said so; that is
+ * not a rhyme to suppress, it is one idea with two spellings.
+ *
+ * The caption is passed in rather than branched on, because the choice is
+ * not cosmetic: a single control gets `<label htmlFor>` pointing at its
+ * id, and a group gets `<legend>`, since a `for` naming an id that does
+ * not exist is worse than no label at all.
+ *
+ * The hint hides while the field is failing — two sentences under one
+ * control, one of them now wrong, is worse than the one that matters
+ * alone.
+ */
+function FieldShell({
+  name,
+  caption,
+  hint,
+  error,
+  children,
+}: Readonly<LabelledFieldProps & { caption: ReactNode }>): JSX.Element {
+  return (
+    <>
+      {caption}
+      {children}
+      {hint !== undefined && error === undefined ? (
+        <span className="text-micro text-muted">{hint}</span>
+      ) : undefined}
+      <FieldMessage name={name} error={error} />
+    </>
+  );
+}
+
+/**
+ * A labelled group of controls with **no field box**.
+ *
+ * `FormField` draws a bordered box because the control inside it is a
+ * borderless input inset by `px-4 py-3`: the box *is* that control's
+ * visible boundary. A group whose members draw their own boxes — radio
+ * chips, the verdict row — does not need a sixth border around five, and
+ * design's round 17 ruled it out in as many words: *"neither the row nor
+ * the chips sit inside a field box."*
+ *
+ * Which also fixes a real defect. `field-box` removes the outline from its
+ * descendants (`ui/a11y.css`), on the correct assumption that the child is
+ * that inset input — so wrapping a *button group* in one suppressed every
+ * button's focus ring and left only the container ringed. Tabbing across
+ * A3's five verdicts showed no indication of which one had focus, on the
+ * single control the whole product turns on. Rule 06's "never removed" was
+ * failing by construction.
+ *
+ * **A `<legend>`, not a `<label htmlFor>`.** There is no one control to
+ * point at, and a `for` naming an id that does not exist is worse than no
+ * label at all. The legend is the group's only label, so it wears
+ * `--label` (T1, round 13) rather than `--muted`.
+ *
+ * The row or stack the members sit in is the caller's, because it is the
+ * one thing that genuinely differs — chips wrap, the verdict is five
+ * columns that must not.
+ */
+export function FieldGroup({
+  name,
+  legend,
+  hint,
+  error,
+  children,
+}: Readonly<LabelledFieldProps & { legend: string }>): JSX.Element {
+  return (
+    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+      <FieldShell
+        name={name}
+        hint={hint}
+        error={error}
+        caption={
+          <legend className="mb-2 p-0 text-label">
+            <Mono step="sm">{legend}</Mono>
+          </legend>
+        }
+      >
+        {children}
+      </FieldShell>
+    </fieldset>
+  );
+}
+
 export function FormField({
   name,
   label,
   hint,
   error,
   children,
-}: Readonly<{
-  name: string;
-  label: string;
-  hint?: string | undefined;
-  error?: string | undefined;
-  children: ReactNode;
-}>): JSX.Element {
+}: Readonly<LabelledFieldProps & { label: string }>): JSX.Element {
   const isInvalid = error !== undefined;
   return (
     <div className="flex flex-col gap-2">
-      {/* `--label`, not `--muted`: the mono caption inside the field IS
-          the label (the contract's Forms row says so in as many words), and
-          T1's round-13 row bans --muted from being a control's only label
-          on paper. */}
-      <label htmlFor={name} className="text-label">
-        <Mono step="sm">{label}</Mono>
-      </label>
-      {/* Weight is the signal: 1px rule -> 2px ink, and the box does not
-          grow when it gains the heavier one.
-
-          That used to be a 1px padding compensation — `px-[13px] py-[11px]`
-          against `px-[14px] py-[12px]` — which the 4px grid cannot express:
-          SPACE is "a 4px step, nothing else. 1px and 2px exist only as
-          border widths." So the second pixel is an inset ring instead. A
-          ring is a box-shadow, so it occupies no space at all and there is
-          nothing left to compensate for. */}
-      <div
-        data-invalid={isInvalid ? "true" : undefined}
-        // `field-box` (ui/a11y.css) is the focus half: the box is the
-        // control's visible boundary, so the ring lands on it rather than
-        // on the borderless input inset inside it. It also removes the
-        // ring from that input, which is what five `outline-none`
-        // utilities used to do without saying where the ring had gone.
-        className={
-          isInvalid
-            ? "field-box flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
-            : "field-box flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
+      <FieldShell
+        name={name}
+        hint={hint}
+        error={error}
+        caption={
+          /* `--label`, not `--muted`: the mono caption inside the field IS
+             the label (the contract's Forms row says so in as many words),
+             and T1's round-13 row bans --muted from being a control's only
+             label on paper. */
+          <label htmlFor={name} className="text-label">
+            <Mono step="sm">{label}</Mono>
+          </label>
         }
       >
-        {children}
-      </div>
-      {hint !== undefined && !isInvalid ? (
-        <span className="text-micro text-muted">{hint}</span>
-      ) : undefined}
-      <FieldMessage name={name} error={error} />
+        {/* Weight is the signal: 1px rule -> 2px ink, and the box does not
+            grow when it gains the heavier one.
+
+            That used to be a 1px padding compensation — `px-[13px]
+            py-[11px]` against `px-[14px] py-[12px]` — which the 4px grid
+            cannot express: SPACE is "a 4px step, nothing else. 1px and 2px
+            exist only as border widths." So the second pixel is an inset
+            ring instead. A ring is a box-shadow, so it occupies no space at
+            all and there is nothing left to compensate for. */}
+        <div
+          data-invalid={isInvalid ? "true" : undefined}
+          // `field-box` (ui/a11y.css) is the focus half: the box is the
+          // control's visible boundary, so the ring lands on it rather than
+          // on the borderless input inset inside it. It also removes the
+          // ring from that input, which is what five `outline-none`
+          // utilities used to do without saying where the ring had gone.
+          //
+          // Which is why a *group* does not get one — see `FieldGroup`.
+          className={
+            isInvalid
+              ? "field-box flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
+              : "field-box flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
+          }
+        >
+          {children}
+        </div>
+      </FieldShell>
     </div>
   );
 }
@@ -616,11 +728,7 @@ export function ChoiceList<TOption extends string>({
 >): JSX.Element {
   const isChips = layout === "chips";
   return (
-    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-      {/* A legend is the group's only label, so --label (T1, round 13). */}
-      <legend className="mb-2 p-0 text-label">
-        <Mono step="sm">{legend}</Mono>
-      </legend>
+    <FieldGroup name={name} legend={legend} hint={hint} error={error}>
       <div className={isChips ? "flex flex-wrap gap-2" : "contents"}>
         {options.map((option) => (
           <label
@@ -656,10 +764,6 @@ export function ChoiceList<TOption extends string>({
           </label>
         ))}
       </div>
-      {hint !== undefined && error === undefined ? (
-        <span className="text-micro text-muted">{hint}</span>
-      ) : undefined}
-      <FieldMessage name={name} error={error} />
-    </fieldset>
+    </FieldGroup>
   );
 }

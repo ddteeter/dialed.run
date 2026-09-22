@@ -29,6 +29,7 @@ import { Route as OnboardingSettingsRouteImport } from './routes/onboarding/sett
 import { Route as OnboardingTaplistRouteImport } from './routes/onboarding/taplist'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
+import { Route as RunsBacklogRouteImport } from './routes/runs/backlog'
 import { Route as RunsManualRouteImport } from './routes/runs/manual'
 import { Route as RunsNewRouteImport } from './routes/runs/new'
 import { Route as RunsStravaRouteImport } from './routes/runs/strava'
@@ -146,6 +147,11 @@ const RunsRunIdRoute = RunsRunIdRouteImport.update({
   path: '/runs/$runId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RunsBacklogRoute = RunsBacklogRouteImport.update({
+  id: '/runs/backlog',
+  path: '/runs/backlog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RunsManualRoute = RunsManualRouteImport.update({
   id: '/runs/manual',
   path: '/runs/manual',
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/backlog': typeof RunsBacklogRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByTo {
   '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/backlog': typeof RunsBacklogRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
@@ -320,6 +328,7 @@ export interface FileRoutesById {
   '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/runs/backlog': typeof RunsBacklogRoute
   '/runs/manual': typeof RunsManualRoute
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
@@ -360,6 +369,7 @@ export interface FileRouteTypes {
     | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
+    | '/runs/backlog'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
+    | '/runs/backlog'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
@@ -436,6 +447,7 @@ export interface FileRouteTypes {
     | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
+    | '/runs/backlog'
     | '/runs/manual'
     | '/runs/new'
     | '/runs/strava'
@@ -475,6 +487,7 @@ export interface RootRouteChildren {
   OnboardingSettingsRoute: typeof OnboardingSettingsRoute
   OnboardingTaplistRoute: typeof OnboardingTaplistRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
+  RunsBacklogRoute: typeof RunsBacklogRoute
   RunsManualRoute: typeof RunsManualRoute
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
@@ -640,6 +653,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runs/backlog': {
+      id: '/runs/backlog'
+      path: '/runs/backlog'
+      fullPath: '/runs/backlog'
+      preLoaderRoute: typeof RunsBacklogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs/manual': {
       id: '/runs/manual'
       path: '/runs/manual'
@@ -771,6 +791,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingSettingsRoute: OnboardingSettingsRoute,
   OnboardingTaplistRoute: OnboardingTaplistRoute,
   RunsRunIdRoute: RunsRunIdRoute,
+  RunsBacklogRoute: RunsBacklogRoute,
   RunsManualRoute: RunsManualRoute,
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,

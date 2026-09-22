@@ -13,6 +13,12 @@ import { BelledLayout } from "../../src/modules/notifications/components/BelledL
 /**
  * `Layout` with the bell already in its slot — the wiring seven routes
  * each wrote out by hand.
+ *
+ * `Layout` renders the node in two seats since task 115 (the top bar at
+ * width, the per-screen header below it), so the assertions here read the
+ * first of the pair. Which one is displayed is a width question and
+ * therefore Playwright's; what this file is about is that the count the
+ * route loaded reaches the bell at all.
  */
 
 /**
@@ -35,8 +41,9 @@ describe("BelledLayout", () => {
     // The count reaches the bell rather than being dropped on the way:
     // bracket notation, per docs/product.md §Brand. `textContent` because
     // `Bracketed` renders the brackets as their own text nodes.
-    const bell = screen.getByRole("link", { name: "Notifications" });
-    expect(bell.textContent).toContain("[3]");
+    const bells = screen.getAllByRole("link", { name: "Notifications" });
+    expect(bells).toHaveLength(2);
+    for (const bell of bells) expect(bell.textContent).toContain("[3]");
   });
 
   it("still renders the bell when there is nothing unread", async () => {
@@ -44,8 +51,8 @@ describe("BelledLayout", () => {
     // number on it — a route with a zero count must not lose its way back.
     await renderWithRouter(<BelledLayout unreadCount={0}>page</BelledLayout>);
 
-    const bell = screen.getByRole("link", { name: "Notifications" });
-    expect(bell.textContent).not.toContain("[0]");
+    const bells = screen.getAllByRole("link", { name: "Notifications" });
+    for (const bell of bells) expect(bell.textContent).not.toContain("[0]");
   });
 
   it("renders the page it wraps", async () => {

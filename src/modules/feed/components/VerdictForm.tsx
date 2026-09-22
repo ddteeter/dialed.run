@@ -10,9 +10,11 @@ import {
 } from "../../../lib/photo-constraints";
 import {
   Bracketed,
+  ChoiceList,
   FlowStep,
   FormErrorSummary,
   FormFailureBand,
+  FieldGroup,
   FormField,
   FormStatus,
   LOG_FLOW,
@@ -32,11 +34,41 @@ import {
  * receipt for something that did not happen. Removed with the class, the
  * revert is instant.
  */
-const VERDICT_CHOSEN =
-  "verdict-lock target flex items-center gap-1 rounded-card bg-ink px-4 py-3 text-left font-semibold text-ground";
+/**
+ * `justify-start`, not `justify-center`, and it is not a nicety.
+ *
+ * Four of the five labels are two words and wrap inside their cell;
+ * "Dialed" is one. Centred, the short one floats to the middle of the cell
+ * while its neighbours' first lines sit above it — five labels, no shared
+ * baseline. The board aligns all five first lines, which a layout-signature
+ * diff against it is what caught: the board reads
+ * `['WAY','A BIT','DIALED','A BIT','WAY']` on one row, and this read
+ * `['WAY COLD','A BIT COLD','A BIT WARM','WAY WARM']` with `['DIALED']`
+ * alone on the next.
+ */
+const VERDICT_BASE =
+  "flex flex-col items-center justify-start gap-0 rounded-card px-1 py-3 text-center text-micro font-semibold uppercase";
 
-const VERDICT_RESTING =
-  "target flex items-center gap-1 rounded-card border border-hairline px-4 py-3 text-left";
+const VERDICT_CHOSEN = `verdict-lock ${VERDICT_BASE} bg-ink text-ground`;
+
+/**
+ * The per-item flag as three visible choices.
+ *
+ * `"none"` rather than `""`: a radio's value is a real string and an empty
+ * one reads as "no value" to the platform, which is a different thing from
+ * "the runner chose not to flag this". `payload()` maps it back to
+ * `undefined`, which is what the contract stores.
+ */
+const ITEM_FLAG_OPTIONS = ["none", "too_much", "not_enough"] as const;
+
+const ITEM_FLAG_LABELS: Readonly<Record<(typeof ITEM_FLAG_OPTIONS)[number], string>> =
+  {
+    none: "Fine",
+    too_much: "Too much",
+    not_enough: "Not enough",
+  };
+
+const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
 import { submitVerdictInput } from "../inputs";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
@@ -48,7 +80,11 @@ Field name -> human label, for the summary rows the contract requires once
 two or more fields fail at once.
 */
 const LABELS = {
-  verdict: "How it felt",
+  // "Did it work?", not "How it felt": design's A3 board carries this
+  // wording and DS2's backlog header already shipped it in round 16, so
+  // the two mirrored everywhere except here. Copy is the artboard's
+  // domain; owner confirmed 2026-09-21.
+  verdict: "Did it work?",
   tags: "Tags",
   itemFlags: "Per-item notes",
   isPublic: "Sharing",
@@ -124,10 +160,10 @@ export function VerdictForm({
   // meant re-opening a verdict showed every piece as unflagged — so
   // saving again silently cleared flags the runner had set.
   const [flags, setFlags] = useState<
-    Record<string, "too_much" | "not_enough" | "">
+    Record<string, (typeof ITEM_FLAG_OPTIONS)[number]>
   >(() =>
     Object.fromEntries(
-      entry.items.map((item) => [item.itemId, item.flag ?? ""]),
+      entry.items.map((item) => [item.itemId, item.flag ?? "none"]),
     ),
   );
   const [noted, setNoted] = useState<string | undefined>();
@@ -164,7 +200,7 @@ export function VerdictForm({
   // the runtime's — and it is hoisted out of the JSX because a `Stryker
   // disable` comment does not attach inside an expression container.
   // Stryker disable next-line StringLiteral
-  const flagFor = (itemId: string) => flags[itemId] ?? "";
+  const flagFor = (itemId: string) => flags[itemId] ?? "none";
 
   /**
    * Uploads one file. Multipart: the browser streams it and nothing
@@ -304,12 +340,12 @@ export function VerdictForm({
       isPublic,
       tags: [...tags] as (typeof entryTags)[number][],
       itemFlags: entry.items.map((item) => {
-        // `=== ""` alone: an item with no entry reads as undefined, which
-        // is already the answer this returns for it.
+        // `=== "none"` alone: an item with no entry reads as undefined,
+        // which is already the answer this returns for it.
         const flagValue = flags[item.itemId];
         return {
           itemId: item.itemId,
-          flag: flagValue === "" ? undefined : flagValue,
+          flag: flagValue === "none" ? undefined : flagValue,
         };
       }),
     };
@@ -317,7 +353,7 @@ export function VerdictForm({
 
   if (noted !== undefined) {
     return (
-      <div className="mx-auto flex w-full max-w-column flex-col items-center gap-4 px-5 pt-16 text-center">
+      <div className="mx-auto flex w-full max-w-panel flex-col items-center gap-4 px-5 pt-16 text-center">
         <Bracketed className="text-dialed-text">Noted</Bracketed>
         <p>{noted}</p>
         <button
@@ -338,7 +374,7 @@ export function VerdictForm({
       <form
         ref={form.formRef}
         noValidate
-        className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6"
+        className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6"
         onSubmit={(event) => {
           event.preventDefault();
           void form.submit(payload());
@@ -351,12 +387,23 @@ export function VerdictForm({
           onFocusField={form.focusField}
           summaryRef={form.summaryRef}
         />
-        <FormField
+        {/* **One row at every width — in the 390 panel too; never a
+            stack, never wider than the panel** (design round 17). It was
+            `flex flex-col`, which put five full-width buttons in a tall
+            column and, at desk, a tall column beside a screen of empty
+            space. `grid-cols-5` cannot wrap, which is the rule stated as
+            a layout rather than remembered: the labels break inside their
+            own cell instead of the row breaking.
+
+            `FieldGroup`, not `FormField`, for the same round-17 ruling —
+            "neither the row nor the chips sit inside a field box" — and
+            because the box was suppressing each button's focus ring. */}
+        <FieldGroup
           name="verdict"
-          label={LABELS.verdict}
+          legend={LABELS.verdict}
           error={form.fieldErrors.verdict}
         >
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-5 gap-1">
             {verdictScale.map((choice) => {
               const isChosen = verdict === choice.value;
               return (
@@ -381,7 +428,12 @@ export function VerdictForm({
                   onClick={() => {
                     setVerdict(choice.value);
                   }}
-                  className={isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}
+                  // `target` at the site rather than inside
+                  // `VERDICT_BASE`: the 44px hit area is this button's,
+                  // and `targets-and-focus` resolves a double-quoted
+                  // constant but not a template literal — which both of
+                  // these now are, since they share a base.
+                  className={`target ${isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}`}
                 >
                   {isChosen ? (
                     <span aria-hidden="true" className="bracket-close-start">
@@ -398,35 +450,38 @@ export function VerdictForm({
               );
             })}
           </div>
-        </FormField>
+        </FieldGroup>
 
         {entry.items.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          // **Chips, never a `<select>`** (design round 16). A dropdown
+          // beside the kit reads as the verdict control — which is exactly
+          // what happened when the owner watched the demo: he took this
+          // for the verdict and asked why it did not match the backlog's.
+          // `ChoiceList`'s own note has argued the case since it was
+          // written: "a `<select>` hides its options behind a tap and
+          // reads them out one at a time", and comparing the options is
+          // how a runner picks.
+          //
+          // One group per garment, legended with the garment's name, so a
+          // reader entering the group hears which piece it is about.
+          <div className="flex flex-col gap-4">
             <h2>
-              <Mono step="xs">Per-item notes</Mono>
+              <Mono step="xs">Anything specific?</Mono>
             </h2>
             {entry.items.map((item) => (
-              <div
+              <ChoiceList
                 key={item.itemId}
-                className="flex items-center justify-between text-body"
-              >
-                <span>{item.name}</span>
-                <select
-                  value={flagFor(item.itemId)}
-                  onChange={(event) => {
-                    setFlags((prev) => ({
-                      ...prev,
-                      [item.itemId]: event.target.value as
-                        "too_much" | "not_enough" | "",
-                    }));
-                  }}
-                  className="rounded-field border border-hairline px-2 py-1"
-                >
-                  <option value="">No flag</option>
-                  <option value="too_much">Too much</option>
-                  <option value="not_enough">Not enough</option>
-                </select>
-              </div>
+                name={`flag-${item.itemId}`}
+                legend={item.name}
+                layout="chips"
+                options={ITEM_FLAG_OPTIONS}
+                optionLabels={ITEM_FLAG_LABELS}
+                value={flagFor(item.itemId)}
+                field={form.field}
+                onChange={(next) => {
+                  setFlags((prev) => ({ ...prev, [item.itemId]: next }));
+                }}
+              />
             ))}
           </div>
         ) : undefined}

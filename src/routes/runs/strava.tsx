@@ -26,7 +26,7 @@ function StravaPage() {
 
   return (
     <BelledLayout unreadCount={unreadCount}>
-      <Page title="Strava" width="narrow">
+      <Page title="Strava" width="column">
         <p className="text-small text-muted">
           We never store your Strava activity data — connecting only turns on a
           reminder to log your kit after a run.

@@ -7,6 +7,7 @@ import { Bracketed, Mono, Skeleton } from "../../../ui";
 import type { ConsensusResult } from "../consensus";
 import type { FeedItem } from "../feed";
 import { uiGroupLabels, uiGroups } from "../groups";
+import { isBacklogWorthOpening } from "../route-decisions";
 
 /**
  * The feed (screen E1/E2-lite), and the two tabs it switches between.
@@ -20,8 +21,14 @@ export function Feed({
   items,
   conditionsFor,
   units,
+  unjudgedCount,
 }: Readonly<{
   items: FeedItem[];
+  /**
+  How many runs are waiting on a verdict, which is what decides whether
+  the queue is worth a link at all.
+  */
+  unjudgedCount: number;
   /**
   The viewer's own units — every number on this screen is theirs.
   */
@@ -33,7 +40,10 @@ export function Feed({
   const [tab, setTab] = useState<"following" | "conditions">("following");
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
+    // `mx-auto` below 720 only, for DS3's reason: a reflowed column is
+    // "left-aligned inside the page measure, not centred, so it lines up
+    // with the wide screens' primary column".
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-title uppercase">Feed</h1>
         <Link
@@ -43,6 +53,22 @@ export function Feed({
           Find runners
         </Link>
       </div>
+      {isBacklogWorthOpening(unjudgedCount) ? (
+        // DS2's own entry point — "reached from 'Clear the queue ›' on X".
+        // Below two runs there is no queue to clear: the S1 prompt opens
+        // A3 in the panel, like the phone.
+        <Link
+          to="/runs/backlog"
+          className="target flex items-center justify-between gap-3 rounded-none bg-tint px-4 py-3 text-body text-ink no-underline"
+        >
+          <span>
+            <Mono step="sm">{unjudgedCount}</Mono> runs still need a verdict
+          </span>
+          <span className="font-semibold text-cold-text">
+            Clear the queue &rsaquo;
+          </span>
+        </Link>
+      ) : undefined}
       {/* `gap-2`, not `gap-1`: rule 03's other half is 8px between
           adjacent hit areas, and these two are now 44 tall and touching. */}
       <div className="flex gap-2 border-b border-hairline">

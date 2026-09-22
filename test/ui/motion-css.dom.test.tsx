@@ -82,10 +82,23 @@ interface Surface {
   why: string;
 }
 
+/**
+ * One single-quoted JS string, escaped apostrophes included.
+ *
+ * `[^']+` was enough until round 15, when "Tab switch" grew a sentence
+ * about `E1\'s tabs` — and a row the parser cannot read does not fail
+ * loudly, it simply is not there. The map went to eleven surfaces and the
+ * three cases below reported a missing *utility*, which is the opposite
+ * end of the file from the cause.
+ */
+const QUOTED = String.raw`'((?:[^'\\]|\\.)+)'`;
+
 const SURFACES = new Map<string, Surface>();
-for (const match of doctrine.matchAll(
-  /\{ surface: '([^']+)', move: '([^']+)', duration: '([^']+)', easing: '([^']+)',\s*why: '([^']+)' \}/g,
-)) {
+const surfacePattern = new RegExp(
+  String.raw`\{ surface: ${QUOTED}, move: ${QUOTED}, duration: ${QUOTED}, easing: ${QUOTED},\s*why: ${QUOTED} \}`,
+  "g",
+);
+for (const match of doctrine.matchAll(surfacePattern)) {
   const [, surface, move, duration, easing, why] = match;
   if (surface === undefined) continue;
   SURFACES.set(surface, {
@@ -354,6 +367,24 @@ describe("the ported Motion Doctrine (design/motion.js)", () => {
     const declared = withoutComments(css);
     expect(declared.match(/cubic-bezier/g)).toHaveLength(EASING.size);
     expect(declared.match(/\d{1,5}ms;/g)).toHaveLength(DURATION.size + 1);
+  });
+
+  it("slides only where the labels are equal columns (round 15)", () => {
+    // One surface, two bars, and the doctrine now says which is which
+    // rather than leaving one sentence to cover both. The phone bar's
+    // five equal columns make a travelling indicator free; the top bar's
+    // four links and E1's two are natural width, where the same rule
+    // would need a resize observer for a 90ms move. `ui/tabs.ts` is where
+    // the code side of this lives.
+    const move = SURFACES.get("Tab switch")?.move ?? "";
+    expect(move).toContain("five equal columns, the indicator slides");
+    expect(move).toContain("natural-width labels");
+    expect(move).toContain("static underline");
+    // The colour flip is the half that survives at every width, and it is
+    // the only thing `tab-label` does.
+    expect(fullMotion(utilities.get("tab-label") ?? "")).toContain(
+      "transition: color",
+    );
   });
 
   it("keeps the NEVER list, including the one that reads as a nicety", () => {

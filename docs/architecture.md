@@ -77,6 +77,19 @@ Key decisions embedded here:
   modules reach cached conditions only through weather's `index.ts` reads.
   The hourly retry cron is dispatched from `modules/ops/scheduled.ts`.
 
+  **Its attribution line is not in the module** (moved by task 115).
+  `WeatherAttribution` is an anchor and a sentence, imports nothing from
+  weather, and Visual Crossing's free tier requires it *wherever
+  conditions are shown* — a rule about every screen, which is what `ui/`
+  is for. It had to move rather than merely wanting to: reaching it meant
+  importing the weather **barrel**, which exports `attachObservation`,
+  which reaches `src/env`, which is a bare re-export of
+  `cloudflare:workers`. Rolldown cannot strip a module-scope import it
+  must keep, so one attribution line in a client component broke
+  `npm run build` outright. Deep-importing past the barrel is not the
+  alternative — dependency-cruiser forbids it. So the weather barrel's
+  public API is now three entries, not four.
+
 ## Frontend architecture (TanStack Start)
 
 - **SSR-first**: every page renders on the Worker; hydration gives the

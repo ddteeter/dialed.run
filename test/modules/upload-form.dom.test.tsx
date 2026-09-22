@@ -5,7 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -69,6 +69,53 @@ describe("UploadForm", () => {
     // `sr-only`, not `hidden`, or a keyboard user cannot reach it.
     expect(fileInput()).toHaveClass("sr-only");
     expect(fileInput()).toHaveAttribute("accept", ".fit,.gpx,.tcx");
+  });
+
+  it("takes a dropped file, which its label has promised since round 13", async () => {
+    // The label has said "Drop a …" since design's round-13 table named
+    // it, and nothing listened: the input is `sr-only`, so a file dropped
+    // on the dashed box it draws landed on the document and the browser
+    // opened it — out of the flow, with the form gone. Desktop Contract
+    // bend 1 is what makes the copy true.
+    const upload = vi.fn().mockResolvedValue({ importId: "x" });
+    await renderWithRouter(<UploadForm upload={upload} />);
+
+    const well = screen.getByText(/Drop a \.FIT/).closest("label");
+    expect(well).not.toBeNull();
+
+    const transfer = new DataTransfer();
+    transfer.items.add(
+      new File([new Uint8Array([1])], "run.fit", {
+        type: "application/octet-stream",
+      }),
+    );
+    fireEvent.drop(well ?? document.body, { dataTransfer: transfer });
+
+    // The same callback the input's own `onChange` calls — one path, so
+    // the size check and the multipart body are reached identically.
+    await waitFor(() => {
+      expect(upload).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("marks the well while a file is over it, and nothing else moves", async () => {
+    // "Copy and one state change; the layout is untouched." The border is
+    // the state change: it darkens, it does not grow, and the box is the
+    // same dashed field either way.
+    await renderWithRouter(
+      <UploadForm upload={() => Promise.resolve({ importId: "x" })} />,
+    );
+
+    const well = screen.getByText(/Drop a \.FIT/).closest("label");
+    expect(well).toHaveClass("border-dashed", "border-hairline-2");
+    expect(well).not.toHaveClass("border-ink");
+
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array([1])], "run.fit"));
+    fireEvent.dragOver(well ?? document.body, { dataTransfer: transfer });
+
+    expect(well).toHaveClass("border-ink", "border-dashed");
+    expect(well).not.toHaveClass("border-hairline-2");
   });
 
   it("sends the chosen file as multipart under the name the server reads", async () => {

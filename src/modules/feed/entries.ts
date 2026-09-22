@@ -37,6 +37,7 @@ import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { hasReacted, usefulCount } from "./reactions";
+import { isPublicByDefault } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
 type EntryTag = (typeof entryTags)[number];
@@ -58,6 +59,18 @@ export interface AttachKitInput {
   userId: string;
   runId: string;
   itemIds: readonly string[];
+  /**
+   * The verdict to stamp as the entry is created, for a caller that has
+   * the kit and the judgement at the same moment.
+   *
+   * The phone flow omits it: it asks for them on two screens (A2 then
+   * A3), so the entry genuinely exists unjudged for as long as the runner
+   * takes. **The verdict backlog does not** — one `Enter` is both, and a
+   * runner who presses it expects both to land or neither. Passing it
+   * here is what makes that one `batch()` instead of two transactions
+   * with a half-state between them.
+   */
+  verdict?: number | undefined;
 }
 
 /**
@@ -91,6 +104,17 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
       input.userId,
       "run already has another user's entry",
     );
+    // A repeat of a judged save — the same `Enter`, replayed. The kit is
+    // left exactly as the first call attached it (this has never replaced
+    // items) and only the verdict is written, so a retry is idempotent in
+    // the way law 8b means: it returns the row the first call made rather
+    // than erroring, and it does not quietly rewrite the outfit.
+    if (input.verdict !== undefined) {
+      await database
+        .update(outfitEntries)
+        .set({ verdict: input.verdict })
+        .where(eq(outfitEntries.id, existing.id));
+    }
     // Already idempotent, and by a natural key: a run has exactly one entry
     // (UNIQUE `entries_run`), so the run id *is* the key and no column is
     // needed — task 108 requirement 1, prefer a natural key over inventing
@@ -119,11 +143,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     }
   }
 
-  const [profile] = await database
-    .select({ shareDefault: userProfiles.shareDefault })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, input.userId))
-    .limit(1);
+  const isPublic = await isPublicByDefault(database, input.userId);
 
   const entryId = newUlid();
   // One batch, not two awaits: the entry and the items it contains are the
@@ -131,19 +151,27 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   // kit with no garments in it if the second failed, which renders as an
   // empty entry and cannot be told from a deliberate one.
   //
-  // verdict/caption are nullable-no-default columns: omitting them here
-  // (rather than writing a literal null) inserts SQL NULL either way.
+  // caption is a nullable-no-default column: omitting it here (rather
+  // than writing a literal null) inserts SQL NULL either way. `verdict`
+  // is the same, and is now written explicitly because a caller may have
+  // it — see `AttachKitInput`.
   const insertEntry = database.insert(outfitEntries).values({
     id: entryId,
     runId: input.runId,
     userId: input.userId,
-    // Equivalent mutant on the `??`: the column itself defaults to true,
-    // so a runner with no profile row gets a public entry either way. The
-    // default is written here as well because this is where the rule lives
-    // — "public by default, with a per-user preference" — and a schema
-    // default is not a place to read a product decision from.
-    // Stryker disable next-line LogicalOperator
-    isPublic: profile?.shareDefault ?? true,
+    // **The runner's default, seeding this entry's own column.** Asked on
+    // review, and the distinction is the product rule: sharing is
+    // per-entry (`outfit_entries.is_public`, which A3's toggle writes and
+    // `submitVerdict` carries on every save) *with* a per-user default
+    // that decides where a new one starts. This line is only that start.
+    // Changing the preference later republishes nothing, and an entry
+    // made private stays private. The run itself has no public flag —
+    // see `./share-default`.
+    isPublic,
+    // Present only for a caller that has both at once. `undefined` is
+    // what the phone flow passes and inserts SQL NULL, which is the
+    // unjudged state `shouldPromptForVerdict` looks for.
+    verdict: input.verdict,
     createdAt: nowSeconds(),
   });
   if (input.itemIds.length === 0) {
