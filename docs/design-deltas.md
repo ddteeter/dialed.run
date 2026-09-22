@@ -244,9 +244,13 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     Built that way in task 115; `verdictKeys` derives from `verdictScale`,
     so the table cannot drift from the sheet.
 
-    **The ask is one line.** Redraw DS2's verdict column as five slots
-    (`1`–`5`) and drop the skip slot, or rule the other way and say what
-    `1` and `3` should store. D-91.
+    **CLOSED by round 16, imported 2026-09-21.** Design redrew DS2's
+    verdict column as five slots carrying A3's words and only the words —
+    no digits, here or on the desk — with `1`–`5` demoted to keyboard
+    shortcuts in the legend and skip a key rather than a slot. The Flow
+    Map already forbade numeric scores in UI, which is the reason the
+    digits could not stay on the face of the control even though the keys
+    do. Built; D-91 closed.
 
 21. **Bend 2 is satisfied by construction, and its extra line would be
     false.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
@@ -303,6 +307,50 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     marketing bar of its own; and if it loses it, what does a signed-in
     visitor use to get back in? Owner's call to send it rather than guess
     (2026-09-21). D-93.
+
+## Answered in rounds 16–17 (imported 2026-09-21)
+
+### The verdict row is one row at every width, and never in a field box
+
+Round 17, verbatim: *"the five are one row at every width — in the 390
+desk panel too; never a stack, never wider than the panel. Neither the row
+nor the chips sit inside a field box."* Both halves were wrong in the
+code, and one of them was hiding a defect.
+
+**The stack.** A3's five buttons were `flex flex-col` — a tall column of
+five full-width buttons on the phone, and at desk the same column with a
+screen of empty space beside it. The owner spotted it on film and read the
+ruling as covering both widths, which it does. `grid-cols-5` is now the
+layout, and the labels break inside their own cell because the row cannot.
+
+Worth recording *why* nothing caught it: the `ui` vitest project runs in
+happy-dom, which parses CSS and lays nothing out, so every rect is zero
+and "one row" is not a question it can answer. The class was as intended
+and the suite was green. `e2e/verdict/verdict-row.spec.ts` is the answer —
+real Chromium, both widths, and it was checked against the old stack to
+confirm it fails on it.
+
+**The field box.** Wrapping the group in `FormField` drew the Form
+Contract's 1px-rule boundary around five buttons that each already draw
+their own, which is the "mostly empty box" the owner asked about. It was
+also suppressing the focus ring: `field-box` (`src/ui/a11y.css`) removes
+the outline from its descendants — correct when the child is the
+borderless input a `FormField` insets, wrong for buttons — so tabbing
+across the five verdicts showed one static outline around the whole box
+and no indication of which button had focus. On the single control the
+product turns on, rule 06's *"never removed"* was failing by construction
+rather than by an `outline-none` anyone could grep for.
+
+A3's group was the only `FormField` in the app whose child was not an
+`<input>` or a `<select>`, which is why nothing else was affected.
+`ui/form.tsx` gained `FieldGroup` — legend, hint, message, no box — and
+`ChoiceList` was refactored onto it, so the chips and the row share one
+implementation of the ruling instead of two.
+
+**Still open from this round:** A3's legend reads "How it felt" and the
+board now reads "Did it work?", which is what DS2 already ships. Copy is
+the artboard's domain and this is a user-facing string, so it is the
+owner's call rather than a silent edit — asked in the turn.
 
 ## Answered in round 15 (imported 2026-09-20)
 

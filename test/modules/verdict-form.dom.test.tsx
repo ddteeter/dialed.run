@@ -99,7 +99,16 @@ function flagGroups(): HTMLElement[] {
   // `group`, not `radiogroup`: `ChoiceList` renders a real `<fieldset>`
   // with a `<legend>`, which is how the garment's name becomes the
   // group's accessible name — and a fieldset's role is `group`.
-  return screen.getAllByRole("group");
+  //
+  // **The verdict row is a fieldset too**, since design's round 17 took it
+  // out of its field box, so "every group on the screen" is no longer the
+  // same set as "every flag group". A flag group is one that holds the
+  // three flag chips; the verdict row holds buttons and no radio at all,
+  // which is a property of what the control *is* rather than of where it
+  // happens to sit in the document.
+  return screen
+    .getAllByRole("group")
+    .filter((group) => within(group).queryAllByRole("radio").length > 0);
 }
 
 /**
@@ -380,6 +389,94 @@ describe("VerdictForm: the scale", () => {
   });
 });
 
+describe("VerdictForm: the row, and the box that was around it", () => {
+  /**
+   * Design round 17: *"the five are one row at every width — in the 390
+   * desk panel too; never a stack, never wider than the panel. Neither the
+   * row nor the chips sit inside a field box."*
+   *
+   * The geometry half of that is `e2e/verdict/verdict-row.spec.ts`, in a
+   * real browser — happy-dom lays nothing out, so every rect here is zero
+   * and "one row" is not a question this project can answer. What it *can*
+   * answer is the structure the ruling is about.
+   */
+  it("groups the five with a legend rather than a label pointing nowhere", async () => {
+    // A `<label htmlFor="verdict">` names an id that does not exist —
+    // there is no single control to point at, five buttons being the
+    // control. A fieldset's legend is the group's accessible name, which
+    // is what a reader entering the group actually hears.
+    await renderWithRouter(form({}));
+
+    const group = screen.getByRole("group", { name: /How it felt/i });
+    for (const label of [
+      "Way cold",
+      "A bit cold",
+      "Dialed",
+      "A bit warm",
+      "Way warm",
+    ]) {
+      expect(within(group).getByRole("button", { name: label })).toBeVisible();
+    }
+  });
+
+  it("does not wrap the row in a field box, which was eating the focus ring", async () => {
+    // **The defect, not just the look.** `field-box` (ui/a11y.css) removes
+    // the outline from its descendants — correct when the child is the
+    // borderless input a `FormField` insets, wrong for a button group. It
+    // meant tabbing across the five verdicts showed one static outline
+    // around the whole box and no indication of which button had focus, on
+    // the single control the product turns on. Rule 06's "never removed"
+    // was failing by construction.
+    await renderWithRouter(form({}));
+
+    const group = screen.getByRole("group", { name: /How it felt/i });
+    expect(group).not.toHaveClass("field-box");
+    expect(group.querySelector(".field-box")).toBeNull();
+  });
+
+  it("carries the three rules the cell's class string is holding", async () => {
+    // A class string in a const is mutated, so it has to be asserted —
+    // and each of these is a written rule rather than a look:
+    //
+    // - `uppercase` is CSS, never the label text, so the accessible name
+    //   stays "Way cold" and not "WAY COLD". That is why every other
+    //   assertion in this file can ask for the button by its sentence-case
+    //   name (a11y contract, and the reason `Mono` works the same way).
+    // - `text-center` with `flex-col` is round 17's "never wider than the
+    //   panel" made structural: at 390 a two-word label has to break
+    //   *inside* its own cell, because the row itself cannot.
+    // - `target` is the 44px hit area (accessibility rule 03), which for a
+    //   cell this narrow is the padding and not the glyph.
+    await renderWithRouter(form({}));
+
+    const button = screen.getByRole("button", { name: "Way cold" });
+    expect(button).toHaveClass(
+      "uppercase",
+      "text-center",
+      "flex-col",
+      "target",
+    );
+  });
+
+  it("keeps the scale's order, which is the product rule", async () => {
+    // Way cold -> way warm. A set of five buttons in any order is still
+    // five buttons; the order is what makes the row readable as a scale.
+    await renderWithRouter(form({}));
+
+    const group = screen.getByRole("group", { name: /How it felt/i });
+    const names = within(group)
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(names).toEqual([
+      "Way cold",
+      "A bit cold",
+      "Dialed",
+      "A bit warm",
+      "Way warm",
+    ]);
+  });
+});
+
 describe("VerdictForm: per-item flags", () => {
   it("offers a flag per item, defaulting to none", async () => {
     await renderWithRouter(
@@ -423,7 +520,10 @@ describe("VerdictForm: per-item flags", () => {
     expect(
       screen.queryByRole("heading", { name: "Anything specific?" }),
     ).toBeNull();
-    expect(screen.queryAllByRole("group")).toHaveLength(0);
+    // `flagGroups()`, not every group on the screen: the verdict row is
+    // itself a fieldset now, and it is there whether or not the kit has
+    // anything in it.
+    expect(flagGroups()).toHaveLength(0);
   });
 
   it("gives each garment its own radio group, keyed by item id", async () => {

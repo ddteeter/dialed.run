@@ -14,6 +14,7 @@ import {
   FlowStep,
   FormErrorSummary,
   FormFailureBand,
+  FieldGroup,
   FormField,
   FormStatus,
   LOG_FLOW,
@@ -33,8 +34,10 @@ import {
  * receipt for something that did not happen. Removed with the class, the
  * revert is instant.
  */
-const VERDICT_CHOSEN =
-  "verdict-lock target flex items-center gap-1 rounded-card bg-ink px-4 py-3 text-left font-semibold text-ground";
+const VERDICT_BASE =
+  "flex flex-col items-center justify-center gap-0 rounded-card px-1 py-3 text-center text-micro font-semibold uppercase";
+
+const VERDICT_CHOSEN = `verdict-lock ${VERDICT_BASE} bg-ink text-ground`;
 
 /**
  * The per-item flag as three visible choices.
@@ -53,8 +56,7 @@ const ITEM_FLAG_LABELS: Readonly<Record<(typeof ITEM_FLAG_OPTIONS)[number], stri
     not_enough: "Not enough",
   };
 
-const VERDICT_RESTING =
-  "target flex items-center gap-1 rounded-card border border-hairline px-4 py-3 text-left";
+const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
 import { submitVerdictInput } from "../inputs";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
@@ -369,12 +371,23 @@ export function VerdictForm({
           onFocusField={form.focusField}
           summaryRef={form.summaryRef}
         />
-        <FormField
+        {/* **One row at every width — in the 390 panel too; never a
+            stack, never wider than the panel** (design round 17). It was
+            `flex flex-col`, which put five full-width buttons in a tall
+            column and, at desk, a tall column beside a screen of empty
+            space. `grid-cols-5` cannot wrap, which is the rule stated as
+            a layout rather than remembered: the labels break inside their
+            own cell instead of the row breaking.
+
+            `FieldGroup`, not `FormField`, for the same round-17 ruling —
+            "neither the row nor the chips sit inside a field box" — and
+            because the box was suppressing each button's focus ring. */}
+        <FieldGroup
           name="verdict"
-          label={LABELS.verdict}
+          legend={LABELS.verdict}
           error={form.fieldErrors.verdict}
         >
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-5 gap-1">
             {verdictScale.map((choice) => {
               const isChosen = verdict === choice.value;
               return (
@@ -399,7 +412,12 @@ export function VerdictForm({
                   onClick={() => {
                     setVerdict(choice.value);
                   }}
-                  className={isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}
+                  // `target` at the site rather than inside
+                  // `VERDICT_BASE`: the 44px hit area is this button's,
+                  // and `targets-and-focus` resolves a double-quoted
+                  // constant but not a template literal — which both of
+                  // these now are, since they share a base.
+                  className={`target ${isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}`}
                 >
                   {isChosen ? (
                     <span aria-hidden="true" className="bracket-close-start">
@@ -416,7 +434,7 @@ export function VerdictForm({
               );
             })}
           </div>
-        </FormField>
+        </FieldGroup>
 
         {entry.items.length > 0 ? (
           // **Chips, never a `<select>`** (design round 16). A dropdown

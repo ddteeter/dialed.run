@@ -167,9 +167,12 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // beside the kit read as the verdict control, which is exactly what it
   // was mistaken for when this demo was reviewed.
   await scene(page, "Per-item signal is a flag, never a second verdict");
+  // Named, not `.first()`: since round 17 took the verdict row out of its
+  // field box it is a fieldset too, so "the first group on the screen" is
+  // the verdict and not a garment. Each flag group is legended with its
+  // garment's name, which is the thing actually being pointed at.
   await page
-    .getByRole("group")
-    .first()
+    .getByRole("group", { name: "Houdini Jacket" })
     .getByRole("radio", { name: "Not enough" })
     .click();
 
@@ -214,8 +217,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await hydrated(page);
   await expect(
     page
-      .getByRole("group")
-      .first()
+      .getByRole("group", { name: "Houdini Jacket" })
       .getByRole("radio", { name: "Not enough" }),
   ).toBeChecked();
   await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({

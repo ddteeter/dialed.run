@@ -16,6 +16,7 @@ export { Skeleton } from "./Skeleton";
 export {
   ChoiceField,
   ChoiceList,
+  FieldGroup,
   FieldMessage,
   FormErrorSummary,
   FormFailureBand,
