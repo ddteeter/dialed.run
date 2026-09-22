@@ -74,7 +74,24 @@ export default defineConfig({
   // edge-case specs around it are not. Recording everything would bury the
   // journey in thirty validation cases and make the video unwatchable.
   projects: [
-    { name: "e2e", testIgnore: ["**/*.demo.spec.ts", "**/*.setup.ts"] },
+    {
+      name: "e2e",
+      testIgnore: ["**/*.demo.spec.ts", "**/*.setup.ts"],
+      // **Depends on `demo-setup` so a signed-in spec can live here.**
+      //
+      // `verdict-row.spec.ts` needs an owner's session — the verdict screen
+      // is owner-only — and reached for `storageStateFor("verdict")`, which
+      // only `demo-setup` writes. Locally that passed, because a previous
+      // `npm run demo` had left the file in `node_modules/.cache`. CI has no
+      // such leftover and the spec failed there with ENOENT: the exact shape
+      // CLAUDE.md warns about, where local green is not proof.
+      //
+      // The alternative was signing up inline in the spec, which is the
+      // eleven seconds of form-filling this project exists to avoid — and it
+      // would be copied by the next spec that needs an account. The cost is
+      // five signups (~5s) before an e2e run that previously needed none.
+      dependencies: ["demo-setup"],
+    },
     // Creates one account per demo and saves its session, so no demo spends
     // the first eleven seconds of its video filling in a signup form. It is
     // a separate project on purpose: `video` is configured on `demo` alone,
