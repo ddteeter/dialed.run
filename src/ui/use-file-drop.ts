@@ -26,6 +26,12 @@ import { useState, type DragEvent } from "react";
  * `isOver` is the "one state change" — the well marks itself while a file
  * is over it and nothing else moves. No layout, no motion: the Motion
  * Doctrine has no surface for this, and an undesigned one stays still.
+ *
+ * **Not exported from `ui/index.ts`**, deliberately: `ui/FileWell` is the
+ * only thing that should be building one of these wells, so the hook is
+ * its implementation detail rather than part of the foundation's public
+ * surface. A second caller reaching for the hook is a second well, which
+ * is the duplication the clone detector already refused once.
  */
 export interface FileDrop {
   /**

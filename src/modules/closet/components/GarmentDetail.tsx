@@ -5,11 +5,9 @@ import type { GarmentVisibility } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
-  inFlight,
+  FileWell,
   Mono,
-  PendingLabel,
   ProductLink,
-  useFileDrop,
 } from "../../../ui";
 import { garmentLabel } from "../label";
 import { CompositionBlock } from "./Composition";
@@ -99,9 +97,6 @@ export function GarmentDetail({
   const navigate = useNavigate();
   const router = useRouter();
   const [photoError, setPhotoError] = useState<string | undefined>();
-  const photoDrop = useFileDrop((files) => {
-    void handlePhotoFiles(files);
-  });
   const [uploading, setUploading] = useState(false);
 
   const {
@@ -262,47 +257,43 @@ export function GarmentDetail({
         </p>
       ) : undefined}
 
-      {/* Bend 1: "at width the same panel shows a drop zone in the photo
-          well — 'Drop a photo, or shoot it on your phone later.' Copy and
-          one state change; **the layout is untouched**." So the well is
-          the same label with the same input in it; what changes is a line
-          of copy that only exists from 720 up, where there is no camera to
-          open, and a border while a file is over it.
+      {/* Bend 1: "at width the same panel shows a drop zone in the photo well —
+          'Drop a photo, or shoot it on your phone later.' Copy and one state
+          change; **the layout is untouched**." So the well is the same label
+          with the same input in it; what changes is a line of copy that only
+          exists from 720 up, where there is no camera to open, and a border
+          while a file is over it.
 
-          The dropped file goes to `handlePhotoFiles`, which is what the
-          input's own `onChange` calls — so W3's blur and the size and type
-          checks are reached identically. The contract's "do not fork it"
-          is the whole point. */}
-      <label
-        {...photoDrop.handlers}
-        className={`target flex flex-col gap-1 rounded-field border border-dashed p-3 text-body font-semibold ${
-          photoDrop.isOver ? "border-ink" : "border-transparent"
-        }`}
-      >
-        {/* "Add a photo" is design's round-13 rest label for this control;
-            it had been the bare field caption "Photo", which names the
-            field rather than the action and left the in-flight state with
-            nowhere to appear. */}
-        <PendingLabel
-          label="Add a photo"
-          pendingLabel="Uploading"
-          pending={uploading}
-        />
-        <span className="hidden text-micro font-normal text-muted wide:block">
-          Drop a photo, or shoot it on your phone later.
-        </span>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          {...inFlight(uploading)}
-          onChange={(event) => {
-            void handlePhotoFiles(event.target.files);
-          }}
-        />
-      </label>
-      {photoError === undefined ? undefined : (
-        <p className="text-small font-semibold text-cold-text">{photoError}</p>
-      )}
+          The dropped file goes to `handlePhotoFiles`, which is what the input's
+          own `onChange` calls — so W3's blur and the size and type checks are
+          reached identically. The contract's "do not fork it" is the whole
+          point.
+
+          One well, shared with A1 — see `ui/FileWell`. It was a raw
+          `<input type="file">` under a left-aligned caption, so the browser's
+          own "Choose file / No file chosen" pair sat in the middle of the panel
+          and the label read as misaligned against everything around it.
+          Reported off the demo.
+
+          The hint is bend 1's line and is width-only: below 720 there is a
+          camera, so "shoot it on your phone later" would be false. The upload
+          failure is the well's own `error` line, not a paragraph drawn here.
+      */}
+      <FileWell
+        label="Add a photo"
+        pendingLabel="Uploading"
+        pending={uploading}
+        accept="image/jpeg,image/png,image/webp"
+        hint={
+          <span className="hidden text-micro text-muted wide:block">
+            Drop a photo, or shoot it on your phone later.
+          </span>
+        }
+        error={photoError}
+        onFiles={(files) => {
+          void handlePhotoFiles(files);
+        }}
+      />
 
       <div className="flex flex-wrap gap-3">
         <Link

@@ -1,13 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import {
-  FlowStep,
-  inFlight,
-  LOG_FLOW,
-  PendingLabel,
-  useFileDrop,
-} from "../../../ui";
+import { FileWell, FlowStep, LOG_FLOW } from "../../../ui";
 
 /**
  * The upload action, handed in rather than imported.
@@ -53,60 +47,32 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
     }
   }
 
-  const drop = useFileDrop((files) => {
-    void onChange(files);
-  });
-
+  // The ring is on the label, not the input. `sr-only` clips the input to
+  // a 1px corner, so an outline on it is invisible — tabbing to this
+  // control used to show nothing at all, which is rule 06's "never
+  // removed" failing by construction rather than by an `outline-none`.
+  //
+  // Design's round-13 table names this control's rest label "Drop a .FIT,
+  // .gpx, or .tcx file" and its in-flight label "[ Reading ]". The drawn
+  // copy is kept as the rest label, because it carries the accepted
+  // formats and copy is the artboard's domain. The well itself is
+  // `ui/FileWell` — one pattern, shared with F's photo well, which the
+  // clone detector insisted on once the two became identical. Its
+  // `error` prop carries the failure line, so the paragraph that used to
+  // sit beside this call is the well's, not this step's.
   return (
     <FlowStep step={LOG_FLOW.intake}>
-      <div className="flex flex-col gap-3">
-        {/* The ring is on the label, not the input. `sr-only` clips the
-            input to a 1px corner, so an outline on it is invisible —
-            tabbing to this control used to show nothing at all, which is
-            rule 06's "never removed" failing by construction rather than
-            by an `outline-none`. */}
-        {/* The drop is real now (Desktop Contract bend 1). This label has
-            said "Drop a …" since design's round-13 table named it, and
-            nothing listened: the input is `sr-only`, so a file dropped on
-            the dashed box landed on the document and the browser opened
-            it — leaving the flow. `onFiles` is the same callback the
-            `onChange` below uses, so a dropped file and a chosen one take
-            one path.
-
-            The border is the one state change: the well marks itself while
-            a file is over it, and nothing moves. */}
-        <label
-          {...drop.handlers}
-          className={`target flex cursor-pointer flex-col items-center gap-2 rounded-field border border-dashed bg-panel px-6 py-10 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink ${drop.isOver ? "border-ink" : "border-hairline-2"}`}
-        >
-          {/* Design's round-13 table names this control's rest label
-              "Choose a file" and its in-flight label "[ Reading ]". The
-              drawn copy is kept as the rest label, because it carries the
-              accepted formats and copy is the artboard's domain — the
-              boards were not redrawn this round. The pending half is
-              design's own. */}
-          <span className="font-semibold text-ink">
-            <PendingLabel
-              label="Drop a .FIT, .gpx, or .tcx file"
-              pendingLabel="Reading"
-              pending={isUploading}
-            />
-          </span>
-          <span className="text-micro text-muted">up to 25 MB</span>
-          <input
-            type="file"
-            accept=".fit,.gpx,.tcx"
-            {...inFlight(isUploading)}
-            className="sr-only"
-            onChange={(event) => {
-              void onChange(event.target.files);
-            }}
-          />
-        </label>
-        {error === undefined ? undefined : (
-          <p className="text-small font-semibold text-cold-text">{error}</p>
-        )}
-      </div>
+      <FileWell
+        label="Drop a .FIT, .gpx, or .tcx file"
+        pendingLabel="Reading"
+        pending={isUploading}
+        accept=".fit,.gpx,.tcx"
+        hint={<span className="text-micro text-muted">up to 25 MB</span>}
+        error={error}
+        onFiles={(files) => {
+          void onChange(files);
+        }}
+      />
     </FlowStep>
   );
 }

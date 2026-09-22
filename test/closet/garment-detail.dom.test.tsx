@@ -171,15 +171,18 @@ describe("GarmentDetail: the photo well at width", () => {
     const well = screen
       .getByText("Drop a photo, or shoot it on your phone later.")
       .closest("label");
-    expect(well).toHaveClass("target", "border-dashed", "border-transparent");
+    // The same resting treatment A1's well has — a dashed hairline box,
+    // centred, with the input `sr-only` inside it.
+    expect(well).toHaveClass("target", "border-dashed", "border-hairline-2");
     expect(well).not.toHaveClass("border-ink");
+    expect(well?.querySelector("input")).toHaveClass("sr-only");
 
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array([1])], "kit.png"));
     fireEvent.dragOver(well ?? document.body, { dataTransfer: transfer });
 
     expect(well).toHaveClass("border-ink", "border-dashed");
-    expect(well).not.toHaveClass("border-transparent");
+    expect(well).not.toHaveClass("border-hairline-2");
   });
 
   it("takes a dropped file down the same path as a chosen one", async () => {

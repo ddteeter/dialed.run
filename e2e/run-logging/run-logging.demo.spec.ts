@@ -63,6 +63,10 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   // for the top bar.
   await page.setViewportSize(PHONE);
 
+  await scene(
+    page,
+    "Phone width, on purpose — the five-tab bar exists only below 720",
+  );
   await scene(page, "Logging a run is laid over wherever you were");
   await launcher(page).click();
   await hydrated(page);
@@ -99,6 +103,7 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   // without this the rest of the journey — manual entry, the run detail,
   // the runs list — records at 390 on a 1280 canvas, which is the exact
   // thing this lane was built to stop showing.
+  await scene(page, "…and back to the desk, where the top bar replaces it");
   await page.setViewportSize(DESK);
 
   await scene(page, "Weather is never typed — manual is the fallback");
