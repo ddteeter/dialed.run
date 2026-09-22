@@ -3,19 +3,6 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
-/**
- * The three families `design/tokens.js` names — Archivo Black says it,
- * Archivo explains it, IBM Plex Mono measured it — and the four weights
- * `styles.css` maps onto the theme.
- *
- * `display=swap` is deliberate and stays: the alternative, `optional`,
- * drops the brand face entirely on a slow connection, and a run-wardrobe
- * app whose wordmark silently falls back to Helvetica is worse than one
- * that reflows. What removes the jump is getting this request out early,
- * which is what having it here does.
- */
-const FONTS =
-  "https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap";
 import { Devtools } from "../ui/Devtools";
 
 export const Route = createRootRoute({
@@ -33,30 +20,67 @@ export const Route = createRootRoute({
       },
     ],
     links: [
+      /*
+       * **The three latin faces, self-hosted and preloaded.**
+       *
+       * A Google Fonts `<link>` used to sit here, and before that an
+       * `@import` in `src/styles.css`. Both flashed on every cold load:
+       * the glyphs were three round trips and two origins deep — the
+       * document, then `fonts.googleapis.com` for a stylesheet, then
+       * `fonts.gstatic.com` for the files it names — so however early the
+       * request went out, the preconnects beside it warmed a connection
+       * that was still not the last hop. The files live in `public/fonts`
+       * now and `src/ui/fonts.css` declares them.
+       *
+       * A `@font-face` is only a rule: the file behind it is requested
+       * when something is laid out in it, which is after the app CSS has
+       * been fetched *and* parsed. These go out with the document instead,
+       * which is the shortest the chain gets.
+       *
+       * `display=swap` is deliberate and stays. The alternative,
+       * `optional`, drops the brand face entirely on a slow connection,
+       * and a run-wardrobe app whose wordmark silently falls back to
+       * Helvetica is worse than one that reflows — swap is only visible
+       * while the file is in flight, and a preloaded same-origin file is
+       * in flight for about as long as the document was.
+       *
+       * All three, because all three paint above the fold on essentially
+       * every screen: Archivo Black for the uppercase headings, Archivo
+       * for body copy, Plex Mono for every measured value in bracket
+       * notation. `latin-ext` is deliberately not preloaded — a preloaded
+       * font a page never uses is a console warning and wasted bandwidth,
+       * and it exists only for the occasional accented product name, which
+       * the stylesheet discovers when a glyph needs it.
+       *
+       * `crossOrigin` is required even same-origin: a font preload without
+       * it is fetched in a different mode than the one the font loader
+       * later asks for, so the browser downloads the file twice and the
+       * preload buys nothing.
+       *
+       * Spelled out three times rather than mapped, because a route file
+       * may not `.map(` — `server-functions-are-glue` forbids it, since
+       * nothing can import a route to assert on what a loop there built.
+       */
       {
-        rel: "preconnect",
-        href: "https://fonts.googleapis.com",
-      },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: "/fonts/archivo-variable-latin.woff2",
         crossOrigin: "anonymous",
       },
-      // **Before the app stylesheet, and in the head rather than in it.**
-      // This was an `@import` at the top of `src/styles.css`, where the
-      // preload scanner cannot see it: the request could not start until
-      // that file had been fetched and parsed, so the font CSS, the font
-      // files and the app CSS went out strictly in series and the two
-      // preconnects above warmed a connection nothing was using yet. The
-      // visible cost was a reflow a second into every cold load — text
-      // painting in `ui-sans-serif`, then jumping as Archivo arrived.
-      //
-      // Declared first so the `@font-face` rules are known as early as
-      // possible; there is no cascade interaction to order against,
-      // because this stylesheet declares faces and nothing else.
       {
-        rel: "stylesheet",
-        href: FONTS,
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: "/fonts/archivo-black-latin.woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: "/fonts/ibm-plex-mono-400-latin.woff2",
+        crossOrigin: "anonymous",
       },
       {
         rel: "stylesheet",

@@ -1,21 +1,18 @@
 /*
- * **The fonts are a `<link>` in `src/routes/__root.tsx`, not an `@import`
- * here.** They used to be the line above this comment, and it cost a
- * visible reflow on every cold load — the one a reviewer saw jump through
- * the first second of the feed demo.
+ * **The fonts are self-hosted `@font-face` rules in `./ui/fonts.css`,
+ * preloaded from `src/routes/__root.tsx`.** They were an `@import` of
+ * Google's stylesheet on the line above this comment, then a `<link>` to
+ * it, and both cost a visible reflow on every cold load — the one a
+ * reviewer saw jump through the first second of the feed demo.
  *
- * An `@import` inside a stylesheet is invisible to the browser's preload
- * scanner: it cannot be requested until this file has been fetched *and*
- * parsed, so the two downloads are strictly serial and the preconnects in
- * `__root.tsx` warm a connection nothing uses yet. In the head they are
- * discovered in the initial HTML and race alongside this file, which is
- * what shrinks the swap window `display=swap` opens.
- *
- * Do not move it back. If a font ever needs to be declared in CSS, give it
- * a `@font-face` here and preload the `woff2` — never an `@import` of a
- * third-party stylesheet.
+ * Never an `@import` of a third-party stylesheet. It is invisible to the
+ * browser's preload scanner, so nothing can be requested until this file
+ * has been fetched *and* parsed; and even discovered early it is a
+ * stylesheet on one origin naming files on another, which is two hops no
+ * preconnect can remove. `fonts.css` explains what replaced it.
  */
 @import "tailwindcss";
+@import "./ui/fonts.css";
 @import "./ui/tokens.css";
 @import "./ui/motion.css";
 @import "./ui/ink.css";
