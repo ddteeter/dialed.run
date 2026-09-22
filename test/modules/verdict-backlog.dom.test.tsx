@@ -515,7 +515,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     // The day is in the receipt: "Saved" with no day in it is a receipt
     // for whichever row you like.
     expect(screen.getByText(/^Saved /)).toBeVisible();
-    expect(screen.getByRole("status").textContent).toContain("Sep 2");
+    expect(screen.getByRole("status").textContent).toContain("2 Sept");
   });
 });
 
@@ -527,10 +527,10 @@ describe("VerdictBacklog: the rail", () => {
     expect(rail?.textContent).toContain("Selected");
     // Every row here shares one observation, so what proves the rail
     // follows the selection is the day it names.
-    expect(rail?.textContent).toContain("Sep 2");
+    expect(rail?.textContent).toContain("2 Sept");
 
     fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
-    expect(rail?.textContent).toContain("Sep 4");
+    expect(rail?.textContent).toContain("4 Sept");
   });
 
   it("says the thing that stops this reading as a bulk tool", async () => {

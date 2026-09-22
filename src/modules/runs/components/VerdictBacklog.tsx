@@ -74,15 +74,33 @@ function conditionsLine(conditions: Conditions, units: Units): string {
 /**
  * "Mon 2 Sep", the way DS2 labels a row and names the kit it offers.
  *
- * `undefined` locale, so it is the reader's own — the one place this
- * screen shows a date rather than a measured value.
+ * **Fixed locale and an explicit UTC zone, because this renders twice.**
+ * It began as `toLocaleDateString(undefined, …)` — the reader's own
+ * locale, which reads as the considerate choice and is a hydration bug:
+ * the server is workerd and runs in UTC, the browser runs in the
+ * runner's zone, and a run near either end of a day formats to a
+ * different weekday in each. React then discards the whole table and
+ * rebuilds it, which the dev server reported as "the server rendered
+ * text didn't match the client" against this very `<tr>`.
+ *
+ * `en-GB` rather than `undefined` for the same reason, and it is what the
+ * board draws: "Mon 2 Sep", not "Mon, Sep 2".
+ *
+ * **The honest limitation**: this is the run's UTC day, not the runner's.
+ * The app stores no timezone for anybody, so no server render can know
+ * one — see D-96, which names the two other components with the same
+ * bug. For a morning run the two agree; a late-evening run at a negative
+ * offset will read as the next day.
  */
+const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "UTC",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+
 function dayLabel(epochSeconds: number): string {
-  return new Date(epochSeconds * 1000).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+  return DAY_FORMAT.format(new Date(epochSeconds * 1000));
 }
 
 /**
