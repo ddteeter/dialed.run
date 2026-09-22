@@ -34,8 +34,20 @@ import {
  * receipt for something that did not happen. Removed with the class, the
  * revert is instant.
  */
+/**
+ * `justify-start`, not `justify-center`, and it is not a nicety.
+ *
+ * Four of the five labels are two words and wrap inside their cell;
+ * "Dialed" is one. Centred, the short one floats to the middle of the cell
+ * while its neighbours' first lines sit above it — five labels, no shared
+ * baseline. The board aligns all five first lines, which a layout-signature
+ * diff against it is what caught: the board reads
+ * `['WAY','A BIT','DIALED','A BIT','WAY']` on one row, and this read
+ * `['WAY COLD','A BIT COLD','A BIT WARM','WAY WARM']` with `['DIALED']`
+ * alone on the next.
+ */
 const VERDICT_BASE =
-  "flex flex-col items-center justify-center gap-0 rounded-card px-1 py-3 text-center text-micro font-semibold uppercase";
+  "flex flex-col items-center justify-start gap-0 rounded-card px-1 py-3 text-center text-micro font-semibold uppercase";
 
 const VERDICT_CHOSEN = `verdict-lock ${VERDICT_BASE} bg-ink text-ground`;
 
