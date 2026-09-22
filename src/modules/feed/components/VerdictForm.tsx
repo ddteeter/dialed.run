@@ -435,17 +435,33 @@ export function VerdictForm({
                   // these now are, since they share a base.
                   className={`target ${isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}`}
                 >
-                  {isChosen ? (
-                    <span aria-hidden="true" className="bracket-close-start">
-                      [
-                    </span>
-                  ) : undefined}
-                  {choice.label}
-                  {isChosen ? (
-                    <span aria-hidden="true" className="bracket-close-end">
-                      ]
-                    </span>
-                  ) : undefined}
+                  {/* **One inline run, not three flex items.** The cell
+                      became `flex-col` so a two-word label could wrap
+                      inside it, and a column flex lays out its children as
+                      rows — so the brackets stopped hugging the text and
+                      became a line of their own above and below it. The
+                      move makes that unmistakable rather than subtle:
+                      `bracket-close-*` slides them in horizontally, so a
+                      `[` travelled sideways across the row above the word
+                      it was supposed to be closing onto.
+
+                      Wrapping the three in one span makes them one flex
+                      item, and inside it they are inline content that
+                      wraps as a unit — the brackets stay against the text
+                      and the label still breaks between its words. */}
+                  <span>
+                    {isChosen ? (
+                      <span aria-hidden="true" className="bracket-close-start">
+                        [
+                      </span>
+                    ) : undefined}
+                    {choice.label}
+                    {isChosen ? (
+                      <span aria-hidden="true" className="bracket-close-end">
+                        ]
+                      </span>
+                    ) : undefined}
+                  </span>
                 </button>
               );
             })}
