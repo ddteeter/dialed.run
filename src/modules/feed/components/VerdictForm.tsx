@@ -403,7 +403,16 @@ export function VerdictForm({
           legend={LABELS.verdict}
           error={form.fieldErrors.verdict}
         >
-          <div className="grid grid-cols-5 gap-1">
+          <div
+            // The name design's board gives this region
+            // (`data-part="verdict-row"`), so a conformance run can diff
+            // the two against each other rather than the whole screen —
+            // and so a failure reports as "A3 verdict row". `data-slot` is
+            // this repo's existing spelling of the same idea; `top-bar`
+            // and `tab-bar` already match design's names for free.
+            data-slot="verdict-row"
+            className="grid grid-cols-5 gap-1"
+          >
             {verdictScale.map((choice) => {
               const isChosen = verdict === choice.value;
               return (
