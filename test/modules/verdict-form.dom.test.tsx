@@ -331,10 +331,38 @@ describe("VerdictForm: the scale", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
 
     const chosen = screen.getByRole("button", { name: "Dialed" });
-    const brackets = [...chosen.querySelectorAll("span")];
+    // The two bracket spans, not every span in the button: the label and
+    // its brackets are wrapped in one span so they are a single flex item
+    // and wrap together as inline content — without that the cell's
+    // `flex-col` laid the brackets out as rows of their own, above and
+    // below the word they are supposed to be closing onto.
+    const brackets = [...chosen.querySelectorAll("[aria-hidden='true']")];
     expect(brackets.map((span) => span.textContent)).toEqual(["[", "]"]);
     expect(brackets[0]).toHaveClass("bracket-close-start");
     expect(brackets[1]).toHaveClass("bracket-close-end");
+    // **They frame the cell, not the words** (design round 18): *"they
+    // start at the cell's outer edges, vertically centred … the pair never
+    // enters the text."*
+    //
+    // `absolute` is the load-bearing one and the reason the ruling works:
+    // an absolutely positioned child is not a flex item, so the cell's
+    // `flex-col` cannot stack it as a row of its own — which is exactly
+    // what it did before, putting `[` on a line above the word and `]` on
+    // a line below. `inset-y-0` with `items-center` is "vertically
+    // centred", against the cell's full height so a one-line and a
+    // two-line label carry their brackets at the same height.
+    //
+    // Whether they actually clear the text is geometry, and happy-dom lays
+    // nothing out — `e2e/verdict/verdict-row.spec.ts` measures it.
+    for (const bracket of brackets) {
+      expect(bracket).toHaveClass(
+        "absolute",
+        "inset-y-0",
+        "flex",
+        "items-center",
+        "pointer-events-none",
+      );
+    }
     // Decoration, not notation: they must not join the name a screen
     // reader announces, which is why the button is still found by
     // "Dialed" above.
@@ -354,7 +382,9 @@ describe("VerdictForm: the scale", () => {
     await renderWithRouter(form());
 
     expect(
-      screen.getByRole("button", { name: "Dialed" }).querySelectorAll("span"),
+      screen
+        .getByRole("button", { name: "Dialed" })
+        .querySelectorAll("[aria-hidden='true']"),
     ).toHaveLength(0);
   });
 
