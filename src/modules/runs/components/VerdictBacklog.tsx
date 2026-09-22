@@ -40,18 +40,21 @@ import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
  * never the only channel).
  */
 const SLOT_BASE =
-  "inline-flex items-center justify-center rounded-none border px-2 font-mono text-mono-sm";
-const SLOT_RESTING = `${SLOT_BASE} border-hairline-2 text-muted`;
-const SLOT_COLD = `${SLOT_BASE} border-action bg-action text-accent-ink`;
-const SLOT_DIALED = `${SLOT_BASE} border-teal bg-teal text-accent-ink`;
-const SLOT_WARM = `${SLOT_BASE} border-quiet bg-quiet text-ground`;
+  "inline-flex flex-col items-center justify-center rounded-none border px-2 text-center font-mono text-mono-xs";
+const SLOT_RESTING = `${SLOT_BASE} border-hairline-2 font-normal text-quiet`;
+const SLOT_COLD = `${SLOT_BASE} border-action bg-action font-bold text-accent-ink`;
+const SLOT_DIALED = `${SLOT_BASE} border-teal bg-teal font-bold text-accent-ink`;
+const SLOT_WARM = `${SLOT_BASE} border-quiet bg-quiet font-bold text-ground`;
 
 /**
  * Which treatment a chosen slot wears, by the sign of the verdict.
  *
  * Read from the value rather than from the key's position, so the three
  * hues stay tied to the meaning T2 gives them and not to how many keys
- * the table happens to offer.
+ * the table happens to offer. Both cold steps are pink and both warm
+ * steps are grey — round 16: *"hue follows T2 and **position carries the
+ * degree**, as AB1 says it must."* A resting slot is `--quiet` rather
+ * than `--muted`, which is the board's own off state.
  */
 function slotClass(value: VerdictValue, isChosen: boolean): string {
   if (!isChosen) return SLOT_RESTING;
@@ -146,11 +149,18 @@ function OutfitCell({
 }
 
 /**
- * One verdict slot — a key, drawn.
+ * One verdict slot — A3's button, shrunk.
  *
- * *"Verdict slots are the A3 mark drawn as keyboard keys."* The key's
- * digit is the label a sighted runner reads; the word is what a reader
- * hears, because "3" announces nothing about how a run felt.
+ * Round 16 made the mirror the rule: *"the verdict cell is A3's five
+ * buttons, shrunk, in A3's order and with A3's words."* No digits
+ * anywhere on the surface, because the Flow Map forbids numeric scores in
+ * the UI and because a runner who saw `1`–`5` on film could not tell what
+ * they were. The digits survive as shortcuts, in the legend only.
+ *
+ * `text-mono-xs` and not the board's 9px: MONO.xs is 10px and `tokens.js`
+ * calls it the floor everywhere. The board says so too — "nothing shrinks
+ * below MONO.xs" — in the same paragraph it draws 9px, and a contract
+ * beats a drawing.
  */
 function VerdictSlotButton({
   slot,
@@ -167,7 +177,11 @@ function VerdictSlotButton({
     <button
       type="button"
       aria-pressed={isChosen}
-      aria-label={`${slot.label} — ${day}, key ${slot.key}`}
+      // The visible word is the label, so the accessible name adds only
+      // what the eye gets from the row it is in. The key is not in the
+      // name: it is a shortcut, and reading "key 3" to somebody who
+      // cannot see the legend is noise.
+      aria-label={`${slot.label} — ${day}`}
       onClick={onChoose}
       // `target` at the site rather than inside `SLOT_BASE`: the 44px hit
       // area is the button's and belongs where a reviewer — and
@@ -176,7 +190,7 @@ function VerdictSlotButton({
       // decides.
       className={`target ${slotClass(slot.value, isChosen)}`}
     >
-      {slot.key}
+      {slot.label}
     </button>
   );
 }
@@ -321,7 +335,7 @@ export function VerdictBacklog({
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-hairline">
-              {["Run", "Conditions", "Outfit", "Verdict · 1–5"].map(
+              {["Run", "Conditions", "Outfit", "Did it work?"].map(
                 (heading) => (
                   <th key={heading} scope="col" className="px-2 pb-2">
                     <Mono step="xs" className="text-muted">
@@ -464,9 +478,15 @@ function without(set: ReadonlySet<string>, key: string): ReadonlySet<string> {
   return next;
 }
 
+/**
+ * The legend is the **only** place a digit appears on this surface (round
+ * 16). It is also where skip lives: skip is a key, not a slot, so there
+ * is no sixth button offering to do nothing.
+ */
 const LEGEND: readonly { keys: string; does: string }[] = [
   { keys: "↑↓", does: "row" },
-  { keys: "1–5", does: "verdict" },
+  { keys: "1–5", does: "way cold → way warm" },
   { keys: "↵", does: "save & next" },
+  { keys: "↓", does: "skip" },
   { keys: "Tab", does: "outfit" },
 ];

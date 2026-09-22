@@ -184,32 +184,29 @@ describe("ClosetGrid: what a piece says about itself", () => {
   });
 });
 
-describe("ClosetGrid: the second column", () => {
-  it("puts the closet's two controls in a rail, and the grid beside it", async () => {
-    // DS4 lets exactly three screens go two-column at desk, and C is one
-    // of them. What C calls the filter rail, this closet has as the
-    // generic nudge and the retired toggle — so the rail holds those and
-    // invents nothing. Below desk the same markup is one column, which is
-    // DS3's "the filter rail becomes the phone's chips above the grid".
+describe("ClosetGrid: one column at desk", () => {
+  it("puts its two controls above the grid, not in a rail", async () => {
+    // Round 16 redrew C's rail as three real filter groups and made it
+    // all-or-nothing: "it ships whole or Closet stays one column at desk
+    // (same rule Feed got in round 15: one live control and air is the
+    // dashboard DS5 forbids)." This closet has no filters, so there is no
+    // rail — and nothing may reintroduce one until there is (D-94).
     await renderWithRouter(
       <ClosetGrid listing={listing([harrier, genericTop, retiredTee])} />,
     );
 
-    const rail = document.querySelector("[data-slot='closet-rail']");
-    expect(rail).not.toBeNull();
-    expect(rail).toContainElement(
+    expect(document.querySelector("[data-slot='closet-rail']")).toBeNull();
+    expect(document.querySelector("[class*='desk:grid-cols']")).toBeNull();
+    // The two controls are still there, above the grid.
+    expect(
       screen.getByRole("button", { name: /retired/i }),
-    );
-    // The nudge is the rail's other tenant, and the grid is not in it.
-    expect(rail?.textContent).toContain("pieces are still generic");
-    expect(rail?.querySelectorAll("a")).toHaveLength(0);
+    ).toBeInTheDocument();
+    expect(screen.getByText(/pieces are still generic/)).toBeInTheDocument();
   });
 
   it("lets the garment grid fill rather than counting columns", async () => {
     // DS3's reflow rule for a grid of garments: "auto-fill,
-    // minmax(180px, 1fr)". One rule instead of a count per breakpoint,
-    // which is also why the grid needs no telling that the rail has taken
-    // a third of the row.
+    // minmax(180px, 1fr)". One rule instead of a count per breakpoint.
     await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
 
     expect(screen.getByRole("list")).toHaveClass(

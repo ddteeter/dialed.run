@@ -1,7 +1,17 @@
 /**
  * A2 prefill: "MOST LIKELY · FROM 43° DAMP, AUG 14" — the user's own most
  * recent entry with the nearest |feels-like delta| in the same precip
- * class as the run being attached now. Scanned over the user's own last 200
+ * class as the run being attached now.
+ *
+ * **Yes, this is the germ of the Call** — asked on review, and worth
+ * saying out loud. "What did this runner wear the last time it felt like
+ * this" is the question the Call answers; this is that question at
+ * one-nearest-neighbour resolution, over the runner's own last 200
+ * entries, with no learning and no confidence. Epic 200 is the trained
+ * version, and when it arrives this is either its cold-start path or the
+ * thing it replaces. It is not a second recommender: there is one notion
+ * of "nearest conditions" in the codebase and it is `nearestMatch` below,
+ * which the verdict backlog reads too. Scanned over the user's own last 200
  * entries (own history is small at MVP scale; still index-backed via
  * `entries_user_created`).
  */

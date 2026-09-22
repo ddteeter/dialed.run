@@ -308,13 +308,24 @@ function suggestionFrom(
  * path would be a second thing to keep in sync with the verdict rules,
  * which is what DS5's "no second wide form" is about one layer down.
  *
+ * **Two transactions, and deliberately so.** `attachKit` and
+ * `submitVerdict` each batch their own writes, but the pair is not atomic
+ * — D1 has no transaction that spans two calls, and a batch cannot branch
+ * on its own results, which both of these do (one reads ownership and the
+ * sharing default, the other reads the entry's items).
+ *
+ * So this is law 8c's **reconciliation**, which that law prefers over
+ * inventing atomicity wherever a durable marker already exists. It does
+ * here, and it is not a marker this lane added: an entry with
+ * `verdict IS NULL` is exactly what `shouldPromptForVerdict` looks for,
+ * and it is the state the phone flow leaves behind every time a runner
+ * attaches a kit and closes the tab before judging it. A failure between
+ * these two calls lands the run in that state and the S1 verdict prompt
+ * picks it up — `test/feed/backlog.test.ts` proves it rather than
+ * asserting it in prose.
+ *
  * They are one server function rather than two calls from the component
- * because a row half-saved is the one state the table cannot show: the run
- * would have an entry and so leave the backlog, carrying no verdict and no
- * prompt to add one. Here, a failure in `submitVerdict` leaves the entry
- * behind — the same place the phone flow leaves a runner who attaches a
- * kit and closes the tab — and the run's own verdict prompt is what picks
- * it up.
+ * so the component cannot invent a third ordering.
  */
 export async function saveBacklogRow(input: {
   userId: string;

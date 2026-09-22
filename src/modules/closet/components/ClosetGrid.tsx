@@ -147,12 +147,18 @@ export interface ClosetGridProps {
  * Screen C: the closet grid, grouped by the derived UI groups, with the
  * quiet enrichment nudge (D-27/D-28) and retired items behind a toggle.
  *
- * **One of the two screens the Desktop Contract lets go two-column**
- * (DS4: "only at desk, only for Feed X, Closet C and the verdict
- * backlog"; round 15 kept Closet and dropped Feed for v1). What C calls
- * the filter rail, this closet has as two controls — the generic nudge
- * and the retired toggle — so the rail holds those and invents nothing.
- * When the closet grows real filters they have a place to go.
+ * **One column at desk, and that is round 16's ruling rather than a
+ * shortcut.** DS4 permits Closet a second column, and C draws a filter
+ * rail — but round 16 redrew that rail as three real filter groups
+ * (GROUP with counts, WORKS AT, COVERAGE) and made it all-or-nothing:
+ * *"it ships whole or Closet stays one column at desk (same rule Feed got
+ * in round 15: one live control and air is the dashboard DS5 forbids)."*
+ *
+ * This closet has no filters. Task 115 built the rail out of the two
+ * controls it does have — the generic nudge and the retired toggle — and
+ * on film that was a third of a 1280 screen holding one small link, which
+ * is exactly what the rule forbids. So the rail comes out and the three
+ * groups are D-94.
  */
 export function ClosetGrid({
   listing,
@@ -194,22 +200,15 @@ export function ClosetGrid({
   }
 
   return (
-    // DS3's Closet row: "filter rail left, garment grid right. **Below
-    // 1040 the filter rail becomes the phone's filter chips above a
-    // reflowed grid**" — which is what a single-column flex layout below
-    // `desk:` already is, so the rail costs one grid declaration and no
-    // second arrangement of the same parts.
-    //
-    // The ratio is DS4's ("1.55fr / 1fr, gap SPACE[6]") with the columns
-    // in C's order. A ratio, not a width: nothing here pins a number that
-    // is not in MEASURE.
     <div className="flex flex-col gap-6 px-4 py-6 wide:px-6">
       <ClosetHeading action />
-      <div className="flex flex-col gap-8 desk:grid desk:grid-cols-[1fr_1.55fr] desk:items-start desk:gap-6">
-      <div
-        data-slot="closet-rail"
-        className="flex flex-col gap-4 desk:sticky desk:top-6"
-      >
+      <div className="flex flex-col gap-8">
+        {/* The closet's two controls, above the grid at every width — which
+            is where DS3 puts the rail's contents below 1040 anyway. They
+            are not a rail: round 16 made C's rail three real filter
+            groups, all-or-nothing, and until those exist a column holding
+            these two is the thing DS5 calls a dashboard starting. */}
+        <div className="flex flex-col gap-4">
         {listing.genericCount > 0 ? (
           <p className="rounded-none bg-tint px-4 py-3 text-small text-quiet">
             <Mono>
@@ -232,7 +231,7 @@ export function ClosetGrid({
             </Mono>
           </button>
         ) : undefined}
-      </div>
+        </div>
 
         <div className="flex flex-col gap-8">
           {GROUP_ORDER.map(({ group, label }) => (

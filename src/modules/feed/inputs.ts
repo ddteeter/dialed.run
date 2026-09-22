@@ -54,6 +54,23 @@ export const itemFlagInput = z.object({
  * The whole A3 submission. `tags` is capped at the number of tags that
  * exist — a request naming more than that is either a repeat or a bug.
  */
+/**
+ * **A verdict is per-run; per-item signal is the `flag`.** Asked on review
+ * and worth stating where the schema is, because the two are easy to
+ * conflate and the app has both:
+ *
+ * - `verdict` is one integer −2..+2 for the whole outfit (0 = dialed).
+ * - `itemFlags` carries an optional `too_much` / `not_enough` per garment,
+ *   which is exactly the jacket-too-hot-and-tights-too-cold case — at
+ *   lower resolution, because a flag has a direction and no magnitude.
+ *
+ * So "too cold" on a run whose half-tights were the only problem is
+ * already expressible: the run reads −1 and the tights carry
+ * `not_enough`. What is *not* expressible is a magnitude per garment, or
+ * per-half-of-body aggregation. Whether the Call needs that fidelity is
+ * a real open question and is recorded as D-95 rather than guessed at
+ * here; `docs/contracts.md` is the place it would change.
+ */
 export const submitVerdictInput = z.object({
   entryId: ulidSchema,
   verdict: verdictSchema,

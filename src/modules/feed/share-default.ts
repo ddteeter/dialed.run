@@ -15,6 +15,20 @@ import { userProfiles } from "../../db/schema-core";
  *
  * `share_default` is `NOT NULL DEFAULT true`, so the only missing case is
  * a missing profile row — a runner who signed up and has not reached O1.
+ *
+ * **This is the seed, not the state.** The per-entry truth is
+ * `outfit_entries.is_public`, which A3's sharing toggle writes and which
+ * `submitVerdict` carries on every save; this only supplies its value at
+ * the moment the entry is created. Two things follow, and both have been
+ * asked on review: the runner's preference changing later does not
+ * retroactively republish anything, and an entry the runner made private
+ * stays private through every subsequent save.
+ *
+ * **And sharing lives on the entry, not on the run.** `runs` has no
+ * public flag at all — deliberately, because a run on its own is not a
+ * shareable artefact. What a feed shows is the kit, the verdict and the
+ * photos, which are the entry; the run underneath it is a time, a
+ * distance and a place that nobody else ever sees.
  */
 // fallow-ignore-next-line code-duplication -- rhymes with onboarding/profile.ts's hasOnboarded: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (public-by-default vs not-yet-onboarded) that will evolve on its own product timeline
 export async function isPublicByDefault(

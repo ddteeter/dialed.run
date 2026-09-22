@@ -36,13 +36,15 @@ export interface VerdictSlot {
  *
  * Derived from `verdictScale` rather than written out: the scale is the
  * schema's own five values and a second list here would be a rival truth
- * that nothing makes disagree loudly. It is also why there are five keys
- * and not DS2's four — the owner's call, 2026-09-21, recorded in
- * `docs/design-deltas.md`: the drawing coarsens the scale to three
- * verdicts plus a skip, and a verdict saved from the table "counts
- * exactly like a verdict from the phone", so it gets the phone's scale.
- * Skip needs no key of its own: leaving a row and pressing `↓` is
- * skipping it.
+ * that nothing makes disagree loudly. Five and not DS2's original four is
+ * the owner's call of 2026-09-21, which round 16 then drew.
+ *
+ * **The digits are shortcuts, never labels.** Round 16: *"the row shows
+ * A3's five words, never the digits — digits are keyboard shortcuts, not
+ * labels (Flow Map: 'no numeric scores in the UI')."* So `key` is what a
+ * runner presses and `label` is what the slot says, and the legend is the
+ * only place the two are shown together. Skip is `↓`, a key and not a
+ * slot.
  */
 export const verdictKeys: readonly VerdictSlot[] = verdictScale.map(
   (entry, index) => ({

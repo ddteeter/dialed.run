@@ -109,7 +109,9 @@ describe("VerdictBacklog: what a row offers", () => {
     // is most of what makes a backlog readable at all.
     expect(
       screen.getAllByRole("columnheader").map((cell) => cell.textContent),
-    ).toStrictEqual(["Run", "Conditions", "Outfit", "Verdict · 1–5"]);
+    // Round 16: the header asks A3's question. It used to read
+    // "Verdict · 1–5", and a reviewer could not tell what the digits were.
+    ).toStrictEqual(["Run", "Conditions", "Outfit", "Did it work?"]);
     expect(rowsOf()).toHaveLength(1);
   });
 
@@ -159,14 +161,35 @@ describe("VerdictBacklog: what a row offers", () => {
 });
 
 describe("VerdictBacklog: the keyboard", () => {
-  it("names each slot by the verdict, not by the digit", async () => {
+  it("shows the verdict's word and no digit anywhere", async () => {
+    // Round 16, and the reason it exists: "the row shows A3's five words,
+    // never the digits — digits are keyboard shortcuts, not labels (Flow
+    // Map: 'no numeric scores in the UI')". A reviewer watching the demo
+    // could not tell what `1`–`5` were, and asked whether they were
+    // per-item.
     await renderTable([row()]);
 
-    // The digit is what a sighted runner reads; "3" announces nothing
-    // about how a run felt, so the word and the key both go in the name.
+    const slots = screen.getAllByRole("button", { name: /—/ });
+    expect(slots.map((slot) => slot.textContent)).toStrictEqual([
+      "Way cold",
+      "A bit cold",
+      "Dialed",
+      "A bit warm",
+      "Way warm",
+    ]);
+    // The name adds only the row; the key is a shortcut, and reading
+    // "key 3" to somebody who cannot see the legend is noise.
     const dialed = screen.getByRole("button", { name: /^Dialed —/ });
-    expect(dialed.getAttribute("aria-label")).toContain("key 3");
+    expect(dialed.getAttribute("aria-label")).not.toContain("key");
     expect(dialed).toHaveAttribute("aria-pressed", "false");
+
+    // And no digit is drawn in the verdict cell. Scoped to the slots
+    // rather than the whole table, because the row is full of legitimate
+    // digits — the date, the distance, the wind. What round 16 forbids is
+    // a digit standing in for a verdict.
+    for (const slot of slots) {
+      expect(slot.textContent).not.toMatch(/\d/);
+    }
   });
 
   it("sets the verdict on the selected row and says which", async () => {
@@ -365,7 +388,8 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     await renderTable([row()]);
 
     for (const name of [/^Way cold/, /^A bit cold/]) {
-      expect(slot(name)).toHaveClass("border-hairline-2", "text-muted");
+      // `--quiet`, which is the board's own off state — not `--muted`.
+      expect(slot(name)).toHaveClass("border-hairline-2", "text-quiet");
       // The slot is square, mono and padded, in every state — "square is
       // the tell for a statement rather than a control", and mono is the
       // tell that the digit is a measured thing. `target` is rule 03 and
@@ -374,7 +398,9 @@ describe("VerdictBacklog: what each state is drawn as", () => {
         "target",
         "rounded-none",
         "font-mono",
-        "text-mono-sm",
+        // MONO.xs is the floor everywhere (`tokens.js`), which is what the
+        // board's own 9px would have broken.
+        "text-mono-xs",
       );
     }
 
@@ -429,8 +455,13 @@ describe("VerdictBacklog: what each state is drawn as", () => {
 
     const legend = screen.getByText("Keys").parentElement;
     expect(legend?.textContent).toContain("↑↓row");
-    expect(legend?.textContent).toContain("1–5verdict");
+    // The legend is the only place a digit appears, and it maps the keys
+    // to the words rather than asserting they are "the verdict".
+    expect(legend?.textContent).toContain("1–5way cold → way warm");
     expect(legend?.textContent).toContain("↵save & next");
+    // Skip is a key, not a slot — there is no sixth button offering to do
+    // nothing.
+    expect(legend?.textContent).toContain("↓skip");
     expect(legend?.textContent).toContain("Taboutfit");
   });
 

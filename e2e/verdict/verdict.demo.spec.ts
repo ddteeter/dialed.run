@@ -162,9 +162,16 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await scene(page, "A3 · five points, coldest to warmest, one scale");
   await page.getByRole("button", { name: "A bit cold" }).click();
 
-  // Per-item signal is a flag, never a second verdict (CLAUDE.md).
+  // Per-item signal is a flag, never a second verdict (CLAUDE.md) — and
+  // since design round 16 it is chips, never a `<select>`. A dropdown
+  // beside the kit read as the verdict control, which is exactly what it
+  // was mistaken for when this demo was reviewed.
   await scene(page, "Per-item signal is a flag, never a second verdict");
-  await page.getByRole("combobox").first().selectOption("not_enough");
+  await page
+    .getByRole("group")
+    .first()
+    .getByRole("radio", { name: "Not enough" })
+    .click();
 
   // The upload under test: a real file, streamed as multipart.
   await scene(page, "A real photo, streamed as multipart and stored in R2");
@@ -205,7 +212,12 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // with the database. The verdict and the photo come back too.
   await page.goto(`/feed/verdict/${entryId}`);
   await hydrated(page);
-  await expect(page.getByRole("combobox").first()).toHaveValue("not_enough");
+  await expect(
+    page
+      .getByRole("group")
+      .first()
+      .getByRole("radio", { name: "Not enough" }),
+  ).toBeChecked();
   await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({
     timeout: 15_000,
   });

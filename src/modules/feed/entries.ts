@@ -134,6 +134,14 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     id: entryId,
     runId: input.runId,
     userId: input.userId,
+    // **The runner's default, seeding this entry's own column.** Asked on
+    // review, and the distinction is the product rule: sharing is
+    // per-entry (`outfit_entries.is_public`, which A3's toggle writes and
+    // `submitVerdict` carries on every save) *with* a per-user default
+    // that decides where a new one starts. This line is only that start.
+    // Changing the preference later republishes nothing, and an entry
+    // made private stays private. The run itself has no public flag —
+    // see `./share-default`.
     isPublic,
     createdAt: nowSeconds(),
   });

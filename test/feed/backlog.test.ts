@@ -15,6 +15,10 @@ import {
   verdictBacklog,
 } from "../../src/modules/feed/backlog";
 import {
+  attachKit,
+  shouldPromptForVerdict,
+} from "../../src/modules/feed/entries";
+import {
   makeEntry,
   makeItem,
   makeObservation,
@@ -335,6 +339,34 @@ describe("saving a row", () => {
     // SQL NULL, which is the absence of a per-item signal rather than a
     // signal of "none".
     expect(items[0]?.flag).toBeNull();
+  });
+
+  it("leaves a recoverable half-state if the verdict never lands", async () => {
+    // The pair is two transactions and cannot be one: D1 has no
+    // transaction across two calls, and both of these read before they
+    // write. So it is law 8c's *reconciliation*, and this is the marker
+    // and the driver it leans on — an entry with `verdict IS NULL` is
+    // exactly what the S1 prompt looks for, which is also the state the
+    // phone flow leaves whenever a runner attaches a kit and closes the
+    // tab. Asserted rather than claimed in a comment.
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId });
+    const runId = await runAt(userId, NOW - DAY, 3);
+
+    // `attachKit` alone is the half-state a failure between the two
+    // calls would leave.
+    const entryId = await attachKit({
+      userId,
+      runId,
+      itemIds: [halfZip],
+    });
+
+    const [entry] = await coreDb()
+      .select()
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(entry?.verdict).toBeNull();
+    expect(await shouldPromptForVerdict(userId, entryId)).toBe(true);
   });
 
   it("takes the run out of the backlog", async () => {
