@@ -227,7 +227,7 @@ describe("VerdictForm: the scale", () => {
     await user.click(screen.getByRole("button", { name: "Save verdict" }));
 
     expect(
-      await screen.findByRole("button", { name: /How it felt/ }),
+      await screen.findByRole("button", { name: /Did it work/ }),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: /Tags/ })).toBeVisible();
     expect(
@@ -407,7 +407,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     // is what a reader entering the group actually hears.
     await renderWithRouter(form({}));
 
-    const group = screen.getByRole("group", { name: /How it felt/i });
+    const group = screen.getByRole("group", { name: /Did it work/i });
     for (const label of [
       "Way cold",
       "A bit cold",
@@ -429,7 +429,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     // was failing by construction.
     await renderWithRouter(form({}));
 
-    const group = screen.getByRole("group", { name: /How it felt/i });
+    const group = screen.getByRole("group", { name: /Did it work/i });
     expect(group).not.toHaveClass("field-box");
     expect(group.querySelector(".field-box")).toBeNull();
   });
@@ -463,7 +463,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     // five buttons; the order is what makes the row readable as a scale.
     await renderWithRouter(form({}));
 
-    const group = screen.getByRole("group", { name: /How it felt/i });
+    const group = screen.getByRole("group", { name: /Did it work/i });
     const names = within(group)
       .getAllByRole("button")
       .map((button) => button.textContent);

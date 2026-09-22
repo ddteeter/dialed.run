@@ -68,7 +68,11 @@ Field name -> human label, for the summary rows the contract requires once
 two or more fields fail at once.
 */
 const LABELS = {
-  verdict: "How it felt",
+  // "Did it work?", not "How it felt": design's A3 board carries this
+  // wording and DS2's backlog header already shipped it in round 16, so
+  // the two mirrored everywhere except here. Copy is the artboard's
+  // domain; owner confirmed 2026-09-21.
+  verdict: "Did it work?",
   tags: "Tags",
   itemFlags: "Per-item notes",
   isPublic: "Sharing",

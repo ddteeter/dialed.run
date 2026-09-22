@@ -347,10 +347,11 @@ A3's group was the only `FormField` in the app whose child was not an
 `ChoiceList` was refactored onto it, so the chips and the row share one
 implementation of the ruling instead of two.
 
-**Still open from this round:** A3's legend reads "How it felt" and the
-board now reads "Did it work?", which is what DS2 already ships. Copy is
-the artboard's domain and this is a user-facing string, so it is the
-owner's call rather than a silent edit — asked in the turn.
+**Also from this round:** A3's legend read "How it felt" where the board
+reads "Did it work?" — which DS2's backlog header had already shipped in
+round 16, so the two mirrored everywhere except the words. Owner
+confirmed 2026-09-21; A3 now reads "Did it work?" and the one string
+lives in `LABELS.verdict`, which the error-summary row reads too.
 
 ## Answered in round 15 (imported 2026-09-20)
 
