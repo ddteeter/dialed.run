@@ -230,9 +230,23 @@
  * the lock does. Both halves inherit the collapse from the variable, so
  * under reduced motion the whole sequence is 180ms rather than 640.
  * ------------------------------------------------------------------ */
+/*
+ * **`--travel-frame`, not `--travel-element`** (design round 18). Law 3
+ * is "max 24px for an element, one bracket width for a frame", and round
+ * 18 settled which of the two this is: *"the brackets frame the cell, not
+ * the words — they start at the cell's outer edges, vertically centred,
+ * and slide inward by TRAVEL.frame while the fill lands. A wrapping label
+ * ("A bit / cold") never splits the pair; the pair never enters the
+ * text."*
+ *
+ * They were 24px and inline, which was both the wrong distance and the
+ * wrong thing to travel: round 17 shrank the verdict to five narrow cells
+ * whose labels wrap, so an inline pair split across the two lines and a
+ * 24px slide threw a bracket most of a cell's width.
+ */
 @keyframes bracket-close-start {
   from {
-    translate: calc(-1 * var(--travel-element)) 0;
+    translate: calc(-1 * var(--travel-frame)) 0;
   }
   to {
     translate: 0 0;
@@ -241,7 +255,7 @@
 
 @keyframes bracket-close-end {
   from {
-    translate: var(--travel-element) 0;
+    translate: var(--travel-frame) 0;
   }
   to {
     translate: 0 0;

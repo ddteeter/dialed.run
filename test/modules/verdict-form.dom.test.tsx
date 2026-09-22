@@ -340,11 +340,29 @@ describe("VerdictForm: the scale", () => {
     expect(brackets.map((span) => span.textContent)).toEqual(["[", "]"]);
     expect(brackets[0]).toHaveClass("bracket-close-start");
     expect(brackets[1]).toHaveClass("bracket-close-end");
-    // **Adjacent to the text, with nothing between them but the label.**
-    // This is the assertion that fails if they are ever split onto their
-    // own lines again: they are siblings of the label inside one span,
-    // so that span's text reads as the brackets closed onto the word.
-    expect(brackets[0]?.parentElement?.textContent).toBe("[Dialed]");
+    // **They frame the cell, not the words** (design round 18): *"they
+    // start at the cell's outer edges, vertically centred … the pair never
+    // enters the text."*
+    //
+    // `absolute` is the load-bearing one and the reason the ruling works:
+    // an absolutely positioned child is not a flex item, so the cell's
+    // `flex-col` cannot stack it as a row of its own — which is exactly
+    // what it did before, putting `[` on a line above the word and `]` on
+    // a line below. `inset-y-0` with `items-center` is "vertically
+    // centred", against the cell's full height so a one-line and a
+    // two-line label carry their brackets at the same height.
+    //
+    // Whether they actually clear the text is geometry, and happy-dom lays
+    // nothing out — `e2e/verdict/verdict-row.spec.ts` measures it.
+    for (const bracket of brackets) {
+      expect(bracket).toHaveClass(
+        "absolute",
+        "inset-y-0",
+        "flex",
+        "items-center",
+        "pointer-events-none",
+      );
+    }
     // Decoration, not notation: they must not join the name a screen
     // reader announces, which is why the button is still found by
     // "Dialed" above.

@@ -46,8 +46,40 @@ import {
  * `['WAY COLD','A BIT COLD','A BIT WARM','WAY WARM']` with `['DIALED']`
  * alone on the next.
  */
+/**
+ * `relative` and a horizontal gutter, because the brackets frame the cell.
+ *
+ * Design round 18: *"the brackets frame the cell, not the words — they
+ * start at the cell's outer edges, vertically centred … the pair never
+ * enters the text."* So they are positioned against these edges rather
+ * than sitting in the text flow, and `px-3` is the gutter they occupy.
+ *
+ * The gutter is on every cell, chosen or not. Adding it only to the chosen
+ * one would re-flow that cell's label the instant it was picked — a layout
+ * shift on the single most important input in the product, and on the one
+ * frame the runner is actually watching.
+ *
+ * `justify-start`, not `justify-center`: four of the five labels are two
+ * words and wrap; "Dialed" is one. Centred, the short one floats to the
+ * middle of its cell while its neighbours' first lines sit above it, so
+ * five labels share no baseline. Caught by diffing a layout signature
+ * against the board, which reads all five on one row.
+ */
 const VERDICT_BASE =
-  "flex flex-col items-center justify-start gap-0 rounded-card px-1 py-3 text-center text-micro font-semibold uppercase";
+  "relative flex flex-col items-center justify-start gap-0 rounded-card px-3 py-3 text-center text-micro font-semibold uppercase";
+
+/**
+ * A bracket, pinned to one edge of the cell and vertically centred.
+ *
+ * Out of the flow, which is the whole point of round 18's ruling: an
+ * absolutely positioned child is not a flex item, so the cell's `flex-col`
+ * cannot stack it as a row of its own, and a label wrapping to two lines
+ * cannot split the pair. `inset-y-0` plus `items-center` is the "vertically
+ * centred" half — against the cell's full height, so it stays centred
+ * whether the label took one line or two.
+ */
+const BRACKET_BASE =
+  "pointer-events-none absolute inset-y-0 flex items-center";
 
 const VERDICT_CHOSEN = `verdict-lock ${VERDICT_BASE} bg-ink text-ground`;
 
@@ -435,33 +467,23 @@ export function VerdictForm({
                   // these now are, since they share a base.
                   className={`target ${isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}`}
                 >
-                  {/* **One inline run, not three flex items.** The cell
-                      became `flex-col` so a two-word label could wrap
-                      inside it, and a column flex lays out its children as
-                      rows — so the brackets stopped hugging the text and
-                      became a line of their own above and below it. The
-                      move makes that unmistakable rather than subtle:
-                      `bracket-close-*` slides them in horizontally, so a
-                      `[` travelled sideways across the row above the word
-                      it was supposed to be closing onto.
-
-                      Wrapping the three in one span makes them one flex
-                      item, and inside it they are inline content that
-                      wraps as a unit — the brackets stay against the text
-                      and the label still breaks between its words. */}
-                  <span>
-                    {isChosen ? (
-                      <span aria-hidden="true" className="bracket-close-start">
-                        [
-                      </span>
-                    ) : undefined}
-                    {choice.label}
-                    {isChosen ? (
-                      <span aria-hidden="true" className="bracket-close-end">
-                        ]
-                      </span>
-                    ) : undefined}
-                  </span>
+                  {isChosen ? (
+                    <span
+                      aria-hidden="true"
+                      className={`bracket-close-start ${BRACKET_BASE} left-1`}
+                    >
+                      [
+                    </span>
+                  ) : undefined}
+                  {choice.label}
+                  {isChosen ? (
+                    <span
+                      aria-hidden="true"
+                      className={`bracket-close-end ${BRACKET_BASE} right-1`}
+                    >
+                      ]
+                    </span>
+                  ) : undefined}
                 </button>
               );
             })}

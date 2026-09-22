@@ -156,6 +156,98 @@ test("the five verdict buttons sit in one row at 390 and at 1280", async ({
         `the verdict row overflows its panel at ${width}`,
       ).toBeLessThanOrEqual(overflow.clientWidth + 1);
     }
+
+    // ---- Round 18 · the brackets frame the cell, not the words --------
+    //
+    // *"They start at the cell's outer edges, vertically centred, and
+    // slide inward by TRAVEL.frame while the fill lands. A wrapping label
+    // ('A bit / cold') never splits the pair; the pair never enters the
+    // text."*
+    //
+    // Asserted here rather than in a unit test for the same reason the row
+    // is: happy-dom lays nothing out, so "is the bracket outside the text"
+    // is not a question it can answer. It was answered wrong twice — first
+    // as three stacked rows, then as an inline pair split across the
+    // label's two lines — and both looked correct in the markup.
+    await page.setViewportSize(PHONE);
+    await page.goto(`/feed/verdict/${entryId}`);
+    await page.locator('html[data-hydrated="true"]').waitFor({
+      state: "attached",
+    });
+
+    // The two-word label, because a single-word one would wrap to one line
+    // and prove nothing about splitting the pair.
+    const chosen = page.getByRole("button", { name: "A bit cold" });
+    await chosen.click();
+
+    // **Wait for the close to finish before measuring.** The brackets
+    // animate inward by TRAVEL.frame over `--dur-reveal`, so a box read
+    // straight after the click is a box mid-slide — which showed up as a
+    // frame lopsided by 3.8px of the 8px travel. Waiting on the element's
+    // own animations rather than a timeout keeps it deterministic if the
+    // duration ever changes.
+    await page
+      .locator(".bracket-close-start")
+      .evaluate(async (element) => {
+        await Promise.all(
+          element.getAnimations().map(async (animation) => animation.finished),
+        );
+      });
+
+    const cell = await chosen.boundingBox();
+    const open = await page.locator(".bracket-close-start").boundingBox();
+    const close = await page.locator(".bracket-close-end").boundingBox();
+    if (!cell || !open || !close) throw new Error("no bracket boxes");
+
+    // The label's own text node, measured with a Range — an element box
+    // would be the cell's, which is the thing the brackets are pinned to
+    // and would make "never enters the text" trivially true.
+    const label = await chosen.evaluate((button) => {
+      const text = [...button.childNodes].filter(
+        (node) => node.nodeType === 3 && (node.textContent ?? "").trim() !== "",
+      );
+      const range = document.createRange();
+      for (const node of text) range.selectNodeContents(node);
+      const box = range.getBoundingClientRect();
+      return { x: box.x, right: box.x + box.width, height: box.height };
+    });
+
+    // **Two lines**, which is the condition the ruling is about. If the
+    // label ever fits on one, this test stops proving what it claims.
+    expect(
+      label.height,
+      "the label no longer wraps, so this proves nothing",
+    ).toBeGreaterThan(20);
+
+    // **Never enters the text**, on either side.
+    expect(open.x + open.width, "[ overlaps the label").toBeLessThanOrEqual(
+      label.x + 0.5,
+    );
+    expect(close.x, "] overlaps the label").toBeGreaterThanOrEqual(
+      label.right - 0.5,
+    );
+
+    // **At the cell's outer edges**, symmetrically — a frame, not a pair
+    // sitting beside the words.
+    const leftGap = open.x - cell.x;
+    const rightGap = cell.x + cell.width - (close.x + close.width);
+    expect(leftGap).toBeLessThan(8);
+    expect(Math.abs(leftGap - rightGap), "the frame is lopsided").toBeLessThan(
+      1,
+    );
+
+    // **Vertically centred on the cell**, so a one-line and a two-line
+    // label carry the brackets at the same height across the row.
+    const middle = cell.y + cell.height / 2;
+    for (const [name, box] of [
+      ["[", open],
+      ["]", close],
+    ] as const) {
+      expect(
+        Math.abs(box.y + box.height / 2 - middle),
+        `${name} is not centred on the cell`,
+      ).toBeLessThan(1.5);
+    }
   } finally {
     await withLocalDb(async ({ core }) => {
       await core
