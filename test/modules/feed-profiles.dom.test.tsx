@@ -336,9 +336,13 @@ describe("OtherProfile", () => {
       />,
     );
 
-    expect(
-      screen.getByText(new Date(1_755_000_000 * 1000).toLocaleDateString()),
-    ).toBeVisible();
+    // **A literal, not the same call the component makes.** This asserted
+    // `new Date(…).toLocaleDateString()`, which is the implementation
+    // restated — it would have passed whatever that returned, including
+    // the two different answers workerd and the browser were giving, which
+    // is the hydration bug `lib/dates` exists to stop. The date is 2025-08-12
+    // at 07:00 UTC; the day is fixed because the formatter is.
+    expect(screen.getByText("Tue 12 Aug")).toBeVisible();
   });
 
   it("omits an absent caption rather than rendering an empty line", async () => {

@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { VerdictValue } from "../../../lib/contracts";
 import { formatDistance, formatDuration } from "../../../lib/measures";
 import type { Units } from "../../../lib/contracts";
+import { dayLabel } from "../../../lib/dates";
 import { formatTemp } from "../../../lib/temperature";
 import { Mono, PendingLabel, WeatherAttribution } from "../../../ui";
 import type { BacklogRow, BacklogSuggestion, Conditions } from "../../feed";
@@ -71,37 +72,6 @@ function conditionsLine(conditions: Conditions, units: Units): string {
   ].join(" · ");
 }
 
-/**
- * "Mon 2 Sep", the way DS2 labels a row and names the kit it offers.
- *
- * **Fixed locale and an explicit UTC zone, because this renders twice.**
- * It began as `toLocaleDateString(undefined, …)` — the reader's own
- * locale, which reads as the considerate choice and is a hydration bug:
- * the server is workerd and runs in UTC, the browser runs in the
- * runner's zone, and a run near either end of a day formats to a
- * different weekday in each. React then discards the whole table and
- * rebuilds it, which the dev server reported as "the server rendered
- * text didn't match the client" against this very `<tr>`.
- *
- * `en-GB` rather than `undefined` for the same reason, and it is what the
- * board draws: "Mon 2 Sep", not "Mon, Sep 2".
- *
- * **The honest limitation**: this is the run's UTC day, not the runner's.
- * The app stores no timezone for anybody, so no server render can know
- * one — see D-96, which names the two other components with the same
- * bug. For a morning run the two agree; a late-evening run at a negative
- * offset will read as the next day.
- */
-const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
-
-function dayLabel(epochSeconds: number): string {
-  return DAY_FORMAT.format(new Date(epochSeconds * 1000));
-}
 
 /**
  * The outfit cell: the kit this row will save, or the offer of one.

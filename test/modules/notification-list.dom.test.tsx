@@ -87,7 +87,10 @@ describe("NotificationList", () => {
     expect(screen.getByText(/New run on Strava/)).toBeVisible();
     // The timestamp is a measured value, so it renders in mono.
     const time = screen.getAllByText(
-      new Date(1_755_000_000 * 1000).toLocaleString(),
+      // A literal for the reason `feed-profiles` carries: deriving the
+      // expectation from the same ambient call the component used made
+      // the assertion true of any answer, including two different ones.
+      "Tue 12 Aug, 12:00",
     );
     expect(time[0]).toHaveClass("font-mono");
   });

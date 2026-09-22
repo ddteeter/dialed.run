@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { dayLabel } from "../../../lib/dates";
 import { inFlight, Mono, PendingLabel } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 
@@ -112,7 +113,7 @@ export function OtherProfile({
                   <p className="m-0 text-small">{entry.caption}</p>
                 )}
                 <Mono className="text-muted">
-                  {new Date(entry.createdAt * 1000).toLocaleDateString()}
+                  {dayLabel(entry.createdAt)}
                 </Mono>
               </Link>
             </li>

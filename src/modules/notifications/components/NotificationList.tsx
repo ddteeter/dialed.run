@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
+import { dayTimeLabel } from "../../../lib/dates";
 import type { FormFailure } from "../../../ui";
 import {
   FormFailureBand,
@@ -103,7 +104,7 @@ export function NotificationList({
             >
               <p className="m-0 text-ink">{notification.body}</p>
               <Mono className="text-muted">
-                {new Date(notification.createdAt * 1000).toLocaleString()}
+                {dayTimeLabel(notification.createdAt)}
               </Mono>
             </li>
           ))}
