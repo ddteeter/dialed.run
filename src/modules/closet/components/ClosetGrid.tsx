@@ -107,6 +107,32 @@ function ClosetGroup({
   );
 }
 
+/**
+ * Screen C's heading row.
+ *
+ * It moved out of `src/routes/closet/index.tsx` so the empty state can
+ * drop the "Add" beside it without the route branching. `headingAction`
+ * on `Page` could not serve: this screen does not wear `Page`, because
+ * the grid owns its own two-column layout at desk.
+ */
+function ClosetHeading({
+  action,
+}: Readonly<{ action?: boolean }>): JSX.Element {
+  return (
+    <div className="flex items-center justify-between">
+      <h1 className="font-display text-title uppercase">The Closet</h1>
+      {action === true ? (
+        <Link
+          to="/closet/new"
+          className="target inline-flex items-center rounded-pill bg-ink px-3 py-2 text-body font-semibold text-ground"
+        >
+          Add
+        </Link>
+      ) : undefined}
+    </div>
+  );
+}
+
 export interface ClosetGridProps {
   listing: ClosetListing;
   /**
@@ -139,19 +165,30 @@ export function ClosetGrid({
   );
   const retiredCount = listing.items.filter((view) => view.item.retired).length;
 
+  // **The empty closet offers one Add, not two.** The heading's "Add" and
+  // this one are the same action a few inches apart, and on an empty
+  // closet the centred one is the whole screen's point — so the heading
+  // keeps the title and drops the control. The heading lives here rather
+  // than in the route precisely so this can be decided: a route may not
+  // branch (`server-functions-are-glue`), and "which control a state
+  // shows" is exactly the kind of decision that rule wants somewhere a
+  // test can reach. Owner's read, 2026-09-21.
   if (listing.totalCount === 0) {
     return (
-      <div className="px-6 py-12 text-center">
-        <p className="text-body text-quiet">
-          Nothing in here yet. Add the five things you actually reach for — the
-          rest can wait.
-        </p>
-        <Link
-          to="/closet/new"
-          className="target mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
-        >
-          Add a piece
-        </Link>
+      <div className="flex flex-col gap-6 px-4 pt-6 wide:px-6">
+        <ClosetHeading />
+        <div className="py-12 text-center">
+          <p className="text-body text-quiet">
+            Nothing in here yet. Add the five things you actually reach for —
+            the rest can wait.
+          </p>
+          <Link
+            to="/closet/new"
+            className="target mt-6 inline-block rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
+          >
+            Add a piece
+          </Link>
+        </div>
       </div>
     );
   }
@@ -166,7 +203,9 @@ export function ClosetGrid({
     // The ratio is DS4's ("1.55fr / 1fr, gap SPACE[6]") with the columns
     // in C's order. A ratio, not a width: nothing here pins a number that
     // is not in MEASURE.
-    <div className="flex flex-col gap-8 px-4 py-6 wide:px-6 desk:grid desk:grid-cols-[1fr_1.55fr] desk:items-start desk:gap-6">
+    <div className="flex flex-col gap-6 px-4 py-6 wide:px-6">
+      <ClosetHeading action />
+      <div className="flex flex-col gap-8 desk:grid desk:grid-cols-[1fr_1.55fr] desk:items-start desk:gap-6">
       <div
         data-slot="closet-rail"
         className="flex flex-col gap-4 desk:sticky desk:top-6"
@@ -195,14 +234,15 @@ export function ClosetGrid({
         ) : undefined}
       </div>
 
-      <div className="flex flex-col gap-8">
-        {GROUP_ORDER.map(({ group, label }) => (
-          <ClosetGroup
-            key={group}
-            label={label}
-            items={visible.filter((view) => view.uiGroup === group)}
-          />
-        ))}
+        <div className="flex flex-col gap-8">
+          {GROUP_ORDER.map(({ group, label }) => (
+            <ClosetGroup
+              key={group}
+              label={label}
+              items={visible.filter((view) => view.uiGroup === group)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

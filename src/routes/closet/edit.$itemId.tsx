@@ -27,7 +27,7 @@ function EditGarmentPage() {
 
   return (
     <Layout>
-      <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-4 py-8 wide:px-6">
+      <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 wide:px-6">
         <h1 className="font-display text-title uppercase">Edit piece</h1>
         <GarmentForm
           initial={formValuesFromItem(detail.item, detail.effective)}

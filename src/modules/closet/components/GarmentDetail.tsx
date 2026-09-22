@@ -180,7 +180,7 @@ export function GarmentDetail({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-5 px-4 py-8 wide:px-6">
+    <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-5 px-4 py-8 wide:px-6">
       {item.photoKey === null ? undefined : (
         <img
           src={`/closet/photo/${item.id}/card`}

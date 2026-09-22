@@ -26,7 +26,7 @@ function SettingsPage() {
   const { current } = Route.useLoaderData();
 
   return (
-    <Page title="Settings" width="panel">
+    <Page title="Settings" width="column">
       <SettingsForm current={current} savePreferences={savePreferencesFn} />
     </Page>
   );

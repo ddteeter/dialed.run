@@ -28,7 +28,7 @@
  * comment rather than faked here.
  */
 import { storageStateFor } from "../support/accounts";
-import { PHONE, bar, launcher } from "../support/bars";
+import { DESK, PHONE, bar, launcher } from "../support/bars";
 import { expect, scene, test } from "../support/demo";
 
 // Signed in already: the account is created by the `demo-setup` project, so
@@ -94,6 +94,12 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   await expect(launcher(page)).toHaveAttribute("aria-haspopup", "dialog");
   // "No tab is `page` during the flow; the flow screen announces itself."
   await expect(bar(page).locator('[aria-current="page"]')).toHaveCount(0);
+
+  // **Back to the desk canvas.** The beat above is the phone bar's, and
+  // without this the rest of the journey — manual entry, the run detail,
+  // the runs list — records at 390 on a 1280 canvas, which is the exact
+  // thing this lane was built to stop showing.
+  await page.setViewportSize(DESK);
 
   await scene(page, "Weather is never typed — manual is the fallback");
   await page.getByRole("link", { name: "enter it manually" }).click();

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { requireSession } from "../../modules/auth/functions";
 import { ClosetGrid } from "../../modules/closet/components/ClosetGrid";
@@ -30,15 +30,6 @@ function ClosetPage() {
   const { listing } = Route.useLoaderData();
   return (
     <Layout>
-      <div className="flex items-center justify-between px-4 pt-6 wide:px-6">
-        <h1 className="font-display text-title uppercase">The Closet</h1>
-        <Link
-          to="/closet/new"
-          className="target inline-flex items-center rounded-pill bg-ink px-3 py-2 text-body font-semibold text-ground"
-        >
-          Add
-        </Link>
-      </div>
       <ClosetGrid
         listing={listing}
         initialShowRetired={search.retired ?? false}

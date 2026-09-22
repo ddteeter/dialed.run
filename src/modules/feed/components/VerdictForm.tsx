@@ -317,7 +317,7 @@ export function VerdictForm({
 
   if (noted !== undefined) {
     return (
-      <div className="mx-auto flex w-full max-w-column flex-col items-center gap-4 px-5 pt-16 text-center">
+      <div className="mx-auto flex w-full max-w-panel flex-col items-center gap-4 px-5 pt-16 text-center">
         <Bracketed className="text-dialed-text">Noted</Bracketed>
         <p>{noted}</p>
         <button
@@ -338,7 +338,7 @@ export function VerdictForm({
       <form
         ref={form.formRef}
         noValidate
-        className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6"
+        className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6"
         onSubmit={(event) => {
           event.preventDefault();
           void form.submit(payload());

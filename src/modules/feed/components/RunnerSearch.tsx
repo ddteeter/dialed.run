@@ -37,7 +37,7 @@ export function RunnerSearch({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-6 px-5 pt-6">
       <h1 className="font-display text-title uppercase">Find runners</h1>
       <input
         type="search"

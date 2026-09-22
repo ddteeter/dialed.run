@@ -17,7 +17,7 @@ function ImportStatusPage() {
 
   return (
     <BelledLayout unreadCount={unreadCount}>
-      <Page title="Reading your run" width="panel">
+      <Page title="Reading your run" width="column">
         <ImportStatus importId={importId} getStatus={getImportStatusFn} />
       </Page>
     </BelledLayout>
