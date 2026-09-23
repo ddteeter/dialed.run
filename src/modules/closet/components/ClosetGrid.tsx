@@ -96,9 +96,14 @@ function ClosetGroup({
                   </>
                 ) : undefined}
               </span>
-              <Bracketed className="text-dialed-text">
-                {tempLabel(view)}
-              </Bracketed>
+              {/* **Muted, never teal.** T2: teal means *dialed* — a
+                  verdict — and a garment's working range is not one. It was
+                  `text-dialed-text` for both a tested range and "Untested",
+                  so an untested garment wore the dialed hue. Board C draws
+                  the band line in `--muted`, and round 16 says coverage is
+                  monochrome. Found by the 2026-09-22 reconciliation
+                  sweep. */}
+              <Bracketed className="text-muted">{tempLabel(view)}</Bracketed>
             </Link>
           </li>
         ))}

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatDistance,
   formatDuration,
+  formatWind,
   formatTempRange,
 } from "../../src/lib/measures";
 import { formatTemp } from "../../src/lib/temperature";
@@ -30,6 +31,26 @@ describe("formatDistance", () => {
   });
 });
 
+describe("formatWind", () => {
+  it("speaks miles an hour to a runner who counts miles", () => {
+    // Board A1's "SE 9MPH" is 14.5 km/h. The backlog printed 15, in kph,
+    // to a runner set to miles.
+    expect(formatWind(14.5, "mi")).toBe("9mph");
+    expect(formatWind(9, "mi")).toBe("6mph");
+  });
+
+  it("speaks kilometres an hour to a runner who counts kilometres", () => {
+    expect(formatWind(14.5, "km")).toBe("15km/h");
+  });
+
+  it("rounds rather than floors, in both units", () => {
+    // 4.4 km/h is 2.73 mph: floored it would read 2.
+    expect(formatWind(4.4, "mi")).toBe("3mph");
+    expect(formatWind(4.6, "km")).toBe("5km/h");
+    expect(formatWind(0, "mi")).toBe("0mph");
+  });
+});
+
 describe("formatDuration", () => {
   it("reads as minutes and seconds", () => {
     expect(formatDuration(1830)).toBe("30:30");
@@ -46,6 +67,18 @@ describe("formatDuration", () => {
     expect(formatDuration(119)).toBe("1:59");
     expect(formatDuration(59)).toBe("0:59");
     expect(formatDuration(0)).toBe("0:00");
+  });
+
+  it("adds hours from one hour, padding the minutes beneath them", () => {
+    // Board D's run: 8.1 miles in 1:03:41. It read "63:41" because no
+    // test here had ever held a run longer than an hour.
+    expect(formatDuration(3821)).toBe("1:03:41");
+    // The boundary itself, and the last second before it.
+    expect(formatDuration(3600)).toBe("1:00:00");
+    expect(formatDuration(3599)).toBe("59:59");
+    // Minutes are padded under an hour only when there is an hour above
+    // them; ten and more need no padding either way.
+    expect(formatDuration(2 * 3600 + 15 * 60 + 9)).toBe("2:15:09");
   });
 });
 
