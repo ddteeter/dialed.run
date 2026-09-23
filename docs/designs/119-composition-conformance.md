@@ -12,7 +12,8 @@ assertions and they were all green through four composition defects on one
 control in a single day:
 
 1. the verdict laid out as a vertical stack where round 17 ruled one row;
-2. "Dialed" floating off its neighbours' first baseline;
+2. "Dialed" floating off its neighbours' first baseline — true of round
+   18's board, and reversed by round 19 (see "Compare, don't assert" below);
 3. the brackets stacking as rows of their own;
 4. then the brackets splitting across a wrapping label.
 
@@ -90,6 +91,29 @@ rows, and flattening those back out is row-major: a board whose cells wrap
 composition, scrambled by a fold. A cell's text does not care where it
 folded. Rows stay for the one question they genuinely answer — is this one
 band or a stack.
+
+## Compare, don't assert
+
+The harness's own first finding went stale inside a day, and the way it
+went stale is the lesson.
+
+Round 18 drew the Dialed cell with two lines — "DIALED" and "7 IN BAND" —
+so the board's centring put Dialed's first line level with its
+neighbours'. The build's one-line Dialed, centred, sat lower; the diff
+showed it; the fix was `justify-start`, and the spec gained an assertion:
+_"every label starts on the band's first row."_
+
+Round 19 moved the count out of the cell. Dialed became one line, and the
+board still centres — so on the current board Dialed sits mid-cell. The
+assertion kept passing against the top-aligned build, because it encoded
+round 18's _consequence_ rather than reading the board. The owner caught
+it watching a demo.
+
+So a spec asserts a rule only where the rule is design's own words. Where
+it is a measurement of the drawing — alignment, order, which row a thing
+lands on — the spec reads the board's value and compares. `alignmentsOf`
+classifies each cell `top` / `centre` / `bottom` on both sides, and
+against the old build reports exactly the one cell that moved.
 
 ## Known gaps
 

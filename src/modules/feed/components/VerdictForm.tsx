@@ -26,18 +26,6 @@ import {
 } from "../../../ui";
 
 /**
- * `justify-start`, not `justify-center`, and it is not a nicety.
- *
- * Four of the five labels are two words and wrap inside their cell;
- * "Dialed" is one. Centred, the short one floats to the middle of the cell
- * while its neighbours' first lines sit above it — five labels, no shared
- * baseline. The board aligns all five first lines, which a layout-signature
- * diff against it is what caught: the board reads
- * `['WAY','A BIT','DIALED','A BIT','WAY']` on one row, and this read
- * `['WAY COLD','A BIT COLD','A BIT WARM','WAY WARM']` with `['DIALED']`
- * alone on the next.
- */
-/**
  * `relative` and a horizontal gutter, because the brackets frame the cell.
  *
  * Design round 18: *"the brackets frame the cell, not the words — they
@@ -50,14 +38,24 @@ import {
  * shift on the single most important input in the product, and on the one
  * frame the runner is actually watching.
  *
- * `justify-start`, not `justify-center`: four of the five labels are two
- * words and wrap; "Dialed" is one. Centred, the short one floats to the
- * middle of its cell while its neighbours' first lines sit above it, so
- * five labels share no baseline. Caught by diffing a layout signature
- * against the board, which reads all five on one row.
+ * `justify-center`: every label sits in the vertical middle of its cell,
+ * as round 19's board draws all five (measured: text centre to cell centre,
+ * 0px in each). A one-word label — "Dialed" — therefore sits between the
+ * two lines of its neighbours rather than on their first line.
+ *
+ * It was `justify-start` for one round, and that was a misreading of a
+ * board that has since changed. Round 18 drew the Dialed cell with *two*
+ * lines ("DIALED" and "7 IN BAND"), so centring put its first line level
+ * with its neighbours'; the build centred a one-line "Dialed" instead, a
+ * layout-signature diff showed it floating off their first line, and
+ * `justify-start` "fixed" that. Round 19 moved the count out of the cell,
+ * leaving Dialed one line — and the board still centres. The owner saw
+ * the top-aligned Dialed on film. The conformance spec now compares each
+ * cell's alignment against the board's rather than asserting a rule
+ * derived from one round's content.
  */
 const VERDICT_BASE =
-  "relative flex flex-col items-center justify-start gap-0 rounded-card px-3 py-3 text-center text-micro font-semibold uppercase";
+  "relative flex flex-col items-center justify-center gap-0 rounded-card px-3 py-3 text-center text-micro font-semibold uppercase";
 
 /**
  * A bracket, pinned to one edge of the cell and vertically centred.
