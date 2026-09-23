@@ -1381,6 +1381,63 @@ describe("ChoiceList", () => {
 const TRUE_WHEN_INVALID = undefined;
 const NO_DESCRIPTION = undefined;
 
+describe("ChoiceList, read-only", () => {
+  /**
+   * Shown as an answer, not asked as a question — A3's chips after Log it
+   * (design round 20). Not `disabled`: rule 07 bans taking a control out
+   * of the tab order, and `readOnly` does nothing to a radio in any
+   * browser, so this is `aria-disabled` plus a change that is not passed
+   * on.
+   */
+  const OPTIONS = ["none", "too_much"] as const;
+  const LABELS = { none: "Fine", too_much: "Too much" };
+
+  function renderAnswer(onChange: (value: "none" | "too_much") => void, isReadOnly: boolean) {
+    return render(
+      <ChoiceList
+        name="flag"
+        legend="Houdini"
+        options={OPTIONS}
+        optionLabels={LABELS}
+        value="none"
+        field={restingField}
+        onChange={onChange}
+        readOnly={isReadOnly}
+      />,
+    );
+  }
+
+  it("announces every option as unavailable, and keeps it focusable", () => {
+    renderAnswer(vi.fn(), true);
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveAttribute("aria-disabled", "true");
+      expect(radio).not.toBeDisabled();
+    }
+  });
+
+  it("passes no change on, so the answer on screen cannot move", async () => {
+    const onChange = vi.fn();
+    renderAnswer(onChange, true);
+
+    await userEvent.click(screen.getByRole("radio", { name: "Too much" }));
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("radio", { name: "Fine" })).toBeChecked();
+  });
+
+  it("is an ordinary group when not read-only", async () => {
+    const onChange = vi.fn();
+    renderAnswer(onChange, false);
+
+    expect(screen.getByRole("radio", { name: "Fine" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+    await userEvent.click(screen.getByRole("radio", { name: "Too much" }));
+    expect(onChange).toHaveBeenCalledWith("too_much");
+  });
+});
+
 describe("ChoiceList's chip layout (§AH)", () => {
   const OPTIONS = ["navy", "red"] as const;
   const LABELS = { navy: "Navy", red: "Red" };

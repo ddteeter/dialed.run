@@ -678,6 +678,7 @@ export function ChoiceList<TOption extends string>({
   field,
   onChange,
   error,
+  readOnly,
 }: Readonly<
   ChoosableProps<TOption> & {
     legend: string;
@@ -724,6 +725,19 @@ export function ChoiceList<TOption extends string>({
      */
     value: TOption | "" | undefined;
     onChange: (value: TOption) => void;
+    /**
+     * Shown as an answer, not asked as a question — A3's chips after Log
+     * it (design round 20: *"the verdict row and chips stay, read-only, so
+     * the receipt is read against the answer"*).
+     *
+     * **Not `disabled`.** Accessibility rule 07 bans dropping a control out
+     * of the tab order, and a receipt is exactly what a reader should be
+     * able to walk. `readOnly` does nothing to a radio in any browser, so
+     * the group is `aria-disabled` — announced as unavailable, still
+     * focusable — and a change is simply not passed on. The input stays
+     * controlled, so the choice on screen cannot move.
+     */
+    readOnly?: boolean | undefined;
   }
 >): JSX.Element {
   const isChips = layout === "chips";
@@ -744,8 +758,9 @@ export function ChoiceList<TOption extends string>({
               type="radio"
               value={option}
               checked={value === option}
+              aria-disabled={readOnly === true || undefined}
               onChange={() => {
-                onChange(option);
+                if (!readOnly) onChange(option);
               }}
               // A chip's own box is the mark, so the control fills it
               // rather than sitting beside it — and `sr-only` is not the

@@ -19,6 +19,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
+import type { Units } from "../../src/lib/contracts";
 import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
 import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
@@ -157,6 +158,8 @@ function form(
   overrides: {
     entry?: Partial<Entry>;
     bandFloor?: number;
+    bandCounts?: Readonly<Record<number, number>>;
+    units?: Units;
     submitVerdict?: (input: {
       data: Record<string, unknown>;
     }) => Promise<unknown>;
@@ -175,6 +178,8 @@ function form(
     <VerdictForm
       entry={entry(overrides.entry)}
       bandFloor={overrides.bandFloor}
+      bandCounts={overrides.bandCounts}
+      units={overrides.units ?? { temp: "f", distance: "mi" }}
       submitVerdict={overrides.submitVerdict ?? nothing}
       uploadPhoto={overrides.uploadPhoto ?? noUpload}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
@@ -1123,6 +1128,33 @@ describe("VerdictForm: photos", () => {
   });
 });
 
+describe("VerdictForm: the history line beneath the row (D-97)", () => {
+  it("shows this runner's history in the band, which the route already loads", async () => {
+    // The verdict route has fetched `verdictBandCounts` on every visit and
+    // discarded it; round 20 put the line beneath the row.
+    await renderWithRouter(
+      form({ bandFloor: 5, bandCounts: { "-1": 2, "0": 7, "1": 1 } }),
+    );
+
+    expect(
+      screen.getByText("[41–50°] · 2 cold · 7 dialed · 1 warm"),
+    ).toBeVisible();
+  });
+
+  it("draws no line for a run with no band", async () => {
+    // No conditions, no band, no counts — nothing to state.
+    await renderWithRouter(form({ bandCounts: { "0": 7 } }));
+
+    expect(screen.queryByText(/Five states/)).toBeNull();
+  });
+
+  it("draws no line when the counts did not load", async () => {
+    await renderWithRouter(form({ bandFloor: 5 }));
+
+    expect(screen.queryByText(/Five states/)).toBeNull();
+  });
+});
+
 describe("VerdictForm: what happens after saving", () => {
   it("tells them what the run just did to a piece's record", async () => {
     // The point of the whole screen: a verdict is data about a garment in
@@ -1142,8 +1174,17 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
-    expect(await screen.findByText("Houdini is now 3 of 5")).toBeVisible();
-    expect(screen.getByText("[Noted]")).toBeVisible();
+    // The band, as board A3 writes it: "Half-zip is now 8 of 9 in
+    // 38–46°." 5°C is 41°F, and a band is five degrees Celsius wide.
+    const sentence = await screen.findByText(
+      "Houdini is now 3 of 5 in 41–50°.",
+    );
+    expect(sentence).toBeVisible();
+    // Announced when it lands: the button just pressed has gone, and this
+    // is what took its place.
+    const receipt = sentence.closest("[role='status']");
+    expect(receipt).not.toBeNull();
+    expect(receipt).toHaveTextContent(/^Noted/);
     expect(itemBandWearStat).toHaveBeenCalledWith({
       data: { itemId: "01JTEMA0000000000000000000", bandFloorC: 5 },
     });
@@ -1186,9 +1227,16 @@ describe("VerdictForm: what happens after saving", () => {
     });
   });
 
-  it("moves on from the noted screen when asked", async () => {
+  it("lands the receipt in the submit's place, with the answer still on screen", async () => {
+    // Design round 20: "Noted is a receipt, not a preview: it lands after
+    // Log it in the submit's place, replacing share-toggle and submit; the
+    // verdict row and chips stay, read-only, so the receipt is read
+    // against the answer. No button in it — the tab bar is the exit."
+    //
+    // It used to replace the whole screen — "Noted", the sentence and a
+    // Done button — so the answer it was a receipt for was gone.
     const user = userEvent.setup();
-    const { router } = await renderWithRouter(
+    await renderWithRouter(
       form({
         entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
         bandFloor: 5,
@@ -1197,15 +1245,73 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText("Houdini is now 3 of 5");
+    await screen.findByText(/Houdini is now 3 of 5/);
 
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    // In the submit's place: share and submit are gone, and there is no
+    // button standing in for them.
+    expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Share to feed" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe(
-        "/feed/entry/01JENTRY000000000000000000",
+    // The answer stays — the chosen verdict still pressed.
+    const dialed = screen.getByRole("button", { name: "Dialed" });
+    expect(dialed).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("is answerable until it is logged — nothing is read-only on the way in", async () => {
+    // The other half of the lock. A form locked from the start is a form
+    // nobody can answer, and only a test that looks before Log it can see
+    // that.
+    await renderWithRouter(
+      form({ entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] } }),
+    );
+
+    for (const step of verdictScale) {
+      expect(screen.getByRole("button", { name: step.label })).not.toHaveAttribute(
+        "aria-disabled",
       );
+    }
+    expect(screen.getByRole("button", { name: "chafed" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("holds the answer read-only once it is noted, without dropping it from the tab order", async () => {
+    // Read-only, not `disabled`: accessibility rule 07 bans taking a
+    // control out of the tab order, and a receipt is for reading.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        bandFloor: 5,
+        itemBandWearStat: () => Promise.resolve({ worn: 3, total: 5 }),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await screen.findByText(/Houdini is now 3 of 5/);
+
+    const wayCold = screen.getByRole("button", { name: "Way cold" });
+    expect(wayCold).toHaveAttribute("aria-disabled", "true");
+    expect(wayCold).not.toBeDisabled();
+    await user.click(wayCold);
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(wayCold).toHaveAttribute("aria-pressed", "false");
+
+    const tag = screen.getByRole("button", { name: "chafed" });
+    expect(tag).toHaveAttribute("aria-disabled", "true");
+    await user.click(tag);
+    expect(tag).toHaveAttribute("aria-pressed", "false");
+
+    const tooMuch = within(flagGroup(0)).getByRole("radio", {
+      name: "Too much",
     });
+    expect(tooMuch).toHaveAttribute("aria-disabled", "true");
+    await user.click(tooMuch);
+    expect(tooMuch).not.toBeChecked();
   });
 
   it("says so when the save fails, and leaves the form standing", async () => {
