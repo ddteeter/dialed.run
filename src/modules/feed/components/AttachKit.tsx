@@ -162,7 +162,9 @@ export function AttachKit({
   return (
     <FlowStep step={LOG_FLOW.attach}>
       <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6">
-        <h1 className="font-display text-title uppercase">Attach the kit</h1>
+        <h1 className="font-display text-title uppercase">
+          What did you wear?
+        </h1>
 
         {!showPicker && prefill === undefined ? (
           <Skeleton className="h-32 w-full" />
@@ -191,7 +193,7 @@ export function AttachKit({
               }}
               className="target text-body font-semibold text-cold-text"
             >
-              Choose different items
+              Change
             </button>
           </div>
         ) : undefined}

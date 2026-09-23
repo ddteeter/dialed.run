@@ -162,7 +162,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
     page.getByRole("link", { name: /Smartwool Intraknit 200/ }),
   ).toBeVisible();
   await expect(
-    page.getByText("5 of 6 pieces are still generic."),
+    page.getByText("5 of 6 pieces are still generic"),
   ).toBeVisible();
 
   // O6. The teaser with no verdicts behind it: it says it is listening, and

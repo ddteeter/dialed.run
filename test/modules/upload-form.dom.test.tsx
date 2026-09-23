@@ -62,9 +62,13 @@ describe("UploadForm", () => {
     );
 
     expect(
-      screen.getByText(/Drop a \.FIT, \.gpx, or \.tcx file/),
+      screen.getByText("Drop a file, or browse"),
     ).toBeVisible();
-    expect(screen.getByText("up to 25 MB")).toBeVisible();
+    // A1's hint as round 19 draws it; "up to 25 MB" was round 13's, and
+    // the current board supersedes it.
+    expect(
+      screen.getByText("From your watch export or any tracking app."),
+    ).toBeVisible();
     // The input is visually hidden but still in the accessibility tree —
     // `sr-only`, not `hidden`, or a keyboard user cannot reach it.
     expect(fileInput()).toHaveClass("sr-only");
@@ -80,7 +84,7 @@ describe("UploadForm", () => {
     const upload = vi.fn().mockResolvedValue({ importId: "x" });
     await renderWithRouter(<UploadForm upload={upload} />);
 
-    const well = screen.getByText(/Drop a \.FIT/).closest("label");
+    const well = screen.getByText("Drop a file, or browse").closest("label");
     expect(well).not.toBeNull();
 
     const transfer = new DataTransfer();
@@ -106,7 +110,7 @@ describe("UploadForm", () => {
       <UploadForm upload={() => Promise.resolve({ importId: "x" })} />,
     );
 
-    const well = screen.getByText(/Drop a \.FIT/).closest("label");
+    const well = screen.getByText("Drop a file, or browse").closest("label");
     expect(well).toHaveClass("border-dashed", "border-hairline-2");
     expect(well).not.toHaveClass("border-ink");
 
@@ -164,7 +168,7 @@ describe("UploadForm", () => {
     // cancelled — the event fires either way.
     fileInput().dispatchEvent(new Event("change", { bubbles: true }));
     await waitFor(() => {
-      expect(screen.getByText(/Drop a \.FIT/)).toBeVisible();
+      expect(screen.getByText("Drop a file, or browse")).toBeVisible();
     });
 
     expect(upload).not.toHaveBeenCalled();

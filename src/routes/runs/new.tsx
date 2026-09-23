@@ -21,17 +21,18 @@ function NewRunPage() {
 
   return (
     <BelledLayout unreadCount={unreadCount}>
-      <Page title="Log a run">
+      <Page title="Add a run">
         <UploadForm upload={startFileImport} />
         <p className="text-center text-small text-muted">
-          or{" "}
+          No file?{" "}
           <Link
             to="/runs/manual"
             data-target="inline"
             className="font-semibold text-cold-text"
           >
-            enter it manually
-          </Link>
+            Enter the run by hand
+          </Link>{" "}
+          instead.
         </p>
       </Page>
     </BelledLayout>

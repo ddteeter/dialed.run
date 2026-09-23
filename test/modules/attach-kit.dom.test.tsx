@@ -195,7 +195,7 @@ describe("AttachKit: before the picker opens", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "Attach the kit" }),
+      screen.getByRole("heading", { name: "What did you wear?" }),
     ).toBeVisible();
     expect(container.querySelectorAll(".breathe").length).toBeGreaterThan(0);
   });
@@ -633,7 +633,7 @@ describe("AttachKit: the picker", () => {
     await screen.findByRole("button", { name: "That’s it" });
 
     await user.click(
-      screen.getByRole("button", { name: "Choose different items" }),
+      screen.getByRole("button", { name: "Change" }),
     );
 
     expect(await screen.findByText("Tops")).toBeVisible();

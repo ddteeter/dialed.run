@@ -219,7 +219,7 @@ export function ClosetGrid({
             <Mono>
               {listing.genericCount} of {listing.totalCount}
             </Mono>{" "}
-            pieces are still generic. Name the ones you reach for.
+            pieces are still generic — name the ones you reach for.
           </p>
         ) : undefined}
 

@@ -52,10 +52,13 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
   // control used to show nothing at all, which is rule 06's "never
   // removed" failing by construction rather than by an `outline-none`.
   //
-  // Design's round-13 table names this control's rest label "Drop a .FIT,
-  // .gpx, or .tcx file" and its in-flight label "[ Reading ]". The drawn
-  // copy is kept as the rest label, because it carries the accepted
-  // formats and copy is the artboard's domain. The well itself is
+  // The rest label and hint are A1's board as of round 19: "Drop a file,
+  // or browse" / "From your watch export or any tracking app." They were
+  // round 13's "Drop a .FIT, .gpx, or .tcx file" / "up to 25 MB" — which
+  // the current board supersedes, and copy is the artboard's domain. The
+  // board carries the accepted formats in a caption above the well; that
+  // caption is A1's composition work in the 2026-09-22 reconciliation
+  // report. The in-flight label "[ Reading ]" is unchanged. The well itself is
   // `ui/FileWell` — one pattern, shared with F's photo well, which the
   // clone detector insisted on once the two became identical. Its
   // `error` prop carries the failure line, so the paragraph that used to
@@ -63,11 +66,15 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
   return (
     <FlowStep step={LOG_FLOW.intake}>
       <FileWell
-        label="Drop a .FIT, .gpx, or .tcx file"
+        label="Drop a file, or browse"
         pendingLabel="Reading"
         pending={isUploading}
         accept=".fit,.gpx,.tcx"
-        hint={<span className="text-micro text-muted">up to 25 MB</span>}
+        hint={
+          <span className="text-micro text-muted">
+            From your watch export or any tracking app.
+          </span>
+        }
         error={error}
         onFiles={(files) => {
           void onChange(files);

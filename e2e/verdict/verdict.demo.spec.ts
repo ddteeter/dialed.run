@@ -192,7 +192,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   });
 
   await scene(page, "Saving reports the wear rate in this temperature band");
-  await page.getByRole("button", { name: "Save verdict" }).click();
+  await page.getByRole("button", { name: "Log it" }).click();
 
   // With conditions resolved, saving reports the item's wear rate in this
   // temperature band rather than navigating away — the calibration signal
