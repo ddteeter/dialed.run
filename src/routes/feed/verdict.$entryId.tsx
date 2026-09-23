@@ -7,6 +7,7 @@ import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/components/VerdictForm";
 import { bandContextFor } from "../../modules/feed/route-decisions";
 import {
+  bandSignalsQuery,
   entryDetailQuery,
   itemBandWearStatQuery,
   submitVerdictAction,
@@ -28,25 +29,31 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
     return {
       entry,
       units: await viewerUnitsQuery(),
-      ...(await bandContextFor(entry, bandFloorC, async (bandFloor) =>
-        verdictBandCountsQuery({
-          data: { bandFloorC: bandFloor, excludeEntryId: params.entryId },
-        }),
-      )),
+      ...(await bandContextFor(entry, bandFloorC, async (bandFloor) => {
+        const [counts, signals] = await Promise.all([
+          verdictBandCountsQuery({
+            data: { bandFloorC: bandFloor, excludeEntryId: params.entryId },
+          }),
+          bandSignalsQuery({
+            data: { bandFloorC: bandFloor, entryId: params.entryId },
+          }),
+        ]);
+        return { counts, signals };
+      })),
     };
   },
   component: VerdictPage,
 });
 
 function VerdictPage() {
-  const { entry, bandFloor, bandCounts, units } = Route.useLoaderData();
+  const { entry, bandFloor, history, units } = Route.useLoaderData();
 
   return (
     <Layout>
       <VerdictForm
         entry={entry}
         bandFloor={bandFloor}
-        bandCounts={bandCounts}
+        history={history}
         units={units}
         submitVerdict={submitVerdictAction}
         uploadPhoto={uploadPhotoAction}

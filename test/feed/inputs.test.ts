@@ -7,6 +7,7 @@ import {
   attachKitInput,
   saveBacklogRowInput,
   bandCountsInput,
+  bandSignalsInput,
   coordinatesInput,
   entryIdInput,
   feedInput,
@@ -182,6 +183,20 @@ describe("the band inputs", () => {
         .success,
     ).toBe(true);
     expect(bandCountsInput.safeParse({}).success).toBe(false);
+  });
+
+  it("need the entry whose kit the chips are for, and its band", () => {
+    expect(
+      bandSignalsInput.safeParse({ bandFloorC: 5, entryId: newUlid() }).success,
+    ).toBe(true);
+    expect(bandSignalsInput.safeParse({ bandFloorC: 5 }).success).toBe(false);
+    expect(bandSignalsInput.safeParse({ entryId: newUlid() }).success).toBe(
+      false,
+    );
+    expect(
+      bandSignalsInput.safeParse({ bandFloorC: 5, entryId: "not-a-ulid" })
+        .success,
+    ).toBe(false);
   });
 
   it("need the item the stat is about", () => {

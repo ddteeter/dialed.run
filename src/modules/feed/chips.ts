@@ -34,8 +34,29 @@ import type { GarmentRecord } from "./band-signals";
 export type Flag = "too_much" | "not_enough";
 export type EntryTag = (typeof entryTags)[number];
 
+/**
+ * The per-item flag as three visible choices, as A3b lists them.
+ *
+ * `"none"` rather than `""`: a radio's value is a real string and an empty
+ * one reads as "no value" to the platform, which is a different thing from
+ * "the runner chose not to flag this". The form maps it back to
+ * `undefined`, which is what the contract stores.
+ */
+export const ITEM_FLAG_OPTIONS = ["none", "too_much", "not_enough"] as const;
+export type ItemFlagChoice = (typeof ITEM_FLAG_OPTIONS)[number];
+
+/**
+ * One table for the sheet's choices and the chips' labels, so "Too much"
+ * on a chip and in A3b cannot come to say two different things.
+ */
+export const ITEM_FLAG_LABELS: Readonly<Record<ItemFlagChoice, string>> = {
+  none: "Fine",
+  too_much: "Too much",
+  not_enough: "Not enough",
+};
+
 export type Chip =
-  | { kind: "flag"; itemId: string; flag: Flag }
+  | { kind: "flag"; itemId: string; name: string; flag: Flag }
   | { kind: "tag"; tag: EntryTag };
 
 /**
@@ -48,8 +69,12 @@ export const CHIP_COUNT = 5;
 */
 const MAX_SUGGESTED_FLAGS = 2;
 
-interface Garment {
+interface KitGarment {
   itemId: string;
+  name: string;
+}
+
+interface Garment extends KitGarment {
   record: GarmentRecord;
 }
 
@@ -61,9 +86,17 @@ function dialedShare(record: GarmentRecord): number {
  * Weakest first: lowest dialed share, then more runs, then kit order —
  * which `Array.prototype.sort` keeps for equal keys, being stable.
  */
-function byWeakness(garments: readonly Garment[]): Garment[] {
-  return garments
-    .filter((garment) => garment.record.total > 0)
+function byWeakness(
+  kit: readonly KitGarment[],
+  records: Readonly<Record<string, GarmentRecord>>,
+): Garment[] {
+  // A garment with no record here — none at all, or one of nothing — has
+  // no weakness to find (assumption 2), so it never reaches the sort.
+  return kit
+    .flatMap((garment) => {
+      const record = records[garment.itemId];
+      return record && record.total > 0 ? [{ ...garment, record }] : [];
+    })
     .toSorted(
       (a, b) =>
         dialedShare(a.record) - dialedShare(b.record) ||
@@ -95,10 +128,11 @@ const DIRECTION_OF: Readonly<Record<number, Flag>> = {
 
 function suggestedFlags(
   verdict: number | undefined,
-  candidates: readonly Garment[],
+  candidates: readonly KitGarment[],
+  records: Readonly<Record<string, GarmentRecord>>,
 ): Chip[] {
   if (verdict === undefined) return [];
-  const weakest = byWeakness(candidates);
+  const weakest = byWeakness(candidates, records);
   const direction = DIRECTION_OF[verdict];
   // Uncapped here: the caller caps the whole garment block, chosen chips
   // included, and a second cap would be one no input could tell apart.
@@ -106,29 +140,39 @@ function suggestedFlags(
     return weakest.map((garment) => ({
       kind: "flag",
       itemId: garment.itemId,
+      name: garment.name,
       flag: direction,
     }));
   }
   const [first] = weakest;
   const flag = first && offDirection(first.record);
-  return first && flag ? [{ kind: "flag", itemId: first.itemId, flag }] : [];
+  return first && flag
+    ? [{ kind: "flag", itemId: first.itemId, name: first.name, flag }]
+    : [];
 }
 
 export function suggestChips(input: {
   verdict: number | undefined;
   /**
-  The kit, in its own order, each with its record in this band.
+  The kit, in its own order.
   */
-  garments: readonly Garment[];
+  kit: readonly KitGarment[];
+  /**
+   * Each garment's record in this band, by item id. A garment missing from
+   * it — the run has no band, say — is one with no history here.
+   */
+  records: Readonly<Record<string, GarmentRecord>>;
   tagUse: Readonly<Record<string, number>>;
   chosenFlags: Readonly<Record<string, Flag>>;
   chosenTags: ReadonlySet<string>;
 }): Chip[] {
   // Chosen chips come first and stay put whatever the verdict does —
   // "chosen chips stay". Kit order for garments, canonical order for tags.
-  const chosenFlagChips: Chip[] = input.garments.flatMap((garment) => {
+  const chosenFlagChips: Chip[] = input.kit.flatMap((garment) => {
     const flag = input.chosenFlags[garment.itemId];
-    return flag ? [{ kind: "flag", itemId: garment.itemId, flag }] : [];
+    return flag
+      ? [{ kind: "flag", itemId: garment.itemId, name: garment.name, flag }]
+      : [];
   });
   const chosenTagChips: Chip[] = entryTags
     .filter((tag) => input.chosenTags.has(tag))
@@ -137,7 +181,8 @@ export function suggestChips(input: {
   const flagged = new Set(Object.keys(input.chosenFlags));
   const flagSuggestions = suggestedFlags(
     input.verdict,
-    input.garments.filter((garment) => !flagged.has(garment.itemId)),
+    input.kit.filter((garment) => !flagged.has(garment.itemId)),
+    input.records,
   ).slice(0, Math.max(0, MAX_SUGGESTED_FLAGS - chosenFlagChips.length));
 
   const flagBlock = [...chosenFlagChips, ...flagSuggestions];
@@ -149,4 +194,22 @@ export function suggestChips(input: {
     .map((tag) => ({ kind: "tag", tag }));
 
   return [...flagBlock, ...chosenTagChips, ...tagSuggestions];
+}
+
+/**
+ * What a chip says: "Gloves too much", or a tag in words. Normal case —
+ * the chip's mono step uppercases it in CSS, so the accessible name stays
+ * readable rather than being spelled out letter by letter.
+ */
+export function chipLabel(chip: Chip): string {
+  return chip.kind === "flag"
+    ? `${chip.name} ${ITEM_FLAG_LABELS[chip.flag].toLowerCase()}`
+    : tagLabel(chip.tag);
+}
+
+/**
+A tag in words — "cold first mile" — for the chips and for A3b's list.
+*/
+export function tagLabel(tag: EntryTag): string {
+  return tag.replaceAll("_", " ");
 }

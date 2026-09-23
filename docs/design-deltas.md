@@ -308,6 +308,38 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     visitor use to get back in? Owner's call to send it rather than guess
     (2026-09-21). D-93.
 
+24. **A3b is described, not drawn.** Round 20 gives it in one sentence —
+    _"every kit garment as a Fine / Too much / Not enough triple, plus all
+    nine tags"_ — and no board. Built from existing parts only
+    (`feed/components/SpecificsSheet.tsx`): the `Sheet`; a heading,
+    "Anything specific?"; one `ChoiceList` per garment, legended with its
+    name (the groups A3 carried inline before the chips replaced them);
+    the nine tags as the same pill toggle as A3's chips; and a **Done**
+    button in the outline style `ShadeSheet` uses for its secondary
+    action. No new glyph, colour or motion. **The ask is the board.**
+
+    Two things the build had to decide that a board would settle: MORE is
+    inert once Noted is showing (everything chosen is already a pressed
+    chip, and a receipt is not edited), and a garment chip tapped a second
+    time goes back to Fine rather than flipping direction.
+
+25. **Four things the chip rule leaves unsaid, built as assumptions.**
+    Round 20's chip rule is exact about the shape and silent on four
+    inputs; each is one function in `feed/chips.ts` with a test of its own,
+    so a ruling that overturns one is a one-line change.
+    1. **"Weakest" is the lowest dialed share** in the band (dialed ÷
+       runs); ties go to more runs, then kit order.
+    2. **A garment never worn in this band is not suggested** — it has no
+       record to be weak.
+    3. **Dialed suggests one garment**, in the way it has more often been
+       off; one never off either way is not suggested.
+    4. **No garment chips before a verdict is chosen** — the verdict sets
+       their direction. Tags still fill to five.
+
+    **The ask is a yes or a correction on each.** Also open from round 20:
+    when saving has nothing to note (no kit, or no band) the screen still
+    goes to the entry, since Noted has no sentence to say.
+
 ## Answered in round 19 (imported 2026-09-22)
 
 Every question from the conformance work came back answered, and the

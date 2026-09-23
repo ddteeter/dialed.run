@@ -11,6 +11,7 @@ import { optionalUserId, requireUserId } from "../auth";
 import {
   attachKitInput,
   bandCountsInput,
+  bandSignalsInput,
   coordinatesInput,
   entryIdInput,
   feedInput,
@@ -21,11 +22,7 @@ import {
   submitVerdictInput,
   userIdInput,
 } from "./inputs";
-import {
-  saveBacklogRow,
-  unjudgedRunCount,
-  verdictBacklog,
-} from "./backlog";
+import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
 import { conditionsAt } from "./conditions";
 import { consensusAt } from "./consensus";
 import {
@@ -37,6 +34,7 @@ import {
   submitVerdict,
   verdictBandCounts,
 } from "./entries";
+import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
 import { follow, isFollowing, unfollow } from "./follows";
 import { pickerGroups } from "./picker";
@@ -106,6 +104,13 @@ export const verdictBandCountsQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return verdictBandCounts(userId, data.bandFloorC, data.excludeEntryId);
+  });
+
+export const bandSignalsQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => bandSignalsInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return bandSignalsForEntry(userId, data.entryId, data.bandFloorC);
   });
 
 export const itemBandWearStatQuery = createServerFn({ method: "GET" })

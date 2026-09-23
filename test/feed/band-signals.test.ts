@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { entryTags } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { bandSignals } from "../../src/modules/feed/band-signals";
+import { bandSignals, bandSignalsForEntry } from "../../src/modules/feed/band-signals";
 import {
   makeEntry,
   makeItem,
@@ -128,5 +128,38 @@ describe("bandSignals", () => {
 
     expect(signals.garments[shell]).toEqual({ total: 90, dialed: 90, colder: 0, warmer: 0 });
     expect(signals.tagUse).toEqual({ chafed: 90 });
+  });
+});
+
+describe("bandSignalsForEntry", () => {
+  it("reads the entry's own kit, and leaves the entry out of its record", async () => {
+    const userId = await makeUser();
+    const shell = await makeItem({ userId, name: "Shell" });
+    const cap = await makeItem({ userId, name: "Cap" });
+    const unworn = await makeItem({ userId, name: "Not in this kit" });
+    const mine = await makeEntry({ userId, runId: await runAt(userId, 46.1, IN_BAND), verdict: 1, itemIds: [shell, cap] });
+    await makeEntry({ userId, runId: await runAt(userId, 46.2, IN_BAND), verdict: -1, itemIds: [shell, unworn] });
+    await tag(mine, "chafed");
+
+    const signals = await bandSignalsForEntry(userId, mine, BAND);
+
+    // The kit, and only the kit: a garment the runner owns but did not
+    // wear on this run is not a candidate for a chip on it.
+    expect(signals.garments).toEqual({
+      [shell]: { total: 1, dialed: 0, colder: 1, warmer: 0 },
+      [cap]: { total: 0, dialed: 0, colder: 0, warmer: 0 },
+    });
+    expect(signals.tagUse).toEqual({});
+  });
+
+  it("reads someone else's entry as a kit of nothing", async () => {
+    const userId = await makeUser();
+    const other = await makeUser();
+    const shell = await makeItem({ userId: other, name: "Shell" });
+    const theirs = await makeEntry({ userId: other, runId: await runAt(other, 47.1, IN_BAND), verdict: 0, itemIds: [shell] });
+
+    const signals = await bandSignalsForEntry(userId, theirs, BAND);
+
+    expect(signals.garments).toEqual({});
   });
 });

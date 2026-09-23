@@ -1,7 +1,11 @@
-import { and, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { entryTags, outfitEntryItems } from "../../db/schema-core";
+import {
+  entryTags,
+  outfitEntries,
+  outfitEntryItems,
+} from "../../db/schema-core";
 import { env } from "../../env";
 import { chunked } from "../../lib/chunked";
 import { verdictedEntriesInBand } from "./entries";
@@ -124,4 +128,36 @@ export async function bandSignals(
   }
 
   return { garments: Object.fromEntries(garments), tagUse };
+}
+
+/**
+ * The signals for one entry's own kit, as A3 asks for them.
+ *
+ * The kit is read here, scoped to the owner **in SQL**, rather than passed
+ * in: a route may not `.map(` (it must stay glue), and a caller-supplied
+ * list of item ids would let anyone ask for the band record of garments
+ * that are not theirs. Someone else's entry reads as a kit of nothing. The
+ * entry itself is left out of its own record — it is the one being judged.
+ */
+export async function bandSignalsForEntry(
+  userId: string,
+  entryId: string,
+  bandFloorC: number,
+): Promise<BandSignals> {
+  const kit = await db()
+    .select({ itemId: outfitEntryItems.itemId })
+    .from(outfitEntryItems)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, outfitEntryItems.entryId))
+    .where(
+      and(
+        eq(outfitEntryItems.entryId, entryId),
+        eq(outfitEntries.userId, userId),
+      ),
+    );
+  return bandSignals(
+    userId,
+    bandFloorC,
+    kit.map((row) => row.itemId),
+    entryId,
+  );
 }
