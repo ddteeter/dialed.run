@@ -425,6 +425,33 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     );
   });
 
+  it("dates a row where its run happened, not where UTC had reached", async () => {
+    // D-96. 03:30 UTC on Thursday 3 September is still Wednesday evening
+    // in Chicago. The row, the rail and the table cell all say Wednesday,
+    // because the run's own observation names its zone; the same row
+    // without one is dated in UTC, as every row was before.
+    const lateEvening = Math.floor(Date.UTC(2026, 8, 3, 3, 30) / 1000);
+    await renderTable([
+      row({
+        startedAt: lateEvening,
+        conditions: { ...conditions, timeZone: "America/Chicago" },
+      }),
+    ]);
+
+    const rail = document.querySelector("[data-slot='backlog-rail']");
+    expect(rail?.textContent).toContain("Wed 2 Sep");
+    expect(rail?.textContent).not.toContain("Thu 3 Sep");
+    expect(screen.getAllByText("Wed 2 Sep").length).toBeGreaterThan(0);
+  });
+
+  it("dates a row with no known zone in UTC", async () => {
+    const lateEvening = Math.floor(Date.UTC(2026, 8, 3, 3, 30) / 1000);
+    await renderTable([row({ startedAt: lateEvening })]);
+
+    const rail = document.querySelector("[data-slot='backlog-rail']");
+    expect(rail?.textContent).toContain("Thu 3 Sep");
+  });
+
   it("writes the conditions as one measured line", async () => {
     // The actual temperature, the condition, the wind in the viewer's own
     // units — mono, with the brand's separator. The row and the rail

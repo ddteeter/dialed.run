@@ -6,6 +6,7 @@ import {
   findObservationRow,
   hourBucketFor,
   roundCoord,
+  toWeatherObservation,
   upsertManualObservation,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
@@ -129,5 +130,58 @@ describe("what a stored observation records about itself", () => {
       condition: "manual",
       source: "manual",
     });
+  });
+});
+
+describe("the observation's zone (D-96)", () => {
+  it("stores the zone the provider named, so a cache hit can supply it", async () => {
+    // On the observation, not the run, because a run whose hour is cached
+    // never fetches — the row is the only place its zone can come from.
+    const key = cacheKeyFor(41.88, -87.63, new Date("2026-04-01T11:00:00Z"));
+    await upsertRealObservation(
+      key,
+      { ...OBSERVATION, timeZone: "America/Chicago" },
+      newUlid(),
+    );
+
+    const row = await findObservationRow(key);
+    expect(row?.timeZone).toBe("America/Chicago");
+    expect(row && toWeatherObservation(row)).toMatchObject({
+      timeZone: "America/Chicago",
+    });
+  });
+
+  it("stores no zone when the fetch that upgrades a manual row names none", async () => {
+    // The only rows an upsert overwrites are manual ones (`setWhere`), and
+    // those never carry a zone — so a fetch without one leaves the column
+    // empty rather than inventing or keeping anything.
+    const key = cacheKeyFor(41.89, -87.64, new Date("2026-04-02T11:00:00Z"));
+    await upsertManualObservation(key, 5, newUlid());
+    await upsertRealObservation(key, OBSERVATION, newUlid());
+
+    const row = await findObservationRow(key);
+    expect(row?.timeZone).toBeNull();
+    expect(row && toWeatherObservation(row)).not.toHaveProperty("timeZone");
+  });
+
+  it("leaves a manual observation without a zone", async () => {
+    const key = cacheKeyFor(41.9, -87.65, new Date("2026-04-03T11:00:00Z"));
+    await upsertManualObservation(key, 5, newUlid());
+
+    const row = await findObservationRow(key);
+    expect(row && toWeatherObservation(row)).not.toHaveProperty("timeZone");
+  });
+
+  it("drops a stored zone this runtime would reject, on the way out", async () => {
+    // The column is text. A zone valid when written can be one this ICU
+    // does not know; it must not reach `Intl` at render time.
+    const key = cacheKeyFor(41.91, -87.66, new Date("2026-04-04T11:00:00Z"));
+    await upsertRealObservation(key, OBSERVATION, newUlid());
+    const row = await findObservationRow(key);
+    if (!row) throw new Error("no row");
+
+    expect(
+      toWeatherObservation({ ...row, timeZone: "Mars/Olympus_Mons" }),
+    ).not.toHaveProperty("timeZone");
   });
 });

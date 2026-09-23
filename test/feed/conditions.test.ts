@@ -227,6 +227,80 @@ describe("observationsForRuns", () => {
   });
 });
 
+describe("the run's own zone (D-96)", () => {
+  it("carries the observation's zone, so the run's date is local to it", async () => {
+    const userId = await makeUser();
+    const run = await makeRun({ userId, lat: 41.88, lng: -87.63 });
+    await makeObservation({
+      lat: 41.88,
+      lng: -87.63,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 2,
+      timeZone: "America/Chicago",
+    });
+
+    const observations = await observationsForRuns([
+      { id: run, lat: 41.88, lng: -87.63, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(run)?.timeZone).toBe("America/Chicago");
+  });
+
+  it("leaves no zone field at all when the observation has none", async () => {
+    // Not `timeZone: undefined` — an absent key, so conditions without a
+    // zone are the same object they were before the column existed.
+    const userId = await makeUser();
+    const run = await makeRun({ userId, lat: 41.77, lng: -87.63 });
+    await makeObservation({
+      lat: 41.77,
+      lng: -87.63,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 2,
+    });
+
+    const observations = await observationsForRuns([
+      { id: run, lat: 41.77, lng: -87.63, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(run)).not.toHaveProperty("timeZone");
+  });
+
+  it("drops a stored zone this runtime would reject", async () => {
+    const userId = await makeUser();
+    const run = await makeRun({ userId, lat: 41.66, lng: -87.63 });
+    await makeObservation({
+      lat: 41.66,
+      lng: -87.63,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 2,
+      timeZone: "Mars/Olympus_Mons",
+    });
+
+    const observations = await observationsForRuns([
+      { id: run, lat: 41.66, lng: -87.63, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(run)).not.toHaveProperty("timeZone");
+  });
+
+  it("gives current conditions the zone of the place observed", async () => {
+    await makeObservation({
+      lat: 52.22,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 6,
+      feelsLikeC: 4,
+      timeZone: "America/Chicago",
+    });
+
+    const now = await currentConditions(52.22, -93.27, NOW);
+    expect(now?.timeZone).toBe("America/Chicago");
+  });
+});
+
 describe("observationsForEntries", () => {
   it("asks nothing for no entries", async () => {
     const observations = await observationsForEntries(coreDb(), []);

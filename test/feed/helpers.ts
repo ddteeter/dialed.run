@@ -192,6 +192,7 @@ export async function makeObservation(params: {
   feelsLikeC: number;
   precipMm?: number;
   source?: "visualcrossing" | "manual";
+  timeZone?: string;
 }): Promise<void> {
   const key = cacheKeyFor(
     params.lat,
@@ -212,6 +213,7 @@ export async function makeObservation(params: {
       precipMm: params.precipMm ?? 0,
       condition: "clear",
       source: params.source ?? "visualcrossing",
+      timeZone: params.timeZone,
       fetchedAt: NOW,
     });
 }

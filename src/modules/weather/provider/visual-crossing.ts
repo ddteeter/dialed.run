@@ -15,6 +15,7 @@
  */
 import { z } from "zod";
 
+import { isTimeZone } from "../../../lib/dates";
 import { UpstreamError } from "../../../lib/errors";
 import {
   weatherObservationSchema,
@@ -53,6 +54,15 @@ const visualCrossingDaySchema = z.object({
 
 const visualCrossingResponseSchema = z.object({
   days: z.array(visualCrossingDaySchema).min(1),
+  /**
+   * The IANA zone of the location — at the response root, beside
+   * `tzoffset` (D-96). It used to be stripped here, which is why every
+   * date the app rendered was UTC. Any string at this layer: whether it
+   * is a zone `Intl` accepts is decided when the observation is built,
+   * where an invalid one is dropped rather than failing the whole
+   * observation over a label.
+   */
+  timezone: z.string().optional(),
 });
 
 /**
@@ -228,6 +238,10 @@ async function fetchTimeline(
     windKph: hour.windspeed,
     precipMm: hour.precip ?? 0,
     condition: hour.conditions,
+    // Degrade, don't fail (law 5): an unusable zone costs the run its
+    // local date, not its weather. Spread rather than `timeZone:
+    // undefined`, which `exactOptionalPropertyTypes` would reject.
+    ...(isTimeZone(parsed.timezone) && { timeZone: parsed.timezone }),
   };
   const observation = weatherObservationSchema.safeParse(mapped);
   if (!observation.success) {
