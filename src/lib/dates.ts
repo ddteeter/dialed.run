@@ -17,44 +17,61 @@
  * An afternoon run would have agreed and the bug would have stayed hidden.
  *
  * So the locale and the zone are pinned rather than asked for. `en-GB`
- * because it is what the board draws — "Mon 2 Sep", not "Mon, Sep 2" — and
- * the formatters are module-scope constants because `Intl.DateTimeFormat`
- * is expensive to construct and these run per row.
+ * because it is what the board draws — "Mon 2 Sep", not "Mon, Sep 2".
  *
- * **The honest limitation, which is D-96 and not fixed here**: this is the
- * UTC day, not the runner's. The app stores no timezone for anybody, so no
- * server render can know one. A late-evening run at a negative offset
- * still reads as the next day — deterministically, in both runtimes, which
- * is the difference between a wrong date and a flickering one. The real
- * fix is the run's own zone, which Visual Crossing already returns and
- * `visualCrossingResponseSchema` currently strips; that is a schema change
- * and belongs to its own PR.
+ * **The zone is the run's own, when we know it** (D-96). A run's date is
+ * where the run happened — a Chicago run viewed from Berlin is still a
+ * Chicago run — and Visual Crossing names the zone on every observation,
+ * which is now stored. Passed explicitly, it gives the same text in both
+ * runtimes, so hydration still agrees. Without one — an indoor run, a
+ * manual temperature, an observation cached before the column existed —
+ * the answer is UTC, deterministically, which is the difference between a
+ * wrong date and a flickering one.
+ *
+ * A formatter is built per call rather than cached per zone. A cache would
+ * be a branch whose miss produces the same text as its hit — a mutant no
+ * test can kill — and building one costs microseconds against a table of
+ * fifty rows.
  */
-const WEEKDAY = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  weekday: "short",
-});
-const DAY_OF_MONTH = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  day: "numeric",
-});
-const MONTH = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  month: "short",
-});
 /**
- * `hourCycle: "h23"` rather than `hour12: false`, which is the same thing
- * everywhere it matters and not the same thing at midnight: `hour12:
- * false` is specified to allow the h24 cycle, where 00:00 renders as
- * "24:00". Current ICU gives "00:00" for both, so nothing here would have
- * caught it — this is a guard against the engine, not a fix for it.
+ * Is this a zone `Intl` will accept?
+ *
+ * The zone arrives from a third party and is stored, so it is untrusted
+ * twice over — and an invalid one does not fail at the boundary, it throws
+ * a `RangeError` inside `Intl` at render time, on every screen that shows
+ * the run. So it is checked where it enters and again where it is used.
  */
-const TIME_OF_DAY = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
+export function isTimeZone(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  // `Intl` is the judge, and it is complete: it throws a RangeError for an
+  // empty string as well as for an unknown zone, and a successful
+  // construction always resolves to a named zone. An empty-string guard
+  // and a check on the resolved name both used to sit here, measured
+  // redundant against exactly those two facts — and both showed up as
+  // mutants nothing could kill, which is how redundant code announces
+  // itself.
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function zoneOf(timeZone: string | undefined): string {
+  return isTimeZone(timeZone) ? timeZone : "UTC";
+}
+
+function part(
+  epochSeconds: number,
+  timeZone: string | undefined,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: zoneOf(timeZone),
+    ...options,
+  }).format(new Date(epochSeconds * 1000));
+}
 
 /**
  * One formatter per field, assembled here rather than by the locale.
@@ -77,10 +94,14 @@ const TIME_OF_DAY = new Intl.DateTimeFormat("en-GB", {
  *   the compiler demands and no test can reach. `.format()` on a
  *   single-field formatter returns a `string`, so there is nothing to fall
  *   back from and the mutant cannot exist. Restructuring beat granting it.
+ *
+ * `timeZone` is the run's own (D-96); omitted or invalid, it is UTC.
  */
-export function dayLabel(epochSeconds: number): string {
-  const at = new Date(epochSeconds * 1000);
-  return `${WEEKDAY.format(at)} ${DAY_OF_MONTH.format(at)} ${MONTH.format(at).slice(0, 3)}`;
+export function dayLabel(epochSeconds: number, timeZone?: string): string {
+  const weekday = part(epochSeconds, timeZone, { weekday: "short" });
+  const day = part(epochSeconds, timeZone, { day: "numeric" });
+  const month = part(epochSeconds, timeZone, { month: "short" }).slice(0, 3);
+  return `${weekday} ${day} ${month}`;
 }
 
 /**
@@ -88,7 +109,18 @@ export function dayLabel(epochSeconds: number): string {
  *
  * For a notification, where the time of day is the point: two notifications
  * on the same day are otherwise indistinguishable in a list sorted by it.
+ *
+ * `hourCycle: "h23"` rather than `hour12: false`, which is the same thing
+ * everywhere it matters and not the same thing at midnight: `hour12: false`
+ * is specified to allow the h24 cycle, where 00:00 renders as "24:00".
+ * Current ICU gives "00:00" for both, so nothing here would have caught it
+ * — this is a guard against the engine, not a fix for it.
  */
-export function dayTimeLabel(epochSeconds: number): string {
-  return `${dayLabel(epochSeconds)}, ${TIME_OF_DAY.format(new Date(epochSeconds * 1000))}`;
+export function dayTimeLabel(epochSeconds: number, timeZone?: string): string {
+  const time = part(epochSeconds, timeZone, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return `${dayLabel(epochSeconds, timeZone)}, ${time}`;
 }

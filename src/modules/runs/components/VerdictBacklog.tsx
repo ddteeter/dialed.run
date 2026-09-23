@@ -67,6 +67,22 @@ function slotClass(value: VerdictValue, isChosen: boolean): string {
 }
 
 /**
+ * The day a row's run happened, where it happened (D-96).
+ *
+ * A late-evening Chicago run is the Monday it was run on, not the Tuesday
+ * UTC had reached; the zone comes from the run's own observation. A run
+ * with none — indoor, a typed temperature, an hour cached before zones
+ * were stored — is dated in UTC, as every row was before.
+ *
+ * Every date the row shows goes through here — the cell, the rail, and
+ * what the live region says on save — so a row cannot be one day in the
+ * table and another in the announcement.
+ */
+function runDay(row: BacklogRow): string {
+  return dayLabel(row.startedAt, row.conditions?.timeZone);
+}
+
+/**
  * The row's and the rail's conditions, as one measured line.
  *
  * **The actual temperature, and wind in the runner's units.** It led with
@@ -214,7 +230,7 @@ function BacklogRail({
       {row?.conditions === undefined ? undefined : (
         <div className="flex flex-col gap-3 rounded-card border border-hairline bg-panel p-4">
           <Mono step="xs" className="text-muted">
-            Selected · {dayLabel(row.startedAt)}
+            Selected · {runDay(row)}
           </Mono>
           <Mono step="lg">{conditionsLine(row.conditions, units)}</Mono>
         </div>
@@ -289,7 +305,7 @@ export function VerdictBacklog({
         data: { runId: row.runId, itemIds: [...kit.itemIds], verdict },
       });
       setSaved(new Set(saved).add(row.runId));
-      setSaid(`Saved ${dayLabel(row.startedAt)}.`);
+      setSaid(`Saved ${runDay(row)}.`);
       setSelected(rowAfterMove(selected, 1, rows.length));
     } catch {
       // Law 5, and round 4's §AF: "the control that did the thing says
@@ -303,7 +319,7 @@ export function VerdictBacklog({
       // `failure-path-is-static` test says so for the form components,
       // and the rule is the doctrine's, not that file's).
       setFailed(new Set(failed).add(row.runId));
-      setSaid(`Could not save ${dayLabel(row.startedAt)}. Try again.`);
+      setSaid(`Could not save ${runDay(row)}. Try again.`);
     } finally {
       setSaving(undefined);
     }
@@ -322,7 +338,7 @@ export function VerdictBacklog({
     }
     if (action.kind === "verdict") {
       choose(row, action.slot.value);
-      setSaid(`${dayLabel(row.startedAt)}: ${action.slot.label}.`);
+      setSaid(`${runDay(row)}: ${action.slot.label}.`);
       return;
     }
     void save(row);
@@ -375,7 +391,7 @@ export function VerdictBacklog({
               >
                 <td className="px-2 py-2">
                   <span className="block text-body font-semibold">
-                    {dayLabel(row.startedAt)}
+                    {runDay(row)}
                   </span>
                   <Mono step="sm" className="text-muted">
                     {formatDuration(row.durationS)} ·{" "}
@@ -412,7 +428,7 @@ export function VerdictBacklog({
                       <VerdictSlotButton
                         key={slot.key}
                         slot={slot}
-                        day={dayLabel(row.startedAt)}
+                        day={runDay(row)}
                         isChosen={verdicts.get(row.runId) === slot.value}
                         onChoose={() => {
                           choose(row, slot.value);

@@ -31,8 +31,39 @@ describe("visual crossing adapter (103)", () => {
       windKph: 14.2,
       precipMm: 0.2,
       condition: "Overcast",
+      // D-96: the zone at the response root, which used to be stripped.
+      timeZone: "America/Chicago",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("carries no zone when the response names none", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ ...visualCrossingObservationFixture, timezone: undefined }),
+    );
+    const observation = await provider.observation(
+      44.98,
+      -93.27,
+      new Date(1_768_485_780 * 1000),
+    );
+    expect(observation).not.toHaveProperty("timeZone");
+  });
+
+  it("drops a zone Intl would reject, and keeps the weather", async () => {
+    // Degrade, don't fail (law 5): an unusable label costs the run its
+    // local date, never its observation.
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ ...visualCrossingObservationFixture, timezone: "Mars/Olympus_Mons" }),
+    );
+    const observation = await provider.observation(
+      44.98,
+      -93.27,
+      new Date(1_768_485_780 * 1000),
+    );
+    expect(observation).not.toHaveProperty("timeZone");
+    expect(observation.condition).toBe("Overcast");
   });
 
   it("defaults a null precip field to 0", async () => {

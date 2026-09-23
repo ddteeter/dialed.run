@@ -25,6 +25,13 @@ export interface Conditions {
   windKph: number;
   source: "visualcrossing" | "manual";
   /**
+   * The IANA zone of the place the observation was made (D-96), so a run's
+   * date and time render where the run happened rather than in UTC.
+   * Absent for manual conditions and for anything cached before the zone
+   * was stored; the date formatters fall back to UTC then.
+   */
+  timeZone?: string | undefined;
+  /**
    * The coldest and warmest the run actually got, across every hour it
    * spanned. A run inside one hour has `min === max`, which is what makes
    * the range safe to render unconditionally.

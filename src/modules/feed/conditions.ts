@@ -21,6 +21,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
 import { chunked } from "../../lib/chunked";
+import { isTimeZone } from "../../lib/dates";
 import { pointSpan } from "./conditions-shape";
 import type { Conditions } from "./conditions-shape";
 
@@ -66,6 +67,21 @@ interface Locatable {
  * item wear stat — which is three chances to forget that `lat`/`lng` can be
  * null or that the run select needs `startedAt` for the cache key.
  */
+/**
+ * A stored zone as a field to spread, present only if this runtime's
+ * `Intl` accepts it (D-96). The column is text written from a third
+ * party's response; checked again here so an unusable one can never reach
+ * a formatter and throw at render time.
+ *
+ * A field to spread rather than `timeZone: undefined`, so conditions with
+ * no zone are exactly the object they were before the column existed —
+ * the difference `toStrictEqual` sees, and so does anything that
+ * serialises the object.
+ */
+function zoneField(stored: string | null): { timeZone?: string } {
+  return isTimeZone(stored) ? { timeZone: stored } : {};
+}
+
 export async function observationsForEntries(
   database: CoreDb,
   entries: readonly { runId: string }[],
@@ -173,6 +189,9 @@ export async function observationsForRuns(
       condition: start.condition,
       windKph: start.windKph,
       source: start.source,
+      // The starting hour's zone — a run does not change zone mid-run in
+      // any way the date on its card cares about.
+      ...zoneField(start.timeZone),
       span: {
         minTempC: Math.min(...hours.map((h) => h.tempC)),
         maxTempC: Math.max(...hours.map((h) => h.tempC)),
@@ -242,6 +261,7 @@ export async function currentConditions(
     condition: best.condition,
     windKph: best.windKph,
     source: best.source,
+    ...zoneField(best.timeZone),
     // A live reading is one hour by construction — this answers "what is
     // it like there now", not "what was a run like". The span is that one
     // hour, so a viewer's conditions compare against a runner's the same

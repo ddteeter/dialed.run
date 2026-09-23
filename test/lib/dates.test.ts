@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayLabel, dayTimeLabel } from "../../src/lib/dates";
+import { dayLabel, dayTimeLabel, isTimeZone } from "../../src/lib/dates";
 
 /**
  * The bug these two exist to prevent is a hydration mismatch, which no
@@ -77,5 +77,52 @@ describe("dayTimeLabel", () => {
     expect(dayTimeLabel(LATE_ON_THE_21ST)).toContain(
       dayLabel(LATE_ON_THE_21ST),
     );
+  });
+});
+
+// 2026-09-22T03:30:00Z — the Tuesday in UTC, and still Monday evening in
+// Chicago (UTC−5 in September). The shape of the bug D-96 is about: a
+// late-evening run at a negative offset read as the next day.
+const AFTER_UTC_MIDNIGHT = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
+
+describe("the run's own zone (D-96)", () => {
+  it("dates a run where it happened, not where UTC is", () => {
+    expect(dayLabel(AFTER_UTC_MIDNIGHT)).toBe("Tue 22 Sep");
+    expect(dayLabel(AFTER_UTC_MIDNIGHT, "America/Chicago")).toBe("Mon 21 Sep");
+    // East of UTC too, so the zone is not merely "subtract five hours".
+    expect(dayLabel(AFTER_UTC_MIDNIGHT, "Asia/Tokyo")).toBe("Tue 22 Sep");
+  });
+
+  it("carries the zone into the time of day as well", () => {
+    expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "America/Chicago")).toBe(
+      "Mon 21 Sep, 22:30",
+    );
+    expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "Asia/Tokyo")).toBe(
+      "Tue 22 Sep, 12:30",
+    );
+  });
+
+  it("falls back to UTC for a zone Intl would throw on, rather than failing the render", () => {
+    // The zone is stored from a third party. An invalid one must not
+    // become a RangeError on every screen that shows the run.
+    expect(dayLabel(AFTER_UTC_MIDNIGHT, "Mars/Olympus_Mons")).toBe(
+      "Tue 22 Sep",
+    );
+    expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "")).toBe("Tue 22 Sep, 03:30");
+  });
+});
+
+describe("isTimeZone", () => {
+  it("accepts IANA zones and UTC", () => {
+    expect(isTimeZone("America/Chicago")).toBe(true);
+    expect(isTimeZone("Europe/London")).toBe(true);
+    expect(isTimeZone("UTC")).toBe(true);
+  });
+
+  it("rejects what Intl would throw on, and anything not a string", () => {
+    expect(isTimeZone("Mars/Olympus_Mons")).toBe(false);
+    expect(isTimeZone("")).toBe(false);
+    expect(isTimeZone(undefined)).toBe(false);
+    expect(isTimeZone(-5)).toBe(false);
   });
 });

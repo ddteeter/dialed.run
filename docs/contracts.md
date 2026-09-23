@@ -524,6 +524,11 @@ export const weatherObservationSchema = z.object({
   windKph: z.number().min(0),
   precipMm: z.number().min(0),
   condition: z.string(),
+  // D-96: the IANA zone of the place observed. Optional and additive —
+  // manual observations and rows cached before the column have none.
+  // Refined by `isTimeZone`, because an invalid zone throws inside `Intl`
+  // at render time rather than failing here.
+  timeZone: z.string().refine(isTimeZone).optional(),
 });
 export type WeatherObservation = z.infer<typeof weatherObservationSchema>;
 

@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { isTimeZone } from "./dates";
+
 // ---- Common ---------------------------------------------------------------
 
 /**
@@ -617,6 +619,15 @@ export const weatherObservationSchema = z.object({
   windKph: z.number().min(0),
   precipMm: z.number().min(0),
   condition: z.string(),
+  /**
+   * The IANA zone of the place observed, as the provider names it (D-96).
+   *
+   * Optional, and additive: a manual observation has none, and neither
+   * does anything cached before the column existed. Refined rather than
+   * any string, because an invalid zone does not fail here — it throws
+   * inside `Intl` at render time, on every screen that shows the run.
+   */
+  timeZone: z.string().refine(isTimeZone).optional(),
 });
 export type WeatherObservation = z.infer<typeof weatherObservationSchema>;
 

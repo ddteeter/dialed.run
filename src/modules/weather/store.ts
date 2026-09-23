@@ -17,6 +17,7 @@ import { env } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
 import type { WeatherObservation } from "../../lib/contracts";
+import { isTimeZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 
 export interface CacheKey {
@@ -109,6 +110,7 @@ async function upsertObservation(
         windKph: values.windKph,
         precipMm: values.precipMm,
         condition: values.condition,
+        timeZone: values.timeZone,
         source: values.source,
         fetchedAt: values.fetchedAt,
       },
@@ -150,6 +152,10 @@ export async function upsertRealObservation(
     windKph: observation.windKph,
     precipMm: observation.precipMm,
     condition: observation.condition,
+    // Absent when the fetch named none. The upsert below only ever
+    // overwrites a *manual* row, and manual rows carry no zone, so there
+    // is never a stale one to clear.
+    timeZone: observation.timeZone,
     source: "visualcrossing" as const,
     fetchedAt,
   };
@@ -193,6 +199,9 @@ export function toWeatherObservation(row: ObservationRow): WeatherObservation {
     windKph: row.windKph,
     precipMm: row.precipMm,
     condition: row.condition,
+    // Re-checked on the way out: the column is text, and a row can hold a
+    // zone that was valid when written and is not in this runtime's ICU.
+    ...(isTimeZone(row.timeZone) && { timeZone: row.timeZone }),
   };
 }
 

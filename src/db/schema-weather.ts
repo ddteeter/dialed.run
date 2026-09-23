@@ -25,6 +25,13 @@ export const weatherObservations = /*#__PURE__*/ sqliteTable(
     condition: text("condition").notNull(),
     source: text("source", { enum: ["visualcrossing", "manual"] }).notNull(),
     fetchedAt: integer("fetched_at").notNull(),
+    // D-96: the IANA zone of the place observed, as Visual Crossing names
+    // it. On the observation rather than the run because observations are
+    // a shared cache: a run whose hour is already cached never fetches, so
+    // the zone has to be here for a cache hit to supply it. Nullable and
+    // additive — manual rows have none, and nothing cached before this
+    // column existed does either.
+    timeZone: text("time_zone"),
   },
   (t) => [
     uniqueIndex("observations_cache_key").on(t.latR, t.lngR, t.hourBucket),
