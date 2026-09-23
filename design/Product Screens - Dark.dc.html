@@ -60,20 +60,20 @@
             </div>
 
             <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
-              <div data-part="drop-zone" style="border: 2px dashed #4E4E44; border-radius: 16px; padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+              <div data-part="drop-zone" data-state="before-file" style="border: 2px dashed #4E4E44; border-radius: 16px; padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">GPX / TCX / FIT</span>
                 <span style="font-size: 17px; font-weight: 700;">Drop a file, or browse</span>
                 <span style="font-size: 13px; line-height: 1.45; color: #A0A0A6;">From your watch export or any tracking app.</span>
               </div>
 
               <div data-part="parsed-card" style="border: 1px solid #2A2A31; border-radius: 16px; overflow: hidden; background: #16161B;">
-                <div style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: #1C1C22; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #B9B8AE;"><span>PARSED · MORNING_RUN_0829.GPX</span><span style="color: #00E0C6;">✓</span></div>
+                <div style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: #1C1C22; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #B9B8AE;"><span>PARSED · MORNING_RUN_0829.GPX</span><span style="color: #C21A6B; font-weight: 600; margin-left: auto; margin-right: 10px;">REPLACE</span><span style="color: #00E0C6;">✓</span></div>
                 <div style="height: 104px; background-color: #22222A; background-image: repeating-linear-gradient(135deg, #2A2A31 0 7px, #22222A 7px 14px); display: flex; align-items: flex-end; padding: 10px;">
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #A0A0A6; background: #0B0B0E; padding: 4px 7px; border-radius: 3px;">ROUTE MAP</span>
                 </div>
                 <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
                   <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em; line-height: 1;">6.2 MI · 51:38</span>
-                  <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #B9B8AE;"><span>8:19 /MI</span><span style="color: #2A2A31;">|</span><span>SAT AUG 29</span><span style="color: #2A2A31;">|</span><span>6:04 AM</span></div>
+                  <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #B9B8AE;"><span>8:19 /MI</span><span style="color: #2A2A31;">|</span><span>SAT AUG 29</span><span style="color: #2A2A31;">|</span><span style="color: #C21A6B; font-weight: 600; text-decoration: underline; text-underline-offset: 2px;">6:04 AM</span></div>
                 </div>
               </div>
 
@@ -82,7 +82,7 @@
                 <div style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px;">
                   <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.035em; line-height: 1;">41°F <span style="color: #00E0C6;">DAMP</span></span>
                   <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em; color: #7A7A70;">FEELS 36° · 88% HUM · SE 9MPH<br />LIGHT RAIN, FIRST 12 MIN · DEWPOINT 38°</div>
-                  <span style="font-size: 12px; line-height: 1.45; color: #7A7A70;">Never typed by hand. Correct it only if the file's timestamp is wrong.</span>
+                  <span style="font-size: 12px; line-height: 1.45; color: #7A7A70;">Never typed by hand. Wrong time? Tap it on the run card and we'll refetch.</span>
                 </div>
               </div>
 
@@ -94,7 +94,7 @@
 
             <div data-part="tab-bar" style="border-top: 1px solid #2A2A31; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E74;"><span>FEED</span><span>CLOSET</span><span style="color: #F4F3EF; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
           </div>
-          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The parsed card and conditions block appear together the moment the file lands — one screen, no wizard step for weather.</p>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The parsed card and conditions block appear together the moment the file lands — one screen, no wizard step for weather. Round 20: the drop zone is the before-file state and goes once a file parses; the parsed card's header carries the filename and REPLACE, which is the only way back to it. While parsing, the drop zone stays and its title becomes the breathing brackets — [ Reading MORNING_RUN_0829.GPX ] — the product's one waiting device; no bar, no percent. The one correction control is the run time on the parsed card: tapping it opens a time picker and re-fetches conditions. Weather itself is never editable.</p>
         </div>
 
         <!-- A2 -->
@@ -106,7 +106,7 @@
               <span style="font-size: 20px; line-height: 1;">←</span>
               <div style="display: flex; flex-direction: column;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">What did you wear?</span>
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #00E0C6;">6.2 MI · 41°F DAMP</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #00E0C6;">6.2 MI · 41°F DAMP · 2 PIECES</span>
               </div>
             </div>
 
@@ -169,12 +169,15 @@
                 </div>
               </div>
 
-              <button data-part="primary-action" style="margin-top: auto; background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 16px; font-family: Archivo, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Next — did it work?</button>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+                <button data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 16px; font-family: Archivo, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Next — did it work?</button>
+                <span style="font-size: 12px; text-align: center; line-height: 1.45; color: #8B8B93;">Not now — <span style="color: #FF2D8A; font-weight: 600;">leave it in the queue</span>.</span>
+              </div>
             </div>
 
             <div data-part="tab-bar" style="border-top: 1px solid #2A2A31; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E74;"><span>FEED</span><span>CLOSET</span><span style="color: #F4F3EF; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
           </div>
-          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">"That's it" is the whole interaction on a normal day. The picker is condition-filtered by default — 47 pieces collapse to 11 that have history at 41° damp.</p>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">"That's it" is the whole interaction on a normal day. The picker is condition-filtered by default — 47 pieces collapse to 11 that have history at 41° damp. Round 20: ALL › and every + CATEGORY chip open A2b as a sheet for that category — never a route, never in place. Inside, MATCHES CONDITIONS is on by default and the hidden count is stated; a category with zero matches opens with the filter off. A kit is required: the header sub-line carries the count (· 0 PIECES until something is chosen — that is how "nothing yet" is said), the button label never changes, and tapping it with none chosen marks the closet-picker group with the message band "Pick at least one piece." The escape is the text link beneath: the run stays in the backlog (DS2) with no outfit, exactly as an imported run does.</p>
         </div>
 
         <!-- A2b -->
@@ -268,10 +271,11 @@
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #2A2A31; padding: 7px 11px; border-radius: 100px; color: #B9B8AE;">COLD FIRST MILE</span>
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #2A2A31; padding: 7px 11px; border-radius: 100px; color: #B9B8AE;">CHAFED</span>
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #2A2A31; padding: 7px 11px; border-radius: 100px; color: #B9B8AE;">PERFECT WARMUP</span>
+                  <span data-part="flag-more" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #2A2A31; padding: 7px 11px; border-radius: 100px; color: #FF2D8A; font-weight: 600;">MORE ›</span>
                 </div>
               </div>
 
-              <div data-part="noted" style="background: #00E0C6; color: #0B0B0E; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+              <div data-part="noted" data-state="after-log-it" style="background: #00E0C6; color: #0B0B0E; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">NOTED</span>
                 <p style="margin: 0; font-size: 15px; line-height: 1.4; font-weight: 600;">Half-zip is now 8 of 9 in 38–46°. We'll stop suggesting gloves above 40°.</p>
               </div>
@@ -286,7 +290,7 @@
 
             <div data-part="tab-bar" style="border-top: 1px solid #2A2A31; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E74;"><span>FEED</span><span>CLOSET</span><span style="color: #F4F3EF; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
           </div>
-          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Five states is the decision — the extra resolution is worth the wider tap target. The teal "noted" block is the payoff: it proves the logging did something. Round 16: the five buttons carry the words and only the words — no digits, here or on the desktop backlog (DS2), which mirrors this row exactly. "Anything specific?" is optional chips below the verdict, never a dropdown beside the kit. Round 19: the chosen cell fills with its T2 hue — cold pink, dialed teal, warm quiet grey — exactly as DS2's row does; --action is never a verdict fill, so the two mirrored surfaces read the same. The cell carries the word only: the in-band count lives in the line beneath the row, never inside a cell (round 16 stands).</p>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Five states is the decision — the extra resolution is worth the wider tap target. The teal "noted" block is the payoff: it proves the logging did something. Round 16: the five buttons carry the words and only the words — no digits, here or on the desktop backlog (DS2), which mirrors this row exactly. "Anything specific?" is optional chips below the verdict, never a dropdown beside the kit. Round 19: the chosen cell fills with its T2 hue — cold pink, dialed teal, warm quiet grey — exactly as DS2's row does; --action is never a verdict fill, so the two mirrored surfaces read the same. The cell carries the word only: the in-band count lives in the line beneath the row, never inside a cell (round 16 stands). Round 20: the chips are generated, never composed. Five, in two blocks: up to two per-garment flags — GARMENT + TOO MUCH or NOT ENOUGH, direction set by the verdict (warm → too much, cold → not enough, dialed → the weakest garment in this band, either direction), garment picked by the weakest band record — then tags ranked by this runner's use in the band, filling to five. MORE › opens A3b: every kit garment as a Fine / Too much / Not enough triple, plus all nine tags; that is how "the Harrier was not enough" is said when it wasn't suggested. Fine is the default and is never a chip. Changing the verdict recomputes unchosen chips; chosen chips stay. Noted is a receipt, not a preview: it lands after Log it in the submit's place, replacing share-toggle and submit; the verdict row and chips stay, read-only, so the receipt is read against the answer. No button in it — the tab bar is the exit. The board draws both states on one frame; data-state marks the second.</p>
         </div>
       </div>
     </div>
@@ -389,7 +393,7 @@
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">RUNNERS YOU FOLLOW · SAME CONDITIONS</span>
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <div style="display: flex;"><div style="width: 26px; height: 26px; border-radius: 100px; background: #FF2D8A; border: 2px solid #0B0B0E;"></div><div style="width: 26px; height: 26px; border-radius: 100px; background: #00E0C6; border: 2px solid #0B0B0E; margin-left: -8px;"></div><div style="width: 26px; height: 26px; border-radius: 100px; background: #F5FF3D; border: 2px solid #0B0B0E; margin-left: -8px;"></div><div style="width: 26px; height: 26px; border-radius: 100px; background: #4A4A52; border: 2px solid #0B0B0E; margin-left: -8px;"></div></div>
-                    <span style="font-size: 14px; line-height: 1.4; color: #DEDDD6;">4 of 5 also went long-sleeve. None wore a jacket.</span>
+                    <span style="font-size: 14px; line-height: 1.4; color: #B9B8AE;">4 of 5 also went long-sleeve. None wore a jacket.</span>
                   </div>
                 </div>
               </sc-if>
@@ -401,7 +405,7 @@
 
               <div style="margin-top: auto; display: flex; gap: 10px;">
                 <button style="flex: 1; background: #FF2D8A; color: #0B0B0E; border: 0; border-radius: 100px; padding: 15px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #FF57A2;">Save as kit</button>
-                <button style="background: transparent; color: #F4F3EF; border: 1px solid #4A4A52; border-radius: 100px; padding: 15px 18px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;" style-hover="border-color: #F4F3EF;">Swap a layer</button>
+                <button style="background: transparent; color: #F4F3EF; border: 1px solid #2A2A31; border-radius: 100px; padding: 15px 18px; font-family: Archivo, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;" style-hover="border-color: #F4F3EF;">Swap a layer</button>
               </div>
             </div>
           </div>
@@ -424,13 +428,18 @@
       </div>
 
       <div data-screen-label="C Closet desktop" style="background: #0B0B0E; color: #F4F3EF; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column;">
-        <div data-part="top-bar" style="background: #F4F3EF; color: #0B0B0E; padding: 16px 24px; display: flex; align-items: center; gap: 32px;">
-          <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
-          <div style="display: flex; gap: 24px; font-size: 15px;"><span style="color: #7A7A70;">Feed</span><span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 2px;">Closet</span><span style="color: #7A7A70;">The Call</span></div>
-          <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
-            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">SEARCH</span>
-            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; background: #FF2D8A; color: #0B0B0E; padding: 8px 14px; border-radius: 100px;">+ ADD GARMENT</span>
-            <div style="width: 32px; height: 32px; border-radius: 100px; background: #00E0C6; color: #0B0B0E;"></div>
+        <div data-part="top-bar" style="background: #F4F3EF; color: #0B0B0E; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 32px;">
+          <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #C21A6B;">[</span><span>{{ brandWord }}</span><span style="color: #7A7A70;">.run</span><span style="color: #C21A6B;">]</span></span>
+          <div data-part="bar-nav" style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
+            <span style="display: flex; align-items: center; padding: 0 12px; color: #4E4E44;">Feed</span>
+            <span style="display: flex; align-items: center; padding: 0 12px; font-weight: 700; border-bottom: 2px solid #C21A6B; margin-bottom: -1px;">Closet</span>
+            <span style="display: flex; align-items: center; padding: 0 12px; color: #4E4E44;">Call</span>
+            <span style="display: flex; align-items: center; padding: 0 12px; color: #4E4E44;">You</span>
+          </div>
+          <div data-part="bar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+            <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0B0B0E" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l5 5" /></svg></span>
+            <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0B0B0E" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg></span>
+            <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 0 16px; height: 36px; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Log a run</span>
           </div>
         </div>
 
@@ -503,7 +512,7 @@
 
         </div>
       </div>
-      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 780px;">Round 16. The rail is three groups — GROUP, WORKS AT, COVERAGE — and it ships whole or Closet stays one column at desk (same rule Feed got in round 15: one live control and air is the dashboard DS5 forbids). Coverage is monochrome per AB, so nothing in the rail carries a hue. The detail column is gone: garment detail is a route (Y1), and DS5 caps a screen at two columns. Below 1040 the three groups become the phone's filter chips above the reflowed grid. Unnamed pieces carry a <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">[GENERIC]</span> badge and a quiet header nudge; naming is never blocking.</p>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 780px;">Round 16. The rail is three groups — GROUP, WORKS AT, COVERAGE — and it ships whole or Closet stays one column at desk (same rule Feed got in round 15: one live control and air is the dashboard DS5 forbids). Coverage is monochrome per AB, so nothing in the rail carries a hue. The detail column is gone: garment detail is a route (Y1), and DS5 caps a screen at two columns. Below 1040 the three groups become the phone's filter chips above the reflowed grid. Unnamed pieces carry a <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">[GENERIC]</span> badge and a quiet header nudge; naming is never blocking. Round 20: the top bar is DS1's, verbatim — bracketed wordmark, Feed · Closet · Call · You, search glyph, bell, "Log a run"; the board that said "The Call" and "+ Add garment" was stale. Adding a garment is the dashed tile in the grid and the Y-route, never a bar action. One-column fallback: one flat grid of every piece, header "47 pieces", the three rail groups as filter chips above it; the header count follows the chips and reads "14 tops" only once a chip is set. MOST DIALED and RETIRE? are computed, never set: MOST DIALED is the one piece in the visible set with the highest dialed share at ≥5 runs; RETIRE? is any piece at ≥5 runs with dialed ≤25% and the same off-direction on ≥3 of them (drawn: 1/5, too warm ×4).</p>
     </div>
 
     <!-- ================= FLOW D ================= -->
@@ -527,13 +536,12 @@
 
             <div data-part="photo" style="height: 320px; background-color: #24242B; background-image: repeating-linear-gradient(135deg, #2C2C34 0 8px, #24242B 8px 16px); display: flex; align-items: flex-end; justify-content: space-between; padding: 12px;">
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #A0A0A6; background: #0B0B0E; padding: 5px 8px; border-radius: 4px;">OUTFIT PHOTO 1 / 2</span>
-              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #F5FF3D; padding: 6px 10px; border-radius: 100px; color: #0B0B0E;">DIALED</span>
             </div>
 
             <div data-part="run-strip" style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;">
               <div style="display: flex; justify-content: space-between; align-items: baseline;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">8.1 MI · 1:03:41</span>
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">7:52 /MI</span>
+                <div style="display: flex; align-items: center; gap: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">7:52 /MI</span><span data-part="verdict-badge" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #F5FF3D; color: #0B0B0E; padding: 6px 10px; border-radius: 100px;">DIALED</span></div>
               </div>
               <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #00E0C6;">41°F · FEELS 36° · 88% HUM · SE 11MPH · LIGHT RAIN</div>
             </div>
@@ -574,7 +582,7 @@
 
         <div style="flex: 1 1 320px; min-width: 280px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">"USEFUL" INSTEAD OF "LIKE"</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The feed is reference, not performance. Renaming the primary reaction changes what people post — and gives the recommender a far better signal than a like. This is locked, not a variant.</p></div>
-          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">THE VERDICT IS PUBLIC HERE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A shared run carries its verdict badge — that's what makes the post worth reading. Said plainly at the share toggle (A3) and in Settings, because a surprise here is a trust problem.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">THE VERDICT IS PUBLIC HERE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">A shared run carries its verdict badge — that's what makes the post worth reading. Round 20: the badge lives in the run strip, right of the distance — the one block every post has, photo or not. Never on the photo. E1 already does the equivalent: the badge is in the author row on every post, with or without a photo; both are data-part="verdict-badge". Said plainly at the share toggle (A3) and in Settings, because a surprise here is a trust problem.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">DEFERRED, NOT CUT</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">"Try this kit" is the bridge from social to utility — it maps someone else's kit onto what you own and flags what you're missing. It returns with saved kits, and it's where gear suggestions eventually earn their place.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">GEAR ATTRIBUTION</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Brand names appear on kit rows but never as logos or links in v1. Keeps the surface honest before any commercial relationship exists.</p></div>
         </div>
