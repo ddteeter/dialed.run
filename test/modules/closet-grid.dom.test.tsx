@@ -146,6 +146,23 @@ describe("ClosetGrid: what a piece says about itself", () => {
     ).toHaveTextContent("[Untested]");
   });
 
+  it("wears no hue on the range or on Untested — teal means dialed", async () => {
+    // T2: "hue means the same thing" — teal is a *dialed verdict*. Both the
+    // tested range and the "Untested" marker wore `text-dialed-text`, so an
+    // untested garment read as dialed. Board C draws the line in --muted;
+    // round 16 says coverage is monochrome. Found by the 2026-09-22
+    // reconciliation sweep.
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, genericTop])} />,
+    );
+
+    for (const name of [/Harrier/, /Long sleeve top/]) {
+      const label = screen.getByRole("link", { name }).lastElementChild;
+      expect(label).toHaveClass("text-muted");
+      expect(label).not.toHaveClass("text-dialed-text");
+    }
+  });
+
   it("says Untested for a range with no ends, not an empty bracket", async () => {
     // A `tempRange` object whose bounds are both undefined is a range in
     // name only, and `formatTempRange` answers undefined for it. Without

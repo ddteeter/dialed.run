@@ -3,7 +3,11 @@ import type { JSX, KeyboardEvent } from "react";
 import { useState } from "react";
 
 import type { VerdictValue } from "../../../lib/contracts";
-import { formatDistance, formatDuration } from "../../../lib/measures";
+import {
+  formatDistance,
+  formatDuration,
+  formatWind,
+} from "../../../lib/measures";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { formatTemp } from "../../../lib/temperature";
@@ -62,11 +66,24 @@ function slotClass(value: VerdictValue, isChosen: boolean): string {
     : SLOT_RESTING;
 }
 
+/**
+ * The row's and the rail's conditions, as one measured line.
+ *
+ * **The actual temperature, and wind in the runner's units.** It led with
+ * feels-like and wrote `WIND ${windKph}` — kph for everybody — which is how
+ * task 115 misread DS2's `41°F · 88% · MIST · SE 9`. Found by the
+ * 2026-09-22 reconciliation sweep, where a runner set to miles read
+ * `36° · light rain · WIND 15` for a 41°F morning with a 9mph wind.
+ *
+ * Still short of the board by two fields, both recorded rather than faked:
+ * humidity is in the observations table but not in `Conditions`, and wind
+ * *direction* is not stored at all.
+ */
 function conditionsLine(conditions: Conditions, units: Units): string {
   return [
-    formatTemp(conditions.feelsLikeC, units.temp),
+    formatTemp(conditions.tempC, units.temp),
     conditions.condition,
-    `WIND ${String(Math.round(conditions.windKph))}`,
+    formatWind(conditions.windKph, units.distance),
   ].join(" · ");
 }
 
@@ -202,10 +219,15 @@ function BacklogRail({
           <Mono step="lg">{conditionsLine(row.conditions, units)}</Mono>
         </div>
       )}
-      <p className="m-0 bg-tint px-4 py-3 text-small text-quiet">
-        Verdicts saved here count exactly like verdicts from the phone.
-        There&rsquo;s no bulk rule — every row is one run.
-      </p>
+      {/* The rail had a paragraph here — "Verdicts saved here count
+          exactly like verdicts from the phone…" — which is a *note* on the
+          Desktop Contract (`data-annotation`), design explaining the table
+          to its builders. It was never copy for a runner. What the board
+          draws in its place is the selected run's history and the kit
+          they usually wear there; that is drift recorded in the
+          2026-09-22 reconciliation report, and
+          `test/architecture/annotations-are-not-copy.test.ts` stops the
+          next note shipping as copy. */}
       <WeatherAttribution />
     </aside>
   );

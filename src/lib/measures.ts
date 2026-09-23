@@ -22,13 +22,41 @@ export function formatDistance(distanceM: number, unit: DistanceUnit): string {
 }
 
 /**
- * `m:ss`, zero-padded on the seconds only — a run is minutes long, and
- * "07:05" reads like a clock time rather than a duration.
+ * Wind speed in the runner's own units — `6mph` or `9km/h`.
+ *
+ * Styled like `formatDistance` beside it (`8.1mi`, no space), and keyed on
+ * the *distance* unit, since a runner who counts miles counts miles an
+ * hour. The conversion is derived from the two constants above rather
+ * than a third copy of what a mile is.
+ *
+ * **The backlog wrote `WIND ${Math.round(windKph)}` — kph for everybody**,
+ * so a runner set to miles read 15 where the air was doing 9. Found by the
+ * 2026-09-22 reconciliation sweep.
+ */
+export function formatWind(windKph: number, unit: DistanceUnit): string {
+  return unit === "km"
+    ? `${String(Math.round(windKph))}km/h`
+    : `${String(Math.round((windKph * METRES_PER_KM) / METRES_PER_MILE))}mph`;
+}
+
+/**
+ * `m:ss` under an hour, `h:mm:ss` from one — padded everywhere except the
+ * leading field, since "07:05" reads like a clock time rather than a
+ * duration.
+ *
+ * **It never produced hours**, and nothing noticed: a run is usually
+ * under an hour, and every test here was. So a 1h 03m 41s run read
+ * `63:41` on the post detail and the backlog, where the boards draw
+ * `1:03:41`. Found by the 2026-09-22 reconciliation sweep, which seeded an
+ * 8.1-mile run because that is what board D draws.
  */
 export function formatDuration(durationS: number): string {
-  const minutes = Math.floor(durationS / 60);
-  const seconds = durationS % 60;
-  return `${String(minutes)}:${seconds.toString().padStart(2, "0")}`;
+  const hours = Math.floor(durationS / 3600);
+  const minutes = Math.floor((durationS % 3600) / 60);
+  const seconds = (durationS % 60).toString().padStart(2, "0");
+  return hours === 0
+    ? `${String(minutes)}:${seconds}`
+    : `${String(hours)}:${minutes.toString().padStart(2, "0")}:${seconds}`;
 }
 
 /**

@@ -426,12 +426,19 @@ describe("VerdictBacklog: what each state is drawn as", () => {
   });
 
   it("writes the conditions as one measured line", async () => {
-    // Feels-like, the condition, the wind — in that order, mono, with the
-    // brand's separator. The row and the rail render the same line, which
-    // is why it is a function rather than two pieces of markup.
+    // The actual temperature, the condition, the wind in the viewer's own
+    // units — mono, with the brand's separator. The row and the rail
+    // render the same line, which is why it is a function rather than two
+    // pieces of markup.
+    //
+    // This asserted "37° · Clear · WIND 9": feels-like where DS2 draws the
+    // actual temperature, and the fixture's 9 kph printed as 9 to a viewer
+    // who counts miles. It pinned task 115's misreading of the board
+    // rather than the board, and the 2026-09-22 reconciliation sweep is
+    // what caught it. 5°C is 41°F; 9 km/h is 6 mph.
     await renderTable([row()]);
 
-    expect(screen.getAllByText("37° · Clear · WIND 9")).toHaveLength(2);
+    expect(screen.getAllByText("41° · Clear · 6mph")).toHaveLength(2);
   });
 
   it("says how long and how far, in the viewer's own units", async () => {
@@ -533,14 +540,20 @@ describe("VerdictBacklog: the rail", () => {
     expect(rail?.textContent).toContain("4 Sep");
   });
 
-  it("says the thing that stops this reading as a bulk tool", async () => {
+  it("attributes the weather it shows, and carries none of design's notes", async () => {
     await renderTable([row()]);
 
     const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("count exactly like verdicts");
     // Visual Crossing's free tier requires attribution wherever conditions
     // are shown, and the rail shows them.
     expect(rail?.textContent).toContain("Weather by Visual Crossing");
+    // This test used to assert the opposite — that the rail said
+    // "Verdicts saved here count exactly like verdicts from the phone".
+    // That sentence is a `data-annotation` on the Desktop Contract: design
+    // explaining the table to us, not copy for a runner. The architecture
+    // test `annotations-are-not-copy` guards the whole class; this pins
+    // the instance that shipped.
+    expect(rail?.textContent).not.toContain("count exactly like verdicts");
   });
 
   it("draws no conditions card when the selected run has none", async () => {
