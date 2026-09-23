@@ -19,6 +19,8 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
+import type { BandSignals } from "../../src/modules/feed/band-signals";
+import type { Units } from "../../src/lib/contracts";
 import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
 import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
@@ -129,6 +131,18 @@ function flagGroup(index: number): HTMLElement {
   return select;
 }
 
+/**
+ * Opens A3b, where every garment's triple and all nine tags live since
+ * round 20 moved them off A3. Returns the sheet, so a query can be scoped
+ * to it rather than finding the same tag twice — once as a chip, once here.
+ */
+async function openSpecifics(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<HTMLElement> {
+  await user.click(screen.getByRole("button", { name: "More ›" }));
+  return screen.findByRole("dialog", { name: "Anything specific?" });
+}
+
 const nothing = () => Promise.resolve();
 const noStat = () => Promise.resolve({ worn: 1, total: 1 });
 const noUpload = () => Promise.resolve({ key: "k" });
@@ -157,6 +171,9 @@ function form(
   overrides: {
     entry?: Partial<Entry>;
     bandFloor?: number;
+    bandCounts?: Readonly<Record<number, number>>;
+    bandSignals?: BandSignals;
+    units?: Units;
     submitVerdict?: (input: {
       data: Record<string, unknown>;
     }) => Promise<unknown>;
@@ -175,6 +192,16 @@ function form(
     <VerdictForm
       entry={entry(overrides.entry)}
       bandFloor={overrides.bandFloor}
+      history={
+        overrides.bandCounts === undefined &&
+        overrides.bandSignals === undefined
+          ? undefined
+          : {
+              counts: overrides.bandCounts ?? {},
+              signals: overrides.bandSignals ?? { garments: {}, tagUse: {} },
+            }
+      }
+      units={overrides.units ?? { temp: "f", distance: "mi" }}
       submitVerdict={overrides.submitVerdict ?? nothing}
       uploadPhoto={overrides.uploadPhoto ?? noUpload}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
@@ -535,8 +562,9 @@ describe("VerdictForm: the row, and the box that was around it", () => {
   });
 });
 
-describe("VerdictForm: per-item flags", () => {
+describe("VerdictForm: A3b, every garment's triple", () => {
   it("offers a flag per item, defaulting to none", async () => {
+    const user = userEvent.setup();
     await renderWithRouter(
       form({
         entry: {
@@ -548,6 +576,7 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
+    await openSpecifics(user);
     // "Anything specific?" is the board's question for this block.
     expect(
       screen.getByRole("heading", { name: "Anything specific? · optional" }),
@@ -569,17 +598,19 @@ describe("VerdictForm: per-item flags", () => {
     expect(within(flagGroup(0)).getAllByRole("radio")).toHaveLength(3);
   });
 
-  it("asks nothing when the entry has no garments on it", async () => {
-    // An entry saved with a bare kit — which `attachKit` allows — has
-    // nothing to flag, so the block is absent rather than a heading over
-    // nothing. Without this the `> 0` guard reads the same as `>= 0`.
+  it("still asks, with tags alone, when the entry has no garments on it", async () => {
+    // An entry saved with a bare kit — which `attachKit` allows — has no
+    // garment to flag, but tags are about the run, so the question stays
+    // and A3b simply holds no garment groups.
+    const user = userEvent.setup();
     await renderWithRouter(form({ entry: { items: [] } }));
 
     expect(
-      screen.queryByRole("heading", { name: "Anything specific? · optional" }),
-    ).toBeNull();
+      screen.getByRole("heading", { name: "Anything specific? · optional" }),
+    ).toBeVisible();
+    await openSpecifics(user);
     // `flagGroups()`, not every group on the screen: the verdict row is
-    // itself a fieldset now, and it is there whether or not the kit has
+    // itself a fieldset, and it is there whether or not the kit has
     // anything in it.
     expect(flagGroups()).toHaveLength(0);
   });
@@ -593,6 +624,7 @@ describe("VerdictForm: per-item flags", () => {
     // right, because React drives `checked` from props, and the keyboard
     // stops working. happy-dom cannot show that, so the mechanism is what
     // is asserted.
+    const user = userEvent.setup();
     await renderWithRouter(
       form({
         entry: {
@@ -604,6 +636,7 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
+    await openSpecifics(user);
     const names = screen
       .getAllByRole("radio")
       .map((radio) => radio.getAttribute("name"));
@@ -622,18 +655,21 @@ describe("VerdictForm: per-item flags", () => {
     // empty one reads as "no value" to the platform — a different thing
     // from "the runner chose not to flag this". One chip is always on, so
     // the group never announces as having no answer.
+    const user = userEvent.setup();
     await renderWithRouter(
       form({
         entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
       }),
     );
 
+    await openSpecifics(user);
     expect(chosenFlag(flagGroup(0))).toHaveAccessibleName("Fine");
   });
 
   it("starts from the flag the item already carries", async () => {
     // Re-opening a verdict used to show every piece as unflagged, so
     // saving again cleared a flag the runner had set.
+    const user = userEvent.setup();
     await renderWithRouter(
       form({
         entry: {
@@ -648,6 +684,7 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
+    await openSpecifics(user);
     expect(chosenFlag(flagGroup(0))).toHaveAccessibleName("Not enough");
     expect(chosenFlag(flagGroup(1))).toHaveAccessibleName("Fine");
   });
@@ -695,6 +732,7 @@ describe("VerdictForm: per-item flags", () => {
       }),
     );
 
+    await openSpecifics(user);
     await user.click(
       within(flagGroup(0)).getByRole("radio", { name: "Too much" }),
     );
@@ -733,6 +771,7 @@ describe("VerdictForm: per-item flags", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await openSpecifics(user);
     await user.click(
       within(flagGroup(0)).getByRole("radio", { name: "Too much" }),
     );
@@ -763,6 +802,7 @@ describe("VerdictForm: per-item flags", () => {
     // Set it, then put it back — the chip group's "Fine" is how a runner
     // un-flags, and it must reach the payload as absent rather than as
     // the string "none".
+    await openSpecifics(user);
     const group = flagGroup(0);
     await user.click(within(group).getByRole("radio", { name: "Too much" }));
     await user.click(within(group).getByRole("radio", { name: "Fine" }));
@@ -777,12 +817,221 @@ describe("VerdictForm: per-item flags", () => {
   });
 });
 
-describe("VerdictForm: tags and sharing", () => {
-  it("offers every tag the contract defines, in words", async () => {
+/**
+ * A kit whose band record makes the chip rule's choice obvious: the shell
+ * has been dialed once in four runs here, the cap three times in four. So
+ * a warm verdict suggests the shell first, and a cold one does too.
+ */
+const SHELL = "01JTEMA0000000000000000000";
+const CAP = "01JTEMB0000000000000000000";
+const SIGNALS: BandSignals = {
+  garments: {
+    [SHELL]: { total: 4, dialed: 1, colder: 1, warmer: 2 },
+    [CAP]: { total: 4, dialed: 3, colder: 0, warmer: 1 },
+  },
+  tagUse: { sleeves_damp: 3 },
+};
+const KIT = [item(SHELL, "Shell"), item(CAP, "Cap")];
+
+/**
+The chips row, as the runner sees it: each chip's name, in order.
+*/
+function chipNames(): string[] {
+  const row = document.querySelector("[data-slot='flag-chips']");
+  if (!(row instanceof HTMLElement)) throw new Error("no chips row");
+  return within(row)
+    .getAllByRole("button")
+    .map((chip) => chip.textContent);
+}
+
+describe("VerdictForm: the generated chips (round 20)", () => {
+  it("draws five chips and MORE, garments first once a verdict sets their direction", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({ entry: { items: KIT }, bandSignals: SIGNALS }),
+    );
+
+    // Before a verdict: tags only, the runner's most used first.
+    expect(chipNames()).toStrictEqual([
+      "sleeves damp",
+      // Unused tags fill the rest, in the contract's own order.
+      "cold first mile",
+      "cold throughout",
+      "overheated late",
+      "chafed",
+      "More ›",
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+    expect(chipNames().slice(0, 3)).toStrictEqual([
+      "Shell too much",
+      "Cap too much",
+      "sleeves damp",
+    ]);
+    expect(chipNames()).toHaveLength(6);
+
+    // Changing the verdict recomputes the unchosen chips.
+    await user.click(screen.getByRole("button", { name: "A bit cold" }));
+    expect(chipNames().slice(0, 2)).toStrictEqual([
+      "Shell not enough",
+      "Cap not enough",
+    ]);
+  });
+
+  it("suggests no garment when the run has no band to read", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form({ entry: { items: KIT } }));
+
+    await user.click(screen.getByRole("button", { name: "Way warm" }));
+    expect(chipNames()).toStrictEqual([
+      "cold first mile",
+      "cold throughout",
+      "overheated late",
+      "sleeves damp",
+      "chafed",
+      "More ›",
+    ]);
+  });
+
+  it("chooses the garment chip's flag, keeps it through a verdict change, and sends it", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve());
+    await renderWithRouter(
+      form({ entry: { items: KIT }, bandSignals: SIGNALS, submitVerdict }),
+    );
+    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+
+    const shell = screen.getByRole("button", { name: "Shell too much" });
+    expect(shell).toHaveAttribute("aria-pressed", "false");
+    await user.click(shell);
+    expect(
+      screen.getByRole("button", { name: "Shell too much" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    // "Chosen chips stay": a cold verdict would suggest "Shell not
+    // enough", but the runner already said too much.
+    await user.click(screen.getByRole("button", { name: "A bit cold" }));
+    expect(chipNames().slice(0, 2)).toStrictEqual([
+      "Shell too much",
+      "Cap not enough",
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data.itemFlags).toStrictEqual([
+      { itemId: SHELL, flag: "too_much" },
+      { itemId: CAP, flag: undefined },
+    ]);
+  });
+
+  it("puts a chosen garment back to Fine on a second tap, not the other way", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        entry: {
+          items: [{ ...item(SHELL, "Shell"), flag: "too_much" as const }],
+        },
+        bandSignals: SIGNALS,
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Shell too much" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Shell too much", pressed: true }),
+    ).toBeNull();
+    const sheet = await openSpecifics(user);
+    expect(within(sheet).getByRole("radio", { name: "Fine" })).toBeChecked();
+  });
+
+  it("toggles a tag chip on and off, and sends what is on", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve());
+    await renderWithRouter(form({ bandSignals: SIGNALS, submitVerdict }));
+
+    await user.click(screen.getByRole("button", { name: "sleeves damp" }));
+    await user.click(screen.getByRole("button", { name: "cold first mile" }));
+    await user.click(screen.getByRole("button", { name: "cold first mile" }));
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
+      tags: ["sleeves_damp"],
+    });
+  });
+
+  it("marks a chosen chip with the close glyph, and only a chosen one", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form({ bandSignals: SIGNALS }));
+    const damp = screen.getByRole("button", { name: "sleeves damp" });
+    expect(damp.querySelector("svg")).toBeNull();
+    expect(damp).toHaveClass("border-hairline", "text-quiet");
+
+    await user.click(damp);
+
+    const chosen = screen.getByRole("button", { name: "sleeves damp" });
+    expect(chosen.querySelector("svg")).not.toBeNull();
+    expect(chosen).toHaveClass("bg-ink", "text-ground");
+  });
+
+  it("shows a choice made in A3b as a pressed chip when the sheet closes", async () => {
+    // "That is how 'the Harrier was not enough' is said when it wasn't
+    // suggested" — and once said, it is on A3 like any other choice.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({ entry: { items: KIT }, bandSignals: SIGNALS }),
+    );
+    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+
+    const sheet = await openSpecifics(user);
+    const cap = within(sheet).getByRole("group", { name: "Cap" });
+    await user.click(within(cap).getByRole("radio", { name: "Not enough" }));
+    await user.click(within(sheet).getByRole("button", { name: "hands cold" }));
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(
+      screen.getByRole("button", { name: "Cap not enough" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "hands cold" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("says MORE opens a dialog, and is live until the verdict is noted", async () => {
     await renderWithRouter(form());
+    const more = screen.getByRole("button", { name: "More ›" });
+    expect(more).toHaveAttribute("aria-haspopup", "dialog");
+    // Read-only is the receipt's state, not the resting one.
+    expect(more).not.toHaveAttribute("aria-disabled");
+  });
+});
+
+describe("VerdictForm: tags and sharing", () => {
+  it("offers every tag the contract defines, in words, in A3b", async () => {
+    // "Plus all nine tags" (round 20) — the chips show five; the sheet is
+    // where the other four are said.
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+    const sheet = await openSpecifics(user);
+    expect(
+      within(sheet).getAllByRole("button", { pressed: false }),
+    ).toHaveLength(entryTags.length);
     for (const tag of entryTags) {
       expect(
-        screen.getByRole("button", { name: tag.replaceAll("_", " ") }),
+        within(sheet).getByRole("button", { name: tag.replaceAll("_", " ") }),
       ).toBeVisible();
     }
   });
@@ -1123,6 +1372,33 @@ describe("VerdictForm: photos", () => {
   });
 });
 
+describe("VerdictForm: the history line beneath the row (D-97)", () => {
+  it("shows this runner's history in the band, which the route already loads", async () => {
+    // The verdict route has fetched `verdictBandCounts` on every visit and
+    // discarded it; round 20 put the line beneath the row.
+    await renderWithRouter(
+      form({ bandFloor: 5, bandCounts: { "-1": 2, "0": 7, "1": 1 } }),
+    );
+
+    expect(
+      screen.getByText("[41–50°] · 2 cold · 7 dialed · 1 warm"),
+    ).toBeVisible();
+  });
+
+  it("draws no line for a run with no band", async () => {
+    // No conditions, no band, no counts — nothing to state.
+    await renderWithRouter(form({ bandCounts: { "0": 7 } }));
+
+    expect(screen.queryByText(/Five states/)).toBeNull();
+  });
+
+  it("draws no line when the counts did not load", async () => {
+    await renderWithRouter(form({ bandFloor: 5 }));
+
+    expect(screen.queryByText(/Five states/)).toBeNull();
+  });
+});
+
 describe("VerdictForm: what happens after saving", () => {
   it("tells them what the run just did to a piece's record", async () => {
     // The point of the whole screen: a verdict is data about a garment in
@@ -1142,8 +1418,17 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
-    expect(await screen.findByText("Houdini is now 3 of 5")).toBeVisible();
-    expect(screen.getByText("[Noted]")).toBeVisible();
+    // The band, as board A3 writes it: "Half-zip is now 8 of 9 in
+    // 38–46°." 5°C is 41°F, and a band is five degrees Celsius wide.
+    const sentence = await screen.findByText(
+      "Houdini is now 3 of 5 in 41–50°.",
+    );
+    expect(sentence).toBeVisible();
+    // Announced when it lands: the button just pressed has gone, and this
+    // is what took its place.
+    const receipt = sentence.closest("[role='status']");
+    expect(receipt).not.toBeNull();
+    expect(receipt).toHaveTextContent(/^Noted/);
     expect(itemBandWearStat).toHaveBeenCalledWith({
       data: { itemId: "01JTEMA0000000000000000000", bandFloorC: 5 },
     });
@@ -1186,9 +1471,16 @@ describe("VerdictForm: what happens after saving", () => {
     });
   });
 
-  it("moves on from the noted screen when asked", async () => {
+  it("lands the receipt in the submit's place, with the answer still on screen", async () => {
+    // Design round 20: "Noted is a receipt, not a preview: it lands after
+    // Log it in the submit's place, replacing share-toggle and submit; the
+    // verdict row and chips stay, read-only, so the receipt is read
+    // against the answer. No button in it — the tab bar is the exit."
+    //
+    // It used to replace the whole screen — "Noted", the sentence and a
+    // Done button — so the answer it was a receipt for was gone.
     const user = userEvent.setup();
-    const { router } = await renderWithRouter(
+    await renderWithRouter(
       form({
         entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
         bandFloor: 5,
@@ -1197,15 +1489,77 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText("Houdini is now 3 of 5");
+    await screen.findByText(/Houdini is now 3 of 5/);
 
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    // In the submit's place: share and submit are gone, and there is no
+    // button standing in for them.
+    expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "Share to feed" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe(
-        "/feed/entry/01JENTRY000000000000000000",
-      );
-    });
+    // The answer stays — the chosen verdict still pressed.
+    const dialed = screen.getByRole("button", { name: "Dialed" });
+    expect(dialed).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("is answerable until it is logged — nothing is read-only on the way in", async () => {
+    // The other half of the lock. A form locked from the start is a form
+    // nobody can answer, and only a test that looks before Log it can see
+    // that.
+    await renderWithRouter(
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+      }),
+    );
+
+    for (const step of verdictScale) {
+      expect(
+        screen.getByRole("button", { name: step.label }),
+      ).not.toHaveAttribute("aria-disabled");
+    }
+    expect(screen.getByRole("button", { name: "chafed" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("holds the answer read-only once it is noted, without dropping it from the tab order", async () => {
+    // Read-only, not `disabled`: accessibility rule 07 bans taking a
+    // control out of the tab order, and a receipt is for reading.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        bandFloor: 5,
+        itemBandWearStat: () => Promise.resolve({ worn: 3, total: 5 }),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await screen.findByText(/Houdini is now 3 of 5/);
+
+    const wayCold = screen.getByRole("button", { name: "Way cold" });
+    expect(wayCold).toHaveAttribute("aria-disabled", "true");
+    expect(wayCold).not.toBeDisabled();
+    await user.click(wayCold);
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(wayCold).toHaveAttribute("aria-pressed", "false");
+
+    const tag = screen.getByRole("button", { name: "chafed" });
+    expect(tag).toHaveAttribute("aria-disabled", "true");
+    await user.click(tag);
+    expect(tag).toHaveAttribute("aria-pressed", "false");
+
+    // A3b does not open over a receipt: everything chosen is already a
+    // pressed chip, and there is nothing left to change.
+    const more = screen.getByRole("button", { name: "More ›" });
+    expect(more).toHaveAttribute("aria-disabled", "true");
+    await user.click(more);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("says so when the save fails, and leaves the form standing", async () => {

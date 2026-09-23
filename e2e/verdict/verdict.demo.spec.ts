@@ -1,5 +1,6 @@
 /**
- * Covers: A3 (log the verdict) — choosing a verdict, flagging a kit item,
+ * Covers: A3 (log the verdict), A3b (anything specific) — choosing a
+ * verdict, flagging a kit item from the generated chips and a tag from A3b,
  * and attaching a photo, seeing it on the entry, and re-opening the
  * verdict to find all three still there — and DS2, the verdict backlog,
  * which is the same act done from a table instead of six sheets. One
@@ -66,6 +67,11 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   const runId = newUlid();
   const entryId = newUlid();
   const observationId = newUlid();
+  // An earlier run in the same band, the Houdini on it and called cold —
+  // the history A3's chips are generated from. Without one the kit has no
+  // record here, and the chip rule suggests no garment at all.
+  const priorRunId = newUlid();
+  const priorEntryId = newUlid();
 
   // Coordinates distinct from feed.demo's. Observations are cached by
   // rounded lat/lng/hour, so sharing them would mean one spec's seed
@@ -79,6 +85,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // signed up — the verdict screen is owner-only, so the rows have to
   // belong to this user rather than a fixture one.
   const startedAt = nowSeconds() - 3600;
+  const priorStartedAt = startedAt - 7 * 86_400;
   await withLocalDb(async ({ core }) => {
     const [row] = await core
       .select({ id: user.id })
@@ -117,41 +124,74 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
       createdAt: startedAt,
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });
+
+    await core.insert(runs).values({
+      id: priorRunId,
+      userId: row.id,
+      title: "Last week's loop",
+      startedAt: priorStartedAt,
+      durationS: 2700,
+      distanceM: 8000,
+      source: "manual",
+      indoor: false,
+      weatherStatus: "attached",
+      lat: latR,
+      lng: lngR,
+    });
+    await core.insert(outfitEntries).values({
+      id: priorEntryId,
+      userId: row.id,
+      runId: priorRunId,
+      verdict: -1,
+      isPublic: false,
+      createdAt: priorStartedAt,
+    });
+    await core
+      .insert(outfitEntryItems)
+      .values({ entryId: priorEntryId, itemId });
   });
 
   // Seed the conditions this entry was logged in. Without an observation
   // the screen has no temperature band, and saving takes a different
   // branch — so this is seeded deliberately rather than left to chance.
+  //
+  // Both runs, each at its own hour: the earlier one has to land in the
+  // same band for its verdict to count as history here.
   await withLocalDb(async ({ weather }) => {
-    await weather
-      .insert(weatherObservations)
-      .values({
-        id: observationId,
-        runId,
-        latR,
-        lngR,
-        hourBucket: Math.floor(startedAt / 3600),
-        tempC: 6,
-        feelsLikeC: 4,
-        humidity: 70,
-        windKph: 12,
-        precipMm: 0,
-        condition: "clear",
-        source: "visualcrossing",
-        fetchedAt: startedAt,
-      })
-      // (lat_r, lng_r, hour_bucket) is the cache key and is UNIQUE, so a
-      // re-run inside the same hour hits the row the last run left. Upsert
-      // rather than insert: the spec has to be re-runnable, and the values
-      // below are the ones its assertions depend on.
-      .onConflictDoUpdate({
-        target: [
-          weatherObservations.latR,
-          weatherObservations.lngR,
-          weatherObservations.hourBucket,
-        ],
-        set: { runId, tempC: 6, feelsLikeC: 4, source: "visualcrossing" },
-      });
+    for (const [id, run, at] of [
+      [observationId, runId, startedAt],
+      [newUlid(), priorRunId, priorStartedAt],
+    ] as const) {
+      await weather
+        .insert(weatherObservations)
+        .values({
+          id,
+          runId: run,
+          latR,
+          lngR,
+          hourBucket: Math.floor(at / 3600),
+          tempC: 6,
+          feelsLikeC: 4,
+          humidity: 70,
+          windKph: 12,
+          precipMm: 0,
+          condition: "clear",
+          source: "visualcrossing",
+          fetchedAt: at,
+        })
+        // (lat_r, lng_r, hour_bucket) is the cache key and is UNIQUE, so a
+        // re-run inside the same hour hits the row the last run left.
+        // Upsert rather than insert: the spec has to be re-runnable, and
+        // the values below are the ones its assertions depend on.
+        .onConflictDoUpdate({
+          target: [
+            weatherObservations.latR,
+            weatherObservations.lngR,
+            weatherObservations.hourBucket,
+          ],
+          set: { runId: run, tempC: 6, feelsLikeC: 4, source: "visualcrossing" },
+        });
+    }
   });
 
   await page.goto(`/feed/verdict/${entryId}`);
@@ -162,19 +202,31 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await scene(page, "A3 · five points, coldest to warmest, one scale");
   await page.getByRole("button", { name: "A bit cold" }).click();
 
-  // Per-item signal is a flag, never a second verdict (CLAUDE.md) — and
-  // since design round 16 it is chips, never a `<select>`. A dropdown
-  // beside the kit read as the verdict control, which is exactly what it
-  // was mistaken for when this demo was reviewed.
-  await scene(page, "Per-item signal is a flag, never a second verdict");
-  // Named, not `.first()`: since round 17 took the verdict row out of its
-  // field box it is a fieldset too, so "the first group on the screen" is
-  // the verdict and not a garment. Each flag group is legended with its
-  // garment's name, which is the thing actually being pointed at.
-  await page
-    .getByRole("group", { name: "Houdini Jacket" })
-    .getByRole("radio", { name: "Not enough" })
-    .click();
+  // D-97: beneath the row, this runner's own history in the run's band —
+  // loaded by the route all along, and until round 20 never shown.
+  await scene(page, "Beneath the row: your history in this band");
+  await expect(page.getByText(/^Five states\./)).toBeVisible();
+
+  // Round 20: the chips are generated, never composed. The Houdini was
+  // called cold here last week, so a cold verdict suggests it "not
+  // enough"; tags fill the row to five. Per-item signal is a flag, never a
+  // second verdict (CLAUDE.md).
+  await scene(page, "Five chips, generated from your history in this band");
+  const houdini = page.getByRole("button", { name: "Houdini Jacket not enough" });
+  await houdini.click();
+  await expect(houdini).toHaveAttribute("aria-pressed", "true");
+
+  // MORE › opens A3b: every garment's triple and all nine tags — how
+  // something the chips did not suggest gets said.
+  await scene(page, "MORE opens A3b: every garment, all nine tags");
+  await page.getByRole("button", { name: "More ›" }).click();
+  const sheet = page.getByRole("dialog", { name: "Anything specific?" });
+  await sheet.getByRole("button", { name: "hands cold" }).click();
+  await sheet.getByRole("button", { name: "Done" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "hands cold" }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   // The upload under test: a real file, streamed as multipart.
   await scene(page, "A real photo, streamed as multipart and stored in R2");
@@ -200,6 +252,14 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await expect(page.getByText(/Houdini Jacket is now \d+ of \d+/)).toBeVisible({
     timeout: 15_000,
   });
+  // Round 20: Noted is a receipt in the submit's place. Share and Log it
+  // give way to it, and the answer stays on screen, read-only, so the
+  // receipt is read against it.
+  await scene(page, "Noted takes the submit's place — the answer stays");
+  await expect(page.getByRole("button", { name: "Log it" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "A bit cold" }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   // And the verdict is on the entry.
   await scene(page, "And the verdict is on the entry");
@@ -216,10 +276,8 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await page.goto(`/feed/verdict/${entryId}`);
   await hydrated(page);
   await expect(
-    page
-      .getByRole("group", { name: "Houdini Jacket" })
-      .getByRole("radio", { name: "Not enough" }),
-  ).toBeChecked();
+    page.getByRole("button", { name: "Houdini Jacket not enough" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({
     timeout: 15_000,
   });

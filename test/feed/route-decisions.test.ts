@@ -88,7 +88,7 @@ describe("bandContextFor", () => {
     );
 
     expect(context.bandFloor).toBe(5);
-    expect(context.bandCounts).toStrictEqual({ cold: 3, floor: 5 });
+    expect(context.history).toStrictEqual({ cold: 3, floor: 5 });
     // The counts are asked for by band, not by entry.
     expect(countsFor).toHaveBeenCalledWith(5);
   });
@@ -107,7 +107,7 @@ describe("bandContextFor", () => {
 
     expect(context).toStrictEqual({
       bandFloor: undefined,
-      bandCounts: undefined,
+      history: undefined,
     });
     expect(countsFor).not.toHaveBeenCalled();
   });
@@ -120,7 +120,7 @@ describe("bandContextFor", () => {
       (floor) => Promise.resolve({ floor }),
     );
     expect(context.bandFloor).toBe(0);
-    expect(context.bandCounts).toStrictEqual({ floor: 0 });
+    expect(context.history).toStrictEqual({ floor: 0 });
   });
 });
 

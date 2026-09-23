@@ -3,15 +3,14 @@ import type { ChangeEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
-import type { VerdictValue } from "../../../lib/contracts";
+import type { Units, VerdictValue } from "../../../lib/contracts";
+import { bandLabel } from "../../../lib/temperature";
 import { newUlid } from "../../../lib/ids";
 import {
   isAllowedPhotoType,
   maxPhotosPerEntry,
 } from "../../../lib/photo-constraints";
 import {
-  Bracketed,
-  ChoiceList,
   FlowStep,
   FormErrorSummary,
   FormFailureBand,
@@ -67,8 +66,7 @@ const VERDICT_BASE =
  * centred" half — against the cell's full height, so it stays centred
  * whether the label took one line or two.
  */
-const BRACKET_BASE =
-  "pointer-events-none absolute inset-y-0 flex items-center";
+const BRACKET_BASE = "pointer-events-none absolute inset-y-0 flex items-center";
 
 /**
  * The chosen cell: its verdict's T2 hue, landing in the brackets' beat.
@@ -92,25 +90,15 @@ function verdictChosen(value: VerdictValue): string {
   return `verdict-lock ${VERDICT_BASE} border ${verdictHue(value)}`;
 }
 
-/**
- * The per-item flag as three visible choices.
- *
- * `"none"` rather than `""`: a radio's value is a real string and an empty
- * one reads as "no value" to the platform, which is a different thing from
- * "the runner chose not to flag this". `payload()` maps it back to
- * `undefined`, which is what the contract stores.
- */
-const ITEM_FLAG_OPTIONS = ["none", "too_much", "not_enough"] as const;
-
-const ITEM_FLAG_LABELS: Readonly<Record<(typeof ITEM_FLAG_OPTIONS)[number], string>> =
-  {
-    none: "Fine",
-    too_much: "Too much",
-    not_enough: "Not enough",
-  };
-
 const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
 import { submitVerdictInput } from "../inputs";
+import { BandHistory } from "./BandHistory";
+import { NotedReceipt } from "./NotedReceipt";
+import { SpecificsSheet } from "./SpecificsSheet";
+import { VerdictChips } from "./VerdictChips";
+import type { BandSignals } from "../band-signals";
+import { suggestChips } from "../chips";
+import type { Chip, Flag, ItemFlagChoice } from "../chips";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
 
@@ -177,9 +165,30 @@ export function VerdictForm({
   uploadPhoto,
   renderPhotoStep,
   itemBandWearStat,
+  units,
+  history,
 }: Readonly<{
   entry: Entry;
   bandFloor: number | undefined;
+  /**
+   * The runner's own units, for the band in the history line and in
+   * Noted's sentence ("…8 of 9 in 38–46°").
+   */
+  units: Units;
+  /**
+   * This runner's history in the run's band, both halves read over the
+   * same in-band entries: `counts`, their verdicts keyed −2..+2, for the
+   * line beneath the row (D-97); `signals`, each kit garment's record and
+   * the tag use, for the generated chips (round 20). Absent when the run
+   * has no conditions, and therefore no band — then the line is not drawn
+   * and the chips suggest no garment.
+   */
+  history:
+    | {
+        counts: Readonly<Record<number, number>>;
+        signals: BandSignals;
+      }
+    | undefined;
   submitVerdict: (input: { data: Record<string, unknown> }) => Promise<unknown>;
   uploadPhoto: (input: { data: FormData }) => Promise<{ key: string }>;
   /**
@@ -207,14 +216,13 @@ export function VerdictForm({
   // `entry.items[].flag` is what was saved last time, and starting empty
   // meant re-opening a verdict showed every piece as unflagged — so
   // saving again silently cleared flags the runner had set.
-  const [flags, setFlags] = useState<
-    Record<string, (typeof ITEM_FLAG_OPTIONS)[number]>
-  >(() =>
+  const [flags, setFlags] = useState<Record<string, ItemFlagChoice>>(() =>
     Object.fromEntries(
       entry.items.map((item) => [item.itemId, item.flag ?? "none"]),
     ),
   );
   const [noted, setNoted] = useState<string | undefined>();
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [photoKeys, setPhotoKeys] = useState<string[]>(entry.photoKeys);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
   // EntryDetail carried: two sources for one fact, one from the URL params
@@ -373,7 +381,7 @@ export function VerdictForm({
           data: { itemId: firstItem.itemId, bandFloorC: bandFloor },
         });
         setNoted(
-          `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)}`,
+          `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(bandFloor, units.temp)}.`,
         );
         return;
       }
@@ -399,22 +407,41 @@ export function VerdictForm({
     };
   }
 
-  if (noted !== undefined) {
-    return (
-      <div className="mx-auto flex w-full max-w-panel flex-col items-center gap-4 px-5 pt-16 text-center">
-        <Bracketed className="text-dialed-text">Noted</Bracketed>
-        <p>{noted}</p>
-        <button
-          type="button"
-          onClick={() => {
-            void navigate({ to: "/feed/entry/$entryId", params: { entryId } });
-          }}
-          className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
-        >
-          Done
-        </button>
-      </div>
-    );
+  // After Log it the form becomes its own receipt (design round 20): the
+  // answer stays on screen, read-only, and Noted takes the submit's place.
+  const isLocked = noted !== undefined;
+
+  // The answer as the chip rule reads it: Fine is the default and is never
+  // a chip, so "none" is simply not a choice here.
+  const chosenFlags: Record<string, Flag> = {};
+  for (const [itemId, flag] of Object.entries(flags)) {
+    if (flag !== "none") chosenFlags[itemId] = flag;
+  }
+  const chips = suggestChips({
+    verdict,
+    kit: entry.items,
+    records: history?.signals.garments ?? {},
+    tagUse: history?.signals.tagUse ?? {},
+    chosenFlags,
+    chosenTags: tags,
+  });
+
+  function setFlag(itemId: string, flag: ItemFlagChoice): void {
+    setFlags((prev) => ({ ...prev, [itemId]: flag }));
+  }
+
+  function toggleTag(tag: string): void {
+    setTags((prev) => toggledIn(prev, tag));
+  }
+
+  /**
+   * A chip toggles the one choice it names. A pressed garment chip goes
+   * back to Fine, not to the other direction — un-choosing is all a second
+   * tap on it can mean.
+   */
+  function toggleChip(chip: Chip, isPressed: boolean): void {
+    if (chip.kind === "tag") toggleTag(chip.tag);
+    else setFlag(chip.itemId, isPressed ? "none" : chip.flag);
   }
 
   return (
@@ -482,8 +509,11 @@ export function VerdictForm({
                   // control does today and announces the state; the
                   // radiogroup is D-84.
                   aria-pressed={isChosen}
+                  // Read-only once logged, and still focusable: rule 07
+                  // bans `disabled`, and a receipt is for reading.
+                  aria-disabled={isLocked || undefined}
                   onClick={() => {
-                    setVerdict(choice.value);
+                    if (!isLocked) setVerdict(choice.value);
                   }}
                   // `target` at the site rather than inside
                   // `VERDICT_BASE`: the 44px hit area is this button's,
@@ -515,39 +545,40 @@ export function VerdictForm({
           </div>
         </FieldGroup>
 
-        {entry.items.length > 0 ? (
-          // **Chips, never a `<select>`** (design round 16). A dropdown
-          // beside the kit reads as the verdict control — which is exactly
-          // what happened when the owner watched the demo: he took this
-          // for the verdict and asked why it did not match the backlog's.
-          // `ChoiceList`'s own note has argued the case since it was
-          // written: "a `<select>` hides its options behind a tap and
-          // reads them out one at a time", and comparing the options is
-          // how a runner picks.
-          //
-          // One group per garment, legended with the garment's name, so a
-          // reader entering the group hears which piece it is about.
-          <div className="flex flex-col gap-4">
-            <h2>
-              <Mono step="xs">Anything specific? · optional</Mono>
-            </h2>
-            {entry.items.map((item) => (
-              <ChoiceList
-                key={item.itemId}
-                name={`flag-${item.itemId}`}
-                legend={item.name}
-                layout="chips"
-                options={ITEM_FLAG_OPTIONS}
-                optionLabels={ITEM_FLAG_LABELS}
-                value={flagFor(item.itemId)}
-                field={form.field}
-                onChange={(next) => {
-                  setFlags((prev) => ({ ...prev, [item.itemId]: next }));
-                }}
-              />
-            ))}
-          </div>
-        ) : undefined}
+        {history === undefined || bandFloor === undefined ? undefined : (
+          <BandHistory
+            counts={history.counts}
+            bandFloor={bandFloor}
+            units={units}
+          />
+        )}
+
+        {/* **Chips, never a `<select>`** (design round 16), and since
+            round 20 generated rather than listed: five, chosen from this
+            runner's history in the band, with everything else one tap away
+            in A3b. */}
+        <VerdictChips
+          chips={chips}
+          chosenFlags={chosenFlags}
+          chosenTags={tags}
+          readOnly={isLocked}
+          onToggle={toggleChip}
+          onMore={() => {
+            setSheetOpen(true);
+          }}
+        />
+        <SpecificsSheet
+          open={sheetOpen}
+          onClose={() => {
+            setSheetOpen(false);
+          }}
+          items={entry.items}
+          flagFor={flagFor}
+          onFlag={setFlag}
+          tags={tags}
+          onTag={toggleTag}
+          field={form.field}
+        />
 
         <div className="flex flex-col gap-2">
           <h2>
@@ -608,63 +639,45 @@ export function VerdictForm({
               )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <h2>
-            <Mono step="xs">Tags</Mono>
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {entryTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => {
-                  setTags((prev) => toggledIn(prev, tag));
-                }}
-                className={
-                  tags.has(tag)
-                    ? "target rounded-pill bg-ink px-3 py-1 text-ground"
-                    : "target rounded-pill border border-hairline px-3 py-1"
-                }
-              >
-                <Mono step="xs">{tag.replaceAll("_", " ")}</Mono>
-              </button>
-            ))}
-          </div>
-        </div>
+        {isLocked ? (
+          <NotedReceipt sentence={noted} />
+        ) : (
+          <>
+            {/* A3's share-toggle as round 19 draws it: "Share to feed", with
+              what sharing means on the line beneath. The line is outside the
+              label and linked with `aria-describedby`, so the checkbox's
+              accessible name stays the three words and the sentence is read
+              as its description. It was "Share this — the verdict label
+              shows on the post", one line inside the label. */}
+            <div className="flex flex-col gap-1">
+              <label className="target flex items-center gap-2 text-body">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  aria-describedby={SHARE_HINT_ID}
+                  onChange={(event) => {
+                    setIsPublic(event.target.checked);
+                  }}
+                />
+                Share to feed
+              </label>
+              <span id={SHARE_HINT_ID} className="text-small text-muted">
+                Shared runs show your kit, conditions, and your verdict.
+              </span>
+            </div>
 
-        {/* A3's share-toggle as round 19 draws it: "Share to feed", with
-            what sharing means on the line beneath. The line is outside the
-            label and linked with `aria-describedby`, so the checkbox's
-            accessible name stays the three words and the sentence is read
-            as its description. It was "Share this — the verdict label
-            shows on the post", one line inside the label. */}
-        <div className="flex flex-col gap-1">
-          <label className="target flex items-center gap-2 text-body">
-            <input
-              type="checkbox"
-              checked={isPublic}
-              aria-describedby={SHARE_HINT_ID}
-              onChange={(event) => {
-                setIsPublic(event.target.checked);
-              }}
+            <FormFailureBand
+              failure={form.failure}
+              onRetry={form.retry}
+              retryRef={form.retryRef}
             />
-            Share to feed
-          </label>
-          <span id={SHARE_HINT_ID} className="text-small text-muted">
-            Shared runs show your kit, conditions, and your verdict.
-          </span>
-        </div>
-
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <SubmitButton
-          label="Log it"
-          pendingLabel="Logging"
-          pending={form.pending}
-        />
+            <SubmitButton
+              label="Log it"
+              pendingLabel="Logging"
+              pending={form.pending}
+            />
+          </>
+        )}
       </form>
     </FlowStep>
   );

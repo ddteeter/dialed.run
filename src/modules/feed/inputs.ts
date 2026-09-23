@@ -99,6 +99,11 @@ export const bandCountsInput = z.object({
   excludeEntryId: ulidSchema.optional(),
 });
 
+export const bandSignalsInput = z.object({
+  bandFloorC: z.number(),
+  entryId: ulidSchema,
+});
+
 export const itemBandStatInput = z.object({
   itemId: ulidSchema,
   bandFloorC: z.number(),

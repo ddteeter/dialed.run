@@ -320,22 +320,22 @@ function hasVerdict(
 }
 
 /**
- * Distribution of the user's own past verdicts within a 5°C band —
- * calibration context shown under the A3 choices. `excludeEntryId` keeps a
- * not-yet-verdicted entry from counting itself.
+ * The user's own verdicted entries whose runs fall in one 5°C band — the
+ * walk every "your history in this band" answer is built on.
+ *
+ * One walk, shared, because there are now two answers built on it — the
+ * verdict counts under A3's row, and the band record the generated chips
+ * read (design round 20) — and a second copy of a cross-database walk is
+ * a rival that drifts: the WHERE-before-LIMIT fix below had to be made
+ * once, and would have had to be remembered twice.
+ *
+ * `excludeEntryId` keeps a not-yet-verdicted entry from counting itself.
  */
-export async function verdictBandCounts(
+export async function verdictedEntriesInBand(
   userId: string,
   targetBandFloorC: number,
   excludeEntryId?: string,
-): Promise<Record<number, number>> {
-  const counts: Record<number, number> = {
-    "-2": 0,
-    "-1": 0,
-    "0": 0,
-    "1": 0,
-    "2": 0,
-  };
+): Promise<{ id: string; runId: string; verdict: number }[]> {
   // Both filters belong in the WHERE clause, and not only to save a scan:
   // filtering after LIMIT 200 returns "the verdicted rows among the first
   // 200", not "the first 200 verdicted rows". A user whose 200 most recent
@@ -360,21 +360,48 @@ export async function verdictBandCounts(
     .orderBy(desc(outfitEntries.createdAt))
     .limit(200);
   // Two equivalent mutants: the filter cannot drop a row the SQL already
-  // excluded, and an empty list yields the zeroed counts either way. The
+  // excluded, and an empty list yields an empty answer either way. The
   // second saves a cross-database walk.
   // Stryker disable next-line MethodExpression
   const verdicted = own.filter(hasVerdict);
   // Stryker disable next-line ConditionalExpression
-  if (verdicted.length === 0) return counts;
+  if (verdicted.length === 0) return [];
+  // The band filter genuinely cannot move into SQL: the band comes from a
+  // weather observation in DIALED_WEATHER, and DIALED_CORE cannot join
+  // across databases (CLAUDE.md §D1 query discipline).
   const observations = await observationsForEntries(db(), verdicted);
-  for (const entry of verdicted) {
+  return verdicted.filter((entry) => {
     const observation = observations.get(entry.runId);
-    if (!observation) continue;
-    if (
-      bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) !==
-      targetBandFloorC
-    )
-      continue;
+    return (
+      observation !== undefined &&
+      bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) ===
+        targetBandFloorC
+    );
+  });
+}
+
+/**
+ * Distribution of the user's own past verdicts within a 5°C band —
+ * calibration context shown under the A3 choices (D-97).
+ */
+export async function verdictBandCounts(
+  userId: string,
+  targetBandFloorC: number,
+  excludeEntryId?: string,
+): Promise<Record<number, number>> {
+  const counts: Record<number, number> = {
+    "-2": 0,
+    "-1": 0,
+    "0": 0,
+    "1": 0,
+    "2": 0,
+  };
+  const inBand = await verdictedEntriesInBand(
+    userId,
+    targetBandFloorC,
+    excludeEntryId,
+  );
+  for (const entry of inBand) {
     counts[entry.verdict] = (counts[entry.verdict] ?? 0) + 1;
   }
   return counts;

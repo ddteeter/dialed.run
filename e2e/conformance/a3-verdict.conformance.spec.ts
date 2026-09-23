@@ -52,7 +52,7 @@ Design's label for the screen, on both the light and dark boards.
 */
 const A3 = "A3";
 
-test("A3's verdict row is composed as the board draws it", async ({
+test("A3's verdict row and chips are composed as the board draws them", async ({
   page,
   baseURL,
 }) => {
@@ -75,6 +75,12 @@ test("A3's verdict row is composed as the board draws it", async ({
   // redraws A3 with another verdict chosen, the test follows.
   const drawnFills = await fillsOf(page, part(A3, "verdict-row"));
   const drawnAlignments = await alignmentsOf(page, part(A3, "verdict-row"));
+  // The chips are generated (round 20), so their words are this runner's
+  // history and never the board's. What the board fixes is the shape: how
+  // many, where MORE sits, and what a chosen one wears.
+  const drawnChips = await cellsOf(page, part(A3, "flag-chips"));
+  const drawnChipFills = await fillsOf(page, part(A3, "flag-chips"));
+  expect(drawnChips, "the board has no A3 flag-chips region").not.toHaveLength(0);
   const chosen = drawnFills.findIndex((fill) => fill !== "transparent");
   const chosenLabel = drawnCells[chosen];
   if (chosenLabel === undefined) throw new Error("the board draws no chosen cell");
@@ -186,6 +192,17 @@ test("A3's verdict row is composed as the board draws it", async ({
     await page.getByRole("button", { name: chosenLabel }).click();
     expect(await fillsOf(page, '[data-slot="verdict-row"]')).toEqual(
       drawnFills,
+    );
+
+    // **Five chips and MORE, MORE last**, and the board's first chip
+    // chosen. A chosen chip stays first whatever else is suggested, so
+    // choosing ours puts it where the board's is.
+    const builtChips = await cellsOf(page, '[data-slot="flag-chips"]');
+    expect(builtChips).toHaveLength(drawnChips.length);
+    expect(builtChips.at(-1)).toBe(drawnChips.at(-1));
+    await page.locator('[data-slot="flag-chips"] > button').first().click();
+    expect(await fillsOf(page, '[data-slot="flag-chips"]')).toEqual(
+      drawnChipFills,
     );
   } finally {
     await withLocalDb(async ({ core }) => {

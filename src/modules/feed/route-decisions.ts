@@ -36,23 +36,27 @@ export async function shouldAskForVerdict(
 }
 
 /**
- * The band this entry's conditions fall in, and the counts for it — or
- * neither, when the entry has no conditions to place it.
+ * The band this entry's conditions fall in, and this runner's history in
+ * it — or neither, when the entry has no conditions to place it.
  *
- * The counts are what let the verdict screen say "you were cold at this
- * temperature 3 times before", so there is nothing to say without a band.
- * Asking anyway would be a query per verdict on an indoor run.
+ * The history is what A3 reads beneath its verdict row ("your history in
+ * this band") and what its generated chips are chosen from, so there is
+ * nothing to say or suggest without a band. Asking anyway would be a
+ * query per verdict on an indoor run.
+ *
+ * Generic over what "history" is, so the caller decides what to fetch and
+ * this decides only whether there is a band to fetch it for.
  */
-export async function bandContextFor<TCounts>(
+export async function bandContextFor<THistory>(
   entry: { conditions: { feelsLikeC: number } | undefined },
   bandFloorFor: (feelsLikeC: number) => number,
-  countsFor: (bandFloorC: number) => Promise<TCounts>,
-): Promise<{ bandFloor: number | undefined; bandCounts: TCounts | undefined }> {
+  historyFor: (bandFloorC: number) => Promise<THistory>,
+): Promise<{ bandFloor: number | undefined; history: THistory | undefined }> {
   if (entry.conditions === undefined) {
-    return { bandFloor: undefined, bandCounts: undefined };
+    return { bandFloor: undefined, history: undefined };
   }
   const bandFloor = bandFloorFor(entry.conditions.feelsLikeC);
-  return { bandFloor, bandCounts: await countsFor(bandFloor) };
+  return { bandFloor, history: await historyFor(bandFloor) };
 }
 
 /**
