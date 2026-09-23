@@ -36,6 +36,7 @@
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">D3 Ban a runner</span>
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">D4 The notice</span>
         <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">D5 Daily digest</span>
+        <span style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px;">D6 Gave up</span>
       </div>
     </div>
 
@@ -58,6 +59,7 @@
             <div style="padding: 11px 22px; display: flex; justify-content: space-between; align-items: center; background: #16161B; border-left: 3px solid #F5FF3D;"><span style="font-size: 15px; font-weight: 600;">Today</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Review</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">4</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Duplicates</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">23</span></div>
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Gave up</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Runners</span></div>
             <div style="margin-top: auto; padding: 14px 22px 0; display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #6E6E64;"><span>SCREENING · OK</span><span>LAST DIGEST · 07:00</span></div>
           </div>
@@ -348,6 +350,58 @@
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WHY ALWAYS SEND</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The rule is that a failure must reach a human. A digest that only sends when something happened can't tell the human that the digest itself has died. A zero day reads "Nothing waiting. Nothing failed." — and that sentence arriving is the check.</p></div>
           <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">FOR THE LANES</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Plain HTML email, one template, system font fallback acceptable. <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">/desk</span> renders the same three numbers from the same query, so Today and the digest cannot disagree.</p></div>
         </div>
+      </div>
+    </div>
+
+    <!-- D6 GAVE UP -->
+    <div id="D6" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">D6 · Gave up</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Round 21. The jobs the system stopped retrying, one row each, newest first. Each row says what it was trying to do, why it stopped in plain words, and offers the retry that fits the job.</span>
+      </div>
+      <div data-screen-label="D6 Gave up" style="background: #0B0B0E; border: 1px solid #2A2A31; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; border-bottom: 1px solid #24242B;">
+          <div style="display: flex; align-items: center; gap: 14px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">[dialed]</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #F5FF3D;">DESK</span></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">@mara · OPERATOR · SIGN OUT</span>
+        </div>
+        <div style="display: flex; flex: 1; min-height: 0;">
+          <div style="flex: 0 0 220px; border-right: 1px solid #24242B; padding: 22px 0; display: flex; flex-direction: column; gap: 2px;">
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Today</span></div>
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Review</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">4</span></div>
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Duplicates</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">23</span></div>
+            <div style="padding: 11px 22px; display: flex; justify-content: space-between; align-items: center; background: #16161B; border-left: 3px solid #F5FF3D;"><span style="font-size: 15px; font-weight: 600;">Gave up</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></div>
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Runners</span></div>
+          </div>
+          <div data-part="dead-letter" style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-bottom: 14px;">
+              <h2 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1;">Gave up</h2>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">[3 JOBS · OLDEST 2D]</span>
+            </div>
+            
+              <div data-part="job-row" style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 24px; align-items: start; padding: 18px 0; border-top: 1px solid #24242B;">
+                <div style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em;"><span style="color: #F5FF3D;">ENRICHMENT</span><span style="color: #8B8B93;">6H AGO</span></div>
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0;"><span style="font-size: 15px; font-weight: 600; line-height: 1.35;">Read the product page for Tracksmith Harrier Long Sleeve</span><span style="font-size: 14px; line-height: 1.45; color: #B9B8AE;">The shop returned 403 three times. It may be blocking us.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">3 TRIES · LAST 04:12</span></div>
+                <div style="grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #3A3A42; color: #F4F3EF; padding: 9px 14px; border-radius: 100px; cursor: pointer;" style-hover="border-color: #F5FF3D;">RE-FETCH PAGE</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #24242B; color: #6E6E74; padding: 9px 14px; border-radius: 100px;">RE-RUN EXTRACTION</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #8B8B93; padding: 9px 6px; cursor: pointer;" style-hover="color: #F4F3EF;">DROP</span></div>
+              </div>
+            
+              <div data-part="job-row" style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 24px; align-items: start; padding: 18px 0; border-top: 1px solid #24242B;">
+                <div style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em;"><span style="color: #F5FF3D;">ENRICHMENT</span><span style="color: #8B8B93;">1D AGO</span></div>
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0;"><span style="font-size: 15px; font-weight: 600; line-height: 1.35;">Pull fabric and weight from Janji AFO Middle Layer</span><span style="font-size: 14px; line-height: 1.45; color: #B9B8AE;">The page loaded, but neither fabric nor weight was in it.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">3 TRIES · LAST SEP 15 22:40</span></div>
+                <div style="grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #3A3A42; color: #F4F3EF; padding: 9px 14px; border-radius: 100px; cursor: pointer;" style-hover="border-color: #F5FF3D;">RE-FETCH PAGE</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #3A3A42; color: #F4F3EF; padding: 9px 14px; border-radius: 100px; cursor: pointer;" style-hover="border-color: #F5FF3D;">RE-RUN EXTRACTION</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #8B8B93; padding: 9px 6px; cursor: pointer;" style-hover="color: #F4F3EF;">DROP</span></div>
+              </div>
+            
+              <div data-part="job-row" style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 24px; align-items: start; padding: 18px 0; border-top: 1px solid #24242B;">
+                <div style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em;"><span style="color: #F5FF3D;">CONDITIONS</span><span style="color: #8B8B93;">2D AGO</span></div>
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0;"><span style="font-size: 15px; font-weight: 600; line-height: 1.35;">Fetch weather for @sam's run, Sep 14 · 6:10 AM</span><span style="font-size: 14px; line-height: 1.45; color: #B9B8AE;">No weather station within 25 km of the start.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">3 TRIES · LAST SEP 14 09:02</span></div>
+                <div style="grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; border: 1px solid #3A3A42; color: #F4F3EF; padding: 9px 14px; border-radius: 100px; cursor: pointer;" style-hover="border-color: #F5FF3D;">RETRY</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #8B8B93; padding: 9px 6px; cursor: pointer;" style-hover="color: #F4F3EF;">DROP</span></div>
+              </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+        <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">THE RETRY FITS THE JOB</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Enrichment has two steps, so two retries: re-fetch starts over; re-run extraction reuses the stored page and is disabled when there isn't one. Everything else gets one Retry. A retry leaves the row at once and goes back to the queue; if it fails again it returns here with the new reason.</p></div>
+        <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WHY IN WORDS</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The reason is the last failure translated, one sentence. The raw error is one click away in the row's detail, never the headline. Drop is quiet on purpose: it removes the row and the job, nothing else.</p></div>
+        <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">ONE MORE RAIL ITEM</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">D0's rail gains <em>Gave up</em> after Duplicates, with a hi-viz count — it needs a person. At zero the item stays and the count goes. Today's three numbers stay three; the digest adds one line only when the count is above zero.</p></div>
       </div>
     </div>
 

@@ -88,6 +88,14 @@
    * toward the ground, so it is ground-relative and the inverted block
    * redefines it. Same rule — a state, never a surface. */
   --ink-hover: #24242b;
+  /* Round 21. Hi-viz as text — on an ink surface only (NowGoRun's eyebrow
+   * sits on the ink block in both themes, so one value serves both).
+   * 17.6:1 there; 1.1:1 on paper, where it is `--ink` instead. */
+  --hiviz-text: #f5ff3d;
+  /* Round 21. The matched panel's wash: teal mixed into the ground at 14%,
+   * precomputed — "flat hex, never opacity". Ground-relative, so the
+   * inverted block redefines it. Text on it stays ink or --dialed-text. */
+  --dialed-tint: #d2f0e9;
   /* Does not change with the ground. Text on it is always ink. */
   --failure: var(--hi-viz);
   /* The ink those two rows mean, as a role rather than as prose.
@@ -173,4 +181,5 @@
   --cold-text: var(--course-pink);
   /* One step toward an ink ground is lighter, not darker. */
   --ink-hover: #deddd6;
+  --dialed-tint: #0a2524;
 }

@@ -122,7 +122,7 @@ export function EntryDetail({
         <Link
           to="/feed/verdict/$entryId"
           params={{ entryId }}
-          className="target flex items-center justify-between rounded-card border border-dialed-text bg-teal/10 px-4 py-3 text-body font-semibold text-ink no-underline"
+          className="target flex items-center justify-between rounded-card border border-teal bg-dialed-tint px-4 py-3 text-body font-semibold text-ink no-underline"
         >
           You didn&rsquo;t log a verdict for this run. Add one?
         </Link>

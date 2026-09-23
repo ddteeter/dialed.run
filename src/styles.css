@@ -56,6 +56,8 @@
   --color-action: var(--action);
   --color-action-hover: var(--action-hover);
   --color-ink-hover: var(--ink-hover);
+  --color-hiviz-text: var(--hiviz-text);
+  --color-dialed-tint: var(--dialed-tint);
   --color-failure: var(--failure);
   --color-accent-ink: var(--accent-ink);
   /* The two palette colours T1 names in prose rather than in the table.
