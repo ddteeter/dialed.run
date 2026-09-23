@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 /**
@@ -114,9 +114,26 @@ export function FlowStep({
   step: number;
   children: ReactNode;
 }>): JSX.Element {
-  const previous = flow.lastStep;
-  const arrival: FlowArrival =
-    previous === undefined ? "entering" : directionBetween(previous, step);
+  // **Read once, when the step mounts — never again.** How a step was
+  // arrived at is a fact about the navigation that brought it here, and
+  // it used to be recomputed on every render from a record the step's own
+  // effect overwrites. So a step opened with nothing behind it — A3 from
+  // the feed, the backlog, a verdict prompt; A1 from the bar — rendered
+  // `entering` with no class, recorded itself, and on the *first
+  // re-render for any reason* read "previous 3, now 3", computed
+  // `forward`, and gained `flow-step-forward`: the whole step slid 24px
+  // sideways the moment the runner chose a verdict. Reported off the
+  // round-19 demo, where it arrived in the same instant as the fill.
+  //
+  // A lazy initial state is computed on the first render and held for the
+  // component's life. The server's render and the client's first render
+  // both see an empty record on a fresh document, so hydration agrees.
+  const [arrival] = useState<FlowArrival>(() => {
+    const previous = flow.lastStep;
+    return previous === undefined
+      ? "entering"
+      : directionBetween(previous, step);
+  });
 
   useEffect(() => {
     flow.lastStep = step;
