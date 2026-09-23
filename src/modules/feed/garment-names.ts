@@ -2,7 +2,7 @@ import { inArray } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
-import { forIds } from "../../lib/for-ids";
+import { readInChunks } from "../../lib/chunked";
 
 /**
  * Garment names by id, for the ids given.
@@ -12,7 +12,7 @@ import { forIds } from "../../lib/for-ids";
  * `garmentNameById` and `nameById`. That is the copy-then-rename `mild`
  * mode cannot see.
  *
- * `consensus.ts` reads the same table through `forIds` and is deliberately
+ * `consensus.ts` reads the same table in chunks too, and is deliberately
  * *not* folded in here: it selects `category` and `layer` and maps them
  * through `uiGroupFor`, so sharing a helper would mean one function
  * generic over its own projection, coupling "what the feed shows a person"
@@ -23,12 +23,13 @@ export async function garmentNamesByIds(
   database: DrizzleD1Database,
   itemIds: readonly string[],
 ): Promise<Map<string, string>> {
-  // fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with backlog.ts's kitsFor, but against a different table for a different key (item ids -> names, not entry ids -> item pairs); see the note above on why a shared helper is not wanted here
-  const garments = await forIds(itemIds, () =>
+  // In chunks: the backlog asks for every garment across fifty kits, which
+  // is past D1's 100-parameter cap for one statement.
+  const garments = await readInChunks(itemIds, (chunk) =>
     database
       .select({ id: wardrobeItems.id, name: wardrobeItems.name })
       .from(wardrobeItems)
-      .where(inArray(wardrobeItems.id, [...itemIds])),
+      .where(inArray(wardrobeItems.id, chunk)),
   );
   return new Map(garments.map((garment) => [garment.id, garment.name]));
 }

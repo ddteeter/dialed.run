@@ -98,6 +98,26 @@ describe("products: product create-if-missing", () => {
 });
 
 describe("products: attribute defaults", () => {
+  it("bulk defaults answer for more products than D1 binds in one statement", async () => {
+    // The closet asks for every product its garments link to, uncapped,
+    // and D1 refuses more than 100 bound parameters in one statement.
+    const client = db();
+    const ids: string[] = [];
+    for (let index = 0; index < 150; index += 1) {
+      const { product } = await resolveProduct(client, {
+        brandName: "Bulk Brand",
+        productName: `Bulk Product ${String(index)}`,
+        createdBy: newUlid(),
+      });
+      ids.push(product.id);
+    }
+
+    const defaults = await getProductAttributeDefaultsBulk(client, ids);
+
+    expect(defaults.size).toBe(ids.length);
+    expect(ids.every((id) => defaults.has(id))).toBe(true);
+  });
+
   it("returns undefined defaults for a product with no attributes set", async () => {
     const client = db();
     const userId = newUlid();

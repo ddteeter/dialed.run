@@ -20,7 +20,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
-import { chunked } from "../../lib/chunked";
+import { chunked, readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { pointSpan } from "./conditions-shape";
 import type { Conditions } from "./conditions-shape";
@@ -86,25 +86,22 @@ export async function observationsForEntries(
   database: CoreDb,
   entries: readonly { runId: string }[],
 ): Promise<Map<string, Conditions>> {
-  // Equivalent mutant: an empty `inArray` matches nothing, so the walk
-  // would answer with an empty map either way. The return saves the query.
-  // Stryker disable next-line ConditionalExpression
-  if (entries.length === 0) return new Map();
-  const rows = await database
-    .select({
-      id: runs.id,
-      lat: runs.lat,
-      lng: runs.lng,
-      startedAt: runs.startedAt,
-      durationS: runs.durationS,
-    })
-    .from(runs)
-    .where(
-      inArray(
-        runs.id,
-        entries.map((entry) => entry.runId),
-      ),
-    );
+  // In chunks: the list comes from reads of up to 200 entries, and D1
+  // refuses more than 100 bound parameters in one statement.
+  const rows = await readInChunks(
+    entries.map((entry) => entry.runId),
+    (runIds) =>
+      database
+        .select({
+          id: runs.id,
+          lat: runs.lat,
+          lng: runs.lng,
+          startedAt: runs.startedAt,
+          durationS: runs.durationS,
+        })
+        .from(runs)
+        .where(inArray(runs.id, runIds)),
+  );
   return observationsForRuns(rows);
 }
 

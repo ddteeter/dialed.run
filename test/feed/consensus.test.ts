@@ -26,6 +26,29 @@ const HOUR = 3600;
 describe("your conditions consensus (E2-lite)", () => {
   beforeEach(resetTables);
 
+  it("aggregates more entries and garments than D1 binds in one statement", async () => {
+    // D1 refuses more than 100 bound parameters in one statement. The scan
+    // reads up to 200 entries, and every garment on them is a second list:
+    // here 150 of each, so both reads cross the cap.
+    const lat = 11;
+    const lng = 11;
+    const author = await makeUser();
+    await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 6, precipMm: 0 });
+    for (let index = 0; index < 150; index += 1) {
+      const item = await makeItem({ userId: author, category: "top" });
+      const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
+      await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW - index, itemIds: [item] });
+    }
+
+    const result = await yourConditionsConsensus(
+      pointConditions({ tempC: 8, feelsLikeC: 7 }),
+      NOW,
+    );
+
+    expect(result.total).toBe(150);
+    expect(result.groups.tops).toBe(150);
+  });
+
   it("counts an entry within the 72h/±3°C/same-precip window", async () => {
     const lat = 10;
     const lng = 10;

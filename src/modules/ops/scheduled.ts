@@ -9,6 +9,7 @@ import {
   stravaRevocations,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
@@ -373,15 +374,24 @@ async function redispatchStalledEnrichments(
   // The claim (law 2), before the send: the consumer treats only `pending`
   // as work. Re-checked against the status rather than trusting the read,
   // so a row that finished in between is not un-finished.
-  await db
-    .update(products)
-    .set({ extractionStatus: "pending" })
-    .where(
-      and(
-        inArray(products.id, failedIds),
-        eq(products.extractionStatus, "failed"),
-      ),
-    );
+  //
+  // In chunks: a day's failures have no cap, and D1 refuses more than 100
+  // parameters in one statement — which would fail the whole claim, and
+  // with it the re-dispatch. Each row's claim stands alone (it re-checks
+  // its own status), so the chunks need not land together.
+  await Promise.all(
+    chunked(failedIds, IN_LIST_CHUNK).map((chunk) =>
+      db
+        .update(products)
+        .set({ extractionStatus: "pending" })
+        .where(
+          and(
+            inArray(products.id, chunk),
+            eq(products.extractionStatus, "failed"),
+          ),
+        ),
+    ),
+  );
   const stalled = [...pending, ...failedIds.map((id) => ({ id }))];
   // fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence
   await redispatchEach(anomalies, stalled, {

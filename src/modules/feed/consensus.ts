@@ -14,7 +14,7 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { forIds } from "../../lib/for-ids";
+import { readInChunks } from "../../lib/chunked";
 import { precipClassOf } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
 import { conditionsAt, observationsForEntries } from "./conditions";
@@ -149,12 +149,16 @@ async function aggregateGroups(
   database: DrizzleD1Database,
   entryIds: readonly string[],
 ): Promise<Partial<Record<UiGroup, number>>> {
-  const itemRows = await database
-    .select()
-    .from(outfitEntryItems)
-    .where(inArray(outfitEntryItems.entryId, [...entryIds]));
+  // Both reads in chunks: up to 200 entries and every garment worn on
+  // them, each past D1's 100-parameter cap for one statement.
+  const itemRows = await readInChunks(entryIds, (chunk) =>
+    database
+      .select()
+      .from(outfitEntryItems)
+      .where(inArray(outfitEntryItems.entryId, chunk)),
+  );
   const itemIds = [...new Set(itemRows.map((r) => r.itemId))];
-  const garments = await forIds(itemIds, () =>
+  const garments = await readInChunks(itemIds, (chunk) =>
     database
       .select({
         id: wardrobeItems.id,
@@ -162,7 +166,7 @@ async function aggregateGroups(
         layer: wardrobeItems.layer,
       })
       .from(wardrobeItems)
-      .where(inArray(wardrobeItems.id, itemIds)),
+      .where(inArray(wardrobeItems.id, chunk)),
   );
   const groupByItemId = new Map(
     garments.map((g) => [g.id, uiGroupFor(g.category, g.layer)]),

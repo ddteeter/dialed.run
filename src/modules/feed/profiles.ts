@@ -13,8 +13,8 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { forIds } from "../../lib/for-ids";
 import { garmentNamesByIds } from "./garment-names";
+import { readInChunks } from "../../lib/chunked";
 import { bandLabel } from "../../lib/temperature";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForEntries } from "./conditions";
@@ -71,11 +71,13 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
   );
 
   const entryIds = profileEntries.map((e) => e.id);
-  const itemRows = await forIds(entryIds, () =>
+  // In chunks: the history is up to 200 entries, past D1's 100-parameter
+  // cap for one statement.
+  const itemRows = await readInChunks(entryIds, (chunk) =>
     database
       .select({ itemId: outfitEntryItems.itemId })
       .from(outfitEntryItems)
-      .where(inArray(outfitEntryItems.entryId, entryIds)),
+      .where(inArray(outfitEntryItems.entryId, chunk)),
   );
   const wearCounts = new Map<string, number>();
   for (const row of itemRows) {

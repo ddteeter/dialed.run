@@ -28,6 +28,7 @@ import {
 import { env } from "../../env";
 import type { entryTags, itemFlagSchema } from "../../lib/contracts";
 import { ForbiddenError } from "../../lib/errors";
+import { readInChunks } from "../../lib/chunked";
 import { forIds } from "../../lib/for-ids";
 import { publicPhotoStatus } from "../safety";
 import { requireOwned, requireOwner } from "../../lib/owned";
@@ -447,20 +448,20 @@ export async function itemBandWearStat(
         targetBandFloorC
     );
   });
-  // Equivalent mutant: an empty `inArray` matches nothing, so `worn`
-  // would be 0 and `total` already is. The return saves the query.
-  // Stryker disable next-line ConditionalExpression
-  if (inBand.length === 0) return { worn: 0, total: 0 };
-  const inBandEntryIds = inBand.map((entry) => entry.id);
-  const wearingItem = await db()
-    .select({ entryId: outfitEntryItems.entryId })
-    .from(outfitEntryItems)
-    .where(
-      and(
-        eq(outfitEntryItems.itemId, itemId),
-        inArray(outfitEntryItems.entryId, inBandEntryIds),
-      ),
-    );
+  // In chunks, under D1's parameter cap: the band can hold all 200.
+  const wearingItem = await readInChunks(
+    inBand.map((entry) => entry.id),
+    (entryIds) =>
+      db()
+        .select({ entryId: outfitEntryItems.entryId })
+        .from(outfitEntryItems)
+        .where(
+          and(
+            eq(outfitEntryItems.itemId, itemId),
+            inArray(outfitEntryItems.entryId, entryIds),
+          ),
+        ),
+  );
   return { worn: wearingItem.length, total: inBand.length };
 }
 
