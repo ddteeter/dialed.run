@@ -308,13 +308,46 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     visitor use to get back in? Owner's call to send it rather than guess
     (2026-09-21). D-93.
 
+## Answered in round 19 (imported 2026-09-22)
+
+Every question from the conformance work came back answered, and the
+contracts moved with them.
+
+- **A3's chosen fill is the verdict's T2 hue** — _"cold pink, dialed teal,
+  warm quiet grey — exactly as DS2's row does; --action is never a verdict
+  fill."_ A3's board had filled its chosen cell pink to mean _selected_.
+  Built: `ui/verdictHue` is the one table A3 and DS2 both read. D-98 closed.
+- **The in-band count is a line beneath the row, never in a cell.** The
+  harness's known gap for it closed itself. The line is not built; D-97.
+- **One beat, not two** — now in `motion.js`, not only the doctrine
+  caption: _"close by TRAVEL.frame as the fill lands (one beat, not two),
+  then the row locks."_ The fill used to wait a whole `reveal` and then
+  flip. It now lands on the brackets' own duration and curve. The motion
+  test had hand-coded the old two-beat timing as an exception, so the
+  contract change was invisible to it until that exception became an
+  assertion read from the contract.
+- **`--action-hover` and `--ink-hover` joined T1.** Ported; nothing wears
+  them, because the app has no hover states at all. D-99.
+- **Regions named** on A1, A2, A3, C, D, E1, DS1 and DS2, and
+  `data-status="unbuilt"` on seven regions, which the harness now honours.
+- **Wrappers stay 390px.**
+
+**Still open from this round:** the three round-18 "drift, correct to T1"
+hexes are still on the boards (`#4A4A52` 38 uses, `#C41E6A` 7, `#009F8C`
+4), and the eighteen unlicensed colours were not ruled on. Colour coverage
+inside screen frames rose from 93% to 95.2% with the hover roles. One
+hazard worth passing back: `#DEDDD6` is `--ink-hover`'s dark value and
+also a light-board paper tint (91 uses), so a hex→role lookup reads that
+tint as a hover state. Harmless until a light board's panel is compared by
+role; then it is a false match.
+
 ## Answered in rounds 16–17 (imported 2026-09-21)
 
 ### The verdict row is one row at every width, and never in a field box
 
-Round 17, verbatim: *"the five are one row at every width — in the 390
+Round 17, verbatim: _"the five are one row at every width — in the 390
 desk panel too; never a stack, never wider than the panel. Neither the row
-nor the chips sit inside a field box."* Both halves were wrong in the
+nor the chips sit inside a field box."_ Both halves were wrong in the
 code, and one of them was hiding a defect.
 
 **The stack.** A3's five buttons were `flex flex-col` — a tall column of
@@ -323,7 +356,7 @@ screen of empty space beside it. The owner spotted it on film and read the
 ruling as covering both widths, which it does. `grid-cols-5` is now the
 layout, and the labels break inside their own cell because the row cannot.
 
-Worth recording *why* nothing caught it: the `ui` vitest project runs in
+Worth recording _why_ nothing caught it: the `ui` vitest project runs in
 happy-dom, which parses CSS and lays nothing out, so every rect is zero
 and "one row" is not a question it can answer. The class was as intended
 and the suite was green. `e2e/verdict/verdict-row.spec.ts` is the answer —
@@ -338,7 +371,7 @@ the outline from its descendants — correct when the child is the
 borderless input a `FormField` insets, wrong for buttons — so tabbing
 across the five verdicts showed one static outline around the whole box
 and no indication of which button had focus. On the single control the
-product turns on, rule 06's *"never removed"* was failing by construction
+product turns on, rule 06's _"never removed"_ was failing by construction
 rather than by an `outline-none` anyone could grep for.
 
 A3's group was the only `FormField` in the app whose child was not an

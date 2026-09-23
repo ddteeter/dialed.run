@@ -80,6 +80,14 @@
   --unread: #fff9dc;
   /* Does not change with the ground. Text on it is always ink. */
   --action: var(--course-pink);
+  /* Round 19. The hover/pressed tint of `--action`, and only of it — "a
+   * state, never a resting surface; text stays ink." Does not change with
+   * the ground, like the role it tints. */
+  --action-hover: #ff57a2;
+  /* Round 19. The hover/pressed tint of an ink-filled button: one step
+   * toward the ground, so it is ground-relative and the inverted block
+   * redefines it. Same rule — a state, never a surface. */
+  --ink-hover: #24242b;
   /* Does not change with the ground. Text on it is always ink. */
   --failure: var(--hi-viz);
   /* The ink those two rows mean, as a role rather than as prose.
@@ -163,4 +171,6 @@
   --photo: #24242b;
   --dialed-text: var(--split-teal);
   --cold-text: var(--course-pink);
+  /* One step toward an ink ground is lighter, not darker. */
+  --ink-hover: #deddd6;
 }

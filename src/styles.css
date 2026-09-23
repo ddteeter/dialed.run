@@ -54,6 +54,8 @@
   --color-cold-text: var(--cold-text);
   --color-unread: var(--unread);
   --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-ink-hover: var(--ink-hover);
   --color-failure: var(--failure);
   --color-accent-ink: var(--accent-ink);
   /* The two palette colours T1 names in prose rather than in the table.

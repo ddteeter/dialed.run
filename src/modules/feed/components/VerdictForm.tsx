@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
+import type { VerdictValue } from "../../../lib/contracts";
 import { newUlid } from "../../../lib/ids";
 import {
   isAllowedPhotoType,
@@ -21,19 +22,9 @@ import {
   Mono,
   SubmitButton,
   useFormSubmit,
+  verdictHue,
 } from "../../../ui";
 
-/**
- * The chosen verdict, and the row that is not chosen.
- *
- * `verdict-lock` is only on the chosen one, and that asymmetry is the
- * move: "brackets close onto the chosen verdict, **then** the row locks"
- * (design/motion.js). The lock is a `reveal`-long delay before the ink
- * arrives, so the receipt reads first — and putting the same delay on the
- * resting class would make *un*-choosing linger for 320ms, which is a
- * receipt for something that did not happen. Removed with the class, the
- * revert is instant.
- */
 /**
  * `justify-start`, not `justify-center`, and it is not a nicety.
  *
@@ -81,7 +72,27 @@ const VERDICT_BASE =
 const BRACKET_BASE =
   "pointer-events-none absolute inset-y-0 flex items-center";
 
-const VERDICT_CHOSEN = `verdict-lock ${VERDICT_BASE} bg-ink text-ground`;
+/**
+ * The chosen cell: its verdict's T2 hue, landing in the brackets' beat.
+ *
+ * **The hue is the verdict's, not "chosen"** (design round 19): *"the
+ * chosen cell fills with its T2 hue — cold pink, dialed teal, warm quiet
+ * grey — exactly as DS2's row does; --action is never a verdict fill."*
+ * It was `bg-ink` here and `--action` pink on the board, so A3 and the
+ * backlog that mirrors it read three different ways. `verdictHue` is the
+ * one table both surfaces read, so they cannot drift again.
+ *
+ * `border` on both states, so choosing a cell swaps the border's colour
+ * rather than adding one — no one-pixel shift on the frame the runner is
+ * watching.
+ *
+ * `verdict-lock` is only on the chosen cell: the fill lands on the same
+ * duration and curve as the brackets, one beat (round 19, `motion.js`).
+ * Removed with the class, an un-chosen cell reverts at once.
+ */
+function verdictChosen(value: VerdictValue): string {
+  return `verdict-lock ${VERDICT_BASE} border ${verdictHue(value)}`;
+}
 
 /**
  * The per-item flag as three visible choices.
@@ -474,7 +485,7 @@ export function VerdictForm({
                   // and `targets-and-focus` resolves a double-quoted
                   // constant but not a template literal — which both of
                   // these now are, since they share a base.
-                  className={`target ${isChosen ? VERDICT_CHOSEN : VERDICT_RESTING}`}
+                  className={`target ${isChosen ? verdictChosen(choice.value) : VERDICT_RESTING}`}
                 >
                   {isChosen ? (
                     <span

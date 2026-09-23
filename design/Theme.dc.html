@@ -191,6 +191,8 @@ class Component extends DCLogic {
       ['Pink, as text', '--cold-text', '#C21A6B', '#FF2D8A', 'Cold verdict as text, inline action links. Pink as a surface is #FF2D8A on both.'],
       ['Unread tint', '--unread', '#FFF9DC', '#2A2A14', 'Hi-viz at low strength behind unread rows. Hi-viz itself never dims.'],
       ['Action', '--action', '#FF2D8A', '#FF2D8A', 'Does not change. Text on it is always ink.'],
+      ['Action hover', '--action-hover', '#FF57A2', '#FF57A2', 'Round 19. Hover/pressed tint of --action only. A state, never a resting surface; text stays ink.'],
+      ['Ink hover', '--ink-hover', '#24242B', '#DEDDD6', 'Round 19. Hover/pressed tint of an ink-filled button. One step toward ground on each theme. Same rule: a state, never a surface.'],
       ['Failure band', '--failure', '#F5FF3D', '#F5FF3D', 'Does not change. Text on it is always ink.']
     ].map(([role, token, light, dark, note]) => ({ role, token, light, dark, note }));
     return { pairs };

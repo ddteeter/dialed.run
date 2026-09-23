@@ -72,17 +72,17 @@
           <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E1 · FOLLOWING</span>
           <div style="background: #0B0B0E; color: #F4F3EF; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
             <div data-part="status-bar" style="background: #F4F3EF; color: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>7:14</span><span>▮▮▮ 76%</span></div>
-            <div style="background: #F4F3EF; color: #0B0B0E; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div data-part="header" style="background: #F4F3EF; color: #0B0B0E; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
             </div>
-            <div style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+            <div data-part="feed-tabs" style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
               <span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 8px;">Following</span>
               <span style="color: #7A7A70; padding-bottom: 8px;">Your conditions</span>
             </div>
 
-            <div style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
-              <div style="border-bottom: 1px solid #2A2A31; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <div data-part="feed" style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
+              <div data-part="post" style="border-bottom: 1px solid #2A2A31; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <div style="width: 36px; height: 36px; border-radius: 100px; background: #FF2D8A; color: #0B0B0E;"></div>
                   <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">dana_k</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8B8B93;">2H AGO · 6:04 AM</span></div>
@@ -98,7 +98,7 @@
                 <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #B9B8AE;"><span style="color: #FF2D8A; font-weight: 600;">♥ 24 USEFUL</span></div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div data-part="post" style="display: flex; flex-direction: column; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <div style="width: 36px; height: 36px; border-radius: 100px; background: #00E0C6; color: #0B0B0E;"></div>
                   <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">mark_t</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8B8B93;">YESTERDAY · 5:40 PM</span></div>
@@ -120,15 +120,15 @@
           <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">A "too warm" post with no photo is still a useful post. Text-only entries keep the logging bar low and the feed honest.</p>
         </div>
 
-        <div data-screen-label="E2 Feed your conditions" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+        <div data-screen-label="E2 Feed your conditions" data-status="unbuilt" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
           <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">E2 · YOUR CONDITIONS · POST-MVP TARGET</span>
           <div style="background: #0B0B0E; color: #F4F3EF; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
             <div data-part="status-bar" style="background: #F4F3EF; color: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>7:15</span><span>▮▮▮ 76%</span></div>
-            <div style="background: #F4F3EF; color: #0B0B0E; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div data-part="header" style="background: #F4F3EF; color: #0B0B0E; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
             </div>
-            <div style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+            <div data-part="feed-tabs" style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
               <span style="color: #7A7A70; padding-bottom: 8px;">Following</span>
               <span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span>
             </div>
@@ -195,7 +195,7 @@
               <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #7A7A70;">.run</span><span style="color: #FF2D8A;">]</span></span>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
             </div>
-            <div style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+            <div data-part="feed-tabs" style="background: #F4F3EF; color: #0B0B0E; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
               <span style="color: #7A7A70; padding-bottom: 8px;">Following</span>
               <span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span>
             </div>
@@ -350,7 +350,7 @@
               <span style="font-size: 15px; font-weight: 700;">Couldn't read that page.</span>
               <p style="margin: 0; font-size: 14px; line-height: 1.5;">Type the brand and model instead — it's two fields and it works just as well.</p>
               <div style="display: flex; gap: 8px;">
-                <button style="flex: 1; background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 100px; padding: 12px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #24242B;">Enter by hand</button>
+                <button style="flex: 1; background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 100px; padding: 12px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #DEDDD6;">Enter by hand</button>
                 <button style="background: transparent; color: #F4F3EF; border: 1px solid #F4F3EF; border-radius: 100px; padding: 12px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">Retry</button>
               </div>
             </div>
@@ -548,7 +548,7 @@
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">No weather saved</span>
               <p style="margin: 0; font-size: 14px; line-height: 1.5;">We have no record for that hour. Set the conditions yourself and the run still counts.</p>
               <div style="display: flex; gap: 8px;">
-                <button style="background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 8px; padding: 11px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #24242B;">Set conditions</button>
+                <button style="background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 8px; padding: 11px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #DEDDD6;">Set conditions</button>
                 <button style="background: transparent; color: #F4F3EF; border: 1px solid #F4F3EF; border-radius: 8px; padding: 11px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">Try again</button>
               </div>
             </div>
@@ -833,7 +833,7 @@
                 <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #FF2D8A; flex: 0 0 auto;">STOPS</span><span>New runs arriving on their own — log by hand instead</span></div>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button style="background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 8px; padding: 12px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #24242B;">Disconnect</button>
+                <button style="background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 8px; padding: 12px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #DEDDD6;">Disconnect</button>
                 <button style="background: transparent; color: #F4F3EF; border: 1px solid #F4F3EF; border-radius: 8px; padding: 12px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">Keep it</button>
               </div>
             </div>
@@ -1310,7 +1310,7 @@
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">514 of 500 miles</span>
               <p style="margin: 0; font-size: 14px; line-height: 1.5;">The Pegasus 40 passed the limit you set. Retire it, raise the limit, or leave it — we won't ask again for 50 miles.</p>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button style="background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 8px; padding: 11px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #24242B;">Retire</button>
+                <button style="background: #F4F3EF; color: #0B0B0E; border: 0; border-radius: 8px; padding: 11px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="background: #DEDDD6;">Retire</button>
                 <button style="background: transparent; color: #F4F3EF; border: 1px solid #F4F3EF; border-radius: 8px; padding: 11px 15px; font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">Raise the limit</button>
               </div>
             </div>
@@ -2270,11 +2270,11 @@
               <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Exact shade</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">NAVY · OPTIONAL</span></div>
               <div style="display: flex; gap: 10px; align-items: stretch;">
                 <div style="flex: 0 0 120px; height: 120px; border-radius: 12px; position: relative; overflow: hidden; background-color: #24242B; background-image: repeating-linear-gradient(135deg, #2A2A31 0 7px, #24242B 7px 14px);">
-                  <div style="position: absolute; left: 62px; top: 48px; width: 26px; height: 26px; border-radius: 100px; border: 2px solid #F4F3EF; background: #1F2A44; box-shadow: 0 0 0 2px #0B0B0E;"></div>
+                  <div data-content="" style="position: absolute; left: 62px; top: 48px; width: 26px; height: 26px; border-radius: 100px; border: 2px solid #F4F3EF; background: #1F2A44; box-shadow: 0 0 0 2px #0B0B0E;"></div>
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">HEX</span>
-                  <div style="border: 2px solid #F4F3EF; border-radius: 9px; padding: 10px 12px; background: #16161B; display: flex; align-items: center; gap: 10px;"><span style="width: 18px; height: 18px; background: #1F2A44; flex: 0 0 auto;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: 0.04em;">#1F2A44</span></div>
+                  <div style="border: 2px solid #F4F3EF; border-radius: 9px; padding: 10px 12px; background: #16161B; display: flex; align-items: center; gap: 10px;"><span data-content="" style="width: 18px; height: 18px; background: #1F2A44; flex: 0 0 auto;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: 0.04em;">#1F2A44</span></div>
                   <span style="font-size: 12px; line-height: 1.4; color: #8B8B93;">Tap the photo to sample, or type it.</span>
                 </div>
               </div>

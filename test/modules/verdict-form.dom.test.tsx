@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
 import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
+import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 
@@ -302,14 +303,41 @@ describe("VerdictForm: the scale", () => {
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
 
+    // Teal, because the chosen cell wears its verdict's hue (round 19).
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
-      "bg-ink",
+      "bg-teal",
     );
     expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
-      "bg-ink",
+      "bg-action",
     );
     expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
   });
+
+  it.each(verdictScale)(
+    "fills a chosen $label with its T2 hue — the same classes DS2 reads",
+    async ({ label, value }) => {
+      // **The mirror, asserted.** Round 19: *"the chosen cell fills with
+      // its T2 hue — cold pink, dialed teal, warm quiet grey — exactly as
+      // DS2's row does; --action is never a verdict fill."* A3 filled
+      // `bg-ink` whatever the verdict, its board drew `--action` pink
+      // whatever the verdict, and the backlog filled by hue — three
+      // answers on two surfaces that were ruled to read the same.
+      //
+      // `verdictHue` is the one table both surfaces read, so asserting A3
+      // carries exactly its output is asserting the mirror holds.
+      const user = userEvent.setup();
+      await renderWithRouter(form());
+
+      await user.click(screen.getByRole("button", { name: label }));
+
+      const chosen = screen.getByRole("button", { name: label });
+      expect(chosen).toHaveClass(...verdictHue(value).split(" "));
+      expect(chosen).not.toHaveClass("bg-ink");
+      // A border on the chosen cell too, so choosing swaps a colour
+      // rather than adding a pixel.
+      expect(chosen).toHaveClass("border");
+    },
+  );
 
   it("leaves the unchosen ones outlined", async () => {
     const user = userEvent.setup();
@@ -394,7 +422,7 @@ describe("VerdictForm: the scale", () => {
     await renderWithRouter(form({ entry: { verdict: 0 } }));
 
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
-      "bg-ink",
+      "bg-teal",
     );
     expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
   });
