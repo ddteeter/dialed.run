@@ -3,14 +3,14 @@ import type { ChangeEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
-import type { VerdictValue } from "../../../lib/contracts";
+import type { Units, VerdictValue } from "../../../lib/contracts";
+import { bandLabel } from "../../../lib/temperature";
 import { newUlid } from "../../../lib/ids";
 import {
   isAllowedPhotoType,
   maxPhotosPerEntry,
 } from "../../../lib/photo-constraints";
 import {
-  Bracketed,
   ChoiceList,
   FlowStep,
   FormErrorSummary,
@@ -113,6 +113,8 @@ const ITEM_FLAG_LABELS: Readonly<Record<(typeof ITEM_FLAG_OPTIONS)[number], stri
 
 const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
 import { submitVerdictInput } from "../inputs";
+import { BandHistory } from "./BandHistory";
+import { NotedReceipt } from "./NotedReceipt";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
 
@@ -179,9 +181,22 @@ export function VerdictForm({
   uploadPhoto,
   renderPhotoStep,
   itemBandWearStat,
+  units,
+  bandCounts,
 }: Readonly<{
   entry: Entry;
   bandFloor: number | undefined;
+  /**
+   * The runner's own units, for the band in the history line and in
+   * Noted's sentence ("…8 of 9 in 38–46°").
+   */
+  units: Units;
+  /**
+   * This runner's verdicts in the run's band, keyed by verdict (D-97) —
+   * what `verdictBandCounts` answers. Absent when the run has no
+   * conditions, and therefore no band.
+   */
+  bandCounts: Readonly<Record<number, number>> | undefined;
   submitVerdict: (input: { data: Record<string, unknown> }) => Promise<unknown>;
   uploadPhoto: (input: { data: FormData }) => Promise<{ key: string }>;
   /**
@@ -375,7 +390,7 @@ export function VerdictForm({
           data: { itemId: firstItem.itemId, bandFloorC: bandFloor },
         });
         setNoted(
-          `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)}`,
+          `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(bandFloor, units.temp)}.`,
         );
         return;
       }
@@ -401,23 +416,9 @@ export function VerdictForm({
     };
   }
 
-  if (noted !== undefined) {
-    return (
-      <div className="mx-auto flex w-full max-w-panel flex-col items-center gap-4 px-5 pt-16 text-center">
-        <Bracketed className="text-dialed-text">Noted</Bracketed>
-        <p>{noted}</p>
-        <button
-          type="button"
-          onClick={() => {
-            void navigate({ to: "/feed/entry/$entryId", params: { entryId } });
-          }}
-          className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
-        >
-          Done
-        </button>
-      </div>
-    );
-  }
+  // After Log it the form becomes its own receipt (design round 20): the
+  // answer stays on screen, read-only, and Noted takes the submit's place.
+  const isLocked = noted !== undefined;
 
   return (
     <FlowStep step={LOG_FLOW.verdict}>
@@ -484,8 +485,11 @@ export function VerdictForm({
                   // control does today and announces the state; the
                   // radiogroup is D-84.
                   aria-pressed={isChosen}
+                  // Read-only once logged, and still focusable: rule 07
+                  // bans `disabled`, and a receipt is for reading.
+                  aria-disabled={isLocked || undefined}
                   onClick={() => {
-                    setVerdict(choice.value);
+                    if (!isLocked) setVerdict(choice.value);
                   }}
                   // `target` at the site rather than inside
                   // `VERDICT_BASE`: the 44px hit area is this button's,
@@ -517,6 +521,10 @@ export function VerdictForm({
           </div>
         </FieldGroup>
 
+        {bandCounts === undefined || bandFloor === undefined ? undefined : (
+          <BandHistory counts={bandCounts} bandFloor={bandFloor} units={units} />
+        )}
+
         {entry.items.length > 0 ? (
           // **Chips, never a `<select>`** (design round 16). A dropdown
           // beside the kit reads as the verdict control — which is exactly
@@ -543,6 +551,7 @@ export function VerdictForm({
                 optionLabels={ITEM_FLAG_LABELS}
                 value={flagFor(item.itemId)}
                 field={form.field}
+                readOnly={isLocked}
                 onChange={(next) => {
                   setFlags((prev) => ({ ...prev, [item.itemId]: next }));
                 }}
@@ -619,8 +628,10 @@ export function VerdictForm({
               <button
                 key={tag}
                 type="button"
+                aria-pressed={tags.has(tag)}
+                aria-disabled={isLocked || undefined}
                 onClick={() => {
-                  setTags((prev) => toggledIn(prev, tag));
+                  if (!isLocked) setTags((prev) => toggledIn(prev, tag));
                 }}
                 className={
                   tags.has(tag)
@@ -634,39 +645,45 @@ export function VerdictForm({
           </div>
         </div>
 
-        {/* A3's share-toggle as round 19 draws it: "Share to feed", with
-            what sharing means on the line beneath. The line is outside the
-            label and linked with `aria-describedby`, so the checkbox's
-            accessible name stays the three words and the sentence is read
-            as its description. It was "Share this — the verdict label
-            shows on the post", one line inside the label. */}
-        <div className="flex flex-col gap-1">
-          <label className="target flex items-center gap-2 text-body">
-            <input
-              type="checkbox"
-              checked={isPublic}
-              aria-describedby={SHARE_HINT_ID}
-              onChange={(event) => {
-                setIsPublic(event.target.checked);
-              }}
-            />
-            Share to feed
-          </label>
-          <span id={SHARE_HINT_ID} className="text-small text-muted">
-            Shared runs show your kit, conditions, and your verdict.
-          </span>
-        </div>
+        {isLocked ? (
+          <NotedReceipt sentence={noted} />
+        ) : (
+          <>
+          {/* A3's share-toggle as round 19 draws it: "Share to feed", with
+              what sharing means on the line beneath. The line is outside the
+              label and linked with `aria-describedby`, so the checkbox's
+              accessible name stays the three words and the sentence is read
+              as its description. It was "Share this — the verdict label
+              shows on the post", one line inside the label. */}
+          <div className="flex flex-col gap-1">
+            <label className="target flex items-center gap-2 text-body">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                aria-describedby={SHARE_HINT_ID}
+                onChange={(event) => {
+                  setIsPublic(event.target.checked);
+                }}
+              />
+              Share to feed
+            </label>
+            <span id={SHARE_HINT_ID} className="text-small text-muted">
+              Shared runs show your kit, conditions, and your verdict.
+            </span>
+          </div>
 
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <SubmitButton
-          label="Log it"
-          pendingLabel="Logging"
-          pending={form.pending}
-        />
+          <FormFailureBand
+            failure={form.failure}
+            onRetry={form.retry}
+            retryRef={form.retryRef}
+          />
+          <SubmitButton
+            label="Log it"
+            pendingLabel="Logging"
+            pending={form.pending}
+          />
+          </>
+        )}
       </form>
     </FlowStep>
   );
