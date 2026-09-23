@@ -162,6 +162,11 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await scene(page, "A3 · five points, coldest to warmest, one scale");
   await page.getByRole("button", { name: "A bit cold" }).click();
 
+  // D-97: beneath the row, this runner's own history in the run's band —
+  // loaded by the route all along, and until round 20 never shown.
+  await scene(page, "Beneath the row: your history in this band");
+  await expect(page.getByText(/^Five states\./)).toBeVisible();
+
   // Per-item signal is a flag, never a second verdict (CLAUDE.md) — and
   // since design round 16 it is chips, never a `<select>`. A dropdown
   // beside the kit read as the verdict control, which is exactly what it
@@ -200,6 +205,14 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await expect(page.getByText(/Houdini Jacket is now \d+ of \d+/)).toBeVisible({
     timeout: 15_000,
   });
+  // Round 20: Noted is a receipt in the submit's place. Share and Log it
+  // give way to it, and the answer stays on screen, read-only, so the
+  // receipt is read against it.
+  await scene(page, "Noted takes the submit's place — the answer stays");
+  await expect(page.getByRole("button", { name: "Log it" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "A bit cold" }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   // And the verdict is on the entry.
   await scene(page, "And the verdict is on the entry");
