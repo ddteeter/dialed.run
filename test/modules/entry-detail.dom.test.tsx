@@ -215,7 +215,9 @@ describe("EntryDetail: the optional blocks", () => {
     const { container } = await renderWithRouter(detail());
 
     expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(screen.queryByRole("heading", { name: "Kit" })).toBeNull();
+    // A pattern, not the exact heading: an exact name would stop matching
+    // anything the moment the count changed, and pass here for that reason.
+    expect(screen.queryByRole("heading", { name: /^The kit/ })).toBeNull();
     expect(container.querySelectorAll("ul")).toHaveLength(0);
     // One paragraph — the author line. No caption, no tag row.
     expect(container.querySelectorAll("p")).toHaveLength(1);
@@ -250,6 +252,30 @@ describe("EntryDetail: the optional blocks", () => {
     expect(screen.getByText("Perfect morning")).toBeVisible();
   });
 
+  it("counts one piece as a piece", async () => {
+    // "1 pieces" is the slip a count invites; the board only ever draws
+    // three, so nothing there shows the singular.
+    await renderWithRouter(
+      detail({
+        items: [
+          {
+            itemId: "01A",
+            name: "Houdini",
+            brand: "Patagonia",
+            category: "top",
+            layer: undefined,
+            flag: undefined,
+            note: undefined,
+          },
+        ],
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "The kit · 1 piece" }),
+    ).toBeVisible();
+  });
+
   it("lists the kit, with the brand where there is one", async () => {
     await renderWithRouter(
       detail({
@@ -276,7 +302,10 @@ describe("EntryDetail: the optional blocks", () => {
       }),
     );
 
-    expect(screen.getByRole("heading", { name: "Kit" })).toBeVisible();
+    // Board D heads the list "The kit · 3 pieces" (round 19); it was "Kit".
+    expect(
+      screen.getByRole("heading", { name: "The kit · 2 pieces" }),
+    ).toBeVisible();
     expect(screen.getByText("Patagonia Houdini")).toBeVisible();
     // No stray leading space where a brand would have gone.
     expect(screen.getByText("Long sleeve top")).toBeVisible();

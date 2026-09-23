@@ -24,6 +24,15 @@ type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
  * eight decisions, and until this moved out of the route none of them
  * could be reached by a test.
  */
+/**
+ * "The kit · 3 pieces", as board D heads the list (round 19). It was
+ * "Kit", with no count. One piece is "piece": the board only ever draws
+ * three, and "1 pieces" is the kind of slip a count invites.
+ */
+function kitTitle(count: number): string {
+  return `The kit · ${String(count)} ${count === 1 ? "piece" : "pieces"}`;
+}
+
 export function EntryDetail({
   entry,
   shouldPromptVerdict,
@@ -168,7 +177,7 @@ export function EntryDetail({
         <p className="m-0 text-body">{entry.caption}</p>
       )}
 
-      <ListSection title="Kit" items={entry.items}>
+      <ListSection title={kitTitle(entry.items.length)} items={entry.items}>
         {(item) => (
           <li
             key={item.itemId}

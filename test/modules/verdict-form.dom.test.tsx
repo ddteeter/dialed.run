@@ -225,7 +225,7 @@ describe("VerdictForm: the scale", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     expect(
       await screen.findByRole("button", { name: /Did it work/ }),
@@ -250,7 +250,7 @@ describe("VerdictForm: the scale", () => {
     const submitVerdict = vi.fn(() => Promise.resolve(undefined));
     await renderWithRouter(form({ submitVerdict }));
 
-    const save = screen.getByRole("button", { name: "Save verdict" });
+    const save = screen.getByRole("button", { name: "Log it" });
     expect(save).toBeEnabled();
 
     await user.click(save);
@@ -310,7 +310,7 @@ describe("VerdictForm: the scale", () => {
     expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
       "bg-action",
     );
-    expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Log it" })).toBeEnabled();
   });
 
   it.each(verdictScale)(
@@ -424,7 +424,7 @@ describe("VerdictForm: the scale", () => {
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
       "bg-teal",
     );
-    expect(screen.getByRole("button", { name: "Save verdict" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Log it" })).toBeEnabled();
   });
 
   it("sends the number, not the label", async () => {
@@ -435,7 +435,7 @@ describe("VerdictForm: the scale", () => {
     await renderWithRouter(form({ submitVerdict }));
 
     await user.click(screen.getByRole("button", { name: "Way warm" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -550,7 +550,7 @@ describe("VerdictForm: per-item flags", () => {
 
     // "Anything specific?" is the board's question for this block.
     expect(
-      screen.getByRole("heading", { name: "Anything specific?" }),
+      screen.getByRole("heading", { name: "Anything specific? · optional" }),
     ).toBeVisible();
     const groups = flagGroups();
     expect(groups).toHaveLength(2);
@@ -576,7 +576,7 @@ describe("VerdictForm: per-item flags", () => {
     await renderWithRouter(form({ entry: { items: [] } }));
 
     expect(
-      screen.queryByRole("heading", { name: "Anything specific?" }),
+      screen.queryByRole("heading", { name: "Anything specific? · optional" }),
     ).toBeNull();
     // `flagGroups()`, not every group on the screen: the verdict row is
     // itself a fieldset now, and it is there whether or not the kit has
@@ -672,7 +672,7 @@ describe("VerdictForm: per-item flags", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -736,7 +736,7 @@ describe("VerdictForm: per-item flags", () => {
     await user.click(
       within(flagGroup(0)).getByRole("radio", { name: "Too much" }),
     );
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -766,7 +766,7 @@ describe("VerdictForm: per-item flags", () => {
     const group = flagGroup(0);
     await user.click(within(group).getByRole("radio", { name: "Too much" }));
     await user.click(within(group).getByRole("radio", { name: "Fine" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -813,7 +813,7 @@ describe("VerdictForm: tags and sharing", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
@@ -834,13 +834,27 @@ describe("VerdictForm: tags and sharing", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
     expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
       tags: ["chafed"],
     });
+  });
+
+  it("names the toggle in three words and says what sharing means beneath", async () => {
+    // A3's share-toggle as round 19 draws it. The sentence is the
+    // checkbox's *description*, not part of its name, so a reader hears
+    // "Share to feed, checkbox, checked" and then what that means — rather
+    // than one long label, which is what "Share this — the verdict label
+    // shows on the post" was.
+    await renderWithRouter(form());
+
+    const share = screen.getByRole("checkbox", { name: "Share to feed" });
+    expect(share).toHaveAccessibleDescription(
+      "Shared runs show your kit, conditions, and your verdict.",
+    );
   });
 
   it("is shared by default, and can be made private", async () => {
@@ -850,12 +864,12 @@ describe("VerdictForm: tags and sharing", () => {
       (input: { data: Record<string, unknown> }) => Promise<unknown>
     >(() => Promise.resolve());
     await renderWithRouter(form({ submitVerdict }));
-    const share = screen.getByLabelText(/Share this/);
+    const share = screen.getByLabelText("Share to feed");
     expect(share).toBeChecked();
 
     await user.click(share);
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -867,7 +881,7 @@ describe("VerdictForm: tags and sharing", () => {
 
   it("starts private when the entry already is", async () => {
     await renderWithRouter(form({ entry: { isPublic: false } }));
-    expect(screen.getByLabelText(/Share this/)).not.toBeChecked();
+    expect(screen.getByLabelText("Share to feed")).not.toBeChecked();
   });
 });
 
@@ -1126,7 +1140,7 @@ describe("VerdictForm: what happens after saving", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     expect(await screen.findByText("Houdini is now 3 of 5")).toBeVisible();
     expect(screen.getByText("[Noted]")).toBeVisible();
@@ -1148,7 +1162,7 @@ describe("VerdictForm: what happens after saving", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(
@@ -1163,7 +1177,7 @@ describe("VerdictForm: what happens after saving", () => {
     const { router } = await renderWithRouter(form({ bandFloor: 5 }));
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(
@@ -1182,7 +1196,7 @@ describe("VerdictForm: what happens after saving", () => {
       }),
     );
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
     await screen.findByText("Houdini is now 3 of 5");
 
     await user.click(screen.getByRole("button", { name: "Done" }));
@@ -1203,7 +1217,7 @@ describe("VerdictForm: what happens after saving", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     // The band the contract defines, with the classifier's own sentence —
     // not a pink line of the form's own wording. Pink is action, never
@@ -1212,7 +1226,7 @@ describe("VerdictForm: what happens after saving", () => {
       await screen.findByText("Our end failed. Nothing changed."),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Save verdict" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Log it" })).toBeVisible();
   });
 
   it("clears the last failure on the next attempt", async () => {
@@ -1225,12 +1239,12 @@ describe("VerdictForm: what happens after saving", () => {
     await renderWithRouter(form({ submitVerdict }));
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
     expect(
       await screen.findByText("Our end failed. Nothing changed."),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(screen.queryByText("Our end failed. Nothing changed.")).toBeNull();
@@ -1326,7 +1340,7 @@ describe("VerdictForm: the details that go missing silently", () => {
     };
     document.addEventListener("submit", watch);
     try {
-      await user.click(screen.getByRole("button", { name: "Save verdict" }));
+      await user.click(screen.getByRole("button", { name: "Log it" }));
     } finally {
       document.removeEventListener("submit", watch);
     }
@@ -1355,7 +1369,7 @@ describe("VerdictForm: the details that go missing silently", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
-    await user.click(screen.getByRole("button", { name: "Save verdict" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Verdict saved.");

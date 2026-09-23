@@ -107,7 +107,7 @@ test("log a run by hand -> manual-temp fallback -> shows in runs list", async ({
   await page.setViewportSize(DESK);
 
   await scene(page, "Weather is never typed — manual is the fallback");
-  await page.getByRole("link", { name: "enter it manually" }).click();
+  await page.getByRole("link", { name: "Enter the run by hand" }).click();
   await hydrated(page);
 
   await scene(page, "Log a run: what, when, how long, how far");

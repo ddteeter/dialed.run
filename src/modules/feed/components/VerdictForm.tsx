@@ -122,6 +122,13 @@ type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 Field name -> human label, for the summary rows the contract requires once
 two or more fields fail at once.
 */
+/**
+ * The id tying the share toggle to the sentence beneath it. One verdict
+ * form per page, so a constant is enough and `useId` would be a hook for
+ * nothing.
+ */
+const SHARE_HINT_ID = "verdict-share-hint";
+
 const LABELS = {
   // "Did it work?", not "How it felt": design's A3 board carries this
   // wording and DS2's backlog header already shipped it in round 16, so
@@ -524,7 +531,7 @@ export function VerdictForm({
           // reader entering the group hears which piece it is about.
           <div className="flex flex-col gap-4">
             <h2>
-              <Mono step="xs">Anything specific?</Mono>
+              <Mono step="xs">Anything specific? · optional</Mono>
             </h2>
             {entry.items.map((item) => (
               <ChoiceList
@@ -627,16 +634,28 @@ export function VerdictForm({
           </div>
         </div>
 
-        <label className="target flex items-center gap-2 text-body">
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(event) => {
-              setIsPublic(event.target.checked);
-            }}
-          />
-          Share this — the verdict label shows on the post
-        </label>
+        {/* A3's share-toggle as round 19 draws it: "Share to feed", with
+            what sharing means on the line beneath. The line is outside the
+            label and linked with `aria-describedby`, so the checkbox's
+            accessible name stays the three words and the sentence is read
+            as its description. It was "Share this — the verdict label
+            shows on the post", one line inside the label. */}
+        <div className="flex flex-col gap-1">
+          <label className="target flex items-center gap-2 text-body">
+            <input
+              type="checkbox"
+              checked={isPublic}
+              aria-describedby={SHARE_HINT_ID}
+              onChange={(event) => {
+                setIsPublic(event.target.checked);
+              }}
+            />
+            Share to feed
+          </label>
+          <span id={SHARE_HINT_ID} className="text-small text-muted">
+            Shared runs show your kit, conditions, and your verdict.
+          </span>
+        </div>
 
         <FormFailureBand
           failure={form.failure}
@@ -644,8 +663,8 @@ export function VerdictForm({
           retryRef={form.retryRef}
         />
         <SubmitButton
-          label="Save verdict"
-          pendingLabel="Saving"
+          label="Log it"
+          pendingLabel="Logging"
           pending={form.pending}
         />
       </form>
