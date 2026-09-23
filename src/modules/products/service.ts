@@ -11,6 +11,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { brands, products } from "../../db/schema-core";
 import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
+import { readInChunks } from "../../lib/chunked";
 import { firstRowWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
@@ -396,28 +397,29 @@ function parseParts(raw: string | null): readonly FabricPart[] {
 
 /**
  * Batch variant for closet list/detail reads, which need defaults for many
- * linked products in one round trip rather than one query per item.
+ * linked products in one query per chunk of ids rather than one per item.
  */
 export async function getProductAttributeDefaultsBulk(
   db: Db,
   productIds: string[],
 ): Promise<Map<string, ProductAttributeDefaults>> {
   const map = new Map<string, ProductAttributeDefaults>();
-  // Equivalent mutant: an empty `inArray` matches nothing, so the map is
-  // empty either way. The return saves the query.
-  // Stryker disable next-line ConditionalExpression,EqualityOperator
-  if (productIds.length === 0) return map;
-  const rows = await db
-    .select({
-      id: products.id,
-      weight: products.weight,
-      fabric: products.fabric,
-      windResistant: products.windResistant,
-      waterResistant: products.waterResistant,
-      categoryHint: products.categoryHint,
-    })
-    .from(products)
-    .where(inArray(products.id, productIds));
+  // In chunks: the closet asks for every product its garments link to,
+  // with no cap, and D1 refuses more than 100 parameters in one statement.
+  // No ids is no chunks, so no query either.
+  const rows = await readInChunks(productIds, (chunk) =>
+    db
+      .select({
+        id: products.id,
+        weight: products.weight,
+        fabric: products.fabric,
+        windResistant: products.windResistant,
+        waterResistant: products.waterResistant,
+        categoryHint: products.categoryHint,
+      })
+      .from(products)
+      .where(inArray(products.id, chunk)),
+  );
   for (const row of rows) {
     map.set(row.id, {
       weight: row.weight,

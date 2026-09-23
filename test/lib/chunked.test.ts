@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { chunked } from "../../src/lib/chunked";
+import { chunked, IN_LIST_CHUNK, readInChunks } from "../../src/lib/chunked";
 
 describe("chunked", () => {
   it("splits into runs of the given size, in order", () => {
@@ -28,5 +28,31 @@ describe("chunked", () => {
 
   it("gives one chunk when the list is shorter than the size", () => {
     expect(chunked([1], 20)).toStrictEqual([[1]]);
+  });
+});
+
+describe("readInChunks", () => {
+  it("never hands a read more ids than D1 can bind, and keeps them all", async () => {
+    // D1 refuses a statement with more than 100 bound parameters.
+    expect(IN_LIST_CHUNK).toBeLessThan(100);
+    const ids = Array.from({ length: 2 * IN_LIST_CHUNK + 1 }, (_, index) => index);
+    const read = vi.fn((chunk: number[]) => Promise.resolve(chunk.map((id) => id * 10)));
+
+    const rows = await readInChunks(ids, read);
+
+    expect(read.mock.calls.map(([chunk]) => chunk.length)).toStrictEqual([
+      IN_LIST_CHUNK,
+      IN_LIST_CHUNK,
+      1,
+    ]);
+    // Every row, in chunk order.
+    expect(rows).toStrictEqual(ids.map((id) => id * 10));
+  });
+
+  it("reads nothing for no ids", async () => {
+    const read = vi.fn(() => Promise.resolve(["row"]));
+
+    expect(await readInChunks([], read)).toStrictEqual([]);
+    expect(read).not.toHaveBeenCalled();
   });
 });

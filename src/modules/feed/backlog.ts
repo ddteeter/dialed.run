@@ -152,7 +152,6 @@ async function kitsFor(
   entryIds: readonly string[],
 ): Promise<Map<string, Kit>> {
   const database = drizzle(env.DIALED_CORE);
-  // fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with garmentNamesByIds, but against a different table for a different key (entry ids -> item pairs, not item ids -> names); a shared helper would need to be generic over its own projection, which garment-names.ts's own header already argues against for the similar case of consensus.ts
   const rows = await forIds(entryIds, () =>
     database
       .select({

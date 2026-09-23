@@ -161,6 +161,25 @@ describe("ownProfile: coverage bands", () => {
 });
 
 describe("ownProfile: most worn", () => {
+  it("counts wear across a history longer than D1 binds in one statement", async () => {
+    // D1 refuses more than 100 bound parameters in one statement, and the
+    // history is up to 200 entries: read as one list, a runner with more
+    // than a hundred runs had no profile at all.
+    const userId = await makeUser();
+    const shell = await makeItem({ userId, name: "Shell" });
+    await makeObservation({ lat: 47.11, lng: -93.27, startedAt: NOW, tempC: 5, feelsLikeC: 3 });
+    for (let index = 0; index < 150; index += 1) {
+      const runId = await makeRun({ userId, lat: 47.11, lng: -93.27 });
+      await makeEntry({ userId, runId, verdict: 0, itemIds: [shell], createdAt: NOW + index });
+    }
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.mostWornItems).toStrictEqual([
+      { itemId: shell, name: "Shell", wearCount: 150 },
+    ]);
+  });
+
   it("ranks items by how often they were worn", async () => {
     const userId = await makeUser();
     const often = await makeItem({ userId, name: "Favourite" });

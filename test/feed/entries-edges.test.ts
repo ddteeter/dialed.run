@@ -24,6 +24,7 @@ import {
 } from "../../src/modules/feed/entries";
 import { toggleUsefulReaction } from "../../src/modules/feed/reactions";
 import {
+  makeEntry,
   makeItem,
   makeObservation,
   makeRun,
@@ -573,6 +574,35 @@ describe("band statistics", () => {
 
     expect(counts[2]).toBe(0);
     expect(counts[0]).toBe(1);
+  });
+
+  it("reads a history longer than D1 binds in one statement", async () => {
+    // D1 refuses a statement with more than 100 bound parameters ("too
+    // many SQL variables"), and the band walk reads up to 200 entries.
+    // One statement per list failed outright for any runner with more
+    // than a hundred runs; 150 is past the cap and inside the window.
+    const userId = await makeUser();
+    const worn = await makeItem({ userId, name: "Worn" });
+    // One place and hour: one observation serves every run.
+    await makeObservation({ lat: 67.11, lng: -93.27, startedAt: NOW, tempC: 5, feelsLikeC: 3 });
+    for (let index = 0; index < 150; index += 1) {
+      const runId = await makeRun({ userId, lat: 67.11, lng: -93.27 });
+      await makeEntry({
+        userId,
+        runId,
+        verdict: 0,
+        // Every other run, so the count is a real count and not "all".
+        itemIds: index % 2 === 0 ? [worn] : [],
+        createdAt: NOW + index,
+      });
+    }
+
+    expect(await itemBandWearStat(userId, worn, 0)).toStrictEqual({
+      worn: 75,
+      total: 150,
+    });
+    const counts = await verdictBandCounts(userId, 0);
+    expect(counts[0]).toBe(150);
   });
 
   it("counts nothing from another band", async () => {

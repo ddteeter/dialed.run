@@ -535,6 +535,23 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     await coreDb().delete(products);
   });
 
+  it("claims a day of failures longer than D1 binds in one statement", async () => {
+    // A day's failures are unbounded, and D1 refuses more than 100 bound
+    // parameters in one statement — which failed the whole claim, and the
+    // re-dispatch with it, on exactly the day an outage made the most.
+    for (let index = 0; index < 150; index += 1) {
+      await insertProduct("failed", HOUR);
+    }
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    const statuses = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products);
+    expect(statuses).toHaveLength(150);
+    expect(statuses.every((row) => row.status === "pending")).toBe(true);
+  });
+
   it("re-enqueues a product that has sat pending past the grace window", async () => {
     const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
     const productId = await insertProduct("pending", 20 * 60);

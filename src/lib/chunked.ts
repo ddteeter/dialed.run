@@ -23,3 +23,33 @@ export function chunked<TItem>(
   }
   return chunks;
 }
+
+/**
+ * How many ids one `IN (…)` list may carry.
+ *
+ * D1 refuses a statement with more than 100 bound parameters — "too many
+ * SQL variables", and the whole query fails, not just the tail. A list
+ * read from an upstream `LIMIT 200` is past that the moment a runner has
+ * a hundred-odd runs, which is exactly the runner who has the most
+ * history to show. 80 leaves room for the statement's other operands (an
+ * item id, a user id, a status) without anyone having to count them.
+ */
+export const IN_LIST_CHUNK = 80;
+
+/**
+ * Runs `read` once per chunk of `ids` and concatenates the rows, in chunk
+ * order — so a query written as `inArray(column, chunk)` stays under D1's
+ * parameter cap however long the list grows.
+ *
+ * No ids, no query: there are no chunks to read, which is also what an
+ * empty `inArray` would have matched.
+ */
+export async function readInChunks<TId, TRow>(
+  ids: readonly TId[],
+  read: (chunk: TId[]) => Promise<TRow[]>,
+): Promise<TRow[]> {
+  const pages = await Promise.all(
+    chunked(ids, IN_LIST_CHUNK).map(async (chunk) => read(chunk)),
+  );
+  return pages.flat();
+}

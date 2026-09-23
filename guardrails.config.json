@@ -118,11 +118,6 @@
       "count": 2
     },
     {
-      "key": "src/modules/products/service.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
-      "reason": "Equivalent mutant, proof at the site: an empty `inArray` matches nothing, so the defaults map comes back empty either way. The early return saves the query.",
-      "count": 1
-    },
-    {
       "key": "src/modules/notifications/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
       "reason": "Unreachable fallback, proof at the site: `count()` always answers with exactly one row. The optional chain is there because `noUncheckedIndexedAccess` types `rows[0]` as possibly undefined, which is the compiler being right about arrays in general rather than about this query.",
       "count": 1
@@ -168,11 +163,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the entry\u2192run\u2192observation walk answers with an empty map either way. The return saves the query.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Two equivalent guards: no entries means no observations and nothing to filter, so the empty list comes out either way (the return saves the cross-database walk); and every item row's garment is in the batch that fetched it, so the group lookup only misses if a garment was deleted between the two reads \u2014 which is the race the guard exists for.",
       "count": 2
@@ -184,8 +174,8 @@
     },
     {
       "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Six equivalent guards, each with its proof at the site: with no items the ownership read matches nothing; the batch's first two statements always exist; the SQL already filters `isNotNull(verdict)`, so the type guard and the empty-list return cannot change an answer; no entries means no observations; and an empty `inArray` matches nothing. Every one saves a query or narrows a type the runtime has already settled.",
-      "count": 6
+      "reason": "Five equivalent guards, each with its proof at the site: with no items the ownership read matches nothing; the batch's first two statements always exist; the SQL already filters `isNotNull(verdict)`, so the type guard and the empty-list return cannot change an answer; and no entries means no observations. Every one saves a query or narrows a type the runtime has already settled.",
+      "count": 5
     },
     {
       "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
@@ -585,16 +575,6 @@
     {
       "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
       "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/backlog.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with garmentNamesByIds, but against a different table for a different key (entry ids -> item pairs, not item ids -> names); a shared helper would need to be generic over its own projection, which garment-names.ts's own header already argues against for the similar case of consensus.ts",
-      "reason": "Pair B, both sides. The `forIds` + `inArray` read shape, over `outfit_entry_items` (entry ids -> item pairs) and over `wardrobe_items` (item ids -> names). A shared helper would have to be generic over its own projection, which is exactly the merge `garment-names.ts`'s own header already refuses for the similar case of `consensus.ts` \u2014 it predicted this grant in prose before the second caller existed. Owner's call, 2026-09-21 (task 115).",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/garment-names.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the forIds+inArray shape rhymes with backlog.ts's kitsFor, but against a different table for a different key (item ids -> names, not entry ids -> item pairs); see the note above on why a shared helper is not wanted here",
-      "reason": "Pair B, both sides. See the matching grant on `modules/feed/backlog.ts`; this file's header has argued the case since it was written. Owner's call, 2026-09-21 (task 115).",
       "count": 1
     }
   ]
