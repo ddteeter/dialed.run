@@ -340,6 +340,62 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     when saving has nothing to note (no kit, or no band) the screen still
     goes to the entry, since Noted has no sentence to say.
 
+26. **One failure pattern for a control that isn't a form.** Round 22's
+    item 9, which never arrived. A1 upload, A2 attach, run detail's save,
+    Strava connect, follow, useful and unblock each fail differently — some
+    as pink lines, which the Form Contract forbids, some silently. The ask
+    is one pattern (the Form Contract band, an inline mark, or something
+    else), drawn once on a representative control. Round 22 ruled two cases
+    (A1 stalled uses the form band; DS2's failed row gets a band spanning
+    the row), so the pattern may already be "the band, sized to the thing
+    that failed" — design to confirm.
+
+## Answered in round 22 (imported 2026-09-23)
+
+The coverage request (`docs/reconciliation/2026-09-23-design-coverage.md`)
+came back on two new boards: `Auth.dc.html` (items 1–2) and `Round 22
+Coverage.dc.html` (items 3–14 drawn, 27 frames; items 15–25 as one-line
+rulings, drawings due round 23). Every section carries a `data-board` mark
+naming the board it will fold into; the frame, part and state marks are
+final, so the conformance harness can diff against these files until the
+fold lands. Tokens, motion and icons are unchanged.
+
+**Rulings that change or remove what already ships** — each is build work,
+taken with its screen's reconciliation:
+
+- `/runs/import/$id` goes. A1 never navigates while parsing; every outcome
+  (pending, parsed card, parse failed, duplicate, stalled) shows in A1, and
+  the old URL redirects to A1.
+- Run detail's manual-temperature form goes, for one row: "No conditions ·
+  Set conditions ›", opening R2b. Weather that arrived is never editable.
+- The product-link field comes off F for v1 (AC2b); F2a/F2b return with
+  enrichment. Edit is F prefilled, titled "Edit {name}", button Save.
+- Settings becomes U1/N's tap-through index, one small form per sub-page.
+- M's hi-viz unread wash goes: unread is a white row and a pink dot (S2c).
+  The bell's number counts runs awaiting a verdict; everything else is the
+  dot; caps at 9+.
+- D's photo grid goes for the pager. The owner's verdict prompt takes the
+  badge's place, not a banner; Report is a foot text link.
+- The v1 post card drops kit and pace: author and badge, photo, caption,
+  the strip, Useful. A missing part is absent, never a placeholder. Badge
+  fill follows A3 — E1's yellow "dialed" was drift.
+- The auth failure band opens "Not signed in", not "Nothing saved".
+- Zero follows lands on Your conditions.
+- Your conditions needs **five runners** before any aggregate shows (a
+  privacy floor, design's number — the owner may change it); under five in
+  three days the window widens once to fourteen and says so; the band never
+  widens. Location denied recovers with a typed city saved to settings.
+- The garment photo sits in the well: with a photo the well is the
+  preview, Replace and Remove below; drag-over is a 2px ink border and a
+  title swap. Garment detail's order and a 4:3 photo (262 phone, 320 desk).
+- 404 and loader errors keep the shell when signed in; a slow route keeps
+  the old screen and, after 300ms, the destination's tab label breathes.
+
+**Not answered: item 9** (one failure pattern for controls that aren't
+forms) never reached design — the brief as pasted was missing it. Re-asked
+as item 26. **Not yet done by design:** the fold into the screen boards,
+and mirroring the new `data-part` names into its product.md §6b.
+
 ## Answered in round 21 (imported 2026-09-23)
 
 Ten asks, ten answers, on a new board of its own (`Round 21 Rulings.dc.html`)

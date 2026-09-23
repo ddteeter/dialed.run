@@ -24,6 +24,11 @@ one:
 
 Boards as of round 21 (imported the same day).
 
+**Answered the same day by round 22** (`Auth.dc.html`, `Round 22
+Coverage.dc.html`): every gap below except the non-form failure pattern,
+which is re-asked as design-deltas item 26. See "Answered in round 22" in
+`docs/design-deltas.md` for the rulings that change what ships.
+
 ## What it found
 
 - **Screens with no board at all:** login and signup, the landing page (one

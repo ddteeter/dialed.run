@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px; min-height: 100vh;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 22px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 22 &nbsp;/&nbsp; coverage &nbsp;/&nbsp; 2026-09-23</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; text-transform: uppercase;">Round 22.</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.55; color: #DEDDD6; max-width: 860px; text-wrap: pretty;">Tiers 1 and 2 drawn, top to bottom; tier 3 answered as rulings, drawings due round 23. Items 1–2 are the new <a href="Auth.dc.html">Auth</a> board. Every section here names the board it folds into (<code style="font-family: 'IBM Plex Mono', monospace; font-size: 14px;">data-board</code>); frame, part and state marks are final, so the harness can diff from this file until the fold lands. Item 9 did not arrive in the brief and is not answered.</p>
+    </div>
+
+    <!-- RULINGS -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Tiers 1–2 · rulings</span>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">1–2 · AUTH &amp; SIGNED-OUT SHELL</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">On <a href="Auth.dc.html">Auth</a>.</strong> Landing bar with no action from 720 up; no bar below. A signed-out page never shows the tab bar.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">3 · THE V1 POST CARD</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Author row + badge, photo if any, caption if any, the strip, Useful.</strong> Kit and pace leave the card for v1; kit lives on D. A missing part is absent, never a placeholder. <a href="#e1">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">3 · NO FOLLOWS → YOUR CONDITIONS</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Confirmed.</strong> Zero follows lands on Your conditions. Once they follow anyone, Following is the default, even if it's quiet. Following empty is <a href="#e1-empty">drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">4 · THE MATCH FLOOR</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Five runners, or no aggregate.</strong> Fewer than five identifies people. Under five in three days, the window widens to fourteen, once, and says so in the eyebrow. Still under five: no matches. The temperature band never widens. <a href="#e2">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">4 · LOCATION DENIED</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Recover with a typed city, not a second prompt.</strong> The city saves to settings (O1's field) and the tab never asks again. We don't send runners to OS settings.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">5 · A2 BEFORE A SUGGESTION</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Yes, the picker is inline at once.</strong> Only most-likely waits. No suggestion means the block is one line, not an empty card. <a href="#a2">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">6 · /RUNS/IMPORT/$ID GOES</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The route should not exist.</strong> A1 never navigates while parsing. Pending = §6c.5's brackets. Done = parsed card. Parse failed and duplicate <a href="#a1">drawn</a>. Stalled (&gt;20s) = form failure band: "Our end is slow. Your file is fine." + Try again. The old URL redirects to A1.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">7 · GARMENT DETAIL ORDER</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Identity, photo, stats, works at, composition, pairs with, actions.</strong> Photo is 4:3 full column: 262 tall on phone, 320 cap at desk. Delete is a text link, apart from Edit and Retire. <a href="#y">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">8 · ONE WELL</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The photo sits in the well.</strong> With a photo, the well is the preview; Replace and Remove below it. Never an image above a well that still says Add. Drag-over = border to 2px solid ink, title swaps. <a href="#well">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">10 · D WHEN SPARSE</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Pager, not grid.</strong> D's pager wins; the grid is drift. The run strip always shows. The owner's verdict prompt takes the badge's place, not a banner. Report is a text link at the foot. <a href="#d">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">11 · NO MANUAL TEMPERATURE</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The form goes.</strong> In its place, one row: "No conditions · Set conditions ›", which opens R2b. The runner picks from what R2b offers; never types a number. Weather that arrived is never editable. <a href="#r">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">12 · NEW G, EMPTY H</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Zeros are shown as zeros; missing sections go.</strong> A new G shows counts at 0 and one next step. H with nothing public keeps the header and says so. <a href="#gh">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">13 · UNREAD ROWS SIT ON WHITE</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">S2c wins; M is stale.</strong> A hi-viz wash breaks "yellow is only failure". Unread = white row + pink dot. S2b copy confirmed. The bell's number counts runs awaiting a verdict; everything else is the dot. Caps at 9+. <a href="#m">Drawn</a>.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">14 · 404, ERROR, SLOW</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Shell present for signed-in 404 and loader errors; absent signed out.</strong> A slow route keeps the old screen; after 300ms the destination's tab label breathes. No skeleton, no bar. <a href="#x">Drawn</a>.</p></div>
+      </div>
+    </div>
+
+    <!-- E1 -->
+    <div id="e1" data-board="Remaining Screens · E" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">3 · E1 · Following, v1</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Folds into Remaining Screens · E. E1 stays as the post-v1 card; these are what ships.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="E1v1 Following" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E1 · V1 CARD · THREE VARIANTS</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:14</span><span>▮▮▮ 76%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
+            </div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 8px;">Following</span><span style="color: #8B8B93; padding-bottom: 8px;">Your conditions</span></div>
+            <div data-part="feed" style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
+              <div data-part="post" data-state="with-photo" style="border-bottom: 1px solid #DCDBD2; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <div data-part="author" style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 100px; background: #FF2D8A;"></div><div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">dana_k</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">2H AGO · 6:04 AM</span></div><span data-part="verdict-badge" style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #00E0C6; padding: 5px 9px; border-radius: 100px;">DIALED</span></div>
+                <div data-part="photo" style="height: 210px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); display: flex; align-items: flex-end; padding: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px;">OUTFIT PHOTO</span></div>
+                <p data-part="caption" style="margin: 0; font-size: 15px; line-height: 1.45;">Half-zip was right. Hands warm by mile two.</p>
+                <div data-part="run-strip" style="display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;"><span>8.1 MI</span><span style="color: #DCDBD2;">|</span><span style="color: #00776A;">41°F · RAIN</span></div>
+                <span data-part="reactions" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600;">♥ 24 USEFUL</span>
+              </div>
+              <div data-part="post" data-state="no-photo" style="border-bottom: 1px solid #DCDBD2; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <div data-part="author" style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 100px; background: #00E0C6;"></div><div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">mark_t</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">YESTERDAY · 5:40 PM</span></div><span data-part="verdict-badge" style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">A BIT WARM</span></div>
+                <p data-part="caption" style="margin: 0; font-size: 15px; line-height: 1.45;">Wore the shell for a 20mph forecast that never showed up.</p>
+                <div data-part="run-strip" style="display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;"><span>5.4 MI</span><span style="color: #DCDBD2;">|</span><span style="color: #00776A;">47°F · WIND 6MPH</span></div>
+                <span data-part="reactions" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">♡ 11 USEFUL</span>
+              </div>
+              <div data-part="post" data-state="no-conditions" style="display: flex; flex-direction: column; gap: 12px;">
+                <div data-part="author" style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 100px; background: #B9B8AE;"></div><div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">jules.p</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">MON · 7:15 PM</span></div><span data-part="verdict-badge" style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; background: #00E0C6; padding: 5px 9px; border-radius: 100px;">DIALED</span></div>
+                <div data-part="run-strip" style="display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;"><span>4.0 MI</span><span style="color: #DCDBD2;">|</span><span style="color: #7A7A70;">INDOOR</span></div>
+                <span data-part="reactions" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">♡ USEFUL</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Order is fixed: author + badge, photo, caption, strip, Useful. Strip is DIST | TEMP · CONDITION. No conditions: "INDOOR" if the run says so, otherwise the second cell is absent — never "—" or "N/A". No caption, no photo: author, strip, Useful is a whole post. Zero Useful reads "♡ USEFUL", no zero. Badge fill follows A3: dialed is teal, the off verdicts are hairline.</p>
+        </div>
+
+        <div id="e1-empty" data-screen-label="E1v1 Following empty" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E1 · FOLLOWING · EMPTY</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:14</span><span>▮▮▮ 76%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
+            </div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 8px;">Following</span><span style="color: #8B8B93; padding-bottom: 8px;">Your conditions</span></div>
+            <div data-part="feed" data-state="empty" style="padding: 56px 24px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+              <span style="display: flex; gap: 0.15em; font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.035em; line-height: 1.05;"><span style="color: #FF2D8A;">[</span>NOBODY YET<span style="color: #FF2D8A;">]</span></span>
+              <p style="margin: 0; font-size: 17px; line-height: 1.5;">Nobody you follow has posted yet.</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E4E44;">Follow runners you already know by their username.</p>
+              <span data-part="primary-action" style="align-self: flex-start; margin-top: 8px; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 14px 22px; font-size: 15px; font-weight: 700;">Find a runner</span>
+              <span style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #DCDBD2; font-size: 15px; color: #4E4E44;">Meanwhile: <span style="color: #0B0B0E; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">what people wore in your conditions</span></span>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Reached only by switching tabs (no follows) or when follows exist but none has posted — then the second line reads "The runners you follow haven't shared a run yet." and Find a runner stays. The foot link switches tabs; it isn't a second primary. Find a runner opens username search (tier 3, item 15).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- E2 -->
+    <div id="e2" data-board="Remaining Screens · E" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">4 · E2-lite · four more states</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">The teal block means "matched". Anything that isn't a match sits on paper with a hairline — so teal never announces nothing.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="E2-lite Waiting" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E2-LITE · WAITING · PROMPT UP</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 760px; position: relative;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
+            </div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="color: #8B8B93; padding-bottom: 8px;">Following</span><span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span></div>
+            <div data-part="match-block" data-state="waiting" aria-busy="true" style="border-bottom: 1px solid #DCDBD2; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOUR CONDITIONS</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em; line-height: 1.05; white-space: nowrap;"><span style="color: #FF2D8A;">[</span>&nbsp;FINDING WEATHER&nbsp;<span style="color: #FF2D8A;">]</span></span>
+            </div>
+            <div style="flex: 1;"></div>
+            <div data-annotation="" style="position: absolute; left: 36px; right: 36px; top: 300px; background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; text-align: center;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SYSTEM PROMPT · NOT OURS</span>
+              <span style="font-size: 15px; font-weight: 600; line-height: 1.35;">Allow "dialed.run" to use your location?</span>
+              <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">We match your weather, not your address.</span>
+              <div style="display: flex; flex-direction: column; border-top: 1px solid #DCDBD2;"><span style="padding: 11px; font-size: 15px; border-bottom: 1px solid #DCDBD2;">Allow once</span><span style="padding: 11px; font-size: 15px; border-bottom: 1px solid #DCDBD2;">Allow while using</span><span style="padding: 11px 11px 0; font-size: 15px;">Don't allow</span></div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">One state for "asking" and "fetching": the headline breathes, the rest of the screen is empty. No bars below it pretending to load. The OS sheet is drawn only to show what's behind it. The purpose string ("We match your weather, not your address.") is ours and ships in the manifest. A runner with a saved city skips this entirely.</p>
+        </div>
+
+        <div data-screen-label="E2-lite Location denied" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E2-LITE · LOCATION DENIED</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 760px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
+            </div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="color: #8B8B93; padding-bottom: 8px;">Following</span><span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span></div>
+            <div data-part="match-block" data-state="location-denied" style="padding: 28px 20px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOUR CONDITIONS</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em; line-height: 1.05;">WHERE DO YOU RUN?</span>
+              <p style="margin: 0; font-size: 17px; line-height: 1.5;">Location is off. Type your city and we'll match its weather instead.</p>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">CITY</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">Portland, OR</div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Use this city</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #7A7A70;">Saved to your settings. Change it any time under You.</span>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Not a failure — the runner said no, and that's allowed. So no yellow, no band. The city field is O1's (suggest-as-you-type, pick one), so the submit is Form Contract: Use this city → [ Saving ] → the result state. A city nobody's matched yet goes straight to No matches.</p>
+        </div>
+
+        <div data-screen-label="E2-lite No matches" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E2-LITE · NO MATCHES</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 760px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
+            </div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="color: #8B8B93; padding-bottom: 8px;">Following</span><span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span></div>
+            <div data-part="match-block" data-state="no-matches" style="border-bottom: 1px solid #DCDBD2; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">MATCHING [41–47°] · DAMP · LAST 14 DAYS</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em; line-height: 1.05;">NOT ENOUGH<br />RUNS YET</span>
+            </div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+              <p style="margin: 0; font-size: 17px; line-height: 1.5;">Fewer than five runners near you logged this weather in two weeks — too few to show without showing who.</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E4E44;">Your own record in this band is on the Call.</p>
+              <span style="align-self: flex-start; border: 1px solid #DCDBD2; border-radius: 100px; padding: 13px 20px; font-size: 15px; font-weight: 600;">Open the Call</span>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The eyebrow is already widened: No matches only shows after the fourteen-day look. The sentence says why there's nothing, which is the privacy floor, not a lack of runners in the world. The Call is the secondary (hairline); in v1 it's K, which still answers "what do I usually wear here".</p>
+        </div>
+
+        <div data-screen-label="E2-lite Widened window" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E2-LITE · WIDENED WINDOW</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 760px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
+            </div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="color: #8B8B93; padding-bottom: 8px;">Following</span><span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span></div>
+            <div data-part="match-block" data-state="widened" style="background: #00E0C6; color: #0B0B0E; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">MATCHING [41–47°] · DAMP · LAST 14 DAYS</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em; line-height: 1.05;">6 RUNNERS<br />LOGGED THIS</span>
+              <span style="font-size: 14px; line-height: 1.4;">Too few this week, so this looks back two weeks.</span>
+            </div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT THEY WORE</span>
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 83%; height: 100%; background: #FF2D8A;"></div></div><span style="font-size: 15px;">Long sleeve <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">5/6</span></span></div>
+                <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 67%; height: 100%; background: #FF2D8A;"></div></div><span style="font-size: 15px;">Shorts <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">4/6</span></span></div>
+                <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 0 0 96px; height: 26px; border-radius: 4px; background: #EDECE3; overflow: hidden;"><div style="width: 33%; height: 100%; background: #B9B8AE;"></div></div><span style="font-size: 15px;">Gloves <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">2/6</span></span></div>
+              </div>
+              <p style="margin: 0; padding-top: 12px; border-top: 1px solid #DCDBD2; font-size: 14px; line-height: 1.5;">Most got it right in long sleeve and shorts.</p>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The bare "(widened window)" suffix is replaced by two things: the eyebrow's window slot reads LAST 14 DAYS (it read LAST 3 DAYS unwidened — the slot is always there), and the sub-line says why. Rows under 2 runners are dropped at this size, and the verdict histogram hides under 10 total — at 6 it's too easy to read one person.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- A2 -->
+    <div id="a2" data-board="Product Screens · A2" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">5 · A2 · before a suggestion</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Only most-likely changes. The picker, the photo row and the button are A2 at rest, from the first frame.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="A2 Waiting" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">A2 · WAITING FOR PREFILL</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>6:41</span><span>▮▮▮ 82%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">What did you wear?</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #00E0C6;">6.2 MI · 41°F DAMP · 0 PIECES</span></div></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div data-part="most-likely" data-state="waiting" aria-busy="true" style="border: 1px solid #DCDBD2; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">MOST LIKELY</span>
+                <span style="font-size: 15px; font-weight: 600;"><span style="color: #FF2D8A;">[</span>&nbsp;Checking what you wore at 41°&nbsp;<span style="color: #FF2D8A;">]</span></span>
+              </div>
+              <div data-part="closet-picker" style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR PICK FROM THE CLOSET</span>
+                <div data-part="kit-list" style="display: flex; flex-direction: column; gap: 10px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">TOP · 14 &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
+                  <div style="display: flex; gap: 8px;"><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">BOTTOM · 9 &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
+                  <div style="display: flex; gap: 8px;"><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div></div>
+                </div>
+              </div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+                <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Next — did it work?</span>
+                <span style="font-size: 12px; text-align: center; color: #7A7A70;">Not now — <span style="color: #C21A6B; font-weight: 600;">leave it in the queue</span>.</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span style="color: #0B0B0E; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Picker is live and unfiltered while waiting (no 41° DAMP chip yet — the filter arrives with the band). Picking something before the suggestion lands is fine; the suggestion then lands collapsed under the choice rather than replacing it. Location isn't asked here: A2 reads the run's own GPS, never the device's.</p>
+        </div>
+
+        <div data-screen-label="A2 No suggestion" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">A2 · NO SUGGESTION</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>6:41</span><span>▮▮▮ 82%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><div style="display: flex; flex-direction: column;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">What did you wear?</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #00E0C6;">6.2 MI · 41°F DAMP · 0 PIECES</span></div></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div data-part="most-likely" data-state="none" style="border-bottom: 1px solid #DCDBD2; padding-bottom: 14px; display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 15px; font-weight: 600;">No usual kit at 41° yet.</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">Pick what you wore. After a few runs here, we'll suggest it.</span>
+              </div>
+              <div data-part="closet-picker" style="display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">FROM THE CLOSET</span>
+                <div data-part="kit-list" style="display: flex; flex-direction: column; gap: 10px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">TOP · 3 &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
+                  <div style="display: flex; gap: 8px;"><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div></div>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">BOTTOM · 2 &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
+                  <div style="display: flex; gap: 8px;"><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div><div style="flex: 0 0 66px; height: 66px; border-radius: 10px; border: 1px solid #DCDBD2; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div></div>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;"><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ HANDS</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ SHOES</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ ADD A GARMENT</span></div>
+                </div>
+              </div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+                <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Next — did it work?</span>
+                <span style="font-size: 12px; text-align: center; color: #7A7A70;">Not now — <span style="color: #C21A6B; font-weight: 600;">leave it in the queue</span>.</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span style="color: #0B0B0E; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">One line, no card: an empty card is a promise we're not keeping. "OR PICK" loses its OR. No conditions on the run: the line reads "No weather on this run, so no suggestion." and the sub-line drops; the header sub-line loses its temperature cell. A runner with an empty closet gets + ADD A GARMENT only, which opens F in a sheet and returns here.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- A1 -->
+    <div id="a1" data-board="Product Screens · A1" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">6 · A1 · the import route goes</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Every upload outcome renders in A1, in place. The two the route was hiding:</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="A1 Parse failed" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">A1 · PARSE FAILED</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>6:41</span><span>▮▮▮ 82%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Add a run</span></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 10px; flex: 1;">
+              <div data-part="drop-zone" data-state="parse-failed" aria-invalid="true" style="border: 2px solid #0B0B0E; border-radius: 16px; padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">GPX / TCX / FIT</span>
+                <span style="font-size: 17px; font-weight: 700;">Drop a file, or browse</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">From your watch export or any tracking app.</span>
+              </div>
+              <span data-part="field-message" style="background: #F5FF3D; color: #0B0B0E; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">MORNING_RUN.GPX has no track in it. Export the run again.</span>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-size: 12px; text-align: center; line-height: 1.45; color: #7A7A70;">No file? <span style="color: #C21A6B; font-weight: 600;">Enter the run by hand</span> instead.</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span style="color: #0B0B0E; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">A bad file is a field failure: the fix (another file) is inside the drop zone, so it's marked there — dashes go to 2px solid ink, yellow message below. Three sentences, from the parser: no track → above; wrong type → "That's not a GPX, TCX or FIT file."; unreadable → "We couldn't read this file. Export it again." Dropping a new file clears the mark.</p>
+        </div>
+
+        <div data-screen-label="A1 Duplicate" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">A1 · ALREADY LOGGED</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>6:41</span><span>▮▮▮ 82%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Add a run</span></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div data-part="parsed-card" data-state="duplicate" style="border: 1px solid #DCDBD2; border-radius: 16px; overflow: hidden; background: #FFFFFF;">
+                <div style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: #EDECE3; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #4E4E44;"><span>MORNING_RUN_0829.GPX</span><span style="color: #C21A6B; font-weight: 600;">REPLACE</span></div>
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">ALREADY LOGGED</span>
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em; line-height: 1;">6.2 MI · 51:38</span>
+                  <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #4E4E44;"><span>SAT AUG 29</span><span style="color: #DCDBD2;">|</span><span>6:04 AM</span><span style="color: #DCDBD2;">|</span><span style="color: #00776A;">41°F DAMP</span></div>
+                  <span style="font-size: 15px; line-height: 1.45;">This run is already in your log. Nothing new was added.</span>
+                </div>
+              </div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+                <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Open that run</span>
+                <span style="font-size: 12px; text-align: center; color: #7A7A70;">Wrong file? Tap <span style="color: #C21A6B; font-weight: 600;">REPLACE</span> above.</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span style="color: #0B0B0E; font-weight: 600;">+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Not a failure: nothing is wrong and nothing to fix. It's a receipt, in the parsed card's place, drawn from the existing run (its conditions, not a re-fetch). No conditions block below — it's already attached to that run. Primary goes ink, not pink: opening a run is navigation, not the log verb. Open that run → run detail (R), or A2 if it has no kit.</p>
+        </div>
+
+        <div style="flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">THE FIVE IMPORT STATES, MAPPED</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;"><strong style="color: #F4F3EF;">Pending</strong> → drop zone title breathes (§6c.5). <strong style="color: #F4F3EF;">Done</strong> → parsed card + conditions (A1). <strong style="color: #F4F3EF;">Duplicate</strong> → receipt, left. <strong style="color: #F4F3EF;">Parse failed</strong> → field failure, left. <strong style="color: #F4F3EF;">Stalled</strong> (&gt;20s pending) → failure band above where the primary will be: "Nothing saved · Our end is slow. Your file is fine." + Try again, which re-sends the same file.</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">LEAVING MID-PARSE</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The parse keeps going. The run lands in DS2 / the S1 prompt like any import. There is no status page to come back to, and no notification for a parse finishing.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Y -->
+    <div id="y" data-board="Remaining Screens · Y" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">7 · Y · garment detail, whole</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Z2a, AG1/AG2 and Y1 assembled. Order is fixed; a section with nothing in it is absent.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="Y Garment detail" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">Y · GARMENT DETAIL · REST</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 900px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:02</span><span>▮▮▮ 71%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Closet</span></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1;">
+              <div data-part="identity" style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TOP · HALF-ZIP · M</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em; line-height: 1.1;">Janji Rover Half-zip</span>
+                <span style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;"><span data-content="" style="width: 12px; height: 12px; background: #1F2A44;"></span>MIDNIGHT</span>
+              </div>
+              <div data-part="photo" style="height: 262px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); display: flex; align-items: flex-end; padding: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px;">GARMENT PHOTO · 4:3</span></div>
+              <div data-part="stats" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.02em;">142 km logged · 9/14 dialed</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00776A;">WORKS AT [38–46°] · DAMP</span>
+              </div>
+              <div data-part="composition" style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">MADE OF</span>
+                <span style="font-size: 15px; line-height: 1.5;">82% merino, 18% nylon · midweight</span>
+              </div>
+              <div data-part="pairs-with" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">PAIRS WITH · WHEN DIALED</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;"><span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">BANDIT 5" SPLIT · 6</span><span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">THIN GLOVES · 4</span></div>
+              </div>
+              <div data-part="actions" style="margin-top: auto; display: flex; align-items: center; gap: 8px; padding-top: 16px; border-top: 1px solid #DCDBD2;">
+                <span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 600;">Edit</span>
+                <span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 600;">Retire</span>
+                <span style="margin-left: auto; padding: 12px 4px; font-size: 15px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Delete</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span style="color: #0B0B0E; font-weight: 600;">CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Identity (Z2a) owns the top: kicker, heading, colorway swatch. Photo full column, 4:3 — no photo means no well here; adding one is Edit's job, so detail never shows an empty Add box. Stats line (MONO.md) then works-at (MONO.sm, --dialed-text). Composition (AG1) is one line; Pairs with lists up to three, by co-dialed count, and is absent under 3 runs. Shoes (Y1) swap composition for mileage. Actions are all secondary: nothing on this screen is the day's task.</p>
+        </div>
+
+        <div data-screen-label="Y Retire confirm" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">Y · RETIRE / DELETE CONFIRM · SHEET</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 900px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:02</span><span>▮▮▮ 71%</span></div>
+            <div style="background: #0B0B0E; height: 44px;"></div>
+            <div style="flex: 1; background: #B9B8AE;"></div>
+            <div data-part="sheet" data-state="confirm-retire" role="alertdialog" style="background: #FFFFFF; border-radius: 20px 20px 0 0; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Retire the Rover Half-zip?</span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E4E44;">It leaves the closet and the picker. Its 14 runs and verdicts stay, and still count. You can bring it back.</p>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Retire</span>
+              <span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 600;">Keep it</span>
+            </div>
+            <div data-part="sheet" data-state="confirm-delete" role="alertdialog" style="background: #FFFFFF; border-top: 1px solid #DCDBD2; padding: 24px 20px 28px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Delete the Rover Half-zip?</span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E4E44;">Its 14 runs keep their verdicts but lose this piece from their kit. This can't be undone. Retire keeps the history.</p>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Delete</span>
+              <span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 600;">Keep it</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Two sheets drawn stacked; only one is ever open. Shade sheet frame, 20 radius, scrim is the paper dimmed (flat, no opacity). Verb on the primary repeats the verb that opened it. No red and no pink: destruction isn't an alarm, and pink is the log verb. Focus lands on Keep it. Retire → "[ Retiring ]" → back to the closet, the tile collapses (motion.js "retire"). Delete → back to the closet, same collapse. Unretire needs no confirm. A garment with 0 runs deletes without this sheet's second sentence.</p>
+        </div>
+      </div>
+    </div>
+
+    <div data-board="Remaining Screens · Y" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+      <div data-screen-label="Y Retired garment" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+        <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">Y · [RETIRED]</span>
+        <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 640px;">
+          <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:04</span><span>▮▮▮ 71%</span></div>
+          <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Closet</span></div>
+          <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1;">
+            <div data-part="identity" data-state="retired" style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TOP · SINGLET · <span style="color: #0B0B0E; font-weight: 600;">[RETIRED SEP 12]</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em; line-height: 1.1;">Old race singlet</span>
+            </div>
+            <div data-part="stats" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.02em;">610 km logged · 22/31 dialed</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00776A;">WORKED AT [58–70°]</span>
+            </div>
+            <div data-part="actions" style="margin-top: auto; display: flex; align-items: center; gap: 8px; padding-top: 16px; border-top: 1px solid #DCDBD2;">
+              <span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 600;">Unretire</span>
+              <span style="margin-left: auto; padding: 12px 4px; font-size: 15px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Delete</span>
+            </div>
+          </div>
+          <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span style="color: #0B0B0E; font-weight: 600;">CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+        </div>
+        <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Same screen, past tense. The tag rides the kicker (MONO.xs, ink, brackets = a statement) with its date. Works at → WORKED AT. Edit goes (you don't edit a retired piece; unretire first), Pairs with goes (it's a suggestion). No dimming, no opacity: retired is a fact, not a disabled state. No-photo garment shown, so no well.</p>
+      </div>
+
+      <div style="flex: 1 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 12px; overflow-x: auto;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">Y · 1040 · REFLOW AT 620</span>
+        <div data-screen-label="Y Garment detail 1040" style="width: 1040px; flex: 0 0 auto; background: #F4F3EF; color: #0B0B0E; display: flex; flex-direction: column;">
+          <div data-part="top-bar" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 40px; display: flex; align-items: center; gap: 32px; min-height: 72px;">
+            <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">dialed<span style="color: #8B8B93;">.run</span></span>
+            <span data-part="bar-nav" style="display: flex; gap: 24px; font-size: 15px; color: #8B8B93;"><span>Feed</span><span style="color: #F4F3EF; font-weight: 700;">Closet</span><span>Call</span></span>
+          </div>
+          <div style="display: flex; justify-content: center; padding: 32px 24px 48px;">
+            <div style="width: 620px; display: flex; flex-direction: column; gap: 20px;">
+              <div data-part="identity" style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 15px; color: #4E4E44;">← Closet</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; padding-top: 12px;">TOP · HALF-ZIP · M</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Janji Rover Half-zip</span>
+              </div>
+              <div data-part="photo" style="height: 320px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); display: flex; align-items: flex-end; padding: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px;">GARMENT PHOTO · 620 × 320 CAP · OBJECT-FIT CONTAIN</span></div>
+              <div data-part="stats" style="display: flex; gap: 24px; padding: 12px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; font-family: 'IBM Plex Mono', monospace;"><span style="font-size: 13px;">142 km logged · 9/14 dialed</span><span style="font-size: 11px; letter-spacing: 0.06em; color: #00776A;">WORKS AT [38–46°] · DAMP</span></div>
+              <div data-part="actions" style="display: flex; align-items: center; gap: 8px;"><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 600;">Edit</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 600;">Retire</span><span style="margin-left: auto; font-size: 15px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Delete</span></div>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 780px;">Same order in one 620 column (composition and pairs-with sit between stats and actions, elided here). The stats line and works-at share a row at width. A 4:3 photo would be 465 tall at 620, so it's letterboxed on the photo hatch's paper, contain not cover — a garment is never cropped. Confirm sheets become the centred panel.</p>
+      </div>
+    </div>
+
+    <!-- WELL -->
+    <div id="well" data-board="Product Screens · A1 + Remaining Screens · F" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">8 · The well, one component</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">A1's anatomy: kicker, title, sub-line, 2px dashed #B9B8AE, card radius. Only the kicker and sub-line differ between file and photo.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="Well states" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WELL · PHOTO · FOUR STATES</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 22px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">REST</span>
+              <div data-part="photo-well" data-state="empty" style="border: 2px dashed #B9B8AE; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span>
+                <span style="font-size: 17px; font-weight: 700;">Add a photo</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">Flat on the floor works best. JPG, PNG or HEIC.</span>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WITH A PHOTO</span>
+              <div data-part="photo-well" data-state="filled" style="height: 220px; border: 1px solid #DCDBD2; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px); display: flex; align-items: flex-end; padding: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px;">PREVIEW · 4:3 · CONTAIN</span></div>
+              <div data-part="well-actions" style="display: flex; gap: 20px; font-size: 15px; font-weight: 600;"><span style="padding: 12px 0; text-decoration: underline; text-underline-offset: 3px;">Replace</span><span style="padding: 12px 0; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Remove</span></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">UPLOADING</span>
+              <div data-part="photo-well" data-state="uploading" aria-busy="true" style="border: 2px dashed #B9B8AE; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span>
+                <span style="font-size: 17px; font-weight: 700;"><span style="color: #FF2D8A;">[</span>&nbsp;Adding IMG_2231.HEIC&nbsp;<span style="color: #FF2D8A;">]</span></span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">Flat on the floor works best. JPG, PNG or HEIC.</span>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">UPLOAD ERROR</span>
+              <div data-part="photo-well" data-state="error" aria-invalid="true" style="border: 2px solid #0B0B0E; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span>
+                <span style="font-size: 17px; font-weight: 700;">Add a photo</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">Flat on the floor works best. JPG, PNG or HEIC.</span>
+              </div>
+              <span data-part="field-message" style="background: #F5FF3D; color: #0B0B0E; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">That photo is over 20 MB. Pick a smaller one.</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">With a photo the well is the preview: solid hairline replaces the dashes, the three text lines go, Replace and Remove sit under it as text buttons (44 tall). The full-width image above a still-empty well is removed. File type and size are field failures (the fix is another file). A network drop during upload is a form failure on the form's own band, not here — the well returns to rest. W3's blur runs on the preview before this state shows.</p>
+        </div>
+
+        <div style="flex: 1 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 12px; overflow-x: auto;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WELL · 1040 · DRAG-OVER · BEND 1</span>
+          <div style="display: flex; gap: 24px; flex: 0 0 auto;">
+            <div data-screen-label="Well desk rest" style="width: 390px; flex: 0 0 390px; background: #F4F3EF; color: #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">REST · DESK</span>
+              <div data-part="photo-well" data-state="empty" style="border: 2px dashed #B9B8AE; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span>
+                <span style="font-size: 17px; font-weight: 700;">Drop a photo, or browse</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">Flat on the floor works best. JPG, PNG or HEIC.</span>
+              </div>
+            </div>
+            <div data-screen-label="Well desk drag-over" style="width: 390px; flex: 0 0 390px; background: #F4F3EF; color: #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">DRAG-OVER · DESK</span>
+              <div data-part="photo-well" data-state="drag-over" style="border: 2px solid #0B0B0E; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; background: #FFFFFF;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span>
+                <span style="font-size: 17px; font-weight: 700;">Let go to add it</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #6E6E64;">Flat on the floor works best. JPG, PNG or HEIC.</span>
+              </div>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 780px;">Bend 1's "one state change", drawn: dashed #B9B8AE → 2px solid ink, ground → white (--panel), title swaps. Instant on dragenter, instant back on dragleave — static, per Motion Doctrine. Same change on A1's file well ("Let go to read it"). Solid ink is shared with the error mark on purpose: both mean "this box is the one", and the yellow line is what tells them apart. The desk title adds "Drop" because the desk can; the phone's can't.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- D -->
+    <div id="d" data-board="Product Screens · D" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">10 · D · when it isn't full</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">The run strip is the one part every entry has. Everything else is present or absent — never a placeholder.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="D Sparse own entry" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">D · YOURS · NOTHING BUT THE RUN</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>9:10</span><span>▮▮▮ 68%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Your run</span></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div data-part="run-strip" style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid #DCDBD2;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TUE SEP 22 · 6:30 AM</span>
+                <div style="display: flex; align-items: baseline; gap: 12px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.035em; line-height: 1;">5.0 MI</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">8:40 /MI</span></div>
+              </div>
+              <div data-part="verdict-prompt" style="background: #D2F0E9; border: 1px solid #00E0C6; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                <span style="font-size: 15px; line-height: 1.45; font-weight: 600;">You didn't log a verdict for this run. Add one?</span>
+                <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 700;">Did it work?</span>
+              </div>
+              <div data-part="kit" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">KIT</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em;"><span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">L/S CREW</span><span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">BANDIT 5" SPLIT</span></div>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span style="color: #0B0B0E; font-weight: 600;">YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">No photo, caption, conditions or verdict. The strip loses its conditions cell and its badge (nothing to badge). The prompt sits directly under the strip, where the badge would be read — square, --dialed-tint, teal hairline, ink button opening A3. Owner only, and never on a shared post. No conditions gets no line of its own; the missing cell says it.</p>
+        </div>
+
+        <div data-screen-label="D Someone else's entry" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">D · THEIRS · TAGS, FLAGS, REPORT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>9:12</span><span>▮▮▮ 68%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">mark_t</span></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div data-part="run-strip" style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid #DCDBD2;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">MON SEP 21 · 5:40 PM</span>
+                <div style="display: flex; align-items: baseline; gap: 12px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.035em; line-height: 1;">5.4 MI</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">8:36 /MI</span><span data-part="verdict-badge" style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">A BIT WARM</span></div>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00776A;">47°F · WIND 6MPH</span>
+              </div>
+              <p data-part="note" style="margin: 0; font-size: 15px; line-height: 1.5;">Wore the shell for a 20mph forecast that never showed up.</p>
+              <div data-part="kit" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">KIT</span>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 15px;"><span>Patagonia Houdini</span><span data-part="item-flag" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #0B0B0E; font-weight: 600;">[TOO MUCH]</span></div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 15px;"><span>L/S crew <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6E6E64;">[GENERIC]</span></span></div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 15px;"><span>Tights <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6E6E64;">[GENERIC]</span></span></div>
+                </div>
+              </div>
+              <div data-part="tags" style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #4E4E44;"><span style="background: #EDECE3; padding: 5px 9px; border-radius: 100px;">SWEATY BACK</span><span style="background: #EDECE3; padding: 5px 9px; border-radius: 100px;">HOT HEAD</span></div>
+              <span data-part="reactions" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">♡ 11 USEFUL</span>
+              <span data-part="report" style="margin-top: auto; padding: 12px 0; font-size: 13px; color: #6E6E64; text-decoration: underline; text-underline-offset: 3px; align-self: flex-start;">Report this entry</span>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Order: photo pager (absent here), strip, note, kit, tags, Useful, Report. Kit on D is a list, not chips, so a flag can sit at the row's end: [TOO MUCH] / [NOT ENOUGH], MONO.xs ink; Fine shows nothing. Tags are the A3 words, read-only, on E2-lite's bar-track fill (#EDECE3) so they don't read as tappable. Report is a quiet text link at the foot, never in the header (the header's slot is for back). Photos: D's pager, "1 / 2" counter only; the build's grid is removed.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- R -->
+    <div id="r" data-board="New: Runs (R)" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">11 · R · runs and a run</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">No board had these. Reached from You → Runs. A run with a verdict opens D; these are the runs that aren't entries yet.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="R Runs list" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">R · RUNS · STATUS BADGES</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>9:20</span><span>▮▮▮ 66%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Runs</span></div>
+            <div data-part="run-list" style="display: flex; flex-direction: column; flex: 1;">
+              <div data-part="run-row" style="padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;"><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; font-weight: 600;">6.2 mi · Sat Aug 29</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00776A;">41°F DAMP</span></div><span data-part="run-badge" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #DCDBD2; padding: 5px 9px; border-radius: 100px; color: #4E4E44;">CONDITIONS</span></div>
+              <div data-part="run-row" style="padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;"><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; font-weight: 600;">4.0 mi · Fri Aug 28</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">TREADMILL</span></div><span data-part="run-badge" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #DCDBD2; padding: 5px 9px; border-radius: 100px; color: #4E4E44;">INDOOR</span></div>
+              <div data-part="run-row" style="padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;"><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; font-weight: 600;">3.1 mi · Wed Aug 26</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">55°F · SET BY YOU</span></div><span data-part="run-badge" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #DCDBD2; padding: 5px 9px; border-radius: 100px; color: #4E4E44;">SET</span></div>
+              <div data-part="run-row" style="padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;"><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; font-weight: 600;">8.0 mi · Sun Aug 23</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">NO WEATHER FOR THIS TIME</span></div><span data-part="run-badge" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">SET CONDITIONS ›</span></div>
+              <div data-part="run-row" style="padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; align-items: center; gap: 12px;"><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; font-weight: 600;">5.5 mi · Just now</span><span style="display: flex; gap: 0.3em; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;"><span style="color: #FF2D8A;">[</span>FETCHING WEATHER<span style="color: #FF2D8A;">]</span></span></div></div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span style="color: #0B0B0E; font-weight: 600;">YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Five badges collapse to four and one breath. Conditions attached, Indoor, Set (chosen in R2b, "SET BY YOU" in the meta line) are hairline and muted — facts. Unavailable is the only one that's a control: ink hairline, "SET CONDITIONS ›", opens R2b. Pending isn't a badge; the meta line breathes. "Manual temperature" is gone with its form. Empty list: "[ NO RUNS YET ]" + "Upload a file or enter one by hand." + Log a run — same frame as E1 empty.</p>
+        </div>
+
+        <div data-screen-label="R Run before kit" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">R · A RUN BEFORE ITS KIT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>9:21</span><span>▮▮▮ 66%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Run</span></div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div data-part="run-strip" style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid #DCDBD2;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SUN AUG 23 · 7:05 AM · STRAVA</span>
+                <div style="display: flex; align-items: baseline; gap: 12px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.035em; line-height: 1;">8.0 MI</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">8:12 /MI</span></div>
+              </div>
+              <div data-part="conditions" data-state="unavailable" style="border: 1px solid #DCDBD2; border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">NO CONDITIONS</span><span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">No weather came back for this time and place.</span></div>
+                <span style="flex: 0 0 auto; font-size: 15px; font-weight: 700; padding: 12px 0;">Set ›</span>
+              </div>
+              <div data-part="kit" data-state="empty" style="display: flex; flex-direction: column; gap: 6px; padding-top: 4px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">KIT</span>
+                <span style="font-size: 15px; line-height: 1.45;">No kit yet. Without one, this run can't teach your closet anything.</span>
+              </div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+                <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">What did you wear?</span>
+                <span style="font-size: 12px; text-align: center; color: #7A7A70;"><span style="text-decoration: underline; text-underline-offset: 3px;">Delete this run</span></span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span style="color: #0B0B0E; font-weight: 600;">YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The manual-temperature form is replaced by the conditions row: attached → A1's ink block, read-only; unavailable → this row, Set › opens R2b. No inputs on this screen. The primary is the log verb (pink) into A2 → A3, since that's the only thing this run is waiting for. Once it has a verdict, the route shows D instead.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GH -->
+    <div id="gh" data-board="Remaining Screens · G, H" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">12 · G new, H empty</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Drawn with only what v1 stores: display name, username, city if given, counts, public entries.</span>
+      </div>
+      <div id="gh-row" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="G New account" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">G · YOU · DAY ONE</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>6:30</span><span>▮▮▮ 95%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 14px;"><div style="width: 56px; height: 56px; border-radius: 100px; background: #2A2A31; display: grid; place-items: center; font-family: 'Archivo Black', sans-serif; font-size: 22px;">D</div><div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Dana Kim</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">@DANA_K · PORTLAND</span></div></div>
+              <div data-part="counts" style="display: flex; gap: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #B9B8AE;"><span><span style="color: #F4F3EF;">0</span> RUNS</span><span><span style="color: #F4F3EF;">0</span> FOLLOWING</span><span><span style="color: #F4F3EF;">0</span> FOLLOWERS</span></div>
+            </div>
+            <div data-part="entries" data-state="empty" style="padding: 32px 20px 20px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+              <span style="display: flex; gap: 0.15em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>NO RUNS YET<span style="color: #FF2D8A;">]</span></span>
+              <p style="margin: 0; font-size: 17px; line-height: 1.5;">Your runs land here once you log one. Shared runs are what other people see.</p>
+              <span data-part="primary-action" style="align-self: flex-start; margin-top: 8px; background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 14px 22px; font-size: 15px; font-weight: 700;">Log a run</span>
+              <div style="margin-top: auto; display: flex; flex-direction: column; border-top: 1px solid #DCDBD2;"><span style="padding: 14px 0; border-bottom: 1px solid #DCDBD2; font-size: 15px; display: flex; justify-content: space-between;">Settings<span style="color: #7A7A70;">›</span></span></div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span style="color: #0B0B0E; font-weight: 600;">YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Counts show as 0 — hiding them makes a new profile look broken, not new. The avatar is the initial on --hairline dark until a photo exists. City shows only if O1 got one; otherwise the line is just @username. No badges, no "complete your profile" meter. The runs list, a band record and the closet summary appear as they gain data; none is drawn empty.</p>
+        </div>
+
+        <div data-screen-label="H No public entries" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">H · SOMEONE ELSE · NOTHING PUBLIC</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:02</span><span>▮▮▮ 88%</span></div>
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0;"><span style="font-size: 20px; line-height: 1;">←</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; align-items: center; gap: 14px;"><div style="width: 56px; height: 56px; border-radius: 100px; background: #2A2A31; display: grid; place-items: center; font-family: 'Archivo Black', sans-serif; font-size: 22px;">R</div><div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Ravi K</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">@RK_MILES</span></div></div>
+              <span style="align-self: flex-start; background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 12px 22px; font-size: 15px; font-weight: 700;">Follow</span>
+            </div>
+            <div data-part="entries" data-state="empty" style="padding: 32px 20px 20px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+              <p style="margin: 0; font-size: 17px; line-height: 1.5;">No public entries yet.</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E4E44;">Follow Ravi and their shared runs will show in your feed.</p>
+              <span data-part="report" style="margin-top: auto; padding: 12px 0; font-size: 13px; color: #6E6E64; text-decoration: underline; text-underline-offset: 3px; align-self: flex-start;">Report or block @rk_miles</span>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">No counts on H in v1 — a stranger's follower count is a status number, and G shows them only to their owner. Header and Follow stay; the empty line is plain lead, no brackets (it's their silence, not a next step for you). Report/block is H's foot link, same position as D's Report; it opens W1 with the block toggle.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- M -->
+    <div id="m" data-board="V1 Screens · M + Remaining Screens · S2" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">13 · M · unread on white</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">M redrawn to S2c. The yellow wash and rule are removed: yellow is the product's failure fill and nothing else.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+        <div data-screen-label="M Mark all read in flight" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">M · UNREAD · MARK ALL READ IN FLIGHT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 640px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:40</span><span>▮▮▮ 74%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Notifications</span><span data-part="mark-all" data-state="pending" aria-busy="true" style="margin-left: auto; display: flex; gap: 0.3em; font-size: 14px; font-weight: 600;"><span style="color: #FF2D8A;">[</span>Marking<span style="color: #FF2D8A;">]</span></span></div>
+            <div data-part="notification-list" style="display: flex; flex-direction: column; flex: 1;">
+              <div data-part="notification-row" data-state="unread" style="background: #FFFFFF; padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; gap: 12px; align-items: flex-start;"><span style="width: 7px; height: 7px; border-radius: 100px; background: #FF2D8A; margin-top: 7px; flex: 0 0 7px;"></span><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; line-height: 1.4;"><strong>6.2 mi on Saturday</strong> is waiting for a verdict.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">2H AGO</span></div></div>
+              <div data-part="notification-row" data-state="unread" style="background: #FFFFFF; padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; gap: 12px; align-items: flex-start;"><span style="width: 7px; height: 7px; border-radius: 100px; background: #FF2D8A; margin-top: 7px; flex: 0 0 7px;"></span><div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; line-height: 1.4;"><strong>mark_t</strong> found your 41° run useful.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">5H AGO</span></div></div>
+              <div data-part="notification-row" style="padding: 14px 20px 14px 39px; border-bottom: 1px solid #DCDBD2; display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; line-height: 1.4; color: #4E4E44;"><strong style="color: #0B0B0E;">jules.p</strong> started following you.</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YESTERDAY</span></div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Unread = white (--panel) + pink dot; read = paper, text in --quiet, dot's width kept as indent. Mark all read is a text button in the header; in flight its label breathes in place, rows stay unread until it resolves, then all go at once (static). Fails: label returns, nothing changes, status region says "Nothing marked. Your connection dropped." Verdict rows stay unread until the verdict is logged — marking can't clear a to-do. S2b's empty copy ("[ QUIET ]" + "Log a run and we'll ask you one question about it…") confirmed verbatim.</p>
+        </div>
+
+        <div style="flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 20px; padding-top: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">THE BELL'S NUMBER</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;"><strong style="color: #F4F3EF;">Runs with a kit or not, without a verdict, from the last 14 days.</strong> The same set as DS2 and the S1 prompt — one query, three surfaces. It's a number because each one is a thing to do. Follows, useful and system notes are the dot. Number wins over dot when both apply. Caps at "9+".</p></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">WHERE THE BELL LIVES</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Every signed-in top header, right-aligned, on every tab — including Feed (its absence there is on your bug list). Never on a signed-out page.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- X -->
+    <div id="x" data-board="New: System states" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">14 · Not found, failed, slow</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Framework defaults replaced. Signed in, the shell stays so the tab bar is the way out. Signed out, Auth's rule: no bars.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <div data-screen-label="X Not found" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">X1 · NOT FOUND · SIGNED IN</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 640px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:40</span><span>▮▮▮ 74%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; justify-content: space-between; align-items: center;"><span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div data-part="system-state" data-state="not-found" style="padding: 56px 24px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">404</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.035em; line-height: 1.05;">NOTHING HERE</span>
+              <p style="margin: 0; font-size: 17px; line-height: 1.5;">This page doesn't exist, or it's an entry its runner has made private.</p>
+              <span style="align-self: flex-start; margin-top: 8px; border: 1px solid #DCDBD2; border-radius: 100px; padding: 13px 20px; font-size: 15px; font-weight: 600;">Go to your feed</span>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span>CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Shell present, no tab lit. One sentence covers "gone" and "private" so a 404 never confirms a hidden entry exists. Signed out: same body, no bars, the button reads "Log in". No brackets on the headline — brackets mean waiting or a next step, and this is neither.</p>
+        </div>
+
+        <div data-screen-label="X Loader failed" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">X2 · SOMETHING FAILED · LOADER</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 640px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:41</span><span>▮▮▮ 74%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 18px; display: flex; align-items: center; gap: 14px;"><span style="font-size: 20px; line-height: 1;">←</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Closet</span></div>
+            <div data-part="system-state" data-state="loader-failed" style="padding: 24px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+              <div data-part="failure-band" style="border: 1px solid #0B0B0E; padding: 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Didn't load</span>
+                <span style="font-size: 15px; line-height: 1.4;">Our end failed. Your closet is fine.</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; font-weight: 700; font-size: 15px; padding: 12px 20px; border-radius: 100px;">Try again</span>
+              </div>
+            </div>
+            <div data-part="tab-bar" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span style="color: #0B0B0E; font-weight: 600;">CLOSET</span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The Form Contract's band, reused for reads: same block, "Didn't load" in place of "Nothing saved", top of the content area where the screen's first part would be. Header keeps the route's title; tab stays lit. Network: "Your connection dropped." Never a stack trace, never an error code in copy. A root crash (no shell possible) renders this band alone on paper with "Reload".</p>
+        </div>
+
+        <div data-screen-label="X Slow route" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">X3 · SLOW ROUTE CHANGE · AFTER 300MS</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 640px;">
+            <div data-part="status-bar" style="background: #0B0B0E; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>8:42</span><span>▮▮▮ 74%</span></div>
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;"><span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;"><span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 8px;">Following</span><span style="color: #8B8B93; padding-bottom: 8px;">Your conditions</span></div>
+            <div style="padding: 18px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 100px; background: #FF2D8A;"></div><span style="font-size: 15px; font-weight: 600;">dana_k</span></div>
+              <div style="height: 210px; border-radius: 12px; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 8px, #E3E2D8 8px 16px);"></div>
+              <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">FEED STAYS UP, UNTOUCHED</span>
+            </div>
+            <div data-part="tab-bar" data-state="navigating" style="border-top: 1px solid #DCDBD2; padding: 12px 20px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FEED</span><span style="color: #0B0B0E; font-weight: 600;"><span style="color: #FF2D8A;">[</span>CLOSET<span style="color: #FF2D8A;">]</span></span><span>+ ADD</span><span>CALL</span><span>YOU</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The old screen stays; the destination's tab goes lit at once and gains breathing brackets after 300ms. Under 300ms nothing shows. No skeleton, no top bar, no dimming. For in-screen links (a post → D) the brackets go on the tapped element's label. At desk, same on the bar-nav item. Screen reader: the status region says "Loading Closet." once, at 300ms.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIER 3 -->
+    <div id="t3" style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Tier 3 · rulings</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">Answered so the build can move; drawings follow in round 23. Where a ruling says "is X", X's drawing already governs.</span>
+      </div>
+      <div id="t3-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">15 · RUNNER SEARCH</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Row: avatar, display name, @username, Follow pill inline.</strong> No city — search results are the one place a stranger sees you, so they see least. Typing: results under the field, the field's trailing label breathes. None: "No runner called @x." At desk: a 620 column, not the panel.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">16 · CLOSET AT DESK, NO RAIL</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Is §6c.10's one-column fallback.</strong> Heading row: "47 pieces" left, "Show retired" switch right. Retired tiles: same tile, [RETIRED] in the kicker, sorted last, no dimming. Empty: "[ NOTHING IN HERE YET ]" + "Add what you run in most. Three pieces is enough to start." + the dashed Add tile.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">17 · F ADD GARMENT</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Remove the product-link field for v1.</strong> A field that can only say "pending" breaks AC2b; F2a/F2b return with enrichment. Order: AH1 identity → Size → Colorway → photo well (item 8) → Add to closet. Edit is F prefilled, title "Edit Rover Half-zip", button Save.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">18 · DS2 BACKLOG</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Failed row: the row keeps its place and choice, a failure band spans it, Try again inside.</strong> Zero rows: DS2 is unreachable under two; clearing the last shows "[ ALL LOGGED ]" and the bar's count goes. No conditions: rail sentence "No weather on this run." — verdict still allowed. 720–1039: no table; A3 one at a time in the panel.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">19 · O1 CALIBRATE</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">City field suggests as you type; picking one makes the chip.</strong> "Use my location" is a text button under it: in flight it breathes; granted → chip; denied → focus to the field, line "Location's off. Type your city instead." (not yellow). Units: two segmented pairs, °F/°C and mi/km, defaulted from locale.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">20 · SETTINGS</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">U1/N's tap-through index wins; the one long form is drift.</strong> Each sub-page is its own small form with its own Save. Index keeps the tab bar (it's under You); sub-pages keep it too, with back. Unanswered calibration row: "How you run" · "Not answered" in --muted · "Answer ›".</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">21 · SAFETY</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Report is a foot text link on D and H</strong> (drawn above, item 10 and 12). W1 from D has no block toggle: reasons, optional note, Send; ✕ closes and discards without confirm. W2 empty: "You haven't blocked anyone." — one line, no brackets.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">22 · W3 BLUR</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Same slot as W3a's copy line.</strong> After taps: "You blurred 2 spots. Tap one to undo." Blur off: "Faces won't be blurred. Anyone in this photo can be recognised." Not a warning colour; the sentence does the work.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">23 · STRAVA</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The return page is a panel receipt.</strong> Connected: "Strava connected. New runs arrive on their own." + Continue. Not connected (cancel or denied): "Strava isn't connected. Nothing changed." + Try again / Not now. Not configured: the row and button are absent — never a dead control.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">24 · CALL TEASER (K)</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Zero: K as drawn, meter at 0 of 5, "Log five verdicts and the Call starts."</strong> Threshold met in v1: K stays, meter full, "That's enough to call. The Call arrives in the next release." No button — there's no B1 to hand off to.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">25 · SMALL FOLDS</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Expanded folds are the same rows, continued, with "Fewer" at the end.</strong> No second style for the revealed part. P2.5 with nothing to name: the section is absent, not a line saying so.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">CARRIED IN FROM THIS ROUND</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;">New data-parts: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">form, or-divider, google, cross-link, failure-band, field-message, session-notice, match-block, author, caption, identity, stats, composition, pairs-with, actions, sheet, photo-well, well-actions, verdict-prompt, item-flag, tags, report, run-list, run-row, run-badge, counts, entries, mark-all, notification-list, notification-row, system-state</code>. Mirror into product.md §6b.</p></div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
