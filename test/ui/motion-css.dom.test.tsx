@@ -271,13 +271,8 @@ describe("the ported Motion Doctrine (design/motion.js)", () => {
       if (surface === "Pending / loading") continue;
       const entry = SURFACES.get(surface);
       const body = fullMotion(utilities.get(utility) ?? "");
-      // `verdict-lock` is the "then" in "brackets close … **then** the
-      // row locks": it carries the surface's duration as a delay, not as
-      // its own length.
-      const duration =
-        utility === "verdict-lock" ? "instant" : (entry?.duration ?? "");
-      const easing =
-        utility === "verdict-lock" ? "snap" : (entry?.easing ?? "");
+      const duration = entry?.duration ?? "";
+      const easing = entry?.easing ?? "";
       expect([utility, body.includes(`var(--dur-${duration})`)]).toEqual([
         utility,
         true,
@@ -287,9 +282,33 @@ describe("the ported Motion Doctrine (design/motion.js)", () => {
         true,
       ]);
     }
-    expect(fullMotion(utilities.get("verdict-lock") ?? "")).toContain(
-      "var(--ease-snap) var(--dur-reveal)",
-    );
+  });
+
+  it("lands the verdict's fill in the brackets' beat, not after it", () => {
+    // Round 19 wrote it into the contract: "close by TRAVEL.frame as the
+    // fill lands (one beat, not two)". Read from `motion.js` rather than
+    // restated, so the test moves if the doctrine does.
+    //
+    // **This test exists because the change was invisible without it.**
+    // `verdict-lock` used to be special-cased above — "it carries the
+    // surface's duration as a delay, not as its own length" — and that
+    // hand-written exception meant round 19 could rewrite the surface and
+    // nothing here noticed: every assertion still held against the old
+    // two-beat code. A delay is the second time value in a transition
+    // entry, so "one beat" is: no entry carries two.
+    expect(SURFACES.get("Verdict commit")?.move).toContain("one beat");
+
+    const entries = fullMotion(utilities.get("verdict-lock") ?? "")
+      .replace(/^[\s\S]*?transition:/u, "")
+      .split(",");
+    expect(entries.length).toBeGreaterThan(0);
+    for (const entry of entries) {
+      const times = entry.match(/var\(--dur-[\w-]+\)/gu) ?? [];
+      expect([entry.trim(), times]).toEqual([
+        entry.trim(),
+        ["var(--dur-reveal)"],
+      ]);
+    }
   });
 
   it("gives the sheet the faster exit the map asks for in prose", () => {

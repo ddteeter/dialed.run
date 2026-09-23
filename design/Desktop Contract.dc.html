@@ -65,15 +65,15 @@
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">DS1a · TOP BAR · ≥1040 · LIGHT</span>
         <div style="overflow-x: auto; max-width: 100%;"><div data-screen-label="DS1a Shell desk light" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; width: 1180px; min-width: 1040px; max-width: 1180px;">
-          <div style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 32px;">
-            <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
-            <div style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
+          <div data-part="top-bar" style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 32px;">
+            <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+            <div data-part="bar-nav" style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
               <span style="display: flex; align-items: center; padding: 0 12px; font-weight: 700; border-bottom: 2px solid #FF2D8A; margin-bottom: -1px;">Feed</span>
               <span style="display: flex; align-items: center; padding: 0 12px; color: #B9B8AE;">Closet</span>
               <span style="display: flex; align-items: center; padding: 0 12px; color: #B9B8AE;">Call</span>
               <span style="display: flex; align-items: center; padding: 0 12px; color: #B9B8AE;">You</span>
             </div>
-            <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+            <div data-part="bar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
               <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l5 5" /></svg></span>
               <span style="display: flex; align-items: flex-start; width: 44px; height: 44px; justify-content: center; align-items: center; border-radius: 100px;">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg>
@@ -82,9 +82,9 @@
               <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 0 16px; height: 36px; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Log a run</span>
             </div>
           </div>
-          <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; min-height: 220px;">
-            <div style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">PRIMARY COLUMN · THE PHONE SCREEN'S CONTENT · MIN 620</span></div>
-            <div style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">RAIL · ONLY ON FEED, CLOSET, BACKLOG · NEVER A THIRD</span></div>
+          <div data-part="columns" style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; min-height: 220px;">
+            <div data-part="primary" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">PRIMARY COLUMN · THE PHONE SCREEN'S CONTENT · MIN 620</span></div>
+            <div data-part="rail" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">RAIL · ONLY ON FEED, CLOSET, BACKLOG · NEVER A THIRD</span></div>
           </div>
         </div>
       </div></div>
@@ -93,22 +93,22 @@
         <div style="flex: 1 1 420px; min-width: 300px; display: flex; flex-direction: column; gap: 14px;">
           <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">DS1b · TOP BAR · 720–1039 · DARK · ONE COLUMN</span>
           <div style="overflow-x: auto; max-width: 100%;"><div data-screen-label="DS1b Shell wide dark" style="background: #0B0B0E; color: #F4F3EF; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #2A2A31; width: 720px; min-width: 720px;">
-            <div style="background: #F4F3EF; color: #0B0B0E; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 20px;">
-              <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #C21A6B;">[</span><span>dialed</span><span style="color: #7A7A70;">.run</span><span style="color: #C21A6B;">]</span></span>
-              <div style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
+            <div data-part="top-bar" style="background: #F4F3EF; color: #0B0B0E; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 20px;">
+              <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #C21A6B;">[</span><span>dialed</span><span style="color: #7A7A70;">.run</span><span style="color: #C21A6B;">]</span></span>
+              <div data-part="bar-nav" style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
                 <span style="display: flex; align-items: center; padding: 0 10px; color: #4E4E44;">Feed</span>
                 <span style="display: flex; align-items: center; padding: 0 10px; font-weight: 700; border-bottom: 2px solid #C21A6B; margin-bottom: -1px;">Closet</span>
                 <span style="display: flex; align-items: center; padding: 0 10px; color: #4E4E44;">Call</span>
                 <span style="display: flex; align-items: center; padding: 0 10px; color: #4E4E44;">You</span>
               </div>
-              <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+              <div data-part="bar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
                 <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0B0B0E" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M16 16l4 4" /></svg></span>
                 <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0B0B0E" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg></span>
                 <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 0 16px; height: 36px; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Log a run</span>
               </div>
             </div>
             <div style="padding: 24px; display: flex; justify-content: center; min-height: 200px;">
-              <div style="width: 100%; max-width: 620px; border: 1px dashed #3A3A42; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">ONE COLUMN · MAX 620 · SEARCH AND THEME COLLAPSE TO ICONS</span></div>
+              <div data-part="primary" data-status="unbuilt" style="width: 100%; max-width: 620px; border: 1px dashed #3A3A42; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">ONE COLUMN · MAX 620 · SEARCH AND THEME COLLAPSE TO ICONS</span></div>
             </div>
           </div>
         </div></div>
@@ -134,33 +134,33 @@
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">DS2 · ≥1040 · LIGHT · REACHED FROM "CLEAR THE QUEUE ›" ON X, OR THE S1 VERDICT PROMPT</span>
         <div style="overflow-x: auto; max-width: 100%;"><div data-screen-label="DS2 Verdict backlog" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; width: 1180px; min-width: 1040px; max-width: 1180px;">
-          <div style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 32px;">
-            <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
-            <div style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
+          <div data-part="top-bar" style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 32px;">
+            <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+            <div data-part="bar-nav" style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
               <span style="display: flex; align-items: center; padding: 0 12px; font-weight: 700; border-bottom: 2px solid #FF2D8A; margin-bottom: -1px;">Feed</span>
               <span style="display: flex; align-items: center; padding: 0 12px; color: #B9B8AE;">Closet</span>
               <span style="display: flex; align-items: center; padding: 0 12px; color: #B9B8AE;">Call</span>
               <span style="display: flex; align-items: center; padding: 0 12px; color: #B9B8AE;">You</span>
             </div>
-            <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+            <div data-part="bar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
               <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4" /></svg></span>
               <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 0 16px; height: 36px; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Log a run</span>
             </div>
           </div>
 
-          <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px;">
-            <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
-              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+          <div data-part="columns" style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px;">
+            <div data-part="primary" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+              <div data-part="backlog-header" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Needs a verdict</span>
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">6 RUNS · IMPORTED FROM STRAVA · OLDEST FIRST</span>
               </div>
 
-              <div style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; padding: 0 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; border-bottom: 1px solid #DCDBD2;">
+              <div data-part="column-heads" style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; padding: 0 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; border-bottom: 1px solid #DCDBD2;">
                 <span>RUN</span><span>CONDITIONS</span><span>OUTFIT</span><span>DID IT WORK?</span>
               </div>
 
               <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
-                <div style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; align-items: center; min-height: 60px; padding: 8px 12px; border-radius: 12px; background: {{ r.bg }}; border: 1px solid {{ r.border }};">
+                <div data-part="backlog-row" style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; align-items: center; min-height: 60px; padding: 8px 12px; border-radius: 12px; background: {{ r.bg }}; border: 1px solid {{ r.border }};">
                   <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">{{ r.day }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">{{ r.time }}</span></div>
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44; line-height: 1.4;">{{ r.cond }}</span>
                   <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
@@ -173,7 +173,7 @@
                       <span style="border: 1px dashed #9A9A90; border-radius: 100px; padding: 6px 12px; font-size: 13px; color: #7A7A70; white-space: nowrap;">Same as {{ r.suggest }}? <span style="color: #C21A6B; font-weight: 600;">Use</span> · <span style="color: #C21A6B; font-weight: 600;">Pick</span></span>
                     </sc-if>
                   </div>
-                  <div style="display: flex; gap: 3px;">
+                  <div data-part="verdict-row" role="radiogroup" style="display: flex; gap: 3px;">
                     <sc-for list="{{ r.slots }}" as="s" hint-placeholder-count="5">
                       <span title="{{ s.label }}" style="width: 50px; height: 44px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: pre-line; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.03em; line-height: 1.3; font-weight: {{ s.weight }}; background: {{ s.bg }}; color: {{ s.fg }}; border: 1px solid {{ s.border }};">{{ s.word }}</span>
                     </sc-for>
@@ -181,7 +181,7 @@
                 </div>
               </sc-for>
 
-              <div style="display: flex; align-items: center; gap: 12px; padding-top: 8px; font-size: 13px; color: #4E4E44;">
+              <div data-part="keys" style="display: flex; align-items: center; gap: 12px; padding-top: 8px; font-size: 13px; color: #4E4E44;">
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">KEYS</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">↑↓</span> row</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">1–5</span> way cold → way warm</span>
@@ -192,8 +192,8 @@
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
-              <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <div data-part="rail" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+              <div data-part="selected-card" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SELECTED · WED 4 SEP</span>
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: 0.02em; line-height: 1.2;">41°F · 88% · SE 9</span>
                 <span style="font-size: 15px; line-height: 1.5;">Cold and damp at 6 AM. You logged three runs in this band; you were under-dressed in two and dialed in the one with gloves.</span>
@@ -206,14 +206,14 @@
                   </div>
                 </div>
               </div>
-              <div style="background: #EDECE3; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #4E4E44;">Verdicts saved here count exactly like verdicts from the phone. There is no "bulk" rule — every row is one A3, and the bracket closes on each one (motion: Verdict commit, 320ms, align).</div>
-              <div style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;"><span>WEATHER BY <a href="https://www.visualcrossing.com/" style="color: #C21A6B;">VISUAL CROSSING</a></span></div>
+              <div data-annotation="" style="background: #EDECE3; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #4E4E44;">Verdicts saved here count exactly like verdicts from the phone. There is no "bulk" rule — every row is one A3, and the bracket closes on each one (motion: Verdict commit, 320ms, align).</div>
+              <div data-part="attribution" style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;"><span>WEATHER BY <a href="https://www.visualcrossing.com/" style="color: #C21A6B;">VISUAL CROSSING</a></span></div>
             </div>
           </div>
         </div></div>
         <div style="display: flex; flex-wrap: wrap; gap: 28px;">
           <p style="margin: 0; flex: 1 1 380px; font-size: 13px; line-height: 1.5; color: #8B8B93;">Why it earns the width: the phone version is six S1 prompts, each opening an A3 sheet — six round trips for six decisions the runner can make in twelve seconds once the conditions and their usual kit are side by side. The table doesn't add inputs; it removes the trips.</p>
-          <p style="margin: 0; flex: 1 1 380px; font-size: 13px; line-height: 1.5; color: #8B8B93;">Round 16: the verdict cell is A3's five buttons, shrunk, in A3's order and with A3's words — the mirror is the rule. Hue follows T2 (cold pink, dialed teal, warm quiet grey) and position carries the degree, as AB1 says it must. No digits anywhere on the surface: the header asks A3's question ("Did it work?"), the keys legend maps 1–5 to the words. Skip is a key, not a slot. A saved row keeps its slot filled and drops to <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">--tint</span>; it leaves the list on the next visit, not on save — motion has no "row flies away".</p>
+          <p style="margin: 0; flex: 1 1 380px; font-size: 13px; line-height: 1.5; color: #8B8B93;">Round 16: the verdict cell is A3's five buttons, shrunk, in A3's order and with A3's words — the mirror is the rule. Hue follows T2 (cold pink, dialed teal, warm quiet grey) and position carries the degree, as AB1 says it must. No digits anywhere on the surface: the header asks A3's question ("Did it work?"), the keys legend maps 1–5 to the words. Skip is a key, not a slot. A saved row keeps its slot filled and drops to <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">--tint</span>; it leaves the list on the next visit, not on save — motion has no "row flies away". Round 19: A3's board now fills its chosen cell with the same T2 hue, so the mirror holds in both directions; both rows carry <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">data-part="verdict-row"</span> and the harness may diff them against each other.</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 28px;">
           <p style="margin: 0; flex: 1 1 380px; font-size: 13px; line-height: 1.5; color: #8B8B93;"><strong style="color: #F4F3EF;">The per-item flag is not in the row.</strong> A3's "Anything specific?" chips are optional and belong to one run's outfit; on the backlog they live in the A2 panel a Tab opens, not in a cell. And they are chips, never a <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">&lt;select&gt;</span> — a dropdown beside the kit reads as the verdict control, which is exactly what happened on film. Product Screens A3 carries the same note.</p>

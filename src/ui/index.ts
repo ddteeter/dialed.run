@@ -34,4 +34,5 @@ export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export { useIdempotencyKey } from "./use-idempotency-key";
 export { useListMotion } from "./use-list-motion";
 export { WeatherAttribution } from "./WeatherAttribution";
+export { verdictHue } from "./verdict-hue";
 export { Wordmark } from "./Wordmark";

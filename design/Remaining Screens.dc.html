@@ -71,17 +71,17 @@
           <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">E1 · FOLLOWING</span>
           <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
             <div data-part="status-bar" style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:14</span><span>▮▮▮ 76%</span></div>
-            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
             </div>
-            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
               <span style="font-weight: 700; border-bottom: 2px solid #FF2D8A; padding-bottom: 8px;">Following</span>
               <span style="color: #8B8B93; padding-bottom: 8px;">Your conditions</span>
             </div>
 
-            <div style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
-              <div style="border-bottom: 1px solid #DCDBD2; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <div data-part="feed" style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
+              <div data-part="post" style="border-bottom: 1px solid #DCDBD2; padding-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <div style="width: 36px; height: 36px; border-radius: 100px; background: #FF2D8A;"></div>
                   <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">dana_k</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">2H AGO · 6:04 AM</span></div>
@@ -97,7 +97,7 @@
                 <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;"><span style="color: #C21A6B; font-weight: 600;">♥ 24 USEFUL</span></div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div data-part="post" style="display: flex; flex-direction: column; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <div style="width: 36px; height: 36px; border-radius: 100px; background: #00E0C6;"></div>
                   <div style="display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">mark_t</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">YESTERDAY · 5:40 PM</span></div>
@@ -119,15 +119,15 @@
           <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">A "too warm" post with no photo is still a useful post. Text-only entries keep the logging bar low and the feed honest.</p>
         </div>
 
-        <div data-screen-label="E2 Feed your conditions" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+        <div data-screen-label="E2 Feed your conditions" data-status="unbuilt" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
           <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">E2 · YOUR CONDITIONS · POST-MVP TARGET</span>
           <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 880px;">
             <div data-part="status-bar" style="background: #0B0B0E; color: #F4F3EF; padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;"><span>7:15</span><span>▮▮▮ 76%</span></div>
-            <div style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div data-part="header" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: center;">
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.03em;">{{ brandWord }}<span style="color: #FF2D8A;">.run</span></span>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
             </div>
-            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
               <span style="color: #8B8B93; padding-bottom: 8px;">Following</span>
               <span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span>
             </div>
@@ -194,7 +194,7 @@
               <span style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00E0C6; letter-spacing: 0.06em;">44°F · 6:10 AM</span>
             </div>
-            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
+            <div data-part="feed-tabs" style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px 0; display: flex; gap: 20px; font-size: 15px;">
               <span style="color: #8B8B93; padding-bottom: 8px;">Following</span>
               <span style="font-weight: 700; border-bottom: 2px solid #00E0C6; padding-bottom: 8px;">Your conditions</span>
             </div>
@@ -296,7 +296,7 @@
                   <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">Attributes</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">WEIGHT · FABRIC · WIND · VISIBILITY</span></div>
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;">[OPTIONAL] ˅</span>
                 </div>
-                <div style="border-top: 1px solid #DCDBD2; padding: 12px 15px; background: #F9F8F4;">
+                <div style="border-top: 1px solid #DCDBD2; padding: 12px 15px; background: #FFFFFF;">
                   <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">Collapsed by default. Filling these in gives an estimated range before you've worn it — or skip them and let the runs do the work.</p>
                 </div>
               </div>
@@ -1243,7 +1243,7 @@
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; color: #4E4E44;">
                   <span><span style="color: #C21A6B;">■</span> ROAD 231</span>
-                  <span><span style="color: #8B8B84;">■</span> TREADMILL 56</span>
+                  <span><span style="color: #7A7A70;">■</span> TREADMILL 56</span>
                   <span><span style="color: #B9B8AE;">■</span> TRAIL 25</span>
                 </div>
               </div>
@@ -2278,11 +2278,11 @@
               <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Exact shade</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;">NAVY · OPTIONAL</span></div>
               <div style="display: flex; gap: 10px; align-items: stretch;">
                 <div style="flex: 0 0 120px; height: 120px; border-radius: 12px; position: relative; overflow: hidden; background-color: #E3E2D8; background-image: repeating-linear-gradient(135deg, #D8D7CC 0 7px, #E3E2D8 7px 14px);">
-                  <div style="position: absolute; left: 62px; top: 48px; width: 26px; height: 26px; border-radius: 100px; border: 2px solid #0B0B0E; background: #1F2A44; box-shadow: 0 0 0 2px #FFFFFF;"></div>
+                  <div data-content="" style="position: absolute; left: 62px; top: 48px; width: 26px; height: 26px; border-radius: 100px; border: 2px solid #0B0B0E; background: #1F2A44; box-shadow: 0 0 0 2px #FFFFFF;"></div>
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">HEX</span>
-                  <div style="border: 2px solid #0B0B0E; border-radius: 9px; padding: 10px 12px; background: #FFFFFF; display: flex; align-items: center; gap: 10px;"><span style="width: 18px; height: 18px; background: #1F2A44; flex: 0 0 auto;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: 0.04em;">#1F2A44</span></div>
+                  <div style="border: 2px solid #0B0B0E; border-radius: 9px; padding: 10px 12px; background: #FFFFFF; display: flex; align-items: center; gap: 10px;"><span data-content="" style="width: 18px; height: 18px; background: #1F2A44; flex: 0 0 auto;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: 0.04em;">#1F2A44</span></div>
                   <span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">Tap the photo to sample, or type it.</span>
                 </div>
               </div>

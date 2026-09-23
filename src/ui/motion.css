@@ -278,10 +278,30 @@
   }
 }
 
+/*
+ * **One beat, not two** (design round 19, now in `motion.js`): *"Brackets
+ * frame the chosen cell at its edges and close by TRAVEL.frame as the
+ * fill lands (one beat, not two), then the row locks."*
+ *
+ * It was two. The fill waited a whole `reveal` and then flipped at
+ * `instant`, so the brackets closed onto an empty cell and the colour
+ * arrived afterwards — "brackets close, **then** the row locks", read as
+ * two moves. Now the fill lands on the same duration and curve as the
+ * brackets, from the same frame, so they arrive together. Nothing waits.
+ *
+ * `border-color` too, because the chosen cell now wears its verdict's hue
+ * on its border as well as its fill (round 19 again, see VerdictForm) —
+ * left out, the border would snap while the fill travelled.
+ *
+ * Only on the chosen cell. Un-choosing removes the class, and with it the
+ * transition, so a cell that stops being chosen reverts at once — a
+ * receipt for something that did not happen should not linger.
+ */
 @utility verdict-lock {
   transition:
-    background-color var(--dur-instant) var(--ease-snap) var(--dur-reveal),
-    color var(--dur-instant) var(--ease-snap) var(--dur-reveal);
+    background-color var(--dur-reveal) var(--ease-align),
+    border-color var(--dur-reveal) var(--ease-align),
+    color var(--dur-reveal) var(--ease-align);
 }
 
 /* ------------------------------------------------------------------

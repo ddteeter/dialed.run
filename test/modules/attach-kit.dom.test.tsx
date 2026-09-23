@@ -717,6 +717,19 @@ describe("AttachKit: the log flow", () => {
 
     const step = document.querySelector("[data-flow-direction]");
     expect(step).not.toBeNull();
-    expect(step?.className).toMatch(/^flow-step-(forward|back)$/);
+    // Mounted with no step before it, so this is the way in: the class is
+    // absent precisely because the rise is the move — as its three sibling
+    // screens already assert.
+    //
+    // **This asserted `flow-step-(forward|back)` and passed because of a
+    // bug.** Arrival was recomputed on every render, and AttachKit is the
+    // one step that re-renders on its own after mounting (its geolocation
+    // effect), so by the time this looked, the re-render had read its own
+    // record and added the slide class. That is the same bug that slid the
+    // whole verdict screen sideways when a verdict was chosen. The other
+    // three screens do not re-render unprompted, which is why their tests
+    // captured the mount state and this one captured the bug.
+    expect(step).toHaveAttribute("data-flow-direction", "entering");
+    expect(step?.className).toBe("");
   });
 });

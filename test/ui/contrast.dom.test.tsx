@@ -138,9 +138,10 @@ function contrast(a: string, b: string): number {
 
 describe("the T1 port", () => {
   it("parsed the table, so nothing below is vacuous", () => {
-    // Sixteen rows since round 13 added `--label`. A parser that matched
-    // nothing would make every case below pass against no colours at all.
-    expect(t1).toHaveLength(16);
+    // Eighteen rows: round 13 added `--label`, round 19 the two hover
+    // states. A parser that matched nothing would make every case below
+    // pass against no colours at all.
+    expect(t1).toHaveLength(18);
     expect(t1.map((pair) => pair.role)).toContain("--label");
     expect(root.size).toBeGreaterThan(15);
   });

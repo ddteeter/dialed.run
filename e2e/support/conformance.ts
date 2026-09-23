@@ -70,6 +70,10 @@ const ROLE_BY_HEX = roleByHex();
 `rgb(11, 11, 14)` -> `#0b0b0e`. Both sides resolve to `rgb()`.
 */
 function hexOf(computed: string): string {
+  // An unfilled element computes to `rgba(0, 0, 0, 0)`, and reading only
+  // the first three channels would call that `#000000` — a black fill
+  // where there is no fill at all.
+  if (/rgba\([^)]*,\s*0\)$/u.test(computed)) return "transparent";
   const parts = /rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(computed);
   if (parts === null) return computed;
   const channel = (index: number): string =>
@@ -129,39 +133,55 @@ const EXTRACT = ({
   if (!root) return [];
   const leaves: Leaf[] = [];
 
-  const walk = (element: Element): void => {
-    for (const node of element.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = (node.textContent ?? "").trim().replaceAll(/\s+/gu, " ");
-        if (text === "") continue;
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        const box = range.getBoundingClientRect();
-        if (box.width <= 0 || box.height <= 0) continue;
+  // **The browser walks, and its filter decides what not to descend
+  // into.** `FILTER_REJECT` drops an element *and its whole subtree*,
+  // which is exactly the semantics each of these needs:
+  //
+  // - `data-annotation` — design's captions and commentary, not the
+  //   screen;
+  // - `data-status="unbuilt"` — a region design marks as not built yet
+  //   (round 19), skipped by design's word rather than by a list kept by
+  //   hand here;
+  // - anything not rendered.
+  //
+  // A TreeWalker rather than a recursive function with a helper, because
+  // this whole function is serialised into the browser: a helper hoisted
+  // to module scope (which lint asks for) would not exist when it runs.
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+        const element = node as HTMLElement;
         const style = getComputedStyle(element);
-        leaves.push({
-          text,
-          x: box.x,
-          y: box.y,
-          color: style.color,
-          weight: style.fontWeight,
-          size: style.fontSize,
-        });
-        continue;
-      }
-      if (node.nodeType !== Node.ELEMENT_NODE) continue;
-      // `HTMLElement`, not `Element`, only so `dataset` is in the type —
-      // `unicorn/prefer-dom-node-dataset` rewrites `hasAttribute` to it,
-      // and `Element` does not carry it.
-      const child = node as HTMLElement;
-      if (Object.hasOwn(child.dataset, "annotation")) continue;
-      const style = getComputedStyle(child);
-      if (style.display === "none" || style.visibility === "hidden") continue;
-      walk(child);
-    }
-  };
+        const isHidden =
+          Object.hasOwn(element.dataset, "annotation") ||
+          element.dataset.status === "unbuilt" ||
+          style.display === "none" ||
+          style.visibility === "hidden";
+        return isHidden ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
+      },
+    },
+  );
 
-  walk(root);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const text = (node.textContent ?? "").trim().replaceAll(/\s+/gu, " ");
+    if (text === "" || node.parentElement === null) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const box = range.getBoundingClientRect();
+    if (box.width <= 0 || box.height <= 0) continue;
+    const style = getComputedStyle(node.parentElement);
+    leaves.push({
+      text,
+      x: box.x,
+      y: box.y,
+      color: style.color,
+      weight: style.fontWeight,
+      size: style.fontSize,
+    });
+  }
 
   const base = root.getBoundingClientRect();
   return leaves.map((leaf) => ({
@@ -227,6 +247,7 @@ export async function cellsOf(
   return page.$$eval(`${selector} > *`, (cells) =>
     cells
       .filter((cell) => {
+        if ((cell as HTMLElement).dataset.status === "unbuilt") return false;
         const style = getComputedStyle(cell);
         return style.display !== "none" && style.visibility !== "hidden";
       })
@@ -250,6 +271,36 @@ export async function cellsOf(
       })
       .filter((text) => text !== ""),
   );
+}
+
+/**
+ * Each of the region's cells as the T1 role its fill resolves to.
+ *
+ * **The colour axis**, and the one no other check here covers: the unit
+ * suite proves T1's values are ported correctly, never that a given
+ * surface wears the right role. That gap is how A3's chosen verdict came
+ * to be `--ink` in the build and `--action` on the board while the
+ * backlog that mirrors it filled by hue — three answers, all green.
+ *
+ * Waits on the cells' own animations first. A chosen cell's fill lands
+ * over `--dur-reveal` (round 19's one beat), so a colour read straight
+ * after the click is a colour mid-transition and resolves to no role.
+ */
+export async function fillsOf(
+  page: Page,
+  selector: string,
+): Promise<readonly string[]> {
+  const computed = await page.$$eval(`${selector} > *`, async (cells) => {
+    await Promise.all(
+      cells.flatMap((cell) =>
+        cell.getAnimations().map(async (animation) => animation.finished),
+      ),
+    );
+    return cells
+      .filter((cell) => (cell as HTMLElement).dataset.status !== "unbuilt")
+      .map((cell) => getComputedStyle(cell).backgroundColor);
+  });
+  return computed.map((color) => colorRole(color));
 }
 
 /**

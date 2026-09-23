@@ -7,7 +7,12 @@ import { formatDistance, formatDuration } from "../../../lib/measures";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { formatTemp } from "../../../lib/temperature";
-import { Mono, PendingLabel, WeatherAttribution } from "../../../ui";
+import {
+  Mono,
+  PendingLabel,
+  verdictHue,
+  WeatherAttribution,
+} from "../../../ui";
 import type { BacklogRow, BacklogSuggestion, Conditions } from "../../feed";
 import type { VerdictSlot } from "../backlog-keys";
 import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
@@ -35,33 +40,26 @@ import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
  */
 
 /**
- * The chosen verdict slot: pink cold, teal dialed, grey warm — *"same hue
- * meanings as T2"* — with the shape carrying it as well as the hue, since
- * the position of the filled slot differs per verdict (rule 01, colour is
- * never the only channel).
+ * The slot's shape, which is DS2's own: a shrunk, square-cornered mono
+ * key. Its *colour* is not DS2's to choose — see `ui/verdictHue`, which A3
+ * reads too, so the two mirrored surfaces cannot drift apart (round 19).
  */
 const SLOT_BASE =
   "inline-flex flex-col items-center justify-center rounded-none border px-2 text-center font-mono text-mono-xs";
 const SLOT_RESTING = `${SLOT_BASE} border-hairline-2 font-normal text-quiet`;
-const SLOT_COLD = `${SLOT_BASE} border-action bg-action font-bold text-accent-ink`;
-const SLOT_DIALED = `${SLOT_BASE} border-teal bg-teal font-bold text-accent-ink`;
-const SLOT_WARM = `${SLOT_BASE} border-quiet bg-quiet font-bold text-ground`;
 
 /**
- * Which treatment a chosen slot wears, by the sign of the verdict.
+ * Resting, or chosen and wearing its verdict's T2 hue.
  *
- * Read from the value rather than from the key's position, so the three
- * hues stay tied to the meaning T2 gives them and not to how many keys
- * the table happens to offer. Both cold steps are pink and both warm
- * steps are grey — round 16: *"hue follows T2 and **position carries the
- * degree**, as AB1 says it must."* A resting slot is `--quiet` rather
- * than `--muted`, which is the board's own off state.
+ * A resting slot is `--quiet` rather than `--muted`, which is the board's
+ * own off state. The hue is read from the value's sign by `verdictHue`, so
+ * both cold steps are pink and both warm steps grey — round 16: *"hue
+ * follows T2 and **position carries the degree**, as AB1 says it must."*
  */
 function slotClass(value: VerdictValue, isChosen: boolean): string {
-  if (!isChosen) return SLOT_RESTING;
-  if (value < 0) return SLOT_COLD;
-  if (value > 0) return SLOT_WARM;
-  return SLOT_DIALED;
+  return isChosen
+    ? `${SLOT_BASE} font-bold ${verdictHue(value)}`
+    : SLOT_RESTING;
 }
 
 function conditionsLine(conditions: Conditions, units: Units): string {

@@ -405,6 +405,45 @@ describe("Log flow step: direction carries which way you are going", () => {
     expect(entered).not.toHaveClass("flow-step-back");
   });
 
+  it("stays still when the step re-renders, however it was entered", () => {
+    // **The whole screen slid when a verdict was chosen.** Arrival used to
+    // be recomputed on every render from the record the step's own effect
+    // had just written, so a step entered with nothing behind it rendered
+    // `entering`, and its first re-render — any state change at all —
+    // read "previous 3, now 3", decided `forward`, and started the 24px
+    // step slide under the runner's finger.
+    //
+    // Every test above models a *route change*: a keyed element, so each
+    // step is a new mount. None re-rendered a step in place, which is the
+    // one thing a screen does all the time and the one that broke.
+    const flow = render(step(LOG_FLOW.verdict));
+    expect(screen.getByText(/step 3/u)).toHaveAttribute(
+      "data-flow-direction",
+      "entering",
+    );
+
+    // Same key, same element: what a parent's state change does.
+    flow.rerender(step(LOG_FLOW.verdict));
+    flow.rerender(step(LOG_FLOW.verdict));
+
+    const still = screen.getByText(/step 3/u);
+    expect(still).toHaveAttribute("data-flow-direction", "entering");
+    expect(still).not.toHaveClass("flow-step-forward");
+    expect(still).not.toHaveClass("flow-step-back");
+  });
+
+  it("keeps the direction it arrived with through re-renders", () => {
+    // The other half: a step that *did* arrive forward keeps saying so,
+    // rather than recomputing against a record that now names itself.
+    const flow = render(step(LOG_FLOW.intake));
+    flow.rerender(step(LOG_FLOW.attach));
+    flow.rerender(step(LOG_FLOW.attach));
+
+    const kept = screen.getByText(/step 2/u);
+    expect(kept).toHaveAttribute("data-flow-direction", "forward");
+    expect(kept).toHaveClass("flow-step-forward");
+  });
+
   it("enters from the trailing edge, and reverses when you go back", () => {
     const flow = render(step(LOG_FLOW.intake));
 

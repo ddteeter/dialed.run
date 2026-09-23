@@ -13,6 +13,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { accountEmail, storageStateFor } from "../support/accounts";
 import {
   cellsOf,
+  fillsOf,
   openBoard,
   part,
   signatureOf,
@@ -50,30 +51,6 @@ Design's label for the screen, on both the light and dark boards.
 */
 const A3 = "A3";
 
-/**
- * Differences confirmed real, not yet closed, and deliberately not
- * silent.
- *
- * **A conformance harness with no way to record a known gap gets
- * deleted.** The first screen through it found one, and the choice was
- * either to leave the check red — which trains everyone to ignore it — or
- * to fix a feature inside a testing PR. Neither. A gap is written here
- * with the register entry that owns it, and the test asserts it is *still
- * needed*: close the gap and this fails, telling you to delete the line.
- *
- * It is not a suppression. A suppression hides a difference; this one is
- * enumerated, and the count is reviewable.
- */
-const KNOWN_GAPS: ReadonlyMap<string, string> = new Map([
-  // D-97: the board's dialed cell carries the runner's count in this
-  // temperature band ("7 IN BAND"); we draw the word alone. That is a
-  // feature — A3 has the history query behind it already — and not a
-  // composition bug, so it is owned by the register rather than fixed
-  // inside the PR that found it.
-  ["DIALED 7 IN BAND", "DIALED"],
-]);
-
-
 test("A3's verdict row is composed as the board draws it", async ({
   page,
   baseURL,
@@ -91,6 +68,14 @@ test("A3's verdict row is composed as the board draws it", async ({
     drawnCells,
     "the board has no A3 verdict-row region — has the packet changed?",
   ).not.toHaveLength(0);
+
+  // **The board draws one cell chosen**, so the fill comparison reads
+  // which from the board rather than hard-coding "Dialed" — if design
+  // redraws A3 with another verdict chosen, the test follows.
+  const drawnFills = await fillsOf(page, part(A3, "verdict-row"));
+  const chosen = drawnFills.findIndex((fill) => fill !== "transparent");
+  const chosenLabel = drawnCells[chosen];
+  if (chosenLabel === undefined) throw new Error("the board draws no chosen cell");
 
   // ---- What we built --------------------------------------------------
   const itemId = newUlid();
@@ -155,19 +140,12 @@ test("A3's verdict row is composed as the board draws it", async ({
     // fold at different points — the board's cells are a couple of pixels
     // narrower, so "WAY COLD" breaks there and not here. A cell's text
     // does not care where it folded.
-    const expected = drawnCells.map((cell) => KNOWN_GAPS.get(cell) ?? cell);
-    expect(builtCells).toEqual(expected);
-
-    // **Every known gap is still a gap.** Without this the map is a
-    // suppression that outlives the thing it suppressed: close D-97 and
-    // the entry would go on quietly rewriting a cell that no longer
-    // needs it, hiding the next difference in that same cell.
-    for (const drawn of KNOWN_GAPS.keys()) {
-      expect(
-        drawnCells,
-        `${drawn} is no longer drawn — delete its KNOWN_GAPS entry`,
-      ).toContain(drawn);
-    }
+    //
+    // This carried a known gap until round 19: the board's dialed cell
+    // read "DIALED 7 IN BAND" and ours "DIALED". Design moved the count
+    // to the line beneath the row, the gap's own check failed saying so,
+    // and the entry was deleted — the mechanism doing what it was for.
+    expect(builtCells).toEqual(drawnCells);
 
     // **And the cells really are one band**, which is the question rows
     // do answer and cells cannot: the comparison above would pass just as
@@ -188,6 +166,20 @@ test("A3's verdict row is composed as the board draws it", async ({
       builtRows[0],
       "not every label starts on the band's first row",
     ).toHaveLength(builtCells.length);
+
+    // **Choose the cell the board has chosen, and wear what it wears.**
+    //
+    // The colour axis. Round 19: *"the chosen cell fills with its T2 hue
+    // — cold pink, dialed teal, warm quiet grey — exactly as DS2's row
+    // does; --action is never a verdict fill."* Before it, A3 filled
+    // `--ink`, its board `--action` and the backlog by hue — three answers
+    // and every unit test green, because those prove T1 is ported, never
+    // that a surface wears the right role. Compared as roles, so the diff
+    // reads "board `--dialed-text`, app `--ink`", not two hex codes.
+    await page.getByRole("button", { name: chosenLabel }).click();
+    expect(await fillsOf(page, '[data-slot="verdict-row"]')).toEqual(
+      drawnFills,
+    );
   } finally {
     await withLocalDb(async ({ core }) => {
       await core

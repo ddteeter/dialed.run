@@ -95,19 +95,37 @@ band or a stack.
 
 A harness with no way to record a real difference gets deleted: either the
 check stays red until someone stops reading it, or a feature gets built
-inside a testing PR. Neither. `KNOWN_GAPS` in the spec maps a drawn cell
-to what we currently draw, with the register entry that owns it — and the
-test asserts each gap is **still** a gap, so closing one fails the test and
-tells you to delete the line. It is enumerated and countable, which is what
-separates it from a suppression.
+inside a testing PR. Neither. A known gap maps a drawn cell to what we
+currently draw, with the register entry that owns it — and the test asserts
+each gap is **still** a gap, so closing one fails the test and tells you to
+delete the line. It is enumerated and countable, which is what separates it
+from a suppression.
 
-The first screen through found two, both real:
+The first screen through found two, and both were resolved by design in
+round 19 rather than by us:
 
-- **D-97** — the board's dialed cell carries the runner's count in the
-  run's temperature band ("7 IN BAND"); we draw the word alone.
-- **D-98** — the chosen cell wears `--ink` where the board draws
-  `--action`, and that may itself conflict with round 16's ruling that
-  DS2's hue follows T2 (dialed is teal). Blocked on design.
+- **D-97** — the board's dialed cell read "DIALED 7 IN BAND" and ours
+  "DIALED". Design moved the count to a line beneath the row, never inside
+  a cell. The gap's own check failed with _"DIALED 7 IN BAND is no longer
+  drawn — delete its KNOWN_GAPS entry"_, and it was deleted: the mechanism
+  doing exactly what it was for. What remains (the line itself) is outside
+  any region and stays in the register.
+- **D-98** — the chosen cell wore `--ink` where the board drew `--action`,
+  and the backlog that mirrors it filled by hue. Design ruled the fill is
+  the verdict's T2 hue on both. That made the colour axis live: the spec
+  now chooses the cell the board has chosen and compares fills as T1 roles,
+  and against the old code it reports `- "--dialed-text"` / `+ "--ink"`.
+
+With no gaps left on A3 the map was removed rather than kept empty; an
+unused mechanism is dead code. It returns as a support helper with the
+first screen that needs one.
+
+## Unbuilt regions
+
+Round 19 added `data-status="unbuilt"` on seven regions design knows we
+have not built — DS1's primary and rail, D's try-kit, part of E1. The
+extractor rejects those subtrees the way it rejects `data-annotation`, so
+the harness skips them by design's word rather than by a list kept here.
 
 ## Scope
 

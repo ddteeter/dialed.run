@@ -53,7 +53,7 @@ export const SURFACES = [
     why: 'The tab bar is a destination, not a journey. A crossfade would add 200ms to the most-used gesture in the app.' },
   { surface: 'Log flow step', move: 'Step slides in from the trailing edge, previous step slides out.', duration: 'move', easing: 'snap',
     why: 'Direction tells you which way you are travelling through the flow, so Back feels like back.' },
-  { surface: 'Verdict commit', move: 'Brackets close onto the chosen verdict, then the row locks.', duration: 'reveal', easing: 'align',
+  { surface: 'Verdict commit', move: 'Brackets frame the chosen cell at its edges and close by TRAVEL.frame as the fill lands (one beat, not two), then the row locks.', duration: 'reveal', easing: 'align',
     why: 'The single most important input in the product. The bracket closing is the receipt.' },
   { surface: 'Recommendation reveal', move: 'Brackets open, then layers arrive in dressing order.', duration: 'reveal', easing: 'align',
     why: 'The payoff. The only place in the app allowed a stagger, because the order is the answer.' },
