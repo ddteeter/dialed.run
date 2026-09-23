@@ -7,7 +7,7 @@ import {
   outfitEntryItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { chunked } from "../../lib/chunked";
+import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { verdictedEntriesInBand } from "./entries";
 
 /**
@@ -40,12 +40,6 @@ export interface BandSignals {
   garments: Readonly<Record<string, GarmentRecord>>;
   tagUse: Readonly<Record<string, number>>;
 }
-
-/**
- * D1 caps bound parameters per statement, and an in-band entry list runs
- * to 200. Chunks stay well under the cap with room for the other operand.
- */
-const CHUNK = 80;
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -104,7 +98,7 @@ export async function bandSignals(
 
   const chunks = chunked(
     inBand.map((entry) => entry.id),
-    CHUNK,
+    IN_LIST_CHUNK,
   );
   for (const chunk of chunks) {
     const [worn, tagged] = await db().batch([
