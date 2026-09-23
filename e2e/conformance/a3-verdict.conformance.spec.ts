@@ -12,6 +12,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { accountEmail, storageStateFor } from "../support/accounts";
 import {
+  alignmentsOf,
   cellsOf,
   fillsOf,
   openBoard,
@@ -73,6 +74,7 @@ test("A3's verdict row is composed as the board draws it", async ({
   // which from the board rather than hard-coding "Dialed" — if design
   // redraws A3 with another verdict chosen, the test follows.
   const drawnFills = await fillsOf(page, part(A3, "verdict-row"));
+  const drawnAlignments = await alignmentsOf(page, part(A3, "verdict-row"));
   const chosen = drawnFills.findIndex((fill) => fill !== "transparent");
   const chosenLabel = drawnCells[chosen];
   if (chosenLabel === undefined) throw new Error("the board draws no chosen cell");
@@ -157,15 +159,20 @@ test("A3's verdict row is composed as the board draws it", async ({
       "the verdict labels are stacked, not laid across one band",
     ).toBeLessThanOrEqual(2);
 
-    // **Every cell starts on the first row.** "Dialed" is one word where
-    // its neighbours are two, and centred vertically it floated to the
-    // middle of its cell while their first lines sat above it — five
-    // labels sharing no baseline. Found by diffing against this board,
-    // and nobody would have thought to assert it in advance.
+    // **Each label sits in its cell where the board puts it.**
+    //
+    // Compared, not asserted. This used to read "every cell starts on the
+    // band's first row" — a rule written from round 18, whose Dialed cell
+    // had two lines, so centring put its first line level with its
+    // neighbours'. Round 19 moved the count out of the cell and the board
+    // still centres, so a one-line Dialed sits mid-cell; the old assertion
+    // held against a build that had been top-aligned to satisfy it, and
+    // the owner saw the difference on film. Read from the board, this
+    // follows the board.
     expect(
-      builtRows[0],
-      "not every label starts on the band's first row",
-    ).toHaveLength(builtCells.length);
+      await alignmentsOf(page, '[data-slot="verdict-row"]'),
+      "a label sits in its cell differently from the board",
+    ).toEqual(drawnAlignments);
 
     // **Choose the cell the board has chosen, and wear what it wears.**
     //

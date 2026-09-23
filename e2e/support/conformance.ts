@@ -274,6 +274,50 @@ export async function cellsOf(
 }
 
 /**
+ * Where each cell's text sits vertically inside the cell: `top`, `centre`
+ * or `bottom`.
+ *
+ * **Compared against the board, never asserted as a rule.** The spec used
+ * to say "every label starts on the band's first row" — true of round 18,
+ * whose Dialed cell had two lines, and false of round 19, where it has one
+ * and the board centres it. The assertion held against a build that no
+ * longer matched the drawing, and the owner saw the difference on film.
+ * A rule derived from one round's content is a snapshot; reading the
+ * board's own alignment follows the board when it moves.
+ *
+ * Classified rather than measured in pixels, because the board's cells and
+ * ours are not the same height — what has to match is the alignment, not
+ * the offset. Brackets are excluded: they are absolutely positioned and
+ * frame the cell rather than sit in it.
+ */
+export async function alignmentsOf(
+  page: Page,
+  selector: string,
+): Promise<readonly string[]> {
+  return page.$$eval(`${selector} > *`, (cells) =>
+    cells.map((cell) => {
+      const box = cell.getBoundingClientRect();
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const parent = node.parentElement;
+        if (parent === null || getComputedStyle(parent).position === "absolute") continue;
+        if ((node.textContent ?? "").trim() === "") continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const rect = range.getBoundingClientRect();
+        top = Math.min(top, rect.top);
+        bottom = Math.max(bottom, rect.bottom);
+      }
+      const offset = (top + bottom) / 2 - (box.top + box.height / 2);
+      if (Math.abs(offset) < 2) return "centre";
+      return offset < 0 ? "top" : "bottom";
+    }),
+  );
+}
+
+/**
  * Each of the region's cells as the T1 role its fill resolves to.
  *
  * **The colour axis**, and the one no other check here covers: the unit
