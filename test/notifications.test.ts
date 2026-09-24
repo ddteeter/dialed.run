@@ -36,7 +36,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
       body: "Add your kit.",
     });
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, NOW);
     expect(rows).toHaveLength(1);
   });
 
@@ -62,7 +62,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
     await markAllNotificationsRead(db, userId, NOW);
     expect(await unreadNotificationCount(db, userId)).toBe(0);
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, NOW);
     expect(rows.every((row) => row.read)).toBe(true);
   });
 
@@ -84,7 +84,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
       body: "Yours.",
     });
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, NOW);
     expect(rows.map((row) => row.body)).toEqual(["Yours."]);
   });
 });
@@ -105,7 +105,7 @@ describe("what a notification row records", () => {
       body: "Your import failed.",
     });
 
-    const [row] = await listNotifications(db, userId);
+    const [row] = await listNotifications(db, userId, NOW);
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
     // Unread is the state the bell counts; a row that arrives read is a
@@ -173,6 +173,89 @@ describe("the bell (round 22, item 13)", () => {
   });
 });
 
+describe("which rows Mark all read can clear", () => {
+  it("says an owed reminder is not markable, and any other unread row is", async () => {
+    const db = notificationsDb();
+    const userId = newUlid();
+    const waiting = await makeRun({ userId, startedAt: NOW - 3600 });
+    const judged = await makeRun({ userId, startedAt: NOW - 3600 });
+    await makeEntry({ userId, runId: judged, verdict: 0 });
+    await createNotification(db, {
+      userId,
+      kind: "kit_reminder",
+      subjectId: waiting,
+      body: "owed",
+    });
+    await createNotification(db, {
+      userId,
+      kind: "kit_reminder",
+      subjectId: judged,
+      body: "judged",
+    });
+    await createNotification(db, {
+      userId,
+      kind: "import_failed",
+      subjectId: waiting,
+      body: "other kind",
+    });
+
+    const rows = await listNotifications(db, userId, NOW);
+    const markable = Object.fromEntries(
+      rows.map((row) => [row.body, row.markable]),
+    );
+    expect(markable).toStrictEqual({
+      owed: false,
+      judged: true,
+      "other kind": true,
+    });
+  });
+
+  it("says a read row is not markable, owed or not", async () => {
+    const db = notificationsDb();
+    const userId = newUlid();
+    await createNotification(db, {
+      userId,
+      kind: "import_failed",
+      subjectId: newUlid(),
+      body: "read",
+    });
+    await markAllNotificationsRead(db, userId, NOW);
+
+    const [row] = await listNotifications(db, userId, NOW);
+    expect(row?.markable).toBe(false);
+  });
+
+  it("agrees with what Mark all read then clears", async () => {
+    const db = notificationsDb();
+    const userId = newUlid();
+    const waiting = await makeRun({ userId, startedAt: NOW - 3600 });
+    await createNotification(db, {
+      userId,
+      kind: "kit_reminder",
+      subjectId: waiting,
+      body: "owed",
+    });
+    await createNotification(db, {
+      userId,
+      kind: "import_failed",
+      subjectId: newUlid(),
+      body: "other",
+    });
+    const before = await listNotifications(db, userId, NOW);
+    const offered = before.filter((row) => row.markable).map((row) => row.body);
+
+    await markAllNotificationsRead(db, userId, NOW);
+
+    const after = await listNotifications(db, userId, NOW);
+    const cleared = after
+      .filter(
+        (row) => row.read && before.some((b) => b.id === row.id && !b.read),
+      )
+      .map((row) => row.body);
+    expect(cleared).toStrictEqual(offered);
+  });
+});
+
 describe("mark all read never clears a verdict still owed", () => {
   it("leaves a kit reminder unread while its run waits, and takes the rest", async () => {
     const db = notificationsDb();
@@ -203,7 +286,7 @@ describe("mark all read never clears a verdict still owed", () => {
 
     await markAllNotificationsRead(db, userId, NOW);
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, NOW);
     const unread = rows.filter((row) => !row.read).map((row) => row.body);
     expect(unread).toStrictEqual([
       "Add your kit for the run you just imported.",

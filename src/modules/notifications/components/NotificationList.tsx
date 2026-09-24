@@ -56,7 +56,12 @@ export function NotificationList({
     // back as the server now has them rather than as this guesses.
     onSuccess: () => navigate({ to: "/notifications" }),
   });
-  const hasUnread = notifications.some((notification) => !notification.read);
+  // Offered only when it would clear something: an unread verdict
+  // reminder whose run still owes one is not markable (the server leaves
+  // it unread), and a button that changes nothing is a broken button.
+  const hasMarkable = notifications.some(
+    (notification) => notification.markable,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -64,7 +69,7 @@ export function NotificationList({
         <h1 className="m-0 font-display text-display uppercase">
           Notifications
         </h1>
-        {hasUnread ? (
+        {hasMarkable ? (
           <button
             type="button"
             data-part="mark-all"

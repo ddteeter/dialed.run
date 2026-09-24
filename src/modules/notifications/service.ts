@@ -8,11 +8,13 @@ import {
   count,
   desc,
   eq,
+  getTableColumns,
   gte,
   isNull,
   ne,
   notInArray,
   or,
+  sql,
 } from "drizzle-orm";
 
 import { notifications, outfitEntries, runs } from "../../db/schema-core";
@@ -92,9 +94,28 @@ export async function createNotification(
   await notificationInsert(db, draft);
 }
 
-export async function listNotifications(db: NotificationsDb, userId: string) {
+/**
+ * The runner's notifications, newest first, each saying whether Mark all
+ * read would clear it: unread, and not a verdict still owed. The screen
+ * offers the button only when some row is `markable`, so a runner whose
+ * one unread row is an owed reminder is not handed a button that does
+ * nothing (PR #102 review). The predicate is mark-all's own, in SQL, so
+ * the two cannot disagree.
+ */
+export async function listNotifications(
+  db: NotificationsDb,
+  userId: string,
+  nowEpochSeconds: number,
+) {
+  const markable = and(
+    eq(notifications.read, false),
+    notOwed(db, userId, nowEpochSeconds),
+  );
   return db
-    .select()
+    .select({
+      ...getTableColumns(notifications),
+      markable: sql<number>`coalesce(${markable}, 0)`.mapWith(Boolean),
+    })
     .from(notifications)
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
@@ -209,14 +230,21 @@ export async function markAllNotificationsRead(
   userId: string,
   nowEpochSeconds: number,
 ): Promise<void> {
-  const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
-  const owed = waitingRuns(db, userId, since);
-  const notAToDo = or(
-    ne(notifications.kind, "kit_reminder"),
-    notInArray(notifications.subjectId, owed),
-  );
   await db
     .update(notifications)
     .set({ read: true })
-    .where(and(unreadOf(userId), notAToDo));
+    .where(and(unreadOf(userId), notOwed(db, userId, nowEpochSeconds)));
+}
+
+/**
+ * A notification that is not a verdict still owed: any kind but a kit
+ * reminder, or a kit reminder whose run has its verdict (or has left the
+ * window). What Mark all read may clear, and what the list calls markable.
+ */
+function notOwed(db: NotificationsDb, userId: string, nowEpochSeconds: number) {
+  const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
+  return or(
+    ne(notifications.kind, "kit_reminder"),
+    notInArray(notifications.subjectId, waitingRuns(db, userId, since)),
+  );
 }

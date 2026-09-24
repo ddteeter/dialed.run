@@ -18,7 +18,7 @@ import {
 export const listNotificationsFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    return listNotifications(notificationsDb(), userId);
+    return listNotifications(notificationsDb(), userId, nowSeconds());
   },
 );
 

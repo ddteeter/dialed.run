@@ -41,16 +41,23 @@ async function renderWithRouter(element: ReactElement, at = "/") {
 const NOTHING = z.null().parse(JSON.parse("null"));
 
 function notification(
-  overrides: { id?: string; body?: string; read?: boolean } = {},
+  overrides: {
+    id?: string;
+    body?: string;
+    read?: boolean;
+    markable?: boolean;
+  } = {},
 ) {
+  const isRead = overrides.read ?? false;
   return {
     id: overrides.id ?? "01N",
     userId: "01USER",
     kind: "kit_reminder",
     subjectId: NOTHING,
     body: overrides.body ?? "Log your kit?",
-    read: overrides.read ?? false,
+    read: isRead,
     createdAt: 1_755_000_000,
+    markable: overrides.markable ?? !isRead,
   };
 }
 
@@ -137,6 +144,22 @@ describe("NotificationList · the rows", () => {
         notifications={[notification({ read: true })]}
         markAllRead={nothing}
       />,
+    );
+    expect(screen.queryByRole("button", { name: "Mark all read" })).toBeNull();
+  });
+
+  it("offers nothing to mark when the only unread row is a verdict still owed", async () => {
+    // The server leaves an owed reminder unread; a button that could only
+    // leave it unread is a button that does nothing.
+    await renderWithRouter(
+      <NotificationList
+        notifications={[notification({ read: false, markable: false })]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(screen.getByRole("listitem")).toHaveAttribute(
+      "data-state",
+      "unread",
     );
     expect(screen.queryByRole("button", { name: "Mark all read" })).toBeNull();
   });
