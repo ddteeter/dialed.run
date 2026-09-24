@@ -7,6 +7,7 @@ import {
   outfitEntryItems,
   products,
   runs,
+  wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -19,6 +20,7 @@ import {
   createItem,
   deleteOrRetireItem,
   getItemDetail,
+  getItemDetailWithPairs,
   getOwnedItem,
   listItems,
   NotFoundError,
@@ -288,7 +290,44 @@ describe("performance stats: verdicts, mileage, pairs-with", () => {
     expect(shirtStats?.summary.dialedCount).toBe(3);
     expect(shirtStats?.summary.mileageM).toBe(16_000);
     expect(shirtStats?.buckets).toContain("most_dialed");
-    expect(shirtStats?.pairsWith).toContain(shorts.id);
+    expect(shirtStats?.summary.runCount).toBe(4);
+    // Round 22: co-dialed only, with the count. The rarely-paired piece
+    // shared one run, and that run was not dialed.
+    expect(shirtStats?.pairsWith).toStrictEqual([
+      { itemId: shorts.id, count: 3 },
+    ]);
+
+    // The whole detail, named: the pair resolves to the shorts' row.
+    const detail = await getItemDetailWithPairs(client, userId, shirt.id);
+    expect(
+      detail.pairedItems.map((pair) => [pair.item.name, pair.count]),
+    ).toStrictEqual([["Shorts", 3]]);
+  });
+
+  it("drops a pair whose piece is not this runner's to name", async () => {
+    // Pairs come from this runner's own entries, so a missing row is one
+    // that was deleted since; it drops out rather than rendering a blank.
+    const userId = newUlid();
+    const client = db();
+    const shirt = await createItem(client, userId, {
+      category: "top",
+      name: "Shirt",
+    });
+    const shorts = await createItem(client, userId, {
+      category: "bottom",
+      name: "Shorts",
+    });
+    await logEntry(userId, [shirt.id, shorts.id], 0, 5000);
+    await logEntry(userId, [shirt.id, shorts.id], 0, 5000);
+    await logEntry(userId, [shirt.id, shorts.id], 0, 5000);
+    await client
+      .update(wardrobeItems)
+      .set({ userId: newUlid() })
+      .where(eq(wardrobeItems.id, shorts.id));
+
+    const detail = await getItemDetailWithPairs(client, userId, shirt.id);
+    expect(detail.performance?.pairsWith).toHaveLength(1);
+    expect(detail.pairedItems).toStrictEqual([]);
   });
 
   it("classifies an item with verdicts but never dialed as never_worked", async () => {

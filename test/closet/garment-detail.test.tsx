@@ -11,34 +11,30 @@ import { describe, expect, it, vi } from "vitest";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { GarmentDetail } from "../../src/modules/closet/components/GarmentDetail";
-import { createItem, getItemDetail } from "../../src/modules/closet/service";
+import {
+  createItem,
+  getItemDetailWithPairs,
+} from "../../src/modules/closet/service";
 
 /**
- * The no-anchor branch of screen E's product link, against a real stored
- * item rather than a hand-built one: `wardrobe_items.product_url` is
- * `NULL` when nobody pasted a link, and a real D1 row is the only way to
- * get that `null` without writing the literal this repo's lint forbids
- * (`unicorn/no-null`) — see test/closet/garment-detail.dom.test.tsx for
- * why the DOM-rendered case doesn't attempt it.
+ * Garment detail's first paint, from a real stored row: what the server
+ * sends before any script runs. A real D1 row is the only way to get the
+ * genuine `null`s a garment with no photo and no link carries, without the
+ * literal this repo's lint forbids (`unicorn/no-null`).
  */
 
 function db() {
   return drizzle(env.DIALED_CORE);
 }
 
-async function detailFor(productUrl?: string) {
+async function renderedMarkup(): Promise<string> {
   const userId = newUlid();
   const created = await createItem(db(), userId, {
     category: "top",
     name: "Rover Half-Zip",
-    ...(productUrl !== undefined && { productUrl }),
+    productUrl: "https://janji.com/p/rover-half-zip",
   });
-  const view = await getItemDetail(db(), userId, created.id);
-  return { ...view, pairedItems: [] };
-}
-
-async function renderedMarkup(productUrl?: string): Promise<string> {
-  const detail = await detailFor(productUrl);
+  const detail = await getItemDetailWithPairs(db(), userId, created.id);
   const rootRoute = createRootRoute({
     component: () => (
       <GarmentDetail
@@ -47,6 +43,7 @@ async function renderedMarkup(productUrl?: string): Promise<string> {
         unretire={vi.fn()}
         remove={vi.fn()}
         uploadPhoto={vi.fn()}
+        removePhoto={vi.fn()}
       />
     ),
   });
@@ -58,19 +55,18 @@ async function renderedMarkup(productUrl?: string): Promise<string> {
   return renderToString(<RouterProvider router={router} />);
 }
 
-describe("GarmentDetail's product link, against real stored items", () => {
-  it("links to the stored URL, with the rel set and domain link hygiene requires", async () => {
-    const markup = await renderedMarkup("https://janji.com/p/rover-half-zip");
-
-    expect(markup).toContain('href="https://janji.com/p/rover-half-zip"');
-    expect(markup).toContain('rel="ugc nofollow noopener"');
-    expect(markup).toContain("janji.com");
-  });
-
-  it("renders no product link at all when the item has none stored", async () => {
+describe("GarmentDetail's first paint, against a real stored row", () => {
+  it("has no photo well and no empty Add box when the garment has no photo", async () => {
+    // Round 22: "no photo means no well here; adding one is Edit's job".
     const markup = await renderedMarkup();
 
-    expect(markup).not.toContain("ugc nofollow noopener");
+    expect(markup).not.toContain('data-part="photo-well"');
+    expect(markup).not.toContain("Add a photo");
+  });
+
+  it("draws no product link, even for a garment that has one stored", async () => {
+    const markup = await renderedMarkup();
+
     expect(markup).not.toContain("janji.com");
   });
 });

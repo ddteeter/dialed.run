@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   ColorName,
@@ -24,6 +24,7 @@ import {
   Bracketed,
   ChoiceField,
   ChoiceList,
+  FileWell,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -34,7 +35,10 @@ import {
   ToggleField,
   useFormSubmit,
 } from "../../../ui";
+import { photoAcceptAttribute } from "../../../lib/photo-constraints";
+import type { PhotoStep } from "../../../ui";
 import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
+import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
 import { ShadeSheet } from "./ShadeSheet";
 
 type Category = (typeof garmentCategories)[number];
@@ -64,6 +68,13 @@ const FABRIC_LABELS: Record<(typeof fabricSchema.options)[number], string> = {
 };
 
 /**
+ * The well's name in the form's error set. A refused photo is a field
+ * failure — *"file type and size are field failures (the fix is another
+ * file)"* — so it rides the same summary and status as every other field.
+ */
+const PHOTO_FIELD = "photo-well";
+
+/**
 Field name -> human label, for the summary rows the contract requires once
 two or more fields fail at once.
 */
@@ -83,7 +94,7 @@ const LABELS = {
   colorName: "Color",
   colorHex: "Hex",
   visibilityLevel: "Visibility",
-  productUrl: "Product link",
+  [PHOTO_FIELD]: "Photo",
 };
 
 /**
@@ -190,14 +201,69 @@ export interface GarmentFormProps {
   pendingLabel: string;
   successMessage: string;
   /**
-   * The garment's own photo, when it has one — the shade sampler reads a
-   * pixel out of it.
+   * Everything about the well, as one prop because it is one field: what
+   * is stored, the two writes, and the step a picked photo goes through.
+   */
+  photo: GarmentPhoto;
+}
+
+interface GarmentPhoto {
+  /**
+   * The garment's stored photo, when it has one: the well's preview, and
+   * what §AH's shade sampler reads a pixel out of.
    *
    * Handed in rather than derived, because the add form has no photo yet
-   * (a piece is photographed on detail, after it exists) and the edit form
-   * does. §AH: no photo, no sampler — the hex field stands alone.
+   * and the edit form may. §AH: no photo, no sampler — the hex field
+   * stands alone.
    */
-  photoUrl?: string | undefined;
+  url?: string | undefined;
+  /**
+   * The photo's two writes, run after the save once the row exists — the
+   * add form has no id to attach a photo to until then. Handed in for the
+   * same reason as `save`.
+   */
+  upload: (input: {
+    data: FormData;
+  }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  remove: (input: { data: { itemId: string } }) => Promise<unknown>;
+  /**
+  W3's blur, composed by the route — see `usePhotoPick`.
+  */
+  renderStep?: PhotoStep | undefined;
+}
+
+/**
+ * A photo the server refused, in the shape `useFormSubmit` reads a field
+ * failure from. Thrown after the row is saved, so a retry resubmits — the
+ * create is idempotent on the form's key and the update is idempotent by
+ * nature — and the photo is tried again.
+ */
+class PhotoRefused extends Error {
+  readonly issues: readonly { path: string[]; message: string }[];
+
+  constructor(message: string) {
+    super(message);
+    this.issues = [{ path: [PHOTO_FIELD], message }];
+  }
+}
+
+/**
+ * A blob URL for the held photo, revoked when it is replaced or dropped.
+ */
+function useObjectUrl(file: File | undefined): string | undefined {
+  const [url, setUrl] = useState<string | undefined>();
+  useEffect(() => {
+    if (file === undefined) {
+      setUrl(undefined);
+      return;
+    }
+    const next = URL.createObjectURL(file);
+    setUrl(next);
+    return () => {
+      URL.revokeObjectURL(next);
+    };
+  }, [file]);
+  return url;
 }
 
 /**
@@ -228,7 +294,7 @@ export function GarmentForm({
   submitLabel,
   pendingLabel,
   successMessage,
-  photoUrl,
+  photo,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
@@ -236,10 +302,35 @@ export function GarmentForm({
   });
   const fields = fieldsForCategory(values.category);
   const [shadeOpen, setShadeOpen] = useState(false);
+  /**
+   * The photo is part of the form, so nothing about it is written until
+   * the save: a picked photo is held (after W3's blur) and previewed from
+   * the device, and Remove marks the stored one to go.
+   */
+  const [held, setHeld] = useState<File | undefined>();
+  const [removed, setRemoved] = useState(false);
+  const heldUrl = useObjectUrl(held);
+  const preview = heldUrl ?? (removed ? undefined : photo.url);
+  const pick = usePhotoPick({
+    renderPhotoStep: photo.renderStep,
+    onReady: setHeld,
+  });
 
   const form = useFormSubmit({
     schema: garmentFormSchema,
-    action: save,
+    action: async (garment: Garment) => {
+      const saved = await save(garment);
+      if (held !== undefined) {
+        const data = new FormData();
+        data.set("itemId", saved.id);
+        data.set("photo", held);
+        const result = await photo.upload({ data });
+        if (!result.ok) throw new PhotoRefused(result.error);
+      } else if (removed && photo.url !== undefined) {
+        await photo.remove({ data: { itemId: saved.id } });
+      }
+      return saved;
+    },
     successMessage,
     labels: LABELS,
     onSuccess: onSaved,
@@ -479,7 +570,7 @@ export function GarmentForm({
               open={shadeOpen}
               colorName={COLOR_LABELS[values.colorName]}
               value={values.colorHex}
-              photoUrl={photoUrl}
+              photoUrl={preview}
               onUse={(picked) => {
                 update("colorHex", picked);
                 setShadeOpen(false);
@@ -525,22 +616,37 @@ export function GarmentForm({
         field={form.field}
         error={form.fieldErrors.color}
       />
-      <TextField
-        name="productUrl"
-        label={LABELS.productUrl}
-        value={values.productUrl}
-        onChange={(value) => {
-          update("productUrl", value);
+      {/* Round 22, item 17: the well is the last thing before the save —
+          identity, Size, Colorway, photo, Add to closet. The product-link
+          field that sat here is gone for v1 (AC2b: a field that can only
+          say "pending" is a promise the build can't keep); F2a/F2b return
+          with enrichment. A stored link still round-trips untouched,
+          because the value rides in the form state the field no longer
+          draws. */}
+      <FileWell
+        part="photo-well"
+        copy={GARMENT_PHOTO_COPY}
+        pending={pick.stepping || (form.pending && held !== undefined)}
+        accept={photoAcceptAttribute}
+        error={form.fieldErrors[PHOTO_FIELD]}
+        preview={
+          preview === undefined
+            ? undefined
+            : { src: preview, alt: values.name }
+        }
+        onRemove={() => {
+          setHeld(undefined);
+          setRemoved(true);
         }}
-        field={form.field}
-        error={form.fieldErrors.productUrl}
-        type="url"
+        onFiles={(files) => {
+          if (files === null) return;
+          const file = files[0];
+          if (file === undefined) return;
+          form.field(PHOTO_FIELD).onInput();
+          pick.pick(file);
+        }}
       />
-      {values.productUrl === "" ? undefined : (
-        <p className="text-micro text-muted">
-          <Mono>Enrichment pending — lane 107</Mono>
-        </p>
-      )}
+      {pick.step(form.announce)}
 
       <FormFailureBand
         failure={form.failure}

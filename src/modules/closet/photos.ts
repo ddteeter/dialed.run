@@ -8,12 +8,16 @@
  * every derived size has landed in R2, so a partial failure never leaves a
  * dangling reference the GET route can't serve.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { ulidSchema } from "../../lib/ids";
-import { isAllowedPhotoType, maxPhotoBytes } from "../../lib/photo-constraints";
+import {
+  allowedPhotoTypes,
+  isAllowedPhotoType,
+  maxPhotoBytes,
+} from "../../lib/photo-constraints";
 import { env } from "../../env";
 import { fitWithin, withReleased } from "../../lib/photo-pipeline";
 import { getOwnedItem } from "./service";
@@ -150,6 +154,56 @@ export async function uploadItemPhoto(
   );
 
   return { photoKey: keyPrefix };
+}
+
+/**
+ * Every object an upload can have left under a key prefix: the three
+ * derived sizes, and the original under whichever extension it arrived
+ * with. The original's extension is not stored anywhere, so all three are
+ * named — deleting a key R2 does not hold is a no-op, not an error.
+ *
+ * Derived from `photoSizes` and `allowedPhotoTypes` rather than listed, so
+ * a fourth size or a new type cannot leave bytes behind on a remove.
+ */
+export function photoObjectKeys(keyPrefix: string): string[] {
+  return [
+    ...photoSizes.map((size) => `${keyPrefix}/${size}.webp`),
+    ...allowedPhotoTypes.map(
+      (type) => `${keyPrefix}/original.${extensionFor(type)}`,
+    ),
+  ];
+}
+
+/**
+ * Remove photo (round 22, the well's Remove): the garment goes back to
+ * having no photo, and its bytes leave storage.
+ *
+ * **One D1 write, then R2, and in that order on purpose** (law 8c — the
+ * two cannot be one transaction). Clearing the key first means the worst
+ * a failed delete leaves is bytes nothing points at, which the next upload
+ * to this garment overwrites (the prefix is the item's). The other order
+ * would leave a row pointing at objects that are gone: a broken image on
+ * the runner's own screen, with nothing to heal it.
+ *
+ * `visibility` goes back to `ok` in the same statement, because that is
+ * what a garment with no photo wears (`uploadItemPhoto` sets `pending`
+ * only alongside a key) — leaving `pending` would queue a photo that no
+ * longer exists for the screening sweep, and leaving a hidden state would
+ * hide nothing.
+ */
+export async function removeItemPhoto(
+  db: Db,
+  userId: string,
+  itemId: string,
+): Promise<void> {
+  const item = await getOwnedItem(db, userId, itemId);
+  if (item.photoKey === null) return;
+  await db
+    .update(wardrobeItems)
+    // `sql\`NULL\`` rather than the literal — see lib/sql-null.
+    .set({ photoKey: sql`NULL`, visibility: "ok" })
+    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
+  await env.MEDIA.delete(photoObjectKeys(item.photoKey));
 }
 
 /**

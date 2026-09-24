@@ -4,7 +4,13 @@ import { requireSession } from "../../modules/auth/functions";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import { formValuesFromItem } from "../../modules/closet/form-mapping";
 import { photoUrlFor } from "../../modules/closet/photo-url";
-import { getItemFn, updateItemFn } from "../../modules/closet/functions";
+import {
+  getItemFn,
+  removePhotoFn,
+  updateItemFn,
+  uploadPhotoFn,
+} from "../../modules/closet/functions";
+import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout } from "../../ui";
 
@@ -28,10 +34,9 @@ function EditGarmentPage() {
   return (
     <Layout>
       <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 wide:px-6">
-        <h1 className="font-display text-title uppercase">Edit piece</h1>
+        <h1 className="font-display text-title uppercase">{`Edit ${detail.item.name}`}</h1>
         <GarmentForm
           initial={formValuesFromItem(detail.item, detail.effective)}
-          photoUrl={photoUrlFor(detail.item)}
           save={async (garment) =>
             updateItemFn({ data: { itemId: detail.item.id, garment } })
           }
@@ -44,9 +49,15 @@ function EditGarmentPage() {
           onBrandInput={(value) => {
             void handleBrandInput(value);
           }}
-          submitLabel="Save changes"
+          submitLabel="Save"
           pendingLabel="Saving"
           successMessage="Changes saved."
+          photo={{
+            url: photoUrlFor(detail.item),
+            upload: uploadPhotoFn,
+            remove: removePhotoFn,
+            renderStep: photoBlurStep,
+          }}
         />
       </div>
     </Layout>

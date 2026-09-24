@@ -460,16 +460,30 @@ export function effectiveTempRange(
 // ---- Performance (D-27 filters; per-item verdict summary) ------------------
 
 export interface PerformanceSummary {
+  /**
+   * Runs this piece was worn on, verdict or not — the count the retire and
+   * delete sheets name ("Its 14 runs and verdicts stay"), and the one
+   * pairs-with waits on.
+   */
+  runCount: number;
   verdictCount: number;
   dialedCount: number;
   lastWornAt: number | undefined;
   mileageM: number;
 }
 
+/**
+One "pairs with" chip: the other piece, and how many dialed runs they share.
+*/
+export interface PairWith {
+  itemId: string;
+  count: number;
+}
+
 export interface ItemPerformance {
   summary: PerformanceSummary;
   buckets: PerformanceBucket[];
-  pairsWith: string[];
+  pairsWith: PairWith[];
 }
 
 export function classifyPerformance(
@@ -531,22 +545,31 @@ async function fetchUserEntryItemRows(
     .where(eq(outfitEntries.userId, userId));
 }
 
-/** Groups the flat entry/item rows into per-item summaries and, alongside,
- * the per-entry item lists co-occurrence needs. */
+/**
+ * Groups the flat entry/item rows into per-item summaries and, alongside,
+ * the per-entry item lists of the **dialed** runs, which is what
+ * co-occurrence counts.
+ *
+ * Dialed only, because round 22 titles the list "PAIRS WITH · WHEN
+ * DIALED": two pieces worn together on a run that went wrong are not a
+ * pairing anybody should repeat.
+ */
 export function summarizeByItem(rows: EntryItemRow[]): {
   summaries: Map<string, PerformanceSummary>;
-  entryItems: Map<string, string[]>;
+  dialedKits: Map<string, string[]>;
 } {
   const summaries = new Map<string, PerformanceSummary>();
-  const entryItems = new Map<string, string[]>();
+  const dialedKits = new Map<string, string[]>();
 
   for (const row of rows) {
     const summary = summaries.get(row.itemId) ?? {
+      runCount: 0,
       verdictCount: 0,
       dialedCount: 0,
       lastWornAt: undefined,
       mileageM: 0,
     };
+    summary.runCount += 1;
     if (row.verdict !== null) {
       summary.verdictCount += 1;
       if (row.verdict === 0) summary.dialedCount += 1;
@@ -558,12 +581,14 @@ export function summarizeByItem(rows: EntryItemRow[]): {
     summary.mileageM += row.distanceM;
     summaries.set(row.itemId, summary);
 
-    const items = entryItems.get(row.entryId) ?? [];
-    items.push(row.itemId);
-    entryItems.set(row.entryId, items);
+    if (row.verdict === 0) {
+      const items = dialedKits.get(row.entryId) ?? [];
+      items.push(row.itemId);
+      dialedKits.set(row.entryId, items);
+    }
   }
 
-  return { summaries, entryItems };
+  return { summaries, dialedKits };
 }
 
 /** Co-occurrence counts per item, from the per-entry item lists. Isolated in
@@ -594,18 +619,38 @@ function addPairCounts(
 }
 
 /**
- * Top `limit` co-occurring item ids by count. The selection itself is
- * `lib/top-by-count` — the profile's "most worn" is the same one, and both
- * had their own loop.
+ * Top `limit` co-occurring items by count, with the count — the chip says
+ * it ("BANDIT 5" SPLIT · 6"). The selection itself is `lib/top-by-count` —
+ * the profile's "most worn" is the same one, and both had their own loop.
  */
-export function topPairIds(
+export function topPairs(
   counts: Map<string, number>,
   limit: number,
-): string[] {
-  return topByCount(counts, limit).map(([itemId]) => itemId);
+): PairWith[] {
+  return topByCount(counts, limit).map(([itemId, count]) => ({
+    itemId,
+    count,
+  }));
 }
 
-const PAIRS_WITH_LIMIT = 2;
+/**
+ * Round 22, Y: *"Pairs with lists up to three, by co-dialed count, and is
+ * absent under 3 runs."* Under three runs a pairing is one outing, and a
+ * suggestion drawn from one outing is a coincidence with a label on it.
+ */
+const PAIRS_WITH_LIMIT = 3;
+const PAIRS_WITH_MIN_RUNS = 3;
+
+/**
+The pairs a piece shows, or none while it has too few runs to have any.
+*/
+export function pairsFor(
+  summary: PerformanceSummary,
+  counts: Map<string, number> | undefined,
+): PairWith[] {
+  if (summary.runCount < PAIRS_WITH_MIN_RUNS) return [];
+  return topPairs(counts ?? new Map<string, number>(), PAIRS_WITH_LIMIT);
+}
 
 /**
  * One index-covered scan of the user's whole logging history, aggregated in
@@ -618,20 +663,16 @@ export async function computeUserPerformance(
   userId: string,
 ): Promise<Map<string, ItemPerformance>> {
   const rows = await fetchUserEntryItemRows(db, userId);
-  const { summaries, entryItems } = summarizeByItem(rows);
-  const coOccurrence = buildCoOccurrence(entryItems);
+  const { summaries, dialedKits } = summarizeByItem(rows);
+  const coOccurrence = buildCoOccurrence(dialedKits);
 
   const now = nowSeconds();
   const result = new Map<string, ItemPerformance>();
   for (const [itemId, summary] of summaries) {
-    const pairsWith = topPairIds(
-      coOccurrence.get(itemId) ?? new Map<string, number>(),
-      PAIRS_WITH_LIMIT,
-    );
     result.set(itemId, {
       summary,
       buckets: classifyPerformance(summary, now),
-      pairsWith,
+      pairsWith: pairsFor(summary, coOccurrence.get(itemId)),
     });
   }
   return result;
@@ -838,6 +879,42 @@ export async function getItemsByIds(
     .where(
       and(eq(wardrobeItems.userId, userId), inArray(wardrobeItems.id, itemIds)),
     );
+}
+
+/**
+One "pairs with" chip, named: the other piece, and the dialed runs shared.
+*/
+export interface PairedItem {
+  item: WardrobeItemRow;
+  count: number;
+}
+
+/**
+ * Garment detail in full: the detail, and its pairs with their names.
+ *
+ * Here rather than in `getItemFn`, because matching the named rows back to
+ * the counts is a decision — the order is the count's, not the query's —
+ * and `functions.ts` is where no test can reach one (D-41). A pair whose
+ * row is gone (another runner's, or deleted) simply drops out.
+ */
+export async function getItemDetailWithPairs(
+  db: Db,
+  userId: string,
+  itemId: string,
+): Promise<ItemDetail & { pairedItems: PairedItem[] }> {
+  const detail = await getItemDetail(db, userId, itemId);
+  const pairs = detail.performance?.pairsWith ?? [];
+  const rows = await getItemsByIds(
+    db,
+    userId,
+    pairs.map((pair) => pair.itemId),
+  );
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const pairedItems = pairs.flatMap((pair) => {
+    const item = byId.get(pair.itemId);
+    return item === undefined ? [] : [{ item, count: pair.count }];
+  });
+  return { ...detail, pairedItems };
 }
 
 /**

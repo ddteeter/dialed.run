@@ -2,7 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { requireSession } from "../../modules/auth/functions";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
-import { createItemFn } from "../../modules/closet/functions";
+import {
+  createItemFn,
+  removePhotoFn,
+  uploadPhotoFn,
+} from "../../modules/closet/functions";
+import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout, useIdempotencyKey } from "../../ui";
 
@@ -25,7 +30,7 @@ function NewGarmentPage() {
   return (
     <Layout>
       <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 wide:px-6">
-        <h1 className="font-display text-title uppercase">Add a piece</h1>
+        <h1 className="font-display text-title uppercase">Add a garment</h1>
         <GarmentForm
           save={async (garment) =>
             createItemFn({ data: { garment, idempotencyKey } })
@@ -43,6 +48,11 @@ function NewGarmentPage() {
           submitLabel="Add to closet"
           pendingLabel="Adding"
           successMessage="Added to your closet."
+          photo={{
+            upload: uploadPhotoFn,
+            remove: removePhotoFn,
+            renderStep: photoBlurStep,
+          }}
         />
       </div>
     </Layout>

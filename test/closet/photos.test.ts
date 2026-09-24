@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -10,15 +11,23 @@ import { z } from "zod";
 import samplePhotoBytes from "../fixtures/sample-photo.bin";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { createItem, getOwnedItem } from "../../src/modules/closet/service";
+import {
+  createItem,
+  getOwnedItem,
+  NotFoundError,
+} from "../../src/modules/closet/service";
+import { wardrobeItems } from "../../src/db/schema-core";
 import { maxPhotoBytes } from "../../src/lib/photo-constraints";
 import {
   extensionFor,
   getItemPhotoObject,
   isPhotoSize,
+  photoKeyFor,
+  photoObjectKeys,
   photoSizes,
   PhotoValidationError,
   reasonFrom,
+  removeItemPhoto,
   unquoteEtag,
   uploadItemPhoto,
   uploadPhotoFromForm,
@@ -475,6 +484,97 @@ describe("keys are built from real values, never from a null", () => {
     expect(
       await getItemPhotoObject(client, userId, item.id, "original"),
     ).toBeUndefined();
+  });
+});
+
+describe("photoObjectKeys", () => {
+  it("names the three derived sizes and every original an upload can leave", () => {
+    expect(photoObjectKeys("items/u/i")).toStrictEqual([
+      "items/u/i/thumb.webp",
+      "items/u/i/card.webp",
+      "items/u/i/full.webp",
+      "items/u/i/original.jpg",
+      "items/u/i/original.png",
+      "items/u/i/original.webp",
+    ]);
+  });
+});
+
+/**
+ * A garment with a stored photo, without running photon: the row carries
+ * the key and the objects sit where an upload would have put them. The
+ * pipeline is tested above; what is under test here is the undoing of it.
+ */
+async function garmentWithPhoto(userId: string) {
+  const client = db();
+  const item = await createItem(client, userId, {
+    category: "top",
+    name: "Photographed",
+  });
+  const photoKey = photoKeyFor(userId, item.id);
+  await client
+    .update(wardrobeItems)
+    .set({ photoKey, visibility: "hidden_pending_review" })
+    .where(eq(wardrobeItems.id, item.id));
+  for (const key of photoObjectKeys(photoKey)) {
+    await env.MEDIA.put(key, new Uint8Array([1, 2, 3]));
+  }
+  return { item, photoKey };
+}
+
+async function storedKeys(prefix: string): Promise<string[]> {
+  const listed = await env.MEDIA.list({ prefix });
+  return listed.objects.map((object) => object.key);
+}
+
+describe("removeItemPhoto (round 22, the well's Remove)", () => {
+  it("clears the key, puts the no-photo visibility back, and empties storage", async () => {
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+
+    await removeItemPhoto(db(), userId, item.id);
+
+    const row = await getOwnedItem(db(), userId, item.id);
+    expect(row.photoKey).toBeNull();
+    // A garment with no photo wears `ok`; a photo that is gone cannot be
+    // pending a screen or hidden from anyone.
+    expect(row.visibility).toBe("ok");
+    expect(await storedKeys(photoKey)).toStrictEqual([]);
+  });
+
+  it("does nothing to a garment with no photo", async () => {
+    // Without the guard the key would be `${null}` — the string "null" —
+    // and the delete would reach whatever sits there.
+    await env.MEDIA.put("null/thumb.webp", new Uint8Array([1]));
+    const userId = newUlid();
+    const client = db();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Never photographed",
+    });
+    await client
+      .update(wardrobeItems)
+      .set({ visibility: "pass" })
+      .where(eq(wardrobeItems.id, item.id));
+
+    await removeItemPhoto(client, userId, item.id);
+
+    const row = await getOwnedItem(client, userId, item.id);
+    expect(row.visibility).toBe("pass");
+    expect(await storedKeys("null/")).toStrictEqual(["null/thumb.webp"]);
+  });
+
+  it("refuses another runner's garment and touches none of it", async () => {
+    const owner = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(owner);
+
+    await expect(
+      removeItemPhoto(db(), newUlid(), item.id),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    const row = await getOwnedItem(db(), owner, item.id);
+    expect(row.photoKey).toBe(photoKey);
+    expect(await storedKeys(photoKey)).toHaveLength(6);
   });
 });
 

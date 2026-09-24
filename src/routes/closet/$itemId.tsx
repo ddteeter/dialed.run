@@ -5,6 +5,7 @@ import { GarmentDetail } from "../../modules/closet/components/GarmentDetail";
 import {
   deleteItemFn,
   getItemFn,
+  removePhotoFn,
   retireItemFn,
   unretireItemFn,
   uploadPhotoFn,
@@ -29,6 +30,7 @@ function GarmentDetailPage() {
         unretire={unretireItemFn}
         remove={deleteItemFn}
         uploadPhoto={uploadPhotoFn}
+        removePhoto={removePhotoFn}
         renderPhotoStep={photoBlurStep}
       />
     </Layout>
