@@ -442,4 +442,29 @@ describe("ConditionsTab: what round 22 does not draw", () => {
     expect(await screen.findByText("Not enough runs yet")).toBeVisible();
     expect(conditionsFor).toHaveBeenCalledTimes(2);
   });
+
+  it("tries again where the saved city is, without asking where the runner is", async () => {
+    // PR #102 review: the loader's `home` predates the save, so a retry
+    // that went back through it prompted for the location again and put
+    // the city form back — the tab promises never to ask again.
+    const user = userEvent.setup();
+    const locate = vi.fn(() => Promise.resolve(undefined));
+    const conditionsFor = vi
+      .fn<(input: { data: Coords }) => Promise<ConsensusResult | undefined>>()
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockResolvedValueOnce({ status: "too-few", windowDays: 14, band });
+    await renderFeedScreen(tab({ locate, conditionsFor }));
+
+    await user.type(await screen.findByLabelText("City"), "Portland, OR");
+    await user.click(screen.getByRole("button", { name: "Use this city" }));
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Not enough runs yet")).toBeVisible();
+    expect(conditionsFor.mock.calls).toStrictEqual([
+      [{ data: PORTLAND }],
+      [{ data: PORTLAND }],
+    ]);
+    expect(locate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText("City")).toBeNull();
+  });
 });

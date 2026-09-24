@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
@@ -76,6 +76,10 @@ export function ConditionsTab({
   units: Units;
 }>) {
   const [state, setState] = useState<TabState>("waiting");
+  // A city saved on this tab outranks the loader's `home`, which was read
+  // before the save: without it, a retry after a failed read prompted for
+  // the location again and put the city form back (PR #102 review).
+  const saved = useRef<Coords>(undefined);
 
   const lookAt = useCallback(
     async (coords: Coords) => {
@@ -91,7 +95,7 @@ export function ConditionsTab({
 
   const look = useCallback(async () => {
     setState("waiting");
-    const coords = home.coords ?? (await locate());
+    const coords = saved.current ?? home.coords ?? (await locate());
     if (coords === undefined) {
       setState(home.cityLabel === undefined ? "denied" : "no-weather");
       return;
@@ -118,7 +122,13 @@ export function ConditionsTab({
   }
   if (state === "denied") {
     return (
-      <CityForm saveCity={saveCity} onSaved={(coords) => lookAt(coords)} />
+      <CityForm
+        saveCity={saveCity}
+        onSaved={(coords) => {
+          saved.current = coords;
+          return lookAt(coords);
+        }}
+      />
     );
   }
   if (state === "no-weather") return <NoWeather />;
