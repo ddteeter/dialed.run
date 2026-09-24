@@ -60,6 +60,25 @@ export function formatDuration(durationS: number): string {
 }
 
 /**
+ * Pace in the runner's own unit — `8:40 /mi`, `5:23 /km` — as D's run
+ * strip draws it (round 22).
+ *
+ * Nothing when the run has no distance: a treadmill session logged by
+ * time alone has no pace, and `Infinity:NaN /mi` is not one.
+ */
+export function formatPace(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): string | undefined {
+  if (distanceM <= 0) return undefined;
+  const metres = unit === "km" ? METRES_PER_KM : METRES_PER_MILE;
+  const perUnit = Math.round((durationS * metres) / distanceM);
+  const seconds = (perUnit % 60).toString().padStart(2, "0");
+  return `${String(Math.floor(perUnit / 60))}:${seconds} /${unit}`;
+}
+
+/**
  * The temperature a run actually covered: `[4°]` when it fits one hour,
  * `[4–12°]` when it does not.
  *

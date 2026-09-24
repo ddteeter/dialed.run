@@ -70,6 +70,11 @@ export interface FeedItem {
   distanceM: number;
   durationS: number;
   startedAt: number;
+  /**
+  The run says it was indoors — the strip reads "INDOOR" rather than
+  dropping its conditions cell (round 22, E1).
+  */
+  indoor: boolean;
   verdict: number | undefined;
   caption: string | undefined;
   createdAt: number;
@@ -77,12 +82,23 @@ export interface FeedItem {
   photoKeys: string[];
   tags: string[];
   usefulCount: number;
+  /**
+  Whether the viewer has already marked this one useful, so the card's
+  control starts in the right state (round 22: Useful on the card).
+  */
+  viewerHasReacted: boolean;
   conditions: Conditions | undefined;
 }
 
 export interface FeedPage {
   items: FeedItem[];
   nextCursor: FeedCursor | undefined;
+  /**
+  How many runners the viewer follows — what decides which tab the feed
+  opens on (round 22: zero follows lands on Your conditions) and which
+  sentence Following's empty state says.
+  */
+  followeeCount: number;
 }
 
 /**
@@ -141,16 +157,36 @@ async function hydrateEntries(
     .select({ entryId: reactions.entryId })
     .from(reactions)
     .where(inArray(reactions.entryId, entryIds));
+  // Which of these the viewer has marked, so each card's Useful starts in
+  // the right state (round 22). Its own read on the same primary key
+  // rather than a column on every reaction row: one row per mark, and
+  // only the viewer's.
+  const viewerMarks = and(
+    eq(reactions.userId, viewerId),
+    inArray(reactions.entryId, entryIds),
+  );
+  const markedQuery = database
+    .select({ entryId: reactions.entryId })
+    .from(reactions)
+    .where(viewerMarks);
 
-  const [runRows, authorRows, itemRows, photoRows, tagRows, reactionRows] =
-    await database.batch([
-      runsQuery,
-      authorsQuery,
-      itemsQuery,
-      photosQuery,
-      tagsQuery,
-      reactionsQuery,
-    ]);
+  const [
+    runRows,
+    authorRows,
+    itemRows,
+    photoRows,
+    tagRows,
+    reactionRows,
+    markedRows,
+  ] = await database.batch([
+    runsQuery,
+    authorsQuery,
+    itemsQuery,
+    photosQuery,
+    tagsQuery,
+    reactionsQuery,
+    markedQuery,
+  ]);
 
   const runsById = new Map(runRows.map((r) => [r.id, r]));
   const authorsById = new Map(authorRows.map((a) => [a.userId, a]));
@@ -163,6 +199,7 @@ async function hydrateEntries(
   for (const row of reactionRows) {
     usefulCounts.set(row.entryId, (usefulCounts.get(row.entryId) ?? 0) + 1);
   }
+  const reactedByViewer = new Set(markedRows.map((row) => row.entryId));
 
   return entryRows.map((entry) => {
     const run = runsById.get(entry.runId);
@@ -187,6 +224,7 @@ async function hydrateEntries(
       distanceM: run?.distanceM ?? 0,
       durationS: run?.durationS ?? 0,
       startedAt: run?.startedAt ?? entry.createdAt,
+      indoor: run?.indoor ?? false,
       verdict: entry.verdict ?? undefined,
       caption: entry.caption ?? undefined,
       createdAt: entry.createdAt,
@@ -196,6 +234,7 @@ async function hydrateEntries(
       photoKeys: photosForEntry.map((p) => p.photoKey),
       tags: tagRows.filter((t) => t.entryId === entry.id).map((t) => t.tag),
       usefulCount: usefulCounts.get(entry.id) ?? 0,
+      viewerHasReacted: reactedByViewer.has(entry.id),
       conditions: run ? observations.get(run.id) : undefined,
     };
   });
@@ -220,6 +259,7 @@ export async function followingFeed(
   const last = page.at(-1);
   return {
     items,
+    followeeCount: followeeIds.length,
     nextCursor:
       last && rows.length > limit
         ? { createdAt: last.createdAt, id: last.id }

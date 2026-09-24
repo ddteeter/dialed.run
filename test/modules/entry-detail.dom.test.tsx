@@ -1,63 +1,34 @@
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
-import { expectAvailable, expectBusy } from "../ui/unavailable";
+import { MILES, renderFeedScreen } from "./feed-fixtures";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
+type Item = Entry["items"][number];
 
 /**
- * Screen D. Eight of its blocks are conditional on the entry having that
- * thing, and an entry with none of them is perfectly ordinary — so every
- * one of those forks is a state a real user reaches.
+ * Screen D, as round 22 draws it "when it isn't full": the run strip is
+ * the one part every entry has, and everything else is present or absent,
+ * never a placeholder.
  */
-async function renderWithRouter(element: ReactElement) {
-  const rootRoute = createRootRoute();
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/",
-    component: () => element,
-  });
-  const feedRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/feed",
-    component: () => <p>The feed</p>,
-  });
-  const verdictRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/feed/verdict/$entryId",
-    component: () => <p>Verdict</p>,
-  });
-  const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, feedRoute, verdictRoute]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
-  await router.load();
-  return { router, ...render(<RouterProvider router={router} />) };
-}
+const OWNER = "01USER";
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
     id: "01ENTRY",
-    userId: "01USER",
-    authorDisplayName: undefined,
+    userId: OWNER,
+    authorDisplayName: "mark_t",
     runId: "01RUN",
     runTitle: "Evening run",
-    distanceM: 8047,
-    durationS: 1830,
-    startedAt: 1_755_000_000,
+    distanceM: 5 * 1609.34,
+    durationS: 2600,
+    // Tue 12 Aug 2025, 06:30 UTC.
+    startedAt: Date.UTC(2025, 7, 12, 6, 30) / 1000,
     indoor: false,
     verdict: undefined,
     isPublic: true,
@@ -73,529 +44,199 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   };
 }
 
-/**
-The heading and the badge share a row; the badge is the only other thing
-in it.
-*/
-function badgeRow(): string {
-  return (
-    screen.getByRole("heading", { name: "Evening run" }).parentElement
-      ?.textContent ?? ""
-  );
+function item(overrides: Partial<Item> = {}): Item {
+  return {
+    itemId: "01ITEM",
+    name: "Houdini",
+    brand: "Patagonia",
+    category: "top",
+    layer: "outer",
+    flag: undefined,
+    note: undefined,
+    ...overrides,
+  };
 }
 
 const nothing = () => Promise.resolve();
-const noReaction = () => Promise.resolve({ useful: true });
+const marked = () => Promise.resolve({ useful: true });
 
-function detail(overrides: Partial<Entry> = {}, shouldPrompt = false) {
+function detail(
+  overrides: Partial<Entry> = {},
+  options: {
+    viewerId?: string | undefined;
+    shouldPrompt?: boolean;
+    recordPrompted?: () => Promise<unknown>;
+    toggleUseful?: () => Promise<{ useful: boolean }>;
+    report?: boolean;
+  } = {},
+) {
   return (
     <EntryDetail
-      units={{ temp: "f", distance: "mi" }}
+      units={MILES}
       entry={entry(overrides)}
-      shouldPromptVerdict={shouldPrompt}
-      recordPrompted={nothing}
-      toggleUseful={noReaction}
+      viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}
+      shouldPromptVerdict={options.shouldPrompt ?? false}
+      recordPrompted={options.recordPrompted ?? nothing}
+      toggleUseful={options.toggleUseful ?? marked}
+      reportAffordance={
+        options.report === false ? undefined : (
+          <button type="button">Report this entry</button>
+        )
+      }
     />
   );
 }
 
-describe("EntryDetail: the run itself", () => {
-  it("names the run and renders the measured values in mono", async () => {
-    await renderWithRouter(detail());
+function part(name: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(
+    `[data-part="${CSS.escape(name)}"]`,
+  );
+}
 
-    expect(screen.getByRole("heading", { name: "Evening run" })).toBeVisible();
-    // 8047 m is 5.0 mi and 1830 s is 30:30.
-    const measured = screen.getByText(/5\.0mi/);
-    expect(measured).toHaveTextContent("5.0mi · 30:30");
-    expect(measured).toHaveClass("font-mono");
+function partsInOrder(): string[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      '[data-part]:not([data-part="failure-band"])',
+    ),
+  ]
+    .map((element) => element.dataset.part ?? "")
+    .filter((name) => name !== "verdict-badge");
+}
+
+describe("EntryDetail: the order, and what a sparse entry leaves out", () => {
+  it("is photo pager, strip, note, kit, tags, Useful, Report on a full entry", async () => {
+    await renderFeedScreen(
+      detail({
+        photoKeys: ["a.jpg"],
+        caption: "Wore the shell.",
+        items: [item()],
+        tags: ["hands_cold"],
+        verdict: 1,
+      }),
+    );
+
+    expect(partsInOrder()).toStrictEqual([
+      "photo",
+      "run-strip",
+      "note",
+      "kit",
+      "tags",
+      "reactions",
+      "report",
+    ]);
   });
 
-  it("falls back to A runner when the author has no display name", async () => {
-    await renderWithRouter(detail());
-    expect(screen.getByText("A runner")).toBeVisible();
-  });
+  it("is the strip and Useful alone with nothing else — no placeholders", async () => {
+    await renderFeedScreen(detail({}, { report: false }));
 
-  it("names the author when there is one", async () => {
-    await renderWithRouter(detail({ authorDisplayName: "Drew" }));
-    expect(screen.getByText("Drew")).toBeVisible();
+    expect(partsInOrder()).toStrictEqual(["run-strip", "reactions"]);
+    expect(document.querySelector("img")).toBeNull();
   });
 });
 
-describe("EntryDetail: the verdict badge", () => {
-  it("is absent on an entry with no verdict", async () => {
-    await renderWithRouter(detail());
-    expect(badgeRow()).toBe("Evening run");
+describe("EntryDetail: the heading", () => {
+  it("is Your run to its author", async () => {
+    await renderFeedScreen(detail({}, { viewerId: OWNER }));
+    expect(screen.getByRole("heading", { name: "Your run" })).toBeVisible();
   });
 
-  it("reads the verdict through the shared scale", async () => {
-    // The words come from `verdictScale` in lib/contracts, so this cannot
-    // drift from the picker that wrote them.
-    await renderWithRouter(detail({ verdict: -2 }));
-    expect(badgeRow()).toMatch(/^Evening run\[.+\]$/);
-    expect(badgeRow()).not.toBe("Evening run[Dialed]");
+  it("is the author's name to anyone else, or A runner", async () => {
+    await renderFeedScreen(detail());
+    expect(screen.getByRole("heading", { name: "mark_t" })).toBeVisible();
   });
 
-  it("still says something for a verdict outside the scale", async () => {
-    // Defensive: the column is an integer, so a value the scale does not
-    // know is possible in corrupt data, and an empty badge is worse than
-    // a wrong one.
-    await renderWithRouter(detail({ verdict: 7 }));
-    expect(badgeRow()).toBe("Evening run[Dialed]");
+  it("falls back to A runner, and never calls a signed-out viewer the author", async () => {
+    await renderFeedScreen(
+      detail({ authorDisplayName: undefined }, { viewerId: undefined }),
+    );
+    expect(screen.getByRole("heading", { name: "A runner" })).toBeVisible();
   });
 
-  it("treats a dialed verdict as a verdict, not as nothing", async () => {
-    // 0 means dialed. A truthiness check here would hide the badge on
-    // exactly the runs that got it right.
-    await renderWithRouter(detail({ verdict: 0 }));
-    expect(screen.getByText("[Dialed]")).toBeVisible();
+  it("goes back to the feed from the header's own slot", async () => {
+    await renderFeedScreen(detail());
+    expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
+      "href",
+      "/feed",
+    );
   });
 });
 
-describe("EntryDetail: conditions", () => {
-  it("shows the temperature and the condition when there are any", async () => {
-    await renderWithRouter(
-      detail({
-        conditions: pointConditions({
-          tempC: 10,
-          feelsLikeC: 8,
-          condition: "Clear",
-        }),
-      }),
-    );
-    expect(screen.getByText(/Clear/)).toBeVisible();
+describe("EntryDetail: the run strip", () => {
+  it("says when, how far and how fast, all measured", async () => {
+    await renderFeedScreen(detail());
+
+    const strip = part("run-strip");
+    expect(strip).toHaveTextContent("Tue 12 Aug · 6:30 AM5.0mi8:40 /mi");
+    expect(screen.getByText("5.0mi")).toHaveClass("font-mono", "text-mono-lg");
+    expect(screen.getByText("8:40 /mi")).toHaveClass("font-mono", "text-quiet");
   });
 
-  it("renders the temperature in Fahrenheit, with the condition beside it", async () => {
-    // The unit is display-only (D-6 makes it a preference later); the
-    // space between the two is a deliberate `{" "}`, because JSX drops
-    // whitespace between expressions.
-    await renderWithRouter(
-      detail({
-        conditions: pointConditions({
-          tempC: 10,
-          feelsLikeC: 8,
-          condition: "Clear",
-        }),
-      }),
-    );
-    expect(screen.getByText(/Clear/)).toHaveTextContent("50° Clear");
+  it("leaves pace out of a run with no distance", async () => {
+    await renderFeedScreen(detail({ distanceM: 0 }));
+    expect(part("run-strip")).not.toHaveTextContent("/mi");
   });
 
-  it("shows the range when the run spanned more than one hour", async () => {
-    // D-5: a 2->14 run is not a 2 degree run. The reader sees what the run
-    // covered, whatever it is banded at.
-    await renderWithRouter(
+  it("carries the badge when there is a verdict, and loses it when there is none", async () => {
+    await renderFeedScreen(detail({ verdict: -1 }));
+    expect(
+      part("run-strip")?.querySelector('[data-part="verdict-badge"]'),
+    ).toHaveTextContent("A bit cold");
+  });
+
+  it("has no badge on an entry nobody judged", async () => {
+    await renderFeedScreen(detail());
+    expect(part("verdict-badge")).toBeNull();
+  });
+
+  it("gives the conditions in teal, in the run's own zone", async () => {
+    await renderFeedScreen(
       detail({
         conditions: {
-          ...pointConditions({ tempC: 2, feelsLikeC: 2, condition: "Clear" }),
-          span: {
-            minTempC: 2,
-            maxTempC: 14,
-            minFeelsLikeC: 2,
-            maxFeelsLikeC: 14,
-          },
+          ...pointConditions({ tempC: 8, feelsLikeC: 6, condition: "Wind" }),
+          timeZone: "America/Chicago",
         },
       }),
     );
-    expect(screen.getByText(/Clear/)).toHaveTextContent("36–57° Clear");
+
+    expect(screen.getByText("46° · Wind")).toHaveClass("text-dialed-text");
+    expect(screen.getByText("Tue 12 Aug · 1:30 AM")).toBeVisible();
   });
 
-  it("says nothing at all on an entry with none", async () => {
-    // An indoor run has no conditions, and an empty weather line reads as
-    // a failure to fetch rather than as a treadmill.
-    await renderWithRouter(detail());
-    expect(screen.queryByText(/°/)).toBeNull();
-  });
-});
-
-describe("EntryDetail: the optional blocks", () => {
-  it("omits photos, caption, kit and tags on a bare entry", async () => {
-    // Not merely empty — absent. Each of these is a flex child, so an
-    // empty one still costs a row's worth of gap.
-    const { container } = await renderWithRouter(detail());
-
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    // A pattern, not the exact heading: an exact name would stop matching
-    // anything the moment the count changed, and pass here for that reason.
-    expect(screen.queryByRole("heading", { name: /^The kit/ })).toBeNull();
-    expect(container.querySelectorAll("ul")).toHaveLength(0);
-    // One paragraph — the author line. No caption, no tag row.
-    expect(container.querySelectorAll("p")).toHaveLength(1);
-    // The photo grid and the tag row, named by the class that makes each
-    // one what it is. `.grid` alone used to stand for the photo grid and
-    // stopped being able to: `PendingLabel` stacks a control's two labels
-    // in one grid cell, so the Useful button contains a `.grid` on every
-    // entry whether or not there is a photo.
-    expect(container.querySelectorAll(".grid-cols-2")).toHaveLength(0);
-    expect(container.querySelectorAll(".flex-wrap")).toHaveLength(0);
+  it("says Indoor when the run was, and nothing when it just has no weather", async () => {
+    await renderFeedScreen(detail({ indoor: true }));
+    expect(screen.getByText("Indoor")).toHaveClass("text-muted");
   });
 
-  it("renders one image per photo key, pointing at the cached route", async () => {
-    const { container } = await renderWithRouter(
-      detail({
-        photoKeys: ["entries/01USER/01ENTRY/a", "entries/01USER/01ENTRY/b"],
-      }),
-    );
-
-    const images = [...container.querySelectorAll("img")];
-    expect(images).toHaveLength(2);
-    expect(images[0]).toHaveAttribute(
-      "src",
-      "/feed/photo/entries/01USER/01ENTRY/a",
-    );
-    // Decorative: the entry's own text is the description.
-    expect(images[0]).toHaveAttribute("alt", "");
-  });
-
-  it("shows the caption when there is one", async () => {
-    await renderWithRouter(detail({ caption: "Perfect morning" }));
-    expect(screen.getByText("Perfect morning")).toBeVisible();
-  });
-
-  it("counts one piece as a piece", async () => {
-    // "1 pieces" is the slip a count invites; the board only ever draws
-    // three, so nothing there shows the singular.
-    await renderWithRouter(
-      detail({
-        items: [
-          {
-            itemId: "01A",
-            name: "Houdini",
-            brand: "Patagonia",
-            category: "top",
-            layer: undefined,
-            flag: undefined,
-            note: undefined,
-          },
-        ],
-      }),
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "The kit · 1 piece" }),
-    ).toBeVisible();
-  });
-
-  it("lists the kit, with the brand where there is one", async () => {
-    await renderWithRouter(
-      detail({
-        items: [
-          {
-            itemId: "01A",
-            name: "Houdini",
-            brand: "Patagonia",
-            category: "top",
-            layer: undefined,
-            flag: undefined,
-            note: undefined,
-          },
-          {
-            itemId: "01B",
-            name: "Long sleeve top",
-            brand: undefined,
-            category: "top",
-            layer: undefined,
-            flag: undefined,
-            note: undefined,
-          },
-        ],
-      }),
-    );
-
-    // Board D heads the list "The kit · 3 pieces" (round 19); it was "Kit".
-    expect(
-      screen.getByRole("heading", { name: "The kit · 2 pieces" }),
-    ).toBeVisible();
-    expect(screen.getByText("Patagonia Houdini")).toBeVisible();
-    // No stray leading space where a brand would have gone.
-    expect(screen.getByText("Long sleeve top")).toBeVisible();
-  });
-
-  it("shows a per-item flag in words rather than in schema case", async () => {
-    // `too_much` is the stored value; a reader should hear "too much".
-    await renderWithRouter(
-      detail({
-        items: [
-          {
-            itemId: "01A",
-            name: "Houdini",
-            brand: undefined,
-            category: "top",
-            layer: undefined,
-            flag: "too_much",
-            note: undefined,
-          },
-        ],
-      }),
-    );
-    expect(screen.getByText("[too much]")).toBeVisible();
-  });
-
-  it("shows tags the same way", async () => {
-    const { container } = await renderWithRouter(
-      detail({ tags: ["wind_chill", "rain"] }),
-    );
-    expect(screen.getByText("[wind chill]")).toBeVisible();
-    expect(screen.getByText("[rain]")).toBeVisible();
-    expect(container.querySelectorAll(".flex-wrap")).toHaveLength(1);
+  it("says nothing at all about conditions it does not have", async () => {
+    await renderFeedScreen(detail());
+    expect(part("run-strip")?.children).toHaveLength(2);
   });
 });
 
-describe("EntryDetail: the useful reaction", () => {
-  it("shows the count it was given", async () => {
-    await renderWithRouter(detail({ usefulCount: 4 }));
-    expect(screen.getByRole("button", { name: /Useful/ })).toHaveTextContent(
-      "[4]",
+describe("EntryDetail: the owner's verdict prompt", () => {
+  it("takes the badge's place, directly under the strip, and opens A3", async () => {
+    await renderFeedScreen(
+      detail({ verdict: 0 }, { viewerId: OWNER, shouldPrompt: true }),
     );
+
+    const prompt = screen.getByRole("link", { name: /didn’t log a verdict/u });
+    expect(prompt).toHaveAttribute("href", "/feed/verdict/01ENTRY");
+    expect(prompt).toHaveAttribute("data-part", "verdict-prompt");
+    expect(prompt).toHaveTextContent(
+      "You didn’t log a verdict for this run. Add one?Did it work?",
+    );
+    expect(prompt).toHaveClass("bg-dialed-tint", "border-teal", "rounded-none");
+    expect(part("run-strip")?.nextElementSibling).toBe(prompt);
+    // In the badge's place: not both.
+    expect(part("verdict-badge")).toBeNull();
   });
 
-  it("counts up when the viewer marks it useful", async () => {
-    const user = userEvent.setup();
-    const toggleUseful = vi.fn(() => Promise.resolve({ useful: true }));
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry({ usefulCount: 4, viewerHasReacted: false })}
-        shouldPromptVerdict={false}
-        recordPrompted={nothing}
-        toggleUseful={toggleUseful}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /Useful/ }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Useful/ })).toHaveTextContent(
-        "[5]",
-      );
-    });
-    // The whole resting label, not a fragment of it: the count rolls now,
-    // so it is two spans where it was one text node, and the space before
-    // the bracket is the caller's.
-    //
-    // **`[Noting]` is in the DOM beside it and is not part of this.** The
-    // two labels are stacked in one grid cell and swapped by `visibility`
-    // (`PendingLabel`), which is what keeps the button from resizing
-    // mid-press — so the pending verb is always present and always hidden
-    // at rest. `toBeVisible` reads the visibility style, which is the
-    // mechanism; `textContent` cannot, because it has no opinion about
-    // layout at all.
-    //
-    // Not asserted as the *accessible name* either, which is what actually
-    // broke — Chromium announced "Useful [ 5 ]" while the slot clipped
-    // with `overflow: hidden`, because the name algorithm spaces a node
-    // whose display is not inline. happy-dom has no layout and inserts
-    // those spaces either way, so a name query here would pin its quirk
-    // rather than the rule. `e2e/feed` is what guards it, in a real
-    // browser, and it is what proves the hidden verb stays out of the
-    // name.
-    expect(screen.getByText("Useful").parentElement).toBeVisible();
-    expect(screen.getByText("Noting")).not.toBeVisible();
-    expect(screen.getByText("Useful").closest("span")?.textContent).toBe(
-      "Useful [5]",
-    );
-    expect(toggleUseful).toHaveBeenCalledWith({ data: { entryId: "01ENTRY" } });
-  });
-
-  it("counts down when they take it back", async () => {
-    const user = userEvent.setup();
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry({ usefulCount: 4, viewerHasReacted: true })}
-        shouldPromptVerdict={false}
-        recordPrompted={nothing}
-        toggleUseful={() => Promise.resolve({ useful: false })}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /Useful/ }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Useful/ })).toHaveTextContent(
-        "[3]",
-      );
-    });
-  });
-
-  it("says what is still true under Useful when the press fails, and keeps the count", async () => {
-    // Round 23, item 9, drawn on D: "Useful reads its prior state — empty
-    // heart, 11, not 12 — because it never left it". It used to fail in
-    // silence: a `finally` with no `catch`.
-    const user = userEvent.setup();
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry({ usefulCount: 11, viewerHasReacted: false })}
-        shouldPromptVerdict={false}
-        recordPrompted={nothing}
-        toggleUseful={() => Promise.reject(new TypeError("Failed to fetch"))}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /Useful/ }));
-
-    const band = await screen.findByText("Not marked");
-    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
-      "Not markedYour connection dropped.Try again",
-    );
-    expect(screen.getByRole("button", { name: /Useful/ })).toHaveTextContent(
-      "[11]",
-    );
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Not marked. Your connection dropped.",
-    );
-  });
-
-  it("says it is still marked when taking it back fails", async () => {
-    const user = userEvent.setup();
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry({ usefulCount: 4, viewerHasReacted: true })}
-        shouldPromptVerdict={false}
-        recordPrompted={nothing}
-        toggleUseful={() => Promise.reject(new TypeError("Failed to fetch"))}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /Useful/ }));
-
-    expect(await screen.findByText("Still marked")).toBeVisible();
-  });
-
-  it("marks the button when the viewer has already reacted", async () => {
-    await renderWithRouter(detail({ viewerHasReacted: true }));
-    const button = screen.getByRole("button", { name: /Useful/ });
-    expect(button).toHaveClass("bg-teal");
-    expect(button).not.toHaveClass("border");
-  });
-
-  it("leaves it an outline when they have not", async () => {
-    await renderWithRouter(detail({ viewerHasReacted: false }));
-    const button = screen.getByRole("button", { name: /Useful/ });
-    expect(button).toHaveClass("border");
-    expect(button).not.toHaveClass("bg-teal");
-  });
-
-  it("does nothing on a second press while the first is in flight", async () => {
-    // The guard rule 07 makes necessary. `aria-disabled` keeps the button
-    // focusable and announcing, so unlike `disabled` it does not stop the
-    // press — the handler has to. Without the guard this toggle spends a
-    // round trip undoing the reaction the first press is still making.
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ useful: boolean }>();
-    const toggleUseful = vi.fn(() => pending.promise);
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry()}
-        shouldPromptVerdict={false}
-        recordPrompted={nothing}
-        toggleUseful={toggleUseful}
-      />,
-    );
-    const button = screen.getByRole("button", { name: /Useful/ });
-
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
-    });
-    await user.click(button);
-    await user.click(button);
-
-    expect(toggleUseful).toHaveBeenCalledTimes(1);
-  });
-
-  it("locks the button while it works", async () => {
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ useful: boolean }>();
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry()}
-        shouldPromptVerdict={false}
-        recordPrompted={nothing}
-        toggleUseful={() => pending.promise}
-      />,
-    );
-    const button = screen.getByRole("button", { name: /Useful/ });
-
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
-    });
-
-    pending.resolve({ useful: true });
-    await waitFor(() => {
-      expectAvailable(button);
-    });
-  });
-});
-
-describe("EntryDetail: the verdict prompt", () => {
   it("is absent when the entry is not owed one", async () => {
-    await renderWithRouter(detail());
-    expect(screen.queryByText(/didn’t log a verdict/)).toBeNull();
+    await renderFeedScreen(detail());
+    expect(part("verdict-prompt")).toBeNull();
   });
 
-  it("offers the prompt, and spends the once-only budget by showing it", async () => {
-    // Packet A3: the prompt *showing* — not the user acting on it — is
-    // what spends the budget, so the record happens on mount.
-    const recordPrompted = vi.fn(() => Promise.resolve());
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry()}
-        shouldPromptVerdict
-        recordPrompted={recordPrompted}
-        toggleUseful={noReaction}
-      />,
-    );
-
-    expect(
-      screen.getByRole("link", { name: /didn’t log a verdict/ }),
-    ).toHaveAttribute("href", "/feed/verdict/01ENTRY");
-    await waitFor(() => {
-      expect(recordPrompted).toHaveBeenCalledWith({
-        data: { entryId: "01ENTRY" },
-      });
-    });
-  });
-
-  it("spends the budget once, not on every render", async () => {
-    // The effect's dependencies are what stop a re-render spending it
-    // again — the budget is one prompt, not one per paint.
-    const user = userEvent.setup();
-    const recordPrompted = vi.fn(() => Promise.resolve());
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry()}
-        shouldPromptVerdict
-        recordPrompted={recordPrompted}
-        toggleUseful={noReaction}
-      />,
-    );
-    await waitFor(() => {
-      expect(recordPrompted).toHaveBeenCalledTimes(1);
-    });
-
-    // A re-render with nothing relevant changed.
-    await user.click(screen.getByRole("button", { name: /Useful/ }));
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Useful/ })).toHaveTextContent(
-        "[1]",
-      );
-    });
-
-    expect(recordPrompted).toHaveBeenCalledTimes(1);
-  });
-
-  it("spends the budget when the prompt appears later", async () => {
-    // The dependency list is what makes that work: with a constant one the
-    // effect would fire on mount and never again, so an entry whose
-    // prompt arrives after the first paint would never record it.
+  it("spends the once-only budget by showing, once, and only when shown", async () => {
     const user = userEvent.setup();
     const recordPrompted = vi.fn(() => Promise.resolve());
 
@@ -611,48 +252,160 @@ describe("EntryDetail: the verdict prompt", () => {
           >
             The prompt arrives
           </button>
-          <EntryDetail
-            units={{ temp: "f", distance: "mi" }}
-            entry={entry()}
-            shouldPromptVerdict={prompt}
-            recordPrompted={recordPrompted}
-            toggleUseful={noReaction}
-          />
+          {detail({}, { shouldPrompt: prompt, recordPrompted })}
         </>
       );
     }
 
-    await renderWithRouter(<LatePrompt />);
+    await renderFeedScreen(<LatePrompt />);
     expect(recordPrompted).not.toHaveBeenCalled();
 
     await user.click(
       screen.getByRole("button", { name: "The prompt arrives" }),
     );
-
     await waitFor(() => {
-      expect(recordPrompted).toHaveBeenCalledTimes(1);
+      expect(recordPrompted).toHaveBeenCalledWith({
+        data: { entryId: "01ENTRY" },
+      });
     });
+    // A re-render with nothing relevant changed spends nothing more.
+    await user.click(screen.getByRole("button", { name: /Useful/u }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Useful/u })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+    expect(recordPrompted).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("EntryDetail: the photos", () => {
+  it("pages them one at a time, each with its own counter", async () => {
+    await renderFeedScreen(detail({ photoKeys: ["a.jpg", "b.jpg"] }));
+
+    const pager = part("photo");
+    expect(pager).toHaveClass("snap-x", "snap-mandatory", "overflow-x-auto");
+    const images = [...document.querySelectorAll("img")];
+    expect(images.map((image) => image.getAttribute("src"))).toStrictEqual([
+      "/feed/photo/a.jpg",
+      "/feed/photo/b.jpg",
+    ]);
+    expect(screen.getByText("1 / 2")).toHaveClass("font-mono");
+    expect(screen.getByText("2 / 2")).toBeVisible();
+  });
+});
+
+describe("EntryDetail: the note, the kit and the tags", () => {
+  it("shows the note when there is one", async () => {
+    await renderFeedScreen(detail({ caption: "Wore the shell." }));
+    expect(part("note")).toHaveTextContent("Wore the shell.");
   });
 
-  it("spends nothing when there is no prompt to show", async () => {
-    const recordPrompted = vi.fn(() => Promise.resolve());
-    await renderWithRouter(
-      <EntryDetail
-        units={{ temp: "f", distance: "mi" }}
-        entry={entry()}
-        shouldPromptVerdict={false}
-        recordPrompted={recordPrompted}
-        toggleUseful={noReaction}
-      />,
+  it("lists the kit, brand first where there is one", async () => {
+    await renderFeedScreen(
+      detail({
+        items: [
+          item(),
+          item({ itemId: "01B", brand: undefined, name: "L/S crew" }),
+        ],
+      }),
     );
-    expect(recordPrompted).not.toHaveBeenCalled();
+
+    const rows = part("kit")?.querySelectorAll("li") ?? [];
+    expect([...rows].map((row) => row.textContent)).toStrictEqual([
+      "Patagonia Houdini",
+      "L/S crew[Generic]",
+    ]);
+    expect(screen.getByText("Kit")).toHaveClass("font-mono");
   });
 
-  it("offers a way back to the feed", async () => {
-    await renderWithRouter(detail());
-    expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
-      "href",
-      "/feed",
+  it("marks a generic piece [GENERIC], and only that one", async () => {
+    await renderFeedScreen(
+      detail({
+        items: [
+          item({ itemId: "01A", brand: undefined, name: "Tights" }),
+          item({ itemId: "01B" }),
+        ],
+      }),
     );
+
+    expect(screen.getAllByText("[Generic]")).toHaveLength(1);
+    expect(screen.getByText("[Generic]")).toHaveClass(
+      "font-mono",
+      "text-label",
+    );
+  });
+
+  it("puts a flag at the row's end, in words, and Fine shows nothing", async () => {
+    await renderFeedScreen(
+      detail({
+        items: [
+          item({ itemId: "01A", flag: "too_much" }),
+          item({ itemId: "01B", name: "Gloves", flag: "not_enough" }),
+          item({ itemId: "01C", name: "Tights" }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText("[Too much]")).toHaveClass(
+      "font-mono",
+      "font-semibold",
+    );
+    expect(screen.getByText("[Not enough]")).toBeVisible();
+    const rows = part("kit")?.querySelectorAll("li") ?? [];
+    expect(rows[2]).toHaveTextContent(/^Patagonia Tights$/u);
+  });
+
+  it("reads the tags in A3's words on the track fill, and drops a stored word that is not one", async () => {
+    await renderFeedScreen(
+      detail({ tags: ["hands_cold", "not_a_tag", "chafed"] }),
+    );
+
+    const chips = part("tags")?.querySelectorAll("li") ?? [];
+    expect([...chips].map((chip) => chip.textContent)).toStrictEqual([
+      "hands cold",
+      "chafed",
+    ]);
+    expect(chips[0]).toHaveClass("bg-tint");
+  });
+
+  it("draws no tag row when no stored word is a tag", async () => {
+    await renderFeedScreen(detail({ tags: ["not_a_tag"] }));
+    expect(part("tags")).toBeNull();
+  });
+});
+
+describe("EntryDetail: Useful and Report", () => {
+  it("leaves both off the runner's own entry — they are what others say", async () => {
+    await renderFeedScreen(detail({ usefulCount: 3 }, { viewerId: OWNER }));
+
+    expect(screen.queryByRole("button", { name: /Useful/u })).toBeNull();
+    expect(part("report")).toBeNull();
+    expect(partsInOrder()).toStrictEqual(["run-strip"]);
+  });
+
+  it("is Useful on the control-failure pattern, announced in the screen's region", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      detail(
+        { usefulCount: 11 },
+        { toggleUseful: () => Promise.reject(new TypeError("offline")) },
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: /Useful/u }));
+
+    expect(await screen.findByText("Not marked")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not marked. Your connection dropped.",
+    );
+  });
+
+  it("puts Report at the foot, in a quiet line", async () => {
+    await renderFeedScreen(detail());
+    const report = part("report");
+    expect(report).toHaveTextContent("Report this entry");
+    expect(report).toHaveClass("text-small", "text-label");
   });
 });

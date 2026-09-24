@@ -12,6 +12,7 @@ import {
   attachKitInput,
   bandCountsInput,
   bandSignalsInput,
+  conditionsCityInput,
   coordinatesInput,
   entryIdInput,
   feedInput,
@@ -36,6 +37,7 @@ import {
 } from "./entries";
 import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
+import { conditionsHome, saveConditionsCity } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { pickerGroups } from "./picker";
 import { photoUploadFrom, uploadPhoto } from "./photos";
@@ -43,7 +45,7 @@ import { prefillAt } from "./prefill";
 import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
 import { toggleUsefulReaction } from "./reactions";
-import { searchByDisplayName } from "./search";
+import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
 
 export const attachKitAction = createServerFn({ method: "POST" })
@@ -189,8 +191,27 @@ export const followingFeedQuery = createServerFn({ method: "GET" })
 export const yourConditionsQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => coordinatesInput.parse(input))
   .handler(async ({ data }) => {
-    await requireUserId();
-    return consensusAt(data.lat, data.lng, nowSeconds());
+    const userId = await requireUserId();
+    return consensusAt(data.lat, data.lng, nowSeconds(), userId);
+  });
+
+/**
+ * Where the tab looks without asking: the profile's saved location, and
+ * the city label if one was typed (round 22, E2-lite).
+ */
+export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
+  async () => conditionsHome(await requireUserId()),
+);
+
+/**
+ * Location denied: the typed city goes to the profile's city, and the tab
+ * never asks again.
+ */
+export const saveConditionsCityAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => conditionsCityInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    await saveConditionsCity(userId, data.cityLabel);
   });
 
 // ---- Units (D-6) --------------------------------------------------------------
@@ -224,8 +245,8 @@ export const otherProfileQuery = createServerFn({ method: "GET" })
 export const searchQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => searchInput.parse(input))
   .handler(async ({ data }) => {
-    await requireUserId();
-    return searchByDisplayName(data.prefix);
+    const userId = await requireUserId();
+    return searchRunners(userId, data.prefix);
   });
 
 // ---- Photos -----------------------------------------------------------------

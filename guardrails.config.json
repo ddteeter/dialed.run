@@ -168,11 +168,6 @@
       "count": 2
     },
     {
-      "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line LogicalOperator,UnaryOperator",
-      "reason": "Unreachable fallbacks: `pass` indexes `WINDOW_H`, and `WINDOW_H` and `FEELS_LIKE_DELTA_C` are the same length by construction. They are here because an index signature cannot promise that.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Five equivalent guards, each with its proof at the site: with no items the ownership read matches nothing; the batch's first two statements always exist; the SQL already filters `isNotNull(verdict)`, so the type guard and the empty-list return cannot change an answer; and no entries means no observations. Every one saves a query or narrows a type the runtime has already settled.",
       "count": 5

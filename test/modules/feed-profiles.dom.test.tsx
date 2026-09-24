@@ -1,66 +1,37 @@
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { Avatar, initialOf } from "../../src/modules/feed/components/Avatar";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
 import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";
 import { RunnerSearch } from "../../src/modules/feed/components/RunnerSearch";
-import { expectAvailable, expectBusy } from "../ui/unavailable";
 import type {
   OtherProfile as OtherProfileData,
   OwnProfile as OwnProfileData,
 } from "../../src/modules/feed/profiles";
+import type { SearchResult } from "../../src/modules/feed/search";
+import { renderFeedScreen } from "./feed-fixtures";
 
 /**
- * The three social screens (G, H and find-a-runner). Every section on a
- * profile is conditional on having something to show, and none of those
- * forks could be reached while they were markup in a route.
+ * G, H and runner search, as round 22 draws them with only what v1
+ * stores ("G New account", "H No public entries", item 15's ruling) —
+ * and Follow on the control-failure pattern wherever it appears.
  */
 const NOTHING = z.null().parse(JSON.parse("null"));
-
-async function renderWithRouter(element: ReactElement) {
-  const rootRoute = createRootRoute();
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/",
-    component: () => element,
-  });
-  const entryRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/feed/entry/$entryId",
-    component: () => <p>An entry</p>,
-  });
-  const userRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/feed/u/$userId",
-    component: () => <p>A runner</p>,
-  });
-  const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, entryRoute, userRoute]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
-  await router.load();
-  return { router, ...render(<RouterProvider router={router} />) };
-}
+const done = () => Promise.resolve();
 
 function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
   return {
     userId: "01USER",
-    displayName: undefined,
+    displayName: "Dana Kim",
     cityLabel: undefined,
     thermalLevel: undefined,
     followerCount: 0,
     followingCount: 0,
     entryCount: 0,
+    runCount: 0,
     coverage: [],
     mostWornItems: [],
     recentEntries: [],
@@ -68,585 +39,522 @@ function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
   };
 }
 
-describe("OwnProfile: who you are", () => {
-  it("falls back to You when there is no display name", async () => {
-    await renderWithRouter(<OwnProfile profile={ownProfile()} />);
-    expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
-  });
-
-  it("uses the display name when there is one", async () => {
-    await renderWithRouter(
-      <OwnProfile profile={ownProfile({ displayName: "Drew" })} />,
-    );
-    expect(screen.getByRole("heading", { name: "Drew" })).toBeVisible();
-  });
-
-  it("omits the city line entirely when there is no city", async () => {
-    // Not an empty paragraph: a blank line under the name reads as a
-    // rendering bug.
-    const { container } = await renderWithRouter(
-      <OwnProfile profile={ownProfile()} />,
-    );
-    expect(container.querySelectorAll("p")).toHaveLength(0);
-  });
-
-  it("shows the city when there is one", async () => {
-    await renderWithRouter(
-      <OwnProfile profile={ownProfile({ cityLabel: "Minneapolis" })} />,
-    );
-    expect(screen.getByText("Minneapolis")).toBeVisible();
-  });
-
-  it.each([
-    [-2, "Runs hot — sweating in a t-shirt at 40°"],
-    [-1, "Runs warm"],
-    [0, "Runs average"],
-    [1, "Runs cold"],
-    [2, "Runs cold — always freezing"],
-  ])("reads thermal level %s as %s", async (level, blurb) => {
-    // 0 is a real level — "runs average" — not the absence of one, so the
-    // check has to be `=== undefined` rather than truthiness.
-    await renderWithRouter(
-      <OwnProfile profile={ownProfile({ thermalLevel: level })} />,
-    );
-    expect(screen.getByText(blurb)).toBeVisible();
-  });
-
-  it("says nothing about a level it does not recognise", async () => {
-    await renderWithRouter(
-      <OwnProfile profile={ownProfile({ thermalLevel: 7 })} />,
-    );
-    expect(screen.getByText("Runs average")).toBeVisible();
-  });
-
-  it("shows all three counts", async () => {
-    await renderWithRouter(
-      <OwnProfile
-        profile={ownProfile({
-          followerCount: 12,
-          followingCount: 34,
-          entryCount: 56,
-        })}
-      />,
-    );
-    expect(screen.getByText("12 followers")).toBeVisible();
-    expect(screen.getByText("34 following")).toBeVisible();
-    expect(screen.getByText("56 entries")).toBeVisible();
-  });
-});
-
-describe("OwnProfile: the sections that only appear when there is something in them", () => {
-  it("omits every one on a new account", async () => {
-    // A profile listing "Most worn" over nothing reads as a broken app
-    // rather than as a new account.
-    await renderWithRouter(<OwnProfile profile={ownProfile()} />);
-    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
-  });
-
-  it("names how each band was called, in three redundant channels", async () => {
-    // Design §AB3. The row this replaces had one channel — hue, on three
-    // identical dot runs, with warm at 30% ink — which is a three-way
-    // distinction carried by colour alone *and* a contrast failure. Now
-    // the filled slot's position carries it, hue repeats it, and a word
-    // says it outright.
-    await renderWithRouter(
-      <OwnProfile
-        profile={ownProfile({
-          coverage: [
-            { bandFloorC: 0, label: "0–5°", cold: 2, dialed: 3, warm: 1 },
-          ],
-        })}
-      />,
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "How you call it, by band" }),
-    ).toBeVisible();
-    expect(screen.getByText("[0–5°]")).toBeVisible();
-    // Dialed leads 3–2–1, and the count is every verdict in the band.
-    expect(screen.getByText("Dialed")).toBeVisible();
-    expect(screen.getByText("6 runs")).toBeVisible();
-    expect(document.querySelector("[data-verdict]")).toHaveAttribute(
-      "data-verdict",
-      "dialed",
-    );
-  });
-
-  it("retires the 30%-ink warm, and names it as over-dressed", async () => {
-    // §AB rule 04: `text-night/30` is gone, because opacity never encodes
-    // meaning. Warm is full-strength ink with its own slot and its own
-    // word.
-    await renderWithRouter(
-      <OwnProfile
-        profile={ownProfile({
-          coverage: [
-            { bandFloorC: 10, label: "10–15°", cold: 1, dialed: 0, warm: 4 },
-          ],
-        })}
-      />,
-    );
-
-    expect(screen.getByText("Over-dressed")).toBeVisible();
-    expect(document.querySelector("[data-verdict='warm']")).not.toBeNull();
-    expect(document.querySelector(String.raw`.text-night\/30`)).toBeNull();
-  });
-
-  it("calls a band under-dressed when cold leads, ties included", async () => {
-    // Ties go to the colder end — the same rule `ladderFrom` uses to pick
-    // its thinnest band, and for the same reason: underdressing is the
-    // failure that ends a run early.
-    await renderWithRouter(
-      <OwnProfile
-        profile={ownProfile({
-          coverage: [
-            { bandFloorC: -5, label: "-5–0°", cold: 3, dialed: 3, warm: 0 },
-          ],
-        })}
-      />,
-    );
-
-    expect(screen.getByText("Under-dressed")).toBeVisible();
-    expect(document.querySelector("[data-verdict='cold']")).not.toBeNull();
-  });
-
-  it("lists most-worn items with their counts", async () => {
-    await renderWithRouter(
-      <OwnProfile
-        profile={ownProfile({
-          mostWornItems: [{ itemId: "01A", name: "Houdini", wearCount: 9 }],
-        })}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: "Most worn" })).toBeVisible();
-    expect(screen.getByText("Houdini")).toBeVisible();
-    expect(screen.getByText("[9]")).toBeVisible();
-  });
-
-  it("links recent entries, and says which have no verdict yet", async () => {
-    await renderWithRouter(
-      <OwnProfile
-        profile={ownProfile({
-          recentEntries: [
-            { entryId: "01A", createdAt: 1, verdict: NOTHING },
-            { entryId: "01B", createdAt: 2, verdict: 0 },
-          ],
-        })}
-      />,
-    );
-
-    expect(
-      screen.getByRole("link", { name: "No verdict yet" }),
-    ).toHaveAttribute("href", "/feed/entry/01A");
-    expect(screen.getByRole("link", { name: "Entry" })).toHaveAttribute(
-      "href",
-      "/feed/entry/01B",
-    );
-  });
-});
-
 function otherProfile(
   overrides: Partial<OtherProfileData> = {},
 ): OtherProfileData {
   return {
-    userId: "01THEM",
-    displayName: NOTHING,
+    userId: "01RAVI",
+    displayName: "Ravi K",
     cityLabel: NOTHING,
     recentPublicEntries: [],
     ...overrides,
   };
 }
 
-const nothing = () => Promise.resolve();
+function part(name: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(
+    `[data-part="${CSS.escape(name)}"]`,
+  );
+}
 
-describe("OtherProfile", () => {
-  it("falls back to A runner, and omits an absent city", async () => {
-    const { container } = await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
+function otherScreen(
+  overrides: Partial<OtherProfileData> = {},
+  options: {
+    isFollowing?: boolean;
+    follow?: () => Promise<unknown>;
+    unfollow?: () => Promise<unknown>;
+  } = {},
+) {
+  return (
+    <OtherProfile
+      profile={otherProfile(overrides)}
+      isFollowing={options.isFollowing ?? false}
+      follow={options.follow ?? done}
+      unfollow={options.unfollow ?? done}
+      reportAffordance={<button type="button">Report</button>}
+    />
+  );
+}
+
+function followScreen(options: {
+  isFollowing?: boolean;
+  follow?: () => Promise<unknown>;
+  unfollow?: () => Promise<unknown>;
+}) {
+  return (
+    <OtherProfile
+      profile={otherProfile()}
+      isFollowing={options.isFollowing ?? false}
+      follow={options.follow ?? done}
+      unfollow={options.unfollow ?? done}
+    />
+  );
+}
+
+function results(...names: string[]): SearchResult[] {
+  return names.map((displayName, index) => ({
+    userId: `01R${String(index)}`,
+    displayName,
+    following: index === 1,
+  }));
+}
+
+function searchScreen(
+  found: (prefix: string) => Promise<SearchResult[]> = () =>
+    Promise.resolve([]),
+) {
+  return (
+    <RunnerSearch
+      search={({ data }) => found(data.prefix)}
+      follow={done}
+      unfollow={done}
+    />
+  );
+}
+
+describe("Avatar", () => {
+  it("is the runner's initial, upper-cased, and decorative", async () => {
+    expect(initialOf("dana")).toBe("D");
+    const { container } = await renderFeedScreen(
+      <Avatar name="dana" size="large" />,
+    );
+    const avatar = container.querySelector('[aria-hidden="true"]');
+    expect(avatar).toHaveTextContent("D");
+    expect(avatar).toHaveClass("size-14", "bg-hairline");
+  });
+
+  it("comes small for a row", async () => {
+    const { container } = await renderFeedScreen(
+      <Avatar name="dana" size="small" />,
+    );
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveClass(
+      "size-9",
+    );
+  });
+});
+
+describe("OwnProfile (G): day one", () => {
+  it("shows its counts at zero, never hidden", async () => {
+    await renderFeedScreen(<OwnProfile profile={ownProfile()} />);
+
+    expect(part("counts")).toHaveTextContent("0 Runs0 Following0 Followers");
+  });
+
+  it("offers one next step: [ NO RUNS YET ], a line, Log a run — and Settings", async () => {
+    await renderFeedScreen(<OwnProfile profile={ownProfile()} />);
+
+    expect(part("entries")).toHaveAttribute("data-state", "empty");
+    expect(screen.getByText("No runs yet")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Your runs land here once you log one. Shared runs are what other people see.",
+      ),
+    ).toBeVisible();
+    const log = screen.getByRole("link", { name: "Log a run" });
+    expect(log).toHaveAttribute("href", "/runs/new");
+    expect(log).toHaveClass("bg-action");
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/onboarding/settings",
+    );
+  });
+
+  it("names the runner, or You, and shows a city only when O1 got one", async () => {
+    await renderFeedScreen(
+      <OwnProfile profile={ownProfile({ displayName: undefined })} />,
+    );
+    expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
+    expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
+  });
+
+  it("shows the city in mono under the name", async () => {
+    await renderFeedScreen(
+      <OwnProfile profile={ownProfile({ cityLabel: "Portland" })} />,
+    );
+    expect(screen.getByText("Portland")).toHaveClass("font-mono");
+  });
+});
+
+describe("OwnProfile (G): past day one", () => {
+  const band = {
+    bandFloorC: 5,
+    label: "41–50°",
+    cold: 1,
+    dialed: 2,
+    warm: 0,
+  };
+
+  it("drops the next step and shows the counts it has", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        profile={ownProfile({
+          runCount: 12,
+          followingCount: 3,
+          followerCount: 4,
+        })}
       />,
+    );
+
+    expect(part("counts")).toHaveTextContent("12 Runs3 Following4 Followers");
+    expect(screen.queryByText("No runs yet")).toBeNull();
+    expect(screen.getByText("12")).toHaveClass("text-ink");
+  });
+
+  it("draws each section only once there is something in it", async () => {
+    await renderFeedScreen(
+      <OwnProfile profile={ownProfile({ runCount: 1 })} />,
+    );
+    expect(screen.queryByText("How you call it, by band")).toBeNull();
+    expect(screen.queryByText("Most worn")).toBeNull();
+    expect(screen.queryByText("Recent entries")).toBeNull();
+  });
+
+  it("names how each band was called", async () => {
+    await renderFeedScreen(
+      <OwnProfile profile={ownProfile({ runCount: 3, coverage: [band] })} />,
+    );
+    const row = screen.getByText("Dialed").closest("li");
+    expect(row).toHaveTextContent("[41–50°]Dialed3 runs");
+  });
+
+  it("names a band called cold as under-dressed and warm as over-dressed", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        profile={ownProfile({
+          runCount: 3,
+          coverage: [
+            { ...band, cold: 3, dialed: 0 },
+            { ...band, bandFloorC: 10, cold: 0, dialed: 0, warm: 2 },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Under-dressed")).toBeVisible();
+    expect(screen.getByText("Over-dressed")).toBeVisible();
+  });
+
+  it("lists the most-worn pieces and links the recent entries", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        profile={ownProfile({
+          runCount: 2,
+          mostWornItems: [{ itemId: "01A", name: "Houdini", wearCount: 4 }],
+          recentEntries: [
+            { entryId: "01E", createdAt: 1, verdict: NOTHING },
+            { entryId: "01F", createdAt: 2, verdict: 0 },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Houdini").closest("li")).toHaveTextContent(
+      "Houdini[4]",
+    );
+    expect(
+      screen.getByRole("link", { name: "No verdict yet" }),
+    ).toHaveAttribute("href", "/feed/entry/01E");
+    expect(screen.getByRole("link", { name: "Entry" })).toHaveAttribute(
+      "href",
+      "/feed/entry/01F",
+    );
+  });
+});
+
+describe("OtherProfile (H)", () => {
+  it("keeps its header and Follow with nothing public, and says so plainly", async () => {
+    await renderFeedScreen(otherScreen());
+
+    expect(screen.getByRole("heading", { name: "Ravi K" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
+    expect(part("entries")).toHaveAttribute("data-state", "empty");
+    expect(screen.getByText("No public entries yet.")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Follow Ravi K and their shared runs will show in your feed.",
+      ),
+    ).toBeVisible();
+    // Their silence, not a next step: no brackets.
+    expect(part("entries")?.textContent).not.toMatch(/\[/u);
+  });
+
+  it("shows no counts — a stranger's follower count is a status number", async () => {
+    await renderFeedScreen(otherScreen());
+    expect(part("counts")).toBeNull();
+  });
+
+  it("puts Report at the foot, after what is there — nothing, here", async () => {
+    await renderFeedScreen(otherScreen());
+    expect(part("entries")?.lastElementChild).toBe(part("report"));
+    expect(
+      within(part("report") ?? document.body).getByRole("button"),
+    ).toHaveTextContent("Report");
+  });
+
+  it("falls back to A runner and shows a city only when there is one", async () => {
+    await renderFeedScreen(
+      otherScreen({ displayName: NOTHING, cityLabel: "St. Paul" }),
     );
     expect(screen.getByRole("heading", { name: "A runner" })).toBeVisible();
-    expect(container.querySelectorAll("p")).toHaveLength(1);
+    expect(screen.getByText("St. Paul")).toHaveClass("font-mono");
   });
 
-  it("shows a city when there is one", async () => {
-    const { container } = await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile({ cityLabel: "Minneapolis" })}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
-      />,
+  it("lists public entries by date, with the verdict and caption each has", async () => {
+    await renderFeedScreen(
+      otherScreen({
+        recentPublicEntries: [
+          {
+            entryId: "01A",
+            createdAt: 1_755_000_000,
+            verdict: 0,
+            caption: "Rain stopped at mile 2.",
+          },
+          {
+            entryId: "01B",
+            createdAt: 1_755_000_000,
+            verdict: NOTHING,
+            caption: NOTHING,
+          },
+        ],
+      }),
     );
-    expect(screen.getByText("Minneapolis")).toBeVisible();
-    // The city and the empty-entries line, and nothing else.
-    expect(container.querySelectorAll("p")).toHaveLength(2);
+
+    const [first, second] = screen.getAllByRole("link", {
+      name: /Tue 12 Aug/u,
+    });
+    expect(first).toHaveAttribute("href", "/feed/entry/01A");
+    expect(first).toHaveTextContent(
+      /^Tue 12 AugDialedRain stopped at mile 2\.$/u,
+    );
+    // No verdict, no badge; no caption, no line.
+    expect(second).toHaveAttribute("href", "/feed/entry/01B");
+    expect(second).toHaveTextContent(/^Tue 12 Aug$/u);
+    // And Report still closes the list.
+    expect(part("entries")?.lastElementChild).toBe(part("report"));
+    expect(screen.getAllByText("Tue 12 Aug")[0]).toHaveClass("font-mono");
   });
 
-  it("marks Follow as the primary action", () => {
-    // The night fill is the primary CTA in this palette.
-    render(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Follow" })).toHaveClass(
-      "bg-ink",
-    );
-  });
-
-  it("drops Following to an outline, because following again is not the thing to do next", () => {
-    render(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing
-        follow={nothing}
-        unfollow={nothing}
-      />,
-    );
-    const following = screen.getByRole("button", { name: "Following" });
-    expect(following).toHaveClass("border");
-    expect(following).not.toHaveClass("bg-ink");
-  });
-
-  it("dates each entry from its epoch-second timestamp", async () => {
-    // Stored in seconds, rendered from milliseconds — the factor of a
-    // thousand puts a 2026 run in 1970.
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile({
-          recentPublicEntries: [
-            {
-              entryId: "01A",
-              createdAt: 1_755_000_000,
-              verdict: NOTHING,
-              caption: NOTHING,
-            },
-          ],
-        })}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
-      />,
-    );
-
-    // **A literal, not the same call the component makes.** This asserted
-    // `new Date(…).toLocaleDateString()`, which is the implementation
-    // restated — it would have passed whatever that returned, including
-    // the two different answers workerd and the browser were giving, which
-    // is the hydration bug `lib/dates` exists to stop. The date is 2025-08-12
-    // at 07:00 UTC; the day is fixed because the formatter is.
-    expect(screen.getByText("Tue 12 Aug")).toBeVisible();
-  });
-
-  it("omits an absent caption rather than rendering an empty line", async () => {
-    const { container } = await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile({
-          recentPublicEntries: [
-            {
-              entryId: "01A",
-              createdAt: 1,
-              verdict: NOTHING,
-              caption: NOTHING,
-            },
-          ],
-        })}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
-      />,
-    );
-    expect(container.querySelectorAll("p")).toHaveLength(0);
-  });
-
-  it("says there are no public entries yet, rather than showing an empty list", async () => {
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
-      />,
-    );
-    expect(screen.getByText("No public entries yet.")).toBeVisible();
-    expect(screen.queryByRole("list")).toBeNull();
-  });
-
-  it("lists the public entries it was given, captions and all", async () => {
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile({
-          recentPublicEntries: [
-            {
-              entryId: "01A",
-              createdAt: 1_755_000_000,
-              verdict: 0,
-              caption: "Perfect morning",
-            },
-            {
-              entryId: "01B",
-              createdAt: 1_755_000_001,
-              verdict: NOTHING,
-              caption: NOTHING,
-            },
-          ],
-        })}
-        isFollowing={false}
-        follow={nothing}
-        unfollow={nothing}
-      />,
-    );
-
-    expect(screen.getByText("Perfect morning")).toBeVisible();
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
-    expect(screen.getAllByRole("link")[0]).toHaveAttribute(
+  it("goes back to the feed", async () => {
+    await renderFeedScreen(otherScreen());
+    expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
       "href",
-      "/feed/entry/01A",
+      "/feed",
     );
   });
+});
 
-  it("follows, and flips the label", async () => {
+describe("Follow, on the control-failure pattern", () => {
+  it("is the pink primary until followed, then a hairline", async () => {
     const user = userEvent.setup();
-    const follow = vi.fn(() => Promise.resolve());
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing={false}
-        follow={follow}
-        unfollow={nothing}
-      />,
+    const follow = vi.fn(done);
+    await renderFeedScreen(followScreen({ follow }));
+    const button = screen.getByRole("button", { name: "Follow" });
+    expect(button).toHaveClass("bg-action");
+
+    await user.click(button);
+
+    expect(follow).toHaveBeenCalledWith({ data: { userId: "01RAVI" } });
+    await waitFor(() => {
+      expect(button).toHaveAccessibleName("Following");
+    });
+    expect(button).toHaveClass("border-hairline");
+    expect(button).not.toHaveClass("bg-action");
+  });
+
+  it("waits behind [ Following ] without flipping first", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    await renderFeedScreen(followScreen({ follow: () => pending.promise }));
+    const button = screen.getByRole("button", { name: "Follow" });
+
+    await user.click(button);
+
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveClass("bg-action");
+    expect(within(button).getByText("Following")).toBeVisible();
+    pending.resolve(undefined);
+    await waitFor(() => {
+      expect(button).not.toHaveAttribute("aria-busy");
+    });
+  });
+
+  it("unfollows behind [ Unfollowing ], calling the other endpoint", async () => {
+    const user = userEvent.setup();
+    const follow = vi.fn(done);
+    const unfollow = vi.fn(done);
+    await renderFeedScreen(
+      followScreen({ isFollowing: true, follow, unfollow }),
+    );
+    const button = screen.getByRole("button", { name: "Following" });
+
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveAccessibleName("Follow");
+    });
+    expect(unfollow).toHaveBeenCalledWith({ data: { userId: "01RAVI" } });
+    expect(follow).not.toHaveBeenCalled();
+  });
+
+  it("says NOT FOLLOWING under it when following fails, and keeps the label", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      followScreen({ follow: () => Promise.reject(new TypeError("offline")) }),
     );
 
     await user.click(screen.getByRole("button", { name: "Follow" }));
 
-    await waitFor(() => {
-      expect(follow).toHaveBeenCalledWith({ data: { userId: "01THEM" } });
-    });
-    expect(screen.getByRole("button", { name: "Following" })).toBeVisible();
+    expect(await screen.findByText("Not following")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not following. Your connection dropped.",
+    );
+    expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
   });
 
-  it("unfollows, and flips back", async () => {
-    // The pair is per-direction: crossing the two would leave the label
-    // telling the opposite of the truth.
+  it("says STILL FOLLOWING when unfollowing fails", async () => {
     const user = userEvent.setup();
-    const unfollow = vi.fn(() => Promise.resolve());
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing
-        follow={nothing}
-        unfollow={unfollow}
-      />,
+    await renderFeedScreen(
+      followScreen({
+        isFollowing: true,
+        unfollow: () => Promise.reject(new Error("D1 went away")),
+      }),
     );
 
     await user.click(screen.getByRole("button", { name: "Following" }));
 
-    await waitFor(() => {
-      expect(unfollow).toHaveBeenCalledWith({ data: { userId: "01THEM" } });
-    });
-    expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
-  });
-
-  it("does nothing on a second press while the first is in flight", async () => {
-    // The guard rule 07 makes necessary. `aria-disabled` keeps the button
-    // focusable and announcing, so unlike `disabled` it does not stop the
-    // press — the handler has to. Without the guard the second press fires
-    // the *opposite* endpoint against a state the server has not confirmed.
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
-    const follow = vi.fn(() => pending.promise);
-    const unfollow = vi.fn(nothing);
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing={false}
-        follow={follow}
-        unfollow={unfollow}
-      />,
-    );
-    const button = screen.getByRole("button", { name: "Follow" });
-
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
-    });
-    await user.click(button);
-
-    expect(follow).toHaveBeenCalledTimes(1);
-    expect(unfollow).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [false, "Follow", "Following"],
-    [true, "Following", "Unfollowing"],
-  ])(
-    "swaps the label for its own pending verb (following: %s)",
-    async (isFollowing, rest, verb) => {
-      // Design's round-13 table, and the reason both halves are asserted:
-      // "Follow · Following" at rest becomes "[ Following ] ·
-      // [ Unfollowing ]" in flight, so the two directions do **not** share
-      // a verb — and "Following" is the rest label of one and the pending
-      // verb of the other. A test that checked only one direction would
-      // pass on a button that said "Following" whatever it was doing.
-      const user = userEvent.setup();
-      const pending = Promise.withResolvers<undefined>();
-      await renderWithRouter(
-        <OtherProfile
-          profile={otherProfile()}
-          isFollowing={isFollowing}
-          follow={() => pending.promise}
-          unfollow={() => pending.promise}
-        />,
-      );
-      const button = screen.getByRole("button", { name: rest });
-
-      // At rest the verb is in the DOM and hidden — that is what keeps the
-      // button from resizing mid-press — so visibility is the assertion,
-      // not presence.
-      expect(screen.getByText(verb)).not.toBeVisible();
-
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText(verb)).toBeVisible();
-      });
-      expect(screen.getByText(rest)).not.toBeVisible();
-
-      pending.resolve(undefined);
-    },
-  );
-
-  it("locks the button while it works", async () => {
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
-    await renderWithRouter(
-      <OtherProfile
-        profile={otherProfile()}
-        isFollowing={false}
-        follow={() => pending.promise}
-        unfollow={nothing}
-      />,
-    );
-    const button = screen.getByRole("button", { name: "Follow" });
-
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
-    });
-
-    pending.resolve(undefined);
-    await waitFor(() => {
-      expectAvailable(button);
-    });
+    expect(await screen.findByText("Still following")).toBeVisible();
+    expect(screen.getByText("Our end failed.")).toBeVisible();
   });
 });
 
 describe("RunnerSearch", () => {
-  it("says nothing at rest — not that there are no runners", async () => {
-    // The empty state is not the resting state: an empty box would accuse
-    // the user of having no friends before they typed.
-    await renderWithRouter(<RunnerSearch search={() => Promise.resolve([])} />);
-    expect(screen.queryByText("No runners found.")).toBeNull();
+  it("says nothing at rest, and lists nothing", async () => {
+    await renderFeedScreen(searchScreen());
+    expect(screen.queryByText(/No runner called/u)).toBeNull();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 
-  it("starts with nothing listed at all", async () => {
-    const { container } = await renderWithRouter(
-      <RunnerSearch search={() => Promise.resolve([])} />,
-    );
-    expect(container.querySelectorAll("li")).toHaveLength(0);
-  });
-
-  it("keeps quiet while a search is still running", async () => {
-    // `searched` flips only once an answer is back: showing "no runners
-    // found" against an in-flight query is a wrong answer, briefly.
+  it("searches on what is typed, trimmed, and lists avatar, name and a Follow pill", async () => {
     const user = userEvent.setup();
-    const pending =
-      Promise.withResolvers<{ userId: string; displayName: string }[]>();
-    await renderWithRouter(<RunnerSearch search={() => pending.promise} />);
+    const found = vi.fn(() => Promise.resolve(results("Ana", "Andy")));
+    await renderFeedScreen(searchScreen(found));
 
-    await user.type(screen.getByLabelText("Search by name"), "d");
-    expect(screen.queryByText("No runners found.")).toBeNull();
+    await user.type(screen.getByLabelText("Search by name"), " An");
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    });
+    expect(found).toHaveBeenLastCalledWith("An");
+    const [ana, andy] = screen.getAllByRole("listitem");
+    expect(
+      within(ana ?? document.body).getByRole("link", { name: "Ana" }),
+    ).toHaveAttribute("href", "/feed/u/01R0");
+    expect(
+      within(ana ?? document.body).getByRole("button", { name: "Follow" }),
+    ).toBeVisible();
+    // Each row knows whether the viewer already follows them.
+    expect(
+      within(andy ?? document.body).getByRole("button", { name: "Following" }),
+    ).toBeVisible();
+    expect(ana).toHaveTextContent(/^AAnaFollow/u);
+  });
+
+  it("breathes its trailing label while a search is out, and only then", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<SearchResult[]>();
+    await renderFeedScreen(searchScreen(() => pending.promise));
+    const label = screen.getByText("Searching").parentElement;
+    expect(label).toHaveStyle({ visibility: "hidden" });
+
+    await user.type(screen.getByLabelText("Search by name"), "A");
+    expect(label).not.toHaveStyle({ visibility: "hidden" });
+    expect(label?.querySelectorAll(".breathe")).toHaveLength(2);
 
     pending.resolve([]);
-    expect(await screen.findByText("No runners found.")).toBeVisible();
-  });
-
-  it("searches on what is typed, trimmed", async () => {
-    const user = userEvent.setup();
-    const search = vi.fn(() => Promise.resolve([]));
-    await renderWithRouter(<RunnerSearch search={search} />);
-
-    await user.type(screen.getByLabelText("Search by name"), "  dre  ");
-
     await waitFor(() => {
-      expect(search).toHaveBeenLastCalledWith({ data: { prefix: "dre" } });
+      expect(label).toHaveStyle({ visibility: "hidden" });
     });
   });
 
-  it("links each result to their profile", async () => {
+  it("says No runner called @x once a search has come back empty", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(
-      <RunnerSearch
-        search={() =>
-          Promise.resolve([{ userId: "01THEM", displayName: "Drew" }])
-        }
-      />,
-    );
+    await renderFeedScreen(searchScreen());
 
-    await user.type(screen.getByLabelText("Search by name"), "d");
+    await user.type(screen.getByLabelText("Search by name"), "zed ");
 
-    const link = await screen.findByRole("link", { name: "Drew" });
-    expect(link).toHaveAttribute("href", "/feed/u/01THEM");
-    // And no "no runners found" beside the runner it just found.
-    expect(screen.queryByText("No runners found.")).toBeNull();
+    expect(await screen.findByText("No runner called @zed.")).toBeVisible();
   });
 
-  it("says no runners found once a search has actually happened", async () => {
+  it("goes quiet again when the box is cleared, whitespace and all", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(<RunnerSearch search={() => Promise.resolve([])} />);
-
-    await user.type(screen.getByLabelText("Search by name"), "zzz");
-
-    expect(await screen.findByText("No runners found.")).toBeVisible();
-  });
-
-  it("goes quiet again when the box is cleared", async () => {
-    // Clearing is not a search for nothing — it is the resting state
-    // returning, so the results and the empty message both go.
-    const user = userEvent.setup();
-    const search = vi.fn(() =>
-      Promise.resolve([{ userId: "01THEM", displayName: "Drew" }]),
-    );
-    await renderWithRouter(<RunnerSearch search={search} />);
+    const found = vi.fn(() => Promise.resolve(results("Ana")));
+    await renderFeedScreen(searchScreen(found));
     const box = screen.getByLabelText("Search by name");
 
-    await user.type(box, "d");
-    await screen.findByRole("link", { name: "Drew" });
-
+    await user.type(box, "A");
+    await screen.findByRole("listitem");
     await user.clear(box);
+    await user.type(box, "  ");
 
-    await waitFor(() => {
-      expect(screen.queryByRole("link")).toBeNull();
-    });
-    expect(screen.queryByText("No runners found.")).toBeNull();
-    // And an empty box costs no query.
-    expect(search).toHaveBeenCalledTimes(1);
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(screen.queryByText(/No runner called/u)).toBeNull();
+    expect(found).toHaveBeenCalledTimes(1);
   });
 
-  it("treats whitespace as empty", async () => {
+  it("drops a slower answer to an older prefix", async () => {
     const user = userEvent.setup();
-    const search = vi.fn(() => Promise.resolve([]));
-    await renderWithRouter(<RunnerSearch search={search} />);
+    const slow = Promise.withResolvers<SearchResult[]>();
+    await renderFeedScreen(
+      searchScreen((prefix) =>
+        prefix === "A" ? slow.promise : Promise.resolve(results("Ana")),
+      ),
+    );
 
-    await user.type(screen.getByLabelText("Search by name"), " ".repeat(3));
+    await user.type(screen.getByLabelText("Search by name"), "An");
+    await screen.findByRole("link", { name: "Ana" });
+    slow.resolve(results("Old answer"));
 
-    expect(search).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByText("Old answer")).toBeNull();
+    });
+    expect(screen.getByRole("link", { name: "Ana" })).toBeVisible();
+  });
+
+  it("says Didn't load when the search fails, and tries the same one again", async () => {
+    const user = userEvent.setup();
+    const found = vi
+      .fn<(prefix: string) => Promise<SearchResult[]>>()
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockResolvedValueOnce(results("Ana"));
+    await renderFeedScreen(searchScreen(found));
+
+    await user.type(screen.getByLabelText("Search by name"), "A");
+    expect(await screen.findByText("Didn't load")).toBeVisible();
+    expect(screen.queryByText(/No runner called/u)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("link", { name: "Ana" })).toBeVisible();
+    expect(found).toHaveBeenLastCalledWith("A");
+    expect(screen.queryByText("Didn't load")).toBeNull();
+  });
+
+  it("puts a failed follow's band under the whole row", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      <RunnerSearch
+        search={() => Promise.resolve(results("Ana"))}
+        follow={() => Promise.reject(new TypeError("offline"))}
+        unfollow={done}
+      />,
+    );
+    await user.type(screen.getByLabelText("Search by name"), "A");
+    await user.click(await screen.findByRole("button", { name: "Follow" }));
+
+    const band = await screen.findByText("Not following");
+    const row = screen.getByRole("listitem");
+    expect(row).toContainElement(band);
+    expect(row.lastElementChild).toContainElement(band);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not following. Your connection dropped.",
+    );
   });
 });

@@ -13,16 +13,33 @@ import { NotificationBell } from "./NotificationBell";
  * component may not make one (CLAUDE.md); what moves here is only the
  * wiring.
  *
+ * Round 22 gave the bell a number as well as a dot, so a route now loads
+ * `bellStateFn` and spreads it here. `verdictsWaiting` is optional so the
+ * routes still loading only `unreadNotificationCountFn` keep compiling and
+ * show the dot until they move over.
+ *
  * It lives in `modules/notifications` rather than in `ui/` for the reason
  * `Layout` takes `bell` as a prop at all: `ui/` is foundation and may not
  * import from `modules/`, and the bell is a notifications concern.
  */
 export function BelledLayout({
   unreadCount,
+  verdictsWaiting,
   children,
-}: Readonly<{ unreadCount: number; children: ReactNode }>): JSX.Element {
+}: Readonly<{
+  unreadCount: number;
+  verdictsWaiting?: number | undefined;
+  children: ReactNode;
+}>): JSX.Element {
   return (
-    <Layout bell={<NotificationBell unreadCount={unreadCount} />}>
+    <Layout
+      bell={
+        <NotificationBell
+          unreadCount={unreadCount}
+          verdictsWaiting={verdictsWaiting}
+        />
+      }
+    >
       {children}
     </Layout>
   );

@@ -4,8 +4,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { env } from "../../src/env";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
+  BAND_HALF_WIDTH_C,
   consensusAt,
+  matchTally,
+  MIN_GROUP_RUNNERS,
+  MIN_RUNNERS,
   recentPublicEntriesStatement,
+  shownGroups,
+  WINDOW_DAYS,
   yourConditionsConsensus,
 } from "../../src/modules/feed/consensus";
 import {
@@ -22,249 +28,185 @@ import {
 // one D1 instance across the `it()` blocks in a file, so every test starts
 // from a clean slate.
 const HOUR = 3600;
+const DAY = 24 * HOUR;
+const THREE_DAYS_AGO = NOW - 3 * DAY;
+const VIEWER = pointConditions({ tempC: 8, feelsLikeC: 7 });
 
-describe("your conditions consensus (E2-lite)", () => {
+type Category = "top" | "bottom" | "gloves" | "shoes";
+
+/**
+ * One runner, one public entry, logged `ago` seconds before NOW at a place
+ * whose observation reads `feelsLikeC` — wearing one garment per category.
+ * Each runner gets their own coordinates, so no two share a cache cell.
+ */
+const place = { next: 0 };
+async function runner(
+  options: {
+    ago?: number;
+    feelsLikeC?: number;
+    precipMm?: number;
+    categories?: Category[];
+    userId?: string;
+    source?: "visualcrossing" | "manual";
+  } = {},
+): Promise<string> {
+  place.next += 1;
+  const lat = (place.next % 80) + 0.5;
+  const lng = Math.floor(place.next / 80) + 0.5;
+  const at = NOW - (options.ago ?? HOUR);
+  const userId = options.userId ?? (await makeUser());
+  const itemIds = await Promise.all(
+    (options.categories ?? ["top"]).map((category) =>
+      makeItem({ userId, category }),
+    ),
+  );
+  const runId = await makeRun({ userId, lat, lng, startedAt: at });
+  await makeEntry({ userId, runId, createdAt: at, itemIds });
+  await makeObservation({
+    lat,
+    lng,
+    startedAt: at,
+    tempC: 8,
+    feelsLikeC: options.feelsLikeC ?? 7,
+    precipMm: options.precipMm ?? 0,
+    ...(options.source !== undefined && { source: options.source }),
+  });
+  return userId;
+}
+
+/**
+How many runners matched, and nothing else.
+*/
+async function runnersIn(
+  viewer: typeof VIEWER,
+  since: number,
+  viewerId?: string,
+): Promise<number> {
+  const tally = await matchTally(viewer, since, viewerId);
+  return tally.runners;
+}
+
+async function runners(count: number, ago = HOUR): Promise<void> {
+  for (let index = 0; index < count; index += 1) {
+    await runner({ ago });
+  }
+}
+
+describe("the rules round 22 set", () => {
+  it("are five runners, two per row, three days then fourteen, ±3°", () => {
+    expect(MIN_RUNNERS).toBe(5);
+    expect(MIN_GROUP_RUNNERS).toBe(2);
+    expect(WINDOW_DAYS).toStrictEqual([3, 14]);
+    expect(BAND_HALF_WIDTH_C).toBe(3);
+  });
+});
+
+describe("matchTally: who matched", () => {
   beforeEach(resetTables);
+
+  it("counts a runner inside the band, the precip class and the window", async () => {
+    await runner();
+    const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
+    expect(tally).toStrictEqual({ runners: 1, groups: { tops: 1 } });
+  });
+
+  it("counts a runner exactly at the band's edge, and not one degree past it", async () => {
+    // `<=`: three degrees away is inside a ±3 band.
+    await runner({ feelsLikeC: 7 - 3 });
+    await runner({ feelsLikeC: 7 + 3 });
+    await runner({ feelsLikeC: 7 + 4 });
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+  });
+
+  it("leaves out a different precip class, a manual observation, and an unresolved one", async () => {
+    await runner({ precipMm: 5 });
+    await runner({ source: "manual" });
+    const author = await makeUser();
+    const runId = await makeRun({
+      userId: author,
+      lat: 89,
+      lng: 89,
+      startedAt: NOW,
+    });
+    await makeEntry({ userId: author, runId, createdAt: NOW });
+
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 0,
+      groups: {},
+    });
+  });
+
+  it("leaves out an entry from before the window", async () => {
+    await runner({ ago: 3 * DAY + 1 });
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(0);
+  });
+
+  it("counts runners, not entries — and a runner once per group", async () => {
+    const userId = await runner({ categories: ["top", "bottom"] });
+    await runner({ userId, categories: ["top", "top"] });
+    await runner({ categories: ["top"] });
+
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 2,
+      groups: { tops: 2, bottoms: 1 },
+    });
+  });
+
+  it("counts a matching runner who wore nothing in the closet", async () => {
+    await runner({ categories: [] });
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 1,
+      groups: {},
+    });
+  });
+
+  it("leaves the viewer's own entries out of what other runners wore", async () => {
+    const viewerId = await runner();
+    await runner();
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO, viewerId)).toBe(1);
+    // And only with a viewer to leave out.
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+  });
 
   it("aggregates more entries and garments than D1 binds in one statement", async () => {
     // D1 refuses more than 100 bound parameters in one statement. The scan
     // reads up to 200 entries, and every garment on them is a second list:
     // here 150 of each, so both reads cross the cap.
-    const lat = 11;
-    const lng = 11;
     const author = await makeUser();
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 6, precipMm: 0 });
-    for (let index = 0; index < 150; index += 1) {
-      const item = await makeItem({ userId: author, category: "top" });
-      const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-      await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW - index, itemIds: [item] });
-    }
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 7 }),
-      NOW,
-    );
-
-    expect(result.total).toBe(150);
-    expect(result.groups.tops).toBe(150);
-  });
-
-  it("counts an entry within the 72h/±3°C/same-precip window", async () => {
-    const lat = 10;
-    const lng = 10;
-    const author = await makeUser();
-    const item = await makeItem({ userId: author, category: "top" });
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-    await makeEntry({
-      userId: author,
-      runId,
-      isPublic: true,
-      createdAt: NOW,
-      itemIds: [item],
-    });
     await makeObservation({
-      lat,
-      lng,
+      lat: 11,
+      lng: 11,
       startedAt: NOW,
       tempC: 8,
       feelsLikeC: 6,
-      precipMm: 0,
     });
+    for (let index = 0; index < 150; index += 1) {
+      const item = await makeItem({ userId: author, category: "top" });
+      const runId = await makeRun({
+        userId: author,
+        lat: 11,
+        lng: 11,
+        startedAt: NOW,
+      });
+      await makeEntry({
+        userId: author,
+        runId,
+        createdAt: NOW - index,
+        itemIds: [item],
+      });
+    }
 
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 7 }),
-      NOW,
-    );
-    expect(result.total).toBe(1);
-    expect(result.widened).toBe(false);
-    expect(result.groups.tops).toBe(1);
+    const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
+
+    expect(tally).toStrictEqual({ runners: 1, groups: { tops: 1 } });
   });
 
-  it("excludes an entry whose feels-like is outside the delta", async () => {
-    const lat = 20;
-    const lng = 20;
-    const author = await makeUser();
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-    await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW });
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: NOW,
-      tempC: 20,
-      feelsLikeC: 20,
-      precipMm: 0,
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 8 }),
-      NOW,
-    );
-    expect(result.total).toBe(0);
-  });
-
-  it("excludes an entry in a different precip class", async () => {
-    const lat = 30;
-    const lng = 30;
-    const author = await makeUser();
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-    await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW });
-    // wet (>2.5mm) vs. the viewer's dry conditions.
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: NOW,
-      tempC: 8,
-      feelsLikeC: 8,
-      precipMm: 5,
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 8 }),
-      NOW,
-    );
-    expect(result.total).toBe(0);
-  });
-
-  it("excludes a manual-source observation from the aggregate", async () => {
-    const lat = 40;
-    const lng = 40;
-    const author = await makeUser();
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-    await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW });
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: NOW,
-      tempC: 8,
-      feelsLikeC: 8,
-      precipMm: 0,
-      source: "manual",
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 8 }),
-      NOW,
-    );
-    expect(result.total).toBe(0);
-  });
-
-  it("excludes an entry older than the (widened) window", async () => {
-    const lat = 50;
-    const lng = 50;
-    const author = await makeUser();
-    const eightDaysAgo = NOW - 8 * 24 * HOUR;
-    const runId = await makeRun({
-      userId: author,
-      lat,
-      lng,
-      startedAt: eightDaysAgo,
-    });
-    await makeEntry({
-      userId: author,
-      runId,
-      isPublic: true,
-      createdAt: eightDaysAgo,
-    });
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: eightDaysAgo,
-      tempC: 8,
-      feelsLikeC: 8,
-      precipMm: 0,
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 8 }),
-      NOW,
-    );
-    expect(result.total).toBe(0);
-    expect(result.widened).toBe(true);
-  });
-
-  it("widens from 72h/±3°C to 7d/±5°C before declaring empty", async () => {
-    const lat = 60;
-    const lng = 60;
-    const author = await makeUser();
-    const fourDaysAgo = NOW - 4 * 24 * HOUR;
-    const runId = await makeRun({
-      userId: author,
-      lat,
-      lng,
-      startedAt: fourDaysAgo,
-    });
-    await makeEntry({
-      userId: author,
-      runId,
-      isPublic: true,
-      createdAt: fourDaysAgo,
-    });
-    // 4°C outside the first pass's ±3, inside the widened pass's ±5.
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: fourDaysAgo,
-      tempC: 12,
-      feelsLikeC: 12,
-      precipMm: 0,
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 8 }),
-      NOW,
-    );
-    expect(result.total).toBe(1);
-    expect(result.widened).toBe(true);
-  });
-
-  it("aggregates per UI group, counting an entry once per group even with multiple items in it", async () => {
-    const lat = 70;
-    const lng = 70;
-    const authorA = await makeUser();
-    const authorB = await makeUser();
-    const topA = await makeItem({ userId: authorA, category: "top" });
-    const bottomA = await makeItem({ userId: authorA, category: "bottom" });
-    const topB = await makeItem({ userId: authorB, category: "top" });
-
-    const runA = await makeRun({ userId: authorA, lat, lng, startedAt: NOW });
-    const runB = await makeRun({ userId: authorB, lat, lng, startedAt: NOW });
-    await makeEntry({
-      userId: authorA,
-      runId: runA,
-      isPublic: true,
-      createdAt: NOW,
-      itemIds: [topA, bottomA],
-    });
-    await makeEntry({
-      userId: authorB,
-      runId: runB,
-      isPublic: true,
-      createdAt: NOW,
-      itemIds: [topB],
-    });
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: NOW,
-      tempC: 8,
-      feelsLikeC: 8,
-      precipMm: 0,
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 8 }),
-      NOW,
-    );
-    expect(result.total).toBe(2);
-    expect(result.groups.tops).toBe(2);
-    expect(result.groups.bottoms).toBe(1);
-  });
-
-  it("resolves the recent-public-entries scan window with an index seek, no table scan", async () => {
+  it("resolves the recent-public-entries scan with an index seek, no table scan", async () => {
     const database = drizzle(env.DIALED_CORE);
     const { sql, params } = recentPublicEntriesStatement(
       database,
-      NOW - 72 * HOUR,
+      THREE_DAYS_AGO,
+      "01VIEWER",
     ).toSQL();
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
@@ -274,121 +216,86 @@ describe("your conditions consensus (E2-lite)", () => {
   });
 });
 
-describe("consensus: the edges of the window", () => {
+describe("yourConditionsConsensus: the floor and the window", () => {
   beforeEach(resetTables);
 
-  it("counts an entry exactly at the delta", async () => {
-    // `<=`, not `<`: three degrees away is inside a ±3 window, and the
-    // widened pass's ±5 is what a runner is told the number covers.
-    const lat = 60;
-    const lng = 60;
-    const author = await makeUser();
-    const item = await makeItem({ userId: author, category: "top" });
-    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-    await makeEntry({
-      userId: author,
-      runId,
-      isPublic: true,
-      createdAt: NOW,
-      itemIds: [item],
-    });
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: NOW,
-      tempC: 8,
-      feelsLikeC: 4,
-      precipMm: 0,
-    });
+  const band = { minC: 4, maxC: 10, precip: "dry" };
 
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 7 }),
-      NOW,
-    );
-
-    expect(result.total).toBe(1);
-    // And found it in the *first* window: three degrees is inside ±3, not
-    // something the widened pass had to reach for.
-    expect(result.widened).toBe(false);
+  it("shows the block at five runners in three days, and says three days", async () => {
+    await runners(5);
+    const result = await yourConditionsConsensus(VIEWER, NOW);
+    expect(result).toStrictEqual({
+      status: "matched",
+      runners: 5,
+      groups: [{ group: "tops", runners: 5 }],
+      windowDays: 3,
+      band,
+    });
   });
 
-  it("counts nothing from an entry whose conditions were never resolved", async () => {
-    // No observation for that run at all. Comparing it to the viewer's
-    // conditions is a crash, not a miscount.
-    const author = await makeUser();
-    const item = await makeItem({ userId: author, category: "top" });
-    const runId = await makeRun({
-      userId: author,
-      lat: 62,
-      lng: 62,
-      startedAt: NOW,
+  it("widens once to fourteen days when three have fewer than five", async () => {
+    await runners(4);
+    await runners(1, 10 * DAY);
+    const result = await yourConditionsConsensus(VIEWER, NOW);
+    expect(result).toMatchObject({
+      status: "matched",
+      runners: 5,
+      windowDays: 14,
     });
-    await makeEntry({
-      userId: author,
-      runId,
-      isPublic: true,
-      createdAt: NOW,
-      itemIds: [item],
-    });
-
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 7 }),
-      NOW,
-    );
-
-    expect(result.total).toBe(0);
   });
 
-  it("says it widened when it had to, and admits an empty answer as widened", async () => {
-    // `widened` is what the screen uses to say "from a wider window". An
-    // empty consensus has been through every pass by definition, so it is
-    // widened too — claiming otherwise reads as "nobody nearby ran in
-    // these exact conditions", which is a different statement.
-    const empty = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 7 }),
-      NOW,
-    );
-
-    expect(empty).toStrictEqual({ total: 0, groups: {}, widened: true });
+  it("has nothing to show at four runners, after looking back fourteen days", async () => {
+    await runners(4);
+    await runners(1, 15 * DAY);
+    expect(await yourConditionsConsensus(VIEWER, NOW)).toStrictEqual({
+      status: "too-few",
+      windowDays: 14,
+      band,
+    });
   });
 
-  it("takes the last pass's answer even when it is empty", async () => {
-    // The loop must stop at the final pass rather than falling through to
-    // the empty return with a different `widened` — and it must not stop
-    // early on the first pass when a wider one would have found something.
-    const lat = 61;
-    const lng = 61;
-    const author = await makeUser();
-    const item = await makeItem({ userId: author, category: "top" });
-    const runId = await makeRun({
-      userId: author,
-      lat,
-      lng,
-      startedAt: NOW - 100 * HOUR,
+  it("never widens the band — only the window", async () => {
+    // Five runners four degrees off: a wider band would find them all.
+    for (let index = 0; index < 5; index += 1) {
+      await runner({ feelsLikeC: 7 + 4, ago: 5 * DAY });
+    }
+    expect(await yourConditionsConsensus(VIEWER, NOW)).toMatchObject({
+      status: "too-few",
     });
-    await makeEntry({
-      userId: author,
-      runId,
-      isPublic: true,
-      createdAt: NOW - 100 * HOUR,
-      itemIds: [item],
-    });
-    await makeObservation({
-      lat,
-      lng,
-      startedAt: NOW - 100 * HOUR,
-      tempC: 8,
-      feelsLikeC: 7,
-      precipMm: 0,
-    });
+  });
 
-    const result = await yourConditionsConsensus(
-      pointConditions({ tempC: 8, feelsLikeC: 7 }),
-      NOW,
-    );
+  it("names its band from the viewer's feels-like and precip", async () => {
+    const wet = pointConditions({ tempC: 1, feelsLikeC: -2, precipMm: 4 });
+    expect(await yourConditionsConsensus(wet, NOW)).toStrictEqual({
+      status: "too-few",
+      windowDays: 14,
+      band: { minC: -5, maxC: 1, precip: "wet" },
+    });
+  });
 
-    expect(result.total).toBe(1);
-    expect(result.widened).toBe(true);
+  it("does not count the viewer as one of the five", async () => {
+    const viewerId = await runner();
+    await runners(4);
+    expect(await yourConditionsConsensus(VIEWER, NOW, viewerId)).toMatchObject({
+      status: "too-few",
+    });
+  });
+});
+
+describe("shownGroups", () => {
+  it("drops a group worn by fewer than two, and puts the most-worn first", () => {
+    expect(
+      shownGroups({ tops: 2, bottoms: 5, shoes: 1, outer: 2 }),
+    ).toStrictEqual([
+      { group: "bottoms", runners: 5 },
+      // Equals keep the closet's own group order.
+      { group: "tops", runners: 2 },
+      { group: "outer", runners: 2 },
+    ]);
+  });
+
+  it("shows nothing when nothing reaches two", () => {
+    expect(shownGroups({ tops: 1 })).toStrictEqual([]);
   });
 });
 
@@ -397,24 +304,27 @@ describe("consensusAt", () => {
 
   it("shows no block at all when the viewer's conditions are unknown", async () => {
     // Law 5: an empty consensus claims nobody nearby ran in these
-    // conditions. "We do not know what they are" is a different statement,
-    // and the screen says nothing rather than the wrong thing.
+    // conditions. "We do not know what they are" is a different statement.
     expect(await consensusAt(80, 80, NOW)).toBeUndefined();
   });
 
-  it("answers once the viewer's conditions resolve", async () => {
+  it("answers once the viewer's conditions resolve, leaving the viewer out", async () => {
     await makeObservation({
       lat: 81,
       lng: 81,
       startedAt: NOW,
       tempC: 8,
       feelsLikeC: 7,
-      precipMm: 0,
     });
+    const viewerId = await runner();
+    await runners(4);
 
-    const result = await consensusAt(81, 81, NOW);
-
-    expect(result).toBeDefined();
-    expect(result?.total).toBe(0);
+    expect(await consensusAt(81, 81, NOW, viewerId)).toMatchObject({
+      status: "too-few",
+    });
+    expect(await consensusAt(81, 81, NOW)).toMatchObject({
+      status: "matched",
+      runners: 5,
+    });
   });
 });

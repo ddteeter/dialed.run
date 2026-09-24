@@ -246,7 +246,6 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
         .toSorted((a, b) => a.localeCompare(b)),
     ).toEqual([
       "src/modules/auth/auth-page.tsx",
-      "src/modules/feed/components/Feed.tsx",
       "src/routes/runs/new.tsx",
       "src/ui/ProductLink.tsx",
       "src/ui/WeatherAttribution.tsx",

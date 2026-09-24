@@ -17,7 +17,7 @@ import {
   toggleUsefulReaction,
   usefulCount,
 } from "../../src/modules/feed/reactions";
-import { searchByDisplayName } from "../../src/modules/feed/search";
+import { searchRunners } from "../../src/modules/feed/search";
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 
@@ -80,14 +80,15 @@ describe("username search", () => {
     await makeUser({ displayName: "Andy Trails" });
     await makeUser({ displayName: "Beth Miles" });
 
-    const results = await searchByDisplayName("An");
+    const viewer = await makeUser({ displayName: "Viewer" });
+    const results = await searchRunners(viewer, "An");
     expect(results.map((r) => r.displayName)).toEqual(
       expect.arrayContaining(["Ana Runner", "Andy Trails"]),
     );
     expect(results).toHaveLength(2);
 
-    expect(await searchByDisplayName("Beth")).toHaveLength(1);
-    expect(await searchByDisplayName("zzz")).toHaveLength(0);
+    expect(await searchRunners(viewer, "Beth")).toHaveLength(1);
+    expect(await searchRunners(viewer, "zzz")).toHaveLength(0);
   });
 });
 

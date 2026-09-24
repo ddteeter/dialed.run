@@ -44,6 +44,19 @@ export const coordinatesInput = z.object({
   lng: longitudeSchema,
 });
 
+/**
+ * And for a runner who will not share one: E2-lite's location-denied
+ * recovery, the city typed instead. O1's bounds, and a sentence that names
+ * the fix.
+ */
+export const conditionsCityInput = z.object({
+  cityLabel: z
+    .string()
+    .trim()
+    .min(1, { message: "Type the city you run in." })
+    .max(120),
+});
+
 export const itemFlagInput = z.object({
   itemId: ulidSchema,
   flag: itemFlagSchema.optional(),

@@ -9,7 +9,7 @@ import {
 import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
 import { otherProfile } from "../../src/modules/feed/profiles";
-import { yourConditionsConsensus } from "../../src/modules/feed/consensus";
+import { matchTally } from "../../src/modules/feed/consensus";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   makeEntry,
@@ -125,11 +125,11 @@ describe("authorization", () => {
       feelsLikeC: 9,
     });
 
-    const result = await yourConditionsConsensus(
+    const result = await matchTally(
       pointConditions({ tempC: 10, feelsLikeC: 9 }),
-      NOW,
+      NOW - 72 * 3600,
     );
-    expect(result.total).toBe(0);
+    expect(result.runners).toBe(0);
   });
 
   it("never shows another viewer a public entry's per-item flags/notes", async () => {

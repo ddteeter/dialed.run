@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatDistance,
   formatDuration,
+  formatPace,
   formatWind,
   formatTempRange,
 } from "../../src/lib/measures";
@@ -130,5 +131,27 @@ describe("inFahrenheitRange", () => {
 
   it("keeps the degree sign on the high end only", () => {
     expect(formatTempRange(0, 10, "f")).toBe("32–50°");
+  });
+});
+
+describe("formatPace", () => {
+  it("is minutes and seconds per mile, padded, with its unit", () => {
+    // 5 mi in 43:20 is 8:40 a mile — D's own example.
+    expect(formatPace(2600, 5 * 1609.34, "mi")).toBe("8:40 /mi");
+    expect(formatPace(3605, 5 * 1609.34, "mi")).toBe("12:01 /mi");
+  });
+
+  it("is per kilometre for a runner who counts them", () => {
+    expect(formatPace(1615, 5000, "km")).toBe("5:23 /km");
+  });
+
+  it("rounds to the nearest second", () => {
+    expect(formatPace(1000, 3000, "km")).toBe("5:33 /km");
+    expect(formatPace(1001, 3000, "km")).toBe("5:34 /km");
+  });
+
+  it("has no pace for a run with no distance, and one for any distance at all", () => {
+    expect(formatPace(1800, 0, "mi")).toBeUndefined();
+    expect(formatPace(1800, 1, "km")).toBe("30000:00 /km");
   });
 });

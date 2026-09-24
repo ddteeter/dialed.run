@@ -13,7 +13,8 @@ import {
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
-import { Layout } from "../../ui";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/entry/$entryId")({
   beforeLoad: async () => {
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
       entry,
       viewerId: session.user.id,
       units: await viewerUnitsQuery(),
+      bell: await bellStateFn(),
       shouldPromptVerdict: await shouldAskForVerdict(
         entry,
         session.user.id,
@@ -40,12 +42,14 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
 
 function EntryDetailPage() {
   const { entryId } = Route.useParams();
-  const { entry, shouldPromptVerdict, units, viewerId } = Route.useLoaderData();
+  const { entry, shouldPromptVerdict, units, viewerId, bell } =
+    Route.useLoaderData();
 
   return (
-    <Layout>
+    <BelledLayout {...bell}>
       <EntryDetail
         entry={entry}
+        viewerId={viewerId}
         units={units}
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
@@ -64,6 +68,6 @@ function EntryDetailPage() {
           />
         }
       />
-    </Layout>
+    </BelledLayout>
   );
 }

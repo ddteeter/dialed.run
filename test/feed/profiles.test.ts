@@ -167,10 +167,22 @@ describe("ownProfile: most worn", () => {
     // than a hundred runs had no profile at all.
     const userId = await makeUser();
     const shell = await makeItem({ userId, name: "Shell" });
-    await makeObservation({ lat: 47.11, lng: -93.27, startedAt: NOW, tempC: 5, feelsLikeC: 3 });
+    await makeObservation({
+      lat: 47.11,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 3,
+    });
     for (let index = 0; index < 150; index += 1) {
       const runId = await makeRun({ userId, lat: 47.11, lng: -93.27 });
-      await makeEntry({ userId, runId, verdict: 0, itemIds: [shell], createdAt: NOW + index });
+      await makeEntry({
+        userId,
+        runId,
+        verdict: 0,
+        itemIds: [shell],
+        createdAt: NOW + index,
+      });
     }
 
     const profile = await ownProfile(userId);
@@ -246,6 +258,26 @@ describe("ownProfile: the social counts", () => {
 
     expect(profile.followerCount).toBe(1);
     expect(profile.followingCount).toBe(1);
+  });
+
+  it("counts every run logged, with an entry or without, and only this runner's", async () => {
+    // G's first count (round 22). A run nobody has dressed yet is still a
+    // run — counting entries would call a runner with a backlog new.
+    const me = await makeUser();
+    await makeRun({ userId: me });
+    const dressed = await makeRun({ userId: me });
+    await makeEntry({ userId: me, runId: dressed });
+    await makeRun({ userId: await makeUser() });
+
+    const profile = await ownProfile(me);
+
+    expect(profile.runCount).toBe(2);
+    expect(profile.entryCount).toBe(1);
+  });
+
+  it("counts no runs on day one", async () => {
+    const profile = await ownProfile(await makeUser());
+    expect(profile.runCount).toBe(0);
   });
 });
 

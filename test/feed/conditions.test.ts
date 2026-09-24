@@ -2,12 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
 
-import {
-  follows as followsTable,
-  userProfiles as userProfilesTable,
-} from "../../src/db/schema-core";
+import { follows as followsTable } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { newUlid } from "../../src/lib/ids";
 import {
   conditionsAt,
   currentConditions,
@@ -15,7 +11,6 @@ import {
   observationsForRuns,
 } from "../../src/modules/feed/conditions";
 import { follow, followerCount } from "../../src/modules/feed/follows";
-import { searchByDisplayName } from "../../src/modules/feed/search";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   makeEntry,
@@ -409,42 +404,6 @@ describe("currentConditions", () => {
     expect(await currentConditions(52.11, -93.27, NOW)).toStrictEqual(
       pointConditions({ tempC: 6, feelsLikeC: 4, precipMm: 2, windKph: 10 }),
     );
-  });
-});
-
-describe("searchByDisplayName", () => {
-  it("answers with nothing for a blank query", async () => {
-    // Including one that is only spaces: an untrimmed blank becomes
-    // `LIKE ' %'`, which is a full scan for nothing.
-    await makeUser({ displayName: "Somebody" });
-    expect(await searchByDisplayName("")).toStrictEqual([]);
-    expect(await searchByDisplayName(" ".repeat(3))).toStrictEqual([]);
-  });
-
-  it("matches on a trimmed prefix", async () => {
-    const userId = await makeUser({ displayName: "Tracksmith Runner" });
-
-    const results = await searchByDisplayName("  Tracksmith ".trimEnd());
-
-    expect(results).toStrictEqual([
-      { userId, displayName: "Tracksmith Runner" },
-    ]);
-  });
-
-  it("matches a prefix, not a substring", async () => {
-    await makeUser({ displayName: "Fast Runner" });
-    expect(await searchByDisplayName("Runner")).toStrictEqual([]);
-  });
-
-  it("leaves out a profile that has no display name", async () => {
-    // The result type promises a name. A row with none is not a person you
-    // can offer to follow.
-    const userId = newUlid();
-    await coreDb()
-      .insert(userProfilesTable)
-      .values({ userId, shareDefault: true });
-
-    expect(await searchByDisplayName("")).toStrictEqual([]);
   });
 });
 
