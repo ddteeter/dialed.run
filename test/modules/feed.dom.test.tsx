@@ -12,7 +12,7 @@ import { feedItem, MILES, NOW, renderFeedScreen } from "./feed-fixtures";
  * link, and Following — its cards and its drawn empty state. The cards
  * and Your conditions have files of their own.
  */
-const useful = () => Promise.resolve({ useful: true });
+const useful = () => Promise.resolve({ useful: true, count: 1 });
 
 function feed(
   overrides: {
@@ -29,7 +29,7 @@ function feed(
       now={NOW}
       units={MILES}
       unjudgedCount={overrides.unjudgedCount ?? 0}
-      toggleUseful={useful}
+      setUseful={useful}
       conditions={{
         home: { coords: undefined, cityLabel: undefined },
         locate: () => Promise.resolve(undefined),
@@ -186,7 +186,7 @@ describe("Feed: Following", () => {
         now={NOW}
         units={MILES}
         unjudgedCount={0}
-        toggleUseful={() => Promise.reject(new TypeError("offline"))}
+        setUseful={() => Promise.reject(new TypeError("offline"))}
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),

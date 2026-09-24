@@ -8,7 +8,7 @@ import { shouldAskForVerdict } from "../../modules/feed/route-decisions";
 import {
   entryDetailQuery,
   recordVerdictPromptedAction,
-  toggleUsefulAction,
+  setUsefulAction,
   verdictPromptQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
@@ -53,7 +53,7 @@ function EntryDetailPage() {
         units={units}
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
-        toggleUseful={toggleUsefulAction}
+        setUseful={setUsefulAction}
         reportAffordance={
           <ReportAffordance
             subject={{

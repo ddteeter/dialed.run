@@ -48,7 +48,7 @@ export function UsefulButton({
         aria-pressed={useful.reacted}
         {...inFlight(markUseful.pending)}
         onClick={() => {
-          void markUseful.run();
+          void markUseful.run(!useful.reacted);
         }}
         className={`target flex cursor-pointer items-center self-start border-none bg-transparent p-0 ${
           useful.reacted ? "font-semibold text-cold-text" : "text-quiet"

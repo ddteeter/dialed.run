@@ -3,24 +3,30 @@ import { useState } from "react";
 import { useControlAction } from "../../../ui";
 
 /**
- * The server's own answer to a press: the new reacted state, from which the
- * count moves — Useful is not optimistic (round 23, item 9).
+ * Asks the server for the viewer's Useful as a state, and answers with the
+ * state the server now holds — its own count and mark, never a ±1 on the
+ * client's guess (law 8b).
  */
-export type ToggleUsefulFn = (input: {
-  data: { entryId: string };
-}) => Promise<{ useful: boolean }>;
+export type SetUsefulFn = (input: {
+  data: { entryId: string; useful: boolean };
+}) => Promise<{ useful: boolean; count: number }>;
 
 export interface UsefulReactionInput {
   entryId: string;
   usefulCount: number;
   viewerHasReacted: boolean;
-  toggleUseful: ToggleUsefulFn;
+  setUseful: SetUsefulFn;
 }
 
 /**
- * Useful's optimistic-free count + reacted state, shared by D's own button
- * and the E1 card control (round 22 draws it in both places): press, wait
- * for the server behind `[ Noting ]`, and move the count on success only.
+ * Useful's count and mark, shared by D's button and the E1 card (round 22
+ * draws it in both places): press, wait for the server behind `[ Noting ]`,
+ * then show what the server says.
+ *
+ * **The press carries the state it wants**, fixed when pressed, so the
+ * band's Try again repeats that same request: if the first one landed and
+ * only its answer was lost, the retry changes nothing — where a toggle
+ * would have taken the mark back.
  *
  * The state still true when the press fails is the one it tried to leave:
  * §4a names "Not marked" for Useful, and taking one back that fails is
@@ -30,19 +36,16 @@ export function useUsefulReaction({
   entryId,
   usefulCount,
   viewerHasReacted,
-  toggleUseful,
+  setUseful,
 }: UsefulReactionInput) {
-  const [useful, setUseful] = useState({
+  const [useful, setState] = useState({
     count: usefulCount,
     reacted: viewerHasReacted,
   });
   const markUseful = useControlAction({
-    action: async () => {
-      const result = await toggleUseful({ data: { entryId } });
-      setUseful((previous) => ({
-        count: result.useful ? previous.count + 1 : previous.count - 1,
-        reacted: result.useful,
-      }));
+    action: async (isUseful: boolean) => {
+      const result = await setUseful({ data: { entryId, useful: isUseful } });
+      setState({ count: result.count, reacted: result.useful });
     },
     kicker: useful.reacted ? "Still marked" : "Not marked",
   });

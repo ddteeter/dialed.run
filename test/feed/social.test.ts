@@ -14,7 +14,7 @@ import {
 } from "../../src/modules/feed/follows";
 import {
   hasReacted,
-  toggleUsefulReaction,
+  setUsefulReaction,
   usefulCount,
 } from "../../src/modules/feed/reactions";
 import { searchRunners } from "../../src/modules/feed/search";
@@ -24,24 +24,44 @@ import { nowSeconds } from "../../src/lib/now";
 describe("useful reactions (D-11)", () => {
   beforeEach(resetTables);
 
-  it("toggles on then off, and the count follows", async () => {
+  it("marks, then unmarks, answering with the state and count it left", async () => {
     const author = await makeUser();
     const reactor = await makeUser();
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId, isPublic: true });
 
     expect(await usefulCount(entryId)).toBe(0);
-    expect(await toggleUsefulReaction(entryId, reactor)).toEqual({
+    expect(await setUsefulReaction(entryId, reactor, true)).toStrictEqual({
       useful: true,
+      count: 1,
     });
     expect(await usefulCount(entryId)).toBe(1);
     expect(await hasReacted(entryId, reactor)).toBe(true);
 
-    expect(await toggleUsefulReaction(entryId, reactor)).toEqual({
+    expect(await setUsefulReaction(entryId, reactor, false)).toStrictEqual({
       useful: false,
+      count: 0,
     });
     expect(await usefulCount(entryId)).toBe(0);
     expect(await hasReacted(entryId, reactor)).toBe(false);
+  });
+
+  it("counts everyone's marks, and answers with this viewer's own", async () => {
+    const author = await makeUser();
+    const [first, second] = [await makeUser(), await makeUser()];
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+
+    await setUsefulReaction(entryId, first, true);
+
+    expect(await setUsefulReaction(entryId, second, true)).toStrictEqual({
+      useful: true,
+      count: 2,
+    });
+    expect(await setUsefulReaction(entryId, second, false)).toStrictEqual({
+      useful: false,
+      count: 1,
+    });
   });
 });
 
@@ -97,7 +117,7 @@ describe("useful reactions: who may react", () => {
 
   it("refuses a reaction to an entry that does not exist, and says why", async () => {
     await expect(
-      toggleUsefulReaction(newUlid(), await makeUser()),
+      setUsefulReaction(newUlid(), await makeUser(), true),
     ).rejects.toThrow(/not visible/);
   });
 
@@ -109,7 +129,7 @@ describe("useful reactions: who may react", () => {
     const runId = await makeRun({ userId: owner });
     const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
 
-    await expect(toggleUsefulReaction(entryId, stranger)).rejects.toThrow(
+    await expect(setUsefulReaction(entryId, stranger, true)).rejects.toThrow(
       /not visible/,
     );
   });
@@ -119,8 +139,9 @@ describe("useful reactions: who may react", () => {
     const runId = await makeRun({ userId: owner });
     const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
 
-    expect(await toggleUsefulReaction(entryId, owner)).toStrictEqual({
+    expect(await setUsefulReaction(entryId, owner, true)).toStrictEqual({
       useful: true,
+      count: 1,
     });
   });
 
@@ -133,7 +154,7 @@ describe("useful reactions: who may react", () => {
     const entryId = await makeEntry({ userId: owner, runId, isPublic: true });
     const before = nowSeconds();
 
-    await toggleUsefulReaction(entryId, reactor);
+    await setUsefulReaction(entryId, reactor, true);
 
     const [row] = await drizzle(env.DIALED_CORE)
       .select()

@@ -9,7 +9,7 @@ import { stripConditions } from "../strip";
 import { Avatar } from "./Avatar";
 import { ConditionsCell } from "./ConditionsCell";
 import { UsefulButton } from "./UsefulButton";
-import type { ToggleUsefulFn } from "./useful-reaction";
+import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
 
 /**
@@ -30,12 +30,12 @@ export interface PostCardProps {
   The loader's clock, so the server and the browser say the same "2h ago".
   */
   now: number;
-  toggleUseful: ToggleUsefulFn;
+  setUseful: SetUsefulFn;
   onStatus: (status: string) => void;
 }
 
 export function PostCard(props: Readonly<PostCardProps>) {
-  const { item, units, now, toggleUseful, onStatus } = props;
+  const { item, units, now, setUseful, onStatus } = props;
   const name = item.authorDisplayName ?? "A runner";
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
@@ -94,7 +94,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
         entryId={item.entryId}
         usefulCount={item.usefulCount}
         viewerHasReacted={item.viewerHasReacted}
-        toggleUseful={toggleUseful}
+        setUseful={setUseful}
         onStatus={onStatus}
       />
     </article>

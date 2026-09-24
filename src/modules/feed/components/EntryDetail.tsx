@@ -14,7 +14,7 @@ import { stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { ReportFoot } from "./ReportFoot";
 import { UsefulButton } from "./UsefulButton";
-import type { ToggleUsefulFn } from "./useful-reaction";
+import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
@@ -58,7 +58,7 @@ export interface EntryDetailProps {
   units: Units;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
-  toggleUseful: ToggleUsefulFn;
+  setUseful: SetUsefulFn;
   /**
    * W1's report control, composed by the route — a node rather than a
    * callback, because this module may not import `modules/safety`: its
@@ -75,7 +75,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     viewerId,
     shouldPromptVerdict,
     recordPrompted,
-    toggleUseful,
+    setUseful,
     units,
     reportAffordance,
   } = props;
@@ -144,7 +144,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           entryId={entryId}
           usefulCount={entry.usefulCount}
           viewerHasReacted={entry.viewerHasReacted}
-          toggleUseful={toggleUseful}
+          setUseful={setUseful}
           onStatus={setStatus}
         />
       )}

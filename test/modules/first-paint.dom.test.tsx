@@ -26,7 +26,7 @@ describe("the status region on first paint", () => {
         now={NOW}
         units={MILES}
         unjudgedCount={0}
-        toggleUseful={() => Promise.resolve({ useful: true })}
+        setUseful={() => Promise.resolve({ useful: true, count: 1 })}
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
@@ -45,7 +45,7 @@ describe("the status region on first paint", () => {
         viewerId="01STRANGER"
         shouldPromptVerdict={false}
         recordPrompted={done}
-        toggleUseful={() => Promise.resolve({ useful: true })}
+        setUseful={() => Promise.resolve({ useful: true, count: 1 })}
         entry={{
           id: "01ENTRY",
           userId: "01USER",

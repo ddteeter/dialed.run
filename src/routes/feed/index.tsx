@@ -6,7 +6,7 @@ import {
   conditionsHomeQuery,
   followingFeedQuery,
   saveConditionsCityAction,
-  toggleUsefulAction,
+  setUsefulAction,
   unjudgedRunCountQuery,
   viewerUnitsQuery,
   yourConditionsQuery,
@@ -47,7 +47,7 @@ function FeedPage() {
         now={now}
         units={units}
         unjudgedCount={unjudgedCount}
-        toggleUseful={toggleUsefulAction}
+        setUseful={setUsefulAction}
         conditions={{
           home,
           locate: geolocate,

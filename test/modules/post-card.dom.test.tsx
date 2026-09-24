@@ -12,13 +12,15 @@ import { feedItem, MILES, NOW, renderFeedScreen } from "./feed-fixtures";
  * The v1 post card (round 22, "E1v1 Following"): author and badge, photo,
  * caption, strip, Useful — in that order, and a missing part absent.
  */
-const nothing = () => Promise.resolve({ useful: true });
+const nothing = () => Promise.resolve({ useful: true, count: 1 });
+
+type Setter = (input: {
+  data: { entryId: string; useful: boolean };
+}) => Promise<{ useful: boolean; count: number }>;
 
 async function card(
   overrides: Partial<FeedItem> = {},
-  toggleUseful: (input: {
-    data: { entryId: string };
-  }) => Promise<{ useful: boolean }> = nothing,
+  setUseful: Setter = nothing,
   onStatus: (status: string) => void = vi.fn(),
 ) {
   await renderFeedScreen(
@@ -26,7 +28,7 @@ async function card(
       item={feedItem(overrides)}
       units={MILES}
       now={NOW}
-      toggleUseful={toggleUseful}
+      setUseful={setUseful}
       onStatus={onStatus}
     />,
   );
@@ -201,41 +203,64 @@ describe("PostCard: Useful", () => {
     expect(useful()).toHaveAccessibleName("3 Useful");
   });
 
-  it("waits behind [ Noting ], then counts up on success only", async () => {
+  it("asks to mark it, waits behind [ Noting ], then shows the server's count", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ useful: boolean }>();
-    const toggle = vi.fn(() => pending.promise);
-    await card({ entryId: "01A", usefulCount: 2 }, toggle);
+    const pending = Promise.withResolvers<{ useful: boolean; count: number }>();
+    const set = vi.fn(() => pending.promise);
+    await card({ entryId: "01A", usefulCount: 2 }, set);
     const button = useful();
 
     await user.click(button);
-    expect(toggle).toHaveBeenCalledWith({ data: { entryId: "01A" } });
+    expect(set).toHaveBeenCalledWith({
+      data: { entryId: "01A", useful: true },
+    });
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(screen.getByText("Noting")).toBeVisible();
     expect(button).toHaveAttribute("aria-pressed", "false");
 
-    pending.resolve({ useful: true });
+    // The server's count, not the card's 2 + 1: two others marked it
+    // while this card sat open.
+    pending.resolve({ useful: true, count: 5 });
     await waitFor(() => {
       expect(button).toHaveAttribute("aria-pressed", "true");
     });
-    expect(button).toHaveTextContent("3");
+    await waitFor(() => {
+      expect(button).toHaveTextContent(/^♥5Useful\[Noting\]$/u);
+    });
     expect(button).not.toHaveAttribute("aria-busy");
   });
 
-  it("counts down when taken back", async () => {
+  it("asks to take it back, and shows what the server then has", async () => {
     const user = userEvent.setup();
-    await card({ usefulCount: 2, viewerHasReacted: true }, () =>
-      Promise.resolve({ useful: false }),
-    );
+    const set = vi.fn(() => Promise.resolve({ useful: false, count: 1 }));
+    await card({ entryId: "01A", usefulCount: 2, viewerHasReacted: true }, set);
 
     await user.click(useful());
 
+    expect(set).toHaveBeenCalledWith({
+      data: { entryId: "01A", useful: false },
+    });
     await waitFor(() => {
       expect(useful()).toHaveAttribute("aria-pressed", "false");
     });
     // Once the leaving digit has rolled away.
     await waitFor(() => {
       expect(useful()).toHaveTextContent(/^♡1Useful\[Noting\]$/u);
+    });
+  });
+
+  it("believes the server over a stale card: marking what is already marked stays marked", async () => {
+    // Another tab marked it; this card still says unmarked. The press asks
+    // for "marked", and the server — which already has it — says so.
+    const user = userEvent.setup();
+    await card({ usefulCount: 0 }, () =>
+      Promise.resolve({ useful: true, count: 1 }),
+    );
+
+    await user.click(useful());
+
+    await waitFor(() => {
+      expect(useful()).toHaveTextContent(/^♥1Useful\[Noting\]$/u);
     });
   });
 
@@ -270,13 +295,15 @@ describe("PostCard: Useful", () => {
     expect(await screen.findByText("Still marked")).toBeVisible();
   });
 
-  it("tries again from the band", async () => {
+  it("tries again with the same request, so a mark whose answer was lost is not taken back", async () => {
+    // The first press landed and only its answer was lost. A toggle would
+    // have unmarked it on the retry; a set asks for "marked" again.
     const user = userEvent.setup();
-    const toggle = vi
-      .fn<() => Promise<{ useful: boolean }>>()
+    const set = vi
+      .fn<Setter>()
       .mockRejectedValueOnce(new TypeError("offline"))
-      .mockResolvedValueOnce({ useful: true });
-    await card({ usefulCount: 0 }, toggle);
+      .mockResolvedValueOnce({ useful: true, count: 1 });
+    await card({ entryId: "01A", usefulCount: 0 }, set);
 
     await user.click(useful());
     await user.click(await screen.findByRole("button", { name: "Try again" }));
@@ -284,6 +311,10 @@ describe("PostCard: Useful", () => {
     await waitFor(() => {
       expect(useful()).toHaveAttribute("aria-pressed", "true");
     });
+    expect(set.mock.calls).toStrictEqual([
+      [{ data: { entryId: "01A", useful: true } }],
+      [{ data: { entryId: "01A", useful: true } }],
+    ]);
     expect(screen.queryByText("Not marked")).toBeNull();
   });
 });

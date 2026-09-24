@@ -138,6 +138,12 @@ export const itemBandStatInput = z.object({
 
 export const entryIdInput = z.object({ entryId: ulidSchema });
 
+/**
+ * Useful, as the state the viewer wants — never "flip it" (law 8b): a
+ * repeat of the same request leaves the same state.
+ */
+export const usefulInput = entryIdInput.extend({ useful: z.boolean() });
+
 export const userIdInput = z.object({ userId: ulidSchema });
 
 export const feedInput = z.object({

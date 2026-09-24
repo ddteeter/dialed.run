@@ -58,7 +58,7 @@ function item(overrides: Partial<Item> = {}): Item {
 }
 
 const nothing = () => Promise.resolve();
-const marked = () => Promise.resolve({ useful: true });
+const marked = () => Promise.resolve({ useful: true, count: 1 });
 
 function detail(
   overrides: Partial<Entry> = {},
@@ -66,7 +66,7 @@ function detail(
     viewerId?: string | undefined;
     shouldPrompt?: boolean;
     recordPrompted?: () => Promise<unknown>;
-    toggleUseful?: () => Promise<{ useful: boolean }>;
+    setUseful?: () => Promise<{ useful: boolean; count: number }>;
     report?: boolean;
   } = {},
 ) {
@@ -77,7 +77,7 @@ function detail(
       viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}
       shouldPromptVerdict={options.shouldPrompt ?? false}
       recordPrompted={options.recordPrompted ?? nothing}
-      toggleUseful={options.toggleUseful ?? marked}
+      setUseful={options.setUseful ?? marked}
       reportAffordance={
         options.report === false ? undefined : (
           <button type="button">Report this entry</button>
@@ -392,7 +392,7 @@ describe("EntryDetail: Useful and Report", () => {
     await renderFeedScreen(
       detail(
         { usefulCount: 11 },
-        { toggleUseful: () => Promise.reject(new TypeError("offline")) },
+        { setUseful: () => Promise.reject(new TypeError("offline")) },
       ),
     );
 

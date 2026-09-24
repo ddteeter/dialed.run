@@ -10,7 +10,7 @@ import { isBacklogWorthOpening } from "../route-decisions";
 import { BracketHeadline } from "./BracketHeadline";
 import { ConditionsTab } from "./ConditionsTab";
 import { PostCard } from "./PostCard";
-import type { ToggleUsefulFn } from "./useful-reaction";
+import type { SetUsefulFn } from "./useful-reaction";
 
 type FeedTab = "following" | "conditions";
 
@@ -57,7 +57,7 @@ export interface FeedProps {
   the queue is worth a link at all.
   */
   unjudgedCount: number;
-  toggleUseful: ToggleUsefulFn;
+  setUseful: SetUsefulFn;
   /**
   Everything Your conditions needs, handed through untouched.
   */
@@ -80,7 +80,7 @@ export function Feed(props: Readonly<FeedProps>) {
     now,
     units,
     unjudgedCount,
-    toggleUseful,
+    setUseful,
     conditions,
   } = props;
   // The runner's own choice wins; until they make one, the default follows
@@ -156,7 +156,7 @@ export function Feed(props: Readonly<FeedProps>) {
           followeeCount={followeeCount}
           now={now}
           units={units}
-          toggleUseful={toggleUseful}
+          setUseful={setUseful}
           onConditions={() => {
             setTab("conditions");
           }}
@@ -173,14 +173,14 @@ function FollowingTab({
   followeeCount,
   now,
   units,
-  toggleUseful,
+  setUseful,
   onConditions,
 }: Readonly<{
   items: FeedItem[];
   followeeCount: number;
   now: number;
   units: Units;
-  toggleUseful: ToggleUsefulFn;
+  setUseful: SetUsefulFn;
   onConditions: () => void;
 }>) {
   // One status region for the screen, however many cards (Accessibility
@@ -204,7 +204,7 @@ function FollowingTab({
           item={item}
           units={units}
           now={now}
-          toggleUseful={toggleUseful}
+          setUseful={setUseful}
           onStatus={setStatus}
         />
       ))}

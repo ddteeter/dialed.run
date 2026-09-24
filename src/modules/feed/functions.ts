@@ -21,6 +21,7 @@ import {
   saveBacklogRowInput,
   searchInput,
   submitVerdictInput,
+  usefulInput,
   userIdInput,
 } from "./inputs";
 import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
@@ -44,7 +45,7 @@ import { photoUploadFrom, uploadPhoto } from "./photos";
 import { prefillAt } from "./prefill";
 import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
-import { toggleUsefulReaction } from "./reactions";
+import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
 import { resolvePlace } from "../weather";
@@ -148,11 +149,11 @@ export const entryDetailQuery = createServerFn({ method: "GET" })
 
 // ---- Useful reactions (D-11) -------------------------------------------------
 
-export const toggleUsefulAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => entryIdInput.parse(input))
+export const setUsefulAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => usefulInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return toggleUsefulReaction(data.entryId, userId);
+    return setUsefulReaction(data.entryId, userId, data.useful);
   });
 
 // ---- Follows ------------------------------------------------------------------
