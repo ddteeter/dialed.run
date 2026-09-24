@@ -1,8 +1,18 @@
 /**
  * "Your conditions" (E2-lite, D-10/D-16): consensus block only, no stranger
- * cards. Bounded scan (docs/architecture.md): ≤200 core rows via the
- * `entries_public_created` covering index + ≤200 weather cache-key seeks.
+ * cards. Every public entry in the window, via the `entries_public_created`
+ * index, then the weather cache cells of their runs.
  * `source='manual'` observations are excluded from the aggregate.
+ *
+ * **No LIMIT on the window, deliberately.** The match is decided against
+ * weather in DIALED_WEATHER, which SQL here cannot join to, so the filter
+ * runs in code — and a `LIMIT 200` ahead of it answered "the matches among
+ * the newest 200", hiding every runner in the viewer's conditions behind a
+ * busy afternoon somewhere else (PR #102 review). The read is bounded by
+ * the window instead. Reading weather first would bound it by the band,
+ * but the cache has no index to find cells by hour and feels-like, and
+ * nothing maps a cell back to runs; that is an index decision for the
+ * owner, recorded in PR #102's Register.
  *
  * Round 22 set the rules this module now keeps:
  *
@@ -21,7 +31,7 @@
  * question, and counting the viewer as one of the five would leave four
  * strangers behind a floor meant to be five.
  */
-import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -41,7 +51,6 @@ import type { UiGroup } from "./groups";
 import { uiGroupFor, uiGroups } from "./groups";
 import { publiclyVisibleEntry } from "../safety";
 
-const SCAN_LIMIT = 200;
 const DAY_S = 24 * 3600;
 
 /**
@@ -69,7 +78,6 @@ export function recentPublicEntriesStatement(
   database: DrizzleD1Database,
   sinceEpochSeconds: number,
   viewerId?: string,
-  limit = SCAN_LIMIT,
 ) {
   return database
     .select()
@@ -84,9 +92,7 @@ export function recentPublicEntriesStatement(
         gte(outfitEntries.createdAt, sinceEpochSeconds),
         viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
       ),
-    )
-    .orderBy(desc(outfitEntries.createdAt))
-    .limit(limit);
+    );
 }
 
 /**

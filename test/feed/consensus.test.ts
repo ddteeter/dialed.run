@@ -201,6 +201,32 @@ describe("matchTally: who matched", () => {
     expect(tally).toStrictEqual({ runners: 1, groups: { tops: 1 } });
   });
 
+  it("finds a match behind two hundred newer entries that do not match", async () => {
+    // PR #102 review: the window was read `LIMIT 200` newest-first and then
+    // filtered, so it answered "the matches among the newest 200" — a busy
+    // afternoon somewhere hot hid every runner in the viewer's conditions.
+    await runner({ ago: 2 * DAY });
+    const author = await makeUser();
+    await makeObservation({
+      lat: 12,
+      lng: 12,
+      startedAt: NOW,
+      tempC: 30,
+      feelsLikeC: 30,
+    });
+    for (let index = 0; index < 200; index += 1) {
+      const runId = await makeRun({
+        userId: author,
+        lat: 12,
+        lng: 12,
+        startedAt: NOW,
+      });
+      await makeEntry({ userId: author, runId, createdAt: NOW - index });
+    }
+
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(1);
+  });
+
   it("resolves the recent-public-entries scan with an index seek, no table scan", async () => {
     const database = drizzle(env.DIALED_CORE);
     const { sql, params } = recentPublicEntriesStatement(
