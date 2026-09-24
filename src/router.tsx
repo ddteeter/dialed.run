@@ -1,6 +1,10 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
 import { viewTransitionTypesFor } from "./lib/nav-types";
+import {
+  NotFound,
+  RouteFailed,
+} from "./modules/auth/components/SystemState";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -29,6 +33,18 @@ export function getRouter() {
      * pulls server functions — so nothing that branches belongs here.
      */
     defaultViewTransition: { types: viewTransitionTypesFor },
+    /**
+     * Round 22's system states in place of the framework's defaults: the
+     * shell when signed in and no bars when not, decided inside the
+     * components (`modules/auth/components/SystemState`).
+     *
+     * **No pending component, anywhere**, on purpose: X3's *"a slow route
+     * keeps the old screen"* is what the router does when there is none —
+     * the old matches stay up until the new ones resolve — and the tab
+     * label's breathing (`ui/tabs`'s `useSlowRoute`) is the only sign.
+     */
+    defaultNotFoundComponent: NotFound,
+    defaultErrorComponent: RouteFailed,
   });
 
   return router;

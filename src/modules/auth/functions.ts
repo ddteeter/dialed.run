@@ -15,6 +15,16 @@ export const getSession = createServerFn({ method: "GET" }).handler(
 );
 
 /**
+ * Whether anyone is signed in, for the shell's own decisions — the system
+ * states' frame (round 22, X1/X2) — read once at the root.
+ */
+export const signedInQuery = createServerFn({ method: "GET" }).handler(
+  async () => ({
+    signedIn: (await auth.api.getSession({ headers: getRequestHeaders() })) !== null,
+  }),
+);
+
+/**
 Loader-side gate: the session, or a redirect to sign-in.
 */
 export async function requireSession(): Promise<
