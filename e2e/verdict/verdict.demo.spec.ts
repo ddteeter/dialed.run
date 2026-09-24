@@ -56,11 +56,15 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   const runId = newUlid();
   const entryId = newUlid();
   const observationId = newUlid();
-  // An earlier run in the same band, the Houdini on it and called cold —
-  // the history A3's chips are generated from. Without one the kit has no
-  // record here, and the chip rule suggests no garment at all.
-  const priorRunId = newUlid();
-  const priorEntryId = newUlid();
+  // Two earlier runs in the same band, the Houdini on both and called
+  // cold — the history A3's chips are generated from. Round 21: a garment
+  // needs two runs in the band to have a record at all, so with one the
+  // chip rule suggests no garment.
+  const priors = [7, 14].map((daysAgo) => ({
+    runId: newUlid(),
+    entryId: newUlid(),
+    daysAgo,
+  }));
 
   // Coordinates distinct from feed.demo's. Observations are cached by
   // rounded lat/lng/hour, so sharing them would mean one spec's seed
@@ -74,7 +78,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // signed up — the verdict screen is owner-only, so the rows have to
   // belong to this user rather than a fixture one.
   const startedAt = nowSeconds() - 3600;
-  const priorStartedAt = startedAt - 7 * 86_400;
+  const priorStart = (daysAgo: number): number => startedAt - daysAgo * 86_400;
   await withLocalDb(async ({ core }) => {
     const [row] = await core
       .select({ id: user.id })
@@ -114,42 +118,46 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });
 
-    await core.insert(runs).values({
-      id: priorRunId,
-      userId: row.id,
-      title: "Last week's loop",
-      startedAt: priorStartedAt,
-      durationS: 2700,
-      distanceM: 8000,
-      source: "manual",
-      indoor: false,
-      weatherStatus: "attached",
-      lat: latR,
-      lng: lngR,
-    });
-    await core.insert(outfitEntries).values({
-      id: priorEntryId,
-      userId: row.id,
-      runId: priorRunId,
-      verdict: -1,
-      isPublic: false,
-      createdAt: priorStartedAt,
-    });
-    await core
-      .insert(outfitEntryItems)
-      .values({ entryId: priorEntryId, itemId });
+    for (const prior of priors) {
+      await core.insert(runs).values({
+        id: prior.runId,
+        userId: row.id,
+        title: "An earlier loop",
+        startedAt: priorStart(prior.daysAgo),
+        durationS: 2700,
+        distanceM: 8000,
+        source: "manual",
+        indoor: false,
+        weatherStatus: "attached",
+        lat: latR,
+        lng: lngR,
+      });
+      await core.insert(outfitEntries).values({
+        id: prior.entryId,
+        userId: row.id,
+        runId: prior.runId,
+        verdict: -1,
+        isPublic: false,
+        createdAt: priorStart(prior.daysAgo),
+      });
+      await core
+        .insert(outfitEntryItems)
+        .values({ entryId: prior.entryId, itemId });
+    }
   });
 
   // Seed the conditions this entry was logged in. Without an observation
   // the screen has no temperature band, and saving takes a different
   // branch — so this is seeded deliberately rather than left to chance.
   //
-  // Both runs, each at its own hour: the earlier one has to land in the
-  // same band for its verdict to count as history here.
+  // Every run, each at its own hour: the earlier ones have to land in the
+  // same band for their verdicts to count as history here.
   await withLocalDb(async ({ weather }) => {
     for (const [id, run, at] of [
       [observationId, runId, startedAt],
-      [newUlid(), priorRunId, priorStartedAt],
+      ...priors.map(
+        (prior) => [newUlid(), prior.runId, priorStart(prior.daysAgo)] as const,
+      ),
     ] as const) {
       await weather
         .insert(weatherObservations)
