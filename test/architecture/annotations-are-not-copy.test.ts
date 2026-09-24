@@ -93,12 +93,24 @@ const ANNOTATED =
  * words. Eight is long enough that two notes do not collide with ordinary
  * UI copy by accident, and short enough to survive a note that goes on to
  * differ from a copy in its tail.
+ *
+ * **What a note quotes is not the note.** Design rules copy inside its
+ * notes by quoting it — round 21's A3 note reads *No kit: "Logged. No kit
+ * on this run, so no garment record moved."* — and a quoted sentence is
+ * the ruling's words for the screen, which the build is meant to carry.
+ * So a double-quoted span is cut out before sentences are keyed, and the
+ * commentary around it is what stays checked.
  */
+const QUOTED = /"[^"]*"/gu;
+
 function annotationKeys(): Set<string> {
   const keys = new Set<string>();
   for (const html of Object.values(boards)) {
     for (const match of html.matchAll(ANNOTATED)) {
-      const text = withoutTags(match.groups?.body ?? "");
+      const text = withoutTags(match.groups?.body ?? "").replaceAll(
+        QUOTED,
+        ". ",
+      );
       for (const sentence of decoded(text).split(/[.!?]\s/u)) {
         const key = words(sentence).split(" ").slice(0, 8);
         if (key.length >= 6) keys.add(key.join(" "));
@@ -124,7 +136,8 @@ describe("design's annotations", () => {
       if (isInstrumented(source)) continue;
       const rendered = ` ${words(withoutComments(source))} `;
       for (const key of KEYS) {
-        if (rendered.includes(` ${key} `)) leaks.push(`${repoPath(path)}: "${key}…"`);
+        if (rendered.includes(` ${key} `))
+          leaks.push(`${repoPath(path)}: "${key}…"`);
       }
     }
     expect(leaks).toEqual([]);

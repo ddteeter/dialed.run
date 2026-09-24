@@ -20,9 +20,11 @@ import type { GarmentRecord } from "./band-signals";
  * 1. **"Weakest" is the lowest dialed share** (dialed ÷ runs in the band);
  *    ties go to the garment with more runs, the stronger evidence, then to
  *    kit order.
- * 2. **A garment never worn in this band is not suggested.** It has no
- *    record to be weak — suggesting it would be a guess about a garment
- *    the runner has told us nothing about here.
+ * 2. **A garment worn fewer than twice in this band is not suggested.**
+ *    Round 21 confirmed all four and added this to the first: *"a garment
+ *    needs ≥2 runs in the band to be 'weakest' — one bad run isn't a
+ *    record. Below that it falls to 2 (not suggested)."* Never worn is the
+ *    same answer from the other end: no record to be weak.
  * 3. **A dialed verdict suggests one garment** ("the weakest garment",
  *    singular), in the direction it has more often been off; one never off
  *    either way is not suggested at all. Warm and cold suggest up to two.
@@ -69,6 +71,11 @@ export const CHIP_COUNT = 5;
 */
 const MAX_SUGGESTED_FLAGS = 2;
 
+/**
+"A garment needs ≥2 runs in the band to be 'weakest'" (round 21).
+*/
+const MIN_RUNS_FOR_A_RECORD = 2;
+
 interface KitGarment {
   itemId: string;
   name: string;
@@ -90,12 +97,14 @@ function byWeakness(
   kit: readonly KitGarment[],
   records: Readonly<Record<string, GarmentRecord>>,
 ): Garment[] {
-  // A garment with no record here — none at all, or one of nothing — has
+  // A garment with no record here — none at all, or one run's worth — has
   // no weakness to find (assumption 2), so it never reaches the sort.
   return kit
     .flatMap((garment) => {
       const record = records[garment.itemId];
-      return record && record.total > 0 ? [{ ...garment, record }] : [];
+      return record && record.total >= MIN_RUNS_FOR_A_RECORD
+        ? [{ ...garment, record }]
+        : [];
     })
     .toSorted(
       (a, b) =>

@@ -124,3 +124,57 @@ export function dayTimeLabel(epochSeconds: number, timeZone?: string): string {
   });
   return `${dayLabel(epochSeconds, timeZone)}, ${time}`;
 }
+
+/**
+ * The time of day on the board's clock — "6:04 AM".
+ *
+ * A3's header and A1's parsed card both draw a twelve-hour time beside the
+ * day ("SAT AUG 29 · 6:04 AM"), where a notification's `dayTimeLabel`
+ * draws 24-hour. Upper-cased here rather than left to the mono step's CSS,
+ * because `en-GB` writes "am" and a screen reader should hear the letters
+ * the eye sees.
+ *
+ * `timeZone` is the run's own (D-96); omitted or invalid, it is UTC.
+ */
+export function clockLabel(epochSeconds: number, timeZone?: string): string {
+  return part(epochSeconds, timeZone, {
+    hour: "numeric",
+    minute: "2-digit",
+    hourCycle: "h12",
+  }).toUpperCase();
+}
+
+/**
+ * The time of day as a time input writes it — "06:04", 24-hour — so A1's
+ * time correction can start from the run's own clock.
+ */
+export function timeOfDay(epochSeconds: number, timeZone?: string): string {
+  return part(epochSeconds, timeZone, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+function minutesOf(hhmm: string): number {
+  const [hours = 0, minutes = 0] = hhmm.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * How far to move a start so it reads `hhmm` on the same clock — the one
+ * the runner was looking at, in the run's own zone.
+ *
+ * A difference between two times on one clock needs no zone arithmetic to
+ * be right, which is why the correction travels as a shift rather than a
+ * new epoch: the server adds seconds and never has to know where the run
+ * was. The day does not change — a run that started on another day is
+ * another run.
+ */
+export function shiftToTimeOfDay(
+  epochSeconds: number,
+  timeZone: string | undefined,
+  hhmm: string,
+): number {
+  return (minutesOf(hhmm) - minutesOf(timeOfDay(epochSeconds, timeZone))) * 60;
+}
