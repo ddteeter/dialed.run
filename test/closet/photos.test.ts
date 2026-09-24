@@ -665,6 +665,10 @@ describe("replacing a photo", () => {
       category: "top",
       name: "Replaced",
     });
+    // A first photo has nothing to replace. Without the guard the cleanup
+    // would build keys from `${null}` — the string "null" — and delete
+    // whatever sits there.
+    await env.MEDIA.put("null/full.webp", new Uint8Array([1]));
 
     const first = await uploadItemPhoto(
       client,
@@ -681,6 +685,9 @@ describe("replacing a photo", () => {
       "image/png",
     );
 
+    expect(await storedKeys("null/full.webp")).toStrictEqual([
+      "null/full.webp",
+    ]);
     expect(second.photoKey).not.toBe(first.photoKey);
     expect(second.photoKey.startsWith(`${photoKeyFor(userId, item.id)}/`)).toBe(
       true,
