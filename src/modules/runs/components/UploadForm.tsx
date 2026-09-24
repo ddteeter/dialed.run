@@ -242,14 +242,16 @@ function UploadFlow({
         error={refusal}
         onFiles={onFiles}
       />
-      <FormFailureBand
-        failure={failed?.failure}
-        onRetry={() => {
-          // The same key: a send that may have landed before the
-          // connection dropped cannot become two uploads.
-          if (failed !== undefined) void send(failed.attempt);
-        }}
-      />
+      {failed === undefined ? undefined : (
+        <FormFailureBand
+          failure={failed.failure}
+          onRetry={() => {
+            // The same key: a send that may have landed before the
+            // connection dropped cannot become two uploads.
+            void send(failed.attempt);
+          }}
+        />
+      )}
     </>
   );
 }
