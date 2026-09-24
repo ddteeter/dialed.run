@@ -1,41 +1,135 @@
 /**
- * Client-side "Continue with Google" button, shared by the login and signup
- * routes. Like client.ts, deliberately NOT exported from index.ts — route
+ * "Continue with Google", shared by the log-in and create-account pages.
+ * Like client.ts, deliberately NOT exported from index.ts — route
  * components import this file directly.
  */
-import { useState } from "react";
+import { useRef } from "react";
+import type { JSX } from "react";
 
-import { authClient } from "./client";
+import {
+  FailureBand,
+  Mono,
+  PendingLabel,
+  inFlight,
+  useControlAction,
+} from "../../ui";
+import type { ControlAction } from "../../ui";
+import { AUTH_COPY, AUTH_KICKER } from "./auth-copy";
+import { googleConsentUrl } from "./credentials";
 
-export function GoogleButton() {
-  const [error, setError] = useState<string | undefined>();
+/**
+ * The Google attempt: `useControlAction`'s state, plus a way to abandon it.
+ */
+export interface GoogleSignIn extends ControlAction<[]> {
+  /**
+   * Au5: *"The other form stays live: tapping Log in cancels the Google
+   * attempt."* An answer for a cancelled attempt is dropped rather than
+   * followed, so the runner is not carried off to Google mid-submit.
+   */
+  cancel: () => void;
+}
 
-  async function start() {
-    setError(undefined);
-    // On success the browser navigates away to Google's consent screen.
-    const result = await authClient.signIn.social({
-      provider: "google",
-      callbackURL: "/",
-    });
-    if (result.error) {
-      setError(result.error.message ?? "That didn't work. Try again.");
-    }
-  }
+/**
+ * Round 22, Au5–Au6: *"Google is a submit button"* — so it goes through
+ * the control-failure pattern rather than a pink line under it. Not
+ * optimistic, the in-flight label while it waits, and a band that names
+ * what is still true: `Not signed in`.
+ *
+ * `leave` is how the page goes to Google once the consent URL is back —
+ * the route's to supply, so a test can observe the departure without the
+ * test runner's own document being navigated away.
+ */
+export function useGoogleSignIn({
+  callbackURL,
+  leave,
+}: Readonly<{
+  /**
+  Where Google's success lands — `/`, or the form Au7 carried.
+  */
+  callbackURL: string;
+  leave: (url: string) => void;
+}>): GoogleSignIn {
+  // Counts attempts, so "is this answer still wanted" is a comparison
+  // rather than a flag that a later attempt could reset under an earlier
+  // one.
+  const attempt = useRef(0);
+  const control = useControlAction<[]>({
+    kicker: AUTH_KICKER,
+    action: async () => {
+      attempt.current += 1;
+      const mine = attempt.current;
+      const url = await googleConsentUrl(callbackURL);
+      if (mine === attempt.current) leave(url);
+    },
+  });
 
+  return {
+    ...control,
+    cancel: () => {
+      attempt.current += 1;
+    },
+  };
+}
+
+/**
+ * The "G" the board draws in a ring — its own lockup of the letter, not
+ * Google's logo, so it is composed from the type system rather than
+ * imported as a glyph the icon pack does not hold.
+ */
+function GoogleMark(): JSX.Element {
   return (
-    <div className="flex flex-col gap-2">
+    <span
+      aria-hidden="true"
+      className="grid size-5 place-items-center rounded-pill border border-ink"
+    >
+      <Mono step="xs">G</Mono>
+    </span>
+  );
+}
+
+/**
+ * The hairline pill, the same width as the primary (Au1: *"Google is the
+ * hairline pill, same width"*).
+ *
+ * In flight the glyph drops for the label, so the width holds (Au5); on
+ * failure the band sits directly above this button and not above Log in,
+ * because *"the band belongs to the button that failed"* (Au6). No pink
+ * anywhere on either.
+ */
+export function GoogleButton({
+  google,
+}: Readonly<{ google: GoogleSignIn }>): JSX.Element {
+  return (
+    <>
+      {google.failure === undefined ? undefined : (
+        <FailureBand
+          kicker={AUTH_KICKER}
+          message={AUTH_COPY.google}
+          onRetry={google.retry}
+          retryRef={google.retryRef}
+        />
+      )}
       <button
         type="button"
+        data-part="google"
+        data-state={google.pending ? "pending" : undefined}
+        {...inFlight(google.pending)}
         onClick={() => {
-          void start();
+          void google.run();
         }}
-        className="target rounded-pill border border-hairline bg-panel px-4 py-2 font-semibold"
+        className="target flex w-full cursor-pointer items-center justify-center rounded-pill border border-hairline bg-ground px-6 py-4 text-body font-semibold text-ink"
       >
-        Continue with Google
+        <PendingLabel
+          label={
+            <span className="flex items-center gap-3">
+              <GoogleMark />
+              Continue with Google
+            </span>
+          }
+          pendingLabel="Opening Google"
+          pending={google.pending}
+        />
       </button>
-      {error === undefined ? undefined : (
-        <p className="text-small font-semibold text-cold-text">{error}</p>
-      )}
-    </div>
+    </>
   );
 }

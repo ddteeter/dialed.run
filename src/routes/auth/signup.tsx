@@ -1,47 +1,73 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { useState } from "react";
 
 import { signUpSchema } from "../../lib/contracts";
-import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
+import {
+  AuthCrossLink,
+  AuthLegal,
+  AuthPage,
+  PasswordField,
+  useAuthForm,
+} from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
-import { TextField, useFormSubmit } from "../../ui";
+import { useGoogleSignIn } from "../../modules/auth/google-button";
+import { TextField } from "../../ui";
 
+/**
+ * Au1. The name field stays until the username task replaces it (owner,
+ * 2026-09-24): the board's two fields are that task's, not this one's.
+ */
 export const Route = createFileRoute("/auth/signup")({ component: SignupPage });
 
 const LABELS = { name: "Name", email: "Email", password: "Password" };
 
 function SignupPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const form = useFormSubmit({
+  const google = useGoogleSignIn({
+    callbackURL: "/",
+    leave: (url) => {
+      globalThis.location.assign(url);
+    },
+  });
+  const { form, cause } = useAuthForm({
     schema: signUpSchema,
     action: signUp,
     successMessage: "Account created.",
     labels: LABELS,
     onSuccess: async () => {
+      await router.invalidate();
       await navigate({ to: "/" });
     },
   });
 
   return (
     <AuthPage
-      heading="Sign up"
-      submitLabel="Sign up"
-      pendingLabel="Signing up"
+      heading="Create account"
+      submitLabel="Create account"
+      pendingLabel="Creating account"
       form={form}
-      onSubmit={() => {
-        void form.submit({ name, email, password });
-      }}
-      footer={
+      cause={cause}
+      google={google}
+      legal={<AuthLegal />}
+      crossLink={
         <AuthCrossLink
-          prompt="Already have an account?"
+          prompt="Have an account?"
           to="/auth/login"
           label="Log in"
         />
       }
+      onSubmit={() => {
+        void form.submit({ name, email, password });
+      }}
     >
       <TextField
         name="name"
@@ -62,10 +88,8 @@ function SignupPage() {
         field={form.field}
         error={form.fieldErrors.email}
       />
-      <TextField
-        name="password"
+      <PasswordField
         label={LABELS.password}
-        type="password"
         autoComplete="new-password"
         value={password}
         onChange={setPassword}

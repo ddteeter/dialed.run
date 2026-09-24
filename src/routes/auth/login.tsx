@@ -1,28 +1,59 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { useState } from "react";
 
 import { signInSchema } from "../../lib/contracts";
-import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
+import {
+  AuthPage,
+  LoginCrossLink,
+  PasswordField,
+  SessionNotice,
+  useAuthForm,
+} from "../../modules/auth/auth-page";
 import { signIn } from "../../modules/auth/credentials";
-import { TextField, useFormSubmit } from "../../ui";
+import { useGoogleSignIn } from "../../modules/auth/google-button";
+import { parseSignInSearch } from "../../modules/auth/sign-in-search";
+import { TextField } from "../../ui";
 
-export const Route = createFileRoute("/auth/login")({ component: LoginPage });
+/**
+ * Au2 — and Au7 when a form was carried here by an expired session. The
+ * search params are parsed by the module's schema; a bad one is dropped,
+ * so an edited URL is still the ordinary log-in page.
+ */
+export const Route = createFileRoute("/auth/login")({
+  validateSearch: parseSignInSearch,
+  component: LoginPage,
+});
 
 const LABELS = { email: "Email", password: "Password" };
 
 function LoginPage() {
-  // fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const router = useRouter();
+  const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
+  const back = search.redirect ?? "/";
 
-  const form = useFormSubmit({
+  const google = useGoogleSignIn({
+    callbackURL: back,
+    // fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
+    leave: (url) => {
+      globalThis.location.assign(url);
+    },
+  });
+  const { form, cause } = useAuthForm({
     schema: signInSchema,
     action: signIn,
     successMessage: "Signed in.",
     labels: LABELS,
     onSuccess: async () => {
-      await navigate({ to: "/" });
+      // The shell reads "signed in" once, at the root; tell it.
+      await router.invalidate();
+      await navigate({ href: back });
     },
   });
 
@@ -31,14 +62,15 @@ function LoginPage() {
     <AuthPage
       heading="Log in"
       submitLabel="Log in"
-      pendingLabel="Signing in"
+      pendingLabel="Logging in"
       form={form}
+      cause={cause}
+      google={google}
+      notice={<SessionNotice carried={search.carried} />}
+      crossLink={<LoginCrossLink carried={search.carried} />}
       onSubmit={() => {
         void form.submit({ email, password });
       }}
-      footer={
-        <AuthCrossLink prompt="New here?" to="/auth/signup" label="Sign up" />
-      }
     >
       <TextField
         name="email"
@@ -50,15 +82,14 @@ function LoginPage() {
         field={form.field}
         error={form.fieldErrors.email}
       />
-      <TextField
-        name="password"
+      <PasswordField
         label={LABELS.password}
-        type="password"
         autoComplete="current-password"
         value={password}
         onChange={setPassword}
         field={form.field}
         error={form.fieldErrors.password}
+        focusOnArrival={search.carried !== undefined}
       />
     </AuthPage>
   );
