@@ -20,7 +20,7 @@ wrong thing and is missing on the five feed routes (D-102).
   aggregate; three days, widened once to fourteen; the ±3° band never
   widens; groups under two runners drop. The result carries its band, damp
   class and window so the eyebrow is `MATCHING [41–47°] · DAMP · LAST 3
-  DAYS`. `ConditionsTab` states: waiting (breathing headline), location
+DAYS`. `ConditionsTab` states: waiting (breathing headline), location
   denied (city form), no matches, matched/widened. A saved location skips
   the prompt.
 - **D** — pager (one photo, `1 / 2`), run strip with badge (or the owner's
@@ -57,8 +57,13 @@ wrong thing and is missing on the five feed routes (D-102).
 
 ## Open questions
 
-- **No username exists** (`user_profiles` has a display name only). Search,
-  G and H draw `@username`; built without that slot until the owner decides.
-- **A typed city has no coordinates.** O1's field is a label and nothing
-  geocodes it, so Location denied saves the label and, until a geocoder
-  exists, goes to No matches, as the ruling says an unmatched city does.
+Answered by the owner, 2026-09-24:
+
+- **Usernames** — the product moves to usernames in a separate task
+  (schema plus signup/settings). Here, display names stand where the frames
+  draw `@username`.
+- **A typed city** — geocoded through Visual Crossing (`resolvePlace` in
+  `modules/weather`), saved as `city_label`, `lat`, `lng`; a city nobody
+  can find is a field message.
+- **Per-item flags on someone else's D** — the contract holds: never public.
+- **No Useful or Report on your own D** — confirmed.
