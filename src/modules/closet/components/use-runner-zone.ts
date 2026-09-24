@@ -1,36 +1,26 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * The zone the runner's device is in, once there is a device to ask.
  *
  * **Nothing stores a runner's zone** — the profile holds a city's lat/lng
  * and no zone name — so the device is the only honest answer to "whose
- * Sep 12 is this". Asked through `useSyncExternalStore` because that hook
- * is built for exactly this split: the server snapshot (`undefined`, read
- * as UTC) is what the server renders and what hydration compares against,
- * and the client snapshot takes over straight after — so a date near
- * midnight moves once after load rather than failing hydration, which is
- * the failure `lib/dates.ts` was written about.
+ * Sep 12 is this".
  *
- * The zone never changes while a page is open, so there is nothing to
- * subscribe to.
+ * `undefined` (read as UTC) on the first render, which is also what the
+ * server renders, so hydration compares like with like; the device's zone
+ * after mount. A date near midnight therefore moves once after load rather
+ * than failing hydration, which is the failure `lib/dates.ts` was written
+ * about.
+ *
+ * The effect has no dependency list on purpose: it runs after every render
+ * and sets the same string, which React ignores — and there is then no
+ * array for a mutant to replace with another constant one.
  */
 export function useRunnerZone(): string | undefined {
-  return useSyncExternalStore(noChanges, deviceZone, serverZone);
-}
-
-function noChanges(): () => void {
-  return unsubscribe;
-}
-
-function unsubscribe(): void {
-  // Nothing was subscribed.
-}
-
-function deviceZone(): string {
-  return new Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
-function serverZone(): undefined {
-  return;
+  const [zone, setZone] = useState<string | undefined>();
+  useEffect(() => {
+    setZone(new Intl.DateTimeFormat().resolvedOptions().timeZone);
+  });
+  return zone;
 }

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   RouterProvider,
@@ -8,6 +9,7 @@ import {
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+import { wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { GarmentDetail } from "../../src/modules/closet/components/GarmentDetail";
@@ -27,13 +29,19 @@ function db() {
   return drizzle(env.DIALED_CORE);
 }
 
-async function renderedMarkup(): Promise<string> {
+async function renderedMarkup(isRetired = false): Promise<string> {
   const userId = newUlid();
   const created = await createItem(db(), userId, {
     category: "top",
     name: "Rover Half-Zip",
     productUrl: "https://janji.com/p/rover-half-zip",
   });
+  if (isRetired) {
+    await db()
+      .update(wardrobeItems)
+      .set({ retired: true, retiredAt: 1_789_257_000 })
+      .where(eq(wardrobeItems.id, created.id));
+  }
   const detail = await getItemDetailWithPairs(db(), userId, created.id);
   const rootRoute = createRootRoute({
     component: () => (
@@ -62,6 +70,13 @@ describe("GarmentDetail's first paint, against a real stored row", () => {
 
     expect(markup).not.toContain('data-part="photo-well"');
     expect(markup).not.toContain("Add a photo");
+  });
+
+  it("dates a retired piece in UTC on the server's frame, which hydration then agrees with", async () => {
+    // 2026-09-12 23:50 UTC. The device's zone takes over after mount.
+    const markup = await renderedMarkup(true);
+
+    expect(markup).toMatch(/\[<!-- -->Retired Sep 12<!-- -->\]/u);
   });
 
   it("draws no product link, even for a garment that has one stored", async () => {

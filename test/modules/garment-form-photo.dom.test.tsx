@@ -309,6 +309,8 @@ describe("GarmentForm: a picked photo", () => {
     });
     expect(onSaved).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledTimes(1);
+    // The well is let go of: the held photo shows again, not a busy well.
+    expect(well()).toHaveAttribute("data-state", "filled");
 
     // Another file is the fix, and picking one clears the mark.
     await user.upload(fileInput(), png("smaller.png"));
@@ -342,25 +344,39 @@ describe("GarmentForm: a picked photo", () => {
     expect(screen.queryByText("Photo not saved")).toBeNull();
   });
 
-  it("sends the photo once however fast Try again is pressed", async () => {
+  it("sends the photo once when Save is pressed while Try again is in flight", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
     const pending = Promise.withResolvers<{ ok: true }>();
     const upload = vi
       .fn<Upload>()
       .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
-      .mockReturnValueOnce(pending.promise);
-    renderForm({ upload });
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({ ok: true });
+    const { onSaved, save } = renderForm({ upload });
 
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
-    const retry = await screen.findByRole("button", { name: "Try again" });
-    await user.dblClick(retry);
-
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(2);
+    });
+    // Past the form's announce-then-move grace, so the second save has
+    // reached the photo step — where the guard turns it away.
+    await act(async () => {
+      await new Promise((resolve) => {
+        globalThis.setTimeout(resolve, 200);
+      });
+    });
     expect(upload).toHaveBeenCalledTimes(2);
+
     await act(async () => {
       pending.resolve({ ok: true });
       await pending.promise;
+    });
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -477,6 +493,25 @@ describe("GarmentForm: a picked photo", () => {
 });
 
 describe("GarmentForm: editing a garment that has a photo", () => {
+  it("keeps the emptied well at rest while the stored photo is being removed", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    const remove = vi.fn<RemovePhoto>(() => pending.promise);
+    renderForm({ url: "/closet/photo/01ITEM/card", remove });
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(remove).toHaveBeenCalled();
+    });
+    expect(well()).toHaveAttribute("data-state", "empty");
+    await act(async () => {
+      pending.resolve(undefined);
+      await pending.promise;
+    });
+  });
+
   it("removes the stored photo on Save, after the row is written", async () => {
     const user = userEvent.setup();
     const { calls, removePhoto, onSaved } = renderForm({
