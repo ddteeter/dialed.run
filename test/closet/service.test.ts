@@ -304,6 +304,33 @@ describe("performance stats: verdicts, mileage, pairs-with", () => {
     ).toStrictEqual([["Shorts", 3]]);
   });
 
+  it("gives a retired piece no pairs-with slot", async () => {
+    const userId = newUlid();
+    const client = db();
+    const shirt = await createItem(client, userId, {
+      category: "top",
+      name: "Shirt",
+    });
+    const oldShorts = await createItem(client, userId, {
+      category: "bottom",
+      name: "Old shorts",
+    });
+    const cap = await createItem(client, userId, {
+      category: "headwear",
+      name: "Cap",
+    });
+    for (let index = 0; index < 3; index += 1) {
+      await logEntry(userId, [shirt.id, oldShorts.id], 0, 5000);
+    }
+    await logEntry(userId, [shirt.id, cap.id], 0, 5000);
+    await retireItem(client, userId, oldShorts.id);
+
+    const detail = await getItemDetailWithPairs(client, userId, shirt.id);
+    expect(
+      detail.pairedItems.map((pair) => [pair.item.name, pair.count]),
+    ).toStrictEqual([["Cap", 1]]);
+  });
+
   it("drops a pair whose piece is not this runner's to name", async () => {
     // Pairs come from this runner's own entries, so a missing row is one
     // that was deleted since; it drops out rather than rendering a blank.

@@ -133,6 +133,7 @@ function row(overrides: Partial<EntryItemRow> = {}): EntryItemRow {
     createdAt: NOW,
     verdict: 0,
     distanceM: 5000,
+    retired: false,
     ...overrides,
   };
 }
@@ -181,6 +182,15 @@ describe("summarizeByItem", () => {
     ]);
     expect(dialedKits.get("run-1")).toStrictEqual(["shirt", "shorts"]);
     expect(dialedKits.get("run-2")).toStrictEqual(["shirt"]);
+  });
+
+  it("never offers a retired piece as a pairing, though its own history counts", () => {
+    const { dialedKits, summaries } = summarizeByItem([
+      row({ entryId: "run-1", itemId: "shirt" }),
+      row({ entryId: "run-1", itemId: "old-shorts", retired: true }),
+    ]);
+    expect(dialedKits.get("run-1")).toStrictEqual(["shirt"]);
+    expect(summaries.get("old-shorts")?.dialedCount).toBe(1);
   });
 
   it("leaves a kit out of the pairings unless the run was dialed", () => {

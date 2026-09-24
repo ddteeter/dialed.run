@@ -4,6 +4,7 @@ import { requireSession } from "../../modules/auth/functions";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import {
   createItemFn,
+  updateItemFn,
   removePhotoFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
@@ -34,6 +35,9 @@ function NewGarmentPage() {
         <GarmentForm
           save={async (garment) =>
             createItemFn({ data: { garment, idempotencyKey } })
+          }
+          updateSaved={async (itemId, garment) =>
+            updateItemFn({ data: { itemId, garment } })
           }
           onSaved={async (created) => {
             rotate();

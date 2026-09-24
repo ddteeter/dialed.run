@@ -19,6 +19,7 @@ import {
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import { garmentLabel } from "../label";
+import { photoUrlFor } from "../photo-url";
 import { CompositionBlock } from "./Composition";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
 import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
@@ -232,7 +233,9 @@ export function GarmentDetail({
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
   unretire: (input: { data: { itemId: string } }) => Promise<unknown>;
-  remove: (input: { data: { itemId: string } }) => Promise<unknown>;
+  remove: (input: {
+    data: { itemId: string };
+  }) => Promise<{ action: "retired" | "deleted" }>;
   uploadPhoto: (input: {
     data: FormData;
   }) => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -252,6 +255,7 @@ export function GarmentDetail({
   const { item, isGeneric, composition } = detail;
   const itemId = item.id;
   const { runCount } = summaryOf(detail);
+  const photoUrl = photoUrlFor(item);
   // Same name for the heading and the photo's accessible name.
   const label = garmentLabel({ name: item.name, brand: item.brand, isGeneric });
 
@@ -299,22 +303,44 @@ export function GarmentDetail({
     },
   });
 
-  const confirmed = useControlAction({
-    action: async (kind: ConfirmKind) => {
-      if (kind === "delete") {
-        await remove({ data: { itemId } });
-        await navigate({ to: "/closet" });
-        return;
-      }
+  /**
+   * Land on the closet with retired pieces shown, so the piece is visibly
+   * *there* and marked [Retired] — the grid hides retired pieces by
+   * default, and without the switch on it would simply appear to have
+   * been deleted by the action that promises not to.
+   */
+  async function toClosetWithRetired(): Promise<void> {
+    await navigate({ to: "/closet", search: { retired: true } });
+  }
+
+  /**
+   * One action per sheet, never one shared between them: a failure is a
+   * fact about the thing that failed. Shared, a failed Retire followed by
+   * Keep it and Delete opened the delete sheet showing "Not retired", and
+   * its Try again replayed the retire under a heading asking to delete.
+   */
+  const retiring = useControlAction({
+    action: async () => {
       await retire({ data: { itemId } });
       await router.invalidate();
-      // Land on the closet with retired pieces shown, so the piece is
-      // visibly *there* and marked [Retired] — the grid hides retired
-      // pieces by default, and without the switch on it would simply
-      // appear to have been deleted by the action that promises not to.
-      await navigate({ to: "/closet", search: { retired: true } });
+      await toClosetWithRetired();
     },
-    kicker: confirming === "delete" ? "Not deleted" : "Not retired",
+    kicker: "Not retired",
+  });
+
+  const deleting = useControlAction({
+    action: async () => {
+      const outcome = await remove({ data: { itemId } });
+      // The server retires instead when a run was logged against the piece
+      // since this page loaded (retire, don't delete) — so it lands where
+      // a retire does, with the piece in sight, never hidden.
+      if (outcome.action === "retired") {
+        await toClosetWithRetired();
+        return;
+      }
+      await navigate({ to: "/closet" });
+    },
+    kicker: "Not deleted",
   });
 
   return (
@@ -324,7 +350,8 @@ export function GarmentDetail({
           upload.status ||
           removal.status ||
           bringBack.status ||
-          confirmed.status}
+          retiring.status ||
+          deleting.status}
       </FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">
@@ -340,7 +367,7 @@ export function GarmentDetail({
         <Colorway item={item} />
       </div>
 
-      {item.photoKey === null ? undefined : (
+      {photoUrl === undefined ? undefined : (
         <div className="flex flex-col gap-2">
           <FileWell
             part="photo-well"
@@ -348,7 +375,7 @@ export function GarmentDetail({
             pending={upload.pending || photo.stepping}
             accept={photoAcceptAttribute}
             error={photoError}
-            preview={{ src: `/closet/photo/${itemId}/card`, alt: label }}
+            preview={{ src: photoUrl, alt: label }}
             onRemove={() => {
               void removal.run();
             }}
@@ -469,7 +496,7 @@ export function GarmentDetail({
         kind={confirming}
         name={item.name}
         runCount={runCount}
-        action={confirmed}
+        action={confirming === "delete" ? deleting : retiring}
         onClose={() => {
           setConfirming(undefined);
         }}

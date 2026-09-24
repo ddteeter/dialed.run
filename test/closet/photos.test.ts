@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 // A 4000x3000 (12 MP) synthetic JPEG, named `.bin` so wrangler/vite's
@@ -13,6 +13,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   createItem,
+  deleteOrRetireItem,
   getOwnedItem,
   NotFoundError,
 } from "../../src/modules/closet/service";
@@ -22,7 +23,6 @@ import {
   extensionFor,
   getItemPhotoObject,
   isPhotoSize,
-  photoKeyFor,
   photoObjectKeys,
   photoSizes,
   PhotoValidationError,
@@ -33,6 +33,10 @@ import {
   uploadPhotoFromForm,
   validatePhoto,
 } from "../../src/modules/closet/photos";
+import {
+  deleteStoredObjects,
+  photoKeyFor,
+} from "../../src/modules/closet/photo-store";
 import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
 
 function db() {
@@ -98,7 +102,10 @@ describe("photo pipeline: store + retrieve + benchmark", () => {
     // three on a loaded laptop. Anything that trips 30s is a real bug.
     expect(elapsedMs).toBeLessThan(30_000);
 
-    expect(result.photoKey).toBe(`items/${userId}/${item.id}`);
+    // A new version under the item's own prefix, per upload.
+    expect(result.photoKey).toMatch(
+      new RegExp(`^items/${userId}/${item.id}/[0-9A-Z]{26}$`, "u"),
+    );
 
     const updated = await getOwnedItem(client, userId, item.id);
     expect(updated.photoKey).toBe(result.photoKey);
@@ -511,7 +518,8 @@ async function garmentWithPhoto(userId: string) {
     category: "top",
     name: "Photographed",
   });
-  const photoKey = photoKeyFor(userId, item.id);
+  // A versioned key, as every upload now writes one.
+  const photoKey = `${photoKeyFor(userId, item.id)}/01V1`;
   await client
     .update(wardrobeItems)
     .set({ photoKey, visibility: "hidden_pending_review" })
@@ -542,26 +550,50 @@ describe("removeItemPhoto (round 22, the well's Remove)", () => {
     expect(await storedKeys(photoKey)).toStrictEqual([]);
   });
 
-  it("does nothing to a garment with no photo", async () => {
-    // Without the guard the key would be `${null}` — the string "null" —
-    // and the delete would reach whatever sits there.
-    await env.MEDIA.put("null/thumb.webp", new Uint8Array([1]));
+  it("leaves a no-photo row alone, but still clears anything stored under the item", async () => {
+    // A retry after a failed R2 delete arrives here: the row was already
+    // cleared, and the bytes are still there. It must finish the job.
     const userId = newUlid();
     const client = db();
     const item = await createItem(client, userId, {
       category: "top",
-      name: "Never photographed",
+      name: "Row already cleared",
     });
     await client
       .update(wardrobeItems)
       .set({ visibility: "pass" })
       .where(eq(wardrobeItems.id, item.id));
+    const prefix = photoKeyFor(userId, item.id);
+    await env.MEDIA.put(`${prefix}/01OLD/card.webp`, new Uint8Array([1]));
 
     await removeItemPhoto(client, userId, item.id);
 
     const row = await getOwnedItem(client, userId, item.id);
     expect(row.visibility).toBe("pass");
-    expect(await storedKeys("null/")).toStrictEqual(["null/thumb.webp"]);
+    expect(await storedKeys(prefix)).toStrictEqual([]);
+  });
+
+  it("finishes on a retry when R2 failed after the row was cleared", async () => {
+    // Law 8c: the D1 write commits, the delete throws, the runner sees
+    // "Photo kept" and presses Try again. The retry must reach the bytes
+    // even though the row no longer names them.
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+    const failing = vi
+      .spyOn(env.MEDIA, "delete")
+      .mockRejectedValueOnce(new Error("R2 down"));
+
+    await expect(removeItemPhoto(db(), userId, item.id)).rejects.toThrow(
+      "R2 down",
+    );
+    const cleared = await getOwnedItem(db(), userId, item.id);
+    expect(cleared.photoKey).toBeNull();
+    expect(await storedKeys(photoKey)).toHaveLength(6);
+    failing.mockRestore();
+
+    await removeItemPhoto(db(), userId, item.id);
+
+    expect(await storedKeys(photoKeyFor(userId, item.id))).toStrictEqual([]);
   });
 
   it("refuses another runner's garment and touches none of it", async () => {
@@ -576,6 +608,124 @@ describe("removeItemPhoto (round 22, the well's Remove)", () => {
     expect(row.photoKey).toBe(photoKey);
     expect(await storedKeys(photoKey)).toHaveLength(6);
   });
+});
+
+describe("deleteStoredObjects", () => {
+  it("deletes every page under the prefix, and nothing beside it", async () => {
+    const prefix = `items/${newUlid()}/${newUlid()}`;
+    const beside = `${prefix}X/card.webp`;
+    for (const name of ["a", "b", "c", "d", "e"]) {
+      await env.MEDIA.put(`${prefix}/${name}.webp`, new Uint8Array([1]));
+    }
+    await env.MEDIA.put(beside, new Uint8Array([1]));
+
+    await deleteStoredObjects(prefix, 2);
+
+    expect(await storedKeys(`${prefix}/`)).toStrictEqual([]);
+    expect(await storedKeys(beside)).toStrictEqual([beside]);
+    await env.MEDIA.delete(beside);
+  });
+
+  it("is a no-op on a prefix with nothing under it", async () => {
+    await expect(
+      deleteStoredObjects(`items/${newUlid()}/${newUlid()}`),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("hard-deleting a garment takes its photo with it", () => {
+  it("clears storage when the garment is deleted, not when it is retired", async () => {
+    const userId = newUlid();
+    const deleted = await garmentWithPhoto(userId);
+
+    expect(
+      await deleteOrRetireItem(db(), userId, deleted.item.id),
+    ).toStrictEqual({ action: "deleted" });
+    expect(
+      await storedKeys(photoKeyFor(userId, deleted.item.id)),
+    ).toStrictEqual([]);
+  });
+});
+
+/**
+A decodable 1x1 PNG, so a replace test pays for photon on one pixel.
+*/
+const PNG_1X1 = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  ),
+  (char) => char.codePointAt(0) ?? 0,
+);
+
+describe("replacing a photo", () => {
+  it("writes a new version, and the replaced one leaves storage", async () => {
+    const userId = newUlid();
+    const client = db();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Replaced",
+    });
+
+    const first = await uploadItemPhoto(
+      client,
+      userId,
+      item.id,
+      PNG_1X1,
+      "image/png",
+    );
+    const second = await uploadItemPhoto(
+      client,
+      userId,
+      item.id,
+      PNG_1X1,
+      "image/png",
+    );
+
+    expect(second.photoKey).not.toBe(first.photoKey);
+    expect(second.photoKey.startsWith(`${photoKeyFor(userId, item.id)}/`)).toBe(
+      true,
+    );
+    expect(await storedKeys(`${first.photoKey}/`)).toStrictEqual([]);
+    expect(await storedKeys(`${second.photoKey}/`)).toHaveLength(4);
+  }, 20_000);
+
+  it("keeps the new photo when clearing the old one fails", async () => {
+    // Law 5: the photo the runner asked for is saved; the leftover is
+    // reported, and Remove or Delete clears the whole prefix later.
+    const userId = newUlid();
+    const client = db();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Replace, cleanup fails",
+    });
+    await uploadItemPhoto(client, userId, item.id, PNG_1X1, "image/png");
+    const failing = vi
+      .spyOn(env.MEDIA, "delete")
+      .mockRejectedValueOnce(new Error("R2 down"));
+
+    const report = vi.fn();
+    const second = await uploadItemPhoto(
+      client,
+      userId,
+      item.id,
+      PNG_1X1,
+      "image/png",
+      undefined,
+      report,
+    );
+    failing.mockRestore();
+
+    expect(report).toHaveBeenCalledWith(expect.any(Error), {
+      userId,
+      itemId: item.id,
+      op: "replace-photo-cleanup",
+    });
+
+    const row = await getOwnedItem(client, userId, item.id);
+    expect(row.photoKey).toBe(
+      second.photoKey,
+    );
+  }, 20_000);
 });
 
 function formFor(itemId: string, photo?: File): FormData {
@@ -608,10 +758,10 @@ describe("uploadPhotoFromForm", () => {
     const form = formFor(item.id, photoFile());
     const result = await uploadPhotoFromForm(client, userId, form);
 
-    expect(result).toStrictEqual({
-      ok: true,
-      result: { photoKey: `items/${userId}/${item.id}` },
-    });
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.result.photoKey).toMatch(
+      new RegExp(`^items/${userId}/${item.id}/[0-9A-Z]{26}$`, "u"),
+    );
   });
 
   it("says so when no file was attached", async () => {

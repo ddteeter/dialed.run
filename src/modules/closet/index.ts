@@ -40,4 +40,5 @@ export {
 } from "./tap-list";
 export { photoUrlFor } from "./photo-url";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
-export { photoKeyFor, photoSizes } from "./photos";
+export { photoSizes } from "./photos";
+export { photoKeyFor } from "./photo-store";

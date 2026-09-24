@@ -199,6 +199,17 @@ export interface GarmentFormProps {
    * which one it is.
    */
   save: (garment: Garment) => Promise<{ id: string }>;
+  /**
+   * Writes the fields onto a row this form already saved. The add form
+   * passes it: once a create has succeeded and only the photo failed, the
+   * next submit must *update* that row — resending the create returns the
+   * first row unchanged (it is idempotent on the form's key), so a runner
+   * who fixed the name while picking another photo lost the fix while
+   * being told "Added to your closet". The edit form's `save` is already
+   * an update, so it passes nothing.
+   */
+  updateSaved?:
+    ((itemId: string, garment: Garment) => Promise<{ id: string }>) | undefined;
   onSaved: (result: { id: string }) => Promise<void>;
   submitLabel: string;
   pendingLabel: string;
@@ -293,6 +304,7 @@ export function GarmentForm({
   brandOptions,
   onBrandInput,
   save,
+  updateSaved,
   onSaved,
   submitLabel,
   pendingLabel,
@@ -312,6 +324,10 @@ export function GarmentForm({
    */
   const [held, setHeld] = useState<File | undefined>();
   const [removed, setRemoved] = useState(false);
+  /**
+  The row a submit already saved, when a later step of that submit failed.
+  */
+  const [savedId, setSavedId] = useState<string | undefined>();
   const heldUrl = useObjectUrl(held);
   const preview = heldUrl ?? (removed ? undefined : photo.url);
   const pick = usePhotoPick({
@@ -322,7 +338,11 @@ export function GarmentForm({
   const form = useFormSubmit({
     schema: garmentFormSchema,
     action: async (garment: Garment) => {
-      const saved = await save(garment);
+      const saved =
+        savedId === undefined || updateSaved === undefined
+          ? await save(garment)
+          : await updateSaved(savedId, garment);
+      setSavedId(saved.id);
       if (held !== undefined) {
         const data = new FormData();
         data.set("itemId", saved.id);
@@ -633,9 +653,7 @@ export function GarmentForm({
         accept={photoAcceptAttribute}
         error={form.fieldErrors[PHOTO_FIELD]}
         preview={
-          preview === undefined
-            ? undefined
-            : { src: preview, alt: values.name }
+          preview === undefined ? undefined : { src: preview, alt: values.name }
         }
         onRemove={() => {
           setHeld(undefined);

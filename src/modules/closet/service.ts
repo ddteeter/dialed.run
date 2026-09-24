@@ -53,6 +53,7 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/owned";
+import { deleteStoredObjects, photoKeyFor } from "./photo-store";
 import { isDeniedDomain } from "../safety";
 import { nowSeconds } from "../../lib/now";
 
@@ -412,6 +413,11 @@ export async function deleteOrRetireItem(
       .where(ownedItemWhere(userId, itemId));
     return { action: "retired" };
   }
+  // Its photo leaves storage first. The other order cannot be retried: once
+  // the row is gone, ownership cannot be proven again and the bytes would
+  // stay for good. This order, failing between the two, leaves a garment
+  // whose photo no longer loads — visible, and a second Delete finishes it.
+  await deleteStoredObjects(photoKeyFor(userId, itemId));
   await db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId));
   return { action: "deleted" };
 }
@@ -525,6 +531,10 @@ export interface EntryItemRow {
   createdAt: number;
   verdict: number | null;
   distanceM: number;
+  /**
+  Whether the worn piece is retired now — it may be worn, never suggested.
+  */
+  retired: boolean;
 }
 
 async function fetchUserEntryItemRows(
@@ -538,10 +548,16 @@ async function fetchUserEntryItemRows(
       createdAt: outfitEntries.createdAt,
       verdict: outfitEntries.verdict,
       distanceM: runs.distanceM,
+      retired: wardrobeItems.retired,
     })
     .from(outfitEntries)
     .innerJoin(outfitEntryItems, eq(outfitEntryItems.entryId, outfitEntries.id))
     .innerJoin(runs, eq(runs.id, outfitEntries.runId))
+    // By primary key, so it costs a lookup per row and scans nothing. The
+    // retired flag has to come back rather than filter here: a retired
+    // piece still has its own history to show (WORKED AT, its mileage),
+    // it just never takes a pairs-with slot from a piece still in use.
+    .innerJoin(wardrobeItems, eq(wardrobeItems.id, outfitEntryItems.itemId))
     .where(eq(outfitEntries.userId, userId));
 }
 
@@ -581,7 +597,9 @@ export function summarizeByItem(rows: EntryItemRow[]): {
     summary.mileageM += row.distanceM;
     summaries.set(row.itemId, summary);
 
-    if (row.verdict === 0) {
+    // A retired piece is left out of the kits a pairing is read from, so it
+    // is never offered as something to wear with another.
+    if (row.verdict === 0 && !row.retired) {
       const items = dialedKits.get(row.entryId) ?? [];
       items.push(row.itemId);
       dialedKits.set(row.entryId, items);

@@ -12,7 +12,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
-import { ulidSchema } from "../../lib/ids";
+import { newUlid, ulidSchema } from "../../lib/ids";
 import {
   allowedPhotoTypes,
   isAllowedPhotoType,
@@ -21,6 +21,8 @@ import {
 import { env } from "../../env";
 import { fitWithin, withReleased } from "../../lib/photo-pipeline";
 import { getOwnedItem } from "./service";
+import { deleteStoredObjects, photoKeyFor } from "./photo-store";
+import { captureException } from "../ops";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
@@ -74,10 +76,6 @@ export function validatePhoto(contentType: string, byteLength: number): void {
   }
 }
 
-export function photoKeyFor(userId: string, itemId: string): string {
-  return `items/${userId}/${itemId}`;
-}
-
 export interface PhotoUploadResult {
   photoKey: string;
 }
@@ -92,9 +90,15 @@ export async function uploadItemPhoto(
   Injectable so a test can make the upstream fail on demand.
   */
   classify?: Classify,
+  /**
+  Where a failed cleanup of the replaced photo is reported. Injectable for
+  the same reason as `classify`.
+  */
+  report: typeof captureException = captureException,
 ): Promise<PhotoUploadResult> {
   validatePhoto(contentType, bytes.byteLength);
-  await getOwnedItem(db, userId, itemId);
+  const owned = await getOwnedItem(db, userId, itemId);
+  const previous = owned.photoKey;
 
   // Lazily imported on purpose: this package ships a WASM module, and a
   // static import instantiates it during worker startup — a cost paid by
@@ -103,7 +107,11 @@ export async function uploadItemPhoto(
   // module compiles once per isolate, on a request that was always slow.
   const { PhotonImage, SamplingFilter, resize } =
     await import("@cf-wasm/photon/workerd");
-  const keyPrefix = photoKeyFor(userId, itemId);
+  // A new version under the item's prefix for every upload. The URL a
+  // photo is served from carries the version (`photoUrlFor`), and the GET
+  // route caches it as immutable — so a replaced photo must live at a new
+  // address, or every browser that saw the old one keeps showing it.
+  const keyPrefix = `${photoKeyFor(userId, itemId)}/${newUlid()}`;
   const ext = extensionFor(contentType);
 
   // Original first (requirement 8): even if decode/resize below throws, the
@@ -143,6 +151,20 @@ export async function uploadItemPhoto(
     .set({ photoKey: keyPrefix, visibility: "pending" })
     .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
 
+  // The replaced photo leaves storage — it may be the unblurred frame the
+  // runner replaced it to get rid of. After the row points at the new
+  // version, so a failure here never leaves the row pointing at nothing;
+  // and never failing the upload (law 5), because the photo the runner
+  // asked for is saved. What is left behind is reported, and Remove, or
+  // deleting the garment, clears the whole prefix whatever is in it.
+  if (previous !== null) {
+    try {
+      await env.MEDIA.delete(photoObjectKeys(previous));
+    } catch (error) {
+      report(error, { userId, itemId, op: "replace-photo-cleanup" });
+    }
+  }
+
   // Same shape as the entry path: bounded, never throws, and a failure
   // leaves the row `pending` for the screening-retry cron. The ORIGINAL
   // bytes are classified rather than a derived size — a resize is our
@@ -179,11 +201,14 @@ export function photoObjectKeys(keyPrefix: string): string[] {
  * having no photo, and its bytes leave storage.
  *
  * **One D1 write, then R2, and in that order on purpose** (law 8c — the
- * two cannot be one transaction). Clearing the key first means the worst
- * a failed delete leaves is bytes nothing points at, which the next upload
- * to this garment overwrites (the prefix is the item's). The other order
- * would leave a row pointing at objects that are gone: a broken image on
- * the runner's own screen, with nothing to heal it.
+ * two cannot be one transaction). The other order would leave a row
+ * pointing at objects that are gone: a broken image on the runner's own
+ * screen. This order can leave bytes nothing points at — so the R2 half
+ * never depends on the row: it deletes everything under the item's own
+ * prefix, whether or not the row still names a photo. A failed delete
+ * says "Photo kept", and the runner's Try again finishes the job even
+ * though the row was already cleared; without that, the retry returned
+ * early and the bytes (possibly a face) stayed for good.
  *
  * `visibility` goes back to `ok` in the same statement, because that is
  * what a garment with no photo wears (`uploadItemPhoto` sets `pending`
@@ -197,13 +222,16 @@ export async function removeItemPhoto(
   itemId: string,
 ): Promise<void> {
   const item = await getOwnedItem(db, userId, itemId);
-  if (item.photoKey === null) return;
-  await db
-    .update(wardrobeItems)
-    // `sql\`NULL\`` rather than the literal — see lib/sql-null.
-    .set({ photoKey: sql`NULL`, visibility: "ok" })
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)));
-  await env.MEDIA.delete(photoObjectKeys(item.photoKey));
+  if (item.photoKey !== null) {
+    await db
+      .update(wardrobeItems)
+      // `sql\`NULL\`` rather than the literal — see lib/sql-null.
+      .set({ photoKey: sql`NULL`, visibility: "ok" })
+      .where(
+        and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)),
+      );
+  }
+  await deleteStoredObjects(photoKeyFor(userId, itemId));
 }
 
 /**

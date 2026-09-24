@@ -92,6 +92,7 @@ function performance(
 
 const nothing = () => Promise.resolve();
 const uploads = () => Promise.resolve({ ok: true as const });
+const deleted = () => Promise.resolve({ action: "deleted" as const });
 
 function garment(
   overrides: Partial<Detail> = {},
@@ -102,7 +103,7 @@ function garment(
       detail={detail(overrides)}
       retire={nothing}
       unretire={nothing}
-      remove={nothing}
+      remove={deleted}
       uploadPhoto={uploads}
       removePhoto={nothing}
       {...props}
@@ -295,7 +296,7 @@ describe("GarmentDetail: the photo", () => {
     expect(part("photo-well")).toHaveAttribute("data-state", "filled");
     expect(
       screen.getByRole("img", { name: "Tracksmith Harrier" }),
-    ).toHaveAttribute("src", "/closet/photo/01ITEM/card");
+    ).toHaveAttribute("src", "/closet/photo/01ITEM/card?v=01ITEM");
     expect(screen.getByLabelText("Replace")).toHaveAttribute(
       "accept",
       "image/jpeg,image/png,image/webp",
@@ -883,7 +884,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
 describe("GarmentDetail: the delete confirm (round 22)", () => {
   it("deletes a piece with no runs, after asking, and goes back to the closet", async () => {
     const user = userEvent.setup();
-    const remove = vi.fn<Props["remove"]>(nothing);
+    const remove = vi.fn<Props["remove"]>(deleted);
     const retire = vi.fn<Props["retire"]>(nothing);
     const { router } = await renderWithRouter(garment({}, { remove, retire }));
 
@@ -914,7 +915,7 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     // Retire, don't delete: `deleteOrRetireItem` retires a piece any entry
     // references, so the sheet says what will actually be done.
     const user = userEvent.setup();
-    const remove = vi.fn<Props["remove"]>(nothing);
+    const remove = vi.fn<Props["remove"]>(deleted);
     await renderWithRouter(
       garment({ performance: performance({ runCount: 2 }) }, { remove }),
     );
@@ -929,7 +930,7 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
 
   it("says [ Deleting ] while it waits, and Not deleted when it fails", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
+    const pending = Promise.withResolvers<{ action: "deleted" }>();
     await renderWithRouter(garment({}, { remove: () => pending.promise }));
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -942,5 +943,91 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     });
 
     expect(await within(sheet()).findByText("Not deleted")).toBeVisible();
+  });
+
+  it("lands with retired pieces shown when the server retired it instead", async () => {
+    // A run was logged against the piece after this page loaded, so the
+    // delete became a retire (retire, don't delete). Landing on a grid that
+    // hides retired pieces would make it look deleted after all.
+    const user = userEvent.setup();
+    const { router } = await renderWithRouter(
+      garment(
+        {},
+        { remove: () => Promise.resolve({ action: "retired" as const }) },
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(within(sheet()).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/closet");
+    });
+    expect(router.state.location.search).toMatchObject({ retired: true });
+  });
+});
+
+describe("GarmentDetail: each sheet owns its own failure", () => {
+  it("does not carry a failed retire into the delete sheet", async () => {
+    // One action shared by both sheets showed "Not retired" on the delete
+    // sheet, and its Try again replayed the retire under "Delete the …?".
+    const user = userEvent.setup();
+    const retire = vi
+      .fn<Props["retire"]>()
+      .mockRejectedValue(new Error("D1 down"));
+    const remove = vi.fn<Props["remove"]>(deleted);
+    await renderWithRouter(garment({}, { retire, remove }));
+
+    await user.click(
+      within(part("actions")).getByRole("button", { name: "Retire" }),
+    );
+    await user.click(within(sheet()).getByRole("button", { name: "Retire" }));
+    expect(await within(sheet()).findByText("Not retired")).toBeVisible();
+    await user.click(within(sheet()).getByRole("button", { name: "Keep it" }));
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
+    expect(within(sheet()).queryByText("Not retired")).toBeNull();
+    expect(
+      within(sheet()).queryByRole("button", { name: "Try again" }),
+    ).toBeNull();
+    await user.click(within(sheet()).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(remove).toHaveBeenCalledTimes(1);
+    });
+    expect(retire).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a failed retire's band when the retire sheet is reopened", async () => {
+    // It is still true that the piece was not retired.
+    const user = userEvent.setup();
+    const retire = vi
+      .fn<Props["retire"]>()
+      .mockRejectedValue(new Error("D1 down"));
+    await renderWithRouter(garment({}, { retire }));
+
+    await user.click(
+      within(part("actions")).getByRole("button", { name: "Retire" }),
+    );
+    await user.click(within(sheet()).getByRole("button", { name: "Retire" }));
+    await within(sheet()).findByText("Not retired");
+    await user.click(within(sheet()).getByRole("button", { name: "Keep it" }));
+    await user.click(
+      within(part("actions")).getByRole("button", { name: "Retire" }),
+    );
+
+    expect(within(sheet()).getByText("Not retired")).toBeVisible();
+  });
+});
+
+describe("GarmentDetail: the photo's address", () => {
+  it("serves the stored version, so a replaced photo is never the cached one", async () => {
+    await renderWithRouter(
+      garment(photographed({ photoKey: "items/01USER/01ITEM/01V2" })),
+    );
+    expect(
+      screen.getByRole("img", { name: "Tracksmith Harrier" }),
+    ).toHaveAttribute("src", "/closet/photo/01ITEM/card?v=01V2");
   });
 });

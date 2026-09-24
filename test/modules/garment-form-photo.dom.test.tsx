@@ -304,6 +304,76 @@ describe("GarmentForm: a picked photo", () => {
     expect(screen.queryByText("Photo must be 10 MB or smaller.")).toBeNull();
   });
 
+  it("updates the row it already made when the runner fixes a field and resubmits", async () => {
+    // The create succeeded and the photo was refused. Resending the create
+    // returns the first row unchanged (idempotent on the form's key), so
+    // the edit would be dropped while the form said "Added".
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
+      .mockResolvedValueOnce({ ok: true });
+    const updateSaved = vi.fn<NonNullable<GarmentFormProps["updateSaved"]>>(
+      (itemId) => Promise.resolve({ id: itemId }),
+    );
+    const { save, onSaved } = renderForm({ upload }, { updateSaved });
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo file is empty.");
+
+    await user.clear(screen.getByLabelText(/Model \/ name/));
+    await user.type(screen.getByLabelText(/Model \/ name/), "Harrier II");
+    await user.upload(fileInput(), png("other.png"));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith({ id: "01SAVED" });
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(updateSaved).toHaveBeenCalledWith(
+      "01SAVED",
+      expect.objectContaining({ name: "Harrier II" }),
+    );
+    expect(upload.mock.calls[1]?.[0].data.get("itemId")).toBe("01SAVED");
+  });
+
+  it("resaves through save when there is no update to use — the edit form", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
+      .mockResolvedValueOnce({ ok: true });
+    const { save, onSaved } = renderForm({ upload });
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo file is empty.");
+    await user.upload(fileInput(), png("other.png"));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it("creates through save the first time, even when it could update", async () => {
+    const user = userEvent.setup();
+    const updateSaved = vi.fn<NonNullable<GarmentFormProps["updateSaved"]>>();
+    const { save, onSaved } = renderForm({}, { updateSaved });
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(updateSaved).not.toHaveBeenCalled();
+  });
+
   it("drops a held photo on Remove, and lets its preview go", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");

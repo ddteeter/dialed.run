@@ -77,7 +77,7 @@ export function GarmentConfirm({
    * in the screen's one status region, and its kicker names what is still
    * true of this garment, which the screen knows.
    */
-  action: ControlAction<[ConfirmKind]>;
+  action: ControlAction<[]>;
   onClose: () => void;
 }>): JSX.Element {
   const isOpen = kind !== undefined;
@@ -109,7 +109,7 @@ export function GarmentConfirm({
           data-part="primary-action"
           {...inFlight(action.pending)}
           onClick={() => {
-            void action.run(shown);
+            void action.run();
           }}
           className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
         >

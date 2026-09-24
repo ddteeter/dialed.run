@@ -13,7 +13,7 @@ function ignore(): void {
   // Nothing under test reacts to this.
 }
 
-function idle(): ControlAction<["retire" | "delete"]> {
+function idle(): ControlAction<[]> {
   return {
     pending: false,
     failure: undefined,
