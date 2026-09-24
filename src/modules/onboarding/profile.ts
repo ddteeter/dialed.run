@@ -3,7 +3,12 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import { defaultUnits } from "../../lib/contracts";
-import type { Calibration, Preferences } from "./inputs";
+import type {
+  Calibration,
+  Preferences,
+  SharingChoice,
+  UnitsChoice,
+} from "./inputs";
 
 /**
  * O1's write, and the first thing in the app to create a `user_profiles`
@@ -78,27 +83,26 @@ export async function hasOnboarded(
 }
 
 /**
- * The settings screen's write: two display units and the sharing default.
+ * A settings sub-page's write: the units, or the sharing default.
  *
  * An upsert for the same reason `saveCalibration` is one — nothing else
- * creates this row — and it names only its own three columns, so saving
- * preferences cannot reset a calibration and recalibrating cannot reset
- * preferences. The two screens write disjoint sets on purpose.
+ * creates this row — and it names only the columns it was handed, so
+ * saving units cannot reset the sharing default, saving sharing cannot
+ * reset units, and neither can reset a calibration. Each sub-page is its
+ * own small form (round 22, item 20), and each writes a disjoint set.
+ *
+ * The input is whatever the sub-page's schema parsed (`unitsInput`,
+ * `sharingInput`), so no field outside those two sets can reach it.
  */
 export async function savePreferences(
   db: DrizzleD1Database,
   userId: string,
-  input: Preferences,
+  input: UnitsChoice | SharingChoice,
 ): Promise<void> {
-  const preferences = {
-    tempUnit: input.tempUnit,
-    distanceUnit: input.distanceUnit,
-    shareDefault: input.shareDefault,
-  };
   await db
     .insert(userProfiles)
-    .values({ userId, ...preferences })
-    .onConflictDoUpdate({ target: userProfiles.userId, set: preferences });
+    .values({ userId, ...input })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: input });
 }
 
 /**

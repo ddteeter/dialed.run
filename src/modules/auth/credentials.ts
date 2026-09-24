@@ -104,6 +104,16 @@ export async function signUp(values: SignUpValues): Promise<void> {
 }
 
 /**
+ * Signs out, as a promise that rejects — so the settings index's Sign out
+ * can say "Still signed in" rather than announce a sign-out that did not
+ * happen.
+ */
+export async function signOut(): Promise<void> {
+  const { error } = await authClient.signOut();
+  if (error) throw new AuthRejected(error.status);
+}
+
+/**
  * Asks Better Auth where Google's consent screen is, without going there.
  *
  * `disableRedirect` so the caller decides whether to leave: Au5's *"tapping

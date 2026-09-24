@@ -51,9 +51,7 @@ export function CallLadder({
 
       <Countdown ladder={ladder} />
 
-      {ladder.bands.length === 0 ? undefined : (
-        <Coverage ladder={ladder} />
-      )}
+      {ladder.bands.length === 0 ? undefined : <Coverage ladder={ladder} />}
 
       {isCalling ? undefined : <LogThisNext band={ladder.thinnestBand} />}
 
@@ -102,7 +100,9 @@ function Countdown({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
         <div
           data-part="meter-fill"
           className="h-full bg-accent-ink"
-          style={{ width: `${String((logged / CALL_VERDICT_THRESHOLD) * 100)}%` }}
+          style={{
+            width: `${String((logged / CALL_VERDICT_THRESHOLD) * 100)}%`,
+          }}
         />
       </div>
       <Bracketed>{`${String(logged)} of ${String(CALL_VERDICT_THRESHOLD)}`}</Bracketed>

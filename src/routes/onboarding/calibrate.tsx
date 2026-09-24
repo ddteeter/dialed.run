@@ -5,6 +5,7 @@ import { CalibrateForm } from "../../modules/onboarding/components/CalibrateForm
 import {
   localeUnitsQuery,
   saveCalibrationFn,
+  searchCitiesQuery,
 } from "../../modules/onboarding/functions";
 import { geolocate } from "../../modules/onboarding/geolocate";
 import { Page } from "../../ui";
@@ -31,6 +32,7 @@ function CalibratePage() {
       <CalibrateForm
         defaults={defaults}
         locate={geolocate}
+        searchCities={searchCitiesQuery}
         saveCalibration={saveCalibrationFn}
         onSaved={() => {
           void navigate({ to: "/onboarding/taplist" });

@@ -246,6 +246,29 @@ describe("savePreferences and currentSettings", () => {
     });
   });
 
+  it("writes only the sub-page's own fields (round 22, item 20)", async () => {
+    // Each sub-page is its own small form: saving units cannot reset the
+    // sharing default, and saving sharing cannot reset the units.
+    const userId = newUlid();
+    await savePreferences(coreDb(), userId, { shareDefault: false });
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "c",
+      distanceUnit: "km",
+    });
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+
+    await savePreferences(coreDb(), userId, { shareDefault: true });
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: true,
+    });
+  });
+
   it("answers with the app defaults for an account with no row", async () => {
     // Not a throw and not blanks: settings shows the same Fahrenheit and
     // miles a feed reader is already being shown, because `feed/units.ts`

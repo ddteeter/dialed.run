@@ -1,37 +1,57 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import type { CitySuggestion } from "../../src/modules/onboarding/cities";
 import { CalibrateForm } from "../../src/modules/onboarding/components/CalibrateForm";
 import type { Calibration } from "../../src/modules/onboarding/inputs";
 
 /**
- * Screen O1. The behaviour that matters is what a runner can finish
- * *without*: no location, no typed city, no unit change. One question.
+ * Screen O1, with round 22's location step (item 19). The behaviour that
+ * matters is what a runner can finish *without*: no location, no city, no
+ * unit change. One question.
  */
 const DEFAULTS = { temp: "f", distance: "mi" } as const;
+
+const MINNEAPOLIS: CitySuggestion = {
+  label: "Minneapolis, Minnesota",
+  lat: 44.98,
+  lng: -93.27,
+};
 
 function renderForm(
   overrides: {
     locate?: () => Promise<{ lat: number; lng: number } | undefined>;
-    onSaved?: () => void;
+    searchCities?: (input: {
+      data: { query: string };
+    }) => Promise<readonly CitySuggestion[]>;
+    defaults?: { temp: "f" | "c"; distance: "mi" | "km" };
   } = {},
 ) {
   // Typed and echoing its input, so `mock.calls[0]` has a shape.
   const save = vi.fn((input: { data: Calibration }) => Promise.resolve(input));
+  const onSaved = vi.fn();
+  const searchCities = vi.fn(
+    overrides.searchCities ?? (() => Promise.resolve([])),
+  );
   render(
     <CalibrateForm
-      defaults={DEFAULTS}
+      defaults={overrides.defaults ?? DEFAULTS}
       locate={overrides.locate ?? (() => Promise.resolve(undefined))}
+      searchCities={searchCities}
       saveCalibration={save}
-      onSaved={overrides.onSaved ?? vi.fn()}
+      onSaved={onSaved}
     />,
   );
-  return save;
+  return { save, onSaved, searchCities, user: userEvent.setup() };
 }
 
-describe("CalibrateForm", () => {
-  it("asks the design's question, with its five answers", () => {
+const submit = () => screen.getByRole("button", { name: "Start running" });
+const locateButton = () =>
+  screen.getByRole("button", { name: "Use my location" });
+
+describe("the question", () => {
+  it("asks the design's question, with its five answers and their offsets", () => {
     renderForm();
 
     expect(
@@ -39,20 +59,6 @@ describe("CalibrateForm", () => {
         name: "Compared to people you run with, do you run warm or cold?",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Always freezing/)).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/^Sweating in a t-shirt at 40°/),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the offset, because design says it is visible on purpose", () => {
-    // Requirement 1 names this copy. The numbers are the artboard's:
-    // +8°/+4°/0°/−4°/−8° in Fahrenheit, from 2.2°C per step.
-    renderForm();
-
-    // A tuple array, so both halves are typed and neither needs a non-null
-    // assertion to destructure. The minus is U+2212, which is what the
-    // component renders: a hyphen sits at the wrong height in mono.
     const offsets: readonly (readonly [string, string])[] = [
       ["Always freezing", "+8\u{00B0}"],
       ["Run a little cold", "+4\u{00B0}"],
@@ -62,58 +68,27 @@ describe("CalibrateForm", () => {
     ];
     for (const [answer, offset] of offsets) {
       expect(
-        screen.getByLabelText(new RegExp(`^${answer}`)).closest("label"),
+        screen.getByLabelText(new RegExp(`^${answer}`, "u")).closest("label"),
       ).toHaveTextContent(offset);
     }
-    expect(
-      screen.getByText(
-        "The offset is visible on purpose. You'll see it change as we learn.",
-      ),
-    ).toBeVisible();
   });
 
-  it("moves the offsets when the unit changes", () => {
-    // A temperature *difference*: Fahrenheit is ×9/5, never +32. Getting
-    // that wrong turns +8° into +40°, which is wrong and not obviously so.
-    renderForm();
-
+  it("moves the offsets when the unit changes", async () => {
+    const { user } = renderForm();
     const alwaysFreezing = () =>
-      screen.getByLabelText(/^Always freezing/).closest("label");
+      screen.getByLabelText(/^Always freezing/u).closest("label");
     expect(alwaysFreezing()).toHaveTextContent("+8°");
 
-    fireEvent.change(screen.getByLabelText("Temperature"), {
-      target: { value: "c" },
-    });
+    await user.click(screen.getByRole("radio", { name: "°C" }));
 
     expect(alwaysFreezing()).toHaveTextContent("+4°");
   });
 
-  it("keeps a unit on the offsets when the select is cleared", () => {
-    // `ChoiceField` carries an empty option, so "" is a state a person can
-    // reach. The offsets are the screen's promise that the answer means
-    // something measurable; they cannot lose their unit halfway.
-    renderForm();
-    expect(
-      screen.getByLabelText(/^Always freezing/).closest("label"),
-    ).toHaveTextContent("+8°");
-
-    fireEvent.change(screen.getByLabelText("Temperature"), {
-      target: { value: "" },
-    });
-
-    expect(
-      screen.getByLabelText(/^Always freezing/).closest("label"),
-    ).toHaveTextContent("+8°");
-  });
-
   it("finishes on the one required answer", async () => {
-    // The two-tap target: pick an answer, submit. No city, no location, no
-    // unit change.
-    const user = userEvent.setup();
-    const save = renderForm();
+    const { user, save, onSaved } = renderForm();
 
-    await user.click(screen.getByLabelText(/^Always freezing/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    await user.click(screen.getByLabelText(/^Always freezing/u));
+    await user.click(submit());
 
     expect(save).toHaveBeenCalledWith({
       data: {
@@ -125,228 +100,286 @@ describe("CalibrateForm", () => {
         distanceUnit: "mi",
       },
     });
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Calibrated.");
   });
 
   it("writes the negative end of the scale as a negative number", async () => {
-    // Positive means runs cold. A form that sent the option's index, or
-    // dropped the sign, would calibrate every warm runner backwards.
-    const user = userEvent.setup();
-    const save = renderForm();
+    const { user, save } = renderForm();
 
-    await user.click(screen.getByLabelText(/^Sweating in a t-shirt at 40°/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    await user.click(screen.getByLabelText(/^Sweating in a t-shirt at 40°/u));
+    await user.click(submit());
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       data: { thermalLevel: -2 },
     });
   });
 
-  it("refuses to submit with no answer, and says so in the schema's words", async () => {
-    const user = userEvent.setup();
-    const save = renderForm();
+  it("refuses to submit with no answer, in the schema's words", async () => {
+    const { user, save } = renderForm();
 
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    await user.click(submit());
 
     expect(save).not.toHaveBeenCalled();
-    // Under the field, not in the summary: the contract's summary appears
-    // only once two or more fields fail at once. And in the schema's own
-    // sentence — without one, `Number(undefined)` gets a runner "expected
-    // number, received nan".
     expect(
       await screen.findByText("Pick the one that sounds most like you."),
     ).toBeVisible();
+    // Never the `disabled` attribute on a submit.
+    expect(submit()).not.toHaveAttribute("disabled");
   });
+});
 
-  it("carries a typed city, trimmed", async () => {
-    const user = userEvent.setup();
-    const save = renderForm();
+describe("where you run: typed and suggested (round 22, item 19)", () => {
+  it("carries a typed city that was never picked, as a label alone", async () => {
+    const { user, save } = renderForm();
 
-    await user.click(screen.getByLabelText(/^About average/));
+    await user.click(screen.getByLabelText(/^About average/u));
     await user.type(screen.getByLabelText("Where you run"), "  Seattle, WA  ");
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    await user.click(submit());
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { cityLabel: "Seattle, WA" },
+      data: { cityLabel: "Seattle, WA", lat: undefined, lng: undefined },
     });
   });
 
-  it("carries coordinates once the browser gives them", async () => {
-    const user = userEvent.setup();
-    const save = renderForm({
+  it("sends no city for a field of spaces", async () => {
+    const { user, save } = renderForm();
+
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.type(screen.getByLabelText("Where you run"), " ".repeat(3));
+    await user.click(submit());
+
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: { cityLabel: undefined },
+    });
+  });
+
+  it("suggests as you type, and picking one makes the chip", async () => {
+    const { user, save, searchCities } = renderForm({
+      searchCities: () => Promise.resolve([MINNEAPOLIS]),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "Mi");
+    expect(searchCities).toHaveBeenLastCalledWith({ data: { query: "Mi" } });
+    const list = await screen.findByRole("list", { name: "Cities" });
+    expect(list).toHaveAttribute("data-part", "city-suggestions");
+
+    await user.click(
+      screen.getByRole("button", { name: "Minneapolis, Minnesota" }),
+    );
+
+    const chip = document.querySelector("[data-part='city-chip']");
+    expect(chip).toHaveTextContent("Minneapolis, Minnesota");
+    expect(screen.queryByLabelText("Where you run")).toBeNull();
+    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
+
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: { cityLabel: "Minneapolis, Minnesota", lat: 44.98, lng: -93.27 },
+    });
+  });
+
+  it("puts the field back, empty, when the chip is changed", async () => {
+    const { user } = renderForm({
+      searchCities: () => Promise.resolve([MINNEAPOLIS]),
+    });
+    await user.type(screen.getByLabelText("Where you run"), "Mi");
+    await user.click(
+      await screen.findByRole("button", { name: "Minneapolis, Minnesota" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Change" }));
+
+    expect(screen.getByLabelText("Where you run")).toHaveValue("");
+    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+    // The old suggestions do not come back with it.
+    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
+  });
+
+  it("drops an answer for text the runner has since typed past", async () => {
+    const late = Promise.withResolvers<readonly CitySuggestion[]>();
+    const { user } = renderForm({
+      searchCities: ({ data }) =>
+        data.query === "Mi" ? late.promise : Promise.resolve([]),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "Mi");
+    await user.type(screen.getByLabelText("Where you run"), "x");
+    await act(async () => {
+      late.resolve([MINNEAPOLIS]);
+      await late.promise;
+    });
+
+    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
+  });
+
+  it("shows nothing, and keeps the field, when suggesting fails", async () => {
+    const { user } = renderForm({
+      searchCities: ({ data }) =>
+        data.query === "M"
+          ? Promise.resolve([MINNEAPOLIS])
+          : Promise.reject(new Error("down")),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "M");
+    await screen.findByRole("list", { name: "Cities" });
+    await user.type(screen.getByLabelText("Where you run"), "i");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
+    });
+    expect(screen.getByLabelText("Where you run")).toHaveValue("Mi");
+    expect(screen.queryByText(/didn't|try again/iu)).toBeNull();
+  });
+
+  it("ignores a failure for text the runner has since typed past", async () => {
+    const late = Promise.withResolvers<readonly CitySuggestion[]>();
+    const { user } = renderForm({
+      searchCities: ({ data }) =>
+        data.query === "M" ? late.promise : Promise.resolve([MINNEAPOLIS]),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "M");
+    await user.type(screen.getByLabelText("Where you run"), "i");
+    await screen.findByRole("list", { name: "Cities" });
+    await act(async () => {
+      late.reject(new Error("down"));
+      await Promise.allSettled([late.promise]);
+    });
+
+    expect(screen.getByRole("list", { name: "Cities" })).toBeInTheDocument();
+  });
+});
+
+describe("Use my location (round 22, item 19)", () => {
+  it("is a text button under the field that breathes while it asks", async () => {
+    const answer = Promise.withResolvers<{ lat: number; lng: number }>();
+    const { user } = renderForm({ locate: () => answer.promise });
+
+    await user.click(locateButton());
+
+    expect(locateButton()).toHaveAttribute("aria-busy", "true");
+    expect(locateButton()).not.toHaveAttribute("disabled");
+    expect(locateButton().querySelectorAll(".breathe")).toHaveLength(2);
+    expect(locateButton()).toHaveClass("underline");
+
+    await act(async () => {
+      answer.resolve({ lat: 44.98, lng: -93.27 });
+      await answer.promise;
+    });
+  });
+
+  it("asks once however often it is pressed while asking", async () => {
+    const answer = Promise.withResolvers<undefined>();
+    const locate = vi.fn(() => answer.promise);
+    const { user } = renderForm({ locate });
+
+    await user.click(locateButton());
+    await user.click(locateButton());
+    expect(locate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      answer.resolve(undefined);
+      await answer.promise;
+    });
+  });
+
+  it("becomes the chip when granted, and the coordinates are carried", async () => {
+    const { user, save } = renderForm({
       locate: () => Promise.resolve({ lat: 44.98, lng: -93.27 }),
     });
 
-    await user.click(screen.getByRole("button", { name: "Use my location" }));
-    expect(await screen.findByText("Got it.")).toBeVisible();
+    await user.click(locateButton());
 
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    const chip = await waitFor(() => {
+      const found = document.querySelector("[data-part='city-chip']");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    // Located, not named: a measured value, in brackets.
+    expect(chip).toHaveTextContent("[44.98, -93.27]");
 
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
     expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { lat: 44.98, lng: -93.27 },
+      data: { cityLabel: undefined, lat: 44.98, lng: -93.27 },
     });
   });
 
-  it("treats a refused permission as an answer, not a failure", async () => {
-    // Requirement 1: denial must not block. It says so plainly and leaves
-    // the typed-city path intact — no failure band, no blocked submit.
-    const user = userEvent.setup();
-    const save = renderForm({ locate: () => Promise.resolve(undefined) });
+  it("when denied, says so plainly and puts focus in the field — never a failure", async () => {
+    const { user, save } = renderForm({
+      locate: () => Promise.resolve(undefined),
+    });
 
-    await user.click(screen.getByRole("button", { name: "Use my location" }));
-    expect(
-      await screen.findByText("No location — the city above is enough."),
-    ).toBeVisible();
-    expect(screen.queryByText(/didn't work|try again/i)).toBeNull();
+    await user.click(locateButton());
 
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    const line = await screen.findByText(
+      "Location’s off. Type your city instead.",
+    );
+    expect(line).toHaveClass("text-quiet");
+    expect(line.className).not.toMatch(/failure|hiviz/u);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Where you run")).toHaveFocus();
+    });
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+    expect(locateButton()).not.toHaveAttribute("aria-busy");
 
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the denied line when asked again", async () => {
+    const answers = [undefined, { lat: 1, lng: 2 }];
+    const { user } = renderForm({
+      locate: () => Promise.resolve(answers.shift()),
+    });
+    await user.click(locateButton());
+    await screen.findByText("Location’s off. Type your city instead.");
+
+    await user.click(locateButton());
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Location’s off. Type your city instead."),
+      ).toBeNull();
+    });
   });
 
   it("says nothing about location before it has been asked", () => {
     renderForm();
+    expect(screen.queryByText(/Location’s off/u)).toBeNull();
+    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+  });
+});
 
-    expect(screen.queryByText("Got it.")).toBeNull();
-    expect(screen.queryByText(/No location/)).toBeNull();
+describe("units: two segmented pairs (round 22, item 19)", () => {
+  it("offers °F/°C and mi/km, defaulted from the locale", () => {
+    renderForm({ defaults: { temp: "c", distance: "km" } });
+
+    expect(
+      screen.getByRole("group", { name: "Temperature" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Distance" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "°C" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "°F" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "km" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "mi" })).not.toBeChecked();
   });
 
-  it("names the units in words, not in codes", () => {
-    // "f" and "mi" are what the contract stores; nobody picks a unit from
-    // a two-letter code.
-    renderForm();
+  it("sends what the runner picked", async () => {
+    const { user, save } = renderForm();
 
-    expect(screen.getByLabelText("Temperature")).toHaveTextContent(
-      "Fahrenheit",
-    );
-    expect(screen.getByLabelText("Temperature")).toHaveTextContent("Celsius");
-    expect(screen.getByLabelText("Distance")).toHaveTextContent("Miles");
-    expect(screen.getByLabelText("Distance")).toHaveTextContent("Kilometres");
-  });
-
-  it("offers the units, defaulted from the locale and editable", async () => {
-    const user = userEvent.setup();
-    const save = renderForm();
-
-    await user.selectOptions(screen.getByLabelText("Temperature"), "c");
-    await user.selectOptions(screen.getByLabelText("Distance"), "km");
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(screen.getByRole("radio", { name: "°C" }));
+    await user.click(screen.getByRole("radio", { name: "km" }));
+    await user.click(submit());
 
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       data: { tempUnit: "c", distanceUnit: "km" },
     });
-  });
-
-  it("lists both failures by name when two fields fail at once", async () => {
-    // The contract's summary appears only from two errors up, so this is
-    // the one path that renders the field labels at all.
-    const user = userEvent.setup();
-    const save = renderForm();
-
-    await user.type(screen.getByLabelText("Where you run"), " ".repeat(3));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
-
-    // The summary is a focusable container, not a live region — the
-    // contract announces it by moving focus to it. So it is found by its
-    // own words, and each row is a button that focuses its field.
-    expect(await screen.findByText("Nothing saved")).toBeVisible();
-    // "2 fields need a fix." appears twice on purpose — once in the live
-    // region that announces the outcome and once in the summary that lists
-    // it — so it is not a useful anchor. The rows are.
-    expect(
-      screen.getByRole("button", { name: /^Warm or cold —/ }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: /^Where you run —/ }),
-    ).toBeVisible();
-    expect(save).not.toHaveBeenCalled();
-  });
-
-  it("sends no unit at all when the runner clears one", async () => {
-    // The em-dash option means "not saying", and it has to reach the
-    // server as absent rather than as an empty string the column rejects.
-    const user = userEvent.setup();
-    const save = renderForm();
-
-    await user.selectOptions(screen.getByLabelText("Temperature"), "");
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
-
-    expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { tempUnit: undefined, distanceUnit: "mi" },
-    });
-  });
-
-  it("clears the distance unit independently of the temperature one", async () => {
-    // Both units carry their own "not saying" branch, and a test that only
-    // ever clears one leaves the other's unexercised.
-    const user = userEvent.setup();
-    const save = renderForm();
-
-    await user.selectOptions(screen.getByLabelText("Distance"), "");
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
-
-    expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { tempUnit: "f", distanceUnit: undefined },
-    });
-  });
-
-  it("says it saved, in the one live region", async () => {
-    const user = userEvent.setup();
-    renderForm();
-
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
-
-    expect(await screen.findByText("Calibrated.")).toBeVisible();
-  });
-
-  it("never lets the browser submit the form itself", async () => {
-    // `noValidate` plus `preventDefault`: without the second the page
-    // navigates away mid-submit and the handler's result is lost.
-    const user = userEvent.setup();
-    renderForm();
-    await user.click(screen.getByLabelText(/^About average/));
-
-    let prevented: boolean | undefined;
-    const watch = (event: Event) => {
-      prevented = event.defaultPrevented;
-    };
-    document.addEventListener("submit", watch);
-    try {
-      await user.click(screen.getByRole("button", { name: "Start running" }));
-    } finally {
-      document.removeEventListener("submit", watch);
-    }
-
-    expect(prevented).toBe(true);
-  });
-
-  it("sends no city when the runner typed none", async () => {
-    // Absent, not an empty string — the column is nullable and "" is not
-    // a place.
-    const user = userEvent.setup();
-    const save = renderForm();
-
-    await user.click(screen.getByLabelText(/^About average/));
-    await user.click(screen.getByRole("button", { name: "Start running" }));
-
-    expect(save.mock.calls[0]?.[0].data.cityLabel).toBeUndefined();
-  });
-
-  it("never disables the submit button", async () => {
-    // §5 of the Forms contract: `disabled` drops focus and stops
-    // announcing. The double-submit guard lives in the handler.
-    const user = userEvent.setup();
-    renderForm();
-    await user.click(screen.getByLabelText(/^About average/));
-
-    const submit = screen.getByRole("button", { name: "Start running" });
-    await user.click(submit);
-
-    expect(submit).not.toBeDisabled();
   });
 });

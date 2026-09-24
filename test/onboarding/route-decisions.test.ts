@@ -1,7 +1,8 @@
-import { isRedirect } from "@tanstack/react-router";
+import { isNotFound, isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
 import {
+  settingsSectionOrNotFound,
   skipNamingIfNothingToName,
   startOnboardingIfNeeded,
 } from "../../src/modules/onboarding/route-decisions";
@@ -59,5 +60,27 @@ describe("skipNamingIfNothingToName (round 22, item 25)", () => {
   it("hands the offer back when there is something to name", () => {
     const offer = { items: [{ itemId: "i-1" }], totalCount: 1 };
     expect(skipNamingIfNothingToName(offer)).toBe(offer);
+  });
+});
+
+describe("settingsSectionOrNotFound (round 22, item 20)", () => {
+  it("names the two sub-pages there are", () => {
+    expect(settingsSectionOrNotFound("units")).toBe("units");
+    expect(settingsSectionOrNotFound("sharing")).toBe("sharing");
+  });
+
+  it("is the router's not-found for any other path", () => {
+    let thrown: unknown;
+    try {
+      settingsSectionOrNotFound("delete-everything");
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(isNotFound(thrown)).toBe(true);
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).toHaveProperty(
+      "message",
+      'No settings page called "delete-everything".',
+    );
   });
 });

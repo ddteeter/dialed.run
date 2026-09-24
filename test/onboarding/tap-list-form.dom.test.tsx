@@ -129,9 +129,9 @@ describe("TapListForm", () => {
     const fewer = screen.getByRole("button", { name: "Fewer" });
     expect(fewer).toHaveAttribute("aria-expanded", "true");
     const chips = screen.getAllByRole("checkbox");
-    expect(
-      chips.at(-1)?.compareDocumentPosition(fewer),
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(chips.at(-1)?.compareDocumentPosition(fewer)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
 
     // And closes again from there.
     await user.click(fewer);

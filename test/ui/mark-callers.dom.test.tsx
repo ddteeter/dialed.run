@@ -110,11 +110,12 @@ function marks(attribute: string): HTMLElement[] {
 }
 
 describe("CoverageMark's callers print the level", () => {
-  it("says the word in every band row of the ladder", () => {
+  it("says the word in every band row of the ladder", async () => {
     // O6's ladder: one row per band, the swatch between the temperature
     // and the level. Design's own line is the reason — "the counts are
     // there so the reading never depends on the swatch".
-    render(
+    // In a router: K's "Log a run" is a typed link.
+    await renderWithRouter(
       <CallLadder
         ladder={ladderFrom([
           band(-5, { dialed: 1 }),
