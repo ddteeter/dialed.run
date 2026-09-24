@@ -80,7 +80,7 @@ export function NotFoundState({
           Nothing here
         </h1>
         <p className="m-0 text-body">
-          This page doesn&rsquo;t exist, or it&rsquo;s an entry its runner has
+          This page doesn&apos;t exist, or it&apos;s an entry its runner has
           made private.
         </p>
         {signedIn ? (

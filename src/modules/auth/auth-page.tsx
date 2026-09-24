@@ -273,9 +273,9 @@ export function SessionNotice({
       <Mono step="xs" className="text-hiviz-text">
         You were signed out
       </Mono>
+      {/* One string, so the sentence is one run of text and not three. */}
       <span className="text-body">
-        Log in and you&rsquo;re back on your {carried}. What you entered is
-        kept.
+        {`Log in and you're back on your ${carried}. What you entered is kept.`}
       </span>
     </div>
   );

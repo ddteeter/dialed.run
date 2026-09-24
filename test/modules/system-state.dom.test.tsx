@@ -53,7 +53,7 @@ describe("X1 · not found", () => {
     // entry exists.
     expect(
       screen.getByText(
-        "This page doesn’t exist, or it’s an entry its runner has made private.",
+        "This page doesn't exist, or it's an entry its runner has made private.",
       ),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "Go to your feed" })).toHaveAttribute(

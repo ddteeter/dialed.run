@@ -476,7 +476,7 @@ describe("Au7 · signed out arrival", () => {
     expect(notice).toHaveAttribute("data-ground", "ink");
     expect(notice).toHaveTextContent("You were signed out");
     expect(notice).toHaveTextContent(
-      "Log in and you’re back on your garment. What you entered is kept.",
+      "Log in and you're back on your garment. What you entered is kept.",
     );
     expect(notice?.nextElementSibling).toBe(
       screen.getByRole("heading", { name: "Log in" }),
