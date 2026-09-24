@@ -96,6 +96,23 @@ const visualCrossingStatsSchema = z.object({
 
 const MEAN = 1;
 
+/**
+ * Where the endpoint resolved a location to — at the response root, for
+ * any request. A typed label is geocoded upstream (D-59), and these two
+ * are what it found.
+ */
+const visualCrossingPlaceSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+/**
+ * The status Visual Crossing answers a location it cannot find with
+ * ("Bad API Request: Invalid location parameter value."). It is an
+ * answer, not an outage: the runner typed a place that is not one.
+ */
+const UNKNOWN_LOCATION = 400;
+
 type VisualCrossingHour = z.infer<typeof visualCrossingHourSchema>;
 
 function pickNearestHour(
@@ -134,7 +151,7 @@ function pickNearestHour(
 function timelineUrl(
   location: string,
   date: string,
-  include: "hours" | "stats",
+  include: "hours" | "stats" | "days",
   apiKey: string,
 ): URL {
   const url = new URL(
@@ -178,19 +195,38 @@ async function timelineJson<TSchema extends z.ZodType>(
   what: string,
   fetchImpl: typeof fetch,
 ): Promise<z.output<TSchema>> {
-  let response: Response;
+  const response = await timelineFetch(url, what, fetchImpl);
+  return await timelineBody(response, schema, what);
+}
+
+/**
+The request itself, under the timeout, with a failure named for what it was.
+*/
+async function timelineFetch(
+  url: URL,
+  what: string,
+  fetchImpl: typeof fetch,
+): Promise<Response> {
   try {
-    response = await fetchImpl(url, {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    return await fetchImpl(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch (error) {
     throw new WeatherUnavailableError(
       `Visual Crossing ${what} request failed`,
-      {
-        cause: error,
-      },
+      { cause: error },
     );
   }
+}
+
+/**
+ * The second half of every read: refuse a non-2xx, take the body as
+ * `unknown`, parse it. Separate so the place lookup, which answers one
+ * status itself before this runs, cannot skip either step.
+ */
+async function timelineBody<TSchema extends z.ZodType>(
+  response: Response,
+  schema: TSchema,
+  what: string,
+): Promise<z.output<TSchema>> {
   if (!response.ok) {
     throw new WeatherUnavailableError(
       `Visual Crossing ${what} responded ${String(response.status)}`,
@@ -251,6 +287,38 @@ async function fetchTimeline(
     );
   }
   return observation.data;
+}
+
+/**
+ * Where a typed place is, or nothing when the endpoint cannot find it.
+ *
+ * One daily read for today, the smallest request that carries the
+ * resolved coordinates at its root. A 400 is the endpoint saying "no such
+ * place" and comes back as `undefined`; anything else — no key, the
+ * network, a timeout, another status, a body without coordinates — is
+ * the provider being unavailable, and throws like every other read here.
+ */
+async function resolveLabel(
+  label: string,
+  today: Date,
+  apiKey: string | undefined,
+  fetchImpl: typeof fetch,
+): Promise<{ lat: number; lng: number } | undefined> {
+  if (apiKey === undefined || apiKey === "") {
+    throw new WeatherUnavailableError(
+      "VISUAL_CROSSING_API_KEY is not configured",
+    );
+  }
+  const url = timelineUrl(
+    locationPath({ kind: "label", label }),
+    today.toISOString().slice(0, 10),
+    "days",
+    apiKey,
+  );
+  const probe = await timelineFetch(url, "place", fetchImpl);
+  if (probe.status === UNKNOWN_LOCATION) return undefined;
+  const place = await timelineBody(probe, visualCrossingPlaceSchema, "place");
+  return { lat: place.latitude, lng: place.longitude };
 }
 
 /**
@@ -338,6 +406,9 @@ export function createVisualCrossingProvider(
     },
     forecast(lat, lng, at) {
       return fetchTimeline(lat, lng, at, apiKey, fetchImpl);
+    },
+    resolvePlace(label) {
+      return resolveLabel(label, now(), apiKey, fetchImpl);
     },
   };
 }

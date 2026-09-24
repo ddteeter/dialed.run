@@ -47,6 +47,7 @@ import { unitsFor } from "./units";
 import { toggleUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
+import { resolvePlace } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -204,14 +205,14 @@ export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * Location denied: the typed city goes to the profile's city, and the tab
- * never asks again.
+ * Location denied: the typed city is found by the weather provider and
+ * saved as the profile's place, and the tab never asks again.
  */
 export const saveConditionsCityAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => conditionsCityInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await saveConditionsCity(userId, data.cityLabel);
+    return saveConditionsCity(userId, data.cityLabel, resolvePlace);
   });
 
 // ---- Units (D-6) --------------------------------------------------------------

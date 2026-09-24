@@ -35,7 +35,7 @@ function feed(
         locate: () => Promise.resolve(undefined),
         conditionsFor:
           overrides.conditionsFor ?? (() => Promise.resolve(undefined)),
-        saveCity: () => Promise.resolve(),
+        saveCity: () => Promise.resolve({ lat: 1, lng: 2 }),
       }}
     />
   );
@@ -190,7 +190,7 @@ describe("Feed: Following", () => {
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
           conditionsFor: () => Promise.resolve(undefined),
-          saveCity: () => Promise.resolve(),
+          saveCity: () => Promise.resolve({ lat: 1, lng: 2 }),
         }}
       />,
     );

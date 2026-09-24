@@ -26,6 +26,8 @@ interface Coords {
   lng: number;
 }
 
+type SaveCity = (input: { data: { cityLabel: string } }) => Promise<Coords>;
+
 /**
  * What the tab is showing.
  *
@@ -33,7 +35,7 @@ interface Coords {
  *   *"One state for 'asking' and 'fetching'"*).
  * - `denied` — the runner said no, and has no city saved yet.
  * - `no-weather` — we know where, but no reading has come in for there
- *   (or all we have is a typed city, which is a label and not a place).
+ *   (or all we have is a city label O1 saved without its place).
  * - `failed` — the read itself failed; the band says so and retries.
  * - a `ConsensusResult` — matched, widened, or too few.
  */
@@ -66,10 +68,26 @@ export function ConditionsTab({
   conditionsFor: (input: {
     data: Coords;
   }) => Promise<ConsensusResult | undefined>;
-  saveCity: (input: { data: { cityLabel: string } }) => Promise<unknown>;
+  /**
+  Finds the typed city and saves it as the profile's place, answering with
+  where it is.
+  */
+  saveCity: SaveCity;
   units: Units;
 }>) {
   const [state, setState] = useState<TabState>("waiting");
+
+  const lookAt = useCallback(
+    async (coords: Coords) => {
+      setState("waiting");
+      try {
+        setState((await conditionsFor({ data: coords })) ?? "no-weather");
+      } catch (error: unknown) {
+        setState({ failed: classifyFailure(error).message });
+      }
+    },
+    [conditionsFor],
+  );
 
   const look = useCallback(async () => {
     setState("waiting");
@@ -78,12 +96,8 @@ export function ConditionsTab({
       setState(home.cityLabel === undefined ? "denied" : "no-weather");
       return;
     }
-    try {
-      setState((await conditionsFor({ data: coords })) ?? "no-weather");
-    } catch (error: unknown) {
-      setState({ failed: classifyFailure(error).message });
-    }
-  }, [home, locate, conditionsFor]);
+    await lookAt(coords);
+  }, [home, locate, lookAt]);
 
   useEffect(() => {
     void look();
@@ -104,12 +118,7 @@ export function ConditionsTab({
   }
   if (state === "denied") {
     return (
-      <CityForm
-        saveCity={saveCity}
-        onSaved={() => {
-          setState("no-weather");
-        }}
-      />
+      <CityForm saveCity={saveCity} onSaved={(coords) => lookAt(coords)} />
     );
   }
   if (state === "no-weather") return <NoWeather />;
@@ -161,8 +170,8 @@ function CityForm({
   saveCity,
   onSaved,
 }: Readonly<{
-  saveCity: (input: { data: { cityLabel: string } }) => Promise<unknown>;
-  onSaved: () => void;
+  saveCity: SaveCity;
+  onSaved: (coords: Coords) => Promise<void>;
 }>) {
   const [cityLabel, setCityLabel] = useState("");
   const form = useFormSubmit({

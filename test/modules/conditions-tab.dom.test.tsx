@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 
 import { ConditionsTab } from "../../src/modules/feed/components/ConditionsTab";
 import type { ConsensusResult } from "../../src/modules/feed/consensus";
@@ -17,6 +18,7 @@ interface Coords {
   lng: number;
 }
 
+const PORTLAND = { lat: 45.52, lng: -122.68 };
 const NOWHERE: ConditionsHome = { coords: undefined, cityLabel: undefined };
 const band = { minC: 5, maxC: 8, precip: "damp" as const };
 
@@ -27,7 +29,7 @@ function tab(
     conditionsFor?: (input: {
       data: Coords;
     }) => Promise<ConsensusResult | undefined>;
-    saveCity?: (input: { data: { cityLabel: string } }) => Promise<unknown>;
+    saveCity?: (input: { data: { cityLabel: string } }) => Promise<Coords>;
   } = {},
 ) {
   return (
@@ -37,7 +39,7 @@ function tab(
       conditionsFor={
         overrides.conditionsFor ?? (() => Promise.resolve(undefined))
       }
-      saveCity={overrides.saveCity ?? (() => Promise.resolve())}
+      saveCity={overrides.saveCity ?? (() => Promise.resolve(PORTLAND))}
       units={MILES}
     />
   );
@@ -131,11 +133,22 @@ describe("ConditionsTab: location denied", () => {
     expect(screen.queryByLabelText("City")).toBeNull();
   });
 
-  it("saves the typed city, then says there is nothing to match yet", async () => {
+  it("saves the typed city, then matches the weather where it was found", async () => {
     const user = userEvent.setup();
-    const saveCity = vi.fn(() => Promise.resolve());
+    const saveCity = vi.fn(() => Promise.resolve(PORTLAND));
+    const conditionsFor = vi.fn(() =>
+      Promise.resolve({
+        status: "too-few" as const,
+        windowDays: 14 as const,
+        band,
+      }),
+    );
     await renderFeedScreen(
-      tab({ locate: () => Promise.resolve(undefined), saveCity }),
+      tab({
+        locate: () => Promise.resolve(undefined),
+        saveCity,
+        conditionsFor,
+      }),
     );
 
     await user.type(await screen.findByLabelText("City"), "  Portland, OR ");
@@ -144,12 +157,48 @@ describe("ConditionsTab: location denied", () => {
     expect(saveCity).toHaveBeenCalledWith({
       data: { cityLabel: "Portland, OR" },
     });
-    expect(await screen.findByText("No weather yet")).toBeVisible();
+    // A city nobody's matched yet goes straight to No matches (round 22).
+    expect(await screen.findByText("Not enough runs yet")).toBeVisible();
+    expect(conditionsFor).toHaveBeenCalledWith({ data: PORTLAND });
+  });
+
+  it("says why on the city field when the city cannot be found, and keeps the form", async () => {
+    const user = userEvent.setup();
+    // What the server sends for a city the provider could not find: the
+    // schema's issue on the city field, as any field error arrives.
+    const notFound = new ZodError([
+      {
+        code: "custom",
+        path: ["cityLabel"],
+        message: "We couldn't find that city. Add the state or country.",
+        input: undefined,
+      },
+    ]);
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        saveCity: () => Promise.reject(notFound),
+      }),
+    );
+
+    await user.type(await screen.findByLabelText("City"), "Atlantis");
+    await user.click(screen.getByRole("button", { name: "Use this city" }));
+
+    expect(
+      await screen.findByText(
+        "We couldn't find that city. Add the state or country.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByLabelText("City")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(document.querySelector('[data-part="failure-band"]')).toBeNull();
   });
 
   it("marks an empty city with the schema's sentence and saves nothing", async () => {
     const user = userEvent.setup();
-    const saveCity = vi.fn(() => Promise.resolve());
+    const saveCity = vi.fn(() => Promise.resolve(PORTLAND));
     await renderFeedScreen(
       tab({ locate: () => Promise.resolve(undefined), saveCity }),
     );

@@ -11,6 +11,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
+import { resolvedCity } from "./inputs";
 
 export interface ConditionsHome {
   /**
@@ -43,17 +44,30 @@ export async function conditionsHome(userId: string): Promise<ConditionsHome> {
 }
 
 /**
- * Saves the typed city as the profile's city — O1's field, one column.
+ * Saves the typed city as the profile's place: the label the runner typed,
+ * and where the weather provider found it (owner's ruling, 2026-09-24).
+ * O1's three columns and no others, so the calibration and units saved
+ * beside them are untouched.
  *
- * Only `city_label`: a typed city is a label, not a place, and writing it
- * must not disturb the calibration or units O1 saved beside it.
+ * A city the provider cannot find throws `resolvedCity`'s field issue and
+ * saves nothing; a provider that is down throws its own error, which the
+ * form reads as a failure — one attempt either way (law 3).
+ *
+ * `resolve` is the weather module's, handed in by the server function so
+ * this can be tested without the network.
  */
 export async function saveConditionsCity(
   userId: string,
   cityLabel: string,
-): Promise<void> {
+  resolve: (label: string) => Promise<{ lat: number; lng: number } | undefined>,
+): Promise<{ lat: number; lng: number }> {
+  const { cityLabel: place } = resolvedCity.parse({
+    cityLabel: await resolve(cityLabel),
+  });
+  const saved = { cityLabel, lat: place.lat, lng: place.lng };
   await drizzle(env.DIALED_CORE)
     .insert(userProfiles)
-    .values({ userId, cityLabel })
-    .onConflictDoUpdate({ target: userProfiles.userId, set: { cityLabel } });
+    .values({ userId, ...saved })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: saved });
+  return place;
 }

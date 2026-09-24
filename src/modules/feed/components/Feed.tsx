@@ -67,7 +67,9 @@ export interface FeedProps {
     conditionsFor: (input: {
       data: { lat: number; lng: number };
     }) => Promise<ConsensusResult | undefined>;
-    saveCity: (input: { data: { cityLabel: string } }) => Promise<unknown>;
+    saveCity: (input: {
+      data: { cityLabel: string };
+    }) => Promise<{ lat: number; lng: number }>;
   };
 }
 

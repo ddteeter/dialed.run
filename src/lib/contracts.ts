@@ -673,6 +673,13 @@ export interface WeatherProvider {
   Forecast at a future time+place (for the call, post-MVP).
   */
   forecast(lat: number, lng: number, at: Date): Promise<WeatherObservation>;
+  /**
+  Where a typed place is, or nothing when the provider cannot find it —
+  E2-lite's typed city, after the runner refused their location.
+  */
+  resolvePlace(
+    label: string,
+  ): Promise<{ lat: number; lng: number } | undefined>;
 }
 
 // ---- Onboarding / profile -------------------------------------------------

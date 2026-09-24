@@ -57,6 +57,20 @@ export const conditionsCityInput = z.object({
     .max(120),
 });
 
+/**
+ * The typed city once the weather provider has looked for it: a place, or
+ * the field's own message when there is none. Keyed on `cityLabel` so the
+ * issue lands on the city field (owner's ruling: a city nobody can find is
+ * a field message, not a failure band) through the same path a schema
+ * issue always takes to a form.
+ */
+export const resolvedCity = z.object({
+  cityLabel: z.object(
+    { lat: latitudeSchema, lng: longitudeSchema },
+    { error: "We couldn't find that city. Add the state or country." },
+  ),
+});
+
 export const itemFlagInput = z.object({
   itemId: ulidSchema,
   flag: itemFlagSchema.optional(),

@@ -21,6 +21,8 @@ export { forecast } from "./forecast";
 // Seasonal normals, for onboarding's starter list (O3). See ./normals for
 // why this one is not cached.
 export { climateNormals } from "./normals";
+// A typed place, as coordinates — E2-lite's typed city. See ./place.
+export { resolvePlace } from "./place";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
 export type { CacheKey } from "./store";
