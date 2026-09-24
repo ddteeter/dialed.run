@@ -127,17 +127,32 @@ function Colorway({
 }
 
 /**
+A piece never worn has no performance row; it reads as nothing yet.
+*/
+const NEVER_WORN = {
+  runCount: 0,
+  verdictCount: 0,
+  dialedCount: 0,
+  mileageM: 0,
+};
+
+function summaryOf(detail: Detail): typeof NEVER_WORN {
+  return detail.performance?.summary ?? NEVER_WORN;
+}
+
+/**
  * Stats, then works-at: MONO.md for what was logged, MONO.sm in the
  * dialed hue for the band. Retired, the band is past tense — *"Works at →
  * WORKED AT"*. They share a row at width.
  */
 function Stats({ detail }: Readonly<{ detail: Detail }>): JSX.Element {
-  const { item, tempRange, performance } = detail;
-  const km = Math.round((performance?.summary.mileageM ?? 0) / 1000);
-  const verdicts = performance?.summary.verdictCount ?? 0;
+  const { item, tempRange } = detail;
+  const summary = summaryOf(detail);
+  const km = Math.round(summary.mileageM / 1000);
+  const verdicts = summary.verdictCount;
   const dialed =
     verdicts > 0
-      ? ` · ${String(performance?.summary.dialedCount)}/${String(verdicts)} dialed`
+      ? ` · ${String(summary.dialedCount)}/${String(verdicts)} dialed`
       : "";
   return (
     <div
@@ -232,12 +247,11 @@ export function GarmentDetail({
   const router = useRouter();
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [status, setStatus] = useState("");
-  const [confirmStatus, setConfirmStatus] = useState("");
   const [confirming, setConfirming] = useState<ConfirmKind | undefined>();
 
   const { item, isGeneric, composition } = detail;
   const itemId = item.id;
-  const runCount = detail.performance?.summary.runCount ?? 0;
+  const { runCount } = summaryOf(detail);
   // Same name for the heading and the photo's accessible name.
   const label = garmentLabel({ name: item.name, brand: item.brand, isGeneric });
 
@@ -285,20 +299,23 @@ export function GarmentDetail({
     },
   });
 
-  async function confirmed(kind: ConfirmKind): Promise<void> {
-    if (kind === "delete") {
-      await remove({ data: { itemId } });
-      await navigate({ to: "/closet" });
-      return;
-    }
-    await retire({ data: { itemId } });
-    await router.invalidate();
-    // Land on the closet with retired pieces shown, so the piece is
-    // visibly *there* and marked [Retired] — the grid hides retired
-    // pieces by default, and without the switch on it would simply appear
-    // to have been deleted by the action that promises not to.
-    await navigate({ to: "/closet", search: { retired: true } });
-  }
+  const confirmed = useControlAction({
+    action: async (kind: ConfirmKind) => {
+      if (kind === "delete") {
+        await remove({ data: { itemId } });
+        await navigate({ to: "/closet" });
+        return;
+      }
+      await retire({ data: { itemId } });
+      await router.invalidate();
+      // Land on the closet with retired pieces shown, so the piece is
+      // visibly *there* and marked [Retired] — the grid hides retired
+      // pieces by default, and without the switch on it would simply
+      // appear to have been deleted by the action that promises not to.
+      await navigate({ to: "/closet", search: { retired: true } });
+    },
+    kicker: confirming === "delete" ? "Not deleted" : "Not retired",
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-5 px-4 py-8 wide:px-6">
@@ -307,7 +324,7 @@ export function GarmentDetail({
           upload.status ||
           removal.status ||
           bringBack.status ||
-          confirmStatus}
+          confirmed.status}
       </FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">
@@ -452,11 +469,10 @@ export function GarmentDetail({
         kind={confirming}
         name={item.name}
         runCount={runCount}
-        confirm={confirmed}
+        action={confirmed}
         onClose={() => {
           setConfirming(undefined);
         }}
-        onStatus={setConfirmStatus}
       />
     </div>
   );

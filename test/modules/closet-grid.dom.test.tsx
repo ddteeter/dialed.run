@@ -253,6 +253,8 @@ describe("ClosetGrid: what a tile says", () => {
     expect(branded.firstElementChild).toHaveTextContent(/^Tracksmith Harrier$/);
     expect(branded).not.toHaveTextContent("Generic");
     expect(branded).not.toHaveTextContent("Retired");
+    // No kicker at all, rather than an empty one holding a line's height.
+    expect(branded.querySelector(".order-first")).toBeNull();
   });
 
   it("tags a generic piece in the kicker, above the name but after it in the name", async () => {

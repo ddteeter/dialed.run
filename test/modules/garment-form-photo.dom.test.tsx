@@ -1,4 +1,11 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -152,17 +159,49 @@ describe("GarmentForm: a picked photo", () => {
     expect(well()).toHaveAttribute("data-state", "empty");
   });
 
-  it("does nothing for an input with no file list at all", () => {
+  it("opens no step when the picker is dismissed", () => {
+    const step = vi.fn<NonNullable<Photo["renderStep"]>>();
+    renderForm({ renderStep: step });
+
+    fileInput().dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(step).not.toHaveBeenCalled();
+    expect(well()).toHaveAttribute("data-state", "empty");
+  });
+
+  it("does nothing, and throws nothing, for an input with no file list at all", () => {
     renderForm();
     const input = fileInput();
     // The literal is a lint error, so the null is parsed into being.
     Object.defineProperty(input, "files", {
       value: z.null().parse(JSON.parse("null")),
     });
+    const thrown: unknown[] = [];
+    const record = (event: ErrorEvent) => {
+      thrown.push(event.error);
+      event.preventDefault();
+    };
+    globalThis.addEventListener("error", record);
 
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    try {
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    } finally {
+      globalThis.removeEventListener("error", record);
+    }
 
+    expect(thrown).toStrictEqual([]);
     expect(well()).toHaveAttribute("data-state", "empty");
+  });
+
+  it("says to let go while a file is over it", () => {
+    renderForm();
+
+    const transfer = new DataTransfer();
+    transfer.items.add(png());
+    fireEvent.dragOver(well(), { dataTransfer: transfer });
+
+    expect(well()).toHaveAttribute("data-state", "drag-over");
+    expect(within(well()).getByText("Let go to add it")).toBeVisible();
   });
 
   it("goes through W3's step first, and keeps the bytes the step hands back", async () => {
@@ -186,8 +225,9 @@ describe("GarmentForm: a picked photo", () => {
     });
 
     await user.upload(fileInput(), png("face.png"));
-    // Busy while the step decides.
+    // Busy while the step decides, and says so.
     expect(well()).toHaveAttribute("data-state", "uploading");
+    expect(within(well()).getByText("Adding")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Step for face.png" }));
     expect(screen.getByRole("status")).toHaveTextContent("Blurred 1 face.");
 

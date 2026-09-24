@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import {
-  ControlFailureBand,
-  inFlight,
-  PendingLabel,
-  Sheet,
-  useControlAction,
-} from "../../../ui";
+import { ControlFailureBand, inFlight, PendingLabel, Sheet } from "../../../ui";
+import type { ControlAction } from "../../../ui";
 
 /**
 Which of round 22's two confirm sheets is open, if either.
@@ -26,15 +21,16 @@ const VERBS: Record<ConfirmKind, { verb: string; pending: string }> = {
 };
 
 /**
- * What a garment's runs keep. Absent when it has none — round 22: *"A
- * garment with 0 runs deletes without this sheet's second sentence"*, and
- * a retire sheet promising that none of its runs will be lost is the same
- * sentence about nothing.
+ * What a garment's runs keep, with the space that joins it to the
+ * sentence before. Nothing when it has none — round 22: *"A garment with
+ * 0 runs deletes without this sheet's second sentence"*, and a retire
+ * sheet promising that none of its runs will be lost is the same sentence
+ * about nothing.
  */
-function runsSentence(runCount: number): string | undefined {
-  if (runCount === 0) return undefined;
-  if (runCount === 1) return "Its 1 run and verdict stay, and still count.";
-  return `Its ${String(runCount)} runs and verdicts stay, and still count.`;
+function runsSentence(runCount: number): string {
+  if (runCount === 0) return "";
+  if (runCount === 1) return " Its 1 run and verdict stay, and still count.";
+  return ` Its ${String(runCount)} runs and verdicts stay, and still count.`;
 }
 
 /**
@@ -50,13 +46,7 @@ function runsSentence(runCount: number): string | undefined {
  */
 function body(kind: ConfirmKind, runCount: number): string {
   if (kind === "delete") return "This can't be undone. Retire keeps the history.";
-  return [
-    "It leaves the closet and the picker.",
-    runsSentence(runCount),
-    "You can bring it back.",
-  ]
-    .filter((sentence) => sentence !== undefined)
-    .join(" ");
+  return `It leaves the closet and the picker.${runsSentence(runCount)} You can bring it back.`;
 }
 
 /**
@@ -73,9 +63,8 @@ export function GarmentConfirm({
   kind,
   name,
   runCount,
-  confirm,
+  action,
   onClose,
-  onStatus,
 }: Readonly<{
   kind: ConfirmKind | undefined;
   /**
@@ -83,20 +72,17 @@ export function GarmentConfirm({
   */
   name: string;
   runCount: number;
-  confirm: (kind: ConfirmKind) => Promise<void>;
-  onClose: () => void;
   /**
-  The failure sentence, for the screen's one status region.
-  */
-  onStatus: (sentence: string) => void;
+   * The confirmed action, owned by the screen: its status sentence belongs
+   * in the screen's one status region, and its kicker names what is still
+   * true of this garment, which the screen knows.
+   */
+  action: ControlAction<[ConfirmKind]>;
+  onClose: () => void;
 }>): JSX.Element {
   const isOpen = kind !== undefined;
   const shown = kind ?? "retire";
   const heading = `${VERBS[shown].verb} the ${name}?`;
-  const action = useControlAction({
-    action: confirm,
-    kicker: shown === "retire" ? "Not retired" : "Not deleted",
-  });
   // State rather than a ref, so the effect below re-runs once the button
   // exists: on a sheet that mounts already open, the first pass of that
   // effect runs before the ref callback has handed the button over.
@@ -108,10 +94,6 @@ export function GarmentConfirm({
   useEffect(() => {
     if (isOpen && keep !== undefined) keep.focus();
   }, [isOpen, keep]);
-
-  useEffect(() => {
-    onStatus(action.status);
-  }, [action.status, onStatus]);
 
   return (
     <Sheet open={isOpen} onClose={onClose} label={heading}>

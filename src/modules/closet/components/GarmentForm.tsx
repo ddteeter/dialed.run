@@ -70,7 +70,11 @@ const FABRIC_LABELS: Record<(typeof fabricSchema.options)[number], string> = {
 /**
  * The well's name in the form's error set. A refused photo is a field
  * failure — *"file type and size are field failures (the fix is another
- * file)"* — so it rides the same summary and status as every other field.
+ * file)"* — so it rides the same status sentence as every other field.
+ *
+ * It has no summary label because it can never fail alongside another
+ * field: the schema checks every other field before the save, and the
+ * photo is only refused after it.
  */
 const PHOTO_FIELD = "photo-well";
 
@@ -94,7 +98,6 @@ const LABELS = {
   colorName: "Color",
   colorHex: "Hex",
   visibilityLevel: "Visibility",
-  [PHOTO_FIELD]: "Photo",
 };
 
 /**
