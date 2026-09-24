@@ -17,6 +17,7 @@ import { describe, expect, it, vi } from "vitest";
 import { defaultUnits } from "../../src/lib/contracts";
 import type { BacklogRow, Conditions } from "../../src/modules/feed";
 import { VerdictBacklog } from "../../src/modules/runs/components/VerdictBacklog";
+import type { VerdictBacklogProps } from "../../src/modules/runs/components/VerdictBacklog";
 
 /**
  * DS2's table, driven the way a runner drives it — on the keyboard.
@@ -84,6 +85,28 @@ async function renderTable(
   return saveRow;
 }
 
+/**
+ * `renderTable`, with the router's `invalidate` watched — the one thing
+ * the table asks of the router, when the last row clears.
+ */
+async function renderTableWatching(
+  rows: readonly BacklogRow[],
+  saveRow: VerdictBacklogProps["saveRow"],
+) {
+  const element: ReactElement = (
+    <VerdictBacklog rows={rows} units={defaultUnits} saveRow={saveRow} />
+  );
+  const rootRoute = createRootRoute({ component: () => element });
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ["/runs/backlog"] }),
+  });
+  await router.load();
+  const invalidate = vi.spyOn(router, "invalidate");
+  render(<RouterProvider router={router} />);
+  return invalidate;
+}
+
 const body = () => screen.getAllByRole("rowgroup")[1];
 const rowsOf = () => screen.getAllByRole("row").slice(1);
 const slot = (name: RegExp) => screen.getByRole("button", { name });
@@ -109,8 +132,8 @@ describe("VerdictBacklog: what a row offers", () => {
     // is most of what makes a backlog readable at all.
     expect(
       screen.getAllByRole("columnheader").map((cell) => cell.textContent),
-    // Round 16: the header asks A3's question. It used to read
-    // "Verdict · 1–5", and a reviewer could not tell what the digits were.
+      // Round 16: the header asks A3's question. It used to read
+      // "Verdict · 1–5", and a reviewer could not tell what the digits were.
     ).toStrictEqual(["Run", "Conditions", "Outfit", "Did it work?"]);
     expect(rowsOf()).toHaveLength(1);
   });
@@ -135,6 +158,8 @@ describe("VerdictBacklog: what a row offers", () => {
 
     expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
     expect(screen.queryByText(/^Same as/)).toBeNull();
+    // Round 20: "No usual kit here · Pick" — the cell names the gap.
+    expect(screen.getByText("No usual kit here ·")).toBeVisible();
     expect(screen.getByRole("link", { name: "Pick" })).toHaveAttribute(
       "href",
       "/feed/attach/01RUN2",
@@ -347,7 +372,7 @@ describe("VerdictBacklog: saving", () => {
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValue({ entryId: "01NEW" });
-    await renderTable([row()], saveRow);
+    await renderTable([row(), bare], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(body() ?? document.body, { key: "3" });
@@ -355,12 +380,42 @@ describe("VerdictBacklog: saving", () => {
     await waitFor(() => {
       expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
     });
+    // Round 22, item 18: the band spans the row, directly under it, with
+    // Try again inside — the Form Contract's "Nothing saved".
+    const band = document.querySelector("[data-slot='row-failure']");
+    expect(band?.previousElementSibling).toBe(rowsOf()[0]);
+    expect(band?.querySelector("td")).toHaveAttribute("colspan", "4");
+    expect(band).toHaveTextContent("Nothing saved");
+    expect(band).toHaveTextContent("Our end failed. Nothing changed.");
 
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
       expect(rowsOf()[0]).toHaveAttribute("data-saved", "true");
     });
     expect(rowsOf()[0]).not.toHaveAttribute("data-failed");
+    expect(document.querySelector("[data-slot='row-failure']")).toBeNull();
+    expect(saveRow).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the band on its own row while another row is being worked", async () => {
+    // "The row keeps its place and choice": moving on does not clear it,
+    // and the band belongs to the row that failed, not the selection.
+    const saveRow = vi.fn().mockRejectedValue(new Error("offline"));
+    await renderTable([row(), bare], saveRow);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.keyDown(body() ?? document.body, { key: "3" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    await waitFor(() => {
+      expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
+    });
+    fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
+
+    const band = document.querySelector("[data-slot='row-failure']");
+    expect(band).not.toBeNull();
+    // Waiting its turn below the desk, like the row it belongs to.
+    expect(band).toHaveClass("hidden", "desk:table-row");
+    expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
   });
 
   it("clicks the slot as well as typing it", async () => {
@@ -538,9 +593,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     });
     // The breathing bracket is the app's one waiting device, and it is
     // `aria-hidden` — the word beside it is what a reader hears.
-    expect(
-      screen.getByRole("status").querySelector(".breathe"),
-    ).not.toBeNull();
+    expect(screen.getByRole("status").querySelector(".breathe")).not.toBeNull();
 
     pending.resolve({ entryId: "01NEW" });
     await waitFor(() => {
@@ -583,29 +636,113 @@ describe("VerdictBacklog: the rail", () => {
     expect(rail?.textContent).not.toContain("count exactly like verdicts");
   });
 
-  it("draws no conditions card when the selected run has none", async () => {
+  it("says there is no weather on a run with none, and still takes a verdict", async () => {
+    // Round 22, item 18: "No conditions: rail sentence 'No weather on
+    // this run.' — verdict still allowed."
     await renderTable([row({ conditions: undefined, suggestion: undefined })]);
 
     const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).not.toContain("Selected");
+    expect(rail?.textContent).toContain("Selected");
+    expect(rail?.textContent).toContain("No weather on this run.");
+    expect(
+      screen.getByRole("button", { name: /^Dialed —/ }),
+    ).not.toHaveAttribute("aria-disabled");
     // The note and the attribution are not conditional on it.
     expect(rail?.textContent).toContain("Weather by Visual Crossing");
   });
 });
 
-describe("VerdictBacklog: nothing to clear", () => {
-  it("renders the table's chrome and no rows", async () => {
-    // Reachable by typing the URL. `rowAfterMove` is what stops the
-    // selection going negative here, and the rail reads `rows[0]`.
+describe("VerdictBacklog: all logged (round 22, item 18)", () => {
+  it("says [ ALL LOGGED ] when there is nothing to clear, and draws no table", async () => {
+    // Reachable by typing the URL with an empty queue.
     await renderTable([]);
 
-    expect(rowsOf()).toHaveLength(0);
-    expect(screen.getByText(/0 of 0 saved/)).toBeInTheDocument();
-    expect(
-      document.querySelector("[data-slot='backlog-rail']"),
-    ).not.toBeNull();
+    expect(screen.getByText("[All logged]")).toBeVisible();
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(document.querySelector("[data-slot='backlog-rail']")).toBeNull();
+    expect(screen.queryByText(/runs · oldest first/)).toBeNull();
   });
 
+  it("clears to [ ALL LOGGED ] when the last row lands, and asks for the bar's count again", async () => {
+    const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
+    const invalidate = await renderTableWatching([row()], saveRow);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.keyDown(body() ?? document.body, { key: "3" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+
+    expect(await screen.findByText("[All logged]")).toBeVisible();
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("does not ask again while rows are still waiting", async () => {
+    const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
+    const invalidate = await renderTableWatching([row(), bare], saveRow);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.keyDown(body() ?? document.body, { key: "3" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(rowsOf()[0]).toHaveAttribute("data-saved", "true");
+    });
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(screen.queryByText("[All logged]")).toBeNull();
+  });
+});
+
+describe("VerdictBacklog: 720–1039, one run at a time", () => {
+  it("draws only the selected row below the desk, and every row from it up", async () => {
+    // Round 22, item 18: "720–1039: no table; A3 one at a time in the
+    // panel." One markup, two layouts: the classes are the rule.
+    await renderTable([row(), bare]);
+
+    expect(rowsOf()[0]).toHaveClass("flex", "desk:table-row");
+    expect(rowsOf()[0]).not.toHaveClass("hidden");
+    expect(rowsOf()[1]).toHaveClass("hidden", "desk:table-row");
+    expect(screen.getByRole("table")).toHaveClass("block", "desk:table");
+  });
+
+  it("logs the row with A3's own verb where there is no Enter to press", async () => {
+    const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
+    await renderTable([row(), bare], saveRow);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(
+      within(rowsOf()[0] ?? document.body).getByRole("button", {
+        name: /^A bit warm —/,
+      }),
+    );
+    const [logIt] = screen.getAllByRole("button", { name: "Log it" });
+    if (logIt === undefined) throw new Error("no Log it");
+    fireEvent.click(logIt);
+
+    await waitFor(() => {
+      expect(saveRow).toHaveBeenCalledWith({
+        data: {
+          runId: "01RUN1",
+          itemIds: ["01ITEM1", "01ITEM2"],
+          verdict: 1,
+        },
+      });
+    });
+  });
+
+  it("skips to the next run, and back to the last at the end", async () => {
+    await renderTable([row(), bare]);
+
+    const [skip] = screen.getAllByRole("button", { name: "Skip" });
+    if (skip === undefined) throw new Error("no Skip");
+    fireEvent.click(skip);
+
+    expect(rowsOf()[1]).toHaveAttribute("aria-current", "true");
+    expect(rowsOf()[1]).not.toHaveClass("hidden");
+    expect(rowsOf()[0]).toHaveClass("hidden");
+  });
+});
+
+describe("VerdictBacklog: keys it does not claim", () => {
   it("leaves a key it does not claim to the browser", async () => {
     // Both halves matter and neither is visible. `actionForKey` answering
     // `undefined` has to *return* — falling through would read `.kind` off
@@ -633,19 +770,5 @@ describe("VerdictBacklog: nothing to clear", () => {
     fireEvent(body() ?? document.body, down);
     expect(down.defaultPrevented).toBe(true);
     expect(rowsOf()[1]).toHaveAttribute("aria-current", "true");
-  });
-
-  it("does nothing on a key with no row under it", async () => {
-    await renderTable([]);
-
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-
-    // Nothing is announced, because nothing happened. `PendingLabel`'s
-    // hidden half still contributes "Saving" to `textContent` — what this
-    // asserts is that no row spoke.
-    expect(screen.getByRole("status").textContent).not.toMatch(
-      /Sep|Pick an outfit|1 to 5/,
-    );
   });
 });

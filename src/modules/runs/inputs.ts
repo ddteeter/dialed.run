@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { runDraftSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
+import { SET_CONDITION_BANDS } from "./run-conditions";
 import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
@@ -25,12 +26,30 @@ export const importIdInput = z.object({ importId: z.string().min(1) });
 
 export const runIdInput = z.object({ runId: z.string().min(1) });
 
-export const manualTempInput = z.object({
-  runId: z.string().min(1),
-  // The habitable range for a run, not for the planet: a value outside it
-  // is a typo or a unit mix-up, and storing it would poison the fallback
-  // it exists to feed.
-  tempC: z.number().min(-60).max(60),
+/**
+ * R2b's pick: one of the bands it offers, never a typed number (round 22).
+ * Anything else is refused, so the server stores only what the sheet can
+ * show.
+ */
+export const conditionsBandInput = z.object({
+  runId: ulidSchema,
+  bandFloorC: z
+    .number()
+    .refine((floor) => SET_CONDITION_BANDS.includes(floor), {
+      message: "Pick one of the bands.",
+    }),
+});
+
+/**
+ * A1's time correction, as the shift the runner made rather than a new
+ * epoch: the screen shows the run's wall-clock time in its own zone, and
+ * the difference between two times on the same clock is the one thing
+ * that needs no zone to be right. Bounded by a day either way — a run that
+ * started on another day is another run.
+ */
+export const retimeRunInput = z.object({
+  runId: ulidSchema,
+  shiftS: z.number().int().min(-86_400).max(86_400),
 });
 
 /**
@@ -65,15 +84,23 @@ const IMPORT_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
 };
 
 /**
- * The file out of a multipart import upload, or the reason it is not one.
+ * The file out of a multipart import upload, or the reason it is not one,
+ * and the key that makes a retry of it the same upload (law 8b).
  *
  * Size is checked here, before the bytes are read: an oversized upload is
  * refused without allocating it. `startImport` checks the cap again
  * against the bytes it was actually handed — this is the early exit, not
- * the guarantee.
+ * the guarantee. The key is optional because a form that predates it still
+ * sends a file and nothing else.
  */
-export function importUploadFrom(input: unknown): { file: File } {
+export function importUploadFrom(input: unknown): {
+  file: File;
+  idempotencyKey: string | undefined;
+} {
   const part = filePartFrom(input, "file", MAX_IMPORT_BYTES);
   if (!part.ok) throw new ImportUploadError(IMPORT_REFUSALS[part.problem]);
-  return { file: part.file };
+  const key = ulidSchema
+    .optional()
+    .parse(part.form.get("idempotencyKey") ?? undefined);
+  return { file: part.file, idempotencyKey: key };
 }

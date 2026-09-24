@@ -1,267 +1,368 @@
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
 import { RunDetail } from "../../src/modules/runs/components/RunDetail";
-import type { RunRow } from "../../src/modules/runs/service";
-import { expectAvailable, expectBusy } from "../ui/unavailable";
+import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
+import type { Units } from "../../src/lib/contracts";
+import type { RunSummary } from "../../src/modules/runs/service";
+import { expectBusy } from "../ui/unavailable";
+import {
+  RUN_ID,
+  SET_BY_YOU,
+  renderWithRouter,
+  runSummary,
+} from "./run-fixtures";
 
 /**
- * The run screen, and D-24's manual-temp fallback.
- *
- * Weather is never typed by a human on the default path, so this form is
- * the exception and the conditions it appears under are the thing worth
- * pinning. All of it was uncovered until the action moved to a prop.
+ * A run before its kit (round 22, "R Run before kit"), and R2b: no inputs
+ * on the screen, the conditions read-only where the weather came, and
+ * "Set ›" into a band where it did not.
  */
-const NOTHING = z.null().parse(JSON.parse("null"));
 
-async function renderWithRouter(element: ReactElement) {
-  const rootRoute = createRootRoute();
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/",
-    component: () => element,
-  });
-  const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
-  await router.load();
-  render(<RouterProvider router={router} />);
-  return router;
+type SetConditions = ConditionsActions["setConditions"];
+type RetryWeather = ConditionsActions["retryWeather"];
+
+const MILES: Units = { temp: "f", distance: "mi" };
+
+async function openSheet(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<HTMLElement> {
+  await user.click(screen.getByRole("button", { name: "Set ›" }));
+  return screen.findByRole("dialog", { name: "No weather saved" });
 }
 
-function run(overrides: Partial<RunRow> = {}): RunRow {
-  return {
-    id: "01RUN",
-    userId: "01USER",
-    source: "manual",
-    startedAt: 1_755_000_000,
-    durationS: 1830,
-    distanceM: 5432,
-    lat: NOTHING,
-    lng: NOTHING,
-    indoor: false,
-    effort: NOTHING,
-    title: "Evening run",
-    idempotencyKey: NOTHING,
-    weatherStatus: "failed",
-    ...overrides,
-  };
+function detail(
+  run: RunSummary,
+  actions: Partial<ConditionsActions> = {},
+  units: Units = MILES,
+) {
+  return (
+    <RunDetail
+      run={run}
+      units={units}
+      actions={{
+        setConditions: actions.setConditions ?? (() => Promise.resolve(true)),
+        retryWeather: actions.retryWeather ?? (() => Promise.resolve(true)),
+      }}
+    />
+  );
 }
 
-const nothing = () => Promise.resolve();
+const UNAVAILABLE = {
+  weatherStatus: "failed" as const,
+  conditions: undefined,
+  canSetConditions: true,
+};
 
-describe("RunDetail: what the run says", () => {
-  it("names it and renders the measured values in mono", async () => {
-    await renderWithRouter(
-      <RunDetail
-        run={run({ weatherStatus: "attached" })}
-        recordManualTemp={nothing}
-      />,
-    );
+function region(slot: string): HTMLElement {
+  const found = document.querySelector<HTMLElement>(
+    `[data-slot='${CSS.escape(slot)}']`,
+  );
+  if (found === null) throw new Error(`no ${slot}`);
+  return found;
+}
 
-    expect(screen.getByRole("heading", { name: "Evening run" })).toBeVisible();
-    // 5432 m is 5.43 KM and 1830 s is 31 MIN — rounded to the minute, not
-    // truncated, or a 1:59:30 run reads as an hour and 59.
-    const measured = screen.getByText(/5\.43 KM/);
-    expect(measured).toHaveTextContent("5.43 KM · 31 MIN");
-    expect(measured).toHaveClass("font-mono");
+describe("R: a run before its kit", () => {
+  it("strips the run: when, where from, how far, how fast", async () => {
+    await renderWithRouter(detail(runSummary()));
+
+    const strip = region("run-strip");
+    expect(strip).toHaveTextContent("Sat 29 Aug · 6:04 AM · File");
+    expect(within(strip).getByText("6.2 mi")).toBeVisible();
+    expect(within(strip).getByText("8:20 /mi")).toBeVisible();
   });
 
-  it("marks an indoor run as indoor", async () => {
+  it("names a run entered by hand as the board does, and dates it in UTC with no zone", async () => {
     await renderWithRouter(
-      <RunDetail run={run({ indoor: true })} recordManualTemp={nothing} />,
+      detail(runSummary({ source: "manual", conditions: undefined })),
     );
-    expect(screen.getByText("[Indoor]")).toBeVisible();
+
+    expect(region("run-strip")).toHaveTextContent(
+      "Sat 29 Aug · 11:04 AM · By hand",
+    );
   });
 
-  it("does not mark an outdoor one", async () => {
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={nothing} />,
+  it("says the kit is what it is waiting for, and asks for it in the log verb", async () => {
+    await renderWithRouter(detail(runSummary()));
+
+    const kit = region("kit");
+    expect(kit).toHaveAttribute("data-state", "empty");
+    expect(kit).toHaveTextContent(
+      "No kit yet. Without one, this run can’t teach your closet anything.",
     );
-    expect(screen.queryByText("[Indoor]")).toBeNull();
+    const primary = screen.getByRole("link", { name: "What did you wear?" });
+    expect(primary).toHaveAttribute("href", `/feed/attach/${RUN_ID}`);
+    expect(primary).toHaveClass("bg-action");
+  });
+
+  it("has no input on it at all", async () => {
+    await renderWithRouter(detail(runSummary(UNAVAILABLE)));
+
+    expect(document.querySelector("input")).toBeNull();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 });
 
-describe("RunDetail: when the manual-temp fallback appears", () => {
-  it.each([
-    ["failed", true],
-    ["pending", true],
-    ["attached", false],
-    ["manual", false],
-    ["none", false],
-  ] as const)(
-    "outdoor run with %s conditions: %s",
-    async (status, expected) => {
-      // D-24: the fallback exists only where no observation is resolvable.
-      // Offering it next to conditions we already have invites a human to
-      // overwrite a measurement.
-      await renderWithRouter(
-        <RunDetail
-          run={run({ weatherStatus: status })}
-          recordManualTemp={nothing}
-        />,
-      );
+describe("R: the conditions row", () => {
+  it("is A1's ink block, read-only, when the weather arrived", async () => {
+    await renderWithRouter(detail(runSummary()));
 
-      const form = screen.queryByRole("button", { name: "Save temperature" });
-      expect(form === null).toBe(!expected);
-    },
-  );
+    const block = region("conditions");
+    expect(block).toHaveAttribute("data-state", "attached");
+    expect(block).toHaveAttribute("data-ground", "ink");
+    expect(block).toHaveTextContent("Conditions · auto-attached");
+    expect(block).toHaveTextContent("41°F");
+    expect(block).toHaveTextContent("damp");
+    expect(block).toHaveTextContent("Feels 36° · 88% hum · 9mph · Light rain");
+    expect(
+      within(block).getByRole("link", { name: "Weather by Visual Crossing" }),
+    ).toBeVisible();
+    // No correction note here: only A1's card can move the time.
+    expect(block).not.toHaveTextContent("Never typed by hand");
+  });
 
-  it("never appears on an indoor run, whatever the status says", async () => {
-    // An indoor run has no conditions to resolve, so a stale 'pending' on
-    // one is not an invitation to type a temperature.
+  it("says set by you, and nothing it does not know, for a band chosen in R2b", async () => {
     await renderWithRouter(
-      <RunDetail
-        run={run({ indoor: true, weatherStatus: "pending" })}
-        recordManualTemp={nothing}
-      />,
+      detail(
+        runSummary({
+          weatherStatus: "manual",
+          conditions: SET_BY_YOU,
+        }),
+      ),
+    );
+
+    const block = region("conditions");
+    expect(block).toHaveAttribute("data-state", "set");
+    expect(block).toHaveTextContent("Conditions · set by you");
+    expect(block).toHaveTextContent("55°F");
+    expect(block).not.toHaveTextContent("Feels");
+    expect(within(block).queryByRole("link")).toBeNull();
+  });
+
+  it("breathes while the weather is still being asked for", async () => {
+    await renderWithRouter(
+      detail(runSummary({ weatherStatus: "pending", conditions: undefined })),
+    );
+
+    expect(screen.getByText("Fetching weather")).toBeVisible();
+    expect(document.querySelector("[data-slot='conditions']")).toBeNull();
+  });
+
+  it("calls an indoor run a treadmill, with nothing to set", async () => {
+    await renderWithRouter(
+      detail(
+        runSummary({
+          indoor: true,
+          weatherStatus: "none",
+          conditions: undefined,
+        }),
+      ),
+    );
+
+    expect(region("conditions")).toHaveAttribute("data-state", "indoor");
+    expect(screen.getByText("Treadmill")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Set ›" })).toBeNull();
+  });
+
+  it("says no conditions, and offers Set › into R2b, when the weather never came", async () => {
+    await renderWithRouter(detail(runSummary(UNAVAILABLE)));
+
+    const row = region("conditions");
+    expect(row).toHaveAttribute("data-state", "unavailable");
+    expect(row).toHaveTextContent("No conditions");
+    expect(row).toHaveTextContent(
+      "No weather came back for this time and place.",
+    );
+    expect(within(row).getByRole("button", { name: "Set ›" })).toHaveAttribute(
+      "aria-haspopup",
+      "dialog",
+    );
+  });
+
+  it("offers nothing to set for a run with no place to key it on", async () => {
+    await renderWithRouter(
+      detail(runSummary({ ...UNAVAILABLE, canSetConditions: false })),
+    );
+
+    expect(screen.getByText("No conditions")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Set ›" })).toBeNull();
+  });
+});
+
+describe("R2b: no weather saved", () => {
+  it("says what happened, outlined, with the two ways on", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(detail(runSummary(UNAVAILABLE)));
+
+    const sheet = await openSheet(user);
+
+    expect(within(sheet).getByText("No history for that time")).toBeVisible();
+    const box = sheet.querySelector("[data-slot='weather-unavailable']");
+    expect(box).toHaveClass("border-ink");
+    expect(box).toHaveTextContent("No weather saved");
+    expect(box).toHaveTextContent(
+      "We have no record for that hour. Set the conditions yourself and the run still counts.",
     );
     expect(
-      screen.queryByRole("button", { name: "Save temperature" }),
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    ).toBeVisible();
+    expect(
+      within(sheet).getByRole("button", { name: "Try again" }),
+    ).toBeVisible();
+  });
+
+  it("offers bands to pick — never a number to type — in the runner's unit", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), {}, { temp: "c", distance: "km" }),
+    );
+    const sheet = await openSheet(user);
+
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    );
+
+    const bands = within(sheet).getByRole("group", { name: "Conditions" });
+    const buttons = within(bands).getAllByRole("button");
+    expect(buttons).toHaveLength(12);
+    expect(buttons[0]).toHaveAccessibleName("-20–-15°");
+    expect(buttons.at(-1)).toHaveAccessibleName("35–40°");
+    expect(sheet.querySelector("input")).toBeNull();
+    expect(
+      within(sheet).queryByRole("button", { name: "Try again" }),
     ).toBeNull();
   });
-});
 
-describe("RunDetail: typing a temperature", () => {
-  it("says what it is for, and that it will not train the model", async () => {
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={nothing} />,
-    );
-
-    expect(screen.getByText("[Unavailable]")).toBeVisible();
-    expect(screen.getByText(/won’t train the model/)).toBeVisible();
-    expect(screen.getByLabelText(/Temp/)).toHaveValue(10);
-  });
-
-  it("sends the number the user typed, for this run", async () => {
+  it("sets the band picked, then reloads the run and closes", async () => {
     const user = userEvent.setup();
-    const recordManualTemp = vi.fn(() => Promise.resolve());
-    await renderWithRouter(
-      <RunDetail
-        run={run({ id: "01THISRUN" })}
-        recordManualTemp={recordManualTemp}
-      />,
+    const setConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
+    const { router } = await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), { setConditions }),
+    );
+    const invalidate = vi.spyOn(router, "invalidate");
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
     );
 
-    const field = screen.getByLabelText(/Temp/);
-    await user.clear(field);
-    await user.type(field, "-3");
-    await user.click(screen.getByRole("button", { name: "Save temperature" }));
+    await user.click(within(sheet).getByRole("button", { name: "50–59°" }));
 
     await waitFor(() => {
-      expect(recordManualTemp).toHaveBeenCalledWith({
-        data: { runId: "01THISRUN", tempC: -3 },
+      expect(setConditions).toHaveBeenCalledWith({
+        data: { runId: RUN_ID, bandFloorC: 10 },
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("waits behind the band it is setting, and says what is still true if it fails", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<boolean>();
+    const setConditions = vi
+      .fn<SetConditions>()
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce(true);
+    await renderWithRouter(detail(runSummary(UNAVAILABLE), { setConditions }));
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    );
+
+    const band = within(sheet).getByRole("button", { name: "50–59°" });
+    await user.click(band);
+    await waitFor(() => {
+      expectBusy(band);
+    });
+    expect(band).toHaveAccessibleName("Setting");
+    // Every band waits: a second pick mid-flight is not a second write.
+    const other = within(sheet).getByRole("button", { name: "59–68°" });
+    expectBusy(other);
+    await user.click(other);
+    expect(setConditions).toHaveBeenCalledTimes(1);
+
+    pending.reject(new Error("D1 unavailable"));
+    expect(await within(sheet).findByText("No conditions")).toBeVisible();
+    expect(within(sheet).getByText("Our end failed.")).toBeVisible();
+
+    await user.click(within(sheet).getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(setConditions).toHaveBeenLastCalledWith({
+        data: { runId: RUN_ID, bandFloorC: 10 },
       });
     });
   });
 
-  it("submits through its own handler, never the browser's", async () => {
+  it("asks the weather again on Try again, then reloads and closes", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={nothing} />,
+    const retryWeather = vi.fn<RetryWeather>(() => Promise.resolve(true));
+    const { router } = await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), { retryWeather }),
     );
+    const invalidate = vi.spyOn(router, "invalidate");
+    const sheet = await openSheet(user);
 
-    let prevented: boolean | undefined;
-    const watch = (event: Event) => {
-      prevented = event.defaultPrevented;
-    };
-    document.addEventListener("submit", watch);
-    try {
-      await user.click(
-        screen.getByRole("button", { name: "Save temperature" }),
-      );
-    } finally {
-      document.removeEventListener("submit", watch);
-    }
+    await user.click(within(sheet).getByRole("button", { name: "Try again" }));
 
-    expect(prevented).toBe(true);
+    await waitFor(() => {
+      expect(retryWeather).toHaveBeenCalledWith({ data: { runId: RUN_ID } });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(invalidate).toHaveBeenCalled();
   });
 
-  it("does nothing on a second press while the first is in flight", async () => {
-    // The guard rule 07 makes necessary. `aria-disabled` keeps the button
-    // focusable and announcing, so unlike `disabled` it does not stop the
-    // press — the handler has to, and this one writes a temperature.
+  it("says it is trying, and still no conditions when the retry fails", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
-    const recordManualTemp = vi.fn(() => pending.promise);
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={recordManualTemp} />,
-    );
-    const button = screen.getByRole("button", { name: "Save temperature" });
+    const pending = Promise.withResolvers<boolean>();
+    const retryWeather = vi
+      .fn<RetryWeather>()
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce(true);
+    await renderWithRouter(detail(runSummary(UNAVAILABLE), { retryWeather }));
+    const sheet = await openSheet(user);
 
-    await user.click(button);
+    const retry = within(sheet).getByRole("button", { name: "Try again" });
+    await user.click(retry);
     await waitFor(() => {
-      expectBusy(button);
+      expectBusy(retry);
     });
-    await user.click(button);
+    expect(retry).toHaveAccessibleName("Trying");
 
-    expect(recordManualTemp).toHaveBeenCalledTimes(1);
-  });
-
-  it("locks the button while it saves", async () => {
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={() => pending.promise} />,
+    pending.reject(new Error("D1 unavailable"));
+    expect(await within(sheet).findByText("No conditions")).toBeVisible();
+    expect(within(sheet).getByRole("status")).toHaveTextContent(
+      "No conditions. Our end failed.",
     );
-    const button = screen.getByRole("button", { name: "Save temperature" });
 
-    await user.click(button);
+    // The band's own Try again repeats the retry.
+    const band = sheet.querySelector<HTMLElement>("[data-part='failure-band']");
+    if (band === null) throw new Error("no failure band");
+    await user.click(within(band).getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expectBusy(button);
-    });
-
-    pending.resolve(undefined);
-    await waitFor(() => {
-      expectAvailable(button);
+      expect(retryWeather).toHaveBeenCalledTimes(2);
     });
   });
 
-  it("says so when the save fails, and lets them try again", async () => {
+  it("closes the way the platform closes it, and changes nothing", async () => {
+    // Escape and swipe-down are the dialog's own close; both arrive at
+    // the same callback.
     const user = userEvent.setup();
-    const recordManualTemp = vi
-      .fn<() => Promise<unknown>>()
-      .mockRejectedValueOnce(new Error("D1 unavailable"))
-      .mockResolvedValueOnce(undefined);
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={recordManualTemp} />,
-    );
-    const button = screen.getByRole("button", { name: "Save temperature" });
+    const setConditions = vi.fn<SetConditions>();
+    await renderWithRouter(detail(runSummary(UNAVAILABLE), { setConditions }));
+    const sheet = await openSheet(user);
 
-    await user.click(button);
+    (sheet as HTMLDialogElement).close();
 
-    const message = await screen.findByText(/try/i);
-    expect(message).toBeVisible();
-    expectAvailable(button);
-
-    // And the message clears on the next attempt rather than sitting next
-    // to a running save.
-    const pending = Promise.withResolvers<undefined>();
-    recordManualTemp.mockReturnValueOnce(pending.promise);
-    await user.click(button);
     await waitFor(() => {
-      expect(screen.queryByText(message.textContent)).toBeNull();
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
-    pending.resolve(undefined);
-  });
-
-  it("leaves the CTA slot for the kit-attach flow", async () => {
-    await renderWithRouter(
-      <RunDetail run={run()} recordManualTemp={nothing} />,
-    );
-    expect(
-      document.querySelector("[data-slot='attach-kit-cta']"),
-    ).not.toBeNull();
+    expect(setConditions).not.toHaveBeenCalled();
+    // And it opens again from the row.
+    expect(await openSheet(user)).toBeVisible();
   });
 });

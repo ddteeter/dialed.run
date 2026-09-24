@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { StravaCallbackResult } from "../../modules/runs/components/StravaCallbackResult";
-import { completeStravaConnectFn } from "../../modules/runs/functions";
+import {
+  completeStravaConnectFn,
+  getStravaAuthorizeUrlFn,
+  getStravaStatusFn,
+} from "../../modules/runs/functions";
 import { stravaCallbackSearch } from "../../modules/runs/inputs";
 
 /**
@@ -12,10 +16,21 @@ no button, no client state to get out of sync (design doc 102 §6).
 export const Route = createFileRoute("/runs/strava-callback")({
   validateSearch: stravaCallbackSearch,
   loaderDeps: ({ search }) => ({ ...search }),
-  loader: ({ deps }) => completeStravaConnectFn({ data: deps }),
+  loader: async ({ deps }) => {
+    const result = await completeStravaConnectFn({ data: deps });
+    const { configured } = await getStravaStatusFn();
+    return { result, configured };
+  },
   component: StravaCallbackPage,
 });
 
 function StravaCallbackPage() {
-  return <StravaCallbackResult result={Route.useLoaderData()} />;
+  const { result, configured } = Route.useLoaderData();
+  return (
+    <StravaCallbackResult
+      result={result}
+      configured={configured}
+      getAuthorizeUrl={getStravaAuthorizeUrlFn}
+    />
+  );
 }

@@ -7,7 +7,10 @@ import type {
 } from "@garmin/fitsdk";
 import { describe, expect, it } from "vitest";
 
-import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
+import {
+  NO_TRACK_MESSAGE,
+  PARSE_FAILURE_MESSAGE,
+} from "../../src/modules/runs/parsers";
 import { fitSource } from "../../src/modules/runs/parsers/fit";
 import { gpxSource } from "../../src/modules/runs/parsers/gpx";
 import { tcxSource } from "../../src/modules/runs/parsers/tcx";
@@ -110,7 +113,7 @@ describe("parsers (102 §3)", () => {
 
     it("rejects a track missing timestamps", async () => {
       await expect(gpxSource.parse(textBytes(malformedGpx))).rejects.toThrow(
-        PARSE_FAILURE_MESSAGE,
+        NO_TRACK_MESSAGE,
       );
     });
   });
@@ -134,7 +137,7 @@ describe("parsers (102 §3)", () => {
 
     it("rejects a lap missing TotalTimeSeconds", async () => {
       await expect(tcxSource.parse(textBytes(malformedTcx))).rejects.toThrow(
-        PARSE_FAILURE_MESSAGE,
+        NO_TRACK_MESSAGE,
       );
     });
   });

@@ -1,16 +1,33 @@
 /**
- * Shared parser plumbing (102 §3). Every format-specific parser throws this
- * exact user-facing message on malformed input — never a thrown 500, per
- * the packet — so the queue consumer can surface it verbatim on the import
- * row and the "That file didn't parse" copy stays consistent everywhere.
+ * Shared parser plumbing (102 §3). Every format-specific parser throws one
+ * of two user-facing messages on a file it cannot use — never a thrown
+ * 500, per the packet — so the queue consumer can surface it verbatim on
+ * the import row, and A1 can say which of round 22's sentences applies.
  */
 import { XMLParser } from "fast-xml-parser";
 
-export const PARSE_FAILURE_MESSAGE =
-  "That file didn't parse. Try the original export from your watch.";
+import { NO_TRACK_MESSAGE, PARSE_FAILURE_MESSAGE } from "../upload-limits";
 
 /**
- * `message` is the user-facing copy and never varies. `reason` is the
+ * Re-exported from the client-safe sibling that owns the words, so the
+ * parsers' callers keep importing it from here.
+ */
+export { NO_TRACK_MESSAGE, PARSE_FAILURE_MESSAGE } from "../upload-limits";
+
+/**
+ * Which of round 22's two parse sentences a failure earns: a file that
+ * read and held no run is **no track** ("Export the run again"); anything
+ * the decoder could not read at all is **unreadable** ("Export it again").
+ */
+type ParseProblem = "no-track" | "unreadable";
+
+const MESSAGES: Readonly<Record<ParseProblem, string>> = {
+  "no-track": NO_TRACK_MESSAGE,
+  unreadable: PARSE_FAILURE_MESSAGE,
+};
+
+/**
+ * `message` is the user-facing copy, one of two sentences. `reason` is the
  * diagnostic — which of the ~19 ways a file can fail to parse this was —
  * and `cause` carries the underlying library error where there was one.
  *
@@ -23,8 +40,11 @@ export const PARSE_FAILURE_MESSAGE =
 export class RunParseError extends Error {
   readonly reason: string;
 
-  constructor(reason: string, options?: { cause?: unknown }) {
-    super(PARSE_FAILURE_MESSAGE, options);
+  constructor(
+    reason: string,
+    options?: { cause?: unknown; problem?: ParseProblem },
+  ) {
+    super(MESSAGES[options?.problem ?? "unreadable"], options);
     this.name = "RunParseError";
     this.reason = reason;
   }

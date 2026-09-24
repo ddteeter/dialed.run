@@ -20,7 +20,7 @@ import { expect } from "vitest";
  * forgets: `toBeDisabled()` alone is satisfied by an element that has been
  * dropped from the tab order, and that is the failure, not the fix.
  */
-export function expectUnavailable(control: HTMLElement): void {
+function expectUnavailable(control: HTMLElement): void {
   expect(control).not.toBeDisabled();
   expect(control).toHaveAttribute("aria-disabled", "true");
   expect(control).not.toHaveAttribute("tabindex", "-1");

@@ -109,7 +109,8 @@ test("the five verdict buttons sit in one row at 390 and at 1280", async ({
         // zero.
         await expect(button).toBeVisible();
         const box = await button.boundingBox();
-        if (!box) throw new Error(`${label} has no box at ${String(viewport.width)}`);
+        if (!box)
+          throw new Error(`${label} has no box at ${String(viewport.width)}`);
         boxes.push(box);
       }
 
@@ -119,7 +120,10 @@ test("the five verdict buttons sit in one row at 390 and at 1280", async ({
       // rounding. A stack would put them 50-odd pixels apart.
       const tops = boxes.map((box) => box.y);
       const spread = Math.max(...tops) - Math.min(...tops);
-      expect(spread, `verdict buttons are not on one row at ${width}`).toBeLessThan(2);
+      expect(
+        spread,
+        `verdict buttons are not on one row at ${width}`,
+      ).toBeLessThan(2);
 
       // **In order, left to right.** `grid-cols-5` guarantees it, but the
       // scale's order is the product rule (way cold → way warm) and a
@@ -186,13 +190,11 @@ test("the five verdict buttons sit in one row at 390 and at 1280", async ({
     // frame lopsided by 3.8px of the 8px travel. Waiting on the element's
     // own animations rather than a timeout keeps it deterministic if the
     // duration ever changes.
-    await page
-      .locator(".bracket-close-start")
-      .evaluate(async (element) => {
-        await Promise.all(
-          element.getAnimations().map(async (animation) => animation.finished),
-        );
-      });
+    await page.locator(".bracket-close-start").evaluate(async (element) => {
+      await Promise.all(
+        element.getAnimations().map(async (animation) => animation.finished),
+      );
+    });
 
     const cell = await chosen.boundingBox();
     const open = await page.locator(".bracket-close-start").boundingBox();

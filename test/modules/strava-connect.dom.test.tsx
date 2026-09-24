@@ -1,18 +1,19 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
-import { RETRY_GENERIC } from "../../src/lib/copy";
+import {
+  StravaConnect,
+  leaveForStrava,
+} from "../../src/modules/runs/components/StravaConnect";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
- * Connect / reconnect / disconnect (102 §6).
+ * Connect, reconnect and disconnect (Remaining Screens T1, T3; round 22,
+ * item 23; round 23, item 9).
  *
- * Four states — unconfigured, unconnected, connected, broken — and every
- * one of them was uncovered until the two server functions moved to
- * props. The leaving-the-app half is `globalThis.location`, which is
- * stubbed here rather than driven.
+ * The leaving-the-app half is `globalThis.location`, which is stubbed here
+ * rather than driven.
  */
 const location = {
   assign: vi.fn(),
@@ -28,337 +29,294 @@ afterEach(() => {
 
 const nothing = () => Promise.resolve();
 const noUrl = () => Promise.resolve(undefined);
+const STRAVA = "https://www.strava.com/oauth/authorize?state=01";
 
-describe("StravaConnect: nothing to connect to", () => {
-  it("says the deployment has no Strava, and offers no button", () => {
-    // Law 5's shape at the UI: credentials do not exist yet, and the
-    // screen degrades to a sentence rather than a button that cannot work.
-    render(
+function screenFor(
+  status: "ok" | "broken" | undefined,
+  overrides: {
+    getAuthorizeUrl?: () => Promise<string | undefined>;
+    disconnect?: () => Promise<unknown>;
+  } = {},
+) {
+  return render(
+    <StravaConnect
+      configured
+      status={status}
+      runCount={186}
+      getAuthorizeUrl={overrides.getAuthorizeUrl ?? noUrl}
+      disconnect={overrides.disconnect ?? nothing}
+    />,
+  );
+}
+
+/**
+T3b's confirm, or a failure saying it is not open.
+*/
+function confirmBox(): HTMLElement {
+  const found = document.querySelector<HTMLElement>(
+    "[data-slot='disconnect-confirm']",
+  );
+  if (found === null) throw new Error("no disconnect confirm");
+  return found;
+}
+
+describe("StravaConnect: not configured", () => {
+  it("draws nothing at all — never a dead control", () => {
+    const { container } = render(
       <StravaConnect
         configured={false}
         status={undefined}
+        runCount={0}
         getAuthorizeUrl={noUrl}
         disconnect={nothing}
       />,
     );
 
-    expect(screen.getByText(/aren’t set up for this deployment/)).toBeVisible();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(container).toBeEmptyDOMElement();
   });
 });
 
-function connectScreen(getAuthorizeUrl: () => Promise<string | undefined>) {
-  return render(
-    <StravaConnect
-      configured
-      status={undefined}
-      getAuthorizeUrl={getAuthorizeUrl}
-      disconnect={nothing}
-    />,
-  );
-}
-
 describe("StravaConnect: not yet connected", () => {
   it("fetches the authorize URL at click time and leaves for Strava", async () => {
-    // The URL carries a fresh CSRF nonce, so it is fetched when the user
+    // The URL carries a fresh CSRF nonce, so it is fetched when the runner
     // asks rather than rendered into the page.
     const user = userEvent.setup();
-    const getAuthorizeUrl = vi.fn(() =>
-      Promise.resolve("https://www.strava.com/oauth/authorize?state=01"),
-    );
-    connectScreen(getAuthorizeUrl);
-
-    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
-
-    await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(
-        "https://www.strava.com/oauth/authorize?state=01",
-      );
-    });
-    // And a link, for the case where the redirect is blocked.
-    expect(
-      await screen.findByRole("link", { name: "Continue to Strava" }),
-    ).toHaveAttribute(
-      "href",
-      "https://www.strava.com/oauth/authorize?state=01",
-    );
-  });
-
-  it("says so when the server has no URL to give", async () => {
-    // `undefined` means unconfigured secrets — a different problem from a
-    // failed call, and a different sentence.
-    const user = userEvent.setup();
-    connectScreen(noUrl);
-
-    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
+    const getAuthorizeUrl = vi.fn(() => Promise.resolve(STRAVA));
+    screenFor(undefined, { getAuthorizeUrl });
 
     expect(
-      await screen.findByText("Strava isn't configured yet."),
+      screen.getByText("You’ll approve this on Strava’s own screen."),
     ).toBeVisible();
-    expect(location.assign).not.toHaveBeenCalled();
-    expect(screen.queryByRole("link")).toBeNull();
-  });
-
-  it("says so when the call fails, in the shared retry words", async () => {
-    const user = userEvent.setup();
-    connectScreen(() => Promise.reject(new Error("network went away")));
-
     await user.click(screen.getByRole("button", { name: "Connect Strava" }));
 
-    expect(await screen.findByText(RETRY_GENERIC)).toBeVisible();
-    expectAvailable(screen.getByRole("button", { name: "Connect Strava" }));
-  });
-
-  it("does nothing on a second press while the first is in flight", async () => {
-    // The guard rule 07 makes necessary, and these three buttons share one
-    // `isBusy` — so it is a press on *any* of them that has to die, not
-    // just a second press on this one.
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<string | undefined>();
-    const getAuthorizeUrl = vi.fn(() => pending.promise);
-    connectScreen(getAuthorizeUrl);
-    const button = screen.getByRole("button", { name: "Connect Strava" });
-
-    await user.click(button);
     await waitFor(() => {
-      expectBusy(button);
+      expect(location.assign).toHaveBeenCalledWith(STRAVA);
     });
-    await user.click(button);
-
     expect(getAuthorizeUrl).toHaveBeenCalledTimes(1);
   });
 
-  it("locks the button while it fetches", async () => {
+  it("waits behind its in-flight label, and asks once", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<string | undefined>();
-    connectScreen(() => pending.promise);
-    const button = screen.getByRole("button", { name: "Connect Strava" });
+    const getAuthorizeUrl = vi.fn(() => pending.promise);
+    screenFor(undefined, { getAuthorizeUrl });
 
+    const button = screen.getByRole("button", { name: "Connect Strava" });
+    expectAvailable(button);
     await user.click(button);
     await waitFor(() => {
       expectBusy(button);
     });
-
-    pending.resolve(undefined);
-    await waitFor(() => {
-      expectAvailable(button);
-    });
+    expect(button).toHaveAccessibleName("Connecting");
+    await user.click(button);
+    expect(getAuthorizeUrl).toHaveBeenCalledTimes(1);
+    pending.resolve(STRAVA);
   });
 
-  it("says nothing at rest — no empty message, no dead link", () => {
-    // Not just "no text": an empty <p> or <a> in a flex column takes a
-    // line's worth of gap with it, and a link with no href is a control
-    // that announces itself and goes nowhere.
-    const { container } = connectScreen(noUrl);
-    expect(container.querySelectorAll("p")).toHaveLength(0);
-    expect(container.querySelectorAll("a")).toHaveLength(0);
-  });
-
-  it("clears the last message when the user tries again", async () => {
-    // A stale "Strava isn't configured yet." next to a running attempt is
-    // a lie about what is happening.
+  it("says not connected under the button when it fails, and tries again", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<string | undefined>();
     const getAuthorizeUrl = vi
       .fn<() => Promise<string | undefined>>()
-      .mockResolvedValueOnce(undefined)
-      .mockReturnValueOnce(pending.promise);
-    connectScreen(getAuthorizeUrl);
-    const button = screen.getByRole("button", { name: "Connect Strava" });
+      .mockRejectedValueOnce(new Error("upstream down"))
+      .mockResolvedValueOnce(STRAVA);
+    screenFor(undefined, { getAuthorizeUrl });
 
-    await user.click(button);
-    expect(
-      await screen.findByText("Strava isn't configured yet."),
-    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
 
-    await user.click(button);
+    expect(await screen.findByText("Not connected")).toBeVisible();
+    expect(screen.getByText("Our end failed.")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not connected. Our end failed.",
+    );
+    expect(location.assign).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(screen.queryByText("Strava isn't configured yet.")).toBeNull();
+      expect(location.assign).toHaveBeenCalledWith(STRAVA);
     });
-    pending.resolve(undefined);
+  });
+
+  it("treats a server with no URL to give as a failure, not a trip", async () => {
+    const user = userEvent.setup();
+    screenFor(undefined, { getAuthorizeUrl: noUrl });
+
+    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
+
+    expect(await screen.findByText("Not connected")).toBeVisible();
+    expect(location.assign).not.toHaveBeenCalled();
+  });
+
+  it("says nothing at rest", () => {
+    screenFor(undefined);
+    expect(screen.getByRole("status")).toHaveTextContent("");
+    expect(screen.queryByText("Not connected")).toBeNull();
+  });
+});
+
+describe("leaveForStrava", () => {
+  it("goes where the server says, and refuses to go nowhere", async () => {
+    await leaveForStrava(() => Promise.resolve(STRAVA));
+    expect(location.assign).toHaveBeenCalledWith(STRAVA);
+
+    await expect(leaveForStrava(noUrl)).rejects.toThrow(
+      "Strava gave no authorize URL.",
+    );
   });
 });
 
 describe("StravaConnect: connected", () => {
   it("says it is connected, and offers only a disconnect", () => {
-    render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={nothing}
-      />,
-    );
+    screenFor("ok");
 
-    expect(screen.getByText(/Strava is connected/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Disconnect" })).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Reconnect Strava" }),
-    ).toBeNull();
+      screen.getByText(
+        "Strava is connected. We'll remind you to log your kit after a run.",
+      ),
+    ).toBeVisible();
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Disconnect",
+    ]);
   });
 
-  it("disconnects and reloads, so the screen comes back from the server", async () => {
+  it("confirms first, as T3b draws it: what is kept and what stops", async () => {
     const user = userEvent.setup();
-    const disconnect = vi.fn(() => Promise.resolve());
-    render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={disconnect}
-      />,
-    );
+    const disconnect = vi.fn(nothing);
+    screenFor("ok", { disconnect });
 
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
 
-    await waitFor(() => {
-      expect(disconnect).toHaveBeenCalledTimes(1);
-    });
-    expect(location.reload).toHaveBeenCalledTimes(1);
-  });
-
-  it("says so when the disconnect fails, and lets them retry", async () => {
-    const user = userEvent.setup();
-    render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={() => Promise.reject(new Error("Strava is down"))}
-      />,
+    expect(disconnect).not.toHaveBeenCalled();
+    const confirm = confirmBox();
+    expect(confirm).toHaveClass("border-ink");
+    expect(
+      within(confirm).getByRole("heading", { name: "Disconnect Strava?" }),
+    ).toBeVisible();
+    const lines = [...confirm.querySelectorAll(":scope dl > div")].map(
+      (line) => line.textContent,
     );
-    const button = screen.getByRole("button", { name: "Disconnect" });
-
-    await user.click(button);
-
-    expect(await screen.findByText(RETRY_GENERIC)).toBeVisible();
-    expectAvailable(button);
-    expect(location.reload).not.toHaveBeenCalled();
+    expect(lines).toEqual([
+      "KeptAll 186 runs, their outfits and verdicts",
+      "KeptYour closet and everything it has learned",
+      "StopsNew runs arriving on their own — log by hand instead",
+    ]);
+    expect(within(confirm).getAllByText("Kept")[0]).toHaveClass(
+      "text-dialed-text",
+    );
+    expect(within(confirm).getByText("Stops")).toHaveClass("text-cold-text");
   });
 
-  it("clears the last disconnect failure when the user tries again", async () => {
+  it("keeps it on Keep it, changing nothing", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
+    const disconnect = vi.fn(nothing);
+    screenFor("ok", { disconnect });
+
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+    await user.click(screen.getByRole("button", { name: "Keep it" }));
+
+    expect(
+      document.querySelector("[data-slot='disconnect-confirm']"),
+    ).toBeNull();
+    expect(disconnect).not.toHaveBeenCalled();
+  });
+
+  it("disconnects on the confirm, and reloads so the screen comes from the server", async () => {
+    const user = userEvent.setup();
+    const disconnect = vi.fn(nothing);
+    screenFor("ok", { disconnect });
+
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+    await user.click(
+      within(confirmBox()).getByRole("button", { name: "Disconnect" }),
+    );
+
+    await waitFor(() => {
+      expect(location.reload).toHaveBeenCalledTimes(1);
+    });
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("says still connected when the disconnect fails, and tries again", async () => {
+    const user = userEvent.setup();
     const disconnect = vi
       .fn<() => Promise<unknown>>()
-      .mockRejectedValueOnce(new Error("Strava is down"))
-      .mockReturnValueOnce(pending.promise);
-    render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={disconnect}
-      />,
-    );
-    const button = screen.getByRole("button", { name: "Disconnect" });
+      .mockRejectedValueOnce(new Error("D1 unavailable"))
+      .mockResolvedValueOnce(undefined);
+    screenFor("ok", { disconnect });
 
-    await user.click(button);
-    expect(await screen.findByText(RETRY_GENERIC)).toBeVisible();
-
-    await user.click(button);
-    await waitFor(() => {
-      expect(screen.queryByText(RETRY_GENERIC)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+    const verb = within(confirmBox()).getByRole("button", {
+      name: "Disconnect",
     });
-    pending.resolve(undefined);
-  });
+    await user.click(verb);
 
-  it("says nothing at rest on the connected screen either", () => {
-    const { container } = render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={nothing}
-      />,
+    expect(await screen.findByText("Still connected")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Still connected. Our end failed.",
     );
-    // One paragraph — the "Strava is connected" sentence — and no empty
-    // second one waiting for an error.
-    expect(container.querySelectorAll("p")).toHaveLength(1);
+    expect(location.reload).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(location.reload).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("does nothing on a second press while the disconnect is in flight", async () => {
+  it("waits behind its in-flight label while it disconnects", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
+    const pending = Promise.withResolvers<unknown>();
     const disconnect = vi.fn(() => pending.promise);
-    render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={disconnect}
-      />,
-    );
-    const button = screen.getByRole("button", { name: "Disconnect" });
+    screenFor("ok", { disconnect });
 
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+    const verb = within(confirmBox()).getByRole("button", {
+      name: "Disconnect",
     });
-    await user.click(button);
+    await user.click(verb);
 
+    await waitFor(() => {
+      expectBusy(verb);
+    });
+    expect(verb).toHaveAccessibleName("Disconnecting");
+    await user.click(verb);
     expect(disconnect).toHaveBeenCalledTimes(1);
-    pending.resolve(undefined);
-  });
-
-  it("locks the button while it disconnects", async () => {
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<undefined>();
-    render(
-      <StravaConnect
-        configured
-        status="ok"
-        getAuthorizeUrl={noUrl}
-        disconnect={() => pending.promise}
-      />,
-    );
-    const button = screen.getByRole("button", { name: "Disconnect" });
-
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
-    });
     pending.resolve(undefined);
   });
 });
 
 describe("StravaConnect: broken", () => {
-  it("asks them to reconnect, and offers both ways out", () => {
-    // A broken grant is the user's to fix, so the reconnect is the primary
-    // action — but disconnecting entirely stays available.
-    render(
-      <StravaConnect
-        configured
-        status="broken"
-        getAuthorizeUrl={noUrl}
-        disconnect={nothing}
-      />,
-    );
+  it("asks them to reconnect, and still offers the way out", () => {
+    screenFor("broken");
 
     expect(screen.getByText("Strava needs to be reconnected.")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Reconnect Strava" }),
-    ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Disconnect" })).toBeVisible();
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Reconnect Strava[Reconnecting]",
+      "Disconnect",
+    ]);
   });
 
   it("reconnects through the same authorize flow", async () => {
     const user = userEvent.setup();
-    render(
-      <StravaConnect
-        configured
-        status="broken"
-        getAuthorizeUrl={() => Promise.resolve("https://strava.test/authorize")}
-        disconnect={nothing}
-      />,
-    );
+    screenFor("broken", { getAuthorizeUrl: () => Promise.resolve(STRAVA) });
 
     await user.click(screen.getByRole("button", { name: "Reconnect Strava" }));
 
     await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(
-        "https://strava.test/authorize",
-      );
+      expect(location.assign).toHaveBeenCalledWith(STRAVA);
+    });
+  });
+
+  it("says not connected when the reconnect fails", async () => {
+    const user = userEvent.setup();
+    screenFor("broken", {
+      getAuthorizeUrl: () => Promise.reject(new Error("down")),
+    });
+
+    const button = screen.getByRole("button", { name: "Reconnect Strava" });
+    await user.click(button);
+
+    expect(await screen.findByText("Not connected")).toBeVisible();
+    await waitFor(() => {
+      expectAvailable(button);
     });
   });
 });
