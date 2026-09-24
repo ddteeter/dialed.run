@@ -80,10 +80,10 @@ describe("R: a row", () => {
   it("opens run detail for a run with no entry", async () => {
     await renderWithRouter(list([runSummary()]));
 
-    expect(within(onlyRow()).getByRole("link")).toHaveAttribute(
-      "href",
-      `/runs/${RUN_ID}`,
-    );
+    const link = within(onlyRow()).getByRole("link");
+    expect(link).toHaveAttribute("href", `/runs/${RUN_ID}`);
+    // The whole row's words are one 44px target, not a line of text.
+    expect(link).toHaveClass("target", "flex-1");
   });
 
   it("opens the verdict for a run with a kit and no verdict yet", async () => {
@@ -258,6 +258,34 @@ describe("R: R2b from the list", () => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
     expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("opens again for the same row after the platform closed it", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      list([
+        runSummary({
+          weatherStatus: "failed",
+          conditions: undefined,
+          canSetConditions: true,
+        }),
+      ]),
+    );
+    const control = within(onlyRow()).getByRole("button", {
+      name: "Set conditions ›",
+    });
+
+    await user.click(control);
+    const sheet = await screen.findByRole("dialog");
+    sheet.closest("dialog")?.close();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    await user.click(control);
+    expect(
+      await screen.findByRole("dialog", { name: "No weather saved" }),
+    ).toBeVisible();
   });
 
   it("starts a second run's sheet at its first step", async () => {

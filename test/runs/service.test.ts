@@ -8,6 +8,7 @@ import type { Ulid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
   DUPLICATE_WINDOW_S,
+  countRuns,
   createManualRun,
   didRetimeRun,
   didRetryRunWeather,
@@ -551,6 +552,46 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
     const runId = await aRun(newUlid());
     expect(await getRunSummary(coreDb(), newUlid(), runId)).toBeUndefined();
   });
+
+  it("never lends a run someone else's hand-set band in the same place and hour", async () => {
+    // The cache is keyed by place and hour, not by run: a band another
+    // runner set there is theirs, and this run's weather still gave up.
+    const startedAt = START + 5 * 3600;
+    const theirs = await aRun(newUlid(), { startedAt });
+    await recordManualObservation(theirs as Ulid, 12.5);
+    const userId = newUlid();
+    const mine = await aRun(userId, { startedAt });
+
+    const [listed] = await listRunSummaries(coreDb(), userId);
+    expect(listed?.id).toBe(mine);
+    expect(listed?.conditions).toBeUndefined();
+    const summary = await getRunSummary(coreDb(), userId, mine);
+    expect(summary?.conditions).toBeUndefined();
+  });
+
+  it("draws no conditions for a hand-set run whose reading is gone", async () => {
+    const userId = newUlid();
+    await aRun(userId, {
+      startedAt: START + 9 * 3600,
+      weatherStatus: "manual",
+    });
+
+    const [listed] = await listRunSummaries(coreDb(), userId);
+    expect(listed?.weatherStatus).toBe("manual");
+    expect(listed?.conditions).toBeUndefined();
+  });
+});
+
+describe("countRuns: what disconnecting Strava keeps", () => {
+  it("counts the runner's own runs, and no one else's", async () => {
+    const userId = newUlid();
+    expect(await countRuns(coreDb(), userId)).toBe(0);
+    await aRun(userId, { startedAt: START + 1 });
+    await aRun(userId, { startedAt: START + 2 });
+    await aRun(newUlid());
+
+    expect(await countRuns(coreDb(), userId)).toBe(2);
+  });
 });
 
 describe("didSetRunConditions: R2b's pick", () => {
@@ -659,12 +700,19 @@ describe("didRetimeRun: A1's time correction", () => {
       lng: NOWHERE,
       weatherStatus: "failed",
     });
+    const otherHalf = await aRun(userId, {
+      startedAt: START + 60,
+      lat: NOWHERE,
+      weatherStatus: "failed",
+    });
     const weather = fakeWeather();
 
     await didRetimeRun(coreDb(), weather, userId, halfway, 60);
+    await didRetimeRun(coreDb(), weather, userId, otherHalf, 60);
 
     expect(weather.attached).toHaveLength(0);
     expect(await statusOf(halfway)).toBe("failed");
+    expect(await statusOf(otherHalf)).toBe("failed");
   });
 
   it("will not move someone else's run", async () => {

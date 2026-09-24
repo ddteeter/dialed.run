@@ -39,7 +39,10 @@ export type Retime = (input: {
  * Form Contract asks; a time input only ever sends `HH:MM` or nothing.
  */
 const retimeSchema = z.object({
-  time: z.string().regex(/^\d{2}:\d{2}$/u, "Pick the time the run started."),
+  // zod's own clock time, to the minute, rather than a hand-written
+  // pattern: the input sanitises what it holds, so a pattern's edges were
+  // rules no runner — and no test — could ever reach.
+  time: z.iso.time({ precision: -1, error: "Pick the time the run started." }),
 });
 
 /**
@@ -140,7 +143,8 @@ function TimeCorrection({
         },
       }),
     successMessage: "Time changed. Fetching the weather for it.",
-    labels: { time: "Started" },
+    // No `labels`: they name a field in the error summary, and one field
+    // has no summary — its message sits under it.
     onSuccess: onDone,
   });
   return (

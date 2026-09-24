@@ -387,6 +387,9 @@ describe("VerdictBacklog: saving", () => {
     expect(band?.querySelector("td")).toHaveAttribute("colspan", "4");
     expect(band).toHaveTextContent("Nothing saved");
     expect(band).toHaveTextContent("Our end failed. Nothing changed.");
+    // On the row being worked, the band shows below the desk as well.
+    expect(band).toHaveClass("block", "desk:table-row");
+    expect(band).not.toHaveClass("hidden");
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
@@ -702,6 +705,8 @@ describe("VerdictBacklog: 720–1039, one run at a time", () => {
     expect(rowsOf()[0]).not.toHaveClass("hidden");
     expect(rowsOf()[1]).toHaveClass("hidden", "desk:table-row");
     expect(screen.getByRole("table")).toHaveClass("block", "desk:table");
+    // The count heads the queue while there is one to count.
+    expect(screen.getByText(/^2 runs · oldest first$/u)).toBeVisible();
   });
 
   it("logs the row with A3's own verb where there is no Enter to press", async () => {

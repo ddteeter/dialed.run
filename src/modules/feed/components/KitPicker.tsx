@@ -290,8 +290,10 @@ function SheetBody({
   const label = uiGroupLabels[group.group];
   const needle = query.toLowerCase();
   const shownHere: Shown = isFiltered ? matchingOnly : everything;
+  // Brand and name as the row reads them. `join` writes a null brand as
+  // nothing, so a piece with none is found by its name alone.
   const found = shownHere(group).filter((item) =>
-    `${item.brand ?? ""} ${item.name}`.toLowerCase().includes(needle),
+    [item.brand, item.name].join(" ").toLowerCase().includes(needle),
   );
   const chosen = group.items.filter((item) => selected.has(item.id)).length;
 

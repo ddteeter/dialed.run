@@ -159,7 +159,15 @@ export interface RunConditions {
   isSetByYou: boolean;
 }
 
-function asRunConditions(reading: WeatherReading): RunConditions {
+/**
+ * A reading as a screen draws it. Whether the runner set it is the caller's
+ * to say: it knows which read the reading came from, and only R2b's
+ * `manual` runs are read the way that finds a hand-set row.
+ */
+function asRunConditions(
+  reading: Omit<WeatherReading, "source">,
+  isSetByYou: boolean,
+): RunConditions {
   return {
     tempC: reading.tempC,
     feelsLikeC: reading.feelsLikeC,
@@ -168,7 +176,7 @@ function asRunConditions(reading: WeatherReading): RunConditions {
     precipMm: reading.precipMm,
     condition: reading.condition,
     timeZone: reading.timeZone,
-    isSetByYou: reading.source === "manual",
+    isSetByYou,
   };
 }
 
@@ -198,7 +206,7 @@ export interface RunSummary {
 function summaryOf(
   run: RunRow,
   entry: { id: string; verdict: number | null } | undefined,
-  reading: WeatherReading | undefined,
+  conditions: RunConditions | undefined,
 ): RunSummary {
   return {
     id: run.id,
@@ -209,7 +217,7 @@ function summaryOf(
     indoor: run.indoor,
     weatherStatus: run.weatherStatus,
     canSetConditions: canSetConditions(run),
-    conditions: reading === undefined ? undefined : asRunConditions(reading),
+    conditions,
     entryId: entry?.id,
     hasVerdict: entry?.verdict != undefined,
   };
@@ -244,42 +252,85 @@ async function entriesByRun(
 }
 
 /**
- * Each run's conditions, as the list shows them.
- *
- * `DIALED_WEATHER` is a second database, so this is correlated in code,
- * never joined (CLAUDE.md, D1's one exception). The batch read is the
- * weather module's aggregate one, which leaves manual rows out on purpose;
- * a run whose conditions were set by hand is read on its own, and there are
- * few of those — R2b is the only way to make one.
- */
-/**
  * Runs per read of the weather cache. Each run is three bound parameters
  * there — a latitude, a longitude and an hour — and D1 refuses a statement
  * with more than a hundred; a full list of fifty is a hundred and fifty.
  */
 const CELLS_PER_READ = 30;
 
-async function readingsFor(
+/**
+ * Each run's conditions, as the list and run detail show them.
+ *
+ * `DIALED_WEATHER` is a second database, so this is correlated in code,
+ * never joined (CLAUDE.md, D1's one exception). The batch read is the
+ * weather module's aggregate one, which leaves manual rows out on purpose;
+ * a run whose conditions were set by hand is read on its own, and there are
+ * few of those — R2b is the only way to make one.
+ *
+ * **Only a `manual` run is read the second way.** The cache is keyed by
+ * place and hour, not by run, so a run the weather gave up on shares its
+ * cell with anyone else's hand-set band there — and that band is not its
+ * conditions, nor set by this runner.
+ */
+async function conditionsFor(
   list: readonly RunRow[],
-): Promise<Map<string, WeatherReading>> {
+): Promise<Map<string, RunConditions | undefined>> {
   const ids = list.map((run) => ulidSchema.parse(run.id));
   const pages = await Promise.all(
     chunked(ids, CELLS_PER_READ).map(async (chunk) =>
       observationsForRuns(chunk),
     ),
   );
-  const readings = new Map<string, WeatherReading>();
+  const conditions = new Map<string, RunConditions | undefined>();
   for (const page of pages) {
     for (const [runId, observation] of page) {
-      readings.set(runId, { ...observation, source: "visualcrossing" });
+      conditions.set(runId, asRunConditions(observation, false));
     }
   }
   for (const run of list) {
     if (run.weatherStatus !== "manual") continue;
     const reading = await observationForRun(ulidSchema.parse(run.id));
-    if (reading !== undefined) readings.set(run.id, reading);
+    conditions.set(
+      run.id,
+      reading === undefined ? undefined : asRunConditions(reading, true),
+    );
   }
-  return readings;
+  return conditions;
+}
+
+/**
+ * Runs as the screens draw them: their conditions and their entries, read
+ * for the whole list at once.
+ */
+async function summariesOf(
+  db: CoreDb,
+  userId: string,
+  list: readonly RunRow[],
+): Promise<RunSummary[]> {
+  const [entries, conditions] = await Promise.all([
+    entriesByRun(
+      db,
+      userId,
+      list.map((run) => run.id),
+    ),
+    conditionsFor(list),
+  ]);
+  return list.map((run) =>
+    summaryOf(run, entries.get(run.id), conditions.get(run.id)),
+  );
+}
+
+/**
+ * One run, as run detail and A1 draw it — read exactly as the list reads
+ * it, so a run never says one thing in the list and another on its page.
+ */
+export async function summaryOfRun(
+  db: CoreDb,
+  userId: string,
+  run: RunRow,
+): Promise<RunSummary | undefined> {
+  const [summary] = await summariesOf(db, userId, [run]);
+  return summary;
 }
 
 /**
@@ -297,14 +348,7 @@ export async function listRunSummaries(
     .where(eq(runs.userId, userId))
     .orderBy(desc(runs.startedAt))
     .limit(50);
-  const ids = list.map((run) => run.id);
-  const [entries, readings] = await Promise.all([
-    entriesByRun(db, userId, ids),
-    readingsFor(list),
-  ]);
-  return list.map((run) =>
-    summaryOf(run, entries.get(run.id), readings.get(run.id)),
-  );
+  return summariesOf(db, userId, list);
 }
 
 /**
@@ -316,12 +360,7 @@ export async function getRunSummary(
   runId: string,
 ): Promise<RunSummary | undefined> {
   const run = await getRun(db, userId, runId);
-  if (run === undefined) return undefined;
-  const [entries, reading] = await Promise.all([
-    entriesByRun(db, userId, [run.id]),
-    observationForRun(ulidSchema.parse(run.id)),
-  ]);
-  return summaryOf(run, entries.get(run.id), reading);
+  return run === undefined ? undefined : summaryOfRun(db, userId, run);
 }
 
 /**

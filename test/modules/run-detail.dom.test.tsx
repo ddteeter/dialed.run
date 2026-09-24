@@ -178,6 +178,8 @@ describe("R: the conditions row", () => {
       "aria-haspopup",
       "dialog",
     );
+    // R2b waits to be asked for: nothing is laid over the run on arrival.
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("offers nothing to set for a run with no place to key it on", async () => {
@@ -288,11 +290,14 @@ describe("R2b: no weather saved", () => {
     expect(await within(sheet).findByText("No conditions")).toBeVisible();
     expect(within(sheet).getByText("Our end failed.")).toBeVisible();
 
+    // The band's Try again repeats the pick that failed — the same band —
+    // and never asks the weather instead.
     await user.click(within(sheet).getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(setConditions).toHaveBeenLastCalledWith({
-        data: { runId: RUN_ID, bandFloorC: 10 },
-      });
+      expect(setConditions).toHaveBeenCalledTimes(2);
+    });
+    expect(setConditions).toHaveBeenLastCalledWith({
+      data: { runId: RUN_ID, bandFloorC: 10 },
     });
   });
 

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
@@ -9,6 +9,7 @@ import { attachKit } from "./entries";
 import { garmentNamesByIds } from "./garment-names";
 import { nearestMatch, type BestMatch, type HistoryEntry } from "./prefill";
 import { forIds } from "../../lib/for-ids";
+import { runsAwaitingVerdict } from "../runs";
 
 /**
  * DS2 — the verdict backlog's reads.
@@ -79,13 +80,9 @@ export interface Backlog {
 }
 
 /**
- * Runs this runner has logged that carry no outfit entry, oldest first.
- *
- * A LEFT JOIN with `IS NULL` rather than a `NOT IN (SELECT …)`: both
- * sides are index-backed — `runs_user_started` for the scan and the
- * UNIQUE `entries_run` for the probe — and the anti-join lets D1 stop at
- * the first matching entry per run instead of materialising every entry
- * id the runner has.
+ * Runs this runner has logged that still await a verdict, oldest first —
+ * read through `runsAwaitingVerdict`, which owns the query and its index
+ * notes.
  *
  * **No filter on `source`.** DS2 calls these "imported from Strava",
  * which is where a backlog comes from in practice, but a run without an
@@ -94,20 +91,11 @@ export interface Backlog {
  * on source would hide it with nothing to say so.
  */
 async function unjudgedRuns(userId: string) {
-  return drizzle(env.DIALED_CORE)
-    .select({
-      id: runs.id,
-      startedAt: runs.startedAt,
-      durationS: runs.durationS,
-      distanceM: runs.distanceM,
-      lat: runs.lat,
-      lng: runs.lng,
-    })
-    .from(runs)
-    .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
-    .where(and(eq(runs.userId, userId), isNull(outfitEntries.id)))
-    .orderBy(asc(runs.startedAt))
-    .limit(BACKLOG_LIMIT);
+  // The set is the runs module's one definition (owner's ruling: DS2 and
+  // the bell count the same runs) — no entry, or an entry with no verdict,
+  // at any age. A row that already has a kit saves through `attachKit`'s
+  // existing-entry path, which writes the verdict and leaves the kit.
+  return runsAwaitingVerdict(drizzle(env.DIALED_CORE), userId, BACKLOG_LIMIT);
 }
 
 /**
@@ -148,9 +136,7 @@ interface Kit {
   itemNames: string[];
 }
 
-async function kitsFor(
-  entryIds: readonly string[],
-): Promise<Map<string, Kit>> {
+async function kitsFor(entryIds: readonly string[]): Promise<Map<string, Kit>> {
   const database = drizzle(env.DIALED_CORE);
   const rows = await forIds(entryIds, () =>
     database

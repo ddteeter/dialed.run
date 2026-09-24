@@ -1,8 +1,15 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { timeOfDay } from "../../src/lib/dates";
 import type { ImportOutcome } from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
 import type { Retime } from "../../src/modules/runs/components/ParsedCard";
@@ -13,6 +20,7 @@ import {
 import { expectBusy } from "../ui/unavailable";
 import {
   RUN_ID,
+  SAT_MORNING,
   renderWithRouter,
   runConditions,
   runSummary,
@@ -124,6 +132,24 @@ describe("A1 at rest", () => {
     );
     expect(dropInput()).toHaveAttribute("accept", ".fit,.gpx,.tcx");
   });
+
+  it("holds no file name in the reading label it keeps in reserve", async () => {
+    // The breathing label sits under the title, hidden, so the well does
+    // not change size when a read starts. At rest it names nothing: a
+    // stale name there would size the well to a file no longer in it.
+    await renderWithRouter(form());
+
+    expect(within(well()).getByText("Reading")).not.toBeVisible();
+  });
+
+  it("says to let go while a file is held over it", async () => {
+    await renderWithRouter(form());
+
+    fireEvent.dragOver(well());
+
+    expect(well()).toHaveAttribute("data-state", "drag-over");
+    expect(within(well()).getByText("Let go to read it")).toBeVisible();
+  });
 });
 
 describe("A1: a file refused before it is sent", () => {
@@ -175,6 +201,79 @@ describe("A1: a file refused before it is sent", () => {
 
     expect(upload).not.toHaveBeenCalled();
     expect(well()).toHaveAttribute("data-state", "empty");
+  });
+
+  it.each([
+    // An input's `files` is typed `FileList | null`; the null is parsed
+    // for the same reason as `NO_REASON`'s.
+    ["no file list at all", z.null().parse(JSON.parse("null"))],
+    ["an empty file list", []],
+  ])("takes %s quietly, without throwing", async (_, files) => {
+    const upload = vi.fn<Upload>();
+    const thrown: unknown[] = [];
+    const onError = (event: ErrorEvent) => {
+      thrown.push(event.error);
+      event.preventDefault();
+    };
+    globalThis.addEventListener("error", onError);
+    await renderWithRouter(form({ upload }));
+
+    try {
+      fireEvent.change(dropInput(), { target: { files } });
+    } finally {
+      globalThis.removeEventListener("error", onError);
+    }
+
+    expect(thrown).toEqual([]);
+    expect(upload).not.toHaveBeenCalled();
+    expect(well()).toHaveAttribute("data-state", "empty");
+  });
+
+  it("drops the last refusal the moment a good file starts sending", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const pending = Promise.withResolvers<{ importId: string }>();
+    await renderWithRouter(form({ upload: () => pending.promise }));
+
+    await user.upload(dropInput(), new File(["x"], "run.csv"));
+    await user.upload(dropInput(), gpx("good.gpx"));
+
+    expect(well()).toHaveAttribute("data-state", "uploading");
+    expect(screen.queryByText("That's not a GPX, TCX or FIT file.")).toBeNull();
+    pending.resolve({ importId: "01IMPORT" });
+  });
+
+  it("drops a failed send's band when a refused file follows it", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    await renderWithRouter(
+      form({ upload: () => Promise.reject(new TypeError("Failed to fetch")) }),
+    );
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Nothing saved");
+
+    await user.upload(dropInput(), new File(["x"], "run.csv"));
+
+    expect(
+      screen.getByText("That's not a GPX, TCX or FIT file."),
+    ).toBeVisible();
+    expect(screen.queryByText("Nothing saved")).toBeNull();
+  });
+
+  it("puts a refused file on the well in a failed read's place", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    await renderWithRouter(
+      form({
+        getOutcome: () => Promise.resolve(outcome({ status: "failed" })),
+      }),
+    );
+    await user.upload(dropInput(), gpx());
+    await screen.findByText(PARSE_FAILURE_MESSAGE);
+
+    await user.upload(dropInput(), new File(["x"], "run.csv"));
+
+    expect(
+      screen.getByText("That's not a GPX, TCX or FIT file."),
+    ).toBeVisible();
+    expect(screen.queryByText(PARSE_FAILURE_MESSAGE)).toBeNull();
   });
 });
 
@@ -286,6 +385,120 @@ describe("A1: sending and reading", () => {
     expect(second?.get("idempotencyKey")).not.toBe(
       first?.get("idempotencyKey"),
     );
+  });
+
+  it("reads the retried import afresh: the last one's stall does not follow it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({
+      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+    });
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ importId: "01IMPORT" })
+      .mockResolvedValueOnce({ importId: "02IMPORT" });
+    await renderWithRouter(form({ upload, getOutcome: neverAnswers }));
+    await user.upload(dropInput(), gpx());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => {
+      expect(well()).toHaveAttribute("data-state", "uploading");
+    });
+    expect(
+      screen.queryByText("Our end is slow. Your file is fine."),
+    ).toBeNull();
+  });
+
+  it("clears a failed send's band as soon as the next file starts", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ importId: string }>();
+    const upload = vi
+      .fn<Upload>()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockReturnValueOnce(pending.promise);
+    await renderWithRouter(form({ upload }));
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Nothing saved");
+
+    await user.upload(dropInput(), gpx("next.gpx"));
+
+    expect(within(well()).getByText("Reading next.gpx")).toBeVisible();
+    expect(screen.queryByText("Nothing saved")).toBeNull();
+    pending.resolve({ importId: "01IMPORT" });
+  });
+
+  it("leaves a failed read behind the moment another file is sent", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ importId: string }>();
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ importId: "01IMPORT" })
+      .mockReturnValueOnce(pending.promise);
+    await renderWithRouter(
+      form({
+        upload,
+        getOutcome: () => Promise.resolve(outcome({ status: "failed" })),
+      }),
+    );
+    await user.upload(dropInput(), gpx());
+    await screen.findByText(PARSE_FAILURE_MESSAGE);
+
+    await user.upload(dropInput(), gpx("better.gpx"));
+
+    expect(within(well()).getByText("Reading better.gpx")).toBeVisible();
+    expect(screen.queryByText(PARSE_FAILURE_MESSAGE)).toBeNull();
+    pending.resolve({ importId: "02IMPORT" });
+  });
+
+  it("never shows a new import the last one's answer", async () => {
+    const user = userEvent.setup();
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ importId: "01IMPORT" })
+      .mockResolvedValueOnce({ importId: "02IMPORT" });
+    const answers = parsed();
+    await renderWithRouter(
+      form({
+        upload,
+        getOutcome: ({ data }) =>
+          data.importId === "01IMPORT" ? answers() : neverAnswers(),
+      }),
+    );
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Parsed · run.gpx");
+    await user.click(screen.getByRole("button", { name: "Replace" }));
+
+    await user.upload(dropInput(), gpx("second.gpx"));
+
+    await waitFor(() => {
+      expect(upload).toHaveBeenCalledTimes(2);
+    });
+    expect(await within(well()).findByText("Reading second.gpx")).toBeVisible();
+    expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
+  });
+
+  it("keeps reading while the row says so, even once it names its run", async () => {
+    const user = userEvent.setup();
+    const getOutcome = vi.fn<GetOutcome>(() =>
+      Promise.resolve(outcome({ status: "pending", run: runSummary() })),
+    );
+    await renderWithRouter(form({ getOutcome }));
+
+    await user.upload(dropInput(), gpx());
+    await waitFor(() => {
+      expect(getOutcome).toHaveBeenCalled();
+    });
+    // Long enough for the answer to be rendered, however it renders.
+    await act(async () => {
+      await new Promise((resolve) => {
+        globalThis.setTimeout(resolve, 50);
+      });
+    });
+
+    expect(well()).toHaveAttribute("data-state", "uploading");
+    expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
   });
 });
 
@@ -499,7 +712,65 @@ describe("A1: the parsed card", () => {
     expect(
       await screen.findByText("Pick the time the run started."),
     ).toBeVisible();
+    expect(screen.getByLabelText("Started")).toHaveAccessibleDescription(
+      "Pick the time the run started.",
+    );
     expect(retime).not.toHaveBeenCalled();
+  });
+
+  it("says the time moved, and keeps the page where it is", async () => {
+    const user = userEvent.setup();
+    const submitted: SubmitEvent[] = [];
+    const onSubmit = (event: SubmitEvent) => {
+      submitted.push(event);
+    };
+    document.addEventListener("submit", onSubmit);
+    try {
+      await renderWithRouter(form({ getOutcome: parsed() }));
+      await user.upload(dropInput(), gpx());
+      await user.click(
+        await screen.findByRole("button", { name: /change the time/u }),
+      );
+
+      await user.click(screen.getByRole("button", { name: "Refetch" }));
+
+      expect(
+        await screen.findByText("Time changed. Fetching the weather for it."),
+      ).toBeInTheDocument();
+      expect(submitted.map((event) => event.defaultPrevented)).toEqual([true]);
+    } finally {
+      document.removeEventListener("submit", onSubmit);
+    }
+  });
+
+  it("opens the time on the runner's clock when the run has no conditions", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
+      }),
+    );
+    await user.upload(dropInput(), gpx());
+
+    await user.click(
+      await screen.findByRole("button", { name: /change the time/u }),
+    );
+
+    expect(screen.getByLabelText("Started")).toHaveValue(
+      timeOfDay(SAT_MORNING),
+    );
+  });
+
+  it("splits the facts with a rule between each, never before the first", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+    await user.upload(dropInput(), gpx());
+
+    const pace = await screen.findByText("8:20 /mi");
+
+    expect(pace.closest("p")).toHaveTextContent(
+      /^8:20 \/mi\|Sat 29 Aug\|6:04 AM$/u,
+    );
   });
 });
 

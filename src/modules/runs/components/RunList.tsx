@@ -77,22 +77,23 @@ export function RunList({
           </li>
         ))}
       </ul>
-      <SetConditionsSheet
-        // Keyed by the run, so a second run's sheet starts at its own
-        // first step rather than the last one's band list.
-        key={settingFor}
-        runId={settingFor ?? ""}
-        units={units}
-        open={settingFor !== undefined}
-        onClose={() => {
-          setSettingFor(undefined);
-        }}
-        onDone={async () => {
-          setSettingFor(undefined);
-          await router.invalidate();
-        }}
-        actions={actions}
-      />
+      {/* Mounted only while a run is asking, so every run's sheet starts
+          at its own first step rather than the last one's band list. */}
+      {settingFor === undefined ? undefined : (
+        <SetConditionsSheet
+          runId={settingFor}
+          units={units}
+          open
+          onClose={() => {
+            setSettingFor(undefined);
+          }}
+          onDone={async () => {
+            setSettingFor(undefined);
+            await router.invalidate();
+          }}
+          actions={actions}
+        />
+      )}
     </>
   );
 }

@@ -203,6 +203,14 @@ describe("StravaConnect: connected", () => {
       "text-dialed-text",
     );
     expect(within(confirm).getByText("Stops")).toHaveClass("text-cold-text");
+    // T3b's weight: the act is the ink fill, the way back is the outline —
+    // and both are full 44px targets.
+    expect(
+      within(confirm).getByRole("button", { name: "Disconnect" }),
+    ).toHaveClass("target", "bg-ink", "text-ground");
+    expect(
+      within(confirm).getByRole("button", { name: "Keep it" }),
+    ).toHaveClass("target", "border-ink", "bg-transparent");
   });
 
   it("keeps it on Keep it, changing nothing", async () => {

@@ -8,15 +8,14 @@
 
 import { and, eq } from "drizzle-orm";
 
-import { imports } from "../../db/schema-core";
+import { imports, runs } from "../../db/schema-core";
 import { firstColumnWhere } from "../../lib/keyed-read";
 import { ImportUploadError, checkUpload } from "./upload-limits";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import type { ImportJob } from "./queue-messages";
-import { getRunSummary } from "./service";
+import { summaryOfRun } from "./service";
 import type { RunSummary } from "./service";
-import { selectOwnedRow } from "../../lib/owned";
 import { nowSeconds } from "../../lib/now";
 
 /**
@@ -120,14 +119,18 @@ export async function getImportOutcome(
   userId: string,
   importId: string,
 ): Promise<ImportOutcome | undefined> {
-  const row = await selectOwnedRow(db, imports, { id: importId, userId });
+  // The run comes with the import, in one read: joined on the runner too,
+  // so an import can only ever carry its own runner's run.
+  const [row] = await db
+    .select({ upload: imports, run: runs })
+    .from(imports)
+    .leftJoin(runs, and(eq(runs.id, imports.runId), eq(runs.userId, userId)))
+    .where(and(eq(imports.id, importId), eq(imports.userId, userId)))
+    .limit(1);
   if (row === undefined) return undefined;
   return {
-    status: row.status,
-    failureReason: row.failureReason,
-    run:
-      row.runId === null
-        ? undefined
-        : await getRunSummary(db, userId, row.runId),
+    status: row.upload.status,
+    failureReason: row.upload.failureReason,
+    run: row.run === null ? undefined : await summaryOfRun(db, userId, row.run),
   };
 }

@@ -54,11 +54,14 @@ import { KitList, KitSheet, conditionsWords } from "./KitPicker";
 type Suggestion = PrefillCandidate | "none" | undefined;
 
 /**
-A picked photo, and the key its upload is retried under (law 8b).
-*/
+ * A picked photo, the key its upload is retried under (law 8b), and the
+ * object URL its preview is drawn from — minted with the photo, so there
+ * is never a photo without its preview or a preview without its photo.
+ */
 interface HeldPhoto {
   file: File;
   key: string;
+  url: string;
 }
 
 /**
@@ -135,7 +138,6 @@ export function AttachKit({
   const [sheetGroup, setSheetGroup] = useState<UiGroup | undefined>();
   const [kitError, setKitError] = useState<string | undefined>();
   const [photo, setPhoto] = useState<HeldPhoto | undefined>();
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>();
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [photoStep, setPhotoStep] = useState<
     { file: File; step: PhotoStep } | undefined
@@ -158,8 +160,7 @@ export function AttachKit({
   // The preview is the held file's own bytes, released when it goes.
   useEffect(() => {
     if (photo === undefined) return;
-    const url = URL.createObjectURL(photo.file);
-    setPreviewUrl(url);
+    const { url } = photo;
     return () => {
       URL.revokeObjectURL(url);
     };
@@ -190,7 +191,10 @@ export function AttachKit({
   function next(itemIds: readonly string[]): void {
     const parsed = kitChoice.safeParse(itemIds);
     if (!parsed.success) {
-      setKitError(parsed.error.issues[0]?.message);
+      // The schema's own sentence. An empty kit breaks one rule, so there
+      // is one issue; the list is written out whole rather than indexed,
+      // so no guard stands in for an issue a failed parse always has.
+      setKitError(String(parsed.error.issues.map((issue) => issue.message)));
       return;
     }
     setKitError(undefined);
@@ -204,16 +208,16 @@ export function AttachKit({
 
   function keep(ready: File): void {
     setPhotoStep(undefined);
-    setPhoto({ file: ready, key: newUlid() });
+    setPhoto({
+      file: ready,
+      key: newUlid(),
+      url: URL.createObjectURL(ready),
+    });
   }
 
   function onPhotoFiles(files: FileList | null): void {
-    // A `change` from a file input always carries a `FileList` — empty
-    // when the picker was dismissed — so this null guard and the
-    // undefined-index guard below are both live paths every real upload
-    // and every dismissal exercises, with no unreachable branch to prove.
-    if (files === null) return;
-    const file = files[0];
+    // No list, or an empty one — the picker was dismissed: nothing to keep.
+    const file = files?.[0];
     if (file === undefined) return;
     const problem = photoProblem(file);
     setPhotoError(problem);
@@ -298,13 +302,12 @@ export function AttachKit({
           accept={photoAcceptAttribute}
           error={photoError}
           preview={
-            previewUrl === undefined || photo === undefined
+            photo === undefined
               ? undefined
-              : { src: previewUrl, alt: "Your outfit" }
+              : { src: photo.url, alt: "Your outfit" }
           }
           onRemove={() => {
             setPhoto(undefined);
-            setPreviewUrl(undefined);
           }}
           onFiles={onPhotoFiles}
         />

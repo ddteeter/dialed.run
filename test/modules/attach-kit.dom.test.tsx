@@ -5,9 +5,16 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import type { JSX, ReactElement } from "react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -177,10 +184,14 @@ function primary(): HTMLElement {
 
 function region(slot: string): HTMLElement {
   const found = document.querySelector<HTMLElement>(
-    `[data-slot='${CSS.escape(slot)}']`,
+    `[data-slot='${CSS.escape(slot)}'], [data-part='${CSS.escape(slot)}']`,
   );
   if (found === null) throw new Error(`no ${slot} region`);
   return found;
+}
+
+function photoWell(): HTMLElement {
+  return region("photo-well");
 }
 
 function photoInput(): HTMLInputElement {
@@ -233,6 +244,8 @@ describe("AttachKit: the header", () => {
     expect(
       within(header).getByText("6.2 mi · 41°F damp · 0 pieces"),
     ).toBeVisible();
+    // Nothing to announce until something happens.
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
 
   it("counts the pieces as they are chosen, one and then many", async () => {
@@ -304,6 +317,41 @@ describe("AttachKit: most likely", () => {
       expect(prefillFor).toHaveBeenCalledTimes(1);
     });
     expect(prefillFor).toHaveBeenCalledWith({ data: { runId: "01RUN" } });
+  });
+
+  it("asks again when the screen moves on to another run", async () => {
+    const user = userEvent.setup();
+    const prefillFor = vi.fn(() => Promise.resolve(undefined));
+    function TwoRuns(): JSX.Element {
+      const [runId, setRunId] = useState("01RUN");
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setRunId("02RUN");
+            }}
+          >
+            Another run
+          </button>
+          <AttachKit
+            units={{ temp: "f", distance: "mi" }}
+            runId={runId}
+            context={context()}
+            prefillFor={prefillFor}
+            attachKit={() => Promise.resolve({ entryId: "01NEW" })}
+            uploadPhoto={() => Promise.resolve({ key: "k" })}
+          />
+        </>
+      );
+    }
+    await renderWithRouter(<TwoRuns />);
+
+    await user.click(screen.getByRole("button", { name: "Another run" }));
+
+    await waitFor(() => {
+      expect(prefillFor).toHaveBeenLastCalledWith({ data: { runId: "02RUN" } });
+    });
   });
 
   it("says in one line that there is no usual kit yet — no card", async () => {
@@ -378,6 +426,10 @@ describe("AttachKit: most likely", () => {
         .getAllByRole("listitem")
         .map((li) => li.textContent),
     ).toEqual(["Houdini"]);
+    // Nothing stands in for the missing piece, either.
+    expect(within(region("most-likely")).getByRole("list")).toHaveTextContent(
+      /^Houdini$/u,
+    );
   });
 
   it("sends the suggested kit on That's it, and goes on to the verdict", async () => {
@@ -506,6 +558,40 @@ describe("AttachKit: the closet picker", () => {
 });
 
 describe("AttachKit: A2b, one category as a sheet", () => {
+  it("is named for picking while no category is open", async () => {
+    await renderWithRouter(attach());
+
+    const sheet = document.querySelector("dialog");
+    expect(sheet).toHaveAttribute("aria-label", "Pick");
+    expect(sheet).not.toHaveAttribute("open");
+  });
+
+  it("never filters a category when the run has no conditions", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }) }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+    expect(
+      within(sheet).getByRole("checkbox", { name: "Singlet" }),
+    ).toBeVisible();
+    expect(within(sheet).queryByText(/Hidden by the filter/)).toBeNull();
+  });
+
+  it("says nothing is hidden when the filter hides nothing", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Bottoms" }));
+    const sheet = await screen.findByRole("dialog", { name: "Bottoms" });
+    expect(
+      within(sheet).getByRole("button", { name: "Matches conditions" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(within(sheet).queryByText(/Hidden by the filter/)).toBeNull();
+  });
+
   it("opens from ALL ›, filtered, and says how much the filter hides", async () => {
     const user = userEvent.setup();
     await renderWithRouter(attach());
@@ -586,6 +672,10 @@ describe("AttachKit: A2b, one category as a sheet", () => {
         .getAllByRole("checkbox")
         .map((box) => box.closest("label")?.textContent),
     ).toEqual(["Patagonia Houdini"]);
+    await user.clear(search);
+    // Brand and name read as the row writes them, a space between.
+    await user.type(search, "patagonia houdini");
+    expect(within(sheet).getAllByRole("checkbox")).toHaveLength(1);
     await user.clear(search);
     // A piece with no brand is still found by its name alone.
     await user.type(search, "harr");
@@ -672,6 +762,21 @@ describe("AttachKit: a kit is required", () => {
     expect(message).toHaveAttribute("id", "kit-message");
     expect(attachKit).not.toHaveBeenCalled();
     expect(primary()).toBeVisible();
+  });
+
+  it("clears the mark when the suggested kit is sent instead", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      attach({
+        prefillFor: () => Promise.resolve(candidate()),
+        attachKit: neverSettles,
+      }),
+    );
+
+    await user.click(primary());
+    expect(screen.getByText("Pick at least one piece.")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "That’s it" }));
+    expect(screen.queryByText("Pick at least one piece.")).toBeNull();
   });
 
   it("clears the mark as soon as a piece is chosen", async () => {
@@ -808,6 +913,18 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(well).toHaveTextContent("Outfit photo · optional");
     expect(well).toHaveTextContent("Add a photo");
     expect(well).toHaveTextContent("Flat on the floor works best.");
+    // The desk's words ride along, shown from the wide breakpoint up.
+    expect(well).toHaveTextContent("Drop a photo, or browse");
+  });
+
+  it("says let go while a photo is dragged over it", async () => {
+    await renderWithRouter(attach());
+
+    const transfer = new DataTransfer();
+    transfer.items.add(jpeg());
+    fireEvent.dragOver(photoWell(), { dataTransfer: transfer });
+
+    expect(photoWell()).toHaveTextContent("Let go to add it");
     expect(photoInput()).toHaveAttribute(
       "accept",
       "image/jpeg,image/png,image/webp",
@@ -828,6 +945,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
       "data-state",
       "uploading",
     );
+    expect(photoWell()).toHaveTextContent("Adding");
 
     recording.hand(jpeg("blurred.jpg"));
     await waitFor(() => {
@@ -906,6 +1024,25 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
 
     await user.upload(photoInput(), jpeg("fine.jpg"));
     expect(screen.queryByText(/over 10 MB/)).toBeNull();
+  });
+
+  it("does nothing when a change carries no file list, or an empty one", async () => {
+    await renderWithRouter(attach());
+    // A handler that throws is reported, not raised: React hands it to the
+    // window, so that is where a crash on a missing file would show.
+    const thrown: unknown[] = [];
+    const record = (event: ErrorEvent): void => {
+      thrown.push(event.error);
+    };
+    globalThis.addEventListener("error", record);
+
+    fireEvent.change(photoInput(), { target: { files: NOTHING } });
+    fireEvent.change(photoInput(), { target: { files: [] } });
+
+    globalThis.removeEventListener("error", record);
+    expect(thrown).toEqual([]);
+    expect(photoWell()).toHaveAttribute("data-state", "empty");
+    expect(screen.queryByRole("img")).toBeNull();
   });
 
   it("does nothing when the picker is dismissed", async () => {
