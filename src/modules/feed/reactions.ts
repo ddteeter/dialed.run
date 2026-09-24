@@ -8,7 +8,8 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/keyed-read";
+import { countOf, countWhere } from "./count-where";
 import { isEntryPubliclyVisible } from "../safety";
 import { nowSeconds } from "../../lib/now";
 
@@ -92,14 +93,6 @@ export async function setUsefulReaction(
   return { useful: countOf(own) > 0, count: countOf(all) };
 }
 
-/**
- * What a `count()` answered. It always answers with one row; summing them
- * says so without a fallback for a row that cannot be missing.
- */
-function countOf(rows: readonly { n: number }[]): number {
-  return rows.reduce((total, row) => total + row.n, 0);
-}
-
 export async function hasReacted(
   entryId: string,
   userId: string,
@@ -113,11 +106,5 @@ export async function hasReacted(
 }
 
 export async function usefulCount(entryId: string): Promise<number> {
-  const reactors = await columnWhere(
-    db(),
-    reactions,
-    reactions.userId,
-    eq(reactions.entryId, entryId),
-  );
-  return reactors.length;
+  return countWhere(db(), reactions, eq(reactions.entryId, entryId));
 }

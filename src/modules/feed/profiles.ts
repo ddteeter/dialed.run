@@ -16,7 +16,6 @@ import {
 import { env } from "../../env";
 import { garmentNamesByIds } from "./garment-names";
 import { readInChunks } from "../../lib/chunked";
-import { columnWhere } from "../../lib/keyed-read";
 import { bandLabel } from "../../lib/temperature";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForEntries } from "./conditions";
@@ -24,6 +23,7 @@ import { recentOwnEntries } from "./own-history";
 import { bandsAscending, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";
 import { unitsFor } from "./units";
+import { countWhere } from "./count-where";
 import { followerCount, followingCount } from "./follows";
 import { publiclyVisibleEntry } from "../safety";
 
@@ -93,12 +93,12 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
   const topItemIds = topByCount(wearCounts, 5).map(([itemId]) => itemId);
   const nameById = await garmentNamesByIds(database, topItemIds);
 
-  const [followers, following, runIds] = await Promise.all([
+  const [followers, following, runCount] = await Promise.all([
     followerCount(userId),
     followingCount(userId),
-    // `runs_user_started` leads with the user, so this reads the index
-    // alone — the same shape the follow counts take.
-    columnWhere(database, runs, runs.id, eq(runs.userId, userId)),
+    // `runs_user_started` leads with the user, so this counts from the
+    // index alone — the same shape the follow counts take.
+    countWhere(database, runs, eq(runs.userId, userId)),
   ]);
 
   return {
@@ -109,7 +109,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     followerCount: followers,
     followingCount: following,
     entryCount: profileEntries.length,
-    runCount: runIds.length,
+    runCount,
     coverage: bandsAscending(tally),
     mostWornItems: topItemIds.map((itemId) => ({
       itemId,

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 
@@ -278,6 +278,35 @@ describe("ownProfile: the social counts", () => {
   it("counts no runs on day one", async () => {
     const profile = await ownProfile(await makeUser());
     expect(profile.runCount).toBe(0);
+  });
+
+  it("counts runs and follows in SQL, never reading the rows it counts", async () => {
+    // PR #102 review: the run count read every run id to take `.length`,
+    // and the follow counts did the same with every follower id — a
+    // runner with a few thousand runs shipped all of them on each view.
+    const me = await makeUser();
+    await makeRun({ userId: me });
+    await follow(await makeUser(), me);
+    const prepare = vi.spyOn(env.DIALED_CORE, "prepare");
+
+    const profile = await ownProfile(me);
+
+    const statements = prepare.mock.calls.map(([sql]) => sql);
+    prepare.mockRestore();
+    expect(profile.runCount).toBe(1);
+    expect(profile.followerCount).toBe(1);
+    expect(statements).toContain(
+      'select count(*) from "runs" where "runs"."user_id" = ?',
+    );
+    expect(statements).toContain(
+      'select count(*) from "follows" where "follows"."followee_id" = ?',
+    );
+    expect(statements).toContain(
+      'select count(*) from "follows" where "follows"."follower_id" = ?',
+    );
+    expect(statements.join("\n")).not.toMatch(
+      /select "(?:id|follower_id|followee_id)" from "(?:runs|follows)"/u,
+    );
   });
 });
 

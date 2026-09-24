@@ -10,6 +10,7 @@ import { follows } from "../../db/schema-core";
 import { env } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
 import { nowSeconds } from "../../lib/now";
+import { countWhere } from "./count-where";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -71,16 +72,9 @@ export async function followeeIdsOf(followerId: string): Promise<string[]> {
 }
 
 export async function followerCount(userId: string): Promise<number> {
-  const followers = await columnWhere(
-    db(),
-    follows,
-    follows.followerId,
-    eq(follows.followeeId, userId),
-  );
-  return followers.length;
+  return countWhere(db(), follows, eq(follows.followeeId, userId));
 }
 
 export async function followingCount(userId: string): Promise<number> {
-  const ids = await followeeIdsOf(userId);
-  return ids.length;
+  return countWhere(db(), follows, eq(follows.followerId, userId));
 }
