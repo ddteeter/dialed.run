@@ -67,6 +67,9 @@ describe("NotificationList · the rows", () => {
     );
 
     expect(screen.getByText("Quiet")).toBeVisible();
+    expect(screen.getByText("Quiet").closest("p")).toHaveTextContent(
+      /^\[ Quiet \]$/u,
+    );
     expect(
       screen.getByText(
         "Log a run and we’ll ask you one question about it. That’s most of what lands here.",
@@ -124,6 +127,8 @@ describe("NotificationList · the rows", () => {
     expect(read).not.toHaveClass("bg-panel");
     expect(read?.firstElementChild).toHaveClass("size-2");
     expect(read?.firstElementChild).not.toHaveClass("bg-action");
+    // The kept width is the dot's own shape and nothing else.
+    expect(read?.firstElementChild?.classList).toHaveLength(5);
   });
 
   it("offers Mark all read only while something is unread", async () => {

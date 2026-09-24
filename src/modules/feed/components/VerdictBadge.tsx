@@ -12,7 +12,10 @@ import { Mono } from "../../../ui";
  * Mono, because a verdict is a measurement a runner took, and uppercase by
  * the mono step's CSS so the accessible text stays in normal case.
  */
-export function VerdictBadge({ verdict }: Readonly<{ verdict: number }>) {
+export function VerdictBadge({
+  verdict,
+}: Readonly<{ verdict: number | undefined }>) {
+  // No verdict and one off the scale are the same answer: nothing to badge.
   const label = verdictLabel(verdict);
   if (label === undefined) return;
   return (

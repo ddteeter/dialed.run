@@ -78,8 +78,9 @@ describe("NotificationBell", () => {
     );
     expect(bell()).toHaveAttribute("data-state", "number");
     expect(bell()).toHaveClass("text-ink");
-    // A measured count, so it is mono.
+    // A measured count, so it is mono — and only the count: no dot too.
     expect(screen.getByText("3")).toHaveClass("font-mono");
+    expect(bell().children).toHaveLength(2);
   });
 
   it("counts a single waiting run", async () => {

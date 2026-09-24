@@ -59,9 +59,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
               {postedLabel(item.startedAt, now, item.conditions?.timeZone)}
             </Mono>
           </span>
-          {item.verdict === undefined ? undefined : (
-            <VerdictBadge verdict={item.verdict} />
-          )}
+          <VerdictBadge verdict={item.verdict} />
         </div>
         {photo === undefined ? undefined : (
           <img

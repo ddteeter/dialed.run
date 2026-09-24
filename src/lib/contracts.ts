@@ -562,9 +562,10 @@ export const verdictScale = [
 export type VerdictValue = (typeof verdictScale)[number]["value"];
 
 /**
-User-facing wording for a stored verdict; `undefined` if out of range.
+User-facing wording for a stored verdict; `undefined` if out of range or
+if there is no verdict to word.
 */
-export function verdictLabel(value: number): string | undefined {
+export function verdictLabel(value: number | undefined): string | undefined {
   return verdictScale.find((entry) => entry.value === value)?.label;
 }
 export const itemFlagSchema = z.enum(["too_much", "not_enough"]);

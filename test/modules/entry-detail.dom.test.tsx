@@ -171,9 +171,10 @@ describe("EntryDetail: the run strip", () => {
     expect(screen.getByText("8:40 /mi")).toHaveClass("font-mono", "text-quiet");
   });
 
-  it("leaves pace out of a run with no distance", async () => {
+  it("leaves pace out of a run with no distance — no empty cell for it", async () => {
     await renderFeedScreen(detail({ distanceM: 0 }));
     expect(part("run-strip")).not.toHaveTextContent("/mi");
+    expect(screen.getByText("0.0mi").parentElement?.children).toHaveLength(1);
   });
 
   it("carries the badge when there is a verdict, and loses it when there is none", async () => {
@@ -355,6 +356,7 @@ describe("EntryDetail: the note, the kit and the tags", () => {
     expect(screen.getByText("[Not enough]")).toBeVisible();
     const rows = part("kit")?.querySelectorAll("li") ?? [];
     expect(rows[2]).toHaveTextContent(/^Patagonia Tights$/u);
+    expect(rows[2]?.children).toHaveLength(1);
   });
 
   it("reads the tags in A3's words on the track fill, and drops a stored word that is not one", async () => {
@@ -400,6 +402,11 @@ describe("EntryDetail: Useful and Report", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Not marked. Your connection dropped.",
     );
+  });
+
+  it("says nothing in its status region until something happens", async () => {
+    await renderFeedScreen(detail());
+    expect(screen.getByRole("status")).toHaveTextContent("");
   });
 
   it("puts Report at the foot, in a quiet line", async () => {

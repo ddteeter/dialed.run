@@ -220,9 +220,7 @@ function RunStrip({
         {pace === undefined ? undefined : (
           <Mono className="text-quiet">{pace}</Mono>
         )}
-        {showBadge && entry.verdict !== undefined ? (
-          <VerdictBadge verdict={entry.verdict} />
-        ) : undefined}
+        {showBadge ? <VerdictBadge verdict={entry.verdict} /> : undefined}
       </div>
       {conditions === undefined ? undefined : (
         <ConditionsCell cell={conditions} />

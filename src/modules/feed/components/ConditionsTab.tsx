@@ -179,7 +179,6 @@ function CityForm({
     action: (values) => saveCity({ data: values }),
     onSuccess: onSaved,
     successMessage: "City saved.",
-    labels: { cityLabel: "City" },
   });
 
   // Not a failure: the runner said no, and that is allowed — so no band

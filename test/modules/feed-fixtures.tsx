@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { renderToString } from "react-dom/server";
 
 import type { FeedItem } from "../../src/modules/feed/feed";
 
@@ -14,7 +15,7 @@ import type { FeedItem } from "../../src/modules/feed/feed";
  * The routes the feed's screens link to, stubbed, so a typed `<Link>`
  * resolves and a click can be followed.
  */
-export async function renderFeedScreen(element: ReactElement, at = "/") {
+function feedRouter(element: ReactElement, at: string) {
   const rootRoute = createRootRoute();
   const stub = (path: string, text: string) =>
     createRoute({
@@ -27,7 +28,7 @@ export async function renderFeedScreen(element: ReactElement, at = "/") {
     path: "/",
     component: () => element,
   });
-  const router = createRouter({
+  return createRouter({
     routeTree: rootRoute.addChildren([
       indexRoute,
       stub("/feed", "The feed"),
@@ -42,8 +43,23 @@ export async function renderFeedScreen(element: ReactElement, at = "/") {
     ]),
     history: createMemoryHistory({ initialEntries: [at] }),
   });
+}
+
+export async function renderFeedScreen(element: ReactElement, at = "/") {
+  const router = feedRouter(element, at);
   await router.load();
   return { router, ...render(<RouterProvider router={router} />) };
+}
+
+/**
+ * The screen's first paint, as the server sends it — before any effect
+ * runs. The one place a region's starting text can be read: a child that
+ * reports into it on mount has overwritten it by the time a DOM test looks.
+ */
+export async function firstPaintOf(element: ReactElement): Promise<string> {
+  const router = feedRouter(element, "/");
+  await router.load();
+  return renderToString(<RouterProvider router={router} />);
 }
 
 export const NOW = 1_755_000_000;

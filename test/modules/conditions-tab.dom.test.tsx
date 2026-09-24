@@ -1,5 +1,6 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
@@ -103,6 +104,49 @@ describe("ConditionsTab: waiting", () => {
   });
 });
 
+describe("ConditionsTab: when what it was given changes", () => {
+  it("looks again, with what it was given now, when the place or the reader changes", async () => {
+    const user = userEvent.setup();
+    const before = vi.fn(() => Promise.resolve(undefined));
+    const after = vi.fn(() => Promise.resolve(undefined));
+
+    function Changing() {
+      const [moved, setMoved] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setMoved(true);
+            }}
+          >
+            Move
+          </button>
+          {tab({
+            home: {
+              coords: moved ? PORTLAND : { lat: 1, lng: 1 },
+              cityLabel: undefined,
+            },
+            conditionsFor: moved ? after : before,
+          })}
+        </>
+      );
+    }
+
+    await renderFeedScreen(<Changing />);
+    await waitFor(() => {
+      expect(before).toHaveBeenCalledTimes(1);
+    });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      expect(after).toHaveBeenCalledWith({ data: PORTLAND });
+    });
+    expect(before).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("ConditionsTab: location denied", () => {
   it("asks where they run, with a city field — not a failure, so no band", async () => {
     await renderFeedScreen(tab({ locate: () => Promise.resolve(undefined) }));
@@ -157,6 +201,13 @@ describe("ConditionsTab: location denied", () => {
     expect(saveCity).toHaveBeenCalledWith({
       data: { cityLabel: "Portland, OR" },
     });
+    // Announced before the screen moves on (the form contract's order).
+    await waitFor(
+      () => {
+        expect(screen.getByRole("status")).toHaveTextContent("City saved.");
+      },
+      { interval: 1 },
+    );
     // A city nobody's matched yet goes straight to No matches (round 22).
     expect(await screen.findByText("Not enough runs yet")).toBeVisible();
     expect(conditionsFor).toHaveBeenCalledWith({ data: PORTLAND });
@@ -194,6 +245,33 @@ describe("ConditionsTab: location denied", () => {
       "true",
     );
     expect(document.querySelector('[data-part="failure-band"]')).toBeNull();
+  });
+
+  it("waits on the weather where the saved city is, breathing, before it answers", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        conditionsFor: () => pending.promise,
+      }),
+    );
+
+    await user.type(await screen.findByLabelText("City"), "Portland");
+    await user.click(screen.getByRole("button", { name: "Use this city" }));
+
+    expect(await screen.findByText("Finding weather")).toBeVisible();
+    pending.resolve(undefined);
+    expect(await screen.findByText("No weather yet")).toBeVisible();
+  });
+
+  it("keeps the page where it is when the city is sent", async () => {
+    await renderFeedScreen(tab({ locate: () => Promise.resolve(undefined) }));
+    const field = await screen.findByLabelText("City");
+    const form = field.closest("form");
+    if (form === null) throw new Error("no form");
+    // `fireEvent` answers whether the default went ahead: it must not.
+    expect(fireEvent.submit(form)).toBe(false);
   });
 
   it("marks an empty city with the schema's sentence and saves nothing", async () => {

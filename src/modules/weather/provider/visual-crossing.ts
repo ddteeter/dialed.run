@@ -177,7 +177,14 @@ function timelineUrl(
 function locationPath(place: ClimatePlace): string {
   return place.kind === "coordinates"
     ? `${String(place.lat)},${String(place.lng)}`
-    : encodeURIComponent(place.label);
+    : labelPath(place.label);
+}
+
+/**
+A typed place as a path segment: encoded, so `/` and `,` stay text.
+*/
+function labelPath(label: string): string {
+  return encodeURIComponent(label);
 }
 
 /**
@@ -310,7 +317,7 @@ async function resolveLabel(
     );
   }
   const url = timelineUrl(
-    locationPath({ kind: "label", label }),
+    labelPath(label),
     today.toISOString().slice(0, 10),
     "days",
     apiKey,

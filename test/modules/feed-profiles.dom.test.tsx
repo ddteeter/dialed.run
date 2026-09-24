@@ -217,6 +217,20 @@ describe("OwnProfile (G): past day one", () => {
     expect(row).toHaveTextContent("[41–50°]Dialed3 runs");
   });
 
+  it("counts every run in a band, whichever way it went", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        profile={ownProfile({
+          runCount: 4,
+          coverage: [{ ...band, cold: 1, dialed: 2, warm: 1 }],
+        })}
+      />,
+    );
+    expect(screen.getByText("Dialed").closest("li")).toHaveTextContent(
+      "4 runs",
+    );
+  });
+
   it("names a band called cold as under-dressed and warm as over-dressed", async () => {
     await renderFeedScreen(
       <OwnProfile
@@ -297,6 +311,32 @@ describe("OtherProfile (H)", () => {
     expect(screen.getByText("St. Paul")).toHaveClass("font-mono");
   });
 
+  it("badges every verdict an entry has, not only dialed", async () => {
+    await renderFeedScreen(
+      otherScreen({
+        recentPublicEntries: [
+          {
+            entryId: "01A",
+            createdAt: 1_755_000_000,
+            verdict: -1,
+            caption: NOTHING,
+          },
+        ],
+      }),
+    );
+    expect(part("verdict-badge")).toHaveTextContent("A bit cold");
+  });
+
+  it("draws no city line, not an empty one, when there is no city", async () => {
+    await renderFeedScreen(otherScreen());
+    expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(0);
+  });
+
+  it("says nothing in its status region until something happens", async () => {
+    await renderFeedScreen(otherScreen());
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
   it("lists public entries by date, with the verdict and caption each has", async () => {
     await renderFeedScreen(
       otherScreen({
@@ -327,6 +367,7 @@ describe("OtherProfile (H)", () => {
     // No verdict, no badge; no caption, no line.
     expect(second).toHaveAttribute("href", "/feed/entry/01B");
     expect(second).toHaveTextContent(/^Tue 12 Aug$/u);
+    expect(second?.children).toHaveLength(1);
     // And Report still closes the list.
     expect(part("entries")?.lastElementChild).toBe(part("report"));
     expect(screen.getAllByText("Tue 12 Aug")[0]).toHaveClass("font-mono");
@@ -370,6 +411,23 @@ describe("Follow, on the control-failure pattern", () => {
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(button).toHaveClass("bg-action");
     expect(within(button).getByText("Following")).toBeVisible();
+    pending.resolve(undefined);
+    await waitFor(() => {
+      expect(button).not.toHaveAttribute("aria-busy");
+    });
+  });
+
+  it("says [ Unfollowing ] while it takes a follow back", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<undefined>();
+    await renderFeedScreen(
+      followScreen({ isFollowing: true, unfollow: () => pending.promise }),
+    );
+    const button = screen.getByRole("button", { name: "Following" });
+
+    await user.click(button);
+
+    expect(within(button).getByText("Unfollowing")).toBeVisible();
     pending.resolve(undefined);
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-busy");
@@ -472,6 +530,72 @@ describe("RunnerSearch", () => {
     await waitFor(() => {
       expect(label).toHaveStyle({ visibility: "hidden" });
     });
+  });
+
+  it("says nothing in its status region until something happens", async () => {
+    await renderFeedScreen(searchScreen());
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("stops breathing when the box is cleared mid-search", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<SearchResult[]>();
+    await renderFeedScreen(searchScreen(() => pending.promise));
+    const box = screen.getByLabelText("Search by name");
+    const label = screen.getByText("Searching").parentElement;
+
+    await user.type(box, "A");
+    expect(label).not.toHaveStyle({ visibility: "hidden" });
+    await user.clear(box);
+
+    expect(label).toHaveStyle({ visibility: "hidden" });
+    pending.resolve([]);
+  });
+
+  it("drops a slower failure to an older prefix", async () => {
+    const user = userEvent.setup();
+    const slow = Promise.withResolvers<SearchResult[]>();
+    await renderFeedScreen(
+      searchScreen((prefix) =>
+        prefix === "A" ? slow.promise : Promise.resolve(results("Ana")),
+      ),
+    );
+
+    await user.type(screen.getByLabelText("Search by name"), "An");
+    await screen.findByRole("link", { name: "Ana" });
+    slow.reject(new TypeError("offline"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Didn't load")).toBeNull();
+    });
+    expect(screen.getByRole("link", { name: "Ana" })).toBeVisible();
+  });
+
+  it("does not say No runner called over a search that then failed", async () => {
+    const user = userEvent.setup();
+    const found = vi
+      .fn<(prefix: string) => Promise<SearchResult[]>>()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new TypeError("offline"));
+    await renderFeedScreen(searchScreen(found));
+    const box = screen.getByLabelText("Search by name");
+
+    await user.type(box, "z");
+    expect(await screen.findByText("No runner called @z.")).toBeVisible();
+    await user.type(box, "e");
+
+    expect(await screen.findByText("Didn't load")).toBeVisible();
+    expect(screen.queryByText(/No runner called/u)).toBeNull();
+  });
+
+  it("does not say No runner called when there are runners", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(searchScreen(() => Promise.resolve(results("Ana"))));
+
+    await user.type(screen.getByLabelText("Search by name"), "A");
+
+    expect(await screen.findByRole("link", { name: "Ana" })).toBeVisible();
+    expect(screen.queryByText(/No runner called/u)).toBeNull();
   });
 
   it("says No runner called @x once a search has come back empty", async () => {

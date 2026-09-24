@@ -40,7 +40,8 @@ export function RunnerSearch({
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState("");
   const [failed, setFailed] = useState<string | undefined>();
-  const latest = useRef("");
+  // The prefix of the search whose answer the screen should show.
+  const latest = useRef<string>(undefined);
 
   async function runSearch(value: string) {
     setPrefix(value);

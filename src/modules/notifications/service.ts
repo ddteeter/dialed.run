@@ -146,13 +146,18 @@ function waitingRuns(db: NotificationsDb, userId: string, since: number) {
     .select({ id: runs.id })
     .from(runs)
     .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
-    .where(
-      and(
-        eq(runs.userId, userId),
-        gte(runs.startedAt, since),
-        isNull(outfitEntries.verdict),
-      ),
-    );
+    .where(waiting(userId, since));
+}
+
+/**
+The waiting set's condition, for the count and the list alike.
+*/
+function waiting(userId: string, since: number) {
+  return and(
+    eq(runs.userId, userId),
+    gte(runs.startedAt, since),
+    isNull(outfitEntries.verdict),
+  );
 }
 
 /**
@@ -178,10 +183,13 @@ export async function bellState(
   nowEpochSeconds: number,
 ): Promise<BellState> {
   const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
-  const waiting = waitingRuns(db, userId, since).as("w");
   const [unread, owed] = await db.batch([
     db.select({ n: count() }).from(notifications).where(unreadOf(userId)),
-    db.select({ n: count() }).from(waiting),
+    db
+      .select({ n: count() })
+      .from(runs)
+      .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
+      .where(waiting(userId, since)),
   ]);
   return {
     unreadCount: onlyCount(unread),

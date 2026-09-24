@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { postedLabel } from "../../src/modules/feed/posted";
+import { plainSpaces, postedLabel } from "../../src/modules/feed/posted";
 import { stripConditions } from "../../src/modules/feed/strip";
 import { pointConditions } from "./conditions-fixture";
 
@@ -64,6 +64,13 @@ describe("postedLabel", () => {
 
   it("uses one kind of space throughout", () => {
     expect(postedLabel(NOON, NOON)).not.toMatch(/[\u{202F}\u{A0}]/u);
+  });
+});
+
+describe("plainSpaces", () => {
+  it("makes ICU's narrow no-break space before AM a plain one, and leaves the rest", () => {
+    expect(plainSpaces("6:04\u{202F}AM")).toBe("6:04 AM");
+    expect(plainSpaces("6:04 AM · 7:15\u{202F}PM")).toBe("6:04 AM · 7:15 PM");
   });
 });
 

@@ -101,9 +101,7 @@ export function OtherProfile({
                     <Mono step="xs" className="text-muted">
                       {dayLabel(entry.createdAt)}
                     </Mono>
-                    {entry.verdict === null ? undefined : (
-                      <VerdictBadge verdict={entry.verdict} />
-                    )}
+                    <VerdictBadge verdict={entry.verdict ?? undefined} />
                   </span>
                   {entry.caption === null ? undefined : (
                     <span className="text-body">{entry.caption}</span>

@@ -169,6 +169,7 @@ describe("Feed: Following", () => {
       }),
     );
 
+    expect(screen.getByRole("status")).toHaveTextContent("");
     const posts = document.querySelectorAll('[data-part="post"]');
     expect(posts).toHaveLength(2);
     expect(posts[0]).toHaveTextContent("Dana");
@@ -240,6 +241,13 @@ describe("Feed: Following, empty", () => {
     expect(
       screen.getByText("Follow runners you already know by their username."),
     ).toBeVisible();
+  });
+
+  it("reads the foot line as one sentence", async () => {
+    await renderFeedScreen(feed({ followeeCount: 1 }));
+    expect(screen.getByText(/^Meanwhile:/u)).toHaveTextContent(
+      /^Meanwhile: what people wore in your conditions$/u,
+    );
   });
 
   it("switches to Your conditions from the foot link, which is not a second primary", async () => {

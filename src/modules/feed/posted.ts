@@ -72,18 +72,25 @@ function whenLabel(
 /**
  * The time of day on a 12-hour clock, as E1 and D draw it: `6:04 AM`.
  *
- * `en-US` for the 12-hour clock. Current ICU puts a narrow no-break space
- * before "AM"; it is folded to a plain one so a label is one kind of
- * space throughout.
+ * `en-US` for the 12-hour clock, its space made plain by `plainSpaces`.
  */
 function clockIn(epochSeconds: number, zone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  const time = new Intl.DateTimeFormat("en-US", {
     timeZone: zone,
     hour: "numeric",
     minute: "2-digit",
-  })
-    .format(new Date(epochSeconds * 1000))
-    .replaceAll("\u{202F}", " ");
+  }).format(new Date(epochSeconds * 1000));
+  return plainSpaces(time);
+}
+
+/**
+ * The narrow no-break space some ICU builds put before "AM" (72 and
+ * later), made plain. Node and workerd here write a plain one already;
+ * some browsers do not. The label renders on the server and again in the
+ * browser, and React throws the subtree away if the two differ by a space.
+ */
+export function plainSpaces(text: string): string {
+  return text.replaceAll("\u{202F}", " ");
 }
 
 export function postedLabel(
