@@ -1,356 +1,479 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import type { JSX } from "react";
 import { useEffect, useState } from "react";
 
-import { formatTemp } from "../../../lib/temperature";
 import type { Units } from "../../../lib/contracts";
+import { dayLabel } from "../../../lib/dates";
+import { newUlid } from "../../../lib/ids";
+import { distanceNumber } from "../../../lib/measures";
+import { photoAcceptAttribute } from "../../../lib/photo-constraints";
+import { formatTemp, precipClassOf } from "../../../lib/temperature";
+import { toggledIn } from "../../../lib/toggled-in";
 import {
-  Bracketed,
+  ControlFailureBand,
+  FileWell,
   FlowStep,
+  FormStatus,
   inFlight,
   LOG_FLOW,
   Mono,
   PendingLabel,
-  Skeleton,
+  useControlAction,
 } from "../../../ui";
-import { uiGroupLabels } from "../groups";
-import type { PickerGroup } from "../picker";
+import type { PhotoStep } from "../../../ui";
+import type { AttachContext } from "../attach-context";
+import { kitChoice, photoProblem } from "../attach-rules";
+import type { UiGroup } from "../groups";
 import type { PrefillCandidate } from "../prefill";
-import { toggledIn } from "../../../lib/toggled-in";
+import { KitList, KitSheet, conditionsWords } from "./KitPicker";
 
 /**
- * Attach the kit (screen A2), and the whole of the prefill idea.
+ * Attach the kit (screen A2), built to round 22's two frames and round
+ * 20's rules.
  *
- * The screen has three resting states before the picker opens — waiting
- * for a location, a most-likely kit to accept in one tap, or nothing to
- * suggest — and which one a runner sees is the feature. None of them could
- * be reached by a test while this lived in a route file.
+ * **Only most-likely waits.** *"The picker, the photo row and the button
+ * are A2 at rest, from the first frame"* — the closet comes with the route,
+ * and the suggestion is the one thing fetched after it, because it is the
+ * one read that scans the runner's history. It used to hide the whole
+ * screen behind a skeleton until the browser had been asked for a position
+ * and answered, and a denied prompt meant nothing at all.
  *
- * Location is asked for, never required: a denied prompt degrades to the
- * condition-filtered picker rather than blocking the screen.
+ * **A kit is required.** The header counts it ("· 0 PIECES" is how "nothing
+ * yet" is said), the button never changes its label, and pressing it with
+ * nothing chosen marks the picker "Pick at least one piece." — the round-13
+ * "Attach 0 items" is superseded.
+ *
+ * **The photo is here now** (round 20 moved it from A3): the one well, with
+ * W3's blur, held until the attach has made the entry it belongs to.
+ *
+ * **A failed attach is a control failure** (round 23, item 9): no
+ * optimistic step forward, the in-flight label while it waits, and the band
+ * under the button saying what is still true — nothing attached.
  */
-/**
- * The runner's position, "none" once we know there will not be one, and
- * `undefined` while we are still asking.
- *
- * The three states are the point. This used to answer `undefined` for both
- * "still asking" and "denied", and the caller could not tell them apart —
- * so a denied prompt left the screen on its waiting skeleton forever, with
- * no way to attach a kit at all. The comment here claimed it "degrades to
- * the condition-filtered picker"; it did not.
- */
-type Position = GeolocationCoordinates | "none" | undefined;
+
+type Suggestion = PrefillCandidate | "none" | undefined;
 
 /**
- * What to ask the closet for, given what we know about where the runner
- * is. No position means no condition filtering — the picker still works,
- * it just cannot rank by weather.
- */
-export function pickerQueryFor(coords: Position): {
-  lat?: number;
-  lng?: number;
-} {
-  if (coords === undefined || coords === "none") return {};
-  return { lat: coords.latitude, lng: coords.longitude };
+A picked photo, and the key its upload is retried under (law 8b).
+*/
+interface HeldPhoto {
+  file: File;
+  key: string;
 }
 
-function useCoordinates(): Position {
-  const [coords, setCoords] = useState<Position>();
-  // Equivalent mutant on the dependency list below: stryker's replacement
-  // is a constant array, so the effect still runs exactly once.
-  // Stryker disable ArrayDeclaration
-  useEffect(() => {
-    if (!("geolocation" in navigator)) {
-      setCoords("none");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoords(position.coords);
-      },
-      () => {
-        // Denied or unavailable: there will be no position, and the
-        // caller degrades to the condition-filtered picker.
-        setCoords("none");
-      },
-    );
-  }, []);
-  // Stryker restore ArrayDeclaration
-  return coords;
+/**
+"1 piece", "3 pieces" — and "0 pieces", which is the point.
+*/
+function piecesWords(count: number): string {
+  return `${String(count)} ${count === 1 ? "piece" : "pieces"}`;
 }
 
-export function AttachKit({
-  runId,
-  prefillFor,
-  pickerGroupsFor,
-  attachKit,
-  units,
-}: Readonly<{
+/**
+ * The header's sub-line: "6.2 MI · 41°F DAMP · 0 PIECES". With no
+ * conditions *"the header sub-line loses its temperature cell"*.
+ */
+function subLine(context: AttachContext, units: Units, pieces: number): string {
+  const distance = `${distanceNumber(context.distanceM, units.distance)} ${units.distance}`;
+  const { conditions } = context;
+  const cells =
+    conditions === undefined
+      ? [distance, piecesWords(pieces)]
+      : [
+          distance,
+          `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`,
+          piecesWords(pieces),
+        ];
+  return cells.join(" · ");
+}
+
+/**
+ * The server functions, handed in rather than imported, in their own
+ * shapes — a component never reaches `../functions` (CLAUDE.md). Named
+ * rather than inline, `UploadFormProps`' convention.
+ */
+interface AttachKitProps {
   runId: string;
   /**
   The viewer's own units — every number on this screen is theirs.
   */
   units: Units;
+  /**
+  The run, its conditions and the closet, from the route's loader.
+  */
+  context: AttachContext;
   prefillFor: (input: {
-    data: { lat: number; lng: number };
+    data: { runId: string };
   }) => Promise<PrefillCandidate | undefined>;
-  pickerGroupsFor: (input: {
-    data: { lat?: number; lng?: number };
-  }) => Promise<PickerGroup[]>;
   attachKit: (input: {
     data: { runId: string; itemIds: string[] };
   }) => Promise<{ entryId: string }>;
-}>) {
-  const navigate = useNavigate();
-  const coords = useCoordinates();
-  const [prefill, setPrefill] = useState<
-    PrefillCandidate | undefined | "none"
-  >();
-  const [groups, setGroups] = useState<PickerGroup[] | undefined>();
-  const [showPicker, setShowPicker] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | undefined>();
+  uploadPhoto: (input: { data: FormData }) => Promise<{ key: string }>;
   /**
-   * The in-flight half of design's round-13 table, which this screen did
-   * not have.
-   *
-   * `disabled={selected.size === 0}` covered only "not yet"; while the
-   * attach was actually running the button sat at full strength with
-   * nothing stopping a second press — and `attachKit` **creates an
-   * entry**, so two presses are two entries. Rule 07 removes the attribute
-   * that used to stop the first kind of press, so this is what stops the
-   * second.
+   * W3's step between picking a photo and keeping it — a render slot,
+   * because this module may not reach `modules/safety`. Absent, a picked
+   * photo is kept as it is.
    */
-  const [attaching, setAttaching] = useState(false);
+  renderPhotoStep?: PhotoStep | undefined;
+}
 
+export function AttachKit({
+  runId,
+  units,
+  context,
+  prefillFor,
+  attachKit,
+  uploadPhoto,
+  renderPhotoStep,
+}: Readonly<AttachKitProps>): JSX.Element {
+  const navigate = useNavigate();
+  const [suggestion, setSuggestion] = useState<Suggestion>();
+  const [isCardOpen, setIsCardOpen] = useState(true);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [isFiltered, setIsFiltered] = useState(
+    context.conditions !== undefined,
+  );
+  const [sheetGroup, setSheetGroup] = useState<UiGroup | undefined>();
+  const [kitError, setKitError] = useState<string | undefined>();
+  const [photo, setPhoto] = useState<HeldPhoto | undefined>();
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>();
+  const [photoError, setPhotoError] = useState<string | undefined>();
+  const [photoStep, setPhotoStep] = useState<
+    { file: File; step: PhotoStep } | undefined
+  >();
+  const [said, setSaid] = useState("");
+
+  // The one read the screen waits on. A failure is no suggestion: the
+  // picker is already there, and a suggestion is never the only way on.
   useEffect(() => {
-    if (coords === undefined) return;
-    if (coords === "none") {
-      // Nothing to match a previous run against, so there is no
-      // suggestion to make — go straight to the picker rather than
-      // waiting for an answer that will not come.
-      setPrefill("none");
+    async function load(): Promise<void> {
+      try {
+        setSuggestion((await prefillFor({ data: { runId } })) ?? "none");
+      } catch {
+        setSuggestion("none");
+      }
+    }
+    void load();
+  }, [prefillFor, runId]);
+
+  // The preview is the held file's own bytes, released when it goes.
+  useEffect(() => {
+    if (photo === undefined) return;
+    const url = URL.createObjectURL(photo.file);
+    setPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [photo]);
+
+  const attach = useControlAction({
+    kicker: "Nothing attached",
+    action: async (itemIds: string[]) => {
+      // The entry first, then its photo: the photo belongs to an entry and
+      // there is none until this returns. A retry repeats both, and both
+      // are idempotent — the entry by its run, the photo by its key.
+      const { entryId } = await attachKit({ data: { runId, itemIds } });
+      if (photo !== undefined) {
+        const upload = new FormData();
+        upload.append("entryId", entryId);
+        upload.append("photo", photo.file);
+        upload.append("idempotencyKey", photo.key);
+        await uploadPhoto({ data: upload });
+      }
+      await navigate({ to: "/feed/verdict/$entryId", params: { entryId } });
+    },
+  });
+
+  /**
+   * Send this kit, or say why not. The rule is the schema's; the sentence
+   * lands on the picker, where the fix is.
+   */
+  function next(itemIds: readonly string[]): void {
+    const parsed = kitChoice.safeParse(itemIds);
+    if (!parsed.success) {
+      setKitError(parsed.error.issues[0]?.message);
       return;
     }
-    void prefillFor({
-      data: { lat: coords.latitude, lng: coords.longitude },
-    }).then((candidate) => {
-      setPrefill(candidate ?? "none");
-    });
-  }, [coords, prefillFor]);
-
-  useEffect(() => {
-    if (!showPicker || groups !== undefined) return;
-    void pickerGroupsFor({ data: pickerQueryFor(coords) }).then(setGroups);
-  }, [showPicker, groups, coords, pickerGroupsFor]);
-
-  async function submit(itemIds: string[]) {
-    if (attaching) return;
-    setError(undefined);
-    setAttaching(true);
-    try {
-      const { entryId } = await attachKit({ data: { runId, itemIds } });
-      await navigate({ to: "/feed/verdict/$entryId", params: { entryId } });
-    } catch {
-      setError("Couldn't save that. Try again.");
-      // Only on the failing path: the success path navigates away, and
-      // clearing the flag first would reopen the button for the frame
-      // before the route changes.
-      setAttaching(false);
-    }
+    setKitError(undefined);
+    void attach.run(parsed.data);
   }
+
+  function toggle(itemId: string): void {
+    setSelected((previous) => toggledIn(previous, itemId));
+    setKitError(undefined);
+  }
+
+  function keep(ready: File): void {
+    setPhotoStep(undefined);
+    setPhoto({ file: ready, key: newUlid() });
+  }
+
+  function onPhotoFiles(files: FileList | null): void {
+    // A `change` from a file input always carries a `FileList` — empty
+    // when the picker was dismissed — so this null guard and the
+    // undefined-index guard below are both live paths every real upload
+    // and every dismissal exercises, with no unreachable branch to prove.
+    if (files === null) return;
+    const file = files[0];
+    if (file === undefined) return;
+    const problem = photoProblem(file);
+    setPhotoError(problem);
+    if (problem !== undefined) return;
+    if (renderPhotoStep === undefined) {
+      keep(file);
+      return;
+    }
+    setPhotoStep({ file, step: renderPhotoStep });
+  }
+
+  const conditions = context.conditions;
+  const names = new Map(
+    context.groups.flatMap((group) =>
+      group.items.map((item) => [item.id, item.name] as const),
+    ),
+  );
+  const openGroup = context.groups.find((group) => group.group === sheetGroup);
 
   return (
     <FlowStep step={LOG_FLOW.attach}>
-      <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6">
-        <h1 className="font-display text-title uppercase">
-          What did you wear?
-        </h1>
+      <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8">
+        <header
+          data-slot="header"
+          data-ground="ink"
+          className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink"
+        >
+          <h1 className="m-0 font-display text-heading">What did you wear?</h1>
+          <Mono step="xs" className="text-teal">
+            {subLine(context, units, selected.size)}
+          </Mono>
+        </header>
+        <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
 
-        {!showPicker && prefill === undefined ? (
-          <Skeleton className="h-32 w-full" />
-        ) : undefined}
+        <MostLikely
+          suggestion={suggestion}
+          isOpen={isCardOpen}
+          conditions={conditions}
+          units={units}
+          names={names}
+          onAccept={next}
+          onChange={(itemIds) => {
+            setSelected(new Set(itemIds));
+            setIsCardOpen(false);
+          }}
+        />
 
-        {!showPicker && prefill && prefill !== "none" ? (
-          <div className="flex flex-col gap-3 rounded-card border border-hairline p-4">
-            <Bracketed className="text-dialed-text">
-              Most likely · from{" "}
-              {formatTemp(prefill.conditions.tempC, units.temp)},{" "}
-              {Math.round(prefill.feelsLikeDeltaC)}° off
-            </Bracketed>
-            <button
-              type="button"
-              onClick={() => {
-                void submit(prefill.itemIds);
-              }}
-              className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
-            >
-              That&rsquo;s it
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowPicker(true);
-              }}
-              className="target text-body font-semibold text-cold-text"
-            >
-              Change
-            </button>
-          </div>
-        ) : undefined}
+        <KitList
+          groups={context.groups}
+          conditions={conditions}
+          units={units}
+          isFiltered={isFiltered}
+          onFilter={setIsFiltered}
+          isOr={suggestion !== "none"}
+          selected={selected}
+          onToggle={toggle}
+          onOpen={setSheetGroup}
+          error={kitError}
+        />
+        <KitSheet
+          group={openGroup}
+          conditions={conditions}
+          units={units}
+          selected={selected}
+          onToggle={toggle}
+          onClose={() => {
+            setSheetGroup(undefined);
+          }}
+        />
 
-        {!showPicker && prefill === "none" ? (
+        <FileWell
+          part="photo-well"
+          copy={{
+            kicker: "Outfit photo · optional",
+            label: "Add a photo",
+            wideLabel: "Drop a photo, or browse",
+            overLabel: "Let go to add it",
+            pendingLabel: "Adding",
+            hint: "Flat on the floor works best.",
+          }}
+          pending={photoStep !== undefined}
+          accept={photoAcceptAttribute}
+          error={photoError}
+          preview={
+            previewUrl === undefined || photo === undefined
+              ? undefined
+              : { src: previewUrl, alt: "Your outfit" }
+          }
+          onRemove={() => {
+            setPhoto(undefined);
+            setPreviewUrl(undefined);
+          }}
+          onFiles={onPhotoFiles}
+        />
+        {photoStep === undefined
+          ? undefined
+          : photoStep.step(photoStep.file, keep, setSaid)}
+
+        <div className="flex flex-col gap-3">
           <button
             type="button"
+            data-slot="primary-action"
+            {...inFlight(attach.pending)}
             onClick={() => {
-              setShowPicker(true);
+              next([...selected]);
             }}
-            className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
+            className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
           >
-            Choose your kit
+            <PendingLabel
+              label="Next — did it work?"
+              pendingLabel="Attaching"
+              pending={attach.pending}
+            />
           </button>
-        ) : undefined}
-
-        {showPicker ? (
-          <PickerOrSkeleton
-            attaching={attaching}
-            groups={groups}
-            selected={selected}
-            onToggle={(itemId) => {
-              setSelected((prev) => toggledIn(prev, itemId));
-            }}
-            onSubmit={() => {
-              void submit([...selected]);
-            }}
+          <ControlFailureBand
+            failure={attach.failure}
+            onRetry={attach.retry}
+            retryRef={attach.retryRef}
           />
-        ) : undefined}
-
-        {error === undefined ? undefined : (
-          <p className="text-small font-semibold text-cold-text">{error}</p>
-        )}
+          <p className="m-0 text-center text-small text-muted">
+            Not now —{" "}
+            <Link
+              to="/runs"
+              data-target="inline"
+              className="font-semibold text-cold-text"
+            >
+              leave it in the queue
+            </Link>
+            .
+          </p>
+        </div>
       </div>
     </FlowStep>
   );
 }
 
-function PickerOrSkeleton({
-  attaching,
-  groups,
-  selected,
-  onToggle,
-  onSubmit,
+/**
+ * The most-likely region, in its three states (round 22, "A2 Waiting" and
+ * "A2 No suggestion"), each named on `data-state` for the harness:
+ *
+ * - **waiting** — a hairline card whose line is the breathing brackets:
+ *   "[ Checking what you wore at 41° ]".
+ * - **suggestion** — the hi-viz card: where it is from, the pieces, "That's
+ *   it" to send them and "Change" to take them into the picker.
+ * - **none** — *"One line, no card: an empty card is a promise we're not
+ *   keeping."* With no conditions the line says why and the sub-line drops.
+ */
+function MostLikely({
+  suggestion,
+  isOpen,
+  conditions,
+  units,
+  names,
+  onAccept,
+  onChange,
 }: Readonly<{
-  attaching: boolean;
-  groups: PickerGroup[] | undefined;
-  selected: Set<string>;
-  onToggle: (itemId: string) => void;
-  onSubmit: () => void;
-}>) {
-  if (!groups) return <Skeleton className="h-64 w-full" />;
-  return (
-    <Picker
-      attaching={attaching}
-      groups={groups}
-      selected={selected}
-      onToggle={onToggle}
-      onSubmit={onSubmit}
-    />
-  );
-}
+  suggestion: Suggestion;
+  isOpen: boolean;
+  conditions: AttachContext["conditions"];
+  units: Units;
+  names: ReadonlyMap<string, string>;
+  onAccept: (itemIds: readonly string[]) => void;
+  onChange: (itemIds: readonly string[]) => void;
+}>): JSX.Element | undefined {
+  const temp =
+    conditions === undefined
+      ? undefined
+      : formatTemp(conditions.tempC, units.temp);
 
-function Picker({
-  attaching,
-  groups,
-  selected,
-  onToggle,
-  onSubmit,
-}: Readonly<{
-  /**
-   * Drilled through two components rather than read from a context,
-   * because it is one boolean with one reader — the submit button at the
-   * bottom of this list — and a context for it would be a second way to
-   * ask "is the attach running" alongside the state that answers it.
-   */
-  attaching: boolean;
-  groups: PickerGroup[];
-  selected: Set<string>;
-  onToggle: (itemId: string) => void;
-  onSubmit: () => void;
-}>) {
-  const [query, setQuery] = useState("");
-  return (
-    <div className="flex flex-col gap-5">
-      <input
-        type="search"
-        placeholder="Search your closet"
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-        }}
-        className="rounded-field border border-hairline bg-panel px-3 py-2"
-      />
-      {groups.map((group) => {
-        const visible = group.items.filter((item) =>
-          item.name.toLowerCase().includes(query.toLowerCase()),
-        );
-        if (visible.length === 0) return;
-        return (
-          <fieldset key={group.group} className="flex flex-col gap-2">
-            <legend>
-              <Mono step="xs">{uiGroupLabels[group.group]}</Mono>{" "}
-              <Mono className="text-muted">
-                [{String(group.matchCount)} of {String(group.items.length)}]
-              </Mono>
-            </legend>
-            {visible.map((item) => (
-              <label
-                key={item.id}
-                className="target flex items-center gap-2 text-body"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(item.id)}
-                  onChange={() => {
-                    onToggle(item.id);
-                  }}
-                />
-                <span>
-                  {item.brand ? `${item.brand} ` : ""}
-                  {item.name}
-                </span>
-                {item.untested ? (
-                  <Bracketed className="text-muted">untested</Bracketed>
-                ) : undefined}
-              </label>
-            ))}
-            {group.hiddenByFilterCount > 0 ? (
-              <Mono className="text-muted">
-                {String(group.hiddenByFilterCount)} hidden by conditions
-              </Mono>
-            ) : undefined}
-          </fieldset>
-        );
-      })}
-      {/* **Two unavailable states, one button** (design, round 13). *Not
-          yet* — nothing selected — is drawn at full strength and stays
-          silent on press: "the count is the sentence: it says what is
-          missing on the button the runner is looking at", so `Attach 0
-          items` is the whole message and there is no band to add. *In
-          flight* swaps the label. Neither dims, because rule 02 bans
-          opacity as a meaning channel, and neither uses `disabled`,
-          because rule 07 bans dropping a control out of the tab order. */}
-      <button
-        type="button"
-        onClick={onSubmit}
-        {...inFlight(attaching || selected.size === 0)}
-        aria-busy={attaching || undefined}
-        className="target rounded-pill bg-ink px-4 py-3 font-semibold text-ground"
+  if (suggestion === undefined) {
+    return (
+      <div
+        data-slot="most-likely"
+        data-state="waiting"
+        aria-busy="true"
+        className="flex flex-col gap-2 rounded-card border border-hairline p-4"
       >
-        <PendingLabel
-          pending={attaching}
-          pendingLabel="Attaching"
-          label={`Attach ${String(selected.size)} ${selected.size === 1 ? "item" : "items"}`}
-        />
-      </button>
+        <Mono step="xs" className="text-muted">
+          Most likely
+        </Mono>
+        <span className="text-body font-semibold">
+          <PendingLabel
+            label=""
+            pendingLabel={
+              temp === undefined
+                ? "Checking what you wore"
+                : `Checking what you wore at ${temp}`
+            }
+            pending
+          />
+        </span>
+      </div>
+    );
+  }
+
+  if (suggestion === "none") {
+    return (
+      <div
+        data-slot="most-likely"
+        data-state="none"
+        className="flex flex-col gap-1 border-b border-hairline pb-4"
+      >
+        <span className="text-body font-semibold">
+          {temp === undefined
+            ? "No weather on this run, so no suggestion."
+            : `No usual kit at ${temp} yet.`}
+        </span>
+        {temp === undefined ? undefined : (
+          <span className="text-small text-label">
+            Pick what you wore. After a few runs here, we&rsquo;ll suggest it.
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (!isOpen) return undefined;
+
+  return (
+    <div
+      data-slot="most-likely"
+      data-state="suggestion"
+      className="flex flex-col gap-3 rounded-card bg-hi-viz p-4 text-accent-ink"
+    >
+      <Mono step="xs">
+        Most likely · from {conditionsWords(suggestion.conditions, units)},{" "}
+        {dayLabel(suggestion.createdAt, suggestion.conditions.timeZone)}
+      </Mono>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+        {suggestion.itemIds.flatMap((itemId) => {
+          const name = names.get(itemId);
+          return name === undefined
+            ? []
+            : [
+                <li key={itemId} className="text-body font-semibold">
+                  {name}
+                </li>,
+              ];
+        })}
+      </ul>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => {
+            onAccept(suggestion.itemIds);
+          }}
+          className="target rounded-pill bg-ink px-5 py-2 font-semibold text-ground"
+        >
+          That&rsquo;s it
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onChange(suggestion.itemIds);
+          }}
+          className="target font-semibold underline underline-offset-4"
+        >
+          Change
+        </button>
+      </div>
     </div>
   );
 }
