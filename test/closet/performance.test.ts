@@ -308,4 +308,3 @@ describe("pairsFor (round 22: up to three, absent under 3 runs)", () => {
     expect(pairsFor(summary({ runCount: 9 }), undefined)).toStrictEqual([]);
   });
 });
-

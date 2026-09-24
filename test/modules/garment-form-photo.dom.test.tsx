@@ -280,12 +280,16 @@ describe("GarmentForm: a picked photo", () => {
     });
   });
 
-  it("marks the well with the reason a photo was refused, and does not move on", async () => {
+  it("says the garment saved and the photo didn't, and marks the well with why", async () => {
+    // Owner's words (task 122). The save is not undone and not repeated.
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
-    const { onSaved } = renderForm({
+    const { onSaved, save } = renderForm({
       upload: () =>
-        Promise.resolve({ ok: false, error: "Photo must be 10 MB or smaller." }),
+        Promise.resolve({
+          ok: false,
+          error: "Photo must be 10 MB or smaller.",
+        }),
     });
 
     await user.upload(fileInput(), png());
@@ -294,14 +298,91 @@ describe("GarmentForm: a picked photo", () => {
     expect(
       await screen.findByText("Photo must be 10 MB or smaller."),
     ).toBeVisible();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Nothing saved. One field needs a fix.",
+    const band = await screen.findByText("Photo not saved");
+    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
+      "Garment saved, photo didn't. Try again?",
     );
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Garment saved, photo didn't. Try again?",
+      );
+    });
     expect(onSaved).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(1);
 
     // Another file is the fix, and picking one clears the mark.
     await user.upload(fileInput(), png("smaller.png"));
     expect(screen.queryByText("Photo must be 10 MB or smaller.")).toBeNull();
+  });
+
+  it("retries only the photo, against the saved garment, and then moves on", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    const upload = vi
+      .fn<Upload>()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ok: true });
+    const { onSaved, save } = renderForm({ upload });
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo not saved");
+    // A dropped connection is not the file's fault: the well stays clean.
+    expect(well()).not.toHaveAttribute("aria-invalid");
+    expect(fileInput()).not.toHaveAttribute("aria-invalid");
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith({ id: "01SAVED" });
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(upload.mock.calls[1]?.[0].data.get("itemId")).toBe("01SAVED");
+    expect(screen.queryByText("Photo not saved")).toBeNull();
+  });
+
+  it("sends the photo once however fast Try again is pressed", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    const pending = Promise.withResolvers<{ ok: true }>();
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
+      .mockReturnValueOnce(pending.promise);
+    renderForm({ upload });
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    await user.dblClick(retry);
+
+    expect(upload).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      pending.resolve({ ok: true });
+      await pending.promise;
+    });
+  });
+
+  it("clears the band when a later attempt succeeds", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
+      .mockResolvedValueOnce({ ok: true });
+    const { onSaved } = renderForm({ upload });
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo not saved");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(screen.queryByText("Photo not saved")).toBeNull();
+    expect(screen.queryByText("Photo file is empty.")).toBeNull();
   });
 
   it("updates the row it already made when the runner fixes a field and resubmits", async () => {

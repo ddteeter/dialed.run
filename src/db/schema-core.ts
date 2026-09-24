@@ -246,6 +246,12 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // invent one.
     idempotencyKey: text("idempotency_key"),
     retired: integer("retired", { mode: "boolean" }).notNull().default(false),
+    // When the piece was retired, in epoch seconds — round 22's
+    // `[RETIRED SEP 12]`. Written in the same statement as `retired` and
+    // cleared with it on unretire. Nullable and never backfilled: a piece
+    // retired before this column existed shows `[RETIRED]` undated rather
+    // than a date nobody recorded.
+    retiredAt: integer("retired_at"),
     // Reserved by 000 as untyped text written by nobody; task 106 is what
     // it was reserved for. Typing it is type-level only in drizzle — the
     // emitted SQL for a text enum carries no CHECK — so this narrows the

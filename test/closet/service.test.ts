@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
@@ -18,13 +18,14 @@ import {
 import {
   computeUserPerformance,
   createItem,
-  deleteOrRetireItem,
+  deleteItem,
   getItemDetail,
   getItemDetailWithPairs,
   getOwnedItem,
   listItems,
   NotFoundError,
   retireItem,
+  unretireItem,
   updateItem,
 } from "../../src/modules/closet/service";
 import { addFromTapList } from "../../src/modules/closet/tap-list";
@@ -120,41 +121,98 @@ describe("closet CRUD roundtrip", () => {
   });
 });
 
-describe("retire, don't delete", () => {
-  it("hard-deletes an item with no outfit_entry_item reference", async () => {
-    const userId = newUlid();
-    const item = await createItem(db(), userId, {
-      category: "accessory",
-      name: "Unworn cap",
-    });
-    const outcome = await deleteOrRetireItem(db(), userId, item.id);
-    expect(outcome.action).toBe("deleted");
-    await expect(getOwnedItem(db(), userId, item.id)).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
-  });
-
-  it("only retires an item referenced by an outfit_entry_item", async () => {
-    const userId = newUlid();
-    const item = await createItem(db(), userId, {
-      category: "accessory",
-      name: "Worn cap",
-    });
-    await logEntry(userId, [item.id], 0);
-    const outcome = await deleteOrRetireItem(db(), userId, item.id);
-    expect(outcome.action).toBe("retired");
-    const stillThere = await getOwnedItem(db(), userId, item.id);
-    expect(stillThere.retired).toBe(true);
-  });
-
-  it("retireItem sets the flag directly", async () => {
+describe("retire, with its date", () => {
+  it("stamps the date in the same write as the flag, and unretire clears both", async () => {
     const userId = newUlid();
     const item = await createItem(db(), userId, {
       category: "accessory",
       name: "Gloves",
     });
+    const before = nowSeconds();
+
     const retired = await retireItem(db(), userId, item.id);
     expect(retired.retired).toBe(true);
+    expect(retired.retiredAt).toBeGreaterThanOrEqual(before);
+    expect(retired.retiredAt).toBeLessThanOrEqual(nowSeconds());
+
+    const back = await unretireItem(db(), userId, item.id);
+    expect(back.retired).toBe(false);
+    expect(back.retiredAt).toBeNull();
+  });
+});
+
+describe("delete, worn or not (owner's ruling, task 122)", () => {
+  it("deletes an item nobody wore", async () => {
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "accessory",
+      name: "Unworn cap",
+    });
+
+    await deleteItem(db(), userId, item.id);
+
+    await expect(getOwnedItem(db(), userId, item.id)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it("takes a worn piece out of every kit, and leaves the entries and verdicts", async () => {
+    const userId = newUlid();
+    const client = db();
+    const cap = await createItem(client, userId, {
+      category: "accessory",
+      name: "Worn cap",
+    });
+    const shirt = await createItem(client, userId, {
+      category: "top",
+      name: "Shirt",
+    });
+    const first = await logEntry(userId, [cap.id, shirt.id], 0);
+    const second = await logEntry(userId, [cap.id], -1);
+
+    await deleteItem(client, userId, cap.id);
+
+    await expect(getOwnedItem(client, userId, cap.id)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    const kits = await client
+      .select({
+        entryId: outfitEntryItems.entryId,
+        itemId: outfitEntryItems.itemId,
+      })
+      .from(outfitEntryItems)
+      .where(inArray(outfitEntryItems.entryId, [first, second]));
+    expect(kits).toStrictEqual([{ entryId: first, itemId: shirt.id }]);
+    const entries = await client
+      .select({ id: outfitEntries.id, verdict: outfitEntries.verdict })
+      .from(outfitEntries)
+      .where(inArray(outfitEntries.id, [first, second]))
+      .orderBy(outfitEntries.verdict);
+    expect(entries).toStrictEqual([
+      { id: second, verdict: -1 },
+      { id: first, verdict: 0 },
+    ]);
+  });
+
+  it("touches no other runner's kit rows, even ones naming the same id", async () => {
+    // Kit rows are reached through the owner's own entries. A row another
+    // runner holds with this id (which a real app never writes) survives.
+    const owner = newUlid();
+    const other = newUlid();
+    const client = db();
+    const cap = await createItem(client, owner, {
+      category: "accessory",
+      name: "Cap",
+    });
+    const theirs = await logEntry(other, [cap.id], 0);
+
+    await deleteItem(client, owner, cap.id);
+
+    const left = await client
+      .select({ itemId: outfitEntryItems.itemId })
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, theirs));
+    expect(left).toStrictEqual([{ itemId: cap.id }]);
   });
 });
 
@@ -179,9 +237,9 @@ describe("cross-user authorization", () => {
     await expect(retireItem(db(), intruder, item.id)).rejects.toBeInstanceOf(
       NotFoundError,
     );
-    await expect(
-      deleteOrRetireItem(db(), intruder, item.id),
-    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(deleteItem(db(), intruder, item.id)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
 
     // Untouched by the denied calls.
     const stillOwned = await getOwnedItem(db(), owner, item.id);

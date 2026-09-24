@@ -632,9 +632,7 @@ describe("AttachKit: the picker", () => {
     );
     await screen.findByRole("button", { name: "That’s it" });
 
-    await user.click(
-      screen.getByRole("button", { name: "Change" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Change" }));
 
     expect(await screen.findByText("Tops")).toBeVisible();
     expect(screen.queryByRole("button", { name: "That’s it" })).toBeNull();

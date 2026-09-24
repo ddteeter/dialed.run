@@ -366,60 +366,75 @@ export async function nameItem(
   });
 }
 
+/**
+ * Retire, with its date in the same write — round 22's `[RETIRED SEP 12]`.
+ * One statement, so the flag and the date can never disagree.
+ */
 export async function retireItem(
   db: Db,
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  return updateOwnedItem(db, userId, itemId, { retired: true });
+  return updateOwnedItem(db, userId, itemId, {
+    retired: true,
+    retiredAt: nowSeconds(),
+  });
 }
 
+/**
+Unretire, clearing the date with the flag.
+*/
 export async function unretireItem(
   db: Db,
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  return updateOwnedItem(db, userId, itemId, { retired: false });
-}
-
-export interface DeleteOutcome {
-  action: "deleted" | "retired";
+  return updateOwnedItem(db, userId, itemId, {
+    retired: false,
+    retiredAt: sql`NULL`,
+  });
 }
 
 /**
- * Retire, don't delete (CLAUDE.md product rule): an item referenced by any
- * outfit_entry_item can only be retired; an unreferenced item is hard-deleted.
+ * Delete a garment, whatever it was worn on (owner's ruling on task 122:
+ * Retire stays the recommended action, Delete is offered beside it).
+ *
+ * **Entries and verdicts stay.** The piece leaves the kit of every run it
+ * was on — its `outfit_entry_items` rows go — and the garment row goes,
+ * in one `db.batch()`: a failure between the two would leave kit rows
+ * naming a garment that no longer exists, or a garment whose history was
+ * half erased. `outfit_entry_items` has no foreign key to cascade, which
+ * is why the first statement exists.
+ *
+ * **The photo leaves storage first.** The other order cannot be retried:
+ * once the row is gone, ownership cannot be proven again and the bytes
+ * would stay for good. This order, failing between the two, leaves a
+ * garment whose photo no longer loads — visible, and a second Delete
+ * finishes it.
  */
-export async function deleteOrRetireItem(
+export async function deleteItem(
   db: Db,
   userId: string,
   itemId: string,
-): Promise<DeleteOutcome> {
+): Promise<void> {
   await getOwnedItem(db, userId, itemId);
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(outfitEntryItems)
-    .where(eq(outfitEntryItems.itemId, itemId));
-  // Equivalent mutant on the optional chain: `count(*)` always answers with
-  // exactly one row. It is here because `noUncheckedIndexedAccess` types
-  // `rows[0]` as possibly absent, which is the compiler being right about
-  // arrays rather than about this query.
-  // Stryker disable next-line OptionalChaining
-  const isReferenced = (row?.count ?? 0) > 0;
-  if (isReferenced) {
-    await db
-      .update(wardrobeItems)
-      .set({ retired: true })
-      .where(ownedItemWhere(userId, itemId));
-    return { action: "retired" };
-  }
-  // Its photo leaves storage first. The other order cannot be retried: once
-  // the row is gone, ownership cannot be proven again and the bytes would
-  // stay for good. This order, failing between the two, leaves a garment
-  // whose photo no longer loads — visible, and a second Delete finishes it.
   await deleteStoredObjects(photoKeyFor(userId, itemId));
-  await db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId));
-  return { action: "deleted" };
+  // Reached through this runner's entries rather than by `item_id` alone:
+  // the only index on the table is (entry_id, item_id), so an item-only
+  // filter would scan every runner's kit rows. `entries_user_created`
+  // finds the entries, and the pair index finds each row.
+  const ownEntries = db
+    .select({ id: outfitEntries.id })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.userId, userId));
+  const inOwnKits = and(
+    inArray(outfitEntryItems.entryId, ownEntries),
+    eq(outfitEntryItems.itemId, itemId),
+  );
+  await db.batch([
+    db.delete(outfitEntryItems).where(inOwnKits),
+    db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
+  ]);
 }
 
 // ---- UI groups -----------------------------------------------------------
@@ -541,24 +556,29 @@ async function fetchUserEntryItemRows(
   db: Db,
   userId: string,
 ): Promise<EntryItemRow[]> {
-  return db
-    .select({
-      entryId: outfitEntries.id,
-      itemId: outfitEntryItems.itemId,
-      createdAt: outfitEntries.createdAt,
-      verdict: outfitEntries.verdict,
-      distanceM: runs.distanceM,
-      retired: wardrobeItems.retired,
-    })
-    .from(outfitEntries)
-    .innerJoin(outfitEntryItems, eq(outfitEntryItems.entryId, outfitEntries.id))
-    .innerJoin(runs, eq(runs.id, outfitEntries.runId))
-    // By primary key, so it costs a lookup per row and scans nothing. The
-    // retired flag has to come back rather than filter here: a retired
-    // piece still has its own history to show (WORKED AT, its mileage),
-    // it just never takes a pairs-with slot from a piece still in use.
-    .innerJoin(wardrobeItems, eq(wardrobeItems.id, outfitEntryItems.itemId))
-    .where(eq(outfitEntries.userId, userId));
+  return (
+    db
+      .select({
+        entryId: outfitEntries.id,
+        itemId: outfitEntryItems.itemId,
+        createdAt: outfitEntries.createdAt,
+        verdict: outfitEntries.verdict,
+        distanceM: runs.distanceM,
+        retired: wardrobeItems.retired,
+      })
+      .from(outfitEntries)
+      .innerJoin(
+        outfitEntryItems,
+        eq(outfitEntryItems.entryId, outfitEntries.id),
+      )
+      .innerJoin(runs, eq(runs.id, outfitEntries.runId))
+      // By primary key, so it costs a lookup per row and scans nothing. The
+      // retired flag has to come back rather than filter here: a retired
+      // piece still has its own history to show (WORKED AT, its mileage),
+      // it just never takes a pairs-with slot from a piece still in use.
+      .innerJoin(wardrobeItems, eq(wardrobeItems.id, outfitEntryItems.itemId))
+      .where(eq(outfitEntries.userId, userId))
+  );
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ColorName,
@@ -24,6 +24,7 @@ import {
   Bracketed,
   ChoiceField,
   ChoiceList,
+  FailureBand,
   FileWell,
   FormErrorSummary,
   FormFailureBand,
@@ -66,17 +67,6 @@ const FABRIC_LABELS: Record<(typeof fabricSchema.options)[number], string> = {
   blend: "Blend",
   down: "Down",
 };
-
-/**
- * The well's name in the form's error set. A refused photo is a field
- * failure — *"file type and size are field failures (the fix is another
- * file)"* — so it rides the same status sentence as every other field.
- *
- * It has no summary label because it can never fail alongside another
- * field: the schema checks every other field before the save, and the
- * photo is only refused after it.
- */
-const PHOTO_FIELD = "photo-well";
 
 /**
 Field name -> human label, for the summary rows the contract requires once
@@ -247,19 +237,12 @@ interface GarmentPhoto {
 }
 
 /**
- * A photo the server refused, in the shape `useFormSubmit` reads a field
- * failure from. Thrown after the row is saved, so a retry resubmits — the
- * create is idempotent on the form's key and the update is idempotent by
- * nature — and the photo is tried again.
+ * What the runner is told when the garment saved and its photo did not —
+ * the owner's words (task 122). Both halves are true at once, so the
+ * sentence says both: the save is not undone, and only the photo is tried
+ * again.
  */
-class PhotoRefused extends Error {
-  readonly issues: readonly { path: string[]; message: string }[];
-
-  constructor(message: string) {
-    super(message);
-    this.issues = [{ path: [PHOTO_FIELD], message }];
-  }
-}
+const PHOTO_NOT_SAVED = "Garment saved, photo didn't. Try again?";
 
 /**
  * A blob URL for the held photo, revoked when it is replaced or dropped.
@@ -328,6 +311,15 @@ export function GarmentForm({
   The row a submit already saved, when a later step of that submit failed.
   */
   const [savedId, setSavedId] = useState<string | undefined>();
+  /**
+   * The saved garment whose photo did not go up, when that is the state:
+   * what the band's Try again writes the photo against. Holding the id
+   * rather than a flag means the retry cannot be offered without one.
+   */
+  const [photoFailedFor, setPhotoFailedFor] = useState<string | undefined>();
+  const [photoError, setPhotoError] = useState<string | undefined>();
+  const [photoPending, setPhotoPending] = useState(false);
+  const photoInFlight = useRef(false);
   const heldUrl = useObjectUrl(held);
   const preview = heldUrl ?? (removed ? undefined : photo.url);
   const pick = usePhotoPick({
@@ -343,21 +335,63 @@ export function GarmentForm({
           ? await save(garment)
           : await updateSaved(savedId, garment);
       setSavedId(saved.id);
-      if (held !== undefined) {
-        const data = new FormData();
-        data.set("itemId", saved.id);
-        data.set("photo", held);
-        const result = await photo.upload({ data });
-        if (!result.ok) throw new PhotoRefused(result.error);
-      } else if (removed && photo.url !== undefined) {
-        await photo.remove({ data: { itemId: saved.id } });
-      }
       return saved;
     },
     successMessage,
     labels: LABELS,
-    onSuccess: onSaved,
+    onSuccess: async (saved) => {
+      await finishWithPhoto(saved.id);
+    },
   });
+
+  /**
+   * The photo's write, after the row it belongs to exists — the add form
+   * has no id before then. A refusal (type, size) marks the well, because
+   * the fix is another file; any failure raises the band, because the
+   * garment is saved and only the photo is owed. Returns whether the photo
+   * is now as the runner left it.
+   */
+  async function didWritePhoto(itemId: string): Promise<boolean> {
+    setPhotoError(undefined);
+    setPhotoFailedFor(undefined);
+    setPhotoPending(true);
+    try {
+      if (held !== undefined) {
+        const data = new FormData();
+        data.set("itemId", itemId);
+        data.set("photo", held);
+        const result = await photo.upload({ data });
+        if (!result.ok) {
+          setPhotoError(result.error);
+          throw new Error(result.error);
+        }
+      } else if (removed && photo.url !== undefined) {
+        await photo.remove({ data: { itemId } });
+      }
+      return true;
+    } catch {
+      setPhotoFailedFor(itemId);
+      form.announce(PHOTO_NOT_SAVED);
+      return false;
+    } finally {
+      setPhotoPending(false);
+    }
+  }
+
+  /**
+   * Write the photo, and move on only if it landed. One at a time: the
+   * guard is a ref because two presses inside one render would both read
+   * `photoPending` as false.
+   */
+  async function finishWithPhoto(itemId: string): Promise<void> {
+    if (photoInFlight.current) return;
+    photoInFlight.current = true;
+    try {
+      if (await didWritePhoto(itemId)) await onSaved({ id: itemId });
+    } finally {
+      photoInFlight.current = false;
+    }
+  }
 
   const estimate = useMemo(
     () =>
@@ -649,9 +683,9 @@ export function GarmentForm({
       <FileWell
         part="photo-well"
         copy={GARMENT_PHOTO_COPY}
-        pending={pick.stepping || (form.pending && held !== undefined)}
+        pending={pick.stepping || (photoPending && held !== undefined)}
         accept={photoAcceptAttribute}
-        error={form.fieldErrors[PHOTO_FIELD]}
+        error={photoError}
         preview={
           preview === undefined ? undefined : { src: preview, alt: values.name }
         }
@@ -663,11 +697,20 @@ export function GarmentForm({
           if (files === null) return;
           const file = files[0];
           if (file === undefined) return;
-          form.field(PHOTO_FIELD).onInput();
+          setPhotoError(undefined);
           pick.pick(file);
         }}
       />
       {pick.step(form.announce)}
+      {photoFailedFor === undefined ? undefined : (
+        <FailureBand
+          kicker="Photo not saved"
+          message={PHOTO_NOT_SAVED}
+          onRetry={() => {
+            void finishWithPhoto(photoFailedFor);
+          }}
+        />
+      )}
 
       <FormFailureBand
         failure={form.failure}

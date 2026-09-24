@@ -19,7 +19,13 @@ const COUNTS = { "-2": 3, "-1": 1, "0": 7, "1": 0, "2": 2 };
 
 describe("BandHistory", () => {
   it("states the band and folds the counts by sign", () => {
-    render(<BandHistory counts={COUNTS} bandFloor={5} units={{ temp: "f", distance: "mi" }} />);
+    render(
+      <BandHistory
+        counts={COUNTS}
+        bandFloor={5}
+        units={{ temp: "f", distance: "mi" }}
+      />,
+    );
 
     // 5°C is 41°F; a band is five degrees Celsius wide.
     expect(
@@ -34,7 +40,13 @@ describe("BandHistory", () => {
   });
 
   it("writes the band in the runner's own units", () => {
-    render(<BandHistory counts={COUNTS} bandFloor={5} units={{ temp: "c", distance: "km" }} />);
+    render(
+      <BandHistory
+        counts={COUNTS}
+        bandFloor={5}
+        units={{ temp: "c", distance: "km" }}
+      />,
+    );
 
     expect(screen.getByText(/^\[5–10°\]/)).toBeVisible();
   });
@@ -43,7 +55,13 @@ describe("BandHistory", () => {
     // tokens.js: `xs` and `sm` are uppercase; `md` is mixed case for
     // values inside prose. Uppercase here would shout "7 DIALED" in the
     // middle of a sentence.
-    render(<BandHistory counts={COUNTS} bandFloor={5} units={{ temp: "f", distance: "mi" }} />);
+    render(
+      <BandHistory
+        counts={COUNTS}
+        bandFloor={5}
+        units={{ temp: "f", distance: "mi" }}
+      />,
+    );
 
     const measured = screen.getByText("[41–50°] · 4 cold · 7 dialed · 2 warm");
     expect(measured).toHaveClass("font-mono", "text-mono-md");
@@ -61,7 +79,9 @@ describe("BandHistory", () => {
       />,
     );
 
-    expect(container).toHaveTextContent("Five states. No runs in this band yet.");
+    expect(container).toHaveTextContent(
+      "Five states. No runs in this band yet.",
+    );
     expect(container.querySelector(".font-mono")).toBeNull();
   });
 
@@ -75,7 +95,11 @@ describe("BandHistory", () => {
       { "-1": 1, "0": 2, "1": 1 },
     ]) {
       const { container, unmount } = render(
-        <BandHistory counts={counts} bandFloor={5} units={{ temp: "f", distance: "mi" }} />,
+        <BandHistory
+          counts={counts}
+          bandFloor={5}
+          units={{ temp: "f", distance: "mi" }}
+        />,
       );
       expect(container).toHaveTextContent(/Your history in this band/);
       unmount();
@@ -84,7 +108,13 @@ describe("BandHistory", () => {
 
   it("counts a verdict missing from the answer as none of it", () => {
     // A sparse answer must read as zeros, not as NaN on the screen.
-    render(<BandHistory counts={{ "0": 3 }} bandFloor={5} units={{ temp: "f", distance: "mi" }} />);
+    render(
+      <BandHistory
+        counts={{ "0": 3 }}
+        bandFloor={5}
+        units={{ temp: "f", distance: "mi" }}
+      />,
+    );
 
     expect(
       screen.getByText("[41–50°] · 0 cold · 3 dialed · 0 warm"),

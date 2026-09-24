@@ -40,6 +40,7 @@ const item: WardrobeItemRow = {
   origin: "manual",
   idempotencyKey: "idem-1",
   retired: false,
+  retiredAt: 1_700_000_000,
   visibility: "ok",
   createdAt: 1_700_000_000,
 };

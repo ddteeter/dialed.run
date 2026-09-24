@@ -19,7 +19,7 @@ import { removeItemPhoto, uploadPhotoFromForm } from "./photos";
 import {
   createItem,
   withResolvedProduct,
-  deleteOrRetireItem,
+  deleteItem,
   getItemDetailWithPairs,
   listItems,
   retireItem,
@@ -88,7 +88,7 @@ export const deleteItemFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => itemIdInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return deleteOrRetireItem(db(), userId, data.itemId);
+    await deleteItem(db(), userId, data.itemId);
   });
 
 export const addFromTapListFn = createServerFn({ method: "POST" })

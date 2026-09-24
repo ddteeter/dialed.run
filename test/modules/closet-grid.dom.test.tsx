@@ -272,7 +272,9 @@ describe("ClosetGrid: what a tile says", () => {
     );
 
     const tile = screen.getByRole("link", { name: /^Old tee/ });
-    expect(tile.querySelector(".order-first")).toHaveTextContent(/^\[Retired\]$/);
+    expect(tile.querySelector(".order-first")).toHaveTextContent(
+      /^\[Retired\]$/,
+    );
     expect(tile.className).not.toMatch(/opacity/);
   });
 
@@ -371,7 +373,10 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
   it("marks the tile that is leaving, and only that one", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, retiredTee])} initialShowRetired />,
+      <ClosetGrid
+        listing={listing([harrier, retiredTee])}
+        initialShowRetired
+      />,
     );
 
     await user.click(screen.getByRole("switch", { name: "Show retired" }));
@@ -385,7 +390,10 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
 
   it("opens already showing them when the caller asks", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, retiredTee])} initialShowRetired />,
+      <ClosetGrid
+        listing={listing([harrier, retiredTee])}
+        initialShowRetired
+      />,
     );
 
     expect(screen.getByRole("link", { name: /Old tee/ })).toBeVisible();

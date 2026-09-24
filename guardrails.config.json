@@ -143,11 +143,6 @@
       "count": 5
     },
     {
-      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Unreachable, proof at the site: `count(*)` always answers with exactly one row. The optional chain is there because `noUncheckedIndexedAccess` types `rows[0]` as possibly absent, which is the compiler being right about arrays rather than about this query.",
-      "count": 1
-    },
-    {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
       "reason": "Equivalent mutant: dropping the null filter leaves nulls in the `IN` list, which matches nothing, so the defaults come back the same. Filtering is what keeps the list the size of the real work.",
       "count": 1

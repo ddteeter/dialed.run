@@ -20,6 +20,8 @@ import {
 import type { PhotoStep } from "../../../ui";
 import { garmentLabel } from "../label";
 import { photoUrlFor } from "../photo-url";
+import { retiredLabel } from "../retired-label";
+import { useRunnerZone } from "./use-runner-zone";
 import { CompositionBlock } from "./Composition";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
 import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
@@ -63,15 +65,15 @@ function attributeWords(
 /**
  * Z2a's identity kicker: `TOP · M`, and the two tags a piece can wear.
  *
- * `[RETIRED]` rides the kicker in ink — *"brackets = a statement"* — and
- * so does `[GENERIC]`, which is F's word for a piece nobody named.
- * Round 22 dates the retired tag (`[RETIRED SEP 12]`); nothing stores
- * when a piece was retired, so it is undated until a column does.
+ * `[RETIRED SEP 12]` rides the kicker in ink — *"brackets = a statement"*
+ * — dated in the runner's zone (`retiredLabel`), and so does `[GENERIC]`,
+ * which is F's word for a piece nobody named.
  */
 function IdentityKicker({
   item,
   isGeneric,
 }: Readonly<{ item: WardrobeItemRow; isGeneric: boolean }>): JSX.Element {
+  const zone = useRunnerZone();
   const words = [garmentCategoryLabels[item.category], item.size]
     .filter((word) => word !== null && word !== "")
     .join(" · ");
@@ -90,7 +92,7 @@ function IdentityKicker({
         <>
           <Mono step="xs"> · </Mono>
           <Bracketed step="xs" className="font-semibold text-ink">
-            Retired
+            {retiredLabel(item.retiredAt, zone)}
           </Bracketed>
         </>
       ) : undefined}
@@ -233,9 +235,7 @@ export function GarmentDetail({
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
   unretire: (input: { data: { itemId: string } }) => Promise<unknown>;
-  remove: (input: {
-    data: { itemId: string };
-  }) => Promise<{ action: "retired" | "deleted" }>;
+  remove: (input: { data: { itemId: string } }) => Promise<unknown>;
   uploadPhoto: (input: {
     data: FormData;
   }) => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -330,14 +330,7 @@ export function GarmentDetail({
 
   const deleting = useControlAction({
     action: async () => {
-      const outcome = await remove({ data: { itemId } });
-      // The server retires instead when a run was logged against the piece
-      // since this page loaded (retire, don't delete) — so it lands where
-      // a retire does, with the piece in sight, never hidden.
-      if (outcome.action === "retired") {
-        await toClosetWithRetired();
-        return;
-      }
+      await remove({ data: { itemId } });
       await navigate({ to: "/closet" });
     },
     kicker: "Not deleted",
@@ -470,21 +463,18 @@ export function GarmentDetail({
             </button>
           </>
         )}
-        {/* A piece with runs is retired rather than deleted (the product
-            rule), so its Delete opens the sheet that says so — and once it
-            is retired, a Delete could only do what has been done, so it is
-            absent rather than a control that changes nothing. */}
-        {item.retired && runCount > 0 ? undefined : (
-          <button
-            type="button"
-            onClick={() => {
-              setConfirming(runCount > 0 ? "retire" : "delete");
-            }}
-            className="target ml-auto cursor-pointer border-none bg-transparent px-1 text-body text-quiet underline underline-offset-4"
-          >
-            Delete
-          </button>
-        )}
+        {/* Always offered, and always a text link beside the pills: Retire
+            is the recommended action, Delete the secondary one (owner's
+            ruling on task 122). Its sheet says what a delete costs. */}
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming("delete");
+          }}
+          className="target ml-auto cursor-pointer border-none bg-transparent px-1 text-body text-quiet underline underline-offset-4"
+        >
+          Delete
+        </button>
       </div>
       <ControlFailureBand
         failure={bringBack.failure}

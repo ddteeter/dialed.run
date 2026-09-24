@@ -21,32 +21,42 @@ const VERBS: Record<ConfirmKind, { verb: string; pending: string }> = {
 };
 
 /**
- * What a garment's runs keep, with the space that joins it to the
- * sentence before. Nothing when it has none — round 22: *"A garment with
- * 0 runs deletes without this sheet's second sentence"*, and a retire
- * sheet promising that none of its runs will be lost is the same sentence
- * about nothing.
+ * What retiring keeps, with the space that joins it to the sentence before.
+ * Nothing when the piece has no runs — round 22: *"A garment with 0 runs
+ * deletes without this sheet's second sentence"*, and a sheet promising
+ * that none of its runs will be lost is the same sentence about nothing.
  */
-function runsSentence(runCount: number): string {
+function keptSentence(runCount: number): string {
   if (runCount === 0) return "";
   if (runCount === 1) return " Its 1 run and verdict stay, and still count.";
   return ` Its ${String(runCount)} runs and verdicts stay, and still count.`;
 }
 
 /**
- * The body under the heading.
- *
- * **Delete only ever reaches this sheet with no runs.** The board draws a
- * delete that strips a piece out of its runs' kits, and CLAUDE.md's
- * product rule is *retire, don't delete* a garment any entry references —
- * `deleteOrRetireItem` retires one rather than deleting it. So a Delete
- * pressed on a garment with runs opens the retire sheet, which says what
- * will actually happen; the delete sheet's runs sentence would be a
- * promise the server does not keep. Put to the owner with task 122.
+ * What deleting costs a piece with runs, ending with the space that joins
+ * it to the sentence after. Round 22 draws the kit half ("Its 14 runs keep
+ * their verdicts but lose this piece from their kit"); the owner's ruling
+ * on task 122 asks for the band records to be said too, so that clause is
+ * added and is a design delta.
+ */
+function lostSentence(runCount: number): string {
+  if (runCount === 0) return "";
+  if (runCount === 1) {
+    return "Its 1 run keeps its verdict but loses this piece from its kit, and its record in every band is gone. ";
+  }
+  return `Its ${String(runCount)} runs keep their verdicts but lose this piece from their kit, and its record in every band is gone. `;
+}
+
+/**
+ * The body under the heading. Delete spells out its cost plainly; retire
+ * says what it keeps. Both are round 22's sentences, extended to every
+ * run count.
  */
 function body(kind: ConfirmKind, runCount: number): string {
-  if (kind === "delete") return "This can't be undone. Retire keeps the history.";
-  return `It leaves the closet and the picker.${runsSentence(runCount)} You can bring it back.`;
+  if (kind === "delete") {
+    return `${lostSentence(runCount)}This can't be undone. Retire keeps the history.`;
+  }
+  return `It leaves the closet and the picker.${keptSentence(runCount)} You can bring it back.`;
 }
 
 /**

@@ -109,8 +109,8 @@ describe("VerdictBacklog: what a row offers", () => {
     // is most of what makes a backlog readable at all.
     expect(
       screen.getAllByRole("columnheader").map((cell) => cell.textContent),
-    // Round 16: the header asks A3's question. It used to read
-    // "Verdict · 1–5", and a reviewer could not tell what the digits were.
+      // Round 16: the header asks A3's question. It used to read
+      // "Verdict · 1–5", and a reviewer could not tell what the digits were.
     ).toStrictEqual(["Run", "Conditions", "Outfit", "Did it work?"]);
     expect(rowsOf()).toHaveLength(1);
   });
@@ -538,9 +538,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     });
     // The breathing bracket is the app's one waiting device, and it is
     // `aria-hidden` — the word beside it is what a reader hears.
-    expect(
-      screen.getByRole("status").querySelector(".breathe"),
-    ).not.toBeNull();
+    expect(screen.getByRole("status").querySelector(".breathe")).not.toBeNull();
 
     pending.resolve({ entryId: "01NEW" });
     await waitFor(() => {
@@ -601,9 +599,7 @@ describe("VerdictBacklog: nothing to clear", () => {
 
     expect(rowsOf()).toHaveLength(0);
     expect(screen.getByText(/0 of 0 saved/)).toBeInTheDocument();
-    expect(
-      document.querySelector("[data-slot='backlog-rail']"),
-    ).not.toBeNull();
+    expect(document.querySelector("[data-slot='backlog-rail']")).not.toBeNull();
   });
 
   it("leaves a key it does not claim to the browser", async () => {

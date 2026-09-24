@@ -92,7 +92,7 @@ function performance(
 
 const nothing = () => Promise.resolve();
 const uploads = () => Promise.resolve({ ok: true as const });
-const deleted = () => Promise.resolve({ action: "deleted" as const });
+const deleted = () => Promise.resolve();
 
 function garment(
   overrides: Partial<Detail> = {},
@@ -188,10 +188,9 @@ describe("GarmentDetail: the order round 22 fixes", () => {
     expect(
       within(identity).getByRole("heading", { name: "Tracksmith Harrier" }),
     ).toBeVisible();
-    expect(within(identity).getByRole("link", { name: "Closet" })).toHaveAttribute(
-      "href",
-      "/closet",
-    );
+    expect(
+      within(identity).getByRole("link", { name: "Closet" }),
+    ).toHaveAttribute("href", "/closet");
   });
 });
 
@@ -219,6 +218,28 @@ describe("GarmentDetail: identity", () => {
     expect(part("identity").querySelector("p")).toHaveTextContent(
       "Top · [Generic] · [Retired]",
     );
+  });
+
+  it("dates the retired tag, month first, in the runner's zone", async () => {
+    // 2026-09-12 23:30 UTC is already 13 Sep in Auckland.
+    const zone = vi
+      .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+      .mockReturnValue({
+        ...new Intl.DateTimeFormat().resolvedOptions(),
+        timeZone: "Pacific/Auckland",
+      });
+    try {
+      await renderWithRouter(
+        garment({
+          item: wardrobeItem({ retired: true, retiredAt: 1_789_257_000 }),
+        }),
+      );
+      expect(part("identity").querySelector("p")).toHaveTextContent(
+        "Top · [Retired Sep 13]",
+      );
+    } finally {
+      zone.mockRestore();
+    }
   });
 
   it("tags neither on a named, active piece", async () => {
@@ -336,7 +357,10 @@ describe("GarmentDetail: the photo", () => {
     const { router } = await renderWithRouter(
       garment(photographed(), {
         uploadPhoto: () =>
-          Promise.resolve({ ok: false as const, error: "Photo file is empty." }),
+          Promise.resolve({
+            ok: false as const,
+            error: "Photo file is empty.",
+          }),
       }),
     );
     const invalidate = vi.spyOn(router, "invalidate");
@@ -515,7 +539,9 @@ describe("GarmentDetail: stats", () => {
 
   it("says where it works, in the dialed hue", async () => {
     await renderWithRouter(garment({ tempRange: { lowC: 4, highC: 12 } }));
-    const line = within(part("stats")).getByText(/Works at/).closest("p");
+    const line = within(part("stats"))
+      .getByText(/Works at/)
+      .closest("p");
     expect(line).toHaveTextContent("Works at [4–12°]");
     expect(line).toHaveClass("text-dialed-text");
   });
@@ -669,7 +695,9 @@ describe("GarmentDetail: actions", () => {
       "href",
       "/closet/edit/01ITEM",
     );
-    expect(within(actions).getByRole("button", { name: "Retire" })).toBeVisible();
+    expect(
+      within(actions).getByRole("button", { name: "Retire" }),
+    ).toBeVisible();
     expect(within(actions).getByRole("button", { name: "Delete" })).toHaveClass(
       "ml-auto",
       "underline",
@@ -681,15 +709,19 @@ describe("GarmentDetail: actions", () => {
 
     const actions = part("actions");
     expect(within(actions).queryByRole("link", { name: "Edit" })).toBeNull();
-    expect(within(actions).queryByRole("button", { name: "Retire" })).toBeNull();
+    expect(
+      within(actions).queryByRole("button", { name: "Retire" }),
+    ).toBeNull();
     expect(
       within(actions).getByRole("button", { name: "Unretire" }),
     ).toBeVisible();
     // No runs, so a real delete is still on offer.
-    expect(within(actions).getByRole("button", { name: "Delete" })).toBeVisible();
+    expect(
+      within(actions).getByRole("button", { name: "Delete" }),
+    ).toBeVisible();
   });
 
-  it("drops Delete from a retired piece with runs: it could only retire it again", async () => {
+  it("keeps Delete on a retired piece with runs — it is always offered", async () => {
     await renderWithRouter(
       garment({
         item: wardrobeItem({ retired: true }),
@@ -697,8 +729,8 @@ describe("GarmentDetail: actions", () => {
       }),
     );
     expect(
-      within(part("actions")).queryByRole("button", { name: "Delete" }),
-    ).toBeNull();
+      within(part("actions")).getByRole("button", { name: "Delete" }),
+    ).toBeVisible();
   });
 
   it("un-retires without a confirm and stays put", async () => {
@@ -730,7 +762,9 @@ describe("GarmentDetail: actions", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Unretire" }));
-    expectBusy(within(part("actions")).getAllByRole("button")[0] ?? part("actions"));
+    expectBusy(
+      within(part("actions")).getAllByRole("button")[0] ?? part("actions"),
+    );
     await act(async () => {
       pending.reject(new Error("D1 down"));
       await expect(pending.promise).rejects.toThrow("D1 down");
@@ -799,7 +833,9 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     await user.click(screen.getByRole("button", { name: "Retire" }));
 
     await waitFor(() => {
-      expect(within(sheet()).getByRole("button", { name: "Keep it" })).toHaveFocus();
+      expect(
+        within(sheet()).getByRole("button", { name: "Keep it" }),
+      ).toHaveFocus();
     });
   });
 
@@ -911,26 +947,47 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     expect(router.state.location.search).toMatchObject({ retired: false });
   });
 
-  it("opens the retire sheet for a piece with runs, because that is what happens", async () => {
-    // Retire, don't delete: `deleteOrRetireItem` retires a piece any entry
-    // references, so the sheet says what will actually be done.
+  it("offers delete on a piece with runs, and says plainly what it costs", async () => {
+    // Owner's ruling (task 122): Retire stays the recommended action, and
+    // Delete's sheet spells out the kit, the band record, and no undo.
     const user = userEvent.setup();
     const remove = vi.fn<Props["remove"]>(deleted);
     await renderWithRouter(
-      garment({ performance: performance({ runCount: 2 }) }, { remove }),
+      garment({ performance: performance({ runCount: 14 }) }, { remove }),
     );
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(sheet()).toHaveAttribute("data-state", "confirm-retire");
+    expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
     expect(
-      within(sheet()).getByRole("heading", { name: "Retire the Harrier?" }),
+      within(sheet()).getByText(
+        "Its 14 runs keep their verdicts but lose this piece from their kit, and its record in every band is gone. This can't be undone. Retire keeps the history.",
+      ),
+    ).toBeVisible();
+    await user.click(within(sheet()).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(remove).toHaveBeenCalledWith({ data: { itemId: "01ITEM" } });
+    });
+  });
+
+  it("says one run in the singular", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      garment({ performance: performance({ runCount: 1 }) }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(
+      within(sheet()).getByText(
+        "Its 1 run keeps its verdict but loses this piece from its kit, and its record in every band is gone. This can't be undone. Retire keeps the history.",
+      ),
     ).toBeVisible();
   });
 
   it("says [ Deleting ] while it waits, and Not deleted when it fails", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ action: "deleted" }>();
+    const pending = Promise.withResolvers<undefined>();
     await renderWithRouter(garment({}, { remove: () => pending.promise }));
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -943,27 +1000,6 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     });
 
     expect(await within(sheet()).findByText("Not deleted")).toBeVisible();
-  });
-
-  it("lands with retired pieces shown when the server retired it instead", async () => {
-    // A run was logged against the piece after this page loaded, so the
-    // delete became a retire (retire, don't delete). Landing on a grid that
-    // hides retired pieces would make it look deleted after all.
-    const user = userEvent.setup();
-    const { router } = await renderWithRouter(
-      garment(
-        {},
-        { remove: () => Promise.resolve({ action: "retired" as const }) },
-      ),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-    await user.click(within(sheet()).getByRole("button", { name: "Delete" }));
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/closet");
-    });
-    expect(router.state.location.search).toMatchObject({ retired: true });
   });
 });
 

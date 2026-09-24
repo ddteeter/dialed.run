@@ -17,7 +17,7 @@ export type {
 export {
   computeUserPerformance,
   createItem,
-  deleteOrRetireItem,
+  deleteItem,
   getItemDetail,
   getItemsByIds,
   getOwnedItem,

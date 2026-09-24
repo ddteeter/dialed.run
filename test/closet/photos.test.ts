@@ -13,7 +13,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   createItem,
-  deleteOrRetireItem,
+  deleteItem,
   getOwnedItem,
   NotFoundError,
 } from "../../src/modules/closet/service";
@@ -634,13 +634,11 @@ describe("deleteStoredObjects", () => {
 });
 
 describe("hard-deleting a garment takes its photo with it", () => {
-  it("clears storage when the garment is deleted, not when it is retired", async () => {
+  it("clears storage when the garment is deleted", async () => {
     const userId = newUlid();
     const deleted = await garmentWithPhoto(userId);
 
-    expect(
-      await deleteOrRetireItem(db(), userId, deleted.item.id),
-    ).toStrictEqual({ action: "deleted" });
+    await deleteItem(db(), userId, deleted.item.id);
     expect(
       await storedKeys(photoKeyFor(userId, deleted.item.id)),
     ).toStrictEqual([]);
@@ -729,9 +727,7 @@ describe("replacing a photo", () => {
     });
 
     const row = await getOwnedItem(client, userId, item.id);
-    expect(row.photoKey).toBe(
-      second.photoKey,
-    );
+    expect(row.photoKey).toBe(second.photoKey);
   }, 20_000);
 });
 
