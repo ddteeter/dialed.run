@@ -391,9 +391,9 @@ describe("EntryDetail: the useful reaction", () => {
     // name.
     expect(screen.getByText("Useful").parentElement).toBeVisible();
     expect(screen.getByText("Noting")).not.toBeVisible();
-    expect(
-      screen.getByText("Useful").closest("span")?.textContent,
-    ).toBe("Useful [5]");
+    expect(screen.getByText("Useful").closest("span")?.textContent).toBe(
+      "Useful [5]",
+    );
     expect(toggleUseful).toHaveBeenCalledWith({ data: { entryId: "01ENTRY" } });
   });
 
@@ -416,6 +416,52 @@ describe("EntryDetail: the useful reaction", () => {
         "[3]",
       );
     });
+  });
+
+  it("says what is still true under Useful when the press fails, and keeps the count", async () => {
+    // Round 23, item 9, drawn on D: "Useful reads its prior state — empty
+    // heart, 11, not 12 — because it never left it". It used to fail in
+    // silence: a `finally` with no `catch`.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
+        entry={entry({ usefulCount: 11, viewerHasReacted: false })}
+        shouldPromptVerdict={false}
+        recordPrompted={nothing}
+        toggleUseful={() => Promise.reject(new TypeError("Failed to fetch"))}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Useful/ }));
+
+    const band = await screen.findByText("Not marked");
+    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
+      "Not markedYour connection dropped.Try again",
+    );
+    expect(screen.getByRole("button", { name: /Useful/ })).toHaveTextContent(
+      "[11]",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not marked. Your connection dropped.",
+    );
+  });
+
+  it("says it is still marked when taking it back fails", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <EntryDetail
+        units={{ temp: "f", distance: "mi" }}
+        entry={entry({ usefulCount: 4, viewerHasReacted: true })}
+        shouldPromptVerdict={false}
+        recordPrompted={nothing}
+        toggleUseful={() => Promise.reject(new TypeError("Failed to fetch"))}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Useful/ }));
+
+    expect(await screen.findByText("Still marked")).toBeVisible();
   });
 
   it("marks the button when the viewer has already reacted", async () => {

@@ -9,7 +9,16 @@ import {
   formatDuration,
   formatTempRange,
 } from "../../../lib/measures";
-import { Bracketed, Digits, inFlight, Mono, PendingLabel } from "../../../ui";
+import {
+  Bracketed,
+  ControlFailureBand,
+  Digits,
+  FormStatus,
+  inFlight,
+  Mono,
+  PendingLabel,
+  useControlAction,
+} from "../../../ui";
 import type { entryDetailForViewer } from "../entries";
 import { ListSection } from "../../../ui";
 
@@ -89,8 +98,23 @@ export function EntryDetail({
     count: entry.usefulCount,
     reacted: entry.viewerHasReacted,
   });
-  const [pending, setPending] = useState(false);
-
+  // Round 23, item 9: Useful waits for the server behind `[ Noting ]` and
+  // the count changes on success only. It was never optimistic, but its
+  // failure was silent — a `finally` with no `catch`, so a dropped
+  // connection looked exactly like a press that had not registered.
+  const markUseful = useControlAction({
+    action: async () => {
+      const result = await toggleUseful({ data: { entryId } });
+      setUseful((previous) => ({
+        count: result.useful ? previous.count + 1 : previous.count - 1,
+        reacted: result.useful,
+      }));
+    },
+    // The state still true when the press fails is the one it tried to
+    // leave (§4a names "Not marked" for Useful; un-marking fails the other
+    // way round).
+    kicker: useful.reacted ? "Still marked" : "Not marked",
+  });
   // "Prompt once on next open, then never again" (packet A3): the prompt
   // showing at all — not the user acting on it — spends the one-time
   // budget.
@@ -98,23 +122,6 @@ export function EntryDetail({
     if (shouldPromptVerdict) void recordPrompted({ data: { entryId } });
   }, [shouldPromptVerdict, entryId, recordPrompted]);
 
-  async function onToggleUseful() {
-    // The guard the `disabled` attribute used to be. `aria-disabled` keeps
-    // the button focusable and announcing (rule 07), so a second press
-    // still lands — and this one toggles, so a double press would spend a
-    // round trip undoing the first.
-    if (pending) return;
-    setPending(true);
-    try {
-      const result = await toggleUseful({ data: { entryId } });
-      setUseful((previous) => ({
-        count: result.useful ? previous.count + 1 : previous.count - 1,
-        reacted: result.useful,
-      }));
-    } finally {
-      setPending(false);
-    }
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-6 px-5 pt-6">
@@ -208,9 +215,9 @@ export function EntryDetail({
 
       <button
         type="button"
-        {...inFlight(pending)}
+        {...inFlight(markUseful.pending)}
         onClick={() => {
-          void onToggleUseful();
+          void markUseful.run();
         }}
         className={
           useful.reacted
@@ -222,7 +229,7 @@ export function EntryDetail({
             so the whole thing swaps for `[ Noting ]` — a rolling counter
             next to a pending verb would be two states at once. */}
         <PendingLabel
-          pending={pending}
+          pending={markUseful.pending}
           pendingLabel="Noting"
           label={
             <>
@@ -234,6 +241,15 @@ export function EntryDetail({
           }
         />
       </button>
+      {/* Directly under the control that failed, full content width —
+          never beside the pill, which is too narrow for a sentence and a
+          button (§4a). */}
+      <ControlFailureBand
+        failure={markUseful.failure}
+        onRetry={markUseful.retry}
+        retryRef={markUseful.retryRef}
+      />
+      <FormStatus>{markUseful.status}</FormStatus>
 
       <Link
         to="/feed"

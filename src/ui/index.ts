@@ -16,6 +16,8 @@ export { Skeleton } from "./Skeleton";
 export {
   ChoiceField,
   ChoiceList,
+  ControlFailureBand,
+  FailureBand,
   FieldGroup,
   FieldMessage,
   FormErrorSummary,
@@ -30,7 +32,10 @@ export {
 } from "./form";
 export { TabBar } from "./TabBar";
 export { classifyFailure, useFormSubmit } from "./use-form-submit";
+export { useControlAction } from "./use-control-action";
+export type { ControlAction } from "./use-control-action";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
+export type { ControlFailure } from "./form";
 export { useIdempotencyKey } from "./use-idempotency-key";
 export { useListMotion } from "./use-list-motion";
 export { WeatherAttribution } from "./WeatherAttribution";
