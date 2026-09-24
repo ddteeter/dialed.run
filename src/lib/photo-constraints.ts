@@ -36,3 +36,21 @@ const allowedPhotoTypeStrings: readonly string[] = allowedPhotoTypes;
 export function isAllowedPhotoType(value: string): value is AllowedPhotoType {
   return allowedPhotoTypeStrings.includes(value);
 }
+
+/**
+ * The accepted types as a runner reads them, for a well's hint.
+ *
+ * Derived from `allowedPhotoTypes` through a table keyed by it, so a type
+ * added to the tuple fails to compile until it has a word — the hint cannot
+ * go on naming formats the server refuses. Round 22's well draws "JPG, PNG
+ * or HEIC"; HEIC is not accepted, so the hint says what is.
+ */
+const PHOTO_TYPE_WORDS = {
+  "image/jpeg": "JPG",
+  "image/png": "PNG",
+  "image/webp": "WebP",
+} as const satisfies Record<AllowedPhotoType, string>;
+
+export const photoFormatWords = new Intl.ListFormat("en-GB", {
+  type: "disjunction",
+}).format(allowedPhotoTypes.map((type) => PHOTO_TYPE_WORDS[type]));

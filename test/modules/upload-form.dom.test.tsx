@@ -61,9 +61,7 @@ describe("UploadForm", () => {
       <UploadForm upload={() => Promise.resolve({ importId: "x" })} />,
     );
 
-    expect(
-      screen.getByText("Drop a file, or browse"),
-    ).toBeVisible();
+    expect(screen.getByText("Drop a file, or browse")).toBeVisible();
     // A1's hint as round 19 draws it; "up to 25 MB" was round 13's, and
     // the current board supersedes it.
     expect(
@@ -102,24 +100,28 @@ describe("UploadForm", () => {
     });
   });
 
-  it("marks the well while a file is over it, and nothing else moves", async () => {
-    // "Copy and one state change; the layout is untouched." The border is
-    // the state change: it darkens, it does not grow, and the box is the
-    // same dashed field either way.
+  it("goes to solid ink while a file is over it, and says to let go", async () => {
+    // Round 22 draws bend 1's "one state change" for A1 too: dashed to a
+    // 2px solid ink border, the ground to the panel, and the title swaps
+    // ("Let go to read it").
     await renderWithRouter(
       <UploadForm upload={() => Promise.resolve({ importId: "x" })} />,
     );
 
-    const well = screen.getByText("Drop a file, or browse").closest("label");
-    expect(well).toHaveClass("border-dashed", "border-hairline-2");
-    expect(well).not.toHaveClass("border-ink");
+    const well = document.querySelector<HTMLElement>("[data-part='drop-zone']");
+    expect(well).toHaveAttribute("data-state", "empty");
+    expect(screen.getByText("GPX / TCX / FIT")).toBeVisible();
+    expect(screen.getByText("Reading")).not.toBeVisible();
+    expect(
+      screen.getByText("From your watch export or any tracking app."),
+    ).toBeVisible();
 
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array([1])], "run.fit"));
     fireEvent.dragOver(well ?? document.body, { dataTransfer: transfer });
 
-    expect(well).toHaveClass("border-ink", "border-dashed");
-    expect(well).not.toHaveClass("border-hairline-2");
+    expect(well).toHaveAttribute("data-state", "drag-over");
+    expect(screen.getByText("Let go to read it")).toBeInTheDocument();
   });
 
   it("sends the chosen file as multipart under the name the server reads", async () => {

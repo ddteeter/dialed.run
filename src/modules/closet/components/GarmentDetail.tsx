@@ -2,13 +2,21 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import type { GarmentVisibility } from "../../../lib/contracts";
+import {
+  photoAcceptAttribute,
+  photoFormatWords,
+} from "../../../lib/photo-constraints";
 import { formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
+  ControlFailureBand,
   FileWell,
+  FormStatus,
   Mono,
   ProductLink,
+  useControlAction,
 } from "../../../ui";
+import type { PhotoStep } from "../../../ui";
 import { garmentLabel } from "../label";
 import { CompositionBlock } from "./Composition";
 import type {
@@ -85,6 +93,7 @@ export function GarmentDetail({
   unretire,
   remove,
   uploadPhoto,
+  renderPhotoStep,
 }: Readonly<{
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -93,11 +102,29 @@ export function GarmentDetail({
   uploadPhoto: (input: {
     data: FormData;
   }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  /**
+   * W3's blur, composed by the route: a garment photo is a photo, and a
+   * face in it is somebody's face whatever screen it was taken on. Garment
+   * photos used to upload the picked bytes as they were — the verdict
+   * route was the only one that mounted the step (D-102).
+   *
+   * Absent, a picked file is uploaded as-is — which is what the tests of
+   * everything else on this screen want.
+   */
+  renderPhotoStep?: PhotoStep | undefined;
 }>) {
   const navigate = useNavigate();
   const router = useRouter();
   const [photoError, setPhotoError] = useState<string | undefined>();
-  const [uploading, setUploading] = useState(false);
+  /**
+   * The picked file and the step answering for it, together — so a held
+   * file always has the step that opened for it (the same pair
+   * `VerdictForm` holds, for the same reason).
+   */
+  const [pending, setPending] = useState<
+    { file: File; step: PhotoStep } | undefined
+  >();
+  const [status, setStatus] = useState("");
 
   const {
     item,
@@ -143,16 +170,35 @@ export function GarmentDetail({
   }
 
   /**
-   * One path for a chosen file and a dropped one (Desktop Contract bend 1,
-   * "do not fork it"). `FileList | null` rather than the change event,
-   * because a drop has no input to read it from — and everything after
-   * this line, W3's blur included, is reached identically either way.
+   * The upload itself, once the bytes are the ones to send. A wrong type or
+   * size comes back as a field failure on the well (the fix is another
+   * file); a dropped connection throws, and lands on the band under it —
+   * round 22: *"A network drop during upload is a form failure … the well
+   * returns to rest."* It used to leave the well stuck on its in-flight
+   * label for good, because nothing caught the throw.
    */
-  async function handlePhotoFiles(files: FileList | null) {
-    // The guard the `disabled` attribute used to be. `aria-disabled` on an
-    // input does not stop the picker opening (rule 07 keeps it reachable
-    // on purpose), so a second photo chosen mid-upload has to die here.
-    if (uploading) return;
+  const upload = useControlAction({
+    action: async (file: File) => {
+      setPhotoError(undefined);
+      const formData = new FormData();
+      formData.set("itemId", item.id);
+      formData.set("photo", file);
+      const result = await uploadPhoto({ data: formData });
+      if (!result.ok) {
+        setPhotoError(result.error);
+        return;
+      }
+      await router.invalidate();
+    },
+    kicker: "Nothing saved",
+  });
+
+  /**
+   * One path for a chosen file and a dropped one (Desktop Contract bend 1,
+   * "do not fork it"), and both go through W3's blur when the route hands
+   * the step in.
+   */
+  function handlePhotoFiles(files: FileList | null) {
     // Equivalent mutant on the optional index: a `change` from a file
     // input always carries a `FileList`, empty when the picker was
     // dismissed. The `?.` is the compiler's, because the DOM types the
@@ -160,29 +206,19 @@ export function GarmentDetail({
     // Stryker disable next-line OptionalChaining
     const file = files?.[0];
     if (!file) return;
-    setUploading(true);
-    setPhotoError(undefined);
-    const formData = new FormData();
-    formData.set("itemId", item.id);
-    formData.set("photo", file);
-    const result = await uploadPhoto({ data: formData });
-    setUploading(false);
-    if (!result.ok) {
-      setPhotoError(result.error);
+    if (renderPhotoStep === undefined) {
+      void upload.run(file);
       return;
     }
-    await router.invalidate();
+    // Held until the step hands back the bytes to send. One at a time:
+    // the step is a screen, and two of them at once is not a thing a
+    // runner can answer.
+    setPending({ file, step: renderPhotoStep });
   }
 
   return (
     <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-5 px-4 py-8 wide:px-6">
-      {item.photoKey === null ? undefined : (
-        <img
-          src={`/closet/photo/${item.id}/card`}
-          alt={label}
-          className="aspect-square w-full rounded-field object-cover"
-        />
-      )}
+      <FormStatus>{status || upload.status}</FormStatus>
 
       <div>
         <h1 className="font-display text-title uppercase">{label}</h1>
@@ -191,6 +227,47 @@ export function GarmentDetail({
           <Bracketed className="ml-2">Retired</Bracketed>
         ) : undefined}
       </div>
+
+      {/* Round 22, item 8: the photo sits in the well — with a photo the
+          well is the preview, Replace and Remove under it — and item 7
+          puts it straight after the identity line. It used to be a square
+          image at the top of the screen above a well that still said
+          "Add a photo". One well, shared with A1 (`ui/FileWell`). */}
+      <FileWell
+        part="photo-well"
+        copy={{
+          kicker: "Photo · optional",
+          label: "Add a photo",
+          wideLabel: "Drop a photo, or browse",
+          overLabel: "Let go to add it",
+          pendingLabel: "Adding",
+          hint: `Flat on the floor works best. ${photoFormatWords}.`,
+        }}
+        pending={upload.pending || pending !== undefined}
+        accept={photoAcceptAttribute}
+        error={photoError}
+        preview={
+          item.photoKey === null
+            ? undefined
+            : { src: `/closet/photo/${item.id}/card`, alt: label }
+        }
+        onFiles={handlePhotoFiles}
+      />
+      <ControlFailureBand
+        failure={upload.failure}
+        onRetry={upload.retry}
+        retryRef={upload.retryRef}
+      />
+      {pending === undefined
+        ? undefined
+        : pending.step(
+            pending.file,
+            (ready) => {
+              setPending(undefined);
+              void upload.run(ready);
+            },
+            setStatus,
+          )}
 
       <ProductLink url={item.productUrl} label={label} />
 
@@ -256,44 +333,6 @@ export function GarmentDetail({
           ))}
         </p>
       ) : undefined}
-
-      {/* Bend 1: "at width the same panel shows a drop zone in the photo well —
-          'Drop a photo, or shoot it on your phone later.' Copy and one state
-          change; **the layout is untouched**." So the well is the same label
-          with the same input in it; what changes is a line of copy that only
-          exists from 720 up, where there is no camera to open, and a border
-          while a file is over it.
-
-          The dropped file goes to `handlePhotoFiles`, which is what the input's
-          own `onChange` calls — so W3's blur and the size and type checks are
-          reached identically. The contract's "do not fork it" is the whole
-          point.
-
-          One well, shared with A1 — see `ui/FileWell`. It was a raw
-          `<input type="file">` under a left-aligned caption, so the browser's
-          own "Choose file / No file chosen" pair sat in the middle of the panel
-          and the label read as misaligned against everything around it.
-          Reported off the demo.
-
-          The hint is bend 1's line and is width-only: below 720 there is a
-          camera, so "shoot it on your phone later" would be false. The upload
-          failure is the well's own `error` line, not a paragraph drawn here.
-      */}
-      <FileWell
-        label="Add a photo"
-        pendingLabel="Uploading"
-        pending={uploading}
-        accept="image/jpeg,image/png,image/webp"
-        hint={
-          <span className="hidden text-micro text-muted wide:block">
-            Drop a photo, or shoot it on your phone later.
-          </span>
-        }
-        error={photoError}
-        onFiles={(files) => {
-          void handlePhotoFiles(files);
-        }}
-      />
 
       <div className="flex flex-wrap gap-3">
         <Link

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent } from "react";
 import { useRef, useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
@@ -23,6 +23,7 @@ import {
   useFormSubmit,
   verdictHue,
 } from "../../../ui";
+import type { PhotoStep } from "../../../ui";
 
 /**
  * `relative` and a horizontal gutter, because the brackets frame the cell.
@@ -135,29 +136,6 @@ const LABELS = {
  * from `lib/photo-constraints` rather than restated, because the server
  * enforces the same two facts and a second copy would drift.
  */
-/**
- * A screen shown between picking a photo and uploading it — W3's blur.
- *
- * It is handed the picked file and a callback for the bytes that should
- * actually be sent, which are not the same bytes.
- */
-/**
- * The blur step, rendered by the route because it lives in
- * `modules/safety`.
- *
- * `announce` is the third argument because of rule 08: the step has three
- * sentences of its own to say and the screen is allowed **one**
- * `role="status"` region, which this form already mounts. Handing the
- * writer down is what stops the step opening a second one — which is
- * exactly what it used to do, and what made one of the two announcements
- * unreadable.
- */
-type PhotoStep = (
-  file: File,
-  onReady: (ready: File) => void,
-  announce: (sentence: string) => void,
-) => ReactNode;
-
 export function VerdictForm({
   entry,
   bandFloor,

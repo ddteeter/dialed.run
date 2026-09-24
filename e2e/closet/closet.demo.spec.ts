@@ -1,5 +1,6 @@
 /**
- * Covers: C (the closet), F (add a garment), §AG (what a garment is made
+ * Covers: C (the closet), F (add a garment), E (garment detail's photo
+ * well, round 22), §AG (what a garment is made
  * of), §AH (colour as a constraint) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
@@ -38,6 +39,15 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
 }
+
+/**
+ * A real 1x1 PNG — small enough to keep the recording quick, and a genuine
+ * decodable image, since the closet's photo path decodes and resizes it.
+ */
+const PNG_1X1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 test("add garments with product identity -> browse the closet -> retire, don't delete", async ({
   page,
@@ -134,6 +144,25 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   await expect(page.getByText("Body")).toBeVisible();
   await expect(page.getByText("87% polyester · 13% elastane")).toBeVisible();
   await expect(page.getByText("As labelled by Patagonia")).toBeVisible();
+
+  // Round 22, item 8: the photo sits in the well. It passes through W3's
+  // blur first — garment photos used to skip it (D-102) — and once stored
+  // the well IS the preview, with Replace under it, never an image above a
+  // well that still says "Add a photo".
+  await scene(page, "The photo goes through the blur, then sits in the well");
+  const well = page.locator("[data-part='photo-well']");
+  await expect(well).toHaveAttribute("data-state", "empty");
+  await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
+    name: "houdini.png",
+    mimeType: "image/png",
+    buffer: PNG_1X1,
+  });
+  await expect(well).toHaveAttribute("data-state", "filled", {
+    timeout: 20_000,
+  });
+  await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
+  await expect(page.getByText("Replace")).toBeVisible();
+  await expect(page.getByText("Add a photo")).toHaveCount(0);
 
   // Browse the closet: both pieces show real brand + model, grouped by
   // the derived UI group (an "outer" layer groups on its own, ahead of

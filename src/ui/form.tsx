@@ -361,13 +361,59 @@ export function FormErrorSummary({
 }
 
 /**
- * Nothing was saved and the fix is not in the form.
+ * The band that says something failed and the fix is not in any field.
  *
- * It sits directly above the submit button, where the eyes already are —
- * not at the top of the form, and never a toast, because a toast takes the
- * retry away with it when it leaves. No hi-viz here either: yellow means
- * "the fix is here", and it isn't. The values are never cleared, so
- * `Try again` resubmits exactly what was typed.
+ * One block, two callers, and the difference is only the first word:
+ *
+ * - **A form's** band opens "Nothing saved" and sits directly above the
+ *   submit button, where the eyes already are (`FormFailureBand`).
+ * - **A control's** band opens with the state that is still true — "Not
+ *   marked", "Still blocked" — and sits directly under the control that
+ *   failed, because the control has to stay where the thumb left it
+ *   (round 23, item 9; design's product.md §4a). `ControlFailureBand`.
+ *
+ * Never a toast, because a toast takes the retry away with it when it
+ * leaves; never a timer, for the same reason; nothing animates in or out.
+ * No hi-viz: yellow means "the fix is here", and it isn't.
+ *
+ * `data-part` and `data-state` are the names round 22 draws the band
+ * under, so the conformance harness can find it on either kind of screen.
+ */
+export function FailureBand({
+  kicker,
+  message,
+  onRetry,
+  retryRef,
+}: Readonly<{
+  kicker: string;
+  message: string;
+  onRetry: () => void;
+  retryRef?: RefObject<HTMLButtonElement | null> | undefined;
+}>): JSX.Element {
+  return (
+    <div
+      data-part="failure-band"
+      data-state="failed"
+      className="flex flex-col items-start gap-3 border border-ink p-4"
+    >
+      <Mono step="xs">{kicker}</Mono>
+      <span className="text-body">{message}</span>
+      <button
+        ref={retryRef}
+        type="button"
+        onClick={onRetry}
+        className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Nothing was saved and the fix is not in the form — the form's case of
+ * `FailureBand`. The values are never cleared, so `Try again` resubmits
+ * exactly what was typed.
  */
 export function FormFailureBand({
   failure,
@@ -378,20 +424,46 @@ export function FormFailureBand({
   onRetry: () => void;
   retryRef?: RefObject<HTMLButtonElement | null> | undefined;
 }>): JSX.Element | undefined {
+  return (
+    <ControlFailureBand
+      failure={
+        failure && { kicker: "Nothing saved", message: failure.message }
+      }
+      onRetry={onRetry}
+      retryRef={retryRef}
+    />
+  );
+}
+
+/**
+ * What a control that failed says: the state still true, and why.
+ */
+export interface ControlFailure {
+  kicker: string;
+  message: string;
+}
+
+/**
+ * A control's case of `FailureBand` — see `useControlAction`, which
+ * produces the failure this renders.
+ */
+export function ControlFailureBand({
+  failure,
+  onRetry,
+  retryRef,
+}: Readonly<{
+  failure: ControlFailure | undefined;
+  onRetry: () => void;
+  retryRef?: RefObject<HTMLButtonElement | null> | undefined;
+}>): JSX.Element | undefined {
   if (failure === undefined) return undefined;
   return (
-    <div className="flex flex-col items-start gap-3 border border-ink p-4">
-      <Mono step="xs">Nothing saved</Mono>
-      <span className="text-body">{failure.message}</span>
-      <button
-        ref={retryRef}
-        type="button"
-        onClick={onRetry}
-        className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
-      >
-        Try again
-      </button>
-    </div>
+    <FailureBand
+      kicker={failure.kicker}
+      message={failure.message}
+      onRetry={onRetry}
+      retryRef={retryRef}
+    />
   );
 }
 

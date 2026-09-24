@@ -350,6 +350,17 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     the row), so the pattern may already be "the band, sized to the thing
     that failed" — design to confirm.
 
+27. **Two words round 22–23 do not give, built from their rule (task 120).**
+    - **The photo well's formats.** Round 22 draws "Flat on the floor works
+      best. JPG, PNG or HEIC." The server accepts JPEG, PNG and WebP, not
+      HEIC, so the hint reads "JPG, PNG or WebP" — derived from
+      `lib/photo-constraints`, so it cannot name a type the server refuses.
+      **The ask:** keep the derived list, or should HEIC be accepted?
+    - **Un-marking Useful.** §4a names `NOT MARKED` for Useful and pairs
+      Follow/Unfollow as `NOT FOLLOWING` / `STILL FOLLOWING`. Taking a
+      Useful back that fails reads `STILL MARKED`, by the same rule — "the
+      kicker names the state still true". **The ask:** confirm.
+
 ## Answered in round 22 (imported 2026-09-23)
 
 The coverage request (`docs/reconciliation/2026-09-23-design-coverage.md`)

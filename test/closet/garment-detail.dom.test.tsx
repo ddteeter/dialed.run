@@ -62,6 +62,11 @@ const item: WardrobeItemRow = {
 */
 const NO_LINK = z.null().parse(JSON.parse("null"));
 
+/**
+`photoKey` is nullable in the schema too, for the same reason as `NO_LINK`.
+*/
+const NO_PHOTO = z.null().parse(JSON.parse("null"));
+
 const detail = {
   item,
   isGeneric: false,
@@ -131,15 +136,18 @@ describe("GarmentDetail's product link", () => {
 });
 
 describe("GarmentDetail: the photo well at width", () => {
-  it("offers the drop zone's copy, which only exists where there is no camera", async () => {
-    // Bend 1: "at width the same panel shows a drop zone in the photo
-    // well — 'Drop a photo, or shoot it on your phone later.'" `wide:`
-    // is what makes it width-only; happy-dom applies no stylesheet, so
-    // what is checkable here is that the line is the contract's and
-    // carries the variant that hides it on a phone.
+  // An empty well: the shared fixture has a photo, which makes the well
+  // its preview (round 22) and puts no title in it.
+  const noPhoto = { ...detail, item: { ...detail.item, photoKey: NO_PHOTO } };
+
+  it("says Drop at desk, where a file can be dropped", async () => {
+    // Round 22, item 8: "The desk title adds 'Drop' because the desk can;
+    // the phone's can't." Bend 1's old line — "shoot it on your phone
+    // later" — was retired with round 21's bend 2 ruling. happy-dom applies
+    // no stylesheet, so what is checkable is the variant that hides each.
     await renderWithRouter(
       <GarmentDetail
-        detail={detail}
+        detail={noPhoto}
         retire={vi.fn()}
         unretire={vi.fn()}
         remove={vi.fn()}
@@ -147,20 +155,18 @@ describe("GarmentDetail: the photo well at width", () => {
       />,
     );
 
-    const line = screen.getByText(
-      "Drop a photo, or shoot it on your phone later.",
+    expect(screen.getByText("Drop a photo, or browse")).toHaveClass(
+      "hidden",
+      "wide:inline",
     );
-    expect(line).toHaveClass("hidden", "wide:block");
+    expect(screen.getByText("Add a photo")).toHaveClass("wide:hidden");
   });
 
-  it("marks the well while a file is over it, and nothing else moves", async () => {
-    // "Copy and one state change; **the layout is untouched**." The
-    // border is the state change — the box is the same dashed field
-    // either way, and a transparent resting border is what stops the well
-    // shifting 1px when a file arrives over it.
+  it("goes to solid ink while a file is over it, and says to let go", async () => {
+    // Bend 1's "one state change", as round 22 draws it.
     await renderWithRouter(
       <GarmentDetail
-        detail={detail}
+        detail={noPhoto}
         retire={vi.fn()}
         unretire={vi.fn()}
         remove={vi.fn()}
@@ -168,30 +174,25 @@ describe("GarmentDetail: the photo well at width", () => {
       />,
     );
 
-    const well = screen
-      .getByText("Drop a photo, or shoot it on your phone later.")
-      .closest("label");
-    // The same resting treatment A1's well has — a dashed hairline box,
-    // centred, with the input `sr-only` inside it.
-    expect(well).toHaveClass("target", "border-dashed", "border-hairline-2");
-    expect(well).not.toHaveClass("border-ink");
+    const well = document.querySelector<HTMLElement>(
+      "[data-part='photo-well']",
+    );
+    expect(well).toHaveAttribute("data-state", "empty");
     expect(well?.querySelector("input")).toHaveClass("sr-only");
 
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array([1])], "kit.png"));
     fireEvent.dragOver(well ?? document.body, { dataTransfer: transfer });
 
-    expect(well).toHaveClass("border-ink", "border-dashed");
-    expect(well).not.toHaveClass("border-hairline-2");
+    expect(well).toHaveAttribute("data-state", "drag-over");
+    expect(screen.getByText("Let go to add it")).toBeInTheDocument();
   });
 
   it("takes a dropped file down the same path as a chosen one", async () => {
     // "Face-blur runs the same WASM path on the dropped file — do not
     // fork it." The upload callback is the proof: one handler, reached
     // either way.
-    const uploadPhoto = vi
-      .fn()
-      .mockResolvedValue({ ok: true, photoKey: "k" });
+    const uploadPhoto = vi.fn().mockResolvedValue({ ok: true, photoKey: "k" });
     await renderWithRouter(
       <GarmentDetail
         detail={detail}
@@ -202,11 +203,9 @@ describe("GarmentDetail: the photo well at width", () => {
       />,
     );
 
-    const well = screen
-      .getByText("Drop a photo, or shoot it on your phone later.")
-      .closest("label");
-    expect(well).not.toBeNull();
-
+    const well = document.querySelector<HTMLElement>(
+      "[data-part='photo-well']",
+    );
     const transfer = new DataTransfer();
     transfer.items.add(
       new File([new Uint8Array([1])], "kit.png", { type: "image/png" }),

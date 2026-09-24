@@ -9,6 +9,7 @@ import {
   unretireItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
+import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/$itemId")({
@@ -28,6 +29,7 @@ function GarmentDetailPage() {
         unretire={unretireItemFn}
         remove={deleteItemFn}
         uploadPhoto={uploadPhotoFn}
+        renderPhotoStep={photoBlurStep}
       />
     </Layout>
   );

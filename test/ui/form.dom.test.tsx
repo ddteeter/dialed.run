@@ -525,6 +525,11 @@ describe("the failure band", () => {
       expect(retry).toHaveFocus();
     });
     expect(screen.getByRole("status")).toHaveTextContent(/^Nothing saved\./);
+    // The band itself opens with the form's kicker — the same block a
+    // control's failure uses, with the form's first word.
+    const band = retry.closest("[data-part='failure-band']");
+    expect(band).toHaveAttribute("data-state", "failed");
+    expect(band?.firstElementChild).toHaveTextContent("Nothing saved");
 
     await user.click(retry);
     await waitFor(() => {
@@ -1392,7 +1397,10 @@ describe("ChoiceList, read-only", () => {
   const OPTIONS = ["none", "too_much"] as const;
   const LABELS = { none: "Fine", too_much: "Too much" };
 
-  function renderAnswer(onChange: (value: "none" | "too_much") => void, isReadOnly: boolean) {
+  function renderAnswer(
+    onChange: (value: "none" | "too_much") => void,
+    isReadOnly: boolean,
+  ) {
     return render(
       <ChoiceList
         name="flag"

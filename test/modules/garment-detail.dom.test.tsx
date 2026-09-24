@@ -5,7 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -757,5 +757,127 @@ describe("GarmentDetail: composition (§AG)", () => {
     // and "no block" is not an "Unknown" row.
     await renderWithRouter(garment({ composition: undefined }));
     expect(screen.queryByText("Made of")).toBeNull();
+  });
+});
+
+describe("GarmentDetail: W3's blur, and the well that holds the photo", () => {
+  it("holds a picked photo until the step hands back the bytes to send", async () => {
+    // D-102: garment photos used to upload the picked bytes as they were;
+    // only the verdict route mounted the blur. A face in a garment photo
+    // is somebody's face whatever screen it was taken on.
+    const user = userEvent.setup();
+    const uploadPhoto = vi.fn<
+      (input: { data: FormData }) => Promise<{ ok: true }>
+    >(() => Promise.resolve({ ok: true as const }));
+    let hand: ((ready: File) => void) | undefined;
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail()}
+        retire={nothing}
+        unretire={nothing}
+        remove={nothing}
+        uploadPhoto={uploadPhoto}
+        renderPhotoStep={(file, onReady, announce) => {
+          hand = onReady;
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                announce("Blurred 1 face.");
+              }}
+            >
+              Step for {file.name}
+            </button>
+          );
+        }}
+      />,
+    );
+
+    // Nothing to say until something happens.
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
+    await user.upload(fileInput(), jpeg("face.jpg"));
+    // The well is busy while the step decides, so a second photo waits.
+    expectBusy(fileInput());
+    await user.click(screen.getByRole("button", { name: "Step for face.jpg" }));
+
+    expect(uploadPhoto).not.toHaveBeenCalled();
+    // The step's sentence goes to this screen's one status region.
+    expect(screen.getByRole("status")).toHaveTextContent("Blurred 1 face.");
+
+    const blurred = new File(["blurred"], "face.jpg", { type: "image/jpeg" });
+    act(() => {
+      hand?.(blurred);
+    });
+
+    await waitFor(() => {
+      expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    });
+    expect(uploadPhoto.mock.calls[0]?.[0]?.data.get("photo")).toBe(blurred);
+    expect(screen.queryByRole("button", { name: /Step for/ })).toBeNull();
+  });
+
+  it("says nothing was saved when the connection drops, and lets go of the well", async () => {
+    // It used to leave the well on its in-flight label for good: nothing
+    // caught the throw.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <GarmentDetail
+        detail={detail()}
+        retire={nothing}
+        unretire={nothing}
+        remove={nothing}
+        uploadPhoto={() => Promise.reject(new TypeError("Failed to fetch"))}
+      />,
+    );
+
+    await user.upload(fileInput(), jpeg());
+
+    expect(await screen.findByText("Nothing saved")).toBeVisible();
+    expect(screen.getByText("Your connection dropped.")).toBeVisible();
+    expectAvailable(fileInput());
+  });
+
+  it("shows the photo in the well, with Replace, after the identity line", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({
+          id: "01ITEM",
+          name: "Harrier",
+          brand: "Tracksmith",
+          photoKey: "closet/01ITEM/card",
+        }),
+      }),
+    );
+
+    const well = document.querySelector("[data-part='photo-well']");
+    expect(well).toHaveAttribute("data-state", "filled");
+    expect(well?.querySelector("img")).toHaveAttribute(
+      "src",
+      "/closet/photo/01ITEM/card",
+    );
+    expect(screen.getByLabelText("Replace")).toHaveAttribute("type", "file");
+    expect(screen.queryByText("Add a photo")).toBeNull();
+    // Round 22, item 7: identity first, then the photo.
+    const heading = screen.getByRole("heading", { name: "Tracksmith Harrier" });
+    expect(
+      heading.compareDocumentPosition(well ?? document.body) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("names the formats it takes, from the list the server enforces", async () => {
+    await renderWithRouter(garment());
+    expect(
+      screen.getByText("Flat on the floor works best. JPG, PNG or WebP."),
+    ).toBeVisible();
+    expect(screen.getByText("Photo · optional")).toBeVisible();
+    // The in-flight title is in the DOM from the start (PendingLabel stacks
+    // both halves so the box keeps its size), hidden until it is needed.
+    expect(screen.getByText("Adding")).not.toBeVisible();
+    expect(fileInput()).toHaveAttribute(
+      "accept",
+      "image/jpeg,image/png,image/webp",
+    );
   });
 });
