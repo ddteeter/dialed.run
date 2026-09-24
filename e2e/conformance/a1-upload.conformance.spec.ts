@@ -10,6 +10,7 @@ import {
 import type { Seeded } from "./logging-fixtures";
 import {
   BOARD_MORNING,
+  gpx,
   hydrated,
   lookOf,
   seedRun,
@@ -30,22 +31,6 @@ import {
 test.use({ storageState: storageStateFor("run-logging") });
 
 const ROUND_22 = "Round 22 Coverage.dc.html";
-
-/**
- * A GPX file of `points` track points a minute apart from `startedAt`.
- * One point is a file that reads and holds no track — round 22's "no track"
- * sentence.
- */
-function gpx(startedAt: number, points: number): Buffer {
-  const trackPoints = Array.from({ length: points }, (_, index) => {
-    const at = new Date((startedAt + index * 60) * 1000).toISOString();
-    const lat = (44.98 + index * 0.001).toFixed(6);
-    return `<trkpt lat="${lat}" lon="-93.270000"><time>${at}</time></trkpt>`;
-  }).join("");
-  return Buffer.from(
-    `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="conformance"><trk><trkseg>${trackPoints}</trkseg></trk></gpx>`,
-  );
-}
 
 const DROP = '[data-part="drop-zone"]';
 
@@ -83,11 +68,11 @@ test.describe("A1 · upload", () => {
     expect(await signatureOf(page, DROP)).toEqual(drawn);
     const built = await lookOf(page, DROP);
     expect(built.borderStyle).toBe(drawnLook.borderStyle);
-    // **A known gap, and not this lane's to close.** The board's dashes are
-    // #B9B8AE, which T1 names --quiet; `ui/FileWell` (task 120's shared
-    // well) draws them --hairline-2. Reported to the coordinator. Pinned
-    // both ways, so the day either side moves this fails and becomes an
-    // equality — the gap's own check announcing it is closed.
+    // **The contract wins here, by ruling.** The board's dashes are
+    // #B9B8AE, which is not a T1 light-ground value (it resolves nearest to
+    // --quiet); `ui/FileWell` draws them --hairline-2, and the coordinator
+    // ruled that stays (contracts outrank artboards for values). Pinned
+    // both ways, so a change on either side is noticed rather than drifting.
     expect(colorRole(drawnLook.borderColor)).toBe("--quiet");
     expect(colorRole(built.borderColor)).toBe("--hairline-2");
   });

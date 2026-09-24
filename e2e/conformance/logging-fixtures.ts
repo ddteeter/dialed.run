@@ -40,6 +40,22 @@ const LAT = 44.98;
 const LNG = -93.27;
 
 /**
+ * A GPX file of `points` track points a minute apart from `startedAt`.
+ * One point is a file that reads and holds no track — round 22's "no track"
+ * sentence.
+ */
+export function gpx(startedAt: number, points: number): Buffer {
+  const trackPoints = Array.from({ length: points }, (_, index) => {
+    const at = new Date((startedAt + index * 60) * 1000).toISOString();
+    const lat = (LAT + index * 0.001).toFixed(6);
+    return `<trkpt lat="${lat}" lon="${LNG.toFixed(6)}"><time>${at}</time></trkpt>`;
+  }).join("");
+  return Buffer.from(
+    `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="conformance"><trk><trkseg>${trackPoints}</trkseg></trk></gpx>`,
+  );
+}
+
+/**
 Everything a spec seeded, so it can take it all back out.
 */
 export interface Seeded {
