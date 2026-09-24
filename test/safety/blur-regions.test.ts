@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  afterTap,
+  BLUR_OFF_LINE,
   blurSummary,
+  type BlurRegion,
   clamped,
   detectedRegions,
   DETECTION_PADDING,
@@ -207,21 +210,102 @@ describe("the sentence above the photo", () => {
     expect(unavailable).toContain("couldn't check");
   });
 
-  it("acknowledges the runner's own taps", () => {
-    expect(blurSummary({ detector: "ran", detected: 0, tapped: 1 })).toContain(
-      "You blurred one spot",
+  it("gives the line to the runner once they have tapped (round 22, item 22)", () => {
+    // "After taps: 'You blurred 2 spots. Tap one to undo.'" — whether the
+    // detector found nothing or never ran.
+    expect(blurSummary({ detector: "ran", detected: 0, tapped: 1 })).toBe(
+      "You blurred one spot. Tap one to undo.",
     );
     expect(
       blurSummary({ detector: "unavailable", detected: 0, tapped: 2 }),
-    ).toContain("two spots");
+    ).toBe("You blurred two spots. Tap one to undo.");
   });
 
   it("keeps a tap distinct from a detection", () => {
     // "We blurred" is a claim about detection; a runner's own tap is not,
     // and crediting the model for it would overstate what it found.
-    const both = blurSummary({ detector: "ran", detected: 1, tapped: 1 });
-    expect(both).toContain("We blurred one face");
-    expect(both).toContain("You blurred one more spot");
+    expect(blurSummary({ detector: "ran", detected: 1, tapped: 1 })).toBe(
+      "We blurred one face. You blurred one more spot. Tap one to undo.",
+    );
+    expect(blurSummary({ detector: "ran", detected: 2, tapped: 3 })).toBe(
+      "We blurred two faces. You blurred three more spots. Tap one to undo.",
+    );
+  });
+
+  it("says each resting outcome in its own words", () => {
+    expect(blurSummary({ detector: "ran", detected: 1, tapped: 0 })).toBe(
+      "We blurred one face. Missed something? Tap it to blur it too.",
+    );
+    expect(blurSummary({ detector: "ran", detected: 0, tapped: 0 })).toBe(
+      "No face found. Posting as-is.",
+    );
+    expect(
+      blurSummary({ detector: "unavailable", detected: 0, tapped: 0 }),
+    ).toBe("We couldn't check this photo. Tap anything you want blurred.");
+  });
+
+  it("says what blur off means, without a warning", () => {
+    expect(BLUR_OFF_LINE).toBe(
+      "Faces won't be blurred. Anyone in this photo can be recognised.",
+    );
+  });
+});
+
+describe("a tap on the photo", () => {
+  const face: BlurRegion = {
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+    source: "detected",
+  };
+
+  it("adds a spot centred on the tap", () => {
+    // 1000x500: a tenth of the short edge is a 50px square.
+    expect(afterTap([], 300, 200, 1000, 500)).toEqual([
+      { x: 275, y: 175, width: 50, height: 50, source: "tapped" },
+    ]);
+  });
+
+  it("undoes a spot the runner put there, by tapping inside it", () => {
+    const once = afterTap([face], 300, 200, 1000, 500);
+    // Each edge of the spot counts as inside it.
+    for (const [x, y] of [
+      [300, 200],
+      [275, 175],
+      [325, 225],
+    ] as const) {
+      expect([x, y, afterTap(once, x, y, 1000, 500)]).toEqual([x, y, [face]]);
+    }
+  });
+
+  it("adds a spot rather than undoing when the tap misses every spot", () => {
+    const once = afterTap([], 300, 200, 1000, 500);
+    for (const [x, y] of [
+      [274, 200],
+      [326, 200],
+      [300, 174],
+      [300, 226],
+    ] as const) {
+      expect([x, y, afterTap(once, x, y, 1000, 500)]).toHaveProperty(
+        [2, "length"],
+        2,
+      );
+    }
+  });
+
+  it("never undoes a detected face — that is the toggle's job", () => {
+    const tapped = afterTap([face], 50, 50, 1000, 500);
+    expect(tapped).toHaveLength(2);
+    expect(tapped[0]).toBe(face);
+    expect(tapped[1]).toMatchObject({ source: "tapped", x: 25, y: 25 });
+  });
+
+  it("undoes the latest of two overlapping spots, and only that one", () => {
+    const first = afterTap([], 300, 200, 1000, 500);
+    const both = afterTap(first, 330, 200, 1000, 500);
+    // (310, 200) is inside both; the undo takes the newer.
+    expect(afterTap(both, 310, 200, 1000, 500)).toEqual(first);
   });
 });
 

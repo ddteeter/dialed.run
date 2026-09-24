@@ -6,6 +6,11 @@ import { ReportAffordance } from "../../src/modules/safety/components/ReportAffo
 
 type Props = Parameters<typeof ReportAffordance>[0];
 
+/**
+The foot link, whichever of its two wordings the subject gets.
+*/
+const REPORT = /^Report (this entry|or block )/u;
+
 function renderAffordance(overrides: Partial<Props> = {}) {
   const fileReport: Props["fileReport"] = vi
     .fn<Props["fileReport"]>()
@@ -37,7 +42,7 @@ function isSheetOpen(): boolean {
 describe("who is offered a report control", () => {
   it("offers one to a signed-in stranger", () => {
     renderAffordance();
-    expect(screen.getByRole("button", { name: "Report" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: REPORT })).toBeInTheDocument();
   });
 
   it("offers none to the author of the thing", () => {
@@ -45,7 +50,7 @@ describe("who is offered a report control", () => {
     // Reporting your own entry does nothing, and offering it reads as a
     // bug rather than a courtesy.
     expect(
-      screen.queryByRole("button", { name: "Report" }),
+      screen.queryByRole("button", { name: REPORT }),
     ).not.toBeInTheDocument();
   });
 
@@ -55,7 +60,7 @@ describe("who is offered a report control", () => {
     // count to be counted against, and that count is the rule the whole
     // auto-hide threshold rests on.
     expect(
-      screen.queryByRole("button", { name: "Report" }),
+      screen.queryByRole("button", { name: REPORT }),
     ).not.toBeInTheDocument();
   });
 
@@ -65,7 +70,7 @@ describe("who is offered a report control", () => {
     renderAffordance({
       subject: { type: "product", id: "p-1", label: "Some Shoe" },
     });
-    expect(screen.getByRole("button", { name: "Report" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: REPORT })).toBeInTheDocument();
   });
 });
 
@@ -82,7 +87,7 @@ describe("whether the block is offered alongside", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
 
     expect(
       screen.getByRole("checkbox", { name: "Block mark_t as well" }),
@@ -93,7 +98,7 @@ describe("whether the block is offered alongside", () => {
     const user = userEvent.setup();
     renderAffordance();
 
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
 
     // An entry report names the entry, not its author. Blocking would
     // need a lookup the reporter never asked for — and `fileReport`
@@ -123,7 +128,7 @@ describe("whether the block is offered alongside", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
@@ -139,7 +144,7 @@ describe("opening and closing", () => {
     const user = userEvent.setup();
     const { fileReport } = renderAffordance();
 
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
     await user.click(
       screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
     );
@@ -158,7 +163,7 @@ describe("closing the sheet", () => {
   it("shuts when the reporter backs out", async () => {
     const user = userEvent.setup();
     renderAffordance();
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
     expect(isSheetOpen()).toBe(true);
 
     // `Sheet` is a native <dialog> and reports through its `close` event,
@@ -180,7 +185,7 @@ describe("closing the sheet", () => {
     // this proves is that the component heard about it — a handler that
     // never ran leaves `isOpen` true, and pressing Report changes nothing
     // because nothing changed.
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
     await waitFor(() => {
       expect(isSheetOpen()).toBe(true);
     });
@@ -189,7 +194,7 @@ describe("closing the sheet", () => {
   it("shuts once the report has gone", async () => {
     const user = userEvent.setup();
     renderAffordance();
-    await user.click(screen.getByRole("button", { name: "Report" }));
+    await user.click(screen.getByRole("button", { name: REPORT }));
 
     await user.click(
       screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
@@ -201,5 +206,57 @@ describe("closing the sheet", () => {
     await waitFor(() => {
       expect(isSheetOpen()).toBe(false);
     });
+  });
+});
+
+describe("the foot link (round 22, items 10, 12 and 21)", () => {
+  it("reads Report this entry under an entry, as a small underlined link", () => {
+    renderAffordance();
+    const link = screen.getByRole("button", { name: "Report this entry" });
+    expect(link).toHaveAttribute("data-part", "report");
+    expect(link).toHaveClass("text-small", "text-label", "underline");
+  });
+
+  it("names the runner, and the block, under a profile", () => {
+    renderAffordance({
+      subject: {
+        type: "profile",
+        id: "author-1",
+        label: "mark_t",
+        authorId: "author-1",
+        authorName: "mark_t",
+      },
+    });
+    expect(
+      screen.getByRole("button", { name: "Report or block mark_t" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the sheet's close control (round 22, item 21)", () => {
+  it("closes without asking and discards what was chosen", async () => {
+    const user = userEvent.setup();
+    const { fileReport } = renderAffordance();
+    await user.click(screen.getByRole("button", { name: REPORT }));
+    await user.click(
+      screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+    );
+    await user.type(screen.getByLabelText(/Anything else/u), "spam link");
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(false);
+    });
+    expect(fileReport).not.toHaveBeenCalled();
+
+    // Opened again, it is empty: nothing kept from the discarded report.
+    await user.click(screen.getByRole("button", { name: REPORT }));
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(true);
+    });
+    expect(
+      screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+    ).not.toBeChecked();
+    expect(screen.getByLabelText(/Anything else/u)).toHaveValue("");
   });
 });

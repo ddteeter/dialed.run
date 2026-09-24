@@ -95,6 +95,40 @@ export function tapRegion(
 }
 
 /**
+ * The regions after a tap at `(x, y)`: a tapped spot under the finger is
+ * undone, and anywhere else gains a new one.
+ *
+ * Round 22, item 22: *"You blurred 2 spots. Tap one to undo."* Only a
+ * runner's own spots undo this way. A detected face is the app's claim,
+ * and the Blur faces toggle is how a runner declines it — a tap on one
+ * blurs a spot over it, the same as a tap anywhere else.
+ *
+ * The last spot under the finger goes, so on an overlap the undo takes
+ * the one the runner put there most recently.
+ */
+export function afterTap(
+  regions: readonly BlurRegion[],
+  x: number,
+  y: number,
+  imageWidth: number,
+  imageHeight: number,
+): BlurRegion[] {
+  const hit = regions.findLastIndex(
+    (region) =>
+      region.source === "tapped" &&
+      x >= region.x &&
+      x <= region.x + region.width &&
+      y >= region.y &&
+      y <= region.y + region.height,
+  );
+  if (hit !== -1) return regions.filter((_region, index) => index !== hit);
+  return [
+    ...regions,
+    { ...tapRegion(x, y, imageWidth, imageHeight), source: "tapped" },
+  ];
+}
+
+/**
  * Maps a click on a displayed canvas back to image coordinates.
  *
  * The canvas is CSS-scaled to fit the column, so a tap at (100, 40) on
@@ -136,21 +170,34 @@ export function blurSummary(params: {
   detected: number;
   tapped: number;
 }): string {
+  // Only a detector that ran can have found anything, so the count alone
+  // says whether there is a claim to make.
+  const detected =
+    params.detected > 0
+      ? `We blurred ${countOf(params.detected, "face")}.`
+      : undefined;
+  // Round 22, item 22: once the runner has tapped, the line is theirs —
+  // "You blurred 2 spots. Tap one to undo." — after the detector's claim
+  // when it made one, and in place of "no face found" when it did not.
+  if (params.tapped > 0) {
+    const spots = countOf(params.tapped, detected ? "more spot" : "spot");
+    const yours = `You blurred ${spots}. Tap one to undo.`;
+    return detected ? `${detected} ${yours}` : yours;
+  }
   if (params.detector === "unavailable") {
-    return params.tapped === 0
-      ? "We couldn't check this photo. Tap anything you want blurred."
-      : `You blurred ${countOf(params.tapped, "spot")}.`;
+    return "We couldn't check this photo. Tap anything you want blurred.";
   }
-  if (params.detected === 0) {
-    return params.tapped === 0
-      ? "No face found. Posting as-is."
-      : `No face found. You blurred ${countOf(params.tapped, "spot")}.`;
-  }
-  const blurred = `We blurred ${countOf(params.detected, "face")}.`;
-  return params.tapped === 0
-    ? `${blurred} Missed something? Tap it to blur it too.`
-    : `${blurred} You blurred ${countOf(params.tapped, "more spot")}.`;
+  return detected
+    ? `${detected} Missed something? Tap it to blur it too.`
+    : "No face found. Posting as-is.";
 }
+
+/**
+ * W3's line with blur off (round 22, item 22), in the same slot as the
+ * others: *"Not a warning colour; the sentence does the work."*
+ */
+export const BLUR_OFF_LINE =
+  "Faces won't be blurred. Anyone in this photo can be recognised.";
 
 /**
  * "one face" / "two faces" — words for small numbers, because this is a

@@ -259,8 +259,37 @@ describe("tapping", () => {
     // "We blurred" is a claim about detection; a tap is not one, and
     // crediting the model for it would overstate what it found.
     await waitFor(() => {
-      expect(screen.getByText(/You blurred one spot/)).toBeInTheDocument();
+      expect(
+        screen.getByText("You blurred one spot. Tap one to undo."),
+      ).toBeInTheDocument();
     });
+  });
+
+  it("undoes the spot when the runner taps it again", async () => {
+    const user = userEvent.setup();
+    const { pipeline, painted } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/No face found/)).toBeInTheDocument();
+    });
+    const photo = screen.getByLabelText("Outfit photo. Tap a spot to blur it.");
+
+    // The same point twice: the second tap lands inside the first spot.
+    await user.click(photo);
+    await screen.findByText("You blurred one spot. Tap one to undo.");
+    await user.click(photo);
+
+    await waitFor(() => {
+      expect(painted.at(-1)).toHaveLength(0);
+    });
+    expect(screen.getByText("No face found. Posting as-is.")).toBeVisible();
   });
 });
 
@@ -329,6 +358,30 @@ describe("with blur turned off", () => {
     await waitFor(() => {
       expect(screen.queryByText("Tap to blur")).not.toBeInTheDocument();
     });
+  });
+
+  it("says what that means, in the slot the outcome sat in", async () => {
+    const user = userEvent.setup();
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    const outcome = await screen.findByText("No face found. Posting as-is.");
+
+    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+
+    // Round 22, item 22: the same paragraph, now saying blur is off —
+    // plain body copy, not a warning colour.
+    expect(outcome).toHaveTextContent(
+      "Faces won't be blurred. Anyone in this photo can be recognised.",
+    );
+    expect(outcome).toHaveClass("text-small");
+    expect(outcome.className).not.toMatch(/failure|hiviz|cold/u);
   });
 });
 
