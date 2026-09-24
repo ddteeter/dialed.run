@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_REQUIRED_CODE } from "../../src/lib/auth-signal";
 import {
+  type ControlAction,
   ControlFailureBand,
   FormStatus,
   inFlight,
@@ -41,15 +42,21 @@ async function signedOut(): Promise<never> {
 function Probe({
   action,
   onSuccess,
+  onControl,
 }: Readonly<{
   action: (target: string) => Promise<unknown>;
   onSuccess?: (target: string) => void;
+  /**
+  Hands the hook's result out, for calls a button cannot make.
+  */
+  onControl?: (control: ControlAction<[string]>) => void;
 }>) {
   const control = useControlAction({
     action,
     kicker: "Not marked",
     onSuccess,
   });
+  onControl?.(control);
   return (
     <div>
       <button
@@ -200,15 +207,25 @@ describe("useControlAction", () => {
     expect(band()).toBeNull();
   });
 
-  it("does nothing on a retry before anything has been tried", async () => {
-    const user = userEvent.setup();
+  it("does nothing on a retry before anything has been tried, and says nothing", () => {
+    // Called directly, not through a click: a retry that spread an
+    // undefined argument list would throw, and a throw inside a React
+    // event handler is swallowed into a console error.
     const action = vi.fn(() => Promise.resolve());
-    render(<Probe action={action} />);
-
-    await user.click(
-      screen.getByRole("button", { name: "Retry from outside" }),
+    let control: ControlAction<[string]> | undefined;
+    render(
+      <Probe
+        action={action}
+        onControl={(current) => {
+          control = current;
+        }}
+      />,
     );
 
+    expect(() => {
+      control?.retry();
+    }).not.toThrow();
     expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 });

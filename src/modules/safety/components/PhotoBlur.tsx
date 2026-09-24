@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Mono, ToggleField } from "../../../ui";
+import type { PhotoStep } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
   browserPipeline,
@@ -300,3 +301,14 @@ function blurFieldProps(name: string) {
     },
   };
 }
+
+/**
+ * W3's step in the shape every photo-taking screen's slot takes
+ * (`ui/PhotoStep`), so a route hands it straight in —
+ * `renderPhotoStep={photoBlurStep}` — rather than each route writing the
+ * same arrow. The verdict's photos and the garment's go through the one
+ * step.
+ */
+export const photoBlurStep: PhotoStep = (file, onReady, announce) => (
+  <PhotoBlur file={file} onReady={onReady} onAnnounce={announce} />
+);

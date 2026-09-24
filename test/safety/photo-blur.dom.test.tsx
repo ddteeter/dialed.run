@@ -1,9 +1,13 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { isValidElement } from "react";
 import { z } from "zod";
 
-import { PhotoBlur } from "../../src/modules/safety/components/PhotoBlur";
+import {
+  PhotoBlur,
+  photoBlurStep,
+} from "../../src/modules/safety/components/PhotoBlur";
 import type {
   BlurPipeline,
   LoadedImage,
@@ -732,5 +736,23 @@ describe("the sentences go to the screen's region, not one of their own", () => 
       ).not.toBeChecked();
     });
     expect(announce).not.toHaveBeenCalled();
+  });
+});
+
+describe("photoBlurStep", () => {
+  it("is PhotoBlur, handed exactly the file, the callback and the announcer", () => {
+    // The shape every photo screen's slot takes (`ui/PhotoStep`), so the
+    // verdict route and the garment route hand the same step in. Checked
+    // as an element rather than rendered: rendering it for real starts the
+    // browser pipeline, which happy-dom cannot run.
+    const file = new File(["x"], "face.jpg", { type: "image/jpeg" });
+    const onReady = vi.fn();
+    const announce = vi.fn();
+
+    const step = photoBlurStep(file, onReady, announce);
+
+    if (!isValidElement(step)) throw new Error("not an element");
+    expect(step.type).toBe(PhotoBlur);
+    expect(step.props).toStrictEqual({ file, onReady, onAnnounce: announce });
   });
 });

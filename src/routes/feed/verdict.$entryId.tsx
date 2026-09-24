@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { PhotoBlur } from "../../modules/safety/components/PhotoBlur";
+import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 
 import { bandFloorC } from "../../lib/temperature";
 import { getSession } from "../../modules/auth/functions";
@@ -57,9 +57,7 @@ function VerdictPage() {
         units={units}
         submitVerdict={submitVerdictAction}
         uploadPhoto={uploadPhotoAction}
-        renderPhotoStep={(file, onReady, announce) => (
-          <PhotoBlur file={file} onReady={onReady} onAnnounce={announce} />
-        )}
+        renderPhotoStep={photoBlurStep}
         itemBandWearStat={itemBandWearStatQuery}
       />
     </Layout>

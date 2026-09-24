@@ -66,15 +66,16 @@ export function UploadForm({ upload }: Readonly<UploadFormProps>) {
   return (
     <FlowStep step={LOG_FLOW.intake}>
       <FileWell
-        label="Drop a file, or browse"
-        pendingLabel="Reading"
+        part="drop-zone"
+        copy={{
+          kicker: "GPX / TCX / FIT",
+          label: "Drop a file, or browse",
+          overLabel: "Let go to read it",
+          pendingLabel: "Reading",
+          hint: "From your watch export or any tracking app.",
+        }}
         pending={isUploading}
         accept=".fit,.gpx,.tcx"
-        hint={
-          <span className="text-micro text-muted">
-            From your watch export or any tracking app.
-          </span>
-        }
         error={error}
         onFiles={(files) => {
           void onChange(files);
