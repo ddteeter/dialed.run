@@ -8,6 +8,7 @@ import {
   namingOfferQuery,
   namingSuggestionsQuery,
 } from "../../modules/onboarding/functions";
+import { skipNamingIfNothingToName } from "../../modules/onboarding/route-decisions";
 import { Page } from "../../ui";
 
 /**
@@ -19,7 +20,7 @@ import { Page } from "../../ui";
 export const Route = createFileRoute("/onboarding/name")({
   loader: async () => {
     await requireSession();
-    return { offer: await namingOfferQuery() };
+    return { offer: skipNamingIfNothingToName(await namingOfferQuery()) };
   },
   component: NamePage,
 });

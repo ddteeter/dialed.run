@@ -27,7 +27,7 @@ function CallPage() {
 
   return (
     <BelledLayout unreadCount={unreadCount}>
-      <Page title="The Call">
+      <Page width="panel">
         <CallLadder ladder={ladder} />
       </Page>
     </BelledLayout>
