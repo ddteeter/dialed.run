@@ -52,7 +52,7 @@ from the other side: _"never a sixth type."_
 
 ## Open queue (nothing blocks v1 lanes)
 
-10. **Dead-lettered work has nowhere a human looks.** Raised on PR #72 as
+10. **Dead-lettered work has nowhere a human looks.** **ANSWERED by round 21: drawn as D6 · Gave up; not built.** Raised on PR #72 as
     "DLQ handling UIs on the desk" — and there is no desk: no admin surface
     is drawn or built anywhere. Today a job that exhausts its retries lands
     on its row (`products.extraction_status = 'failed'`, `runs`'
@@ -124,7 +124,7 @@ from the other side: _"never a sixth type."_
     schema or a product call, it goes to the owner and lives in
     `docs/deferred.md`.
 
-14. **T1 has no role for an accent used as text.** The table's fifteen rows
+14. **T1 has no role for an accent used as text.** **CLOSED by round 21: `--hiviz-text` and `--dialed-tint`, ported and worn.** The table's fifteen rows
     cover pink and hi-viz as _surfaces_ (`--action`, `--failure`) and pink
     and teal as _body text_ (`--cold-text`, `--dialed-text`, both darker
     cuts that clear contrast on paper). Two shipped surfaces need neither:
@@ -136,7 +136,7 @@ from the other side: _"never a sixth type."_
     strength, never opacity". **The ask is two rows**: an accent-as-text
     value and an accent-tint value, per ground. Nothing is blocked.
 
-15. **Three values the contract sends somewhere visible, for confirmation.**
+15. **Three values the contract sends somewhere visible, for confirmation.** **CLOSED by round 21: all three confirmed.**
     Each is a COLLAPSE the lane applied as written; listing them so design
     sees the result rather than discovering it in a demo.
     - The coverage swatch's `2px` corner became `RADIUS.none`, because
@@ -148,7 +148,7 @@ from the other side: _"never a sixth type."_
     - The `[dialed.run]` wordmark's `.run` was a raw `#8B8B93`, which is
       T1's **dark** muted. On paper the role resolves to `#7A7A70`.
 
-16. **§AH's F strip says VISIBILITY and our column cannot.**
+16. **§AH's F strip says VISIBILITY and our column cannot.** **CLOSED by round 21: keep "Visibility"; never use it for a privacy control.**
     `wardrobe_items.visibility` already exists and means the moderation
     state — `text().notNull().default("ok")`, written by `closet/service.ts`,
     sitting next to `retired`. The attribute ships as `visibility_level`,
@@ -158,7 +158,7 @@ from the other side: _"never a sixth type."_
     is the label**: the artboard and the schema should not disagree about a
     word this load-bearing, on a table that now carries both.
 
-17. **"Colour" on the boards, "Color" in the app.** The artboards spell it
+17. **"Colour" on the boards, "Color" in the app.** **CLOSED by round 21: American stays, on every board.** The artboards spell it
     British throughout; the app's one existing user-facing label said
     "Color" and `docs/product.md`'s lexicon does not mention colour at all.
     Shipped American, and the free-text field became "Colorway" so two
@@ -253,7 +253,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     do. Built; D-91 closed.
 
 21. **Bend 2 is satisfied by construction, and its extra line would be
-    false.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
+    false.** **CLOSED by round 21: met; the sentence is retired. D-92 closed.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
     O5 and that O5 gains _"Photos come from your phone — we'll remind
     you."_ The built flow is O1 (calibrate) → O3 (tap-list) → O4 (name) →
     **P3** — and P3's own artboard note says it _"replaces O4 and O5"_. So
@@ -265,7 +265,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     width**. **The ask is one line**: confirm the bend is met, or say
     where the sentence should live now that O5 does not exist. D-92.
 
-22. **The shell carries two of three controls, one hidden at each width.**
+22. **The shell carries two of three controls, one hidden at each width.** **CLOSED by round 21: understood.**
     Undesigned consequence shipped by task 115 under the placeholder
     protocol — no new glyph, colour or word, but a structural decision a
     reviewer should see rather than discover.
@@ -284,7 +284,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     transcript and is not. D-90.
 
 23. **The landing page wears the product shell, and now wears the top
-    bar.** DS5 reserves this screen — _"no footer, no 'about', no pricing
+    bar.** **ANSWERED by round 21 (its own bar, drawn); not built. D-93.** DS5 reserves this screen — _"no footer, no 'about', no pricing
     in the product bar. The logged-out landing page is a separate page
     with a separate brief"_ — so it is outside the Desktop Contract and
     task 115 did not redesign it. But it does wear `Layout`, which means a
@@ -308,7 +308,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     visitor use to get back in? Owner's call to send it rather than guess
     (2026-09-21). D-93.
 
-24. **A3b is described, not drawn.** Round 20 gives it in one sentence —
+24. **A3b is described, not drawn.** **ANSWERED by round 21: drawn as built; Done and swipe-down both keep.** Round 20 gives it in one sentence —
     _"every kit garment as a Fine / Too much / Not enough triple, plus all
     nine tags"_ — and no board. Built from existing parts only
     (`feed/components/SpecificsSheet.tsx`): the `Sheet`; a heading,
@@ -323,7 +323,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     chip, and a receipt is not edited), and a garment chip tapped a second
     time goes back to Fine rather than flipping direction.
 
-25. **Four things the chip rule leaves unsaid, built as assumptions.**
+25. **Four things the chip rule leaves unsaid, built as assumptions.** **ANSWERED by round 21: all four confirmed, plus ≥2 runs to be "weakest"; nothing-to-note is a receipt. Not built yet.**
     Round 20's chip rule is exact about the shape and silent on four
     inputs; each is one function in `feed/chips.ts` with a test of its own,
     so a ruling that overturns one is a one-line change.
@@ -339,6 +339,101 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     **The ask is a yes or a correction on each.** Also open from round 20:
     when saving has nothing to note (no kit, or no band) the screen still
     goes to the entry, since Noted has no sentence to say.
+
+26. **One failure pattern for a control that isn't a form.** Round 22's
+    item 9, which never arrived. A1 upload, A2 attach, run detail's save,
+    Strava connect, follow, useful and unblock each fail differently — some
+    as pink lines, which the Form Contract forbids, some silently. The ask
+    is one pattern (the Form Contract band, an inline mark, or something
+    else), drawn once on a representative control. Round 22 ruled two cases
+    (A1 stalled uses the form band; DS2's failed row gets a band spanning
+    the row), so the pattern may already be "the band, sized to the thing
+    that failed" — design to confirm.
+
+## Answered in round 22 (imported 2026-09-23)
+
+The coverage request (`docs/reconciliation/2026-09-23-design-coverage.md`)
+came back on two new boards: `Auth.dc.html` (items 1–2) and `Round 22
+Coverage.dc.html` (items 3–14 drawn, 27 frames; items 15–25 as one-line
+rulings, drawings due round 23). Every section carries a `data-board` mark
+naming the board it will fold into; the frame, part and state marks are
+final, so the conformance harness can diff against these files until the
+fold lands. Tokens, motion and icons are unchanged.
+
+**Rulings that change or remove what already ships** — each is build work,
+taken with its screen's reconciliation:
+
+- `/runs/import/$id` goes. A1 never navigates while parsing; every outcome
+  (pending, parsed card, parse failed, duplicate, stalled) shows in A1, and
+  the old URL redirects to A1.
+- Run detail's manual-temperature form goes, for one row: "No conditions ·
+  Set conditions ›", opening R2b. Weather that arrived is never editable.
+- The product-link field comes off F for v1 (AC2b); F2a/F2b return with
+  enrichment. Edit is F prefilled, titled "Edit {name}", button Save.
+- Settings becomes U1/N's tap-through index, one small form per sub-page.
+- M's hi-viz unread wash goes: unread is a white row and a pink dot (S2c).
+  The bell's number counts runs awaiting a verdict; everything else is the
+  dot; caps at 9+.
+- D's photo grid goes for the pager. The owner's verdict prompt takes the
+  badge's place, not a banner; Report is a foot text link.
+- The v1 post card drops kit and pace: author and badge, photo, caption,
+  the strip, Useful. A missing part is absent, never a placeholder. Badge
+  fill follows A3 — E1's yellow "dialed" was drift.
+- The auth failure band opens "Not signed in", not "Nothing saved".
+- Zero follows lands on Your conditions.
+- Your conditions needs **five runners** before any aggregate shows (a
+  privacy floor, design's number — the owner may change it); under five in
+  three days the window widens once to fourteen and says so; the band never
+  widens. Location denied recovers with a typed city saved to settings.
+- The garment photo sits in the well: with a photo the well is the
+  preview, Replace and Remove below; drag-over is a 2px ink border and a
+  title swap. Garment detail's order and a 4:3 photo (262 phone, 320 desk).
+- 404 and loader errors keep the shell when signed in; a slow route keeps
+  the old screen and, after 300ms, the destination's tab label breathes.
+
+**Not answered: item 9** (one failure pattern for controls that aren't
+forms) never reached design — the brief as pasted was missing it. Re-asked
+as item 26. **Not yet done by design:** the fold into the screen boards,
+and mirroring the new `data-part` names into its product.md §6b.
+
+## Answered in round 21 (imported 2026-09-23)
+
+Ten asks, ten answers, on a new board of its own (`Round 21 Rulings.dc.html`)
+and mirrored in `design/docs/product.md` §6d. Theme moved, so the contract
+tests moved with it.
+
+- **Two T1 roles (item 14): granted.** `--hiviz-text` (`#F5FF3D`, ink
+  surfaces only, both themes) and `--dialed-tint` (`#D2F0E9` light,
+  `#0A2524` dark — teal into ground at 14%, precomputed). Ported, and both
+  placeholders replaced: NowGoRun's eyebrow and EntryDetail's matched panel,
+  whose border the ruling also draws in teal rather than `--dialed-text`.
+- **The three contract values (item 15): all confirmed.** The square swatch
+  is data, not a control; the ink block is a surface and should not outline
+  itself; `.run` at `--muted` is right and the dark grey was the drift.
+- **"Visibility" (item 16): keep it** — _"the runner's word for being seen;
+  the column name is storage's business."_ Condition: no runner-facing
+  privacy control ever uses "visibility"; sharing stays "Share to feed".
+- **"Color" (item 17): stays American on every board.** Noted, no answer.
+- **Bend 2 (item 21): met; the sentence is retired, not moved.** The
+  Desktop Contract now reads O1 → O3 → O4 → P3. D-92 closed.
+- **Two bars in the markup (item 22): understood.** D-90 stands as a note.
+- **The landing page at width (item 23): its own bar.** From 720 up, a
+  wordmark and one action — "Log in" (hairline) signed out, "Your closet"
+  (ink) signed in — and the hero drops its own wordmark. Below 720, no bar.
+  No nav, search, bell or "Log a run"; pink stays off it. **Not built yet**;
+  D-93 narrowed to that. The full landing brief stays open.
+- **Dead-lettered work (item 10): drawn** as D6 · Gave up on Operator
+  Screens, a rail item with a hi-viz count and one row per job. Not built.
+
+**Round 20's A3 follow-ups** (items 24–25) are answered on the same board,
+and are the next A3 work: MORE › leaves with
+share and submit when Noted lands; a re-tapped garment chip returns to
+Fine; all four chip assumptions confirmed, plus a garment needs **≥2 runs**
+in the band to be "weakest"; nothing-to-note is a **receipt** ("Logged. No
+weather came with this run, so no band record moved." / "…No kit on this
+run, so no garment record moved.") and A3 never navigates; chips draw at
+32px with a `::before` making the target 44, row gap 12px; A3b is drawn as
+built, and Done and swipe-down both keep.
 
 ## Answered in round 19 (imported 2026-09-22)
 

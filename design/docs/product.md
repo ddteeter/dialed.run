@@ -69,6 +69,25 @@ never carried by color alone.
   Archivo, sentence case. Same band on both surfaces.
 - **Label:** unchanged. One mark per field.
 - **Accent pink `#FF2D8A` is action, not failure.** Never use it for an error.
+- **Choice groups (button groups, chip sets) have no box.** The border mark is
+  for a typed value. A group of bordered options keeps `FormField`'s label and
+  message band, draws no enclosing box, and must not suppress its children's
+  focus rings. A required-but-empty group is marked by the message band alone.
+  Applies to A3's verdict row and the per-item flag chips alike.
+- **Verdict commit brackets frame the cell, not the text** (round 18). They sit
+  at the chosen cell's left and right edges, vertically centred, and slide
+  inward by `TRAVEL.frame` as the fill lands — one beat, not two: the fill is
+  the slide's arrival, on the contract's 320ms / align. Never inline with the
+  label. `motion.js` "Verdict commit" says the same (round 19).
+- **The chosen verdict cell fills with its T2 hue, never `--action`** (round 19).
+  Cold pink `#FF2D8A`, dialed teal `#00E0C6`, warm quiet grey (`--quiet`), ink
+  text on all three — on A3 and on DS2's row alike; the two surfaces mirror in
+  both directions. Pink on a chosen cell means *cold*, not *chosen*. Resolves
+  D-98: A3's board was stale.
+- **A verdict cell carries the word only** (round 16, reaffirmed round 19).
+  The band history (`[38–46°] · 2 cold · 7 dialed · 1 warm`) is the line
+  beneath the row. Never a count inside a cell — a dialed-only count reads as
+  a nudge. Resolves D-97: A3's board was stale; the build was right.
 
 ### Motion: none
 
@@ -162,7 +181,9 @@ the pending payload, and returns to the filled form.
 | `Send` | `Sending` |
 
 - On success the button returns to idle and the **screen** moves on. No green
-  check state, no success toast on a form that navigates.
+  check state, no success toast on a form that navigates. A3 is the one form
+  that does not navigate: its receipt (`Noted`) lands in the submit's place —
+  see §6c.1.
 
 ## 6. Copy rules for errors
 
@@ -175,6 +196,199 @@ the pending payload, and returns to the filled form.
   Bracket/mono notation marks measured values in the product's own voice; an
   error sentence is prose.
 - The lexicon holds: **useful**, never **like**.
+
+## 6b. Board conformance markup (round 18)
+
+Screen boards carry three machine-readable marks. Keep them when editing.
+
+- `data-screen-label` on the 390px wrapper; every direct `<span>`/`<p>` child
+  of that wrapper that is not the phone frame carries `data-annotation=""`.
+  Round rulings live in those `<p>`s — a diff tool reads them, so a ruling
+  is never only in chat.
+- `data-part` on meaningful regions inside a frame. Vocabulary (round 19):
+  - every phone screen: `status-bar`, `header`, `tab-bar`, `primary-action`
+  - A1: `drop-zone`, `parsed-card`, `conditions`
+  - A2: `most-likely`, `closet-picker` ⊃ `kit-list`, `outfit-photo`
+  - A3 and DS2: `verdict-row` (same name on purpose — the harness may diff
+    them against each other), A3 `flag-chips`, `noted`, `share-toggle`, `submit`
+  - C: `top-bar`, `rail`, `grid-header`, `grid`
+  - D: `photo`, `run-strip`, `kit`, `try-kit`, `note`, `reactions`
+  - E1: `feed-tabs`, `feed` ⊃ `post`
+  - DS1/DS2 shell: `top-bar` ⊃ `wordmark`, `bar-nav`, `bar-actions`; `columns`
+    ⊃ `primary`, `rail`
+  - DS2: `backlog-header`, `column-heads`, `backlog-row` ⊃ `verdict-row`,
+    `keys`, `selected-card`, `attribution`
+  - round 20: `flag-more` (A3's MORE › chip), `verdict-badge` (D run-strip,
+    E1 author row)
+  - round 21: A3b `sheet` ⊃ `garment-groups`, `done`; D6 `dead-letter` ⊃ `job-row`
+  Add more only as kebab-case nouns; never rename one.
+- `data-state="<name>"` on a region drawn in a state other than the screen's
+  resting state, so a composite board reads as two states, not one layout.
+  So far: A1 `drop-zone` = `before-file`; A3 `noted` = `after-log-it`. The
+  harness diffs a `data-state` region only against the build in that state.
+- `data-divergence="<reason>"` on a region whose built composition is allowed
+  to differ from the board. Record it as intended, not a failure. So far:
+  C `rail` = `ships-whole-or-one-column`.
+- `data-status="unbuilt"` on a screen or region with no built counterpart
+  yet; the harness skips it by design. So far: E2 (post-MVP), D `try-kit`
+  (deferred with saved kits), DS1's placeholder columns.
+- `data-content=""` on an element whose colour is data (a garment's own
+  colour, e.g. `#1F2A44` on AH2), not palette. Exclude from colour checks.
+- `data-annotation=""` *inside* a frame marks an explanatory block that is
+  drawn in situ but is not product (D's "No comments in v1", DS2's "Verdicts
+  saved here…"). Not composition; skip.
+- Screens are drawn at 390px, the device target.
+
+### Colour conformance scope (round 19)
+
+Only hex **inside a `data-screen-label` frame** is checked. Everything outside
+is board chrome — captions, BACKGROUND callouts (`#22161C`), prose
+(`#DEDDD6`) — and is unlicensed by design. Inside a frame, hex outside T1 is:
+
+- a **state tint**: `--action-hover #FF57A2`; `--ink-hover #24242B` light /
+  `#DEDDD6` dark (both in Theme, 17 roles). Dark boards that hovered an
+  ink button to `#24242B` were drift; corrected.
+- a **placeholder photo hatch** — any `background-image: repeating-linear-
+  gradient` pair and its base (`#E9E8DE`/`#E1E0D5`, `#E3E2D8`/`#D8D7CC`,
+  `#22222A`/`#2A2A31`, `#24242B`/`#2C2C34`) and the blurred-face `#CFCEC3`.
+  Excluded; a photo replaces them.
+- **drift** to correct to the nearest T1 role: light `#DEDDD6`-on-ink →
+  `--quiet` dark value; `#F9F8F4` → `--panel`; `#8B8B84` → `--muted`;
+  `#EDE7C8`/`#4A4820` unread-row hairline → `--hairline`. Dark `#2E2E36` →
+  `--hairline`; `#14141A`, `#17171C` → `--panel`; `#121217` → `--ground`;
+  `#A0A0A6` → `--muted`. Pre-round-13: `#009F8C`, `#C41E6A`, `#6E6E74`.
+- **content**, marked `data-content=""`: `#1F2A44` and any garment swatch.
+
+Nothing else is licensed; report it.
+
+**`#DEDDD6` is two things; classify by property, not value** (round 20).
+As a `background` on an ink-filled button inside a dark frame it is
+`--ink-hover` and legal only under `style-hover`. As a `color` inside any
+frame it is drift → `--quiet` dark `#B9B8AE`. Outside a frame it is prose
+and out of scope. Round-20 sweep: `#4A4A52` → `--hairline` dark `#2A2A31`
+(nav-inactive use → `--placeholder` dark `#6E6E74`); `#C41E6A` → `#C21A6B`;
+`#009F8C` → `#00776A`; corrected on every board. No unlicensed hex remains
+inside a frame beyond the three buckets above.
+
+## 6c. Behaviour the boards draw but did not say (round 20)
+
+End states the boards show, with the rule behind each. These are rulings.
+
+### A3 · Verdict
+
+1. **Flag chips are generated, never composed.** Five chips in two blocks.
+   Block one, up to two per-garment flags: `GARMENT + TOO MUCH | NOT ENOUGH`.
+   Direction follows the verdict — warm → too much, cold → not enough,
+   dialed → the garment with the weakest record in this band, either
+   direction. Garment = weakest band record first. Block two: tags ranked by
+   this runner's use in the band, then global, filling to five. A sixth chip
+   `MORE ›` opens **A3b**: every kit garment as a `Fine / Too much / Not
+   enough` triple (same choice-group rules as the verdict row, §2) plus all
+   nine tags. "The Harrier was not enough" is either a suggested chip or one
+   tap in A3b. `Fine` is the default and is never a chip. Changing the verdict
+   recomputes unchosen chips; chosen chips stay. Chosen = ink fill, ink-hover
+   on press; the `✕` is the whole chip's affordance, not a second target.
+2. **Noted is a receipt.** It appears only after `Log it` resolves, in the
+   submit's place, replacing `share-toggle` and `submit`. The verdict row
+   (filled, brackets closed) and the chips stay, read-only. Noted has no
+   button; the tab bar is the exit. Its two sentences are generated: the
+   garment record that moved, then the rule that changed, if one did.
+
+### A2 · Attach kit
+
+3. **`ALL ›` and every `+ CATEGORY` chip open A2b as a sheet** for that
+   category. Never a route, never in place. A2b opens with `MATCHES
+   CONDITIONS` on and states the hidden count; a category with zero matches
+   opens with the filter off and no hidden block. Selection in A2b commits on
+   its button (`Add {garment}` / `Add 3 pieces`); `✕` discards.
+4. **A kit is required; the count lives in the header sub-line.** `6.2 MI ·
+   41°F DAMP · 0 PIECES` until something is chosen, then `· N PIECES`. The
+   primary label is fixed (`Next — did it work?`). Tapping it with none
+   chosen marks the `closet-picker` group by message band alone: `Pick at
+   least one piece.` The escape is the text link beneath the button, `Not now
+   — leave it in the queue`: the run stays in DS2 with no outfit, exactly like
+   an imported run. No verdict without a kit — a verdict teaches nothing
+   about garments.
+
+### A1 · Upload
+
+5. **The drop zone is the before-file state.** Once a file parses it goes;
+   the parsed card's header carries the filename and `REPLACE`, the only way
+   back. While parsing, the drop zone stays and its title becomes the
+   breathing brackets — `[ Reading MORNING_RUN_0829.GPX ]`, the 900ms loop
+   from §5. No bar, no percent, no second device.
+6. **One correction control: the run time on the parsed card.** Tapping
+   `6:04 AM` opens a time picker; on change, conditions re-fetch and the
+   block re-renders (static, no motion). Date follows the same control.
+   Weather values are never editable. Copy under the conditions block:
+   `Never typed by hand. Wrong time? Tap it on the run card and we'll
+   refetch.`
+
+### D · Post detail and E1 · Feed
+
+7. **The badge is never on the photo.** On D it sits in the `run-strip`,
+   right of the distance, next to pace — the one block every post has. On E1
+   it is in the author row. Both are `data-part="verdict-badge"`. Photos
+   carry only the `1 / 2` counter.
+
+### DS2 · Backlog
+
+8. **`Same as …?` names the most recent run in the same band that has an
+   outfit.** Within seven days of the row's own date (not today): the
+   weekday. Beyond: `MON D` — `Same as Sep 4?`. None: `No usual kit here ·
+   Pick`.
+9. **The rail sentence is generated from three slots, fixed order:**
+   (1) conditions in words — band adjective, moisture adjective, time of day;
+   (2) the count of runs in this band; (3) the verdict split, naming the one
+   garment that separates dialed from not, if one does. Slot 3 falls back to
+   `dialed in one/two/…`; at zero runs the whole sentence is `No runs in this
+   band yet.` Never free text.
+
+### C · Closet (desk)
+
+10. **One-column fallback is one flat grid.** Every piece, header `47
+    pieces`, the three rail groups as filter chips above the grid (round 16).
+    The header count follows the chips; `14 tops` appears only once a GROUP
+    chip is set. **Badges are computed, never set:** `MOST DIALED` = the one
+    piece in the visible set with the highest dialed share at ≥5 runs;
+    `RETIRE?` = any piece at ≥5 runs, dialed ≤25%, same off-direction on ≥3.
+    **Top bar is DS1's, verbatim** — the board that read `The Call` / `+ Add
+    garment` was stale and is redrawn. Adding a garment is the grid's dashed
+    tile and the Y route; never a bar action.
+
+## 6d. Round 21 rulings
+
+Drawn in `Round 21 Rulings.dc.html`; D6 in `Operator Screens.dc.html`.
+
+1. **A3b** is the shade sheet's frame: heading `Anything specific?`, one
+   `Fine / Too much / Not enough` radiogroup per kit garment (kit order,
+   garment name as legend, §2 rules), all nine tags as A3's pill, `Done`
+   (outline secondary). Done and swipe-down both keep. Once Noted shows,
+   `MORE ›` is removed, not inert. Re-tapping a chosen garment chip returns
+   it to Fine.
+2. **Chip inputs** confirmed as built: weakest = lowest dialed share in band,
+   ties → more runs → kit order; needs ≥2 band runs to qualify; never-worn
+   and never-off garments are not suggested; dialed suggests one garment in
+   its more-frequent off direction; no garment chips before a verdict, tags
+   fill to five.
+3. **Nothing to note:** Noted still lands, one sentence. No band: `Logged. No
+   weather came with this run, so no band record moved.` No kit: `Logged. No
+   kit on this run, so no garment record moved.`
+4. **Chips:** 32px drawn, 44px target via `::before { inset: -6px 0 }`,
+   group gap `12px 7px`.
+5. **Theme, 19 roles:** `--hiviz-text` #F5FF3D (ink surface only, both
+   themes); `--dialed-tint` #D2F0E9 light / #0A2524 dark.
+6. Swatch RADIUS.none, ink-block `--hairline` dark, wordmark `.run`
+   #7A7A70 on paper — all confirmed.
+7. **"Visibility"** stays the runner label; no privacy control may use it.
+8. **Bend 2** met (O1 → O3 → O4 → P3); the phone-photos line is retired.
+9. **`/` from 720 up:** own bar — wordmark + one action (`Log in` / `Your
+   closet`). No nav, search, bell or `Log a run`; hero drops its wordmark.
+   Below 720, no bar. Full landing brief still open.
+10. **D6 · Gave up:** dead-lettered jobs, one row each: job, subject, what it
+    was trying to do, why it stopped, tries + last attempt, actions.
+    Enrichment: `Re-fetch page`, `Re-run extraction` (disabled with no
+    fetched page); others: `Retry`. `Drop` removes the row.
 
 ## 7. The primitive
 

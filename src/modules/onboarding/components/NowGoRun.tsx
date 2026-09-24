@@ -55,7 +55,7 @@ export function NowGoRun(): JSX.Element {
         </p>
 
         <div className="flex flex-col gap-3">
-          <Mono step="xs" className="text-hi-viz">
+          <Mono step="xs" className="text-hiviz-text">
             What happens as you log
           </Mono>
           <ol className="m-0 flex list-none flex-col gap-3 p-0">

@@ -193,7 +193,9 @@ class Component extends DCLogic {
       ['Action', '--action', '#FF2D8A', '#FF2D8A', 'Does not change. Text on it is always ink.'],
       ['Action hover', '--action-hover', '#FF57A2', '#FF57A2', 'Round 19. Hover/pressed tint of --action only. A state, never a resting surface; text stays ink.'],
       ['Ink hover', '--ink-hover', '#24242B', '#DEDDD6', 'Round 19. Hover/pressed tint of an ink-filled button. One step toward ground on each theme. Same rule: a state, never a surface.'],
-      ['Failure band', '--failure', '#F5FF3D', '#F5FF3D', 'Does not change. Text on it is always ink.']
+      ['Failure band', '--failure', '#F5FF3D', '#F5FF3D', 'Does not change. Text on it is always ink.'],
+      ['Hi-viz, as text', '--hiviz-text', '#F5FF3D', '#F5FF3D', 'Round 21. Hi-viz as text on an ink surface only (NowGoRun eyebrow — the block is ink in both themes). Never text on paper; there it is --ink.'],
+      ['Dialed tint', '--dialed-tint', '#D2F0E9', '#0A2524', 'Round 21. Teal wash behind a #00E0C6 border (EntryDetail matched panel). 14% teal into ground, precomputed flat — never opacity.']
     ].map(([role, token, light, dark, note]) => ({ role, token, light, dark, note }));
     return { pairs };
   }

@@ -194,7 +194,17 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
     }
   });
 
-  await page.goto(`/feed/verdict/${entryId}`);
+  // The way in: an entry with no verdict asks for one, once. The panel
+  // wears round 21's --dialed-tint behind a teal border.
+  await page.goto(`/feed/entry/${entryId}`);
+  await hydrated(page);
+  await scene(page, "An entry with no verdict asks for one");
+  const prompt = page.getByRole("link", {
+    name: "You didn’t log a verdict for this run. Add one?",
+  });
+  await expect(prompt).toBeVisible();
+  await prompt.click();
+  await page.waitForURL(`**/feed/verdict/${entryId}`);
   await hydrated(page);
 
   // A3: the five-point scale, coldest to warmest, from the one shared

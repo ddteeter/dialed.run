@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px; min-height: 100vh;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 22px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Auth &nbsp;/&nbsp; round 22 &nbsp;/&nbsp; 2026-09-23</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; text-transform: uppercase;">Auth.</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.55; color: #DEDDD6; max-width: 820px; text-wrap: pretty;">Round 22, items 1 and 2. Two forms, four failures, one arrival. Every state is the Form Contract applied verbatim; the only new thing is where the page sits. Rest of round 22 is on <a href="Round 22 Coverage.dc.html">Round 22 Coverage</a>.</p>
+    </div>
+
+    <!-- RULINGS -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">The rulings</span>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">1 · WRONG PASSWORD IS A FIELD FAILURE</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The fix is inside the form, so it's yellow, on Password.</strong> "That password doesn't match this email." One message, never "email or password is wrong" split across two fields. A server fault is the band above the button: "Our end failed. Try again in a moment."</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">1 · THE BAND'S TWO WORDS</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">"Not signed in", not "Nothing saved".</strong> Auth saves nothing, so the contract's opener would be false. Same block, same place, same Try again. This is the only form that changes the two words.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">1 · GOOGLE IS A SUBMIT BUTTON</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">In flight: brackets breathe, label keeps going.</strong> "[ Opening Google ]", hairline pill, width fixed. Its error is a failure band <em>above the Google button</em>, not above Log in; the pink is removed. Cancelled in the popup is not an error: return to rest, silently.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">1 · SIGNED OUT ARRIVAL</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">A square notice above the heading, email prefilled, focus on Password.</strong> It names what's kept, not why the session died. After Log in, the runner lands on the filled form they left, and nothing re-submits on its own.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">2 · THE SHELL</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Auth takes the landing bar with no action.</strong> From 720 up: wordmark only, links to <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">/</code>. The panel drops its own wordmark, so there is one. The form's cross-link does the bar's job; "Log in" on the log-in page would point at itself. Below 720: no bar, the page's wordmark does it.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">2 · THE TAB BAR, SIGNED OUT</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Never.</strong> Every tab is a signed-in place; showing them to someone signed out is five links to the log-in page. Any signed-out page (auth, 404, a shared entry) gets no tab bar and no product bar. Desktop Contract DS3 "Nothing to draw" row now points here.</p></div>
+        <div style="background: #16161A; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">COPY</span><p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6;">"Log in" and "Create account", matching the landing bar. Never "Sign in", "Sign up" or "Register" on screen; routes can keep their names.</p></div>
+      </div>
+    </div>
+
+    <!-- PHONE -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Au · Phone</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">No bar, no tab bar. Paper all the way up — auth is not a product screen, so it doesn't get the ink header.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+        <!-- AU1 SIGN UP -->
+        <div data-screen-label="Au1 Create account" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU1 · CREATE ACCOUNT · REST</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:12</span><span>▮▮▮ 90%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Create account</span>
+            </div>
+            <div data-part="form" style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">you@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;"><span style="color: #7A7A70;">At least 10 characters</span><span style="font-size: 14px; font-weight: 600;">Show</span></div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Create account</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 100px; border: 1px solid #0B0B0E; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">G</span>Continue with Google</span>
+              <span style="font-size: 12px; line-height: 1.4; color: #7A7A70;">By creating an account you agree to the terms and privacy policy.</span>
+              <span data-part="cross-link" style="margin-top: auto; text-align: center; font-size: 15px; color: #4E4E44;">Have an account? <span style="color: #0B0B0E; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">Log in</span></span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Two fields. Name, username and city come later in onboarding (O1), where they have a reason. Primary is the ink pill, same as A3's Log it: pink belongs to the product's own verbs. Google is the hairline pill, same width. Legal line at micro, above the cross-link.</p>
+        </div>
+
+        <!-- AU2 LOG IN -->
+        <div data-screen-label="Au2 Log in" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU2 · LOG IN · REST</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:12</span><span>▮▮▮ 90%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Log in</span>
+            </div>
+            <div data-part="form" style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">you@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><span style="font-size: 13px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Forgot it?</span></div><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; justify-content: flex-end; font-size: 14px; font-weight: 600;">Show</div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Log in</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 100px; border: 1px solid #0B0B0E; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">G</span>Continue with Google</span>
+              <span data-part="cross-link" style="margin-top: auto; text-align: center; font-size: 15px; color: #4E4E44;">New here? <span style="color: #0B0B0E; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">Create an account</span></span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Mirror of Au1: same order, same heights, so switching pages never moves the Google button. "Forgot it?" sits on the Password label row, not under the button. Cross-link is a text link, pinned to the foot.</p>
+        </div>
+
+        <!-- AU3 WRONG PASSWORD -->
+        <div data-screen-label="Au3 Wrong password" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU3 · WRONG PASSWORD · FIELD FAILURE</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:13</span><span>▮▮▮ 90%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Log in</span>
+            </div>
+            <div data-part="form" data-state="field-failure" style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px;">dana.k@hey.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><span style="font-size: 13px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Forgot it?</span></div><div style="border: 2px solid #0B0B0E; border-radius: 8px; padding: 11px 13px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;"><span style="letter-spacing: 0.2em;">••••••••••••</span><span style="font-size: 14px; font-weight: 600; letter-spacing: 0;">Show</span></div><span data-part="field-message" style="background: #F5FF3D; color: #0B0B0E; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">That password doesn't match this email.</span></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Log in</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 100px; border: 1px solid #0B0B0E; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">G</span>Continue with Google</span>
+              <span data-part="cross-link" style="margin-top: auto; text-align: center; font-size: 15px; color: #4E4E44;">New here? <span style="color: #0B0B0E; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">Create an account</span></span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">One field error, so no summary; focus to Password, value kept. Status region: "Not signed in. One field needs a fix." Unknown email reads the same sentence on Password — we don't confirm which emails exist. Create account's taken email is the one exception, on Email: "There's already an account with this email. Log in?"</p>
+        </div>
+
+        <!-- AU4 SERVER FAULT -->
+        <div data-screen-label="Au4 Server fault" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU4 · SERVER FAULT · FORM FAILURE</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:13</span><span>▮▮▮ 90%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Log in</span>
+            </div>
+            <div data-part="form" data-state="form-failure" style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px;">dana.k@hey.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><span style="font-size: 13px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Forgot it?</span></div><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;"><span style="letter-spacing: 0.2em;">••••••••••••</span><span style="font-size: 14px; font-weight: 600; letter-spacing: 0;">Show</span></div></div>
+              <div data-part="failure-band" style="border: 1px solid #0B0B0E; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Not signed in</span>
+                <span style="font-size: 15px; line-height: 1.4;">Our end failed. Try again in a moment.</span>
+              </div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Try again</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 100px; border: 1px solid #0B0B0E; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">G</span>Continue with Google</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">No field is marked. The band sits above the primary; the primary's label becomes Try again (same cell, width fixed) and takes focus. Network: "Your connection dropped." Rate limit is a form failure too: "Too many tries. Wait a minute, then try again." — no countdown.</p>
+        </div>
+
+        <!-- AU5 GOOGLE IN FLIGHT -->
+        <div data-screen-label="Au5 Google in flight" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU5 · GOOGLE · IN FLIGHT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:14</span><span>▮▮▮ 90%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Log in</span>
+            </div>
+            <div data-part="form" style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">you@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; justify-content: flex-end; font-size: 14px; font-weight: 600;">Show</div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Log in</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" data-state="pending" aria-busy="true" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; white-space: nowrap;"><span><span style="color: #FF2D8A;">[</span>&nbsp;Opening Google&nbsp;<span style="color: #FF2D8A;">]</span></span></span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">Brackets breathe at 900ms (motion.js), glyph drops for the label so width holds. aria-busy, never disabled. The other form stays live: tapping Log in cancels the Google attempt. Closing the popup returns to rest with no message.</p>
+        </div>
+
+        <!-- AU6 GOOGLE ERROR -->
+        <div data-screen-label="Au6 Google error" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU6 · GOOGLE · FAILED</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:14</span><span>▮▮▮ 90%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Log in</span>
+            </div>
+            <div data-part="form" style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">you@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; justify-content: flex-end; font-size: 14px; font-weight: 600;">Show</div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Log in</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <div data-part="failure-band" data-state="google-failed" style="border: 1px solid #0B0B0E; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Not signed in</span>
+                <span style="font-size: 15px; line-height: 1.4;">Google didn't answer. Try again, or use your email.</span>
+              </div>
+              <span data-part="google" style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;">Try Google again</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The band belongs to the button that failed, so it sits above Google, not above Log in. No pink anywhere — the build's pink line is removed. Retry border goes to ink (the button is now the one thing to do). Google account with no match on sign-in simply creates one; there is no "no account" error.</p>
+        </div>
+
+        <!-- AU7 SIGNED OUT ARRIVAL -->
+        <div data-screen-label="Au7 Signed out arrival" style="flex: 0 0 390px; max-width: 390px; display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">AU7 · YOU WERE SIGNED OUT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; min-height: 748px;">
+            <div data-part="status-bar" style="padding: 10px 20px 0; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #7A7A70;"><span>6:48</span><span>▮▮▮ 80%</span></div>
+            <div data-part="header" style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+              <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+              <div data-part="session-notice" data-state="session-expired" role="status" style="background: #0B0B0E; color: #F4F3EF; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">YOU WERE SIGNED OUT</span>
+                <span style="font-size: 15px; line-height: 1.4;">Log in and you're back on your run. What you entered is kept.</span>
+              </div>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Log in</span>
+            </div>
+            <div data-part="form" style="padding: 24px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px;">dana.k@hey.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><span style="font-size: 13px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Forgot it?</span></div><div style="border: 2px solid #0B0B0E; border-radius: 8px; padding: 11px 13px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;"><span style="width: 2px; height: 20px; background: #0B0B0E;"></span><span style="font-size: 14px; font-weight: 600;">Show</span></div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Log in</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 100px; border: 1px solid #0B0B0E; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">G</span>Continue with Google</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93;">The notice is an ink block (square, --hiviz-text eyebrow on ink only) — a statement, not an error, so no yellow and no band. Email prefilled; focus in Password (ink border is the focus ring, not a mark). "Your run" names the carried form: "your garment", "your settings" for the others. No cross-link: a signed-out runner has an account. Arrival with nothing carried shows no notice at all — just Au2.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESK -->
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Au · 720 and up</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 720px; line-height: 1.45;">The landing bar, no action. The 390 panel centred beneath, its wordmark dropped. Every Au state above applies unchanged inside the panel.</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <div data-screen-label="Au2 Log in 1040" style="width: 1040px; flex: 0 0 auto; background: #F4F3EF; color: #0B0B0E; display: flex; flex-direction: column; min-height: 680px;">
+          <div data-part="top-bar" style="border-bottom: 1px solid #DCDBD2; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; min-height: 72px;">
+            <span data-part="wordmark" style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">dialed<span style="color: #7A7A70;">.run</span></span>
+          </div>
+          <div style="flex: 1; display: flex; justify-content: center; padding: 56px 24px;">
+            <div data-part="panel" style="width: 390px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase; padding-bottom: 12px;">Log in</span>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</span><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-size: 16px; color: #7A7A70;">you@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</span><span style="font-size: 13px; color: #4E4E44; text-decoration: underline; text-underline-offset: 3px;">Forgot it?</span></div><div style="border: 1px solid #DCDBD2; border-radius: 8px; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; justify-content: flex-end; font-size: 14px; font-weight: 600;">Show</div></div>
+              <span data-part="primary-action" style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Log in</span>
+              <div data-part="or-divider" style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google" style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 100px; border: 1px solid #0B0B0E; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">G</span>Continue with Google</span>
+              <span data-part="cross-link" style="padding-top: 16px; text-align: center; font-size: 15px; color: #4E4E44;">New here? <span style="color: #0B0B0E; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">Create an account</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 780px;">No card, no sheet chrome: the panel is a 390 column on paper, top-aligned 56px under the bar, not vertically centred (the keyboard-less desk doesn't need it, and centring jumps when a band appears). The bar holds the page's height at 72 whether or not it carries an action, so / and /login share a baseline. Dark theme: T1 swaps only.</p>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
