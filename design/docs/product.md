@@ -157,6 +157,27 @@ are, not the top of the form.
 Session expiry is the one exception to "stay put": it routes to sign-in carrying
 the pending payload, and returns to the filled form.
 
+### 4a. When a control fails (round 23, item 9)
+
+The same band, sized to the thing that failed, **directly under it**. Covers
+Useful (D, feed card), Follow/Unfollow (H), Unblock (W2), A1 upload, A2 Attach,
+Strava connect/disconnect, DS2 row save.
+
+- **Where:** under the control's row, full content width. Row controls: inside
+  the row's border, below its content. `data-part="failure-band"`,
+  `data-state="failed"` on the band and on the control/row.
+- **Control state:** already at its prior state — no control is optimistic.
+- **Kicker names the state still true:** `NOT MARKED` (Useful),
+  `NOT FOLLOWING` / `STILL FOLLOWING`, `STILL BLOCKED`, `NOTHING ATTACHED`,
+  `NOT CONNECTED` / `STILL CONNECTED`. Sentence is the §4 cause line.
+- **Dismissal:** stays until the next attempt (band's `Try again` or the control
+  itself), success, or leaving the screen. Never on a timer. No animation.
+  Announce via the status region; focus stays on the control.
+- **In flight:** wait for the server. `[ Noting ]`, `[ Following ]`,
+  `[ Unfollowing ]`, `[ Unblocking ]`. Counts change and rows leave on success
+  only.
+- **Never** a pink line, never a silent snap-back.
+
 ## 5. Submitting: the button
 
 - **Never the `disabled` attribute.** Disabled buttons drop focus and stop

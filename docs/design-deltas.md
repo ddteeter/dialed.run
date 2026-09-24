@@ -340,7 +340,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     when saving has nothing to note (no kit, or no band) the screen still
     goes to the entry, since Noted has no sentence to say.
 
-26. **One failure pattern for a control that isn't a form.** Round 22's
+26. **One failure pattern for a control that isn't a form.** **ANSWERED by round 23's addendum: the band, directly under the control; not built.** Round 22's
     item 9, which never arrived. A1 upload, A2 attach, run detail's save,
     Strava connect, follow, useful and unblock each fail differently — some
     as pink lines, which the Form Contract forbids, some silently. The ask
@@ -382,7 +382,7 @@ taken with its screen's reconciliation:
 - The auth failure band opens "Not signed in", not "Nothing saved".
 - Zero follows lands on Your conditions.
 - Your conditions needs **five runners** before any aggregate shows (a
-  privacy floor, design's number — the owner may change it); under five in
+  privacy floor; design's number, **confirmed by the owner 2026-09-23**); under five in
   three days the window widens once to fourteen and says so; the band never
   widens. Location denied recovers with a typed city saved to settings.
 - The garment photo sits in the well: with a photo the well is the
@@ -391,10 +391,18 @@ taken with its screen's reconciliation:
 - 404 and loader errors keep the shell when signed in; a slow route keeps
   the old screen and, after 300ms, the destination's tab label breathes.
 
-**Not answered: item 9** (one failure pattern for controls that aren't
-forms) never reached design — the brief as pasted was missing it. Re-asked
-as item 26. **Not yet done by design:** the fold into the screen boards,
-and mirroring the new `data-part` names into its product.md §6b.
+**Item 9 (item 26 here) answered by a round-23 addendum**, on the same
+board and in design's product.md §4a: a control that fails outside a form
+gets the failure band **directly under it** (a row control's band sits
+inside the row), full content width. The kicker names what is still true —
+`NOT MARKED`, `NOT FOLLOWING` / `STILL FOLLOWING`, `STILL BLOCKED`,
+`NOTHING ATTACHED`, `NOT CONNECTED` / `STILL CONNECTED` — then the Form
+Contract's cause line. It stays until the next attempt, success or leaving
+the screen, never on a timer, and nothing animates. **No control is
+optimistic:** each waits for the server behind its in-flight label
+(`[ Noting ]`, `[ Following ]`, `[ Unblocking ]`), and counts change and
+rows leave on success only. Build work: Useful and Unblock are optimistic
+today, and several of these fail as pink lines or silently (D-102).
 
 ## Answered in round 21 (imported 2026-09-23)
 
