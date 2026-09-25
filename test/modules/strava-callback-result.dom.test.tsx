@@ -43,10 +43,18 @@ describe("StravaCallbackResult", () => {
     await renderWithRouter(landing({ ok: true }));
 
     expect(screen.getByRole("heading", { name: "Strava" })).toBeVisible();
+    // Round 25: a run happened, we remind you, you add the file.
+    const receipt = document.querySelector("[data-slot='receipt']");
     expect(
-      screen.getByText(
-        "Strava connected. After each run, we’ll remind you to add it here.",
-      ),
+      [...(receipt?.children ?? [])].map((line) => line.textContent),
+    ).toEqual([
+      "Connected",
+      "Strava connected.",
+      "After each run, we’ll remind you to add it here. You upload the file (GPX, TCX or FIT) from your watch or a Strava export, then add what you wore.",
+      "We don’t copy runs from Strava.",
+    ]);
+    expect(
+      screen.getByRole("heading", { name: "Strava connected." }),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(
       "href",

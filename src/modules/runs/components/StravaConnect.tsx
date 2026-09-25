@@ -140,11 +140,18 @@ export function StravaConnect({
   return (
     <div className="flex flex-col gap-3">
       <FormStatus>{connect.status || cut.status}</FormStatus>
-      <p className="m-0 font-semibold text-ink">
-        {status === "ok"
-          ? "Strava is connected. We'll remind you to log your kit after a run."
-          : "Strava needs to be reconnected."}
-      </p>
+      {/* Round 25's T3a status line is "CONNECTED · LAST RUN SEEN {time}".
+          The time is not stored anywhere this reads — the webhook leaves
+          only a reminder row — so the line is "CONNECTED" until it is. */}
+      {status === "ok" ? (
+        <Mono step="sm" className="text-dialed-text">
+          Connected
+        </Mono>
+      ) : (
+        <p className="m-0 font-semibold text-ink">
+          Strava needs to be reconnected.
+        </p>
+      )}
       {status === "broken" ? (
         <ConnectAction
           connect={connect}
@@ -162,16 +169,13 @@ export function StravaConnect({
             <KeptOrStops word="Kept">
               All {runCount} runs, their outfits and verdicts
             </KeptOrStops>
+            {/* Round 25: nothing ever arrived on its own — connecting turns
+                on a reminder, so disconnecting turns off the reminder, and
+                adding runs by file is untouched. */}
             <KeptOrStops word="Kept">
-              Your closet and everything it has learned
+              Adding runs: upload any run&rsquo;s file here, as always
             </KeptOrStops>
-            {/* An interim placeholder, pending design (owner,
-                2026-09-24): the board said new runs stop "arriving on
-                their own", but nothing ever arrived — connecting turns on
-                a reminder, so disconnecting turns it off. */}
-            <KeptOrStops word="Stops">
-              Reminders after each Strava run
-            </KeptOrStops>
+            <KeptOrStops word="Stops">The reminder after each run</KeptOrStops>
           </dl>
           <div className="flex flex-wrap gap-2">
             <button

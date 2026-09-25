@@ -5,6 +5,7 @@ import {
   ControlFailureBand,
   FormStatus,
   inFlight,
+  Mono,
   Page,
   PendingLabel,
   useControlAction,
@@ -18,11 +19,11 @@ import { leaveForStrava } from "./StravaConnect";
  * 'Strava isn't connected. Nothing changed.' + Try again / Not now. Not
  * configured: the row and button are absent — never a dead control."*
  *
- * **The connected sentence is an interim placeholder** (owner, 2026-09-24;
- * pending design). Round 22 drew "New runs arrive on their own", which
- * promises an import the app does not do: Strava's webhook only makes a
- * reminder, and no activity data is ever stored — the runner adds the run
- * here themselves. Until design answers, the receipt promises only that.
+ * **The connected receipt is round 25's** ("Strava reminds. You upload."):
+ * round 22 drew "New runs arrive on their own", which promised an import
+ * the app does not do — Strava's webhook only makes a reminder, and no
+ * activity data is ever stored. Every line says the same three things: a
+ * run happened, we remind you, you add the file.
  *
  * The exchange happens in the route's loader so the code is a one-shot —
  * no button, no client state to get out of sync (design doc 102 §6). This
@@ -55,10 +56,20 @@ export function StravaCallbackResult({
     <Page width="panel" title="Strava">
       {result.ok ? (
         <>
-          <p data-slot="receipt" className="m-0 text-body">
-            Strava connected. After each run, we&rsquo;ll remind you to add it
-            here.
-          </p>
+          <div data-slot="receipt" className="flex flex-col gap-2">
+            <Mono step="xs" className="text-dialed-text">
+              Connected
+            </Mono>
+            <h2 className="m-0 text-lead font-bold">Strava connected.</h2>
+            <p className="m-0 text-body">
+              After each run, we&rsquo;ll remind you to add it here. You upload
+              the file (GPX, TCX or FIT) from your watch or a Strava export,
+              then add what you wore.
+            </p>
+            <p className="m-0 text-small text-muted">
+              We don&rsquo;t copy runs from Strava.
+            </p>
+          </div>
           <Link
             to="/runs/strava"
             className="target inline-flex items-center justify-center self-start rounded-field bg-ink px-4 font-bold text-ground no-underline"

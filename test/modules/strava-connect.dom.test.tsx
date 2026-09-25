@@ -168,11 +168,9 @@ describe("StravaConnect: connected", () => {
   it("says it is connected, and offers only a disconnect", () => {
     screenFor("ok");
 
-    expect(
-      screen.getByText(
-        "Strava is connected. We'll remind you to log your kit after a run.",
-      ),
-    ).toBeVisible();
+    // Round 25's T3a status line. It would carry "· LAST RUN SEEN {time}",
+    // which nothing stores yet.
+    expect(screen.getByText("Connected")).toHaveClass("text-dialed-text");
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
       "Disconnect",
     ]);
@@ -196,8 +194,8 @@ describe("StravaConnect: connected", () => {
     );
     expect(lines).toEqual([
       "KeptAll 186 runs, their outfits and verdicts",
-      "KeptYour closet and everything it has learned",
-      "StopsReminders after each Strava run",
+      "KeptAdding runs: upload any run’s file here, as always",
+      "StopsThe reminder after each run",
     ]);
     expect(within(confirm).getAllByText("Kept")[0]).toHaveClass(
       "text-dialed-text",
