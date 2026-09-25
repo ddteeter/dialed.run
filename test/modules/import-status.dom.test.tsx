@@ -309,6 +309,25 @@ describe("ImportStatus: when it takes too long", () => {
     clearTimer.mockRestore();
   });
 
+  it("leaves no timer behind once it is gone", async () => {
+    // The client is this component's own, so when it unmounts nothing can
+    // reach the cache again. react-query's default still schedules a
+    // five-minute timer to collect it, which outlives the screen and, in
+    // this project, fires into a torn-down window (test/dom-setup.ts).
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await renderWithRouter(
+      <ImportStatus
+        importId="01IMPORT"
+        getStatus={watching(importRow({ status: "done", runId: "01RUN" }))}
+      />,
+    );
+    await screen.findByText(/Your run is in/);
+
+    cleanup();
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("stops promising and says to check back", async () => {
     // The budget is two minutes of watching. Past it the honest thing is
     // to say the work continues rather than keep a skeleton spinning.

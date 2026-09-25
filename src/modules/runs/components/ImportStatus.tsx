@@ -176,7 +176,14 @@ export function ImportStatus({
   importId,
   getStatus,
 }: Readonly<ImportStatusProps>) {
-  const [client] = useState(() => new QueryClient());
+  // `gcTime: Infinity` schedules no garbage-collection timer. The default
+  // leaves a five-minute one behind on every unmount, holding a cache that
+  // nothing can reach once this client goes — and in the `ui` project,
+  // firing into a torn-down window (see test/dom-setup.ts).
+  const [client] = useState(
+    () =>
+      new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } }),
+  );
   return (
     <QueryClientProvider client={client}>
       <ImportStatusInner importId={importId} getStatus={getStatus} />
