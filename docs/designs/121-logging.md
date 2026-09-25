@@ -79,33 +79,49 @@ rebuilds the flow to the drawings, on task 120's shared pieces.
 
 ## Review fixes (PR #103, independent review)
 
-- **B1 — a manual band enters the shared weather cache. Not fixed: it needs a
-  schema change, proposed below and awaiting the owner.** R2b writes a
-  `source='manual'` row keyed by `(lat_r, lng_r, hour_bucket)`, and
-  `resolveAndAttach` treats it as a cache hit for any other runner at that
-  place and hour (`manual`, someone else's guess, excluded from consensus,
-  never refetched). No clean no-schema design exists: the table's only
-  UNIQUE key is the cache cell, so a manual row either occupies it or needs a
-  sentinel key (a rival meaning for `lat_r`/`hour_bucket`, and two manual
-  runners in one cell still collide), and `run_id` has no index, so reading a
-  band by run would scan the table.
+- **B1 — a manual band entered the shared weather cache. Fixed, with the
+  schema change the owner approved.** R2b wrote a `source='manual'` row
+  keyed by `(lat_r, lng_r, hour_bucket)`, and `resolveAndAttach` treated it
+  as a cache hit for any other runner at that place and hour (`manual`,
+  someone else's guess, excluded from consensus, never refetched). No clean
+  no-schema design existed: the table's only UNIQUE key is the cache cell,
+  and `run_id` has no index.
 
-  Proposal — additive, weather DB only (no collision with core `0018` in
-  PR #101):
+  As built — additive, weather DB only:
 
   - new table `manual_conditions (run_id text PK, temp_c real NOT NULL,
-    set_at integer NOT NULL)` in `schema-weather.ts`;
-  - migration `weather/0002_add_manual_conditions`, whose SQL also copies the
-    legacy rows: `INSERT OR IGNORE INTO manual_conditions SELECT run_id,
-    temp_c, fetched_at FROM weather_observations WHERE source='manual' AND
-    run_id IS NOT NULL` (the legacy cache rows stay; deleting them is a
-    later, destructive step);
-  - `recordManualObservation` writes the band there (a real row already in
-    the run's cell still wins, as today); `resolveAndAttach` treats a cached
-    `manual` row as a miss and fetches; `feed/conditions.observationsForRuns`
-    and `weather/read.observationForRun` read real cell rows only, falling
-    back to the run's own band. Runs already poisoned (status `manual`,
-    another runner's band) are not repaired by this.
+set_at integer NOT NULL)` in `schema-weather.ts`;
+  - migration `weather/0002_add_manual_conditions` (no weather migration is
+    on `main` or in #101/#102/#104, so no collision). Its SQL also copies
+    the legacy bands: `INSERT OR IGNORE INTO manual_conditions SELECT
+run_id, temp_c, fetched_at FROM weather_observations WHERE
+source='manual' AND run_id IS NOT NULL`. The legacy cache rows stay;
+    deleting them is a later, destructive step;
+  - the cache holds real observations only. `findObservationRow` skips a
+    `manual` row, so `resolveAndAttach` treats one as a miss and fetches,
+    and the real write upgrades it in place (`setWhere`, unchanged);
+  - `recordManualObservation` links a real row already in the run's cell,
+    as before, and otherwise upserts the band into `manual_conditions`
+    (`upsertManualBand`) and sets `manual`;
+  - **one deviation from the proposal: the band wins, not the cell.** The
+    proposal read "real cell rows only, falling back to the run's own band".
+    Built the other way round: a run with a band reads its band, even after
+    another run later fetched real weather into the same cell. The band is
+    what the runner chose for this run and its status says `manual`; letting
+    a later cell row replace it would show "set by you" for weather they
+    did not set, and put the run into consensus under a status that says it
+    is out. `resolveAndAttach` also checks the band first, so a banded run
+    that is re-driven settles as `manual` instead of fetching over it;
+  - readers: `weather.manualReadingsForRuns` (by run id, primary key, in
+    chunks) replaces `observationForRun`. `runs/service.conditionsFor` (list
+    and detail) reads it in one batch, not per manual run.
+    `feed/conditions.observationsForRuns` — which A2's attach context, A3's
+    band and DS2 all read — skips `manual` cell rows and puts each run's
+    band first, as a one-point span tagged `manual`, which consensus
+    already excludes;
+  - runs poisoned before this (status `manual`, another runner's band, no
+    band of their own) are not repaired: they read as no conditions.
+
 - **B2** — a backlog row whose run already has a kit carries it
   (`BacklogRow.kit`), shows it read-only and saves only the verdict; A2 for a
   kitted run redirects to A3 for its entry (`orOnToVerdict`).

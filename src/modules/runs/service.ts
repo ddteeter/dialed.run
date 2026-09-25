@@ -12,7 +12,7 @@ import { newUlid, ulidSchema } from "../../lib/ids";
 import type { Ulid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { selectOwnedRow } from "../../lib/owned";
-import { observationForRun, observationsForRuns } from "../weather";
+import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 import { bandMiddleC, canSetConditions } from "./run-conditions";
 
@@ -161,8 +161,8 @@ export interface RunConditions {
 
 /**
  * A reading as a screen draws it. Whether the runner set it is the caller's
- * to say: it knows which read the reading came from, and only R2b's
- * `manual` runs are read the way that finds a hand-set row.
+ * to say: it knows which read the reading came from, and only the band
+ * read finds a hand-set one.
  */
 function asRunConditions(
   reading: Omit<WeatherReading, "source">,
@@ -262,38 +262,35 @@ const CELLS_PER_READ = 30;
  * Each run's conditions, as the list and run detail show them.
  *
  * `DIALED_WEATHER` is a second database, so this is correlated in code,
- * never joined (CLAUDE.md, D1's one exception). The batch read is the
- * weather module's aggregate one, which leaves manual rows out on purpose;
- * a run whose conditions were set by hand is read on its own, and there are
- * few of those — R2b is the only way to make one.
+ * never joined (CLAUDE.md, D1's one exception). Two reads: the real
+ * observation at each run's cell, and the band each run's runner set, by
+ * run id.
  *
- * **Only a `manual` run is read the second way.** The cache is keyed by
- * place and hour, not by run, so a run the weather gave up on shares its
- * cell with anyone else's hand-set band there — and that band is not its
- * conditions, nor set by this runner.
+ * **A band wins, and is only ever its own run's.** It is what the runner
+ * chose for this run, so a real reading someone else's run later fetched
+ * into the same cell does not replace it; and it is read by run, never by
+ * cell, so it never reaches anyone else's run (B1).
  */
 async function conditionsFor(
   list: readonly RunRow[],
 ): Promise<Map<string, RunConditions | undefined>> {
   const ids = list.map((run) => ulidSchema.parse(run.id));
-  const pages = await Promise.all(
-    chunked(ids, CELLS_PER_READ).map(async (chunk) =>
-      observationsForRuns(chunk),
+  const [pages, bands] = await Promise.all([
+    Promise.all(
+      chunked(ids, CELLS_PER_READ).map(async (chunk) =>
+        observationsForRuns(chunk),
+      ),
     ),
-  );
+    manualReadingsForRuns(ids),
+  ]);
   const conditions = new Map<string, RunConditions | undefined>();
   for (const page of pages) {
     for (const [runId, observation] of page) {
       conditions.set(runId, asRunConditions(observation, false));
     }
   }
-  for (const run of list) {
-    if (run.weatherStatus !== "manual") continue;
-    const reading = await observationForRun(ulidSchema.parse(run.id));
-    conditions.set(
-      run.id,
-      reading === undefined ? undefined : asRunConditions(reading, true),
-    );
+  for (const [runId, band] of bands) {
+    conditions.set(runId, asRunConditions(band, true));
   }
   return conditions;
 }

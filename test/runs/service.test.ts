@@ -569,6 +569,36 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
     expect(summary?.conditions).toBeUndefined();
   });
 
+  it("keeps a hand-set band the run's own after the weather reaches its cell (B1)", async () => {
+    // The first runner's band is theirs: a real reading another run later
+    // fetched into the same place and hour does not replace it, and the
+    // second runner gets that real reading, not the band.
+    const startedAt = START + 6 * 3600;
+    const firstRunner = newUlid();
+    const first = await aRun(firstRunner, { startedAt });
+    await recordManualObservation(first as Ulid, 12.5);
+    await makeObservation({
+      lat: LAT,
+      lng: LNG,
+      startedAt,
+      tempC: 3,
+      feelsLikeC: 1,
+    });
+    const secondRunner = newUlid();
+    const second = await aRun(secondRunner, {
+      startedAt,
+      weatherStatus: "attached",
+    });
+
+    const mine = await getRunSummary(coreDb(), firstRunner, first);
+    expect(mine?.weatherStatus).toBe("manual");
+    expect(mine?.conditions?.tempC).toBe(12.5);
+    expect(mine?.conditions?.isSetByYou).toBe(true);
+    const theirs = await getRunSummary(coreDb(), secondRunner, second);
+    expect(theirs?.conditions?.tempC).toBe(3);
+    expect(theirs?.conditions?.isSetByYou).toBe(false);
+  });
+
   it("draws no conditions for a hand-set run whose reading is gone", async () => {
     const userId = newUlid();
     await aRun(userId, {
