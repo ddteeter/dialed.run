@@ -76,3 +76,49 @@ rebuilds the flow to the drawings, on task 120's shared pieces.
   a choice list of 5° bands (stored at the band's middle, `source='manual'`);
   a run with no location cannot key an observation, so it gets Try again only.
 - The time picker on A1's parsed card is undrawn; composed from `TextField`.
+
+## Review fixes (PR #103, independent review)
+
+- **B1 — a manual band enters the shared weather cache. Not fixed: it needs a
+  schema change, proposed below and awaiting the owner.** R2b writes a
+  `source='manual'` row keyed by `(lat_r, lng_r, hour_bucket)`, and
+  `resolveAndAttach` treats it as a cache hit for any other runner at that
+  place and hour (`manual`, someone else's guess, excluded from consensus,
+  never refetched). No clean no-schema design exists: the table's only
+  UNIQUE key is the cache cell, so a manual row either occupies it or needs a
+  sentinel key (a rival meaning for `lat_r`/`hour_bucket`, and two manual
+  runners in one cell still collide), and `run_id` has no index, so reading a
+  band by run would scan the table.
+
+  Proposal — additive, weather DB only (no collision with core `0018` in
+  PR #101):
+
+  - new table `manual_conditions (run_id text PK, temp_c real NOT NULL,
+    set_at integer NOT NULL)` in `schema-weather.ts`;
+  - migration `weather/0002_add_manual_conditions`, whose SQL also copies the
+    legacy rows: `INSERT OR IGNORE INTO manual_conditions SELECT run_id,
+    temp_c, fetched_at FROM weather_observations WHERE source='manual' AND
+    run_id IS NOT NULL` (the legacy cache rows stay; deleting them is a
+    later, destructive step);
+  - `recordManualObservation` writes the band there (a real row already in
+    the run's cell still wins, as today); `resolveAndAttach` treats a cached
+    `manual` row as a miss and fetches; `feed/conditions.observationsForRuns`
+    and `weather/read.observationForRun` read real cell rows only, falling
+    back to the run's own band. Runs already poisoned (status `manual`,
+    another runner's band) are not repaired by this.
+- **B2** — a backlog row whose run already has a kit carries it
+  (`BacklogRow.kit`), shows it read-only and saves only the verdict; A2 for a
+  kitted run redirects to A3 for its entry (`orOnToVerdict`).
+- **S1/S2** — the time correction sends an absolute start
+  (`startAtTimeOfDay`); a start already there is a no-op true. A run with no
+  zone is read on the device's clock (`deviceTimeZone`; no profile zone is
+  stored).
+- **S3** — the photo uploads after the attach; its failure is the well's,
+  Next resends it under the same key, Remove goes on without it.
+- **S4** — a failed stat read after a saved verdict locks the form and lands
+  "Noted" without its sentence (`feed/noted.ts` holds the decision).
+- **S5** — the stall retry resends the same attempt (same key); no answer yet
+  keeps polling, and failed polls count against the budget.
+- **S6** — DS2's failed row uses `ControlFailureBand`, kicker "Not logged".
+- **S7** — "That's it"/"Change" send only the pieces shown; `attachKit`
+  refuses a retired garment on a new kit.
