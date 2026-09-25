@@ -22,7 +22,7 @@ import {
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
-import { kitChoice, photoProblem } from "../attach-rules";
+import { kitChoice, PHOTO_NOT_SENT, photoProblem } from "../attach-rules";
 import type { UiGroup } from "../groups";
 import type { PrefillCandidate } from "../prefill";
 import { KitList, KitSheet, conditionsWords } from "./KitPicker";
@@ -44,7 +44,11 @@ import { KitList, KitSheet, conditionsWords } from "./KitPicker";
  * "Attach 0 items" is superseded.
  *
  * **The photo is here now** (round 20 moved it from A3): the one well, with
- * W3's blur, held until the attach has made the entry it belongs to.
+ * W3's blur, held until the attach has made the entry it belongs to. It
+ * goes up only after the attach has landed, and a failed upload is the
+ * well's, not the attach's: the entry exists, so the band never says
+ * "Nothing attached" about it, and the runner can go on without the photo
+ * (law 5 — the secondary thing never fails the primary one).
  *
  * **A failed attach is a control failure** (round 23, item 9): no
  * optimistic step forward, the in-flight label while it waits, and the band
@@ -143,6 +147,11 @@ export function AttachKit({
     { file: File; step: PhotoStep } | undefined
   >();
   const [said, setSaid] = useState("");
+  // The entry the attach made, once it has. From then on Next only sends
+  // the photo and goes on: attaching again would be answered with this same
+  // entry and the kit it already has.
+  const [attached, setAttached] = useState<string | undefined>();
+  const [isSendingPhoto, setIsSendingPhoto] = useState(false);
 
   // The one read the screen waits on. A failure is no suggestion: the
   // picker is already there, and a suggestion is never the only way on.
@@ -166,21 +175,43 @@ export function AttachKit({
     };
   }, [photo]);
 
-  const attach = useControlAction({
-    kicker: "Nothing attached",
-    action: async (itemIds: string[]) => {
-      // The entry first, then its photo: the photo belongs to an entry and
-      // there is none until this returns. A retry repeats both, and both
-      // are idempotent — the entry by its run, the photo by its key.
-      const { entryId } = await attachKit({ data: { runId, itemIds } });
-      if (photo !== undefined) {
+  /**
+   * The held photo, sent to the entry the attach made — then on to A3.
+   *
+   * A failure stays on the well, with the photo still held, and goes
+   * nowhere: the runner either presses Next again, which sends it under the
+   * same key (law 8b — one photo, however many tries), or removes it and
+   * goes on without it.
+   */
+  async function sendPhotoThenGo(entryId: string): Promise<void> {
+    if (photo !== undefined) {
+      setIsSendingPhoto(true);
+      setPhotoError(undefined);
+      try {
         const upload = new FormData();
         upload.append("entryId", entryId);
         upload.append("photo", photo.file);
         upload.append("idempotencyKey", photo.key);
         await uploadPhoto({ data: upload });
+      } catch {
+        setPhotoError(PHOTO_NOT_SENT);
+        return;
+      } finally {
+        setIsSendingPhoto(false);
       }
-      await navigate({ to: "/feed/verdict/$entryId", params: { entryId } });
+    }
+    await navigate({ to: "/feed/verdict/$entryId", params: { entryId } });
+  }
+
+  const attach = useControlAction({
+    kicker: "Nothing attached",
+    action: async (itemIds: string[]) => {
+      // The entry, and only the entry: this is what "Nothing attached" is
+      // about. The photo belongs to an entry and there is none until this
+      // returns, so it goes after, and its failure is its own.
+      const { entryId } = await attachKit({ data: { runId, itemIds } });
+      setAttached(entryId);
+      await sendPhotoThenGo(entryId);
     },
   });
 
@@ -189,6 +220,10 @@ export function AttachKit({
    * lands on the picker, where the fix is.
    */
   function next(itemIds: readonly string[]): void {
+    if (attached !== undefined) {
+      if (!isSendingPhoto) void sendPhotoThenGo(attached);
+      return;
+    }
     const parsed = kitChoice.safeParse(itemIds);
     if (!parsed.success) {
       // The schema's own sentence. An empty kit breaks one rule, so there
@@ -298,7 +333,7 @@ export function AttachKit({
             pendingLabel: "Adding",
             hint: "Flat on the floor works best.",
           }}
-          pending={photoStep !== undefined}
+          pending={photoStep !== undefined || isSendingPhoto}
           accept={photoAcceptAttribute}
           error={photoError}
           preview={
@@ -435,6 +470,11 @@ function MostLikely({
 
   if (!isOpen) return undefined;
 
+  // Only what the card shows: a piece the picker no longer has — retired
+  // since, or gone — is not drawn, so it is not sent either. The server
+  // refuses a retired one regardless.
+  const shown = suggestion.itemIds.filter((itemId) => names.has(itemId));
+
   return (
     <div
       data-slot="most-likely"
@@ -446,22 +486,17 @@ function MostLikely({
         {dayLabel(suggestion.createdAt, suggestion.conditions.timeZone)}
       </Mono>
       <ul className="m-0 flex list-none flex-col gap-1 p-0">
-        {suggestion.itemIds.flatMap((itemId) => {
-          const name = names.get(itemId);
-          return name === undefined
-            ? []
-            : [
-                <li key={itemId} className="text-body font-semibold">
-                  {name}
-                </li>,
-              ];
-        })}
+        {shown.map((itemId) => (
+          <li key={itemId} className="text-body font-semibold">
+            {names.get(itemId)}
+          </li>
+        ))}
       </ul>
       <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={() => {
-            onAccept(suggestion.itemIds);
+            onAccept(shown);
           }}
           className="target rounded-pill bg-ink px-5 py-2 font-semibold text-ground"
         >
@@ -470,7 +505,7 @@ function MostLikely({
         <button
           type="button"
           onClick={() => {
-            onChange(suggestion.itemIds);
+            onChange(shown);
           }}
           className="target font-semibold underline underline-offset-4"
         >

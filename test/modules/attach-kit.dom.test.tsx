@@ -433,6 +433,43 @@ describe("AttachKit: most likely", () => {
     );
   });
 
+  it("sends only the pieces it shows, on That's it and on Change", async () => {
+    // A suggested piece retired since is hidden from the card, so it is
+    // not sent either — "That's it" means the list the runner read.
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    await renderWithRouter(
+      attach({
+        prefillFor: () =>
+          Promise.resolve(candidate({ itemIds: [HOUDINI, "01GONE"] })),
+        attachKit,
+      }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+    expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
+  });
+
+  it("sends only the shown pieces when That's it is pressed", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    await renderWithRouter(
+      attach({
+        prefillFor: () =>
+          Promise.resolve(candidate({ itemIds: [HOUDINI, "01GONE"] })),
+        attachKit,
+      }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "That’s it" }));
+
+    await waitFor(() => {
+      expect(attachKit).toHaveBeenCalledWith({
+        data: { runId: "01RUN", itemIds: [HOUDINI] },
+      });
+    });
+  });
+
   it("sends the suggested kit on That's it, and goes on to the verdict", async () => {
     const user = userEvent.setup();
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
@@ -1105,26 +1142,104 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(sent?.get("idempotencyKey")).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/u);
   });
 
-  it("retries the photo under the same key, so a retry is one photo", async () => {
+  it("says a failed photo on the well, never that nothing attached", async () => {
+    // The entry exists once the attach lands; the photo is secondary
+    // (law 5), so its failure is the well's and the kit stays attached.
     const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValueOnce(new Error("R2 hiccup"));
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    expect(
+      await screen.findByText(
+        "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Nothing attached")).toBeNull();
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+    // The photo is still held, so it can be sent again or removed.
+    expect(photoWell()).toHaveAttribute("data-state", "filled");
+    expect(router.state.location.pathname).toBe("/");
+    expect(attachKit).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the photo again under the same key on Next, without attaching twice", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const uploadPhoto = vi
       .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
       .mockRejectedValueOnce(new Error("R2 hiccup"))
       .mockResolvedValueOnce({ key: "k" });
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+    await screen.findByText(/The photo didn't upload/u);
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(attachKit).toHaveBeenCalledTimes(1);
+    expect(uploadPhoto).toHaveBeenCalledTimes(2);
+    const [first, second] = uploadPhoto.mock.calls.map((call) =>
+      call[0].data.get("idempotencyKey"),
+    );
+    expect(second).toBe(first);
+    expect(uploadPhoto.mock.calls[1]?.[0].data.get("entryId")).toBe("01NEW");
+  });
+
+  it("goes on without the photo once it is removed after a failed upload", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValue(new Error("R2 down"));
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+    await screen.findByText(/The photo didn't upload/u);
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    expect(attachKit).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the well sending while the photo goes up, and sends it once", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ key: string }>();
+    const uploadPhoto = vi.fn(() => pending.promise);
     await renderWithRouter(attach({ uploadPhoto }));
 
     await user.upload(photoInput(), jpeg());
     await user.click(screen.getByRole("button", { name: "Houdini" }));
     await user.click(primary());
-    await user.click(await screen.findByRole("button", { name: "Try again" }));
 
     await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(2);
+      expect(photoWell()).toHaveAttribute("data-state", "uploading");
     });
-    const [first, second] = uploadPhoto.mock.calls.map((call) =>
-      call[0].data.get("idempotencyKey"),
-    );
-    expect(second).toBe(first);
+    await user.click(region("primary-action"));
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    pending.resolve({ key: "k" });
   });
 
   it("sends no photo when none was kept", async () => {
