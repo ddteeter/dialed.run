@@ -55,8 +55,12 @@ describe("importPollIntervalMs", () => {
     expect(importPollIntervalMs({ status: "done" }, 1)).toBe(0);
   });
 
-  it("stops when there is nothing to read yet", () => {
-    expect(importPollIntervalMs(undefined, 0)).toBe(0);
+  it("keeps asking when no answer has come back yet, within the budget", () => {
+    // What a first poll that failed leaves behind. Stopping here ended the
+    // wait for good on one dropped request.
+    expect(importPollIntervalMs(undefined, 0)).toBe(INTERVAL);
+    expect(importPollIntervalMs(undefined, BUDGET_POLLS - 1)).toBe(INTERVAL);
+    expect(importPollIntervalMs(undefined, BUDGET_POLLS)).toBe(0);
   });
 
   it("gives up after two minutes of asking, and not a poll before", () => {

@@ -70,7 +70,8 @@ interface Attempt {
 }
 
 /**
-A second go with the same file, as a new upload.
+A new upload, under a key of its own. A retry of the same upload reuses its
+attempt instead, key and all.
 */
 function freshAttempt(file: File): Attempt {
   return { file, key: newUlid() };
@@ -174,6 +175,9 @@ function UploadFlow({
     // die here.
     if (sending !== undefined) return;
     setSending(attempt);
+    // A send starts its own twenty seconds: a retry of a stalled import
+    // comes back to the same import, and must not arrive already stalled.
+    setStalledId(undefined);
     setRefusal(undefined);
     setFailed(undefined);
     setWatching(undefined);
@@ -224,7 +228,11 @@ function UploadFlow({
         actions={{
           onFiles,
           onResend: () => {
-            void send(freshAttempt(watching.attempt.file));
+            // The same attempt, key and all (law 8b). The first import is
+            // still in the queue: a new key would start a second parse of
+            // the same file, and whichever landed second would come back
+            // "Already logged" about the runner's own retry.
+            void send(watching.attempt);
           },
           onReplace: () => {
             setWatching(undefined);
@@ -299,8 +307,14 @@ function ImportWatch({
     // one's answer.
     queryKey: [importId],
     queryFn: async () => getOutcome({ data: { importId } }),
+    // Answers and failures both count against the budget: a poll that
+    // errors is still a poll, and the budget is what stops a tab asking
+    // forever.
     refetchInterval: (query) =>
-      importPollIntervalMs(query.state.data, query.state.dataUpdateCount),
+      importPollIntervalMs(
+        query.state.data,
+        query.state.dataUpdateCount + query.state.errorUpdateCount,
+      ),
   });
   const data = outcome.data;
 
@@ -346,11 +360,7 @@ function ImportWatch({
       />
       <FormFailureBand
         failure={isWaiting && isStalled ? STALLED : undefined}
-        onRetry={() => {
-          // A new attempt: the first is still sitting in the queue, and
-          // sending it again under its own key would only find it there.
-          onResend();
-        }}
+        onRetry={onResend}
       />
     </>
   );

@@ -40,9 +40,13 @@ interface Progress {
  * Whether there is more to wait for: the file is still being read, or the
  * run is in and its weather is still being asked for — the parsed card's
  * conditions block breathes until it lands.
+ *
+ * **No answer yet is more to wait for.** It is what a first poll that
+ * failed leaves behind, and treating it as settled stopped polling for
+ * good on one dropped request. The budget still ends it.
  */
 function isUnsettled(progress: Progress | undefined): boolean {
-  if (progress === undefined) return false;
+  if (progress === undefined) return true;
   if (isReading(progress.status)) return true;
   return (
     progress.status === "done" && progress.run?.weatherStatus === "pending"

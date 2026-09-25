@@ -344,7 +344,7 @@ describe("A1: sending and reading", () => {
     expect(screen.queryByText("Nothing saved")).toBeNull();
   });
 
-  it("calls a slow read slow after twenty seconds, and tries again as a new upload", async () => {
+  it("calls a slow read slow after twenty seconds, and tries again under the same key", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({
       advanceTimers: (ms) => vi.advanceTimersByTime(ms),
@@ -382,20 +382,22 @@ describe("A1: sending and reading", () => {
     });
     const [first, second] = upload.mock.calls.map((call) => call[0].data);
     expect(second?.get("file")).toBe(first?.get("file"));
-    expect(second?.get("idempotencyKey")).not.toBe(
-      first?.get("idempotencyKey"),
-    );
+    // The same key: the first import is still in the queue, and a new key
+    // would parse the file twice and call the runner's own retry "Already
+    // logged".
+    expect(second?.get("idempotencyKey")).toBe(first?.get("idempotencyKey"));
   });
 
-  it("reads the retried import afresh: the last one's stall does not follow it", async () => {
+  it("gives a retried import twenty seconds of its own before calling it slow again", async () => {
+    // The retry comes back to the same import (same key), so the stall has
+    // to be reset by the send, not by a new import id.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({
       advanceTimers: (ms) => vi.advanceTimersByTime(ms),
     });
-    const upload = vi
-      .fn<Upload>()
-      .mockResolvedValueOnce({ importId: "01IMPORT" })
-      .mockResolvedValueOnce({ importId: "02IMPORT" });
+    const upload = vi.fn<Upload>(() =>
+      Promise.resolve({ importId: "01IMPORT" }),
+    );
     await renderWithRouter(form({ upload, getOutcome: neverAnswers }));
     await user.upload(dropInput(), gpx());
     await act(async () => {
@@ -409,6 +411,61 @@ describe("A1: sending and reading", () => {
     expect(
       screen.queryByText("Our end is slow. Your file is fine."),
     ).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(
+      screen.getByText("Our end is slow. Your file is fine."),
+    ).toBeVisible();
+  });
+
+  it("counts failed polls against the budget, so a dead endpoint is not asked forever", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const getOutcome = vi
+      .fn<GetOutcome>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = userEvent.setup({
+      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+    });
+    await renderWithRouter(form({ getOutcome }));
+    await user.upload(dropInput(), gpx());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    });
+    const asked = getOutcome.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    });
+
+    expect(asked).toBeGreaterThan(0);
+    expect(getOutcome.mock.calls).toHaveLength(asked);
+  });
+
+  it("keeps asking after a poll that failed, and lands the card when the answer comes", async () => {
+    // A first poll that errors leaves no answer at all, which used to read
+    // as settled and stop the polling for good.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const getOutcome = vi
+      .fn<GetOutcome>()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValue(outcome({ status: "done", run: runSummary() }));
+    const user = userEvent.setup({
+      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+    });
+    await renderWithRouter(form({ getOutcome }));
+    await user.upload(dropInput(), gpx());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(screen.getByText("Parsed · run.gpx")).toBeVisible();
+    expect(getOutcome.mock.calls.length).toBeGreaterThanOrEqual(5);
   });
 
   it("clears a failed send's band as soon as the next file starts", async () => {
