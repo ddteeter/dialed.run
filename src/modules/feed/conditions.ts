@@ -86,8 +86,8 @@ export async function observationsForEntries(
   database: CoreDb,
   entries: readonly { runId: string }[],
 ): Promise<Map<string, Conditions>> {
-  // In chunks: the list comes from reads of up to 200 entries, and D1
-  // refuses more than 100 bound parameters in one statement.
+  // In chunks: the list can be a whole consensus window of entries, and
+  // D1 refuses more than 100 bound parameters in one statement.
   const rows = await readInChunks(
     entries.map((entry) => entry.runId),
     (runIds) =>

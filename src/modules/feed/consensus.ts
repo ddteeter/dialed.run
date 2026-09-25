@@ -79,8 +79,15 @@ export function recentPublicEntriesStatement(
   sinceEpochSeconds: number,
   viewerId?: string,
 ) {
+  // Only the four columns the tally reads: the window is unbounded by
+  // count now, so every column left out is paid for on every row of it.
   return database
-    .select()
+    .select({
+      id: outfitEntries.id,
+      runId: outfitEntries.runId,
+      userId: outfitEntries.userId,
+      verdict: outfitEntries.verdict,
+    })
     .from(outfitEntries)
     .where(
       // publiclyVisibleEntry(), not a bare isPublic: a removed or
@@ -204,8 +211,9 @@ async function groupsByRunner(
   database: DrizzleD1Database,
   entryIds: readonly string[],
 ): Promise<Partial<Record<UiGroup, number>>> {
-  // Both reads in chunks: up to 200 entries and every garment worn on
-  // them, each past D1's 100-parameter cap for one statement. The join
+  // Both reads in chunks: every matching entry in the window and every
+  // garment worn on them, each past D1's 100-parameter cap for one
+  // statement. The join
   // brings each garment row its runner, so no row has to look one up.
   const itemRows = await readInChunks(entryIds, (chunk) =>
     database
