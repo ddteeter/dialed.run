@@ -44,7 +44,12 @@ import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
 import { enqueueEnrichment } from "../enrichment";
-import { captureException } from "../ops";
+import {
+  captureException,
+  oweOutbox,
+  outboxInsert,
+  settleOutbox,
+} from "../ops";
 import {
   getProductAttributeDefaultsBulk,
   getProductForDetail,
@@ -53,7 +58,6 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/owned";
-import { deleteStoredObjects, photoKeyFor } from "./photo-store";
 import { isDeniedDomain } from "../safety";
 import { nowSeconds } from "../../lib/now";
 
@@ -406,11 +410,14 @@ export async function unretireItem(
  * half erased. `outfit_entry_items` has no foreign key to cascade, which
  * is why the first statement exists.
  *
- * **The photo leaves storage first.** The other order cannot be retried:
- * once the row is gone, ownership cannot be proven again and the bytes
- * would stay for good. This order, failing between the two, leaves a
- * garment whose photo no longer loads — visible, and a second Delete
- * finishes it.
+ * **Then the photo, through the outbox** (law 8c). The batch also writes
+ * an `outbox` row owing the garment's R2 prefix a delete, so the rows and
+ * the debt land together or not at all: a failed batch leaves the garment
+ * and its photo whole, and a committed one always leaves the bytes owed.
+ * The fast path clears them straight after; if R2 fails, the Delete has
+ * still succeeded and the daily drainer finishes it (law 5). Proving
+ * ownership later needs no row: the prefix is built from the signed-in
+ * runner's own id, so a cleanup can only ever reach their objects.
  */
 export async function deleteItem(
   db: Db,
@@ -418,7 +425,7 @@ export async function deleteItem(
   itemId: string,
 ): Promise<void> {
   await getOwnedItem(db, userId, itemId);
-  await deleteStoredObjects(photoKeyFor(userId, itemId));
+  const debt = oweOutbox({ kind: "photo_delete", payload: { userId, itemId } });
   // Reached through this runner's entries rather than by `item_id` alone:
   // the only index on the table is (entry_id, item_id), so an item-only
   // filter would scan every runner's kit rows. `entries_user_created`
@@ -434,7 +441,9 @@ export async function deleteItem(
   await db.batch([
     db.delete(outfitEntryItems).where(inOwnKits),
     db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
+    outboxInsert(db, debt),
   ]);
+  await settleOutbox(db, debt);
 }
 
 // ---- UI groups -----------------------------------------------------------

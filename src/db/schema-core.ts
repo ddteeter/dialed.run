@@ -514,6 +514,38 @@ export const stravaRevocations = /*#__PURE__*/ sqliteTable(
   },
 );
 
+/**
+ * The generic transactional outbox (law 8c): work owed to another system,
+ * written in the same `db.batch()` as the D1 change that created the debt.
+ *
+ * `kind` + `payload` are a wire format between deploys (law 9), parsed on
+ * the way out by `outboxMessageSchema` in lib/outbox.ts. The UNIQUE pair is
+ * what makes a second enqueue of the same debt one row rather than two.
+ * A row here is work not yet confirmed done: a fast path deletes it on
+ * success, and the daily drainer in modules/ops re-drives what is left,
+ * backing off by `next_attempt_at` and counting `attempts`.
+ *
+ * `strava_revocations` above predates this and is deliberately not folded
+ * in yet (docs/deferred.md).
+ */
+export const outbox = /*#__PURE__*/ sqliteTable(
+  "outbox",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind").notNull(),
+    dedupeKey: text("dedupe_key").notNull(),
+    payload: text("payload").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: integer("next_attempt_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("outbox_kind_dedupe").on(t.kind, t.dedupeKey),
+    // The drainer's read: due rows of one kind, oldest first.
+    index("outbox_kind_due").on(t.kind, t.nextAttemptAt),
+  ],
+);
+
 export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
   "processed_webhook_events",
   {

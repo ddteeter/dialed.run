@@ -17,13 +17,12 @@ import {
   getOwnedItem,
   NotFoundError,
 } from "../../src/modules/closet/service";
-import { wardrobeItems } from "../../src/db/schema-core";
+import { outbox, wardrobeItems } from "../../src/db/schema-core";
 import { maxPhotoBytes } from "../../src/lib/photo-constraints";
 import {
   extensionFor,
   getItemPhotoObject,
   isPhotoSize,
-  photoObjectKeys,
   photoSizes,
   PhotoValidationError,
   reasonFrom,
@@ -33,10 +32,12 @@ import {
   uploadPhotoFromForm,
   validatePhoto,
 } from "../../src/modules/closet/photos";
+import { photoKeyFor } from "../../src/lib/garment-photo-key";
+import { nowSeconds } from "../../src/lib/now";
 import {
-  deleteStoredObjects,
-  photoKeyFor,
-} from "../../src/modules/closet/photo-store";
+  drainOutbox,
+  OUTBOX_FAST_PATH_GRACE_S,
+} from "../../src/modules/ops/outbox";
 import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
 
 function db() {
@@ -494,18 +495,17 @@ describe("keys are built from real values, never from a null", () => {
   });
 });
 
-describe("photoObjectKeys", () => {
-  it("names the three derived sizes and every original an upload can leave", () => {
-    expect(photoObjectKeys("items/u/i")).toStrictEqual([
-      "items/u/i/thumb.webp",
-      "items/u/i/card.webp",
-      "items/u/i/full.webp",
-      "items/u/i/original.jpg",
-      "items/u/i/original.png",
-      "items/u/i/original.webp",
-    ]);
-  });
-});
+/**
+ * Every object an upload leaves under a version: the three derived sizes,
+ * and an original under each extension a runner could have sent — so a
+ * cleanup that named only one extension would leave the others behind.
+ */
+function everyObjectUnder(photoKey: string): string[] {
+  return [
+    ...photoSizes.map((size) => `${photoKey}/${size}.webp`),
+    ...["jpg", "png", "webp"].map((ext) => `${photoKey}/original.${ext}`),
+  ];
+}
 
 /**
  * A garment with a stored photo, without running photon: the row carries
@@ -524,7 +524,7 @@ async function garmentWithPhoto(userId: string) {
     .update(wardrobeItems)
     .set({ photoKey, visibility: "hidden_pending_review" })
     .where(eq(wardrobeItems.id, item.id));
-  for (const key of photoObjectKeys(photoKey)) {
+  for (const key of everyObjectUnder(photoKey)) {
     await env.MEDIA.put(key, new Uint8Array([1, 2, 3]));
   }
   return { item, photoKey };
@@ -533,6 +533,34 @@ async function garmentWithPhoto(userId: string) {
 async function storedKeys(prefix: string): Promise<string[]> {
   const listed = await env.MEDIA.list({ prefix });
   return listed.objects.map((object) => object.key);
+}
+
+/**
+The outbox rows owed for one garment, whatever their state.
+*/
+async function owedFor(userId: string, itemId: string) {
+  return db()
+    .select()
+    .from(outbox)
+    .where(eq(outbox.dedupeKey, `${userId}:${itemId}`));
+}
+
+/**
+ * The daily drain, run as if the fast path's grace has passed — which is
+ * what makes a row the fast path left behind due.
+ */
+async function drainLater(): Promise<string[]> {
+  const anomalies: string[] = [];
+  await drainOutbox(db(), anomalies, {
+    now: nowSeconds() + OUTBOX_FAST_PATH_GRACE_S,
+  });
+  return anomalies;
+}
+
+function r2DeleteFailsOnce() {
+  return vi
+    .spyOn(env.MEDIA, "delete")
+    .mockRejectedValueOnce(new Error("R2 down"));
 }
 
 describe("removeItemPhoto (round 22, the well's Remove)", () => {
@@ -548,11 +576,13 @@ describe("removeItemPhoto (round 22, the well's Remove)", () => {
     // pending a screen or hidden from anyone.
     expect(row.visibility).toBe("ok");
     expect(await storedKeys(photoKey)).toStrictEqual([]);
+    // The fast path settled, so nothing is left owed.
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
   });
 
   it("leaves a no-photo row alone, but still clears anything stored under the item", async () => {
-    // A retry after a failed R2 delete arrives here: the row was already
-    // cleared, and the bytes are still there. It must finish the job.
+    // A second Remove, or one after an earlier cleanup failed: the row was
+    // already cleared, and bytes may still be there.
     const userId = newUlid();
     const client = db();
     const item = await createItem(client, userId, {
@@ -573,27 +603,75 @@ describe("removeItemPhoto (round 22, the well's Remove)", () => {
     expect(await storedKeys(prefix)).toStrictEqual([]);
   });
 
-  it("finishes on a retry when R2 failed after the row was cleared", async () => {
-    // Law 8c: the D1 write commits, the delete throws, the runner sees
-    // "Photo kept" and presses Try again. The retry must reach the bytes
-    // even though the row no longer names them.
+  it("succeeds when R2 fails, owes the bytes, and the drainer deletes them", async () => {
+    // Law 8c: the D1 write and the debt commit together; R2 is the fast
+    // path. A failed delete is not the runner's failure (law 5), and the
+    // bytes (possibly a face) must not depend on them pressing anything.
     const userId = newUlid();
     const { item, photoKey } = await garmentWithPhoto(userId);
-    const failing = vi
-      .spyOn(env.MEDIA, "delete")
-      .mockRejectedValueOnce(new Error("R2 down"));
+    const failing = r2DeleteFailsOnce();
+    const report = vi.fn();
 
-    await expect(removeItemPhoto(db(), userId, item.id)).rejects.toThrow(
-      "R2 down",
-    );
+    await removeItemPhoto(db(), userId, item.id, report);
+    failing.mockRestore();
+
     const cleared = await getOwnedItem(db(), userId, item.id);
     expect(cleared.photoKey).toBeNull();
     expect(await storedKeys(photoKey)).toHaveLength(6);
-    failing.mockRestore();
+    const [owed] = await owedFor(userId, item.id);
+    expect(owed?.kind).toBe("photo_delete");
+    expect(report).toHaveBeenCalledWith(expect.any(Error), {
+      surface: "outbox-fast-path",
+      kind: "photo_delete",
+      outboxId: owed?.id,
+      userId,
+      itemId: item.id,
+    });
 
-    await removeItemPhoto(db(), userId, item.id);
+    expect(await drainLater()).toStrictEqual([
+      "1 photo_delete outbox row(s) were owed; 1 settled",
+    ]);
 
     expect(await storedKeys(photoKeyFor(userId, item.id))).toStrictEqual([]);
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
+  });
+
+  it("owes nothing and touches nothing when the D1 batch fails", async () => {
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+    const client = db();
+    vi.spyOn(client, "batch").mockRejectedValueOnce(new Error("D1 down"));
+
+    await expect(removeItemPhoto(client, userId, item.id)).rejects.toThrow(
+      "D1 down",
+    );
+
+    const untouched = await getOwnedItem(db(), userId, item.id);
+    expect(untouched.photoKey).toBe(photoKey);
+    expect(await storedKeys(photoKey)).toHaveLength(6);
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
+  });
+
+  it("keeps a photo uploaded after the Remove the drainer is still owed", async () => {
+    // The debt is "the prefix holds more than the row names", not "delete
+    // the prefix": a runner who removed, then chose a new photo before the
+    // drain, keeps the new one.
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+    const failing = r2DeleteFailsOnce();
+    await removeItemPhoto(db(), userId, item.id, vi.fn());
+    failing.mockRestore();
+    const fresh = `${photoKeyFor(userId, item.id)}/01V2`;
+    await env.MEDIA.put(`${fresh}/card.webp`, new Uint8Array([1]));
+    await db()
+      .update(wardrobeItems)
+      .set({ photoKey: fresh })
+      .where(eq(wardrobeItems.id, item.id));
+
+    await drainLater();
+
+    expect(await storedKeys(`${photoKey}/`)).toStrictEqual([]);
+    expect(await storedKeys(`${fresh}/`)).toStrictEqual([`${fresh}/card.webp`]);
   });
 
   it("refuses another runner's garment and touches none of it", async () => {
@@ -610,38 +688,54 @@ describe("removeItemPhoto (round 22, the well's Remove)", () => {
   });
 });
 
-describe("deleteStoredObjects", () => {
-  it("deletes every page under the prefix, and nothing beside it", async () => {
-    const prefix = `items/${newUlid()}/${newUlid()}`;
-    const beside = `${prefix}X/card.webp`;
-    for (const name of ["a", "b", "c", "d", "e"]) {
-      await env.MEDIA.put(`${prefix}/${name}.webp`, new Uint8Array([1]));
-    }
-    await env.MEDIA.put(beside, new Uint8Array([1]));
-
-    await deleteStoredObjects(prefix, 2);
-
-    expect(await storedKeys(`${prefix}/`)).toStrictEqual([]);
-    expect(await storedKeys(beside)).toStrictEqual([beside]);
-    await env.MEDIA.delete(beside);
-  });
-
-  it("is a no-op on a prefix with nothing under it", async () => {
-    await expect(
-      deleteStoredObjects(`items/${newUlid()}/${newUlid()}`),
-    ).resolves.toBeUndefined();
-  });
-});
-
 describe("hard-deleting a garment takes its photo with it", () => {
-  it("clears storage when the garment is deleted", async () => {
+  it("clears storage when the garment is deleted, and owes nothing", async () => {
     const userId = newUlid();
     const deleted = await garmentWithPhoto(userId);
 
     await deleteItem(db(), userId, deleted.item.id);
+
     expect(
       await storedKeys(photoKeyFor(userId, deleted.item.id)),
     ).toStrictEqual([]);
+    expect(await owedFor(userId, deleted.item.id)).toStrictEqual([]);
+  });
+
+  it("deletes the garment even when R2 fails, and the drainer finishes the photo", async () => {
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+    const failing = r2DeleteFailsOnce();
+
+    await deleteItem(db(), userId, item.id);
+    failing.mockRestore();
+
+    // The garment and its debt landed together; the bytes are still there.
+    await expect(getOwnedItem(db(), userId, item.id)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    expect(await owedFor(userId, item.id)).toHaveLength(1);
+    expect(await storedKeys(photoKey)).toHaveLength(6);
+
+    await drainLater();
+
+    expect(await storedKeys(photoKeyFor(userId, item.id))).toStrictEqual([]);
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
+  });
+
+  it("never leaves a garment with its photo gone: a failed batch touches no bytes", async () => {
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+    const client = db();
+    vi.spyOn(client, "batch").mockRejectedValueOnce(new Error("D1 down"));
+
+    await expect(deleteItem(client, userId, item.id)).rejects.toThrow(
+      "D1 down",
+    );
+
+    const untouched = await getOwnedItem(db(), userId, item.id);
+    expect(untouched.photoKey).toBe(photoKey);
+    expect(await storedKeys(photoKey)).toHaveLength(6);
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
   });
 });
 
@@ -663,9 +757,9 @@ describe("replacing a photo", () => {
       category: "top",
       name: "Replaced",
     });
-    // A first photo has nothing to replace. Without the guard the cleanup
-    // would build keys from `${null}` — the string "null" — and delete
-    // whatever sits there.
+    // A first photo has nothing to replace, and nothing outside the
+    // garment's own prefix is ever touched — not even at a key a null
+    // photo key would have spelled.
     await env.MEDIA.put("null/full.webp", new Uint8Array([1]));
 
     const first = await uploadItemPhoto(
@@ -692,25 +786,39 @@ describe("replacing a photo", () => {
     );
     expect(await storedKeys(`${first.photoKey}/`)).toStrictEqual([]);
     expect(await storedKeys(`${second.photoKey}/`)).toHaveLength(4);
-  }, 20_000);
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
+  });
 
-  it("keeps the new photo when clearing the old one fails", async () => {
-    // Law 5: the photo the runner asked for is saved; the leftover is
-    // reported, and Remove or Delete clears the whole prefix later.
+  it("clears the replaced original whatever type it arrived as", async () => {
+    // The old version holds a JPEG original (and, planted, every other
+    // extension); the new upload is a PNG. Nothing of the old one stays.
     const userId = newUlid();
-    const client = db();
-    const item = await createItem(client, userId, {
-      category: "top",
-      name: "Replace, cleanup fails",
-    });
-    await uploadItemPhoto(client, userId, item.id, PNG_1X1, "image/png");
-    const failing = vi
-      .spyOn(env.MEDIA, "delete")
-      .mockRejectedValueOnce(new Error("R2 down"));
+    const { item, photoKey } = await garmentWithPhoto(userId);
+
+    const replaced = await uploadItemPhoto(
+      db(),
+      userId,
+      item.id,
+      PNG_1X1,
+      "image/png",
+    );
+
+    expect(await storedKeys(`${photoKey}/`)).toStrictEqual([]);
+    expect(await storedKeys(`${replaced.photoKey}/`)).toContain(
+      `${replaced.photoKey}/original.png`,
+    );
+  });
+
+  it("keeps the new photo when clearing the old one fails, and the drainer clears it", async () => {
+    // Law 5: the photo the runner asked for is saved; the leftover is
+    // owed, reported, and drained later.
+    const userId = newUlid();
+    const { item, photoKey } = await garmentWithPhoto(userId);
+    const failing = r2DeleteFailsOnce();
 
     const report = vi.fn();
     const second = await uploadItemPhoto(
-      client,
+      db(),
       userId,
       item.id,
       PNG_1X1,
@@ -720,15 +828,24 @@ describe("replacing a photo", () => {
     );
     failing.mockRestore();
 
+    const [owed] = await owedFor(userId, item.id);
     expect(report).toHaveBeenCalledWith(expect.any(Error), {
+      surface: "outbox-fast-path",
+      kind: "photo_delete",
+      outboxId: owed?.id,
       userId,
       itemId: item.id,
-      op: "replace-photo-cleanup",
     });
-
-    const row = await getOwnedItem(client, userId, item.id);
+    const row = await getOwnedItem(db(), userId, item.id);
     expect(row.photoKey).toBe(second.photoKey);
-  }, 20_000);
+    expect(await storedKeys(`${photoKey}/`)).toHaveLength(6);
+
+    await drainLater();
+
+    expect(await storedKeys(`${photoKey}/`)).toStrictEqual([]);
+    expect(await storedKeys(`${second.photoKey}/`)).toHaveLength(4);
+    expect(await owedFor(userId, item.id)).toStrictEqual([]);
+  });
 });
 
 function formFor(itemId: string, photo?: File): FormData {

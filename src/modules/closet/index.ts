@@ -41,4 +41,3 @@ export {
 export { photoUrlFor } from "./photo-url";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";
-export { photoKeyFor } from "./photo-store";

@@ -24,9 +24,18 @@ three to Round 22 `#y`, `#well` and rulings 16–17.
   in flight, `ControlFailureBand` on failure. Unretire has no confirm.
 - **Remove photo**: `removeItemPhoto` in `photos.ts` — one D1 write
   (`photo_key = null`, `visibility = 'ok'`, the no-photo state) **then**
-  the R2 deletes. D1 first on purpose (law 8c): a failed R2 delete leaves
-  unreachable bytes the next upload overwrites; the reverse order would
-  leave a row pointing at nothing. `removePhotoFn` is glue.
+  the R2 deletes. D1 first on purpose (law 8c), and since the owner's
+  review the D1 batch also writes an `outbox` row owing the item's R2
+  prefix a delete — see **Outbox** below. `removePhotoFn` is glue.
+- **Outbox (owner review of PR #101)**: Remove, Replace and Delete each
+  write their D1 change and a `photo_delete` outbox row in one
+  `db.batch()`, then run the R2 cleanup as a fast path that deletes the
+  row on success. A failed fast path never fails the runner's action; the
+  daily digest drains what is left (`modules/ops/outbox.ts`). The handler
+  reconciles the garment's prefix against its row — deletes everything
+  the row does not name — so one kind covers all three, and a photo
+  uploaded after a failed Remove survives the drain. New table `outbox`,
+  additive migration `0019_add_outbox` (owner-approved).
 - **Performance**: `PerformanceSummary.runCount`; pairs-with counts only
   dialed entries and carries its count. No schema change.
 - **F / Edit** (`GarmentForm.tsx`): product-link field and its "pending"
@@ -42,8 +51,10 @@ three to Round 22 `#y`, `#well` and rulings 16–17.
 
 ## Contract touches
 
-- Schema changes needed: **none** (`retired_at` would be — see questions).
-- New route files: none. New bindings/queues/crons: **none**.
+- Schema changes: `retired_at` (0018) and the `outbox` table (0019), both
+  additive and owner-approved.
+- New route files: none. New bindings/queues/crons: **none** — the outbox
+  drainer rides the existing daily-digest firing.
 - Screens: Y (detail, 1040, retire confirm, retired), well, F, Edit, C.
 
 ## Test plan
