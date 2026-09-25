@@ -93,6 +93,7 @@ import { SpecificsSheet } from "./SpecificsSheet";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
 import { suggestChips } from "../chips";
+import { notedPlan } from "../noted";
 import type { Chip, Flag, ItemFlagChoice } from "../chips";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
@@ -127,18 +128,6 @@ const LABELS = {
  * because the board draws the question once, in the header.
  */
 const QUESTION_ID = "verdict-question";
-
-/**
- * Noted's two sentences for a run with nothing to count (round 21, ask
- * 3). *"Same block, same place, one sentence naming the missing input"* —
- * A3 never navigates, so a run with no band or no kit still gets a
- * receipt, where it used to be sent to its entry, "on exactly the runs
- * where the runner most wonders if it worked".
- */
-export const NOTHING_MOVED = {
-  noBand: "Logged. No weather came with this run, so no band record moved.",
-  noKit: "Logged. No kit on this run, so no garment record moved.",
-} as const;
 
 /**
  * A3's ink header: the run, where and when it happened, and the question.
@@ -239,7 +228,10 @@ export function VerdictForm({
       entry.items.map((item) => [item.itemId, item.flag ?? "none"]),
     ),
   );
-  const [noted, setNoted] = useState<string | undefined>();
+  // Present once the verdict is saved. The sentence inside it can still be
+  // absent: the save landed and only the record's count failed to come
+  // back, and the receipt is not held hostage to it.
+  const [noted, setNoted] = useState<{ sentence: string | undefined }>();
   const [sheetOpen, setSheetOpen] = useState(false);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
   // EntryDetail carried: two sources for one fact, one from the URL params
@@ -256,20 +248,25 @@ export function VerdictForm({
 
   /**
    * Noted's sentence: what the verdict just did to a record, or — when
-   * there was nothing to count — which input was missing.
+   * there was nothing to count — which input was missing (`notedPlan`).
    *
-   * The band is asked first because it is the wider absence: a run with no
-   * weather moves no record at all, kit or not, and "no kit" would name
-   * the lesser of the two gaps.
+   * **Nothing here may fail the save.** This runs after the verdict has
+   * landed, and a throw from it used to reach `useFormSubmit` as the
+   * submission's own failure: "Nothing saved", the form unlocked, and a
+   * runner invited to log a verdict that was already logged. A count that
+   * does not come back leaves the receipt without its sentence instead.
    */
-  async function notedSentence(): Promise<string> {
-    if (bandFloor === undefined) return NOTHING_MOVED.noBand;
-    const [firstItem] = entry.items;
-    if (firstItem === undefined) return NOTHING_MOVED.noKit;
-    const stat = await itemBandWearStat({
-      data: { itemId: firstItem.itemId, bandFloorC: bandFloor },
-    });
-    return `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(bandFloor, units.temp)}.`;
+  async function notedSentence(): Promise<string | undefined> {
+    const plan = notedPlan(bandFloor, entry.items);
+    if (plan.kind === "nothing-moved") return plan.sentence;
+    try {
+      const stat = await itemBandWearStat({
+        data: { itemId: plan.itemId, bandFloorC: plan.bandFloorC },
+      });
+      return `${plan.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(plan.bandFloorC, units.temp)}.`;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
@@ -289,7 +286,7 @@ export function VerdictForm({
     successMessage: "Verdict saved.",
     labels: LABELS,
     onSuccess: async () => {
-      setNoted(await notedSentence());
+      setNoted({ sentence: await notedSentence() });
     },
   });
 
@@ -487,7 +484,7 @@ export function VerdictForm({
         />
 
         {isLocked ? (
-          <NotedReceipt sentence={noted} />
+          <NotedReceipt sentence={noted.sentence} />
         ) : (
           <>
             {/* A3's share-toggle as round 19 draws it: "Share to feed", with

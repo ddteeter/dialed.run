@@ -1176,6 +1176,39 @@ describe("VerdictForm: what happens after saving", () => {
     });
   });
 
+  it("locks and lands Noted when the save worked but the count did not come back", async () => {
+    // The stat is read after the verdict has landed. A throw from it used
+    // to reach the form as the submission's own failure — "Nothing saved",
+    // the form unlocked — about a verdict that was saved.
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn(() => Promise.resolve({ ok: true }));
+    await renderWithRouter(
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        bandFloor: 5,
+        submitVerdict,
+        itemBandWearStat: () => Promise.reject(new Error("D1 hiccup")),
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    const receipt = await waitFor(() => {
+      const found = document.querySelector("[data-slot='noted']");
+      if (found === null) throw new Error("no receipt yet");
+      return found;
+    });
+    expect(receipt).toHaveTextContent(/^Noted$/u);
+    expect(screen.queryByText(/Nothing saved/u)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(submitVerdict).toHaveBeenCalledTimes(1);
+  });
+
   it("lands a receipt naming the missing weather when there is no band, and stays", async () => {
     // Round 21, ask 3: "Draw a receipt … A3 never navigates; jumping
     // straight to the entry breaks that on exactly the runs where the
