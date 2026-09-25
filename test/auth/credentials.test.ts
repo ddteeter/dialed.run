@@ -5,6 +5,7 @@ import {
   AuthFieldError,
   googleConsentUrl,
   signIn,
+  signOut,
   signUp,
 } from "../../src/modules/auth/credentials";
 
@@ -17,11 +18,13 @@ const client = vi.hoisted(() => ({
   email: vi.fn(),
   social: vi.fn(),
   signUp: vi.fn(),
+  signOut: vi.fn(),
 }));
 vi.mock("../../src/modules/auth/client", () => ({
   authClient: {
     signIn: { email: client.email, social: client.social },
     signUp: { email: client.signUp },
+    signOut: client.signOut,
   },
 }));
 
@@ -41,6 +44,7 @@ beforeEach(() => {
   client.email.mockReset();
   client.social.mockReset();
   client.signUp.mockReset();
+  client.signOut.mockReset();
 });
 
 /**
@@ -145,5 +149,20 @@ describe("googleConsentUrl", () => {
     await expect(googleConsentUrl("/")).rejects.toThrow(
       "no consent URL in Google's answer",
     );
+  });
+});
+
+describe("signOut", () => {
+  it("resolves when the session is gone", async () => {
+    client.signOut.mockResolvedValue({ data: { success: true }, error: undefined });
+    await expect(signOut()).resolves.toBeUndefined();
+    expect(client.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects with the status when Better Auth refuses, so Sign out can say Still signed in", async () => {
+    client.signOut.mockResolvedValue({ data: undefined, error: { status: 500 } });
+    const error = await caught(signOut());
+    expect(error).toBeInstanceOf(AuthRejected);
+    expect(error).toMatchObject({ status: 500 });
   });
 });

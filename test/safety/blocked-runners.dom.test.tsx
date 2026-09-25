@@ -27,6 +27,8 @@ describe("what the screen leads with", () => {
     // Round 22, item 21: one line, no brackets.
     expect(screen.getByText("You haven't blocked anyone.")).toBeInTheDocument();
     expect(screen.queryByText(/That's normal/u)).toBeNull();
+    // Nothing has happened yet, so the one status region is silent.
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
 
   it("promises both directions, because one row means both", () => {

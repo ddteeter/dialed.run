@@ -351,7 +351,11 @@ export function SharingForm({
       initial={{ shareDefault: current.shareDefault }}
       save={saveSharing}
       successMessage="Privacy saved."
-      labels={{ shareDefault: SHARE_DEFAULT_LABEL }}
+      // No summary labels: labels name rows in the error summary, which
+      // appears only for two or more failing fields, and this form has
+      // one. The field carries its own label. Add one here with a second
+      // field.
+      labels={{}}
     >
       {SharingFields}
     </SectionForm>

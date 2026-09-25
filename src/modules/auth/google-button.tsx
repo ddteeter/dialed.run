@@ -49,24 +49,27 @@ export function useGoogleSignIn({
   callbackURL: string;
   leave: (url: string) => void;
 }>): GoogleSignIn {
-  // Counts attempts, so "is this answer still wanted" is a comparison
-  // rather than a flag that a later attempt could reset under an earlier
-  // one.
-  const attempt = useRef(0);
+  // The attempt whose answer is still wanted, by identity: each attempt
+  // mints its own token, so "is this answer still wanted" is a comparison
+  // against that token rather than a flag a later attempt could reset under
+  // an earlier one. Cancelling forgets it. (A counter did the same job, but
+  // `useControlAction` allows one attempt in flight at a time, so which way
+  // it counted could never be observed — its mutants were unkillable.)
+  const wanted = useRef<object | undefined>(undefined);
   const control = useControlAction<[]>({
     kicker: AUTH_KICKER,
     action: async () => {
-      attempt.current += 1;
-      const mine = attempt.current;
+      const mine = {};
+      wanted.current = mine;
       const url = await googleConsentUrl(callbackURL);
-      if (mine === attempt.current) leave(url);
+      if (mine === wanted.current) leave(url);
     },
   });
 
   return {
     ...control,
     cancel: () => {
-      attempt.current += 1;
+      wanted.current = undefined;
     },
   };
 }

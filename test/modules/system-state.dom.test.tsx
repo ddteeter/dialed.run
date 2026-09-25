@@ -56,10 +56,12 @@ describe("X1 · not found", () => {
         "This page doesn't exist, or it's an entry its runner has made private.",
       ),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Go to your feed" })).toHaveAttribute(
-      "href",
-      "/feed",
-    );
+    const wayOut = screen.getByRole("link", { name: "Go to your feed" });
+    expect(wayOut).toHaveAttribute("href", "/feed");
+    // The way out is the ink pill: pink is the product's own verbs, and
+    // leaving a 404 is not one.
+    expect(wayOut).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(wayOut).not.toHaveClass("bg-action");
     // No brackets on the headline: this is neither a wait nor a next step.
     expect(state()).not.toHaveTextContent("[");
   });
@@ -70,10 +72,9 @@ describe("X1 · not found", () => {
     expect(tabBar()).toBeNull();
     expect(document.querySelector("[data-slot='top-bar']")).toBeNull();
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    const logIn = screen.getByRole("link", { name: "Log in" });
+    expect(logIn).toHaveAttribute("href", "/auth/login");
+    expect(logIn).toHaveClass("rounded-pill", "bg-ink", "text-ground");
     expect(screen.queryByRole("link", { name: "Go to your feed" })).toBeNull();
     expect(screen.getByText("404")).toHaveAttribute("aria-hidden", "true");
   });

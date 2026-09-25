@@ -44,10 +44,13 @@ export function ReportAffordance({
   fileReport: Parameters<typeof ReportSheet>[0]["fileReport"];
 }>): JSX.Element | undefined {
   const [isOpen, setIsOpen] = useState(false);
-  // Counts openings, and keys the sheet by it: every report starts from
-  // an empty sheet, so ✕ really is "discard" (round 22, item 21) rather
-  // than "hide what you had chosen until next time".
-  const [opened, setOpened] = useState(0);
+  // Flips on every opening, and keys the sheet by it: every report starts
+  // from an empty sheet, so ✕ really is "discard" (round 22, item 21)
+  // rather than "hide what you had chosen until next time". A flip is
+  // enough — the key only has to differ from the last opening's. A count
+  // could run either way unobserved, and a flip with a starting value
+  // could start from either; this one starts unset.
+  const [generation, setGeneration] = useState<boolean>();
 
   // Signed out, or looking at your own: no report control. Reporting your
   // own entry does nothing, and offering it reads as a bug — while a
@@ -73,14 +76,14 @@ export function ReportAffordance({
         data-part="report"
         className="target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4"
         onClick={() => {
-          setOpened((count) => count + 1);
+          setGeneration((previous) => previous !== true);
           setIsOpen(true);
         }}
       >
         {reportLabel(subject)}
       </button>
       <ReportSheet
-        key={opened}
+        key={String(generation)}
         open={isOpen}
         // One closer for both. `ReportSheet` calls `onFiled` and then
         // `onClose` on success, and this component has nothing to do with

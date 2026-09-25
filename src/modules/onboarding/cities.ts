@@ -74,22 +74,24 @@ export async function searchCities(
   url.searchParams.set("language", "en");
   url.searchParams.set("format", "json");
 
-  let body: unknown;
+  // A timeout, a dropped connection, a body that is not JSON and a body
+  // that is not the shape all come to "no answer", which is no
+  // suggestions — the field still takes a typed city. One catch for all
+  // four, so the parse throws rather than being checked twice: a
+  // `safeParse` branch inside this try could never be told from the throw
+  // the catch already turns into the same empty list.
   try {
     const response = await fetchImpl(url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!response.ok) return [];
-    body = await response.json();
+    const { results } = answerSchema.parse(await response.json());
+    return results.map((place) => ({
+      label: labelOf(place),
+      lat: place.latitude,
+      lng: place.longitude,
+    }));
   } catch {
     return [];
   }
-
-  const parsed = answerSchema.safeParse(body);
-  if (!parsed.success) return [];
-  return parsed.data.results.map((place) => ({
-    label: labelOf(place),
-    lat: place.latitude,
-    lng: place.longitude,
-  }));
 }

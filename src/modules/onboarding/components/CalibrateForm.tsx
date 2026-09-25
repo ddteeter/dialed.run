@@ -251,13 +251,15 @@ function WhereYouRun({
   const [suggestions, setSuggestions] = useState<readonly CitySuggestion[]>([]);
   const [isLocating, setIsLocating] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
-  // Counts keystrokes, so an answer for "Min" arriving after the one for
-  // "Minneapolis" is dropped rather than shown under the wrong text.
-  const asked = useRef(0);
+  // The latest keystroke's question, by identity, so an answer for "Min"
+  // arriving after the one for "Minneapolis" is dropped rather than shown
+  // under the wrong text. (A counter did the same job, but nothing could
+  // observe which way it counted.)
+  const asked = useRef<object | undefined>(undefined);
 
   async function suggestFor(value: string): Promise<void> {
-    asked.current += 1;
-    const mine = asked.current;
+    const mine = {};
+    asked.current = mine;
     let found: readonly CitySuggestion[] = [];
     try {
       found = await searchCities({ data: { query: value } });

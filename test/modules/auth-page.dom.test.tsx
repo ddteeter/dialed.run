@@ -338,6 +338,11 @@ describe("Au4 · form failure", () => {
 describe("Au5 · Google in flight", () => {
   it("breathes, stays a live control, and goes to Google with the answer", async () => {
     const { user, leave } = await logIn();
+    // At rest the board's ringed "G" leads the label — composed from the
+    // type system, hidden from the accessible name.
+    const mark = part("google")?.querySelector("[aria-hidden='true']");
+    expect(mark).toHaveTextContent(/^G$/u);
+    expect(mark).toHaveClass("rounded-pill", "border-ink");
     const answer = Promise.withResolvers<unknown>();
     client.social.mockReturnValue(answer.promise);
     await user.click(
@@ -524,6 +529,8 @@ describe("PasswordField", () => {
       />,
     );
     const input = screen.getByLabelText("Password");
+    // Only Au7's arrival takes focus; an ordinary form leaves it alone.
+    expect(input).not.toHaveFocus();
     expect(input).toHaveAttribute("type", "password");
     expect(input).toHaveAttribute("autocomplete", "new-password");
     expect(input).toHaveAttribute("name", "password");

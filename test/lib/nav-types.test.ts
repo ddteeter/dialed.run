@@ -199,6 +199,8 @@ describe("which type an edge resolves to", () => {
       ["/onboarding/calibrate", "/onboarding/taplist"],
       ["/onboarding/taplist", "/onboarding/settings"],
       ["/onboarding/settings", "/onboarding/done"],
+      ["/onboarding/settings", "/onboarding/settings/units"],
+      ["/onboarding/settings", "/safety/blocked"],
     ] as const) {
       expect([from, to, typeOf(from, to)]).toEqual([from, to, "push"]);
     }

@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -129,6 +135,32 @@ describe("the question", () => {
     // Never the `disabled` attribute on a submit.
     expect(submit()).not.toHaveAttribute("disabled");
   });
+
+  it("names each field in the summary by the words on the screen", async () => {
+    const { user, save } = renderForm();
+
+    await user.click(screen.getByLabelText("Where you run"));
+    await user.paste("x".repeat(121));
+    await user.click(submit());
+
+    expect(save).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("button", {
+        name: "Warm or cold — Pick the one that sounds most like you.",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /^Where you run — / }),
+    ).toBeVisible();
+  });
+
+  it("keeps the submit in the page rather than letting the browser post it", () => {
+    renderForm();
+    const form = submit().closest("form");
+    if (form === null) throw new Error("the submit is not inside a form");
+    // `dispatchEvent` answers false when a handler cancelled the default.
+    expect(fireEvent.submit(form)).toBe(false);
+  });
 });
 
 describe("where you run: typed and suggested (round 22, item 19)", () => {
@@ -154,6 +186,38 @@ describe("where you run: typed and suggested (round 22, item 19)", () => {
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       data: { cityLabel: undefined },
     });
+  });
+
+  it("explains the field, and offers nothing before anything is typed", () => {
+    renderForm();
+    expect(
+      screen.getByText(
+        "Sets your climate cohort — runners who face the same winters.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
+  });
+
+  it("keeps two places that share a name apart", async () => {
+    const springfields: CitySuggestion[] = [
+      { label: "Springfield", lat: 39.8, lng: -89.64 },
+      { label: "Springfield", lat: 37.21, lng: -93.29 },
+    ];
+    const reported = vi.spyOn(console, "error").mockImplementation(() => {
+      // collected, asserted below
+    });
+    const { user } = renderForm({
+      searchCities: () => Promise.resolve(springfields),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "Sp");
+    const list = await screen.findByRole("list", { name: "Cities" });
+
+    expect(list.querySelectorAll("li")).toHaveLength(2);
+    // React reports a list whose rows share an identity — the two rows
+    // would be confused on the next update.
+    expect(reported).not.toHaveBeenCalled();
+    reported.mockRestore();
   });
 
   it("suggests as you type, and picking one makes the chip", async () => {
@@ -332,20 +396,26 @@ describe("Use my location (round 22, item 19)", () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
-  it("clears the denied line when asked again", async () => {
-    const answers = [undefined, { lat: 1, lng: 2 }];
+  it("clears the denied line as soon as it is asked again", async () => {
+    const second = Promise.withResolvers<undefined>();
+    const answers = [Promise.resolve(undefined), second.promise];
     const { user } = renderForm({
-      locate: () => Promise.resolve(answers.shift()),
+      locate: () => answers.shift() ?? Promise.resolve(undefined),
     });
     await user.click(locateButton());
     await screen.findByText("Location’s off. Type your city instead.");
 
     await user.click(locateButton());
 
-    await waitFor(() => {
-      expect(
-        screen.queryByText("Location’s off. Type your city instead."),
-      ).toBeNull();
+    // Gone while the second ask is still out — not only once it lands.
+    expect(locateButton()).toHaveAttribute("aria-busy", "true");
+    expect(
+      screen.queryByText("Location’s off. Type your city instead."),
+    ).toBeNull();
+
+    await act(async () => {
+      second.resolve(undefined);
+      await second.promise;
     });
   });
 

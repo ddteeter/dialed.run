@@ -140,12 +140,14 @@ export function activeTabIndex(
 function seatRoutes(
   tabs: readonly { to: string; launcher?: boolean; also?: readonly string[] }[],
 ): { index: number; route: string }[] {
-  const routes: { index: number; route: string }[] = [];
-  for (const [index, tab] of tabs.entries()) {
-    if (tab.launcher === true) continue;
-    for (const route of ownedRoutes(tab)) routes.push({ index, route });
-  }
-  return routes;
+  // No accumulator: a starting array is a literal nothing can tell from any
+  // other, since a stray entry owns no path and simply never matches.
+  return tabs
+    .map((tab, index) => ({ tab, index }))
+    .filter(({ tab }) => tab.launcher !== true)
+    .flatMap(({ tab, index }) =>
+      ownedRoutes(tab).map((route) => ({ index, route })),
+    );
 }
 
 /**
