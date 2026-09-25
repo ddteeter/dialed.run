@@ -1200,6 +1200,8 @@ describe("VerdictForm: what happens after saving", () => {
       return found;
     });
     expect(receipt).toHaveTextContent(/^Noted$/u);
+    // No empty sentence standing in for the missing one.
+    expect(receipt.querySelector("p")).toBeNull();
     expect(screen.queryByText(/Nothing saved/u)).toBeNull();
     expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(

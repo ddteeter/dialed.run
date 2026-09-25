@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
@@ -139,27 +139,38 @@ async function ownHistory(userId: string): Promise<
 }
 
 /**
- * The kits behind a set of suggested entries, as ids and as names.
+ * The kits behind a set of suggested entries, and the kits already on a set
+ * of runs, as ids and as names — keyed by entry either way.
  *
  * Two reads for the whole table rather than two per row: the entries are
  * asked for together and the garments they name are asked for together
- * after that.
+ * after that. The runs' own kits are found by run rather than by entry, so
+ * a run with no entry needs no filtering out: it simply joins nothing.
  */
 interface Kit {
   itemIds: string[];
   itemNames: string[];
 }
 
-async function kitsFor(entryIds: readonly string[]): Promise<Map<string, Kit>> {
+async function kitsFor(ask: {
+  entryIds: readonly string[];
+  runIds: readonly string[];
+}): Promise<Map<string, Kit>> {
   const database = drizzle(env.DIALED_CORE);
-  const rows = await forIds(entryIds, () =>
+  const rows = await forIds([...ask.entryIds, ...ask.runIds], () =>
     database
       .select({
         entryId: outfitEntryItems.entryId,
         itemId: outfitEntryItems.itemId,
       })
       .from(outfitEntryItems)
-      .where(inArray(outfitEntryItems.entryId, [...entryIds])),
+      .innerJoin(outfitEntries, eq(outfitEntries.id, outfitEntryItems.entryId))
+      .where(
+        or(
+          inArray(outfitEntryItems.entryId, [...ask.entryIds]),
+          inArray(outfitEntries.runId, [...ask.runIds]),
+        ),
+      ),
   );
   const names = await garmentNamesByIds(
     database,
@@ -240,10 +251,12 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
   //
   // The kits already on the rows are read in the same pass as the
   // suggested ones: one read for every entry the table names.
-  const kits = await kitsFor([
-    ...matched.flatMap(({ best }) => best ?? []).map((best) => best.entry.id),
-    ...unjudged.flatMap(({ entryId }) => entryId ?? []),
-  ]);
+  const kits = await kitsFor({
+    entryIds: matched
+      .flatMap(({ best }) => best ?? [])
+      .map((best) => best.entry.id),
+    runIds: unjudged.map((run) => run.id),
+  });
 
   return {
     rows: matched.map(({ run, conditions, best }) => ({

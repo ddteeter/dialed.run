@@ -265,8 +265,9 @@ export function VerdictForm({
       });
       return `${plan.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(plan.bandFloorC, units.temp)}.`;
     } catch {
-      return undefined;
+      // The count did not come back; the save it would describe did land.
     }
+    return undefined;
   }
 
   /**

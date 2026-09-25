@@ -1173,11 +1173,12 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
 
   it("sends the photo again under the same key on Next, without attaching twice", async () => {
     const user = userEvent.setup();
+    const secondSend = Promise.withResolvers<{ key: string }>();
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const uploadPhoto = vi
       .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
       .mockRejectedValueOnce(new Error("R2 hiccup"))
-      .mockResolvedValueOnce({ key: "k" });
+      .mockReturnValueOnce(secondSend.promise);
     const { router } = await renderWithRouter(
       attach({ attachKit, uploadPhoto }),
     );
@@ -1187,6 +1188,13 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await user.click(primary());
     await screen.findByText(/The photo didn't upload/u);
     await user.click(primary());
+
+    // Sending again: last attempt's message is not left standing over it.
+    await waitFor(() => {
+      expect(photoWell()).toHaveAttribute("data-state", "uploading");
+    });
+    expect(screen.queryByText(/The photo didn't upload/u)).toBeNull();
+    secondSend.resolve({ key: "k" });
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
