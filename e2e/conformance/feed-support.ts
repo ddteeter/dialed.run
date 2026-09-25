@@ -125,6 +125,11 @@ export async function removeSeeded(rows: Seeded): Promise<void> {
     [follows, follows.followeeId, rows.runners],
     [userProfiles, userProfiles.userId, rows.runners],
     [notifications, notifications.id, rows.notifications],
+    // What the app wrote *about* a seeded entry: opening one's own sparse
+    // entry records a `verdict_prompt` row (`recordVerdictPrompted`), and
+    // left behind it sat unread among M's seeded rows, so M read three
+    // rows as white where the board draws the third on the paper.
+    [notifications, notifications.subjectId, rows.entries],
   ];
   await withLocalDb(async ({ core, weather }) => {
     for (const [table, column, ids] of coreTeardown) {
