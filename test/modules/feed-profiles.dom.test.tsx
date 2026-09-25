@@ -184,6 +184,17 @@ describe("OwnProfile (G): past day one", () => {
     warm: 0,
   };
 
+  it("keeps the way to Settings, the only place to sign out", async () => {
+    await renderFeedScreen(
+      <OwnProfile profile={ownProfile({ runCount: 12 })} />,
+    );
+
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/onboarding/settings",
+    );
+  });
+
   it("drops the next step and shows the counts it has", async () => {
     await renderFeedScreen(
       <OwnProfile

@@ -115,6 +115,8 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
               </li>
             )}
           </ListSection>
+
+          <SettingsLink />
         </>
       )}
     </div>
@@ -155,15 +157,27 @@ function DayOne() {
       >
         Log a run
       </Link>
-      <Link
-        to="/onboarding/settings"
-        className="target flex w-full items-center justify-between border-y border-hairline py-3 text-body text-ink no-underline"
-      >
-        Settings
-        <span aria-hidden="true" className="text-muted">
-          &rsaquo;
-        </span>
-      </Link>
+      <SettingsLink />
     </div>
+  );
+}
+
+/**
+ * The way to Settings, in every state of G — the board draws it on day
+ * one, inside the next step, and every later G keeps it at the foot:
+ * Settings is the only place to sign out (PR #104), so a runner past day
+ * one without it has no way out.
+ */
+function SettingsLink() {
+  return (
+    <Link
+      to="/onboarding/settings"
+      className="target flex w-full items-center justify-between border-y border-hairline py-3 text-body text-ink no-underline"
+    >
+      Settings
+      <span aria-hidden="true" className="text-muted">
+        &rsaquo;
+      </span>
+    </Link>
   );
 }
