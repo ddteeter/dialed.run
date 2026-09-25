@@ -665,9 +665,9 @@ describe("didRetimeRun: A1's time correction", () => {
     const runId = await aRun(userId, { weatherStatus: "attached" });
     const weather = fakeWeather();
 
-    expect(await didRetimeRun(coreDb(), weather, userId, runId, -5400)).toBe(
-      true,
-    );
+    expect(
+      await didRetimeRun(coreDb(), weather, userId, runId, START - 5400),
+    ).toBe(true);
 
     const run = await getRun(coreDb(), userId, runId);
     expect(run?.startedAt).toBe(START - 5400);
@@ -684,9 +684,9 @@ describe("didRetimeRun: A1's time correction", () => {
     });
     const weather = fakeWeather();
 
-    expect(await didRetimeRun(coreDb(), weather, userId, runId, 600)).toBe(
-      true,
-    );
+    expect(
+      await didRetimeRun(coreDb(), weather, userId, runId, START + 600),
+    ).toBe(true);
 
     const run = await getRun(coreDb(), userId, runId);
     expect(run?.startedAt).toBe(START + 600);
@@ -707,8 +707,8 @@ describe("didRetimeRun: A1's time correction", () => {
     });
     const weather = fakeWeather();
 
-    await didRetimeRun(coreDb(), weather, userId, halfway, 60);
-    await didRetimeRun(coreDb(), weather, userId, otherHalf, 60);
+    await didRetimeRun(coreDb(), weather, userId, halfway, START + 60);
+    await didRetimeRun(coreDb(), weather, userId, otherHalf, START + 120);
 
     expect(weather.attached).toHaveLength(0);
     expect(await statusOf(halfway)).toBe("failed");
@@ -720,10 +720,72 @@ describe("didRetimeRun: A1's time correction", () => {
     const runId = await aRun(owner);
     const weather = fakeWeather();
 
-    expect(await didRetimeRun(coreDb(), weather, newUlid(), runId, 600)).toBe(
-      false,
-    );
+    expect(
+      await didRetimeRun(coreDb(), weather, newUlid(), runId, START + 600),
+    ).toBe(false);
     const run = await getRun(coreDb(), owner, runId);
     expect(run?.startedAt).toBe(START);
+  });
+
+  it("moves a start as far as a day either way, and no further", async () => {
+    // A run that started on another day is another run.
+    const userId = newUlid();
+    const back = await aRun(userId, { weatherStatus: "attached" });
+    const forward = await aRun(userId, {
+      startedAt: START + 3600,
+      weatherStatus: "attached",
+    });
+    const weather = fakeWeather();
+
+    expect(
+      await didRetimeRun(coreDb(), weather, userId, back, START - 86_401),
+    ).toBe(false);
+    expect(
+      await didRetimeRun(
+        coreDb(),
+        weather,
+        userId,
+        forward,
+        START + 3600 + 86_401,
+      ),
+    ).toBe(false);
+    expect(await getRun(coreDb(), userId, back)).toMatchObject({
+      startedAt: START,
+      weatherStatus: "attached",
+    });
+    expect(weather.attached).toHaveLength(0);
+
+    expect(
+      await didRetimeRun(coreDb(), weather, userId, back, START - 86_400),
+    ).toBe(true);
+    expect(
+      await didRetimeRun(
+        coreDb(),
+        weather,
+        userId,
+        forward,
+        START + 3600 + 86_400,
+      ),
+    ).toBe(true);
+    const moved = await getRun(coreDb(), userId, forward);
+    expect(moved?.startedAt).toBe(START + 3600 + 86_400);
+  });
+
+  it("treats a retry of the same start as the first call having landed", async () => {
+    // The start travels absolute, so a retry after a lost response asks
+    // for where the run already is: true, and nothing moves or refetches.
+    const userId = newUlid();
+    const runId = await aRun(userId, { weatherStatus: "attached" });
+    const weather = fakeWeather();
+
+    expect(await didRetimeRun(coreDb(), weather, userId, runId, START)).toBe(
+      true,
+    );
+
+    expect(await getRun(coreDb(), userId, runId)).toMatchObject({
+      startedAt: START,
+      weatherStatus: "attached",
+    });
+    expect(weather.attached).toHaveLength(0);
   });
 });

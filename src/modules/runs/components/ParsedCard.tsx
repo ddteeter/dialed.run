@@ -7,7 +7,8 @@ import type { Units } from "../../../lib/contracts";
 import {
   clockLabel,
   dayLabel,
-  shiftToTimeOfDay,
+  deviceTimeZone,
+  startAtTimeOfDay,
   timeOfDay,
 } from "../../../lib/dates";
 import {
@@ -31,7 +32,7 @@ import { ConditionsRow } from "./ConditionsBlock";
  * The server function that moves a run's start, in its own shape.
  */
 export type Retime = (input: {
-  data: { runId: string; shiftS: number };
+  data: { runId: string; startedAt: number };
 }) => Promise<boolean>;
 
 /**
@@ -114,9 +115,9 @@ function Facts({ children }: Readonly<{ children: ReactNode[] }>): JSX.Element {
 /**
  * A1's one correction control (round 20): *"the run time on the parsed
  * card: tapping it opens a time picker and re-fetches conditions. Weather
- * itself is never editable."* The time is the run's own clock, and what
- * travels is the shift from it — the server adds seconds and never needs
- * the zone.
+ * itself is never editable."* The time is read on `zone`'s clock, and what
+ * travels is the new start itself — absolute, so a retry after a lost
+ * response cannot move the run twice.
  *
  * **Undesigned beyond that sentence**, so composed from the form
  * primitives and nothing else: one `FormField`, the Form Contract's
@@ -124,14 +125,15 @@ function Facts({ children }: Readonly<{ children: ReactNode[] }>): JSX.Element {
  */
 function TimeCorrection({
   run,
+  zone,
   retime,
   onDone,
 }: Readonly<{
   run: RunSummary;
+  zone: string | undefined;
   retime: Retime;
   onDone: () => void;
 }>): JSX.Element {
-  const zone = run.conditions?.timeZone;
   const [time, setTime] = useState(timeOfDay(run.startedAt, zone));
   const form = useFormSubmit({
     schema: retimeSchema,
@@ -139,7 +141,7 @@ function TimeCorrection({
       retime({
         data: {
           runId: run.id,
-          shiftS: shiftToTimeOfDay(run.startedAt, zone, values.time),
+          startedAt: startAtTimeOfDay(run.startedAt, zone, values.time),
         },
       }),
     successMessage: "Time changed. Fetching the weather for it.",
@@ -210,7 +212,12 @@ export function ParsedCard({
   onReplace: () => void;
 }>): JSX.Element {
   const [isRetiming, setIsRetiming] = useState(false);
-  const zone = run.conditions?.timeZone;
+  // The run's own zone, from its observation (D-96). With none — a
+  // treadmill, no GPS, weather that never came — the runner's own clock,
+  // which is the one they read the start from; never UTC, which would put
+  // a Chicago evening run at the next morning. The card is drawn only after
+  // a drop, in the browser, so the device's zone cannot split hydration.
+  const zone = run.conditions?.timeZone ?? deviceTimeZone();
 
   return (
     <>
@@ -243,6 +250,7 @@ export function ParsedCard({
           {isRetiming ? (
             <TimeCorrection
               run={run}
+              zone={zone}
               retime={retime}
               onDone={() => {
                 setIsRetiming(false);

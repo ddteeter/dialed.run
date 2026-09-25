@@ -444,27 +444,40 @@ export async function didSetRunConditions(
 }
 
 /**
+ * How far A1's correction may move a start: within its day, either way.
+ * A run that started on another day is another run.
+ */
+const RETIME_LIMIT_S = 86_400;
+
+/**
  * A1's one correction (round 20): the run started at another time. The
- * start moves by `shiftS`, and a run with a place to look the weather up
+ * start becomes `startedAt`, and a run with a place to look the weather up
  * at has it asked for again at the new hour — the old hour's reading was
  * for a run that did not happen then. Weather itself is never edited.
+ *
+ * **Absolute, so a retry is harmless** (law 8b). It used to take a shift,
+ * and a retry after a lost response applied it twice. A start that is
+ * already where it was asked to be is the first call having landed: true,
+ * and nothing written or fetched again.
  */
 export async function didRetimeRun(
   db: CoreDb,
   weather: Pick<WeatherWrites, "attach">,
   userId: string,
   runId: string,
-  shiftS: number,
+  startedAt: number,
 ): Promise<boolean> {
   const run = await getRun(db, userId, runId);
   if (run === undefined) return false;
+  if (Math.abs(startedAt - run.startedAt) > RETIME_LIMIT_S) return false;
+  if (startedAt === run.startedAt) return true;
   const isLocated = run.lat !== null && run.lng !== null;
   // One write: the new start and, where there is weather to ask for, the
   // marker that says it is owed.
   await db
     .update(runs)
     .set({
-      startedAt: run.startedAt + shiftS,
+      startedAt,
       ...(isLocated && { weatherStatus: "pending" as const }),
     })
     .where(eq(runs.id, runId));

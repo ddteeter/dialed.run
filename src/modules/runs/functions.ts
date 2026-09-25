@@ -127,7 +127,7 @@ export const retimeRunFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => retimeRunInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return didRetimeRun(coreDb(), weather, userId, data.runId, data.shiftS);
+    return didRetimeRun(coreDb(), weather, userId, data.runId, data.startedAt);
   });
 // ---- Strava connect/disconnect (102 §6) ------------------------------
 //

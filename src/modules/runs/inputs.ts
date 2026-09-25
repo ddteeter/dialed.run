@@ -49,7 +49,10 @@ export const conditionsBandInput = z.object({
  */
 export const retimeRunInput = z.object({
   runId: ulidSchema,
-  shiftS: z.number().int().min(-86_400).max(86_400),
+  // The new start, absolute, so a retry is the same request rather than a
+  // second move. How far it may be from the old one is the service's rule,
+  // because only the service knows the old one.
+  startedAt: z.number().int().nonnegative(),
 });
 
 /**

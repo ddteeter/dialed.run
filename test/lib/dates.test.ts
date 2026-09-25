@@ -1,11 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   clockLabel,
   dayLabel,
   dayTimeLabel,
   isTimeZone,
-  shiftToTimeOfDay,
+  deviceTimeZone,
+  startAtTimeOfDay,
   timeOfDay,
 } from "../../src/lib/dates";
 
@@ -162,19 +163,53 @@ describe("timeOfDay", () => {
   });
 });
 
-describe("shiftToTimeOfDay", () => {
-  it("is the seconds between two times on the run's own clock", () => {
+describe("startAtTimeOfDay", () => {
+  it("is the start that reads the picked time on the run's own clock", () => {
     // 18:30 in Chicago, moved to 06:04 the same day: back 12h 26m.
-    expect(shiftToTimeOfDay(LATE_ON_THE_21ST, "America/Chicago", "06:04")).toBe(
-      -(12 * 60 + 26) * 60,
+    expect(startAtTimeOfDay(LATE_ON_THE_21ST, "America/Chicago", "06:04")).toBe(
+      LATE_ON_THE_21ST - (12 * 60 + 26) * 60,
     );
     // And forward, read in UTC when the run has no zone.
-    expect(shiftToTimeOfDay(EARLY_ON_THE_22ND, undefined, "01:45")).toBe(
-      75 * 60,
+    expect(startAtTimeOfDay(EARLY_ON_THE_22ND, undefined, "01:45")).toBe(
+      EARLY_ON_THE_22ND + 75 * 60,
     );
   });
 
-  it("does not move a run to the time it already has", () => {
-    expect(shiftToTimeOfDay(LATE_ON_THE_21ST, undefined, "23:30")).toBe(0);
+  it("leaves a run at the time it already has", () => {
+    expect(startAtTimeOfDay(LATE_ON_THE_21ST, undefined, "23:30")).toBe(
+      LATE_ON_THE_21ST,
+    );
+  });
+
+  it("gives the same start however often it is asked — a retry is not a second move", () => {
+    const once = startAtTimeOfDay(LATE_ON_THE_21ST, "America/Chicago", "07:00");
+    expect(startAtTimeOfDay(once, "America/Chicago", "07:00")).toBe(once);
+  });
+});
+
+/**
+The zone this device's clock is made to read in, for one test.
+*/
+function deviceReads(timeZone: string): void {
+  const resolved = new Intl.DateTimeFormat().resolvedOptions();
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    ...resolved,
+    timeZone,
+  });
+}
+
+describe("deviceTimeZone", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is the zone this device's clock reads in", () => {
+    deviceReads("America/Chicago");
+    expect(deviceTimeZone()).toBe("America/Chicago");
+  });
+
+  it("is none when the device names a zone Intl would not take back", () => {
+    deviceReads("Nowhere/Special");
+    expect(deviceTimeZone()).toBeUndefined();
   });
 });

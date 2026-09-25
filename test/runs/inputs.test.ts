@@ -96,19 +96,19 @@ describe("conditionsBandInput", () => {
 });
 
 describe("retimeRunInput", () => {
-  it("takes a shift of up to a day either way, in whole seconds", () => {
+  it("takes the new start itself, in whole seconds, never a shift", () => {
     const runId = newUlid();
-    expect(retimeRunInput.parse({ runId, shiftS: -86_400 }).shiftS).toBe(
-      -86_400,
-    );
-    expect(retimeRunInput.parse({ runId, shiftS: 86_400 }).shiftS).toBe(86_400);
-    expect(retimeRunInput.safeParse({ runId, shiftS: 86_401 }).success).toBe(
+    expect(
+      retimeRunInput.parse({ runId, startedAt: 1_755_000_000 }).startedAt,
+    ).toBe(1_755_000_000);
+    expect(retimeRunInput.parse({ runId, startedAt: 0 }).startedAt).toBe(0);
+    expect(retimeRunInput.safeParse({ runId, startedAt: -1 }).success).toBe(
       false,
     );
-    expect(retimeRunInput.safeParse({ runId, shiftS: -86_401 }).success).toBe(
+    expect(retimeRunInput.safeParse({ runId, startedAt: 1.5 }).success).toBe(
       false,
     );
-    expect(retimeRunInput.safeParse({ runId, shiftS: 1.5 }).success).toBe(
+    expect(retimeRunInput.safeParse({ runId, shiftS: 600 }).success).toBe(
       false,
     );
   });

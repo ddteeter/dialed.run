@@ -9,7 +9,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { timeOfDay } from "../../src/lib/dates";
 import type { ImportOutcome } from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
 import type { Retime } from "../../src/modules/runs/components/ParsedCard";
@@ -118,6 +117,7 @@ function form(
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("A1 at rest", () => {
@@ -672,7 +672,7 @@ describe("A1: the parsed card", () => {
 
     await waitFor(() => {
       expect(retime).toHaveBeenCalledWith({
-        data: { runId: RUN_ID, shiftS: 90 * 60 },
+        data: { runId: RUN_ID, startedAt: SAT_MORNING + 90 * 60 },
       });
     });
     await waitFor(() => {
@@ -743,22 +743,67 @@ describe("A1: the parsed card", () => {
     }
   });
 
-  it("opens the time on the runner's clock when the run has no conditions", async () => {
+  it("reads a run with no conditions on the runner's own clock, not UTC", async () => {
+    // A treadmill, no GPS, or weather that never came: no zone of its own.
+    // 11:04 UTC is 4:04 in the morning for a runner in Los Angeles, and
+    // that is the clock they read the start from.
+    const resolved = new Intl.DateTimeFormat().resolvedOptions();
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      ...resolved,
+      timeZone: "America/Los_Angeles",
+    });
     const user = userEvent.setup();
+    const retime = vi.fn<Retime>(() => Promise.resolve(true));
     await renderWithRouter(
       form({
         getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
+        retime,
       }),
     );
     await user.upload(dropInput(), gpx());
 
+    const time = await screen.findByRole("button", {
+      name: /change the time/u,
+    });
+    expect(time).toHaveTextContent("4:04 AM");
+    await user.click(time);
+    const field = screen.getByLabelText("Started");
+    expect(field).toHaveValue("04:04");
+    await user.clear(field);
+    await user.type(field, "05:04");
+    await user.click(screen.getByRole("button", { name: "Refetch" }));
+
+    await waitFor(() => {
+      expect(retime).toHaveBeenCalledWith({
+        data: { runId: RUN_ID, startedAt: SAT_MORNING + 3600 },
+      });
+    });
+  });
+
+  it("sends the same start when the correction is tried again", async () => {
+    // A response lost on the way back: the retry must not move the run a
+    // second time, which a relative shift did.
+    const user = userEvent.setup();
+    const retime = vi
+      .fn<Retime>()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValue(true);
+    await renderWithRouter(form({ getOutcome: parsed(), retime }));
+    await user.upload(dropInput(), gpx());
     await user.click(
       await screen.findByRole("button", { name: /change the time/u }),
     );
+    const field = screen.getByLabelText("Started");
+    await user.clear(field);
+    await user.type(field, "07:34");
+    await user.click(screen.getByRole("button", { name: "Refetch" }));
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
 
-    expect(screen.getByLabelText("Started")).toHaveValue(
-      timeOfDay(SAT_MORNING),
-    );
+    await waitFor(() => {
+      expect(retime).toHaveBeenCalledTimes(2);
+    });
+    const sent = retime.mock.calls.map((call) => call[0].data.startedAt);
+    expect(sent).toStrictEqual([SAT_MORNING + 90 * 60, SAT_MORNING + 90 * 60]);
   });
 
   it("splits the facts with a rule between each, never before the first", async () => {

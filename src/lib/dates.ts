@@ -162,19 +162,40 @@ function minutesOf(hhmm: string): number {
 }
 
 /**
- * How far to move a start so it reads `hhmm` on the same clock — the one
- * the runner was looking at, in the run's own zone.
+ * The start that reads `hhmm` on the same clock — the one the runner was
+ * looking at, in the zone they were looking at it in.
  *
- * A difference between two times on one clock needs no zone arithmetic to
- * be right, which is why the correction travels as a shift rather than a
- * new epoch: the server adds seconds and never has to know where the run
- * was. The day does not change — a run that started on another day is
- * another run.
+ * An absolute epoch, not a shift, so sending it twice is sending the same
+ * fact twice: a retry after a lost response moves the run to the time
+ * picked, where a shift would have moved it by that much again. The
+ * arithmetic is still a difference between two times on one clock, so it
+ * needs no zone rules to be right. The day does not change — a run that
+ * started on another day is another run.
  */
-export function shiftToTimeOfDay(
+export function startAtTimeOfDay(
   epochSeconds: number,
   timeZone: string | undefined,
   hhmm: string,
 ): number {
-  return (minutesOf(hhmm) - minutesOf(timeOfDay(epochSeconds, timeZone))) * 60;
+  return (
+    epochSeconds +
+    (minutesOf(hhmm) - minutesOf(timeOfDay(epochSeconds, timeZone))) * 60
+  );
+}
+
+/**
+ * The zone this device's clock reads in, or none if `Intl` names one it
+ * would not accept back.
+ *
+ * **Only for what renders after a runner's own action**, never for first
+ * paint: workerd answers UTC and the browser answers the runner's zone, so
+ * text built from this on the server would not match the client's
+ * (see the note at the top of this file). A1's parsed card is drawn only
+ * once a file has been dropped, in the browser, which is why it may use it
+ * for a run with no zone of its own — the runner's clock, rather than UTC,
+ * is the one they read the start time from.
+ */
+export function deviceTimeZone(): string | undefined {
+  const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return isTimeZone(zone) ? zone : undefined;
 }
