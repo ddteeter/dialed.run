@@ -8,9 +8,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CitySuggestion } from "../../src/modules/onboarding/cities";
 import { CalibrateForm } from "../../src/modules/onboarding/components/CalibrateForm";
 import type { Calibration } from "../../src/modules/onboarding/inputs";
+import type { CityLookup } from "../../src/modules/onboarding/place";
 
 /**
  * Screen O1, with round 22's location step (item 19). The behaviour that
@@ -19,37 +19,32 @@ import type { Calibration } from "../../src/modules/onboarding/inputs";
  */
 const DEFAULTS = { temp: "f", distance: "mi" } as const;
 
-const MINNEAPOLIS: CitySuggestion = {
-  label: "Minneapolis, Minnesota",
-  lat: 44.98,
-  lng: -93.27,
-};
+const FOUND: CityLookup = { kind: "found", lat: 44.98, lng: -93.27 };
 
 function renderForm(
   overrides: {
     locate?: () => Promise<{ lat: number; lng: number } | undefined>;
-    searchCities?: (input: {
-      data: { query: string };
-    }) => Promise<readonly CitySuggestion[]>;
+    lookUpCity?: (input: { data: { label: string } }) => Promise<CityLookup>;
     defaults?: { temp: "f" | "c"; distance: "mi" | "km" };
   } = {},
 ) {
   // Typed and echoing its input, so `mock.calls[0]` has a shape.
   const save = vi.fn((input: { data: Calibration }) => Promise.resolve(input));
   const onSaved = vi.fn();
-  const searchCities = vi.fn(
-    overrides.searchCities ?? (() => Promise.resolve([])),
+  const lookUpCity = vi.fn(
+    overrides.lookUpCity ??
+      ((): Promise<CityLookup> => Promise.resolve({ kind: "unavailable" })),
   );
   render(
     <CalibrateForm
       defaults={overrides.defaults ?? DEFAULTS}
       locate={overrides.locate ?? (() => Promise.resolve(undefined))}
-      searchCities={searchCities}
+      lookUpCity={lookUpCity}
       saveCalibration={save}
       onSaved={onSaved}
     />,
   );
-  return { save, onSaved, searchCities, user: userEvent.setup() };
+  return { save, onSaved, lookUpCity, user: userEvent.setup() };
 }
 
 const submit = () => screen.getByRole("button", { name: "Start running" });
@@ -163,21 +158,117 @@ describe("the question", () => {
   });
 });
 
-describe("where you run: typed and suggested (round 22, item 19)", () => {
-  it("carries a typed city that was never picked, as a label alone", async () => {
-    const { user, save } = renderForm();
+describe("where you run: typed, resolved on submit (owner, 2026-09-24)", () => {
+  it("explains the field, and offers no list of any kind", () => {
+    renderForm();
+    expect(
+      screen.getByText(
+        "Sets your climate cohort — runners who face the same winters.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
+  it("never asks while typing — only once, on submit", async () => {
+    const { user, lookUpCity } = renderForm();
+
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    expect(lookUpCity).not.toHaveBeenCalled();
 
     await user.click(screen.getByLabelText(/^About average/u));
-    await user.type(screen.getByLabelText("Where you run"), "  Seattle, WA  ");
     await user.click(submit());
-
-    expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { cityLabel: "Seattle, WA", lat: undefined, lng: undefined },
+    expect(lookUpCity).toHaveBeenCalledTimes(1);
+    expect(lookUpCity).toHaveBeenCalledWith({
+      data: { label: "Minneapolis" },
     });
   });
 
-  it("sends no city for a field of spaces", async () => {
-    const { user, save } = renderForm();
+  it("saves a found city with its coordinates, and shows it as the chip", async () => {
+    const answer = Promise.withResolvers<unknown>();
+    const save = vi.fn<(input: { data: Calibration }) => Promise<unknown>>(
+      () => answer.promise,
+    );
+    const lookUpCity = vi.fn(() => Promise.resolve(FOUND));
+    const user = userEvent.setup();
+    render(
+      <CalibrateForm
+        defaults={DEFAULTS}
+        locate={() => Promise.resolve(undefined)}
+        lookUpCity={lookUpCity}
+        saveCalibration={save}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Where you run"), "  Minneapolis ");
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: { cityLabel: "Minneapolis", lat: 44.98, lng: -93.27 },
+    });
+    // The label asked about is the trimmed one the schema parsed.
+    expect(lookUpCity).toHaveBeenCalledWith({
+      data: { label: "Minneapolis" },
+    });
+    const chip = document.querySelector("[data-part='city-chip']");
+    expect(chip).toHaveTextContent("Minneapolis");
+    expect(screen.queryByLabelText("Where you run")).toBeNull();
+
+    await act(async () => {
+      answer.resolve({});
+      await answer.promise;
+    });
+  });
+
+  it("puts a place it cannot find on the field, in the field's words, and saves nothing", async () => {
+    const { user, save } = renderForm({
+      lookUpCity: () => Promise.resolve({ kind: "not-found" }),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "Nowhereville");
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+
+    expect(
+      await screen.findByText(
+        "We couldn't find that place. Check the spelling.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Where you run")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText("Where you run")).toHaveFocus();
+    });
+    expect(save).not.toHaveBeenCalled();
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+  });
+
+  it("saves the label alone when the lookup cannot answer", async () => {
+    const { user, save } = renderForm({
+      lookUpCity: () => Promise.resolve({ kind: "unavailable" }),
+    });
+
+    await user.type(screen.getByLabelText("Where you run"), "Seattle, WA");
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: { cityLabel: "Seattle, WA", lat: undefined, lng: undefined },
+    });
+    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+  });
+
+  it("sends no city, and asks nothing, for a field of spaces", async () => {
+    const { user, save, lookUpCity } = renderForm();
 
     await user.click(screen.getByLabelText(/^About average/u));
     await user.type(screen.getByLabelText("Where you run"), " ".repeat(3));
@@ -186,135 +277,55 @@ describe("where you run: typed and suggested (round 22, item 19)", () => {
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       data: { cityLabel: undefined },
     });
+    expect(lookUpCity).not.toHaveBeenCalled();
   });
 
-  it("explains the field, and offers nothing before anything is typed", () => {
-    renderForm();
-    expect(
-      screen.getByText(
-        "Sets your climate cohort — runners who face the same winters.",
-      ),
-    ).toBeVisible();
-    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
-  });
-
-  it("keeps two places that share a name apart", async () => {
-    const springfields: CitySuggestion[] = [
-      { label: "Springfield", lat: 39.8, lng: -89.64 },
-      { label: "Springfield", lat: 37.21, lng: -93.29 },
-    ];
-    const reported = vi.spyOn(console, "error").mockImplementation(() => {
-      // collected, asserted below
-    });
-    const { user } = renderForm({
-      searchCities: () => Promise.resolve(springfields),
-    });
-
-    await user.type(screen.getByLabelText("Where you run"), "Sp");
-    const list = await screen.findByRole("list", { name: "Cities" });
-
-    expect(list.querySelectorAll("li")).toHaveLength(2);
-    // React reports a list whose rows share an identity — the two rows
-    // would be confused on the next update.
-    expect(reported).not.toHaveBeenCalled();
-    reported.mockRestore();
-  });
-
-  it("suggests as you type, and picking one makes the chip", async () => {
-    const { user, save, searchCities } = renderForm({
-      searchCities: () => Promise.resolve([MINNEAPOLIS]),
-    });
-
-    await user.type(screen.getByLabelText("Where you run"), "Mi");
-    expect(searchCities).toHaveBeenLastCalledWith({ data: { query: "Mi" } });
-    const list = await screen.findByRole("list", { name: "Cities" });
-    expect(list).toHaveAttribute("data-part", "city-suggestions");
-
-    await user.click(
-      screen.getByRole("button", { name: "Minneapolis, Minnesota" }),
+  it("does not ask again for a place already resolved", async () => {
+    const save = vi
+      .fn<(input: { data: Calibration }) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("D1 down"))
+      .mockResolvedValueOnce({});
+    const lookUpCity = vi.fn(() => Promise.resolve(FOUND));
+    const user = userEvent.setup();
+    render(
+      <CalibrateForm
+        defaults={DEFAULTS}
+        locate={() => Promise.resolve(undefined)}
+        lookUpCity={lookUpCity}
+        saveCalibration={save}
+        onSaved={vi.fn()}
+      />,
     );
-
-    const chip = document.querySelector("[data-part='city-chip']");
-    expect(chip).toHaveTextContent("Minneapolis, Minnesota");
-    expect(screen.queryByLabelText("Where you run")).toBeNull();
-    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
-
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
     await user.click(screen.getByLabelText(/^About average/u));
     await user.click(submit());
-    expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { cityLabel: "Minneapolis, Minnesota", lat: 44.98, lng: -93.27 },
+    await screen.findByRole("button", { name: "Try again" });
+
+    await user.click(submit());
+
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(2);
+    });
+    expect(lookUpCity).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[1]?.[0]).toMatchObject({
+      data: { cityLabel: "Minneapolis", lat: 44.98, lng: -93.27 },
     });
   });
 
-  it("puts the field back, empty, when the chip is changed", async () => {
+  it("puts the field back, with what was typed, when the chip is changed", async () => {
     const { user } = renderForm({
-      searchCities: () => Promise.resolve([MINNEAPOLIS]),
+      locate: () => Promise.resolve({ lat: 1, lng: 2 }),
     });
     await user.type(screen.getByLabelText("Where you run"), "Mi");
-    await user.click(
-      await screen.findByRole("button", { name: "Minneapolis, Minnesota" }),
-    );
+    await user.click(locateButton());
+    await waitFor(() => {
+      expect(document.querySelector("[data-part='city-chip']")).not.toBeNull();
+    });
 
     await user.click(screen.getByRole("button", { name: "Change" }));
 
-    expect(screen.getByLabelText("Where you run")).toHaveValue("");
-    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
-    // The old suggestions do not come back with it.
-    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
-  });
-
-  it("drops an answer for text the runner has since typed past", async () => {
-    const late = Promise.withResolvers<readonly CitySuggestion[]>();
-    const { user } = renderForm({
-      searchCities: ({ data }) =>
-        data.query === "Mi" ? late.promise : Promise.resolve([]),
-    });
-
-    await user.type(screen.getByLabelText("Where you run"), "Mi");
-    await user.type(screen.getByLabelText("Where you run"), "x");
-    await act(async () => {
-      late.resolve([MINNEAPOLIS]);
-      await late.promise;
-    });
-
-    expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
-  });
-
-  it("shows nothing, and keeps the field, when suggesting fails", async () => {
-    const { user } = renderForm({
-      searchCities: ({ data }) =>
-        data.query === "M"
-          ? Promise.resolve([MINNEAPOLIS])
-          : Promise.reject(new Error("down")),
-    });
-
-    await user.type(screen.getByLabelText("Where you run"), "M");
-    await screen.findByRole("list", { name: "Cities" });
-    await user.type(screen.getByLabelText("Where you run"), "i");
-
-    await waitFor(() => {
-      expect(screen.queryByRole("list", { name: "Cities" })).toBeNull();
-    });
     expect(screen.getByLabelText("Where you run")).toHaveValue("Mi");
-    expect(screen.queryByText(/didn't|try again/iu)).toBeNull();
-  });
-
-  it("ignores a failure for text the runner has since typed past", async () => {
-    const late = Promise.withResolvers<readonly CitySuggestion[]>();
-    const { user } = renderForm({
-      searchCities: ({ data }) =>
-        data.query === "M" ? late.promise : Promise.resolve([MINNEAPOLIS]),
-    });
-
-    await user.type(screen.getByLabelText("Where you run"), "M");
-    await user.type(screen.getByLabelText("Where you run"), "i");
-    await screen.findByRole("list", { name: "Cities" });
-    await act(async () => {
-      late.reject(new Error("down"));
-      await Promise.allSettled([late.promise]);
-    });
-
-    expect(screen.getByRole("list", { name: "Cities" })).toBeInTheDocument();
+    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
   });
 });
 
@@ -416,6 +427,23 @@ describe("Use my location (round 22, item 19)", () => {
     await act(async () => {
       second.resolve(undefined);
       await second.promise;
+    });
+  });
+
+  it("stops breathing and says so when the browser cannot even ask", async () => {
+    // No geolocation at all throws rather than resolving to nothing.
+    const { user } = renderForm({
+      locate: () => Promise.reject(new TypeError("no geolocation")),
+    });
+
+    await user.click(locateButton());
+
+    expect(
+      await screen.findByText("Location’s off. Type your city instead."),
+    ).toBeVisible();
+    expect(locateButton()).not.toHaveAttribute("aria-busy");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Where you run")).toHaveFocus();
     });
   });
 

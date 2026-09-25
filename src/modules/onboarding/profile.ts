@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import { defaultUnits } from "../../lib/contracts";
+import { orSqlNull } from "../../lib/sql-null";
 import type {
   Calibration,
   Preferences,
@@ -30,9 +32,7 @@ export async function saveCalibration(
 ): Promise<void> {
   const calibrated = {
     thermalLevel: input.thermalLevel,
-    cityLabel: input.cityLabel,
-    lat: input.lat,
-    lng: input.lng,
+    ...placeColumns(input),
     tempUnit: input.tempUnit,
     distanceUnit: input.distanceUnit,
   };
@@ -40,6 +40,34 @@ export async function saveCalibration(
     .insert(userProfiles)
     .values({ userId, ...calibrated })
     .onConflictDoUpdate({ target: userProfiles.userId, set: calibrated });
+}
+
+/**
+ * Where the runner runs, as the three columns it is stored in — all three,
+ * or none.
+ *
+ * **Drizzle drops an `undefined` key from `set`**, so writing a new place
+ * as `{ cityLabel, lat: undefined, lng: undefined }` left the *old*
+ * coordinates under the new label: a runner who moved from Minneapolis to
+ * a typed "Austin" kept Minneapolis's weather. So when any part of a place
+ * arrives, the parts that did not are written as NULL (`orSqlNull`). When none does —
+ * a recalibration that answered only the thermal question — the stored
+ * place is left alone rather than erased.
+ */
+function placeColumns(input: Calibration): {
+  cityLabel?: string | SQL;
+  lat?: number | SQL;
+  lng?: number | SQL;
+} {
+  const { cityLabel, lat, lng } = input;
+  if (cityLabel === undefined && lat === undefined && lng === undefined) {
+    return {};
+  }
+  return {
+    cityLabel: orSqlNull(cityLabel),
+    lat: orSqlNull(lat),
+    lng: orSqlNull(lng),
+  };
 }
 
 /**

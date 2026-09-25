@@ -11,8 +11,8 @@ import { env } from "../../env";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
+import { captureException } from "../ops";
 import { climateNormals } from "../weather";
-import { citySearchInput, searchCities } from "./cities";
 import {
   brandPrefixInput,
   calibrationInput,
@@ -21,6 +21,8 @@ import {
   unitsInput,
 } from "./inputs";
 import { ladderFrom } from "./ladder";
+import { cityLookupInput, lookUpCity } from "./place";
+import type { PlaceResolver } from "./place";
 import {
   completeOnboarding,
   currentSettings,
@@ -97,12 +99,29 @@ export const saveSharingFn = createServerFn({ method: "POST" })
     savePreferences(db(), await requireUserId(), data),
   );
 
-export const searchCitiesQuery = createServerFn({ method: "GET" })
-  .validator((data: unknown) => citySearchInput.parse(data))
-  .handler(async ({ data }) => {
-    await requireUserId();
-    return searchCities(data.query);
-  });
+/**
+ * SEAM — O1's place resolver. Lane 123's `resolvePlace` (modules/weather,
+ * Visual Crossing) lands with PR #102; until then there is none, and a
+ * typed city is saved as a label alone, exactly as before O1 could resolve
+ * anything. Wiring it is this one line:
+ * `const O1_PLACE_RESOLVER: PlaceResolver | undefined = resolvePlace;`
+ */
+const O1_PLACE_RESOLVER: PlaceResolver | undefined = undefined;
+
+/**
+ * Resolves O1's typed city once, when the runner confirms — never per
+ * keystroke. A POST because it can reach a billed upstream.
+ */
+export const lookUpCityFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => cityLookupInput.parse(data))
+  .handler(async ({ data }) =>
+    lookUpCity({
+      label: data.label,
+      resolver: O1_PLACE_RESOLVER,
+      report: captureException,
+      userId: await requireUserId(),
+    }),
+  );
 
 export const onboardingGateQuery = createServerFn({ method: "GET" }).handler(
   async () => requiresOnboarding(db(), await optionalUserId()),

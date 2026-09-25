@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
 import type { DistanceUnit, TempUnit, Units } from "../../../lib/contracts";
@@ -16,9 +16,9 @@ import {
   inFlight,
   useFormSubmit,
 } from "../../../ui";
-import type { CitySuggestion } from "../cities";
-import { calibrationInput } from "../inputs";
+import { CITY_NOT_FOUND, calibrationInput } from "../inputs";
 import type { Calibration } from "../inputs";
+import type { CityLookup } from "../place";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
 
 const LABELS = {
@@ -54,8 +54,8 @@ function offsetLabels(unit: TempUnit): Record<string, string> {
 }
 
 /**
- * Where the runner runs, once there is an answer: a picked suggestion
- * (a name and its coordinates), or the browser's coordinates alone.
+ * Where the runner runs, once there is an answer: a typed city the lookup
+ * found (its name and coordinates), or the browser's coordinates alone.
  */
 interface Place {
   label?: string | undefined;
@@ -77,7 +77,7 @@ type Coordinates = { lat: number; lng: number } | undefined;
 export function CalibrateForm({
   defaults,
   locate,
-  searchCities,
+  lookUpCity,
   saveCalibration,
   onSaved,
 }: Readonly<{
@@ -92,13 +92,10 @@ export function CalibrateForm({
    */
   locate: () => Promise<Coordinates>;
   /**
-   * Suggestions for what has been typed. Never rejects in practice — the
-   * server answers nothing rather than failing (law 5) — and a rejection
-   * here is treated the same way: no suggestions, the field still works.
+   * Resolves a typed city to a place, once, on submit — the provider
+   * resolves a label, it does not suggest as you type (owner, 2026-09-24).
    */
-  searchCities: (input: {
-    data: { query: string };
-  }) => Promise<readonly CitySuggestion[]>;
+  lookUpCity: LookUpCity;
   saveCalibration: (input: { data: Calibration }) => Promise<unknown>;
   /**
    * Where O1 goes next. A prop rather than a `navigate` inside the action,
@@ -116,7 +113,10 @@ export function CalibrateForm({
 
   const form = useFormSubmit({
     schema: calibrationInput,
-    action: (values) => saveCalibration({ data: values }),
+    action: async (values) =>
+      saveCalibration({
+        data: await withPlace(values, lookUpCity, setPlace),
+      }),
     onSuccess: onSaved,
     successMessage: "Calibrated.",
     labels: LABELS,
@@ -165,7 +165,6 @@ export function CalibrateForm({
         place={place}
         onPlace={setPlace}
         locate={locate}
-        searchCities={searchCities}
         formField={{
           field: form.field,
           error: form.fieldErrors.cityLabel,
@@ -196,10 +195,50 @@ export function CalibrateForm({
   );
 }
 
+type LookUpCity = (input: { data: { label: string } }) => Promise<CityLookup>;
+
 /**
- * A city typed and not picked is still an answer — a label with no
- * coordinates, which the weather provider resolves upstream — and a blank
- * field is no answer at all.
+ * The city field's failure, shaped the way `useFormSubmit` lands a field
+ * issue — so "we couldn't find that place" is the field's yellow, not the
+ * form's band: the fix is in the field.
+ */
+class CityNotFound extends Error {
+  readonly issues = [{ path: ["cityLabel"], message: CITY_NOT_FOUND }];
+
+  constructor() {
+    super(CITY_NOT_FOUND);
+    this.name = "CityNotFound";
+  }
+}
+
+/**
+ * The calibration with its typed city resolved, when there is one to
+ * resolve.
+ *
+ * Asked once, on submit, and only for a typed city: nothing typed, a place
+ * already resolved, or the browser's own coordinates all go as they are. A
+ * found place becomes the chip, so a retry after a failed save does not
+ * ask again; a provider that cannot answer leaves the label to go alone.
+ */
+async function withPlace(
+  values: Calibration,
+  lookUp: LookUpCity,
+  onFound: (place: Place) => void,
+): Promise<Calibration> {
+  if (values.cityLabel === undefined || values.lat !== undefined) {
+    return values;
+  }
+  const label = values.cityLabel;
+  const found = await lookUp({ data: { label } });
+  if (found.kind === "not-found") throw new CityNotFound();
+  if (found.kind === "unavailable") return values;
+  onFound({ label, lat: found.lat, lng: found.lng });
+  return { ...values, lat: found.lat, lng: found.lng };
+}
+
+/**
+ * A typed city is an answer — resolved on submit (`withPlace`) — and a
+ * blank field is no answer at all.
  */
 function typedCity(typed: string): string | undefined {
   return typed.trim() === "" ? undefined : typed;
@@ -223,10 +262,11 @@ interface FieldBinding {
 }
 
 /**
- * O1's location step (round 22, item 19): *"City field suggests as you
- * type; picking one makes the chip. 'Use my location' is a text button
- * under it: in flight it breathes; granted → chip; denied → focus to the
- * field, line 'Location's off. Type your city instead.' (not yellow)."*
+ * O1's location step (round 22, item 19, as the owner corrected it on
+ * 2026-09-24): the city is typed and resolved on submit, and becomes the
+ * chip when found. "Use my location" is a text button under it: in flight
+ * it breathes; granted → chip; denied → focus to the field, line
+ * "Location's off. Type your city instead." (not yellow).
  */
 function WhereYouRun({
   typed,
@@ -234,7 +274,6 @@ function WhereYouRun({
   place,
   onPlace,
   locate,
-  searchCities,
   formField,
 }: Readonly<{
   typed: string;
@@ -242,31 +281,33 @@ function WhereYouRun({
   place: Place | undefined;
   onPlace: (place: Place | undefined) => void;
   locate: () => Promise<Coordinates>;
-  searchCities: (input: {
-    data: { query: string };
-  }) => Promise<readonly CitySuggestion[]>;
   formField: FieldBinding;
 }>): JSX.Element {
   const { field, error, focusField } = formField;
-  const [suggestions, setSuggestions] = useState<readonly CitySuggestion[]>([]);
   const [isLocating, setIsLocating] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
-  // The latest keystroke's question, by identity, so an answer for "Min"
-  // arriving after the one for "Minneapolis" is dropped rather than shown
-  // under the wrong text. (A counter did the same job, but nothing could
-  // observe which way it counted.)
-  const asked = useRef<object | undefined>(undefined);
 
-  async function suggestFor(value: string): Promise<void> {
-    const mine = {};
-    asked.current = mine;
-    let found: readonly CitySuggestion[] = [];
+  async function askForLocation(): Promise<void> {
+    if (isLocating) return;
+    setIsLocating(true);
+    setIsDenied(false);
+    let at: Coordinates;
     try {
-      found = await searchCities({ data: { query: value } });
+      at = await locate();
     } catch {
-      // No suggestions; the field still works (law 5).
+      // `locate` promises never to reject, but a browser with no
+      // geolocation at all throws before it can keep that promise — and a
+      // throw here would leave the button breathing forever. No
+      // coordinates is the answer either way.
+      at = undefined;
     }
-    if (mine === asked.current) setSuggestions(found);
+    setIsLocating(false);
+    if (at === undefined) {
+      setIsDenied(true);
+      focusField("cityLabel");
+    } else {
+      onPlace(at);
+    }
   }
 
   if (place !== undefined) {
@@ -307,38 +348,12 @@ function WhereYouRun({
         name="cityLabel"
         label={LABELS.cityLabel}
         value={typed}
-        onChange={(value) => {
-          onTyped(value);
-          void suggestFor(value);
-        }}
+        onChange={onTyped}
         field={field}
         error={error}
         hint={HINT}
         autoComplete="address-level2"
       />
-      {suggestions.length === 0 ? undefined : (
-        <ul
-          aria-label="Cities"
-          data-part="city-suggestions"
-          className="m-0 flex list-none flex-col border border-hairline p-0"
-        >
-          {suggestions.map((suggestion) => (
-            <li key={`${suggestion.label} ${String(suggestion.lat)}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  onPlace(suggestion);
-                  onTyped("");
-                  setSuggestions([]);
-                }}
-                className="target w-full cursor-pointer border-none bg-transparent px-4 py-2 text-left text-body text-ink"
-              >
-                {suggestion.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       {isDenied ? (
         // Not yellow: nothing is wrong with the form. It is a fact about
         // the device, and the field is the way on.
@@ -350,18 +365,7 @@ function WhereYouRun({
         type="button"
         {...inFlight(isLocating)}
         onClick={() => {
-          if (isLocating) return;
-          setIsLocating(true);
-          setIsDenied(false);
-          void locate().then((at) => {
-            setIsLocating(false);
-            if (at === undefined) {
-              setIsDenied(true);
-              focusField("cityLabel");
-            } else {
-              onPlace(at);
-            }
-          });
+          void askForLocation();
         }}
         className="target cursor-pointer self-start border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4"
       >

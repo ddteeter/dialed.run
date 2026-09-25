@@ -41,6 +41,14 @@ export const calibrationInput = z.object({
 export type Calibration = z.infer<typeof calibrationInput>;
 
 /**
+ * The city field's message when the typed place cannot be found. Beside
+ * the schema whose field it lands on, because it is that field's error
+ * copy — it just comes from the place lookup rather than from a parse.
+ */
+export const CITY_NOT_FOUND =
+  "We couldn't find that place. Check the spelling.";
+
+/**
  * What the units sub-page writes: the two display units.
  *
  * **Required here, optional in `calibrationInput`, and the difference is

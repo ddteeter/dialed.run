@@ -34,9 +34,16 @@ predates all of it. This lane builds to the drawings and rulings.
   loader reads `signedIn` once (`staleTime: Infinity`, invalidated on
   sign in/out); router wires `defaultNotFoundComponent`,
   `defaultErrorComponent`; no pending component, so the old screen stays.
-- **O1**: city suggest (server function over Open-Meteo's keyless
-  geocoder, 10s timeout, zod-parsed) → chip; "Use my location" as a text
-  button with breathe / chip / denied line; units as two segmented pairs.
+- **O1**: the city is typed and resolved once, on submit (owner,
+  2026-09-24: Visual Crossing resolves a label, it does not suggest).
+  Found → saved with coordinates and shown as the chip; not found → a
+  field message; provider down → the label is saved alone and the failure
+  goes to Sentry. The resolver is lane 123's `resolvePlace` (PR #102),
+  behind the `O1_PLACE_RESOLVER` seam in `onboarding/functions.ts` until
+  it lands. "Use my location" as a text button with breathe / chip /
+  denied line (a throwing `locate` counts as denied); units as two
+  segmented pairs. Recalibrating writes all three place columns or none,
+  NULL for the missing half.
 - **Settings**: `/onboarding/settings` becomes U1/N's index; sub-pages
   `/onboarding/settings/units` and `/onboarding/settings/sharing`, each
   its own small form; rows with no destination yet are absent.
@@ -66,12 +73,21 @@ predates all of it. This lane builds to the drawings and rulings.
 - e2e conformance: `auth-*` (Au1–Au7, landing bar), `system-*` (X1–X3,
   settings index). Demos: auth, onboarding, safety, signed-out shell.
 
+## Owner answers (2026-09-24)
+
+- K keeps `CALL_VERDICT_THRESHOLD` (15); design updates its copy.
+- Geocoding is Visual Crossing via `resolvePlace`; the Open-Meteo
+  suggestion path is removed.
+- The plain lockup on the auth and landing bars is confirmed.
+- The password floor is ten, from `PASSWORD_MIN_LENGTH`, on both sides.
+
 ## Open questions
 
 - The session-expiry _carry_ (Au7) needs `ui/use-form-submit` to route
-  `kind: "session"` to sign-in with the payload — outside this lane; the
-  sign-in half is built here.
+  `kind: "session"` to sign-in with the payload and write the email to
+  session storage (`CARRIED_EMAIL_KEY`) — outside this lane; the sign-in
+  half is built here. A loader's lapsed session is routed to log-in by
+  `RouteFailed`.
 - Au4/Au6 draw a band with no button and the primary relabelled; the
   shared `FailureBand` always carries its own Try again, and `SubmitButton`
   is always pink where Au draws ink. Using the primitives as they are.
-- K's ruling says five verdicts; `CALL_VERDICT_THRESHOLD` is 15.
