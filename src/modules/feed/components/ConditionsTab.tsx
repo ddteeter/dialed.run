@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/measures";
+import { formatTemp } from "../../../lib/temperature";
+import type { PrecipClass } from "../../../lib/temperature";
 import {
   Bracketed,
   classifyFailure,
@@ -158,20 +160,43 @@ function Eyebrow({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
-`MATCHING [41–47°] · DAMP · LAST 14 DAYS` — the window slot is always there.
-*/
-function MatchingEyebrow({
+ * Round 25's precip words — *"dry, damp, rain, snow. All four read
+ * naturally after '44° and'"*. The match has three classes, and its
+ * heaviest reads as rain; nothing here tells snow from rain yet.
+ */
+const PRECIP_WORD: Readonly<Record<PrecipClass, string>> = {
+  dry: "dry",
+  damp: "damp",
+  wet: "rain",
+};
+
+/**
+ * What was matched, in words: `44° and damp`. The viewer's own feels-like,
+ * because the eyebrow already says FEELS and gives the band.
+ */
+function matchedConditions(band: ConsensusBand, units: Units): string {
+  return `${formatTemp(band.feelsC, units.temp)} and ${PRECIP_WORD[band.precip]}`;
+}
+
+/**
+ * Round 25: `SAME CONDITIONS · FEELS [41–47°] · DAMP · 3 DAYS`. Only the
+ * two things matched are named — no wind, and no place, because the match
+ * ignores where a run was (owner, 2026-09-24). The empty state draws it
+ * without the window.
+ */
+function SameConditionsEyebrow({
   band,
   windowDays,
   units,
-}: Readonly<{ band: ConsensusBand; windowDays: number; units: Units }>) {
+}: Readonly<{ band: ConsensusBand; windowDays?: number; units: Units }>) {
   return (
     <Mono step="xs">
-      Matching{" "}
+      Same conditions · Feels{" "}
       <Bracketed step="xs">
         {formatTempRange(band.minC, band.maxC, units.temp)}
       </Bracketed>{" "}
-      · {band.precip} · Last {String(windowDays)} days
+      · {PRECIP_WORD[band.precip]}
+      {windowDays === undefined ? undefined : ` · ${String(windowDays)} days`}
     </Mono>
   );
 }
@@ -271,15 +296,15 @@ function TooFew({
         data-state="no-matches"
         className="flex flex-col gap-2 border-b border-hairline py-5 text-muted"
       >
-        <MatchingEyebrow band={band} windowDays={14} units={units} />
+        <SameConditionsEyebrow band={band} units={units} />
         <p className="m-0 font-display text-title uppercase text-ink">
           Not enough runs yet
         </p>
       </div>
       <div className="flex flex-col gap-4 py-5">
         <p className="m-0 text-lead">
-          Fewer than five runners near you logged this weather in two weeks —
-          too few to show without showing who.
+          Fewer than five runners logged {matchedConditions(band, units)} in two
+          weeks, which is too few to show without showing who.
         </p>
         <p className="m-0 text-body text-quiet">
           Your own record in this band is on the Call.
@@ -325,6 +350,7 @@ function Matched({
   units: Units;
 }>) {
   const isWidened = result.windowDays === 14;
+  const conditions = matchedConditions(result.band, units);
   return (
     <div className="flex flex-col">
       <div
@@ -332,7 +358,7 @@ function Matched({
         data-state={isWidened ? "widened" : "matched"}
         className="flex flex-col gap-2 bg-teal px-5 py-5 text-ink"
       >
-        <MatchingEyebrow
+        <SameConditionsEyebrow
           band={result.band}
           windowDays={result.windowDays}
           units={units}
@@ -342,8 +368,8 @@ function Matched({
         </p>
         <p className="m-0 text-body">
           {isWidened
-            ? "Too few this week, so this looks back two weeks."
-            : "In the last three days, near you."}
+            ? `In ${conditions}, wherever they were. Too few in three days, so this looks back two weeks.`
+            : `In ${conditions}, in the last three days, wherever they were.`}
         </p>
       </div>
       {result.groups.length === 0 ? undefined : (

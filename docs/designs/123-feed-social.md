@@ -18,9 +18,11 @@ wrong thing and is missing on the five feed routes (D-102).
   is drawn with both second lines.
 - **E2-lite** — `consensus.ts` counts **runners**, not entries: five or no
   aggregate; three days, widened once to fourteen; the ±3° band never
-  widens; groups under two runners drop. The result carries its band, damp
-  class and window so the eyebrow is `MATCHING [41–47°] · DAMP · LAST 3
-DAYS`. `ConditionsTab` states: waiting (breathing headline), location
+  widens; groups under two runners drop. The result carries its band (with
+  the viewer's feels-like), damp class and window, so the eyebrow is round
+  25's `SAME CONDITIONS · FEELS [41–47°] · DAMP · 3 DAYS` and the line
+  "In 44° and damp, in the last three days, wherever they were." The match
+  ignores place (owner, 2026-09-24), so no copy names one. `ConditionsTab` states: waiting (breathing headline), location
   denied (city form), no matches, matched/widened. A saved location skips
   the prompt.
 - **D** — pager (one photo, `1 / 2`), run strip with badge (or the owner's

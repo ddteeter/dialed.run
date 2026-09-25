@@ -21,7 +21,8 @@ interface Coords {
 
 const PORTLAND = { lat: 45.52, lng: -122.68 };
 const NOWHERE: ConditionsHome = { coords: undefined, cityLabel: undefined };
-const band = { minC: 5, maxC: 8, precip: "damp" as const };
+// 6.7 °C feels like 44 °F, the frames' own example.
+const band = { feelsC: 6.7, minC: 5, maxC: 8, precip: "damp" as const };
 
 function tab(
   overrides: {
@@ -318,11 +319,13 @@ describe("ConditionsTab: no matches", () => {
     expect(await screen.findByText("Not enough runs yet")).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "no-matches");
     expect(block()).toHaveTextContent(
-      "Matching [41–46°] · damp · Last 14 days",
+      "Same conditions · Feels [41–46°] · damp",
     );
+    // Round 25 draws the empty eyebrow without a window.
+    expect(block()).not.toHaveTextContent(/days/u);
     expect(
       screen.getByText(
-        "Fewer than five runners near you logged this weather in two weeks — too few to show without showing who.",
+        "Fewer than five runners logged 44° and damp in two weeks, which is too few to show without showing who.",
       ),
     ).toBeVisible();
     expect(
@@ -358,8 +361,14 @@ describe("ConditionsTab: matched", () => {
     expect(await screen.findByText("6 runners logged this")).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "matched");
     expect(block()).toHaveClass("bg-teal");
-    expect(block()).toHaveTextContent("Matching [41–46°] · damp · Last 3 days");
-    expect(screen.getByText("In the last three days, near you.")).toBeVisible();
+    expect(block()).toHaveTextContent(
+      "Same conditions · Feels [41–46°] · damp · 3 days",
+    );
+    expect(
+      screen.getByText(
+        "In 44° and damp, in the last three days, wherever they were.",
+      ),
+    ).toBeVisible();
   });
 
   it("says so when it had to look back two weeks", async () => {
@@ -371,11 +380,13 @@ describe("ConditionsTab: matched", () => {
 
     expect(
       await screen.findByText(
-        "Too few this week, so this looks back two weeks.",
+        "In 44° and damp, wherever they were. Too few in three days, so this looks back two weeks.",
       ),
     ).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "widened");
-    expect(block()).toHaveTextContent("Last 14 days");
+    expect(block()).toHaveTextContent(
+      "Same conditions · Feels [41–46°] · damp · 14 days",
+    );
   });
 
   it("lists what they wore, each against the runners, the majority in pink", async () => {
@@ -467,4 +478,73 @@ describe("ConditionsTab: what round 22 does not draw", () => {
     expect(locate).toHaveBeenCalledTimes(1);
     expect(screen.queryByLabelText("City")).toBeNull();
   });
+});
+
+describe("ConditionsTab: round 25's same-conditions copy", () => {
+  const matched = {
+    status: "matched",
+    runners: 6,
+    groups: [{ group: "tops", runners: 5 }],
+    windowDays: 3,
+    band,
+  } as const;
+
+  it("says rain for the heaviest precip, in the eyebrow and the line", async () => {
+    const wet = {
+      ...band,
+      feelsC: 1,
+      minC: -2,
+      maxC: 4,
+      precip: "wet",
+    } as const;
+    await renderFeedScreen(
+      tab({ conditionsFor: () => Promise.resolve({ ...matched, band: wet }) }),
+    );
+
+    expect(
+      await screen.findByText(
+        "In 34° and rain, in the last three days, wherever they were.",
+      ),
+    ).toBeVisible();
+    expect(block()).toHaveTextContent(
+      "Same conditions · Feels [28–39°] · rain · 3 days",
+    );
+  });
+
+  it("says dry as dry", async () => {
+    await renderFeedScreen(
+      tab({
+        conditionsFor: () =>
+          Promise.resolve({
+            status: "too-few",
+            windowDays: 14,
+            band: { ...band, precip: "dry" },
+          }),
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Fewer than five runners logged 44° and dry in two weeks, which is too few to show without showing who.",
+      ),
+    ).toBeVisible();
+  });
+
+  // Owner, 2026-09-24: the match is the same conditions wherever they
+  // were, so no state may place the runners near the viewer.
+  it.each([
+    { status: "too-few", windowDays: 14, band },
+    matched,
+    { ...matched, windowDays: 14 },
+  ] as const)(
+    "never says near you ($status, $windowDays days)",
+    async (answer) => {
+      const { container } = await renderFeedScreen(
+        tab({ conditionsFor: () => Promise.resolve(answer) }),
+      );
+
+      await screen.findByText(/wherever they were|too few to show/u);
+      expect(container.textContent).not.toMatch(/near you/iu);
+    },
+  );
 });

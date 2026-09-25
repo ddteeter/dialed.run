@@ -103,9 +103,12 @@ export function recentPublicEntriesStatement(
 }
 
 /**
-What the eyebrow says the block is matching: `[41–47°] · DAMP`.
+What the block says it matched (round 25): the band in the eyebrow,
+`FEELS [41–47°] · DAMP`, and the viewer's own feels-like in the line,
+"In 44° and damp".
 */
 export interface ConsensusBand {
+  feelsC: number;
   minC: number;
   maxC: number;
   precip: PrecipClass;
@@ -279,6 +282,7 @@ export async function yourConditionsConsensus(
   viewerId?: string,
 ): Promise<ConsensusResult> {
   const band: ConsensusBand = {
+    feelsC: viewer.feelsLikeC,
     minC: viewer.feelsLikeC - BAND_HALF_WIDTH_C,
     maxC: viewer.feelsLikeC + BAND_HALF_WIDTH_C,
     precip: precipClassOf(viewer.precipMm),

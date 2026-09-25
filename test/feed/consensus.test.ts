@@ -245,7 +245,7 @@ describe("matchTally: who matched", () => {
 describe("yourConditionsConsensus: the floor and the window", () => {
   beforeEach(resetTables);
 
-  const band = { minC: 4, maxC: 10, precip: "dry" };
+  const band = { feelsC: 7, minC: 4, maxC: 10, precip: "dry" };
 
   it("shows the block at five runners in three days, and says three days", async () => {
     await runners(5);
@@ -295,7 +295,7 @@ describe("yourConditionsConsensus: the floor and the window", () => {
     expect(await yourConditionsConsensus(wet, NOW)).toStrictEqual({
       status: "too-few",
       windowDays: 14,
-      band: { minC: -5, maxC: 1, precip: "wet" },
+      band: { feelsC: -2, minC: -5, maxC: 1, precip: "wet" },
     });
   });
 

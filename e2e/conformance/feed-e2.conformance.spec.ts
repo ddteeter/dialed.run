@@ -37,7 +37,20 @@ import {
 test.use({ storageState: storageStateFor("feed") });
 
 const BOARD = "Round 22 Coverage.dc.html";
-const EYEBROW = /^MATCHING \[ ?\d+–\d+° ?\] · (DRY|DAMP|WET) · LAST 14 DAYS$/u;
+/**
+ * Round 22's eyebrow, as the board on this branch still draws it. Round 25
+ * rewrote the block's copy to "same conditions, wherever they were" (owner,
+ * 2026-09-24); that board arrives with the round-25 import, so until then
+ * the built copy is held to round 25's template here, not to the drawing.
+ */
+const DRAWN_EYEBROW =
+  /^MATCHING \[ ?\d+–\d+° ?\] · (DRY|DAMP|WET) · LAST 14 DAYS$/u;
+const EYEBROW =
+  /^SAME CONDITIONS · FEELS \[ ?\d+–\d+° ?\] · (DRY|DAMP|RAIN)( · 14 DAYS)?$/u;
+/**
+What the line says was matched, as the harness reads it (upper-cased).
+*/
+const CONDITIONS = String.raw`\d+° AND (DRY|DAMP|RAIN)`;
 
 /**
 Where these specs stand: places nothing else in the suite seeds.
@@ -124,12 +137,18 @@ test.describe("with the location granted", () => {
       await page.locator(built).waitFor();
       const cells = await cellsOf(page, built);
       // The eyebrow is data; its shape is not. The headline is copy.
-      expect(drawn[0]).toMatch(EYEBROW);
+      expect(drawn[0]).toMatch(DRAWN_EYEBROW);
       expect(cells[0]).toMatch(EYEBROW);
       expect(cells.slice(1)).toEqual(drawn.slice(1));
-      expect(folded(await cellsOf(page, `${built} + div`))).toEqual(
-        folded(drawnBody),
+      // Round 25's line; the rest of the body is still the board's.
+      const body = folded(await cellsOf(page, `${built} + div`));
+      expect(body[0]).toMatch(
+        new RegExp(
+          String.raw`^FEWER THAN FIVE RUNNERS LOGGED ${CONDITIONS} IN TWO WEEKS, WHICH IS TOO FEW TO SHOW WITHOUT SHOWING WHO\.$`,
+          "u",
+        ),
       );
+      expect(body.slice(1)).toEqual(folded(drawnBody).slice(1));
       // Teal means matched, so an empty answer sits on the paper.
       expect(await fillOf(page, built)).toBe("transparent");
     } finally {
@@ -180,14 +199,19 @@ test.describe("with the location granted", () => {
       await page.locator(built).waitFor();
       const cells = await cellsOf(page, built);
       expect(cells).toHaveLength(drawn.length);
-      expect(drawn[0]).toMatch(EYEBROW);
+      expect(drawn[0]).toMatch(DRAWN_EYEBROW);
       expect(cells[0]).toMatch(EYEBROW);
       expect(drawn[1]).toMatch(/^\d+ RUNNERS LOGGED THIS$/u);
       // At least the five seeded here: a local database can hold runs
       // from an earlier, interrupted spec in the same band.
       expect(cells[1]).toMatch(/^\d+ RUNNERS LOGGED THIS$/u);
       expect(Number(cells[1]?.split(" ", 1)[0])).toBeGreaterThanOrEqual(5);
-      expect(cells[2]).toBe(drawn[2]);
+      expect(cells[2]).toMatch(
+        new RegExp(
+          String.raw`^IN ${CONDITIONS}, WHEREVER THEY WERE\. TOO FEW IN THREE DAYS, SO THIS LOOKS BACK TWO WEEKS\.$`,
+          "u",
+        ),
+      );
       expect(await fillOf(page, built)).toBe(drawnFill);
       // What they wore, headed as drawn. The rows are this aggregate's.
       const list = await cellsOf(page, `${built} + div`);
