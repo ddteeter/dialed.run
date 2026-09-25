@@ -23,7 +23,7 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
-import { runs } from "../../db/schema-core";
+import { outfitEntries, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import { ulidSchema } from "../../lib/ids";
 import type { Conditions } from "./conditions";
@@ -45,6 +45,13 @@ export interface AttachContext {
   */
   conditions: Conditions | undefined;
   groups: PickerGroup[];
+  /**
+   * The entry this run already has, when it has one. A2 does not choose a
+   * kit for it: `attachKit` never replaces a kit, so a pick here would be
+   * dropped without a word. The route sends the runner on to A3 for this
+   * entry instead.
+   */
+  entryId: string | undefined;
 }
 
 /**
@@ -61,8 +68,12 @@ async function ownRun(userId: string, runId: string) {
       startedAt: runs.startedAt,
       durationS: runs.durationS,
       distanceM: runs.distanceM,
+      // A run has at most one entry (UNIQUE `entries_run`), so the join
+      // never multiplies the row; the probe is that index.
+      entryId: outfitEntries.id,
     })
     .from(runs)
+    .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
     .where(and(eq(runs.id, runId), eq(runs.userId, userId)))
     .limit(1);
   return run;
@@ -110,6 +121,7 @@ export async function attachContext(
     distanceM: found.run.distanceM,
     conditions: found.conditions,
     groups: await pickerGroups(userId, found.conditions),
+    entryId: found.run.entryId ?? undefined,
   };
 }
 

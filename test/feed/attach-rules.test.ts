@@ -1,6 +1,12 @@
+import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
-import { kitChoice, photoProblem } from "../../src/modules/feed/attach-rules";
+import type { AttachContext } from "../../src/modules/feed/attach-context";
+import {
+  kitChoice,
+  orOnToVerdict,
+  photoProblem,
+} from "../../src/modules/feed/attach-rules";
 import { attachKitInput } from "../../src/modules/feed/inputs";
 
 /**
@@ -50,5 +56,30 @@ describe("photoProblem", () => {
       "That photo is over 10 MB. Pick a smaller one.",
     );
     expect(photoProblem(photo(CAP, "image/png"))).toBeUndefined();
+  });
+});
+
+function attachContext(entryId: string | undefined): AttachContext {
+  return { distanceM: 5000, conditions: undefined, groups: [], entryId };
+}
+
+describe("orOnToVerdict", () => {
+  it("hands back the context of a run with no kit yet", () => {
+    const context = attachContext(undefined);
+    expect(orOnToVerdict(context)).toBe(context);
+  });
+
+  it("sends a run that already has a kit on to A3 for its entry", () => {
+    // A pick here would be dropped: `attachKit` never replaces a kit.
+    let thrown: unknown;
+    try {
+      orOnToVerdict(attachContext("01ENTRY"));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(isRedirect(thrown)).toBe(true);
+    expect(thrown).toMatchObject({
+      options: { to: "/feed/verdict/$entryId", params: { entryId: "01ENTRY" } },
+    });
   });
 });

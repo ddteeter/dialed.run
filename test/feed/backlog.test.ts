@@ -264,6 +264,96 @@ describe("what the outfit cell is offered", () => {
   });
 });
 
+describe("a run that already has a kit", () => {
+  it("carries the kit it has, with its names, and is offered no other", async () => {
+    // A kit with no verdict is in the backlog (the owner's ruling), and
+    // `attachKit` never replaces a kit — so the row must show the one the
+    // verdict will be saved against, not a suggestion that would be
+    // silently dropped.
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId, name: "Janji half-zip" });
+    const tee = await makeItem({ userId, name: "Tracksmith tee" });
+    // A near prior entry that *would* be suggested to a bare run here.
+    const nearRun = await runAt(userId, NOW - 10 * DAY, 4);
+    await makeEntry({
+      userId,
+      runId: nearRun,
+      verdict: 0,
+      itemIds: [tee],
+      createdAt: NOW - 10 * DAY,
+    });
+    const kitted = await runAt(userId, NOW - DAY, 3);
+    const entryId = await makeEntry({
+      userId,
+      runId: kitted,
+      itemIds: [halfZip],
+    });
+
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kit).toStrictEqual({
+      entryId,
+      itemIds: [halfZip],
+      itemNames: ["Janji half-zip"],
+    });
+    expect(rows[0]?.suggestion).toBeUndefined();
+  });
+
+  it("carries an entry saved with nothing on it as an empty kit", async () => {
+    const userId = await makeUser();
+    const kitted = await runAt(userId, NOW - DAY, 3);
+    const entryId = await makeEntry({ userId, runId: kitted });
+
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows[0]?.kit).toStrictEqual({ entryId, itemIds: [], itemNames: [] });
+  });
+
+  it("has no kit on a run with no entry", async () => {
+    const userId = await makeUser();
+    await runAt(userId, NOW - DAY, 3);
+
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows[0]?.kit).toBeUndefined();
+  });
+
+  it("stores the verdict against the kit the row showed", async () => {
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId, name: "Janji half-zip" });
+    const kitted = await runAt(userId, NOW - DAY, 3);
+    const entryId = await makeEntry({
+      userId,
+      runId: kitted,
+      itemIds: [halfZip],
+    });
+    const backlog = await verdictBacklog(userId);
+    const [shown] = backlog.rows;
+
+    const saved = await saveBacklogRow({
+      userId,
+      runId: kitted,
+      itemIds: [...(shown?.kit?.itemIds ?? [])],
+      verdict: 1,
+    });
+
+    expect(saved.entryId).toBe(entryId);
+    const stored = await coreDb()
+      .select({ itemId: outfitEntryItems.itemId })
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, entryId));
+    expect(stored.map((item) => item.itemId)).toStrictEqual(
+      shown?.kit?.itemIds,
+    );
+    const [entry] = await coreDb()
+      .select({ verdict: outfitEntries.verdict })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(entry?.verdict).toBe(1);
+  });
+});
+
 describe("saving a row", () => {
   it("writes the verdict in the same row it creates, not after it", async () => {
     // **One transaction, because one keystroke.** This used to be

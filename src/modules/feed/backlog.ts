@@ -50,10 +50,13 @@ const HISTORY_LIMIT = 200;
  * Reading them in the component would mean a component making a server
  * call, which it may not.
  */
-export interface BacklogSuggestion {
+export interface BacklogKit {
   entryId: string;
   itemIds: readonly string[];
   itemNames: readonly string[];
+}
+
+export interface BacklogSuggestion extends BacklogKit {
   /**
   When the run that kit was worn on started, so the cell can say which day
   it is offering rather than "a previous run".
@@ -72,6 +75,17 @@ export interface BacklogRow {
   nothing to be near, so it gets no suggestion either.
   */
   conditions: Conditions | undefined;
+  /**
+   * The kit this run already has, when the runner attached one and never
+   * gave a verdict — the owner's ruling puts that run in the backlog too.
+   * The row shows it and saves only the verdict: `attachKit` never
+   * replaces a kit, so offering another here would save a verdict against
+   * a kit the runner never saw.
+   */
+  kit: BacklogKit | undefined;
+  /**
+  What the outfit cell offers a run with no kit yet; none for one that has.
+  */
   suggestion: BacklogSuggestion | undefined;
 }
 
@@ -209,8 +223,10 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
     return {
       run,
       conditions,
+      // A run that already has a kit is offered no other: it saves its
+      // verdict against the kit it has.
       best:
-        conditions === undefined
+        conditions === undefined || run.entryId !== null
           ? undefined
           : nearestMatch(history, historyConditions, conditions),
     };
@@ -221,9 +237,13 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
   // mutant of it is observable. Emptying the arm strands a row's
   // suggestion; replacing it puts a non-match into the id list and the
   // `.map` below throws on it.
-  const kits = await kitsFor(
-    matched.flatMap(({ best }) => best ?? []).map((best) => best.entry.id),
-  );
+  //
+  // The kits already on the rows are read in the same pass as the
+  // suggested ones: one read for every entry the table names.
+  const kits = await kitsFor([
+    ...matched.flatMap(({ best }) => best ?? []).map((best) => best.entry.id),
+    ...unjudged.flatMap(({ entryId }) => entryId ?? []),
+  ]);
 
   return {
     rows: matched.map(({ run, conditions, best }) => ({
@@ -232,9 +252,26 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
       durationS: run.durationS,
       distanceM: run.distanceM,
       conditions,
+      kit: existingKit(run.entryId, kits),
       suggestion: suggestionFrom(best, kits),
     })),
   };
+}
+
+/**
+ * The kit a row's run already has, or none when it has no entry.
+ *
+ * An entry with no garments is still a kit the runner chose — nothing —
+ * and the row draws it as such rather than offering to replace it, which
+ * `attachKit` would not do.
+ */
+function existingKit(
+  entryId: string | null,
+  kits: ReadonlyMap<string, Kit>,
+): BacklogKit | undefined {
+  if (entryId === null) return undefined;
+  const kit = kits.get(entryId) ?? { itemIds: [], itemNames: [] };
+  return { entryId, itemIds: kit.itemIds, itemNames: kit.itemNames };
 }
 
 /**

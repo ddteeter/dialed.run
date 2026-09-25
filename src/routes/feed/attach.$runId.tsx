@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { AttachKit } from "../../modules/feed/components/AttachKit";
+import { orOnToVerdict } from "../../modules/feed/attach-rules";
 import {
   attachContextQuery,
   attachKitAction,
@@ -19,8 +20,8 @@ export const Route = createFileRoute("/feed/attach/$runId")({
     requireSignedIn(await getSession());
   },
   loader: async ({ params }) => ({
-    context: orBackToFeed(
-      await attachContextQuery({ data: { runId: params.runId } }),
+    context: orOnToVerdict(
+      orBackToFeed(await attachContextQuery({ data: { runId: params.runId } })),
     ),
     units: await viewerUnitsQuery(),
   }),

@@ -131,6 +131,7 @@ function context(overrides: Partial<AttachContext> = {}): AttachContext {
     distanceM: 9978,
     conditions,
     groups: GROUPS,
+    entryId: undefined,
     ...overrides,
   };
 }

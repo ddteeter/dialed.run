@@ -21,7 +21,12 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import type { FormFailure } from "../../../ui";
-import type { BacklogRow, BacklogSuggestion, Conditions } from "../../feed";
+import type {
+  BacklogKit,
+  BacklogRow,
+  BacklogSuggestion,
+  Conditions,
+} from "../../feed";
 import type { VerdictSlot } from "../backlog-keys";
 import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
 
@@ -108,11 +113,41 @@ function conditionsLine(conditions: Conditions, units: Units): string {
 }
 
 /**
+ * A kit as the row draws it: its pieces as chips, read-only.
+ *
+ * An entry saved with nothing on it says so in words, rather than leaving
+ * an empty cell that reads as a failed load.
+ */
+function KitChips({ kit }: Readonly<{ kit: BacklogKit }>): JSX.Element {
+  if (kit.itemNames.length === 0) {
+    return <span className="text-small text-quiet">No kit on this run</span>;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {kit.itemNames.map((name) => (
+        <Mono
+          key={name}
+          step="xs"
+          className="rounded-pill border border-ink px-2 py-1"
+        >
+          {name}
+        </Mono>
+      ))}
+    </div>
+  );
+}
+
+/**
  * The outfit cell: the kit this row will save, or the offer of one.
  *
  * *"Same as Monday? Use · Pick"* — and `Pick` is A2 at its own route,
  * which at width is the centred panel. That is the whole of "editing an
  * outfit still opens A2 in the panel": no picker is rebuilt here.
+ *
+ * **A run that already has a kit offers neither.** It is in the backlog
+ * for its verdict alone (the owner's ruling), and `attachKit` never
+ * replaces a kit — so the row shows the kit the verdict will be saved
+ * against, and saves only the verdict.
  */
 function OutfitCell({
   runId,
@@ -122,24 +157,10 @@ function OutfitCell({
 }: Readonly<{
   runId: string;
   suggestion: BacklogSuggestion | undefined;
-  chosen: BacklogSuggestion | undefined;
+  chosen: BacklogKit | undefined;
   onUse: (kit: BacklogSuggestion) => void;
 }>): JSX.Element {
-  if (chosen !== undefined) {
-    return (
-      <div className="flex flex-wrap items-center gap-1">
-        {chosen.itemNames.map((name) => (
-          <Mono
-            key={name}
-            step="xs"
-            className="rounded-pill border border-ink px-2 py-1"
-          >
-            {name}
-          </Mono>
-        ))}
-      </div>
-    );
-  }
+  if (chosen !== undefined) return <KitChips kit={chosen} />;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -281,9 +302,7 @@ export function VerdictBacklog({
   const [verdicts, setVerdicts] = useState<ReadonlyMap<string, VerdictValue>>(
     new Map(),
   );
-  const [kits, setKits] = useState<ReadonlyMap<string, BacklogSuggestion>>(
-    new Map(),
-  );
+  const [kits, setKits] = useState<ReadonlyMap<string, BacklogKit>>(new Map());
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [saving, setSaving] = useState<string | undefined>();
   const [failures, setFailures] = useState<ReadonlyMap<string, FormFailure>>(
@@ -300,9 +319,16 @@ export function VerdictBacklog({
     setVerdicts(new Map(verdicts).set(row.runId, value));
   }
 
+  /**
+  The kit a row will save: the one its run already has, or the one taken.
+  */
+  function kitOf(row: BacklogRow): BacklogKit | undefined {
+    return row.kit ?? kits.get(row.runId);
+  }
+
   async function save(row: BacklogRow): Promise<void> {
     const verdict = verdicts.get(row.runId);
-    const kit = kits.get(row.runId);
+    const kit = kitOf(row);
     // Both halves, and the message names the missing one: a row is A3's
     // three inputs, and A3 does not save without an outfit either.
     if (kit === undefined) {
@@ -405,7 +431,7 @@ export function VerdictBacklog({
                 onKeyDown(event, current);
               },
             }}
-            rowState={{ saved, failures, kits, verdicts }}
+            rowState={{ saved, failures, kitOf, verdicts }}
             rowActions={{
               onUse: use,
               onChoose: choose,
@@ -456,7 +482,7 @@ const ROW_WAITING = "hidden desk:table-row";
 interface BacklogRowState {
   saved: ReadonlySet<string>;
   failures: ReadonlyMap<string, FormFailure>;
-  kits: ReadonlyMap<string, BacklogSuggestion>;
+  kitOf: (row: BacklogRow) => BacklogKit | undefined;
   verdicts: ReadonlyMap<string, VerdictValue>;
 }
 
@@ -501,7 +527,7 @@ function BacklogTable({
   rowActions: Readonly<BacklogRowActions>;
 }>): JSX.Element {
   const { selected, onSelect, onKeyDown } = selection;
-  const { saved, failures, kits, verdicts } = rowState;
+  const { saved, failures, kitOf, verdicts } = rowState;
   const { onUse, onChoose, onSave } = rowActions;
   return (
     <>
@@ -560,7 +586,7 @@ function BacklogTable({
                     <OutfitCell
                       runId={row.runId}
                       suggestion={row.suggestion}
-                      chosen={kits.get(row.runId)}
+                      chosen={kitOf(row)}
                       onUse={(kit) => {
                         onUse(row, kit);
                       }}

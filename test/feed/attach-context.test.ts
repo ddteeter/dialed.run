@@ -73,6 +73,25 @@ describe("attachContext", () => {
     expect(context?.groups).toHaveLength(1);
   });
 
+  it("names the entry a run already has, and none for a run without one", async () => {
+    // A2 does not choose a kit for a kitted run — the route sends it on to
+    // A3 for this entry, because `attachKit` never replaces a kit.
+    const userId = await makeUser();
+    const kitted = await makeRun({ userId, lat: LAT, lng: LNG });
+    const bare = await makeRun({
+      userId,
+      lat: LAT,
+      lng: LNG,
+      startedAt: NOW - 7200,
+    });
+    const entryId = await makeEntry({ userId, runId: kitted });
+
+    const forKitted = await attachContext(userId, kitted);
+    const forBare = await attachContext(userId, bare);
+    expect(forKitted?.entryId).toBe(entryId);
+    expect(forBare?.entryId).toBeUndefined();
+  });
+
   it("answers nothing for someone else's run, as for a missing one", async () => {
     const owner = await makeUser();
     const stranger = await makeUser();

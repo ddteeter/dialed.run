@@ -1,5 +1,5 @@
 /**
- * A2's two refusals, where both the screen and a test can reach them.
+ * A2's refusals, where both the screen and a test can reach them.
  *
  * A sibling that imports nothing server-side, for the reason
  * `route-decisions.ts` gives: the component that uses these ships to the
@@ -10,7 +10,9 @@ import {
   maxPhotoBytes,
   photoFormatWords,
 } from "../../lib/photo-constraints";
+import type { AttachContext } from "./attach-context";
 import { attachKitInput } from "./inputs";
+import { redirectTo } from "./redirect";
 
 /**
  * The kit A2 sends: the server's own item-id list, plus round 20's rule
@@ -44,4 +46,22 @@ export function photoProblem(file: File): string | undefined {
     return `That photo is over ${String(maxPhotoBytes / MEGABYTE)} MB. Pick a smaller one.`;
   }
   return undefined;
+}
+
+/**
+ * A2 for a run that already has a kit is A3 for its entry.
+ *
+ * The owner's backlog ruling keeps a kitted run with no verdict waiting,
+ * so a runner can reach A2 for one — and `attachKit` never replaces a
+ * kit, so whatever they picked would be dropped while the verdict was
+ * saved against the kit already there. The route sends them on instead.
+ */
+export function orOnToVerdict(context: AttachContext): AttachContext {
+  if (context.entryId !== undefined) {
+    redirectTo({
+      to: "/feed/verdict/$entryId",
+      params: { entryId: context.entryId },
+    });
+  }
+  return context;
 }

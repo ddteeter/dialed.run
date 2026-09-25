@@ -52,6 +52,7 @@ function row(overrides: Partial<BacklogRow> = {}): BacklogRow {
     durationS: 2400,
     distanceM: 8000,
     conditions,
+    kit: undefined,
     suggestion: {
       entryId: "01ENT1",
       itemIds: ["01ITEM1", "01ITEM2"],
@@ -182,6 +183,64 @@ describe("VerdictBacklog: what a row offers", () => {
     expect(screen.getByText("Janji half-zip")).toBeInTheDocument();
     expect(screen.getByText("Bandit split")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
+  });
+});
+
+describe("VerdictBacklog: a run that already has a kit", () => {
+  const kitted = row({
+    runId: "01RUN3",
+    kit: {
+      entryId: "01ENT3",
+      itemIds: ["01ITEM9"],
+      itemNames: ["Houdini"],
+    },
+    suggestion: undefined,
+  });
+
+  it("shows the kit it has, and offers no other", async () => {
+    // A kit with no verdict is in the backlog, and `attachKit` never
+    // replaces a kit — so a Use or a Pick here would choose a kit that is
+    // then silently dropped.
+    await renderTable([kitted]);
+
+    expect(screen.getByText("Houdini")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
+    expect(screen.queryByText("No usual kit here ·")).toBeNull();
+  });
+
+  it("saves the verdict against the kit it showed", async () => {
+    const saveRow = await renderTable([kitted]);
+
+    fireEvent.keyDown(body() ?? document.body, { key: "4" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(saveRow).toHaveBeenCalledWith({
+        data: { runId: "01RUN3", itemIds: ["01ITEM9"], verdict: 1 },
+      });
+    });
+  });
+
+  it("says an entry saved with nothing on it has no kit, and still saves", async () => {
+    const saveRow = await renderTable([
+      row({
+        runId: "01RUN4",
+        kit: { entryId: "01ENT4", itemIds: [], itemNames: [] },
+        suggestion: undefined,
+      }),
+    ]);
+
+    expect(screen.getByText("No kit on this run")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
+    fireEvent.keyDown(body() ?? document.body, { key: "3" });
+    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(saveRow).toHaveBeenCalledWith({
+        data: { runId: "01RUN4", itemIds: [], verdict: 0 },
+      });
+    });
   });
 });
 
