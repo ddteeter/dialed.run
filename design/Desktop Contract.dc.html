@@ -28,7 +28,7 @@
         <span style="color: #FF2D8A;">dialed.run</span>
       </div>
       <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1040px; text-transform: uppercase;">The phone owns the act. Desktop owns the table.</h1>
-      <p style="margin: 0; font-size: 17px; line-height: 1.55; color: #DEDDD6; max-width: 820px; text-wrap: pretty;">Promoted from a note on screen X to the system's position. Desktop is a reading and closet-admin surface. Every act of logging — a run, a verdict, a garment — is the phone flow, unchanged, in a centred panel at phone width. Exactly one job earns a wide layout it didn't have: clearing a backlog of verdicts, because a keyboard and a table beat six sheets.</p>
+      <p style="margin: 0; font-size: 17px; line-height: 1.55; color: #DEDDD6; max-width: 820px; text-wrap: pretty;">Promoted from a note on screen X to the system's position. Desktop is a reading and closet-admin surface. Every act of logging is the phone's one form, unchanged. Round 25: at desk, Log a run puts that form in the primary column with read-only context in the rail (see Round 25 Rulings); other acts stay in the centred panel. Exactly one job earns a wide layout it didn't have: clearing a backlog of verdicts, because a keyboard and a table beat six sheets.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">
         <a href="#DS0" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">DS0 · Does it hold</a>
         <a href="#DS1" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">DS1 · The shell</a>
@@ -84,7 +84,7 @@
           </div>
           <div data-part="columns" style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; min-height: 220px;">
             <div data-part="primary" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">PRIMARY COLUMN · THE PHONE SCREEN'S CONTENT · MIN 620</span></div>
-            <div data-part="rail" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">RAIL · ONLY ON FEED, CLOSET, BACKLOG · NEVER A THIRD</span></div>
+            <div data-part="rail" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">RAIL · FEED, CLOSET, BACKLOG, LOG A RUN · NEVER A THIRD</span></div>
           </div>
         </div>
       </div></div>
@@ -152,7 +152,7 @@
             <div data-part="primary" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
               <div data-part="backlog-header" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Needs a verdict</span>
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">6 RUNS · IMPORTED FROM STRAVA · OLDEST FIRST</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">6 RUNS · NO VERDICT YET · OLDEST FIRST</span>
               </div>
 
               <div data-part="column-heads" style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; padding: 0 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; border-bottom: 1px solid #DCDBD2;">
@@ -344,9 +344,9 @@ class Component extends DCLogic {
       S('Feed', 'E1 · E2-lite · X', 'wide', 'WIDE · X', 'Drawn (X) — but two of its three rail cards are the Call. In v1 Feed is ONE column at desk (round 15); the rail arrives whole with Epic 200 or not at all. A rail with one live card and a hole is the dashboard DS5 forbids. Bar per DS1.'),
       S('Closet', 'C', 'wide', 'WIDE · C', 'Drawn (C, redrawn round 16). The rail is three filter groups — GROUP with counts, WORKS AT (temperature band), COVERAGE (covered / partial / untested, monochrome per AB) — and ships whole or not at all: until all three are live, Closet is ONE column at desk like Feed. A rail with one control and air is the dashboard DS5 forbids. C\'s old detail column is gone (garment detail is a route, Y1; DS5 caps at two). Below 1040 the three groups become the phone\'s filter chips above a reflowed grid.'),
       S('Verdict backlog', 'DS2', 'wide', 'WIDE · DS2', 'Drawn here. Only reachable when ≥2 runs lack a verdict; with one, the S1 prompt opens A3 in the panel like the phone.'),
-      S('Log a run', 'A1 · A2 · A2b · A3 · Q', 'panel', 'PANEL', 'The phone flow, step for step. Camera → drop zone (DS0 bend 1). Step transitions unchanged (motion: Log flow step).'),
+      S('Log a run', 'A1 · A2 · A2b · A3', 'wide', 'WIDE · R25', 'Round 25. The phone form in the primary column (max 620, same fields, order, validation); read-only context in the rail — conditions and band record on A1, this run and band history on A2, the kit\'s records on A3. The rail never holds an input. A2b takes the primary column. 720–1039 is the reflow. Camera → drop zone (DS0 bend 1).'),
       S('Manual entry', 'R1 · R2', 'panel', 'PANEL', 'Form Contract applies verbatim. No wide form.'),
-      S('Add a garment', 'F · F2', 'panel', 'PANEL', 'Same identity-first flow. Paste-a-link is the natural desktop entry; the enrichment states are unchanged.'),
+      S('Add a garment', 'F · F2', 'panel', 'PANEL → WIDE R26', 'Follows Log a run (round 25): fields in the primary column, "Already in your closet" in the rail. Panel until drawn. Same identity-first flow. Paste-a-link is the natural desktop entry; the enrichment states are unchanged.'),
       S('Garment detail / shoes', 'Y1 · Y2', 'reflow', 'REFLOW', 'One column at 620; photo well caps at 320px tall. Retire-a-garment collapses the row exactly as on phone.'),
       S('The Call', 'K · B1 · B2 · C0–C3', 'panel', 'PANEL', 'The reveal is built for one column. Trip planning too. The feed rail card is its summary and links here. Never a dashboard.'),
       S('Post detail', 'D', 'reflow', 'REFLOW', 'Photo first, then run strip, then outfit — same order, 620 wide. No side-by-side photo/text: that is a second layout.'),
@@ -360,8 +360,8 @@ class Component extends DCLogic {
     ];
 
     const nevers = [
-      ['A second wide form', 'Logging, adding a garment, reporting, onboarding: one flow, one width. A wide form doubles the surface that has to stay in sync for the least-used path.'],
-      ['A third column', 'Two is the ceiling, and only on Feed (post-Epic 200), Closet and the backlog. A third column is where "at a glance" widgets go to die.'],
+      ['A second form', 'Logging, adding a garment, reporting, onboarding: one set of fields, one order, one validation, at every width. Width may add read-only context beside the form (round 25); it never adds, splits or reorders inputs.'],
+      ['A third column', 'Two is the ceiling, and only on Feed (post-Epic 200), Closet, the backlog and Log a run. A third column is where "at a glance" widgets go to die.'],
       ['A sidebar', 'The left rail is the Desk\'s chrome — the tell that a screen is a tool and not the product. The runner app navigates from the top bar, full stop.'],
       ['A dashboard', 'No screen that summarises the app. The Call is an answer; the feed is a feed; the closet is a closet. If a wide screen starts collecting cards from elsewhere, it is becoming a dashboard.'],
       ['Denser type', 'Nothing shrinks at width. Tables use the same MONO.sm the phone uses. Density comes from columns, not from smaller text. MONO.xs is the floor everywhere.'],
