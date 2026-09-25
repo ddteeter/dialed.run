@@ -1,7 +1,9 @@
 import {
+  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor } from "@testing-library/react";
@@ -600,6 +602,50 @@ describe("Au7 · signed out arrival", () => {
     refused.mockRestore();
   });
 
+  it("reads the key the session-expiry carry writes", () => {
+    // The wire name between this reader and its writer (the carry in
+    // `ui/use-form-submit`, and the e2e specs): changing it on one side
+    // alone silently loses every prefilled email.
+    expect(CARRIED_EMAIL_KEY).toBe("dialed.carried-email");
+  });
+
+  it("prefills when a form is carried after the page has mounted", async () => {
+    const leave = vi.fn();
+    const onSignedIn = vi.fn();
+    const rootRoute = createRootRoute({ component: () => <Outlet /> });
+    const page = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/auth/login",
+      validateSearch: (search: Record<string, unknown>) => ({
+        carried: search.carried === "run" ? ("run" as const) : undefined,
+      }),
+      component: function Page() {
+        const { carried } = page.useSearch();
+        return (
+          <LogIn carried={carried} leave={leave} onSignedIn={onSignedIn} />
+        );
+      },
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([page]),
+      history: createMemoryHistory({ initialEntries: ["/auth/login"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    await screen.findByLabelText("Email");
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+    expect(screen.getByLabelText("Password")).not.toHaveFocus();
+
+    await act(async () => {
+      await router.navigate({ to: "/auth/login", search: { carried: "run" } });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toHaveValue("dana.k@hey.com");
+    });
+    expect(screen.getByLabelText("Password")).toHaveFocus();
+  });
+
   it("puts focus in Password, the one thing left to type", async () => {
     await logIn({ carried: "run" });
     await waitFor(() => {
@@ -630,6 +676,32 @@ describe("Au7 · signed out arrival", () => {
     expect(screen.getByLabelText("Email")).toHaveValue("");
   });
 });
+
+/**
+A bare PasswordField, arriving or not.
+*/
+function ArrivingPassword({ isArrival }: Readonly<{ isArrival: boolean }>) {
+  return (
+    <PasswordField
+      label="Password"
+      autoComplete="current-password"
+      value=""
+      onChange={() => {
+        // not typed into
+      }}
+      field={(name) => ({
+        name,
+        readOnly: false,
+        "aria-invalid": undefined,
+        "aria-describedby": undefined,
+        onInput: () => {
+          // nothing to clear
+        },
+      })}
+      focusOnArrival={isArrival}
+    />
+  );
+}
 
 describe("PasswordField", () => {
   it("shows and hides what was typed, from inside the field's box", async () => {
@@ -669,6 +741,15 @@ describe("PasswordField", () => {
     expect(input).toHaveAttribute("type", "text");
     await user.click(screen.getByRole("button", { name: "Hide" }));
     expect(input).toHaveAttribute("type", "password");
+  });
+
+  it("focuses when arrival is decided after it has mounted", () => {
+    const { rerender } = render(<ArrivingPassword isArrival={false} />);
+    expect(screen.getByLabelText("Password")).not.toHaveFocus();
+
+    rerender(<ArrivingPassword isArrival />);
+
+    expect(screen.getByLabelText("Password")).toHaveFocus();
   });
 
   it("survives being unmounted after focusing on arrival", async () => {

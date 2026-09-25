@@ -83,9 +83,10 @@ export function useGoogleSignIn({
   // `useControlAction` allows one attempt in flight at a time, so which way
   // it counted could never be observed — its mutants were unkillable.)
   const wanted = useRef<object | undefined>(undefined);
-  // Cancelling puts the button back at rest at once (Au5), rather than
-  // leaving it breathing until an answer nobody wants arrives.
-  const [isCancelled, setIsCancelled] = useState(false);
+  // The same attempt, as state, so cancelling re-renders: the button goes
+  // back to rest at once (Au5) rather than breathing until an answer
+  // nobody wants arrives.
+  const [live, setLive] = useState<object>();
   const [showsReturned, setShowsReturned] = useState(() =>
     didGoogleFail(returnedError),
   );
@@ -94,7 +95,7 @@ export function useGoogleSignIn({
     action: async () => {
       const mine = {};
       wanted.current = mine;
-      setIsCancelled(false);
+      setLive(mine);
       setShowsReturned(false);
       try {
         const url = await googleConsentUrl(callbackURL, errorCallbackURL);
@@ -111,15 +112,18 @@ export function useGoogleSignIn({
 
   return {
     ...control,
-    pending: control.pending && !isCancelled,
+    pending: control.pending && live !== undefined,
     failure,
-    // A returned failure has no attempt of this page's to repeat, so its
-    // Try again is simply a first attempt.
-    retry:
-      control.failure === undefined ? () => void control.run() : control.retry,
+    // Always a fresh attempt: Google's takes no arguments, so repeating
+    // the failed one and starting anew are the same call — and a failure
+    // Google's round trip brought back has no attempt of this page's to
+    // repeat at all.
+    retry: () => {
+      void control.run();
+    },
     cancel: () => {
       wanted.current = undefined;
-      setIsCancelled(true);
+      setLive(undefined);
     },
   };
 }
@@ -156,7 +160,7 @@ export function GoogleButton({
     <>
       {google.failure === undefined ? undefined : (
         <FailureBand
-          kicker={AUTH_KICKER}
+          kicker={google.failure.kicker}
           message={AUTH_COPY.google}
           onRetry={google.retry}
           retryRef={google.retryRef}

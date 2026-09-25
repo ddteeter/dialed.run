@@ -312,6 +312,25 @@ describe("where you run: typed, resolved on submit (owner, 2026-09-24)", () => {
     });
   });
 
+  it("sends the located place, not the text left in the field under the chip", async () => {
+    const { user, save, lookUpCity } = renderForm({
+      locate: () => Promise.resolve({ lat: 1, lng: 2 }),
+    });
+    await user.type(screen.getByLabelText("Where you run"), "Mi");
+    await user.click(locateButton());
+    await waitFor(() => {
+      expect(document.querySelector("[data-part='city-chip']")).not.toBeNull();
+    });
+
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: { cityLabel: undefined, lat: 1, lng: 2 },
+    });
+    expect(lookUpCity).not.toHaveBeenCalled();
+  });
+
   it("puts the field back, with what was typed, when the chip is changed", async () => {
     const { user } = renderForm({
       locate: () => Promise.resolve({ lat: 1, lng: 2 }),

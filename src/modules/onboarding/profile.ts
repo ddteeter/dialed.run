@@ -60,9 +60,7 @@ function placeColumns(input: Calibration): {
   lng?: number | SQL;
 } {
   const { cityLabel, lat, lng } = input;
-  if (cityLabel === undefined && lat === undefined && lng === undefined) {
-    return {};
-  }
+  if ([cityLabel, lat, lng].every((part) => part === undefined)) return {};
   return {
     cityLabel: orSqlNull(cityLabel),
     lat: orSqlNull(lat),

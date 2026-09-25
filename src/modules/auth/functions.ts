@@ -20,7 +20,8 @@ export const getSession = createServerFn({ method: "GET" }).handler(
  */
 export const signedInQuery = createServerFn({ method: "GET" }).handler(
   async () => ({
-    signedIn: (await auth.api.getSession({ headers: getRequestHeaders() })) !== null,
+    signedIn:
+      (await auth.api.getSession({ headers: getRequestHeaders() })) !== null,
   }),
 );
 

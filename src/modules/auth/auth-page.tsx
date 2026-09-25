@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
@@ -15,11 +15,7 @@ import {
   useFormSubmit,
 } from "../../ui";
 import type { FieldProps, FormShell } from "../../ui";
-import {
-  AUTH_KICKER,
-  authFailureMessage,
-  authStatus,
-} from "./auth-copy";
+import { AUTH_KICKER, authFailureMessage, authStatus } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import type { CarriedForm } from "./sign-in-search";
 
@@ -210,7 +206,10 @@ export function AuthCrossLink({
   label: string;
 }>): JSX.Element {
   return (
-    <p data-part="cross-link" className="m-0 pt-4 text-center text-body text-quiet">
+    <p
+      data-part="cross-link"
+      className="m-0 pt-4 text-center text-body text-quiet"
+    >
       {prompt}{" "}
       <Link
         data-target="inline"
@@ -312,19 +311,23 @@ export function PasswordField({
   focusOnArrival?: boolean | undefined;
 }>): JSX.Element {
   const [isShown, setIsShown] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
   // Arrival is once. An inline callback ref here was a new function on
   // every render, so React re-ran it on every keystroke anywhere on the
-  // page and pulled the cursor out of Email into Password mid-word.
-  useEffect(() => {
-    if (focusOnArrival) input.current?.focus();
-  }, [focusOnArrival]);
+  // page and pulled the cursor out of Email into Password mid-word. Held
+  // stable, React calls it when the input mounts (and hands it `null` on
+  // the way out) — and again only if `focusOnArrival` itself changes.
+  const focusOnArrivalRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      if (focusOnArrival) node?.focus();
+    },
+    [focusOnArrival],
+  );
 
   return (
     <FormField name="password" label={label} error={error} hint={hint}>
       <input
         {...field("password")}
-        ref={input}
+        ref={focusOnArrivalRef}
         id="password"
         type={isShown ? "text" : "password"}
         autoComplete={autoComplete}

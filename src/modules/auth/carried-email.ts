@@ -23,15 +23,14 @@ const emailSchema = z.email();
  * is `unknown` until parsed like any other input.
  */
 function readCarriedEmail(): string | undefined {
+  let stored: unknown;
   try {
-    const parsed = emailSchema.safeParse(
-      globalThis.sessionStorage.getItem(CARRIED_EMAIL_KEY),
-    );
-    return parsed.success ? parsed.data : undefined;
+    stored = globalThis.sessionStorage.getItem(CARRIED_EMAIL_KEY);
   } catch {
-    // No storage is no carried email: the ordinary empty field.
-    return undefined;
+    // Storage refused: nothing stored, so the ordinary empty field.
   }
+  const parsed = emailSchema.safeParse(stored);
+  return parsed.success ? parsed.data : undefined;
 }
 
 /**
@@ -47,8 +46,8 @@ export function useCarriedEmail(
   const [email, setEmail] = useState("");
   useEffect(() => {
     if (carried === undefined) return;
-    const found = readCarriedEmail();
-    if (found !== undefined) setEmail(found);
+    // Anything already typed stands when nothing was carried.
+    setEmail((typed) => readCarriedEmail() ?? typed);
   }, [carried]);
   return [email, setEmail];
 }

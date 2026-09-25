@@ -204,11 +204,6 @@ type LookUpCity = (input: { data: { label: string } }) => Promise<CityLookup>;
  */
 class CityNotFound extends Error {
   readonly issues = [{ path: ["cityLabel"], message: CITY_NOT_FOUND }];
-
-  constructor() {
-    super(CITY_NOT_FOUND);
-    this.name = "CityNotFound";
-  }
 }
 
 /**
@@ -299,7 +294,6 @@ function WhereYouRun({
       // geolocation at all throws before it can keep that promise — and a
       // throw here would leave the button breathing forever. No
       // coordinates is the answer either way.
-      at = undefined;
     }
     setIsLocating(false);
     if (at === undefined) {
