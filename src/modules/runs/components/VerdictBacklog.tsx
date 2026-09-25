@@ -14,13 +14,13 @@ import { formatTemp } from "../../../lib/temperature";
 import {
   Bracketed,
   classifyFailure,
-  FormFailureBand,
+  ControlFailureBand,
   Mono,
   PendingLabel,
   verdictHue,
   WeatherAttribution,
 } from "../../../ui";
-import type { FormFailure } from "../../../ui";
+import type { ControlFailure } from "../../../ui";
 import type {
   BacklogKit,
   BacklogRow,
@@ -305,7 +305,7 @@ export function VerdictBacklog({
   const [kits, setKits] = useState<ReadonlyMap<string, BacklogKit>>(new Map());
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [saving, setSaving] = useState<string | undefined>();
-  const [failures, setFailures] = useState<ReadonlyMap<string, FormFailure>>(
+  const [failures, setFailures] = useState<ReadonlyMap<string, ControlFailure>>(
     new Map(),
   );
   const [said, setSaid] = useState("");
@@ -360,15 +360,21 @@ export function VerdictBacklog({
       }
     } catch (error: unknown) {
       // Round 22, item 18: "the row keeps its place and choice, a failure
-      // band spans it, Try again inside." The band is the Form Contract's —
-      // a row is A3's three inputs laid flat, and A3's failure is "Nothing
-      // saved" — with the classifier's own cause, so a dropped connection
-      // reads here exactly as it does under Log it.
+      // band spans it, Try again inside." A row is a control, not a form
+      // (round 23, item 9), so its band is the control's: the kicker names
+      // what is still true — the run is not logged — and the cause is the
+      // classifier's own, so a dropped connection reads here exactly as it
+      // does under Log it.
       //
       // Nothing animates: the failure path is static (task 114's
       // `failure-path-is-static` test says so for the form components,
       // and the rule is the doctrine's, not that file's).
-      setFailures(new Map(failures).set(row.runId, classifyFailure(error)));
+      setFailures(
+        new Map(failures).set(row.runId, {
+          kicker: "Not logged",
+          message: classifyFailure(error).message,
+        }),
+      );
       setSaid(`Could not save ${runDay(row)}. Try again.`);
     } finally {
       setSaving(undefined);
@@ -481,7 +487,7 @@ const ROW_WAITING = "hidden desk:table-row";
  */
 interface BacklogRowState {
   saved: ReadonlySet<string>;
-  failures: ReadonlyMap<string, FormFailure>;
+  failures: ReadonlyMap<string, ControlFailure>;
   kitOf: (row: BacklogRow) => BacklogKit | undefined;
   verdicts: ReadonlyMap<string, VerdictValue>;
 }
@@ -644,7 +650,7 @@ function BacklogTable({
                     className={isHere ? "block desk:table-row" : ROW_WAITING}
                   >
                     <td colSpan={4} className="block px-2 pb-3 desk:table-cell">
-                      <FormFailureBand
+                      <ControlFailureBand
                         failure={failure}
                         onRetry={() => {
                           onSave(row);

@@ -440,12 +440,15 @@ describe("VerdictBacklog: saving", () => {
       expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
     });
     // Round 22, item 18: the band spans the row, directly under it, with
-    // Try again inside — the Form Contract's "Nothing saved".
+    // Try again inside — a control's band (round 23, item 9), whose kicker
+    // names what is still true: the run is not logged.
     const band = document.querySelector("[data-slot='row-failure']");
     expect(band?.previousElementSibling).toBe(rowsOf()[0]);
     expect(band?.querySelector("td")).toHaveAttribute("colspan", "4");
-    expect(band).toHaveTextContent("Nothing saved");
+    expect(band).toHaveTextContent("Not logged");
+    expect(band).not.toHaveTextContent("Nothing saved");
     expect(band).toHaveTextContent("Our end failed. Nothing changed.");
+    expect(band?.querySelector("[data-part='failure-band']")).not.toBeNull();
     // On the row being worked, the band shows below the desk as well.
     expect(band).toHaveClass("block", "desk:table-row");
     expect(band).not.toHaveClass("hidden");

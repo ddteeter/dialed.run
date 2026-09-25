@@ -75,7 +75,10 @@ export function SetConditionsSheet({
     action: async () => actions.retryWeather({ data: { runId } }),
     onSuccess: onDone,
   });
-  const failure = pick.failure ?? retry.failure;
+  // The one band speaks for whichever control failed — its failure, its
+  // Try again and its ref together, so the band can never retry one
+  // control while holding the other's button.
+  const failed = pick.failure === undefined ? retry : pick;
 
   return (
     <Sheet open={open} onClose={onClose} label="No weather saved">
@@ -150,9 +153,9 @@ export function SetConditionsSheet({
           )}
         </div>
         <ControlFailureBand
-          failure={failure}
-          onRetry={pick.failure === undefined ? retry.retry : pick.retry}
-          retryRef={pick.retryRef}
+          failure={failed.failure}
+          onRetry={failed.retry}
+          retryRef={failed.retryRef}
         />
       </div>
     </Sheet>
