@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { PASSWORD_MIN_LENGTH } from "../../src/lib/contracts";
 import { auth } from "../../src/modules/auth/instance";
 import { sessionFromRequest } from "../../src/modules/auth/session";
 
@@ -18,7 +19,10 @@ describe("the app auth instance", () => {
     // Not the secret: the test bindings set none, which is itself the
     // reason `create-auth.ts` takes it as a parameter.
     expect(typeof auth.options.database).toBe("function");
-    expect(auth.options.emailAndPassword).toStrictEqual({ enabled: true });
+    expect(auth.options.emailAndPassword).toStrictEqual({
+      enabled: true,
+      minPasswordLength: PASSWORD_MIN_LENGTH,
+    });
   });
 
   it("carries the framework cookie plugin", () => {

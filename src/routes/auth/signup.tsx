@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { signUpSchema } from "../../lib/contracts";
+import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../lib/contracts";
 import {
   AuthCrossLink,
   AuthLegal,
@@ -95,7 +95,7 @@ function SignupPage() {
         onChange={setPassword}
         field={form.field}
         error={form.fieldErrors.password}
-        hint="At least 8 characters."
+        hint={`At least ${String(PASSWORD_MIN_LENGTH)} characters.`}
       />
     </AuthPage>
   );

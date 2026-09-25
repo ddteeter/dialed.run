@@ -8,6 +8,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
+import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
 
 export interface AuthConfig {
   db: ReturnType<typeof drizzle>;
@@ -65,6 +66,10 @@ export function createAuth({
     }),
     emailAndPassword: {
       enabled: true,
+      // The schema's floor, not a second copy of it: the form refuses a
+      // short password before the round trip, and this is what makes the
+      // server refuse the same one when the form is bypassed.
+      minPasswordLength: PASSWORD_MIN_LENGTH,
     },
     ...(google !== undefined && { socialProviders: { google } }),
     plugins: plugins ?? [],

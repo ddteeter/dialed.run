@@ -525,7 +525,7 @@ describe("PasswordField", () => {
             // nothing to clear
           },
         })}
-        hint="At least 8 characters."
+        hint="At least 10 characters."
       />,
     );
     const input = screen.getByLabelText("Password");
@@ -534,7 +534,7 @@ describe("PasswordField", () => {
     expect(input).toHaveAttribute("type", "password");
     expect(input).toHaveAttribute("autocomplete", "new-password");
     expect(input).toHaveAttribute("name", "password");
-    expect(screen.getByText("At least 8 characters.")).toBeVisible();
+    expect(screen.getByText("At least 10 characters.")).toBeVisible();
 
     const toggle = screen.getByRole("button", { name: "Show" });
     expect(toggle).toHaveAttribute("type", "button");

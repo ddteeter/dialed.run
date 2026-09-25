@@ -227,7 +227,7 @@ const layered = garmentBase.extend({
  * sentence is the four-lanes problem in miniature: same rule, four
  * wordings. The copy rules are binding — one sentence, under ten words,
  * sentence case, ends in a period, and it names the fix rather than the
- * rule ("Use at least 8 characters", not "Value too short").
+ * rule ("Use at least 10 characters", not "Value too short").
  *
  * Lives in contracts rather than the design's suggested `lib/schemas/`
  * because this file already *is* that module: importable by both sides,
@@ -243,12 +243,24 @@ export const signInSchema = z.object({
   password: z.string().min(1, "Enter your password."),
 });
 
+/**
+ * The shortest password an account may have (owner, 2026-09-24: ten, as
+ * Au1's placeholder says). One number for both sides: this schema reads it
+ * so the form says so before the round trip, and `createAuth` hands the
+ * same constant to Better Auth as `minPasswordLength` so the server refuses
+ * exactly what the form does.
+ */
+export const PASSWORD_MIN_LENGTH = 10;
+
 export const signUpSchema = z.object({
   name: z.string().min(1, "Tell us what to call you.").max(60),
   email: emailField,
-  // Better Auth's own floor is 8; stating it here is what lets the form say
-  // so before the round trip rather than after it.
-  password: z.string().min(8, "Use at least 8 characters."),
+  password: z
+    .string()
+    .min(
+      PASSWORD_MIN_LENGTH,
+      `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
+    ),
 });
 
 /**

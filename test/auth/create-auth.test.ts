@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
+import { PASSWORD_MIN_LENGTH } from "../../src/lib/contracts";
 import {
   createAuth,
   googleCredentials,
@@ -68,6 +69,9 @@ describe("createAuth", () => {
   it("enables email and password", () => {
     expect(auth(BASE).options.emailAndPassword).toStrictEqual({
       enabled: true,
+      // The form's floor, handed to the server: the two refuse the same
+      // passwords because they read one number.
+      minPasswordLength: PASSWORD_MIN_LENGTH,
     });
   });
 

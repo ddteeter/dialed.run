@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 
 import {
+  PASSWORD_MIN_LENGTH,
   runDraftSchema,
   signInSchema,
   signUpSchema,
@@ -71,7 +72,7 @@ describe("signInSchema", () => {
   });
 });
 
-const signUp = { name: "Dee", ...signIn };
+const signUp = { name: "Dee", ...signIn, password: "hunter22hunter22" };
 
 describe("signUpSchema", () => {
   it("takes a well-formed registration", () => {
@@ -97,19 +98,17 @@ describe("signUpSchema", () => {
     ).toBe(false);
   });
 
-  it("holds Better Auth's eight-character password floor", () => {
-    // Eight is Better Auth's own minimum. Stating it here is what lets the
-    // form say so before the round trip; a looser copy would let the user
-    // submit something the server then rejects with worse wording.
+  it("refuses a nine-character password and takes a ten (owner, 2026-09-24)", () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(10);
     expect(
       messagesFor(
         signUpSchema,
-        { ...signUp, password: "a".repeat(7) },
+        { ...signUp, password: "a".repeat(9) },
         "password",
       ),
-    ).toStrictEqual(["Use at least 8 characters."]);
+    ).toStrictEqual(["Use at least 10 characters."]);
     expect(
-      signUpSchema.safeParse({ ...signUp, password: "a".repeat(8) }).success,
+      signUpSchema.safeParse({ ...signUp, password: "a".repeat(10) }).success,
     ).toBe(true);
   });
 });
