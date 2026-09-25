@@ -19,7 +19,7 @@ import {
 } from "../../../ui";
 import type { ConsensusBand, ConsensusResult } from "../consensus";
 import { uiGroupLabels } from "../groups";
-import type { ConditionsHome } from "../home";
+import type { ConditionsHome, SavedCity } from "../home";
 import { conditionsCityInput } from "../inputs";
 import { BracketHeadline } from "./BracketHeadline";
 
@@ -28,7 +28,7 @@ interface Coords {
   lng: number;
 }
 
-type SaveCity = (input: { data: { cityLabel: string } }) => Promise<Coords>;
+type SaveCity = (input: { data: { cityLabel: string } }) => Promise<SavedCity>;
 
 /**
  * What the tab is showing.
@@ -72,7 +72,7 @@ export function ConditionsTab({
   }) => Promise<ConsensusResult | undefined>;
   /**
   Finds the typed city and saves it as the profile's place, answering with
-  where it is.
+  where it is and the provider's name for it.
   */
   saveCity: SaveCity;
   units: Units;
@@ -82,6 +82,10 @@ export function ConditionsTab({
   // before the save: without it, a retry after a failed read prompted for
   // the location again and put the city form back (PR #102 review).
   const saved = useRef<Coords>(undefined);
+  // The provider's name for the city just saved, shown back so a bare
+  // "Portland" cannot silently become the wrong one (PR #102 review).
+  // State rather than the ref above: it is drawn, so setting it renders.
+  const [placeName, setPlaceName] = useState<string>();
 
   const lookAt = useCallback(
     async (coords: Coords) => {
@@ -109,6 +113,53 @@ export function ConditionsTab({
     void look();
   }, [look]);
 
+  return (
+    <>
+      {placeName === undefined ? undefined : (
+        <ResolvedPlace address={placeName} />
+      )}
+      <StateBlock
+        state={state}
+        units={units}
+        saveCity={saveCity}
+        onSaved={(city) => {
+          saved.current = { lat: city.lat, lng: city.lng };
+          setPlaceName(city.cityLabel);
+          return lookAt(saved.current);
+        }}
+        onRetry={() => {
+          void look();
+        }}
+      />
+    </>
+  );
+}
+
+/**
+ * The saved city, in the provider's words — the answer to "which
+ * Portland?". Placeholder copy pending design (undesigned surface).
+ */
+function ResolvedPlace({ address }: Readonly<{ address: string }>) {
+  return (
+    <p data-part="resolved-place" className="m-0 pt-5 text-small text-muted">
+      Weather for <span className="font-semibold text-ink">{address}</span>
+    </p>
+  );
+}
+
+function StateBlock({
+  state,
+  units,
+  saveCity,
+  onSaved,
+  onRetry,
+}: Readonly<{
+  state: TabState;
+  units: Units;
+  saveCity: SaveCity;
+  onSaved: (city: SavedCity) => Promise<void>;
+  onRetry: () => void;
+}>) {
   if (state === "waiting") {
     return (
       <div
@@ -123,15 +174,7 @@ export function ConditionsTab({
     );
   }
   if (state === "denied") {
-    return (
-      <CityForm
-        saveCity={saveCity}
-        onSaved={(coords) => {
-          saved.current = coords;
-          return lookAt(coords);
-        }}
-      />
-    );
+    return <CityForm saveCity={saveCity} onSaved={onSaved} />;
   }
   if (state === "no-weather") return <NoWeather />;
   if ("failed" in state) {
@@ -139,9 +182,7 @@ export function ConditionsTab({
       <FailureBand
         kicker="Didn't load"
         message={state.failed}
-        onRetry={() => {
-          void look();
-        }}
+        onRetry={onRetry}
       />
     );
   }
@@ -206,7 +247,7 @@ function CityForm({
   onSaved,
 }: Readonly<{
   saveCity: SaveCity;
-  onSaved: (coords: Coords) => Promise<void>;
+  onSaved: (city: SavedCity) => Promise<void>;
 }>) {
   const [cityLabel, setCityLabel] = useState("");
   const form = useFormSubmit({
@@ -242,6 +283,7 @@ function CityForm({
       <TextField
         name="cityLabel"
         label="City"
+        hint="City and state, e.g. Portland, OR"
         value={cityLabel}
         onChange={setCityLabel}
         field={form.field}

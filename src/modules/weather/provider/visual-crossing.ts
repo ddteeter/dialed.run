@@ -20,6 +20,7 @@ import { UpstreamError } from "../../../lib/errors";
 import {
   weatherObservationSchema,
   type ClimatePlace,
+  type ResolvedPlace,
   type WeatherObservation,
   type WeatherProvider,
 } from "../../../lib/contracts";
@@ -98,12 +99,20 @@ const MEAN = 1;
 
 /**
  * Where the endpoint resolved a location to — at the response root, for
- * any request. A typed label is geocoded upstream (D-59), and these two
- * are what it found.
+ * any request. A typed label is geocoded upstream (D-59), and these are
+ * what it found: the coordinates, and its own name for the place.
+ *
+ * `resolvedAddress` is what the runner is shown and what is saved, because
+ * a bare "Portland" has more than one answer and the typed text cannot say
+ * which one was picked (PR #102 review). Required: a place with no name
+ * cannot be shown back, so a body without one is the provider misbehaving.
+ * Capped because it is saved and rendered, and a runaway upstream string
+ * has no business in either.
  */
 const visualCrossingPlaceSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
+  resolvedAddress: z.string().trim().min(1).max(200),
 });
 
 /**
@@ -304,13 +313,15 @@ async function fetchTimeline(
  * place" and comes back as `undefined`; anything else — no key, the
  * network, a timeout, another status, a body without coordinates — is
  * the provider being unavailable, and throws like every other read here.
+ * So is a body without a name for the place, since the name is what the
+ * runner is shown.
  */
 async function resolveLabel(
   label: string,
   today: Date,
   apiKey: string | undefined,
   fetchImpl: typeof fetch,
-): Promise<{ lat: number; lng: number } | undefined> {
+): Promise<ResolvedPlace | undefined> {
   if (apiKey === undefined || apiKey === "") {
     throw new WeatherUnavailableError(
       "VISUAL_CROSSING_API_KEY is not configured",
@@ -325,7 +336,11 @@ async function resolveLabel(
   const probe = await timelineFetch(url, "place", fetchImpl);
   if (probe.status === UNKNOWN_LOCATION) return undefined;
   const place = await timelineBody(probe, visualCrossingPlaceSchema, "place");
-  return { lat: place.latitude, lng: place.longitude };
+  return {
+    lat: place.latitude,
+    lng: place.longitude,
+    address: place.resolvedAddress,
+  };
 }
 
 /**

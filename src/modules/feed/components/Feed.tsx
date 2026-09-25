@@ -5,7 +5,7 @@ import type { Units } from "../../../lib/contracts";
 import { FormStatus, Mono } from "../../../ui";
 import type { ConsensusResult } from "../consensus";
 import type { FeedItem } from "../feed";
-import type { ConditionsHome } from "../home";
+import type { ConditionsHome, SavedCity } from "../home";
 import { isBacklogWorthOpening } from "../route-decisions";
 import { BracketHeadline } from "./BracketHeadline";
 import { ConditionsTab } from "./ConditionsTab";
@@ -67,9 +67,7 @@ export interface FeedProps {
     conditionsFor: (input: {
       data: { lat: number; lng: number };
     }) => Promise<ConsensusResult | undefined>;
-    saveCity: (input: {
-      data: { cityLabel: string };
-    }) => Promise<{ lat: number; lng: number }>;
+    saveCity: (input: { data: { cityLabel: string } }) => Promise<SavedCity>;
   };
 }
 

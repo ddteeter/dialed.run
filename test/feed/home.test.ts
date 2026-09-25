@@ -25,6 +25,8 @@ function profileOf(userId: string) {
 }
 
 const PORTLAND = { lat: 45.52, lng: -122.68 };
+// What the provider answers: where, and its own name for the place.
+const FOUND = { ...PORTLAND, address: "Portland, OR, United States" };
 
 describe("conditionsHome", () => {
   it("has nothing for a runner with no place saved", async () => {
@@ -45,11 +47,11 @@ describe("conditionsHome", () => {
   it("reads back a saved place and its label", async () => {
     const userId = await makeUser();
     await saveConditionsCity(userId, "Portland, OR", () =>
-      Promise.resolve(PORTLAND),
+      Promise.resolve(FOUND),
     );
     expect(await conditionsHome(userId)).toStrictEqual({
       coords: PORTLAND,
-      cityLabel: "Portland, OR",
+      cityLabel: "Portland, OR, United States",
     });
   });
 
@@ -67,25 +69,45 @@ describe("conditionsHome", () => {
 });
 
 describe("saveConditionsCity", () => {
-  it("asks where the typed city is, saves the label and the place, and answers with it", async () => {
+  it("resolves City, State, saves the provider's name for it and the place, and answers with both", async () => {
     const userId = await makeUser();
-    const resolve = vi.fn(() => Promise.resolve(PORTLAND));
+    const resolve = vi.fn(() => Promise.resolve(FOUND));
 
     const place = await saveConditionsCity(userId, "Portland, OR", resolve);
 
-    expect(place).toStrictEqual(PORTLAND);
+    expect(place).toStrictEqual({
+      ...PORTLAND,
+      cityLabel: "Portland, OR, United States",
+    });
     expect(resolve).toHaveBeenCalledWith("Portland, OR");
     const [row] = await profileOf(userId);
-    expect(row).toMatchObject({ cityLabel: "Portland, OR", ...PORTLAND });
+    expect(row).toMatchObject({
+      cityLabel: "Portland, OR, United States",
+      ...PORTLAND,
+    });
+  });
+
+  it("saves which place a bare name resolved to, never the ambiguous text (PR #102 review)", async () => {
+    const userId = await makeUser();
+    await saveConditionsCity(userId, "Portland", () =>
+      Promise.resolve({
+        lat: 43.66,
+        lng: -70.26,
+        address: "Portland, ME, United States",
+      }),
+    );
+    const [row] = await profileOf(userId);
+    expect(row?.cityLabel).toBe("Portland, ME, United States");
   });
 
   it("creates the profile row when there is none", async () => {
     const userId = newUlid();
-    await saveConditionsCity(userId, "Portland", () =>
-      Promise.resolve(PORTLAND),
-    );
+    await saveConditionsCity(userId, "Portland", () => Promise.resolve(FOUND));
     const [row] = await profileOf(userId);
-    expect(row).toMatchObject({ cityLabel: "Portland", ...PORTLAND });
+    expect(row).toMatchObject({
+      cityLabel: "Portland, OR, United States",
+      ...PORTLAND,
+    });
   });
 
   it("leaves everything else O1 saved alone", async () => {
@@ -95,9 +117,7 @@ describe("saveConditionsCity", () => {
       .set({ thermalLevel: 1 })
       .where(eq(userProfiles.userId, userId));
 
-    await saveConditionsCity(userId, "Portland", () =>
-      Promise.resolve(PORTLAND),
-    );
+    await saveConditionsCity(userId, "Portland", () => Promise.resolve(FOUND));
 
     const [row] = await profileOf(userId);
     expect(row).toMatchObject({

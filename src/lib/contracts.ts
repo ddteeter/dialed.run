@@ -678,9 +678,19 @@ export interface WeatherProvider {
   Where a typed place is, or nothing when the provider cannot find it —
   E2-lite's typed city, after the runner refused their location.
   */
-  resolvePlace(
-    label: string,
-  ): Promise<{ lat: number; lng: number } | undefined>;
+  resolvePlace(label: string): Promise<ResolvedPlace | undefined>;
+}
+
+/**
+ * Where the provider found a typed place, and what it calls it. `address`
+ * is the provider's name for the place ("Portland, OR, United States"),
+ * not the runner's text: a bare "Portland" has more than one answer, and
+ * this is the one that was picked (PR #102 review).
+ */
+export interface ResolvedPlace {
+  lat: number;
+  lng: number;
+  address: string;
 }
 
 // ---- Onboarding / profile -------------------------------------------------

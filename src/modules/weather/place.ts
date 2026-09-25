@@ -6,10 +6,11 @@
  * Not cached, for `normals.ts`'s reason: it runs once, when a runner saves
  * a city, and a cache would be a table for one lookup per account.
  */
+import type { ResolvedPlace } from "../../lib/contracts";
 import { weatherProvider } from "./provider";
 
 export function resolvePlace(
   label: string,
-): Promise<{ lat: number; lng: number } | undefined> {
+): Promise<ResolvedPlace | undefined> {
   return weatherProvider().resolvePlace(label);
 }

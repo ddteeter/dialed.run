@@ -66,6 +66,11 @@ Answered by the owner, 2026-09-24:
   draw `@username`.
 - **A typed city** — geocoded through Visual Crossing (`resolvePlace` in
   `modules/weather`), saved as `city_label`, `lat`, `lng`; a city nobody
-  can find is a field message.
+  can find is a field message. After the PR #102 review, `city_label` is
+  Visual Crossing's `resolvedAddress` ("Portland, OR, United States"), not
+  the typed text, and the tab shows it back ("Weather for …"), so a bare
+  "Portland" cannot silently pick the wrong one. The field hint asks for
+  "City and state, e.g. Portland, OR". Both lines are placeholder copy
+  pending design.
 - **Per-item flags on someone else's D** — the contract holds: never public.
 - **No Useful or Report on your own D** — confirmed.

@@ -66,7 +66,7 @@ export const conditionsCityInput = z.object({
  */
 export const resolvedCity = z.object({
   cityLabel: z.object(
-    { lat: latitudeSchema, lng: longitudeSchema },
+    { lat: latitudeSchema, lng: longitudeSchema, address: z.string() },
     { error: "We couldn't find that city. Add the state or country." },
   ),
 });

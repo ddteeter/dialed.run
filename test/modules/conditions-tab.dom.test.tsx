@@ -6,7 +6,7 @@ import { ZodError } from "zod";
 
 import { ConditionsTab } from "../../src/modules/feed/components/ConditionsTab";
 import type { ConsensusResult } from "../../src/modules/feed/consensus";
-import type { ConditionsHome } from "../../src/modules/feed/home";
+import type { ConditionsHome, SavedCity } from "../../src/modules/feed/home";
 import { MILES, renderFeedScreen } from "./feed-fixtures";
 
 /**
@@ -20,6 +20,11 @@ interface Coords {
 }
 
 const PORTLAND = { lat: 45.52, lng: -122.68 };
+// What a save answers: the place, under the provider's name for it.
+const SAVED: SavedCity = {
+  ...PORTLAND,
+  cityLabel: "Portland, OR, United States",
+};
 const NOWHERE: ConditionsHome = { coords: undefined, cityLabel: undefined };
 // 6.7 °C feels like 44 °F, the frames' own example.
 const band = { feelsC: 6.7, minC: 5, maxC: 8, precip: "damp" as const };
@@ -31,7 +36,7 @@ function tab(
     conditionsFor?: (input: {
       data: Coords;
     }) => Promise<ConsensusResult | undefined>;
-    saveCity?: (input: { data: { cityLabel: string } }) => Promise<Coords>;
+    saveCity?: (input: { data: { cityLabel: string } }) => Promise<SavedCity>;
   } = {},
 ) {
   return (
@@ -41,7 +46,7 @@ function tab(
       conditionsFor={
         overrides.conditionsFor ?? (() => Promise.resolve(undefined))
       }
-      saveCity={overrides.saveCity ?? (() => Promise.resolve(PORTLAND))}
+      saveCity={overrides.saveCity ?? (() => Promise.resolve(SAVED))}
       units={MILES}
     />
   );
@@ -160,6 +165,8 @@ describe("ConditionsTab: location denied", () => {
       ),
     ).toBeVisible();
     expect(screen.getByLabelText("City")).toBeVisible();
+    // One name is often not enough to find a city (PR #102 review).
+    expect(screen.getByText("City and state, e.g. Portland, OR")).toBeVisible();
     expect(
       screen.getByText("Saved to your settings. Change it any time under You."),
     ).toBeVisible();
@@ -180,7 +187,7 @@ describe("ConditionsTab: location denied", () => {
 
   it("saves the typed city, then matches the weather where it was found", async () => {
     const user = userEvent.setup();
-    const saveCity = vi.fn(() => Promise.resolve(PORTLAND));
+    const saveCity = vi.fn(() => Promise.resolve(SAVED));
     const conditionsFor = vi.fn(() =>
       Promise.resolve({
         status: "too-few" as const,
@@ -212,6 +219,43 @@ describe("ConditionsTab: location denied", () => {
     // A city nobody's matched yet goes straight to No matches (round 22).
     expect(await screen.findByText("Not enough runs yet")).toBeVisible();
     expect(conditionsFor).toHaveBeenCalledWith({ data: PORTLAND });
+  });
+
+  it("shows which place the city resolved to, in the provider's words, once saved", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        saveCity: () =>
+          Promise.resolve({
+            lat: 43.66,
+            lng: -70.26,
+            cityLabel: "Portland, ME, United States",
+          }),
+      }),
+    );
+
+    await user.type(await screen.findByLabelText("City"), "Portland");
+    await user.click(screen.getByRole("button", { name: "Use this city" }));
+
+    const place = await screen.findByText("Portland, ME, United States");
+    expect(place).toBeVisible();
+    expect(place.closest("p")).toHaveTextContent(
+      "Weather for Portland, ME, United States",
+    );
+    // It stays through the answer, which is when "which Portland?" matters.
+    expect(await screen.findByText("No weather yet")).toBeVisible();
+    expect(
+      screen.getByText("Portland, ME, United States").closest("p"),
+    ).toHaveAttribute("data-part", "resolved-place");
+  });
+
+  it("names no place for a runner it located, since nothing was typed", async () => {
+    await renderFeedScreen(tab());
+
+    expect(await screen.findByText("No weather yet")).toBeVisible();
+    expect(document.querySelector('[data-part="resolved-place"]')).toBeNull();
+    expect(screen.queryByText(/Weather for/u)).toBeNull();
   });
 
   it("says why on the city field when the city cannot be found, and keeps the form", async () => {
@@ -277,7 +321,7 @@ describe("ConditionsTab: location denied", () => {
 
   it("marks an empty city with the schema's sentence and saves nothing", async () => {
     const user = userEvent.setup();
-    const saveCity = vi.fn(() => Promise.resolve(PORTLAND));
+    const saveCity = vi.fn(() => Promise.resolve(SAVED));
     await renderFeedScreen(
       tab({ locate: () => Promise.resolve(undefined), saveCity }),
     );
