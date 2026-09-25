@@ -44,7 +44,9 @@ describe("StravaCallbackResult", () => {
 
     expect(screen.getByRole("heading", { name: "Strava" })).toBeVisible();
     expect(
-      screen.getByText("Strava connected. New runs arrive on their own."),
+      screen.getByText(
+        "Strava connected. After each run, we’ll remind you to add it here.",
+      ),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(
       "href",

@@ -13,10 +13,16 @@ import { leaveForStrava } from "./StravaConnect";
 
 /**
  * What the runner sees after Strava sends them back — a receipt in the
- * panel (round 22, item 23): *"Connected: 'Strava connected. New runs
- * arrive on their own.' + Continue. Not connected (cancel or denied):
+ * panel (round 22, item 23): *"Connected: '…' + Continue. Not connected
+ * (cancel or denied):
  * 'Strava isn't connected. Nothing changed.' + Try again / Not now. Not
  * configured: the row and button are absent — never a dead control."*
+ *
+ * **The connected sentence is an interim placeholder** (owner, 2026-09-24;
+ * pending design). Round 22 drew "New runs arrive on their own", which
+ * promises an import the app does not do: Strava's webhook only makes a
+ * reminder, and no activity data is ever stored — the runner adds the run
+ * here themselves. Until design answers, the receipt promises only that.
  *
  * The exchange happens in the route's loader so the code is a one-shot —
  * no button, no client state to get out of sync (design doc 102 §6). This
@@ -50,7 +56,8 @@ export function StravaCallbackResult({
       {result.ok ? (
         <>
           <p data-slot="receipt" className="m-0 text-body">
-            Strava connected. New runs arrive on their own.
+            Strava connected. After each run, we&rsquo;ll remind you to add it
+            here.
           </p>
           <Link
             to="/runs/strava"

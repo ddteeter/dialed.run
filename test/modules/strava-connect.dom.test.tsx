@@ -197,7 +197,7 @@ describe("StravaConnect: connected", () => {
     expect(lines).toEqual([
       "KeptAll 186 runs, their outfits and verdicts",
       "KeptYour closet and everything it has learned",
-      "StopsNew runs arriving on their own — log by hand instead",
+      "StopsReminders after each Strava run",
     ]);
     expect(within(confirm).getAllByText("Kept")[0]).toHaveClass(
       "text-dialed-text",

@@ -165,8 +165,12 @@ export function StravaConnect({
             <KeptOrStops word="Kept">
               Your closet and everything it has learned
             </KeptOrStops>
+            {/* An interim placeholder, pending design (owner,
+                2026-09-24): the board said new runs stop "arriving on
+                their own", but nothing ever arrived — connecting turns on
+                a reminder, so disconnecting turns it off. */}
             <KeptOrStops word="Stops">
-              New runs arriving on their own — log by hand instead
+              Reminders after each Strava run
             </KeptOrStops>
           </dl>
           <div className="flex flex-wrap gap-2">
