@@ -247,8 +247,10 @@ test.describe("with the location refused", () => {
     // Eyebrow, headline and lead are copy, word for word.
     expect(cells.slice(0, 3)).toEqual(folded(drawn.slice(0, 3)));
     // The field is O1's "City"; the board's "Portland, OR" is a
-    // placeholder a runner never sees typed.
-    expect(cells[3]).toBe("CITY");
+    // placeholder a runner never sees typed. The hint under it asks for
+    // the state too (PR #102 review): placeholder copy pending design, so
+    // the board does not draw it.
+    expect(cells[3]).toBe("CITY CITY AND STATE, E.G. PORTLAND, OR");
     expect(drawn[3]).toMatch(/^CITY /u);
     // The primary says what the board's does, and the line under it too.
     expect(cells.at(-1)).toBe(drawn.at(-1));
