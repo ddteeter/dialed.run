@@ -214,21 +214,21 @@ describe("the sentence above the photo", () => {
     // "After taps: 'You blurred 2 spots. Tap one to undo.'" — whether the
     // detector found nothing or never ran.
     expect(blurSummary({ detector: "ran", detected: 0, tapped: 1 })).toBe(
-      "You blurred one spot. Tap one to undo.",
+      "You blurred 1 spot. Tap one to undo.",
     );
     expect(
       blurSummary({ detector: "unavailable", detected: 0, tapped: 2 }),
-    ).toBe("You blurred two spots. Tap one to undo.");
+    ).toBe("You blurred 2 spots. Tap one to undo.");
   });
 
   it("keeps a tap distinct from a detection", () => {
     // "We blurred" is a claim about detection; a runner's own tap is not,
     // and crediting the model for it would overstate what it found.
     expect(blurSummary({ detector: "ran", detected: 1, tapped: 1 })).toBe(
-      "We blurred one face. You blurred one more spot. Tap one to undo.",
+      "We blurred one face. You blurred 1 more spot. Tap one to undo.",
     );
     expect(blurSummary({ detector: "ran", detected: 2, tapped: 3 })).toBe(
-      "We blurred two faces. You blurred three more spots. Tap one to undo.",
+      "We blurred two faces. You blurred 3 more spots. Tap one to undo.",
     );
   });
 

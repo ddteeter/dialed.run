@@ -260,7 +260,7 @@ describe("tapping", () => {
     // crediting the model for it would overstate what it found.
     await waitFor(() => {
       expect(
-        screen.getByText("You blurred one spot. Tap one to undo."),
+        screen.getByText("You blurred 1 spot. Tap one to undo."),
       ).toBeInTheDocument();
     });
   });
@@ -283,7 +283,7 @@ describe("tapping", () => {
 
     // The same point twice: the second tap lands inside the first spot.
     await user.click(photo);
-    await screen.findByText("You blurred one spot. Tap one to undo.");
+    await screen.findByText("You blurred 1 spot. Tap one to undo.");
     await user.click(photo);
 
     await waitFor(() => {

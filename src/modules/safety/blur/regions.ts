@@ -180,7 +180,10 @@ export function blurSummary(params: {
   // "You blurred 2 spots. Tap one to undo." — after the detector's claim
   // when it made one, and in place of "no face found" when it did not.
   if (params.tapped > 0) {
-    const spots = countOf(params.tapped, detected ? "more spot" : "spot");
+    // Digits, as the packet quotes the ruling ("2 spots"): the runner is
+    // counting what they did, and the number is what the tap changes.
+    const noun = detected ? "more spot" : "spot";
+    const spots = `${String(params.tapped)} ${noun}${params.tapped === 1 ? "" : "s"}`;
     const yours = `You blurred ${spots}. Tap one to undo.`;
     return detected ? `${detected} ${yours}` : yours;
   }
