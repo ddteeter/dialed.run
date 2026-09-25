@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { requireSession } from "../../modules/auth/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { unreadNotificationCountFn } from "../../modules/notifications/functions";
 import { CallLadder } from "../../modules/onboarding/components/CallLadder";
@@ -10,9 +11,10 @@ import { Page } from "../../ui";
 Screen O6, as the Call tab's teaser (D-16). Progress only — the call
 itself is the next epic, and nothing here reads a garment.
 */
-// fallow-ignore-next-line code-duplication -- two signed-in routes with a two-call loader are the same route shape by mandate: createFileRoute + Promise.all + shell is what server-functions-are-glue requires of a route
 export const Route = createFileRoute("/call/")({
-  loader: async () => {
+  loader: async ({ location }) => {
+    await requireSession(location.href);
+    // fallow-ignore-next-line code-duplication -- two signed-in routes with a two-call loader are the same route shape by mandate: createFileRoute + Promise.all + shell is what server-functions-are-glue requires of a route
     const [ladder, unreadCount] = await Promise.all([
       callLadderQuery(),
       unreadNotificationCountFn(),

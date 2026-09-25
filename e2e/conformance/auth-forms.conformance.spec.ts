@@ -1,15 +1,10 @@
 import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
 
+import { CARRIED_EMAIL_KEY } from "../../src/modules/auth/carried-email";
 import { accountEmail } from "../support/accounts";
 import { openBoard } from "../support/conformance";
-import {
-  fillOf,
-  hydrated,
-  partsExcept,
-  partsIn,
-  wordsOf,
-} from "./auth-parts";
+import { fillOf, hydrated, partsExcept, partsIn, wordsOf } from "./auth-parts";
 
 /**
  * Au1–Au7 and Au2 at 1040, built against `design/Auth.dc.html` (round 22).
@@ -178,13 +173,12 @@ test.describe("Au · phone", () => {
     const band = page.locator(`${PANEL} [data-part='failure-band']`);
     await expect(band).toBeVisible({ timeout: 15_000 });
 
-    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(
-      board.order,
-    );
+    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(board.order);
     // Known gap: the shared band carries its own Try again.
-    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual(
-      [...(board.words.get("failure-band") ?? []), "TRY AGAIN"],
-    );
+    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual([
+      ...(board.words.get("failure-band") ?? []),
+      "TRY AGAIN",
+    ]);
     board.words.delete("failure-band");
     await expectSameWords(page, board.words, {});
   });
@@ -227,14 +221,13 @@ test.describe("Au · phone", () => {
 
     // The band sits between the divider and Google, as drawn.
     // Au6 draws no cross-link beneath; the build keeps Au2's.
-    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(
-      board.order,
-    );
+    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(board.order);
     // Known gap: the shared band carries its own Try again, and the Google
     // button keeps its rest label rather than "Try Google again".
-    expect(
-      await wordsOf(page, `${PANEL} [data-part='failure-band']`),
-    ).toEqual([...(board.words.get("failure-band") ?? []), "TRY AGAIN"]);
+    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual([
+      ...(board.words.get("failure-band") ?? []),
+      "TRY AGAIN",
+    ]);
   });
 
   test("Au7 signed out arrival", async ({ page, baseURL }) => {
@@ -249,10 +242,15 @@ test.describe("Au · phone", () => {
       `${screen("Au7 Signed out arrival")} [data-part='session-notice']`,
     );
     const email = accountEmail("closet");
-    await builtAt390(
-      page,
-      `/auth/login?carried=run&redirect=%2Fruns%2Fnew&email=${encodeURIComponent(email)}`,
+    // The email rides in session storage, never the URL.
+    await page.addInitScript(
+      ([key, value]) => {
+        sessionStorage.setItem(key, value);
+      },
+      [CARRIED_EMAIL_KEY, email] as const,
     );
+    await builtAt390(page, "/auth/login?carried=run&redirect=%2Fruns%2Fnew");
+    expect(page.url()).not.toContain("email");
 
     expect(await partsIn(page, PANEL)).toEqual(board.order);
     await expectSameWords(page, board.words, {});

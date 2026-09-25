@@ -121,16 +121,19 @@ export async function signOut(): Promise<void> {
  * attempt the runner has already abandoned, and a redirect fired from
  * inside the client would take them anyway.
  *
- * `errorCallbackURL` is the log-in page itself, because *"Cancelled in the
- * popup is not an error: return to rest, silently"* — Google sends a
- * refusal back through Better Auth, and landing on the form at rest is
- * what "silently" looks like.
+ * `errorCallbackURL` is the page the attempt left from, with its own
+ * search (`googleReturn`): Better Auth appends `?error=<code>` to it, and
+ * the page reads that code to decide between Au6's band and — for a
+ * cancelled consent, *"not an error: return to rest, silently"* — nothing.
  */
-export async function googleConsentUrl(callbackURL: string): Promise<string> {
+export async function googleConsentUrl(
+  callbackURL: string,
+  errorCallbackURL: string,
+): Promise<string> {
   const result = await authClient.signIn.social({
     provider: "google",
     callbackURL,
-    errorCallbackURL: "/auth/login",
+    errorCallbackURL,
     disableRedirect: true,
   });
   if (result.error) throw new AuthRejected(result.error.status);

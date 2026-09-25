@@ -15,13 +15,22 @@ import {
 } from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
 import { useGoogleSignIn } from "../../modules/auth/google-button";
+import {
+  googleReturn,
+  parseSignInSearch,
+} from "../../modules/auth/sign-in-search";
 import { TextField } from "../../ui";
 
 /**
  * Au1. The name field stays until the username task replaces it (owner,
  * 2026-09-24): the board's two fields are that task's, not this one's.
  */
-export const Route = createFileRoute("/auth/signup")({ component: SignupPage });
+export const Route = createFileRoute("/auth/signup")({
+  // Only `error` matters here: a failed Google round trip comes back to
+  // sign-up, and says so (Au6).
+  validateSearch: parseSignInSearch,
+  component: SignupPage,
+});
 
 const LABELS = { name: "Name", email: "Email", password: "Password" };
 
@@ -32,8 +41,10 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const search = Route.useSearch();
   const google = useGoogleSignIn({
-    callbackURL: "/",
+    ...googleReturn("/auth/signup", search),
+    returnedError: search.error,
     leave: (url) => {
       globalThis.location.assign(url);
     },

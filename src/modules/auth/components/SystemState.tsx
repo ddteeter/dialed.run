@@ -1,5 +1,11 @@
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  Link,
+  Navigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { z } from "zod";
 
@@ -160,10 +166,34 @@ export function LoaderFailedState({
 /**
  * The router's error screen: the band, framed by who is looking, and Try
  * again re-running the loaders that failed.
+ *
+ * **Except when the failure is the session.** A loader whose server
+ * function found nobody signed in did not fail — the runner is signed out,
+ * and "Our end failed" would be a lie about whose end. The Form Contract
+ * routes a lapsed session to sign-in, so this does too, carrying the page
+ * as log-in's way back.
  */
-export function RouteFailed({
-  error,
-}: Readonly<ErrorComponentProps>): JSX.Element {
+export function RouteFailed(props: Readonly<ErrorComponentProps>): JSX.Element {
+  return classifyFailure(props.error).kind === "session" ? (
+    <SignInAgain />
+  ) : (
+    <LoaderFailed error={props.error} />
+  );
+}
+
+/**
+The lapsed session's way on: log-in, returning here after.
+*/
+function SignInAgain(): JSX.Element {
+  const router = useRouter();
+  // The page that failed, read once. Subscribed, it would change the moment
+  // this navigation began — to log-in itself — and this would redirect
+  // again, back to log-in, carrying log-in, forever.
+  const [from] = useState(() => router.state.location.href);
+  return <Navigate to="/auth/login" search={{ redirect: from }} replace />;
+}
+
+function LoaderFailed({ error }: Readonly<{ error: unknown }>): JSX.Element {
   const router = useRouter();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,

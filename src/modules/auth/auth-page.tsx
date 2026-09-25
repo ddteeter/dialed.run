@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
@@ -312,18 +312,19 @@ export function PasswordField({
   focusOnArrival?: boolean | undefined;
 }>): JSX.Element {
   const [isShown, setIsShown] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  // Arrival is once. An inline callback ref here was a new function on
+  // every render, so React re-ran it on every keystroke anywhere on the
+  // page and pulled the cursor out of Email into Password mid-word.
+  useEffect(() => {
+    if (focusOnArrival) input.current?.focus();
+  }, [focusOnArrival]);
 
   return (
     <FormField name="password" label={label} error={error} hint={hint}>
       <input
         {...field("password")}
-        ref={
-          focusOnArrival
-            ? (node) => {
-                node?.focus();
-              }
-            : undefined
-        }
+        ref={input}
         id="password"
         type={isShown ? "text" : "password"}
         autoComplete={autoComplete}

@@ -125,20 +125,23 @@ describe("googleConsentUrl", () => {
       data: { url: "https://accounts.example/consent", redirect: false },
       error: undefined,
     });
-    await expect(googleConsentUrl("/closet")).resolves.toBe(
+    await expect(
+      googleConsentUrl("/closet", "/auth/signup"),
+    ).resolves.toBe(
       "https://accounts.example/consent",
     );
     expect(client.social).toHaveBeenCalledWith({
       provider: "google",
       callbackURL: "/closet",
-      errorCallbackURL: "/auth/login",
+      // Back to the page it left from — sign-up stays sign-up.
+      errorCallbackURL: "/auth/signup",
       disableRedirect: true,
     });
   });
 
   it("fails with the status when Better Auth refuses", async () => {
     client.social.mockResolvedValue({ data: undefined, error: { status: 503 } });
-    await expect(googleConsentUrl("/")).rejects.toMatchObject({ status: 503 });
+    await expect(googleConsentUrl("/", "/auth/login")).rejects.toMatchObject({ status: 503 });
   });
 
   it("fails rather than going nowhere when no URL comes back", async () => {
@@ -146,7 +149,7 @@ describe("googleConsentUrl", () => {
       data: { redirect: false },
       error: undefined,
     });
-    await expect(googleConsentUrl("/")).rejects.toThrow(
+    await expect(googleConsentUrl("/", "/auth/login")).rejects.toThrow(
       "no consent URL in Google's answer",
     );
   });

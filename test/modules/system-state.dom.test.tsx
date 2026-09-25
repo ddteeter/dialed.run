@@ -19,6 +19,7 @@ import {
   RouteFailed,
   loaderFailureMessage,
 } from "../../src/modules/auth/components/SystemState";
+import { AuthRequiredError } from "../../src/modules/auth/auth-error";
 
 /**
  * Round 22's system states: X1 not found, X2 loader failed. *"Signed in,
@@ -167,8 +168,13 @@ async function routedApp({
     },
     component: () => <p>unreachable</p>,
   });
+  const login = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/auth/login",
+    component: () => <p>the log-in page</p>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([closet, gone]),
+    routeTree: rootRoute.addChildren([closet, gone, login]),
     history: createMemoryHistory({ initialEntries: [path] }),
     defaultNotFoundComponent: NotFound,
     defaultErrorComponent: RouteFailed,
@@ -219,6 +225,22 @@ describe("the router's defaults", () => {
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("send a lapsed session to log in, carrying the page back, rather than blaming our end", async () => {
+    const router = await routedApp({
+      signedIn: true,
+      path: "/closet?view=all",
+      failWith: new AuthRequiredError(),
+    });
+
+    await screen.findByText("the log-in page");
+    expect(router.state.location.pathname).toBe("/auth/login");
+    expect(router.state.location.search).toEqual({
+      redirect: "/closet?view=all",
+    });
+    expect(screen.queryByText(/Our end failed/u)).toBeNull();
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
   });
 
   it("say only the cause off a tab", async () => {

@@ -8,7 +8,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { ReactElement } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { signInSchema } from "../../src/lib/contracts";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
@@ -23,6 +23,10 @@ import {
 } from "../../src/modules/auth/auth-page";
 import { signIn } from "../../src/modules/auth/credentials";
 import { useGoogleSignIn } from "../../src/modules/auth/google-button";
+import {
+  CARRIED_EMAIL_KEY,
+  useCarriedEmail,
+} from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/modules/auth/sign-in-search";
 import { TextField } from "../../src/ui";
 
@@ -61,16 +65,21 @@ function LogIn({
   carried,
   leave,
   onSignedIn,
-  email: initialEmail = "",
+  returnedError,
 }: Readonly<{
   carried?: CarriedForm | undefined;
   leave: (url: string) => void;
   onSignedIn: () => void;
-  email?: string;
+  returnedError?: string | undefined;
 }>) {
-  const [email, setEmail] = useState(initialEmail);
+  const [email, setEmail] = useCarriedEmail(carried);
   const [password, setPassword] = useState("");
-  const google = useGoogleSignIn({ callbackURL: "/closet", leave });
+  const google = useGoogleSignIn({
+    callbackURL: "/closet",
+    errorCallbackURL: "/auth/login?redirect=%2Fcloset",
+    returnedError,
+    leave,
+  });
   const { form, cause } = useAuthForm({
     schema: signInSchema,
     action: signIn,
@@ -307,9 +316,7 @@ describe("Au4 · form failure", () => {
 
   it("says the connection dropped when the request never arrived", async () => {
     const { user } = await logIn();
-    client.email.mockRejectedValue(
-      new TypeError("Failed to fetch"),
-    );
+    client.email.mockRejectedValue(new TypeError("Failed to fetch"));
     await fillAndSubmit(user);
     expect(await screen.findByText(AUTH_COPY.network)).toBeVisible();
   });
@@ -358,7 +365,7 @@ describe("Au5 · Google in flight", () => {
     expect(client.social).toHaveBeenCalledWith({
       provider: "google",
       callbackURL: "/closet",
-      errorCallbackURL: "/auth/login",
+      errorCallbackURL: "/auth/login?redirect=%2Fcloset",
       disableRedirect: true,
     });
 
@@ -388,6 +395,11 @@ describe("Au5 · Google in flight", () => {
     );
     await fillAndSubmit(user);
 
+    // At rest at once, not when the abandoned answer eventually lands.
+    expect(part("google")).not.toHaveAttribute("data-state");
+    expect(part("google")).not.toHaveAttribute("aria-busy");
+    expect(part("google")).toHaveTextContent("Continue with Google");
+
     await act(async () => {
       answer.resolve({
         data: { url: "https://accounts.example/consent" },
@@ -399,6 +411,66 @@ describe("Au5 · Google in flight", () => {
       expect(part("google")).not.toHaveAttribute("data-state");
     });
     expect(leave).not.toHaveBeenCalled();
+  });
+
+  it("says nothing when a cancelled attempt fails after all", async () => {
+    const { user } = await logIn();
+    const answer = Promise.withResolvers<unknown>();
+    client.social.mockReturnValue(answer.promise);
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
+    await fillAndSubmit(user);
+    await screen.findByText(AUTH_COPY.wrongPassword);
+
+    await act(async () => {
+      answer.resolve({ data: undefined, error: { status: 502 } });
+      await Promise.resolve();
+    });
+
+    // The runner moved on to Log in; a band for the button they abandoned
+    // would sit over the form they are using.
+    await waitFor(() => {
+      expect(client.social).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
+    expect(part("failure-band")).toBeNull();
+  });
+});
+
+describe("Au6 · a refusal Google's round trip brought back", () => {
+  it("shows the band for any code but the runner's own cancel", async () => {
+    await logIn({ returnedError: "invalid_code" });
+    const band = part("failure-band");
+    expect(band).toHaveTextContent("Not signed in");
+    expect(band).toHaveTextContent(AUTH_COPY.google);
+    expect(band?.nextElementSibling).toBe(part("google"));
+  });
+
+  it("returns to rest, silently, when consent was cancelled", async () => {
+    await logIn({ returnedError: "access_denied" });
+    expect(part("failure-band")).toBeNull();
+    expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
+  });
+
+  it("tries Google afresh from that band, and the band goes", async () => {
+    const { user, leave } = await logIn({ returnedError: "invalid_code" });
+    client.social.mockResolvedValue({
+      data: { url: "https://accounts.example/consent" },
+      error: undefined,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => {
+      expect(leave).toHaveBeenCalledWith("https://accounts.example/consent");
+    });
+    expect(client.social).toHaveBeenCalledTimes(1);
+    expect(part("failure-band")).toBeNull();
   });
 });
 
@@ -472,8 +544,15 @@ describe("Au6 · Google failed", () => {
 });
 
 describe("Au7 · signed out arrival", () => {
+  beforeEach(() => {
+    sessionStorage.setItem(CARRIED_EMAIL_KEY, "dana.k@hey.com");
+  });
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
   it("names the carried form in an ink notice above the heading, with no cross-link", async () => {
-    await logIn({ carried: "garment", email: "dana.k@hey.com" });
+    await logIn({ carried: "garment" });
 
     const notice = part("session-notice");
     expect(notice).toHaveAttribute("data-state", "session-expired");
@@ -487,21 +566,68 @@ describe("Au7 · signed out arrival", () => {
       screen.getByRole("heading", { name: "Log in" }),
     );
     expect(part("cross-link")).toBeNull();
-    expect(screen.getByLabelText("Email")).toHaveValue("dana.k@hey.com");
+  });
+
+  it("prefills the email from session storage, never from the URL", async () => {
+    await logIn({ carried: "run" });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toHaveValue("dana.k@hey.com");
+    });
+  });
+
+  it("prefills nothing from storage that is not an email", async () => {
+    sessionStorage.setItem(CARRIED_EMAIL_KEY, "<script>");
+    await logIn({ carried: "run" });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Password")).toHaveFocus();
+    });
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+  });
+
+  it("prefills nothing when storage refuses to be read", async () => {
+    // What a browser with site data blocked does: touching the property
+    // at all throws.
+    const refused = vi
+      .spyOn(globalThis, "sessionStorage", "get")
+      .mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+    await logIn({ carried: "run" });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Password")).toHaveFocus();
+    });
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+    refused.mockRestore();
   });
 
   it("puts focus in Password, the one thing left to type", async () => {
-    await logIn({ carried: "run", email: "dana.k@hey.com" });
+    await logIn({ carried: "run" });
     await waitFor(() => {
       expect(screen.getByLabelText("Password")).toHaveFocus();
     });
   });
 
-  it("is plain Au2 when nothing was carried", async () => {
+  it("takes focus once: typing in Email after arrival stays in Email", async () => {
+    const { user } = await logIn({ carried: "run" });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toHaveValue("dana.k@hey.com");
+    });
+    const emailField = screen.getByLabelText("Email");
+
+    await user.clear(emailField);
+    await user.type(emailField, "dana@hey.com");
+
+    expect(emailField).toHaveFocus();
+    expect(emailField).toHaveValue("dana@hey.com");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
+  });
+
+  it("is plain Au2 when nothing was carried, and reads no stored email", async () => {
     await logIn();
     expect(part("session-notice")).toBeNull();
     expect(screen.getByLabelText("Password")).not.toHaveFocus();
     expect(part("cross-link")).not.toBeNull();
+    expect(screen.getByLabelText("Email")).toHaveValue("");
   });
 });
 
@@ -577,7 +703,11 @@ describe("PasswordField", () => {
 describe("AuthCrossLink and AuthLegal", () => {
   it("reads as one sentence with an ink link, never pink", async () => {
     await renderWithRouter(
-      <AuthCrossLink prompt="Have an account?" to="/auth/login" label="Log in" />,
+      <AuthCrossLink
+        prompt="Have an account?"
+        to="/auth/login"
+        label="Log in"
+      />,
     );
     const link = screen.getByRole("link", { name: "Log in" });
     expect(link).toHaveAttribute("href", "/auth/login");

@@ -15,7 +15,11 @@ import {
 } from "../../modules/auth/auth-page";
 import { signIn } from "../../modules/auth/credentials";
 import { useGoogleSignIn } from "../../modules/auth/google-button";
-import { parseSignInSearch } from "../../modules/auth/sign-in-search";
+import { useCarriedEmail } from "../../modules/auth/carried-email";
+import {
+  googleReturn,
+  parseSignInSearch,
+} from "../../modules/auth/sign-in-search";
 import { TextField } from "../../ui";
 
 /**
@@ -34,12 +38,13 @@ function LoginPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
-  const [email, setEmail] = useState(search.email ?? "");
+  const [email, setEmail] = useCarriedEmail(search.carried);
   const [password, setPassword] = useState("");
-  const back = search.redirect ?? "/";
+  const returns = googleReturn("/auth/login", search);
 
   const google = useGoogleSignIn({
-    callbackURL: back,
+    ...returns,
+    returnedError: search.error,
     // fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
     leave: (url) => {
       globalThis.location.assign(url);
@@ -53,7 +58,7 @@ function LoginPage() {
     onSuccess: async () => {
       // The shell reads "signed in" once, at the root; tell it.
       await router.invalidate();
-      await navigate({ href: back });
+      await navigate({ href: returns.callbackURL });
     },
   });
 

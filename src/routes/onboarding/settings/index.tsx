@@ -19,8 +19,8 @@ import { Page } from "../../../ui";
  * tab bar.
  */
 export const Route = createFileRoute("/onboarding/settings/")({
-  loader: async () => {
-    await requireSession();
+  loader: async ({ location }) => {
+    await requireSession(location.href);
     const [current, { blocked }, unreadCount] = await Promise.all([
       settingsQuery(),
       blockedRunnersQuery(),

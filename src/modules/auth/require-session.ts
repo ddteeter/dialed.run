@@ -18,13 +18,26 @@ import { redirect } from "@tanstack/react-router";
  * The session, or a redirect to sign-in. Returns a non-null session so a
  * loader can use the result directly instead of re-narrowing after the
  * guard.
+ *
+ * `returnTo` is the page being guarded — the loader's `location.href` —
+ * and rides along as log-in's `redirect`, so signing in lands the runner
+ * where they were going rather than on home. Log-in parses it like any
+ * other search param, so a value that is not a path on this site is
+ * dropped there, not trusted here.
  */
-export function sessionOrRedirect<Session>(session: Session | null): Session {
+export function sessionOrRedirect<Session>(
+  session: Session | null,
+  returnTo?: string,
+): Session {
   if (session === null) {
     // `throw: true` is TanStack's own throwing form. A bare
     // `throw redirect(...)` trips @typescript-eslint/only-throw-error,
     // because what it returns is a Redirect, not an Error.
-    redirect({ to: "/auth/login", throw: true });
+    redirect({
+      to: "/auth/login",
+      search: { redirect: returnTo },
+      throw: true,
+    });
     // Unreachable: the call above throws. It exists so the compiler can
     // narrow `session`, since `redirect` is typed as returning a Redirect
     // rather than `never` — which is also why nothing can read this

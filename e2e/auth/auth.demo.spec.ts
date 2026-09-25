@@ -21,7 +21,7 @@ Not a secret: a throwaway account on the local dev database.
 */
 const PASSPHRASE = ["a", "long", "enough", "passphrase"].join("-");
 
-test("create an account -> sign out -> a wrong password -> log in", async ({
+test("create an account -> sign out -> a guarded page -> a wrong password -> log in and back", async ({
   page,
 }, testInfo) => {
   testInfo.setTimeout(150_000);
@@ -58,9 +58,15 @@ test("create an account -> sign out -> a wrong password -> log in", async ({
     page.getByRole("link", { name: "Create account" }),
   ).toBeVisible();
 
-  await scene(page, "Au3 · a wrong password is marked on Password");
-  await page.goto("/auth/login");
+  // A guarded page, signed out, goes to log-in carrying the way back.
+  await scene(page, "Signed out, the Call sends you to log in and back");
+  await page.goto("/call");
+  await expect(page).toHaveURL(/\/auth\/login\?redirect=%2Fcall$/u, {
+    timeout: 15_000,
+  });
   await hydrated(page);
+
+  await scene(page, "Au3 · a wrong password is marked on Password");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(`${PASSPHRASE}-not`);
   await page.getByRole("button", { name: "Log in" }).click();
@@ -74,5 +80,6 @@ test("create an account -> sign out -> a wrong password -> log in", async ({
   await scene(page, "Au2 · the right one logs in");
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page).not.toHaveURL(/\/auth\//u, { timeout: 15_000 });
+  // Back where the runner was going, not home.
+  await expect(page).toHaveURL(/\/call$/u, { timeout: 15_000 });
 });

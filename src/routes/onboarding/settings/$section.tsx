@@ -16,9 +16,11 @@ import { settingsSectionOrNotFound } from "../../../modules/onboarding/route-dec
  * its own Save (round 22, item 20). An unknown section is X1.
  */
 export const Route = createFileRoute("/onboarding/settings/$section")({
-  loader: async ({ params }) => {
+  loader: async ({ params, location }) => {
+    // Signed in first: a signed-out visitor to a bad section is sent to
+    // log in, not told the page does not exist.
+    await requireSession(location.href);
     const section = settingsSectionOrNotFound(params.section);
-    await requireSession();
     return {
       section,
       ...(await settingsSubPageData(unreadNotificationCountFn())),

@@ -12,8 +12,8 @@ import { Page } from "../../ui";
  */
 // fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/onboarding/taplist")({
-  loader: async () => {
-    await requireSession();
+  loader: async ({ location }) => {
+    await requireSession(location.href);
     return { starter: await starterListQuery() };
   },
   component: TapListPage,
