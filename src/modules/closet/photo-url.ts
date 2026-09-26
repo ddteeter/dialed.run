@@ -12,6 +12,14 @@ import type { WardrobeItemRow } from "./service";
  * Same-origin on purpose: the sampler draws this into a canvas, and a
  * cross-origin image would taint it so `getImageData` throws.
  */
-export function photoUrlFor(item: WardrobeItemRow): string | undefined {
-  return item.photoKey === null ? undefined : `/closet/photo/${item.id}/card`;
+export function photoUrlFor(
+  item: Pick<WardrobeItemRow, "id" | "photoKey">,
+): string | undefined {
+  if (item.photoKey === null) return undefined;
+  // **Versioned**, because the GET route caches as `immutable`: each
+  // upload writes under a new version of the key, and the version rides
+  // the URL, so a replaced photo is a new address rather than a stale
+  // cache entry. The route ignores the query; only the cache reads it.
+  const version = item.photoKey.split("/").at(-1);
+  return `/closet/photo/${item.id}/card?v=${String(version)}`;
 }

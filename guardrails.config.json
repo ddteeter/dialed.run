@@ -143,11 +143,6 @@
       "count": 5
     },
     {
-      "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Unreachable, proof at the site: `count(*)` always answers with exactly one row. The optional chain is there because `noUncheckedIndexedAccess` types `rows[0]` as possibly absent, which is the compiler being right about arrays rather than about this query.",
-      "count": 1
-    },
-    {
       "key": "src/modules/closet/service.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
       "reason": "Equivalent mutant: dropping the null filter leaves nulls in the `IN` list, which matches nothing, so the defaults come back the same. Filtering is what keeps the list the size of the real work.",
       "count": 1
@@ -515,6 +510,16 @@
     {
       "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
       "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/components/GarmentForm.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract",
+      "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/KitPicker.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches closet/components/GarmentForm.tsx only by destructuring one prop per line; one picks a kit, the other edits a garment, and they share nothing to extract",
+      "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
     {

@@ -5,7 +5,8 @@ import {
   buildCoOccurrence,
   classifyPerformance,
   summarizeByItem,
-  topPairIds,
+  pairsFor,
+  topPairs,
   type EntryItemRow,
   type PerformanceSummary,
 } from "../../src/modules/closet/service";
@@ -27,6 +28,7 @@ function summary(
   overrides: Partial<PerformanceSummary> = {},
 ): PerformanceSummary {
   return {
+    runCount: 0,
     verdictCount: 0,
     dialedCount: 0,
     lastWornAt: undefined,
@@ -131,6 +133,7 @@ function row(overrides: Partial<EntryItemRow> = {}): EntryItemRow {
     createdAt: NOW,
     verdict: 0,
     distanceM: 5000,
+    retired: false,
     ...overrides,
   };
 }
@@ -146,6 +149,7 @@ describe("summarizeByItem", () => {
     ]);
 
     expect(summaries.get("item-1")).toStrictEqual({
+      runCount: 3,
       verdictCount: 2,
       dialedCount: 1,
       lastWornAt: NOW,
@@ -170,14 +174,41 @@ describe("summarizeByItem", () => {
     expect(summaries.get("shorts")?.mileageM).toBe(2000);
   });
 
-  it("groups the items worn together in each entry", () => {
-    const { entryItems } = summarizeByItem([
+  it("groups the items worn together in each dialed entry", () => {
+    const { dialedKits } = summarizeByItem([
       row({ entryId: "run-1", itemId: "shirt" }),
       row({ entryId: "run-1", itemId: "shorts" }),
       row({ entryId: "run-2", itemId: "shirt" }),
     ]);
-    expect(entryItems.get("run-1")).toStrictEqual(["shirt", "shorts"]);
-    expect(entryItems.get("run-2")).toStrictEqual(["shirt"]);
+    expect(dialedKits.get("run-1")).toStrictEqual(["shirt", "shorts"]);
+    expect(dialedKits.get("run-2")).toStrictEqual(["shirt"]);
+  });
+
+  it("never offers a retired piece as a pairing, though its own history counts", () => {
+    const { dialedKits, summaries } = summarizeByItem([
+      row({ entryId: "run-1", itemId: "shirt" }),
+      row({ entryId: "run-1", itemId: "old-shorts", retired: true }),
+    ]);
+    expect(dialedKits.get("run-1")).toStrictEqual(["shirt"]);
+    expect(summaries.get("old-shorts")?.dialedCount).toBe(1);
+  });
+
+  it("leaves a kit out of the pairings unless the run was dialed", () => {
+    // "PAIRS WITH · WHEN DIALED": a pair worn on a run that went wrong,
+    // or one nobody rated, is not a pairing to repeat.
+    const { dialedKits } = summarizeByItem([
+      row({ entryId: "cold", itemId: "shirt", verdict: -1 }),
+      row({ entryId: "unrated", itemId: "shirt", verdict: unrated() }),
+    ]);
+    expect(dialedKits.size).toBe(0);
+  });
+
+  it("counts every run a piece was worn on, rated or not", () => {
+    const { summaries } = summarizeByItem([
+      row({ entryId: "a", verdict: -2 }),
+      row({ entryId: "b", verdict: unrated() }),
+    ]);
+    expect(summaries.get("item-1")?.runCount).toBe(2);
   });
 });
 
@@ -206,9 +237,9 @@ describe("co-occurrence", () => {
   });
 });
 
-describe("topPairIds", () => {
-  it("takes the highest counts, in order", () => {
-    const result = topPairIds(
+describe("topPairs", () => {
+  it("takes the highest counts, in order, with the count", () => {
+    const result = topPairs(
       new Map([
         ["cap", 1],
         ["shorts", 5],
@@ -216,50 +247,64 @@ describe("topPairIds", () => {
       ]),
       2,
     );
-    expect(result).toStrictEqual(["shorts", "socks"]);
+    expect(result).toStrictEqual([
+      { itemId: "shorts", count: 5 },
+      { itemId: "socks", count: 3 },
+    ]);
   });
 
   it("takes an item that was worn together exactly once", () => {
     // The starting "best" has to sit below the smallest real count, or a
     // pair seen once is never anyone's pair.
-    expect(topPairIds(new Map([["cap", 1]]), 2)).toStrictEqual(["cap"]);
+    expect(topPairs(new Map([["cap", 1]]), 2)).toStrictEqual([
+      { itemId: "cap", count: 1 },
+    ]);
   });
 
   it("keeps the first of two equal counts rather than the last", () => {
     // Ties are common early on, when everything has been worn once. Which
     // one wins is arbitrary; that it is stable is not.
     expect(
-      topPairIds(
+      topPairs(
         new Map([
           ["shorts", 2],
           ["socks", 2],
         ]),
         1,
       ),
-    ).toStrictEqual(["shorts"]);
+    ).toStrictEqual([{ itemId: "shorts", count: 2 }]);
   });
 
   it("stops when there is nothing left rather than padding", () => {
-    expect(topPairIds(new Map([["shorts", 5]]), 2)).toStrictEqual(["shorts"]);
-    expect(topPairIds(new Map(), 2)).toStrictEqual([]);
-  });
-
-  it("never returns the same id twice", () => {
-    // The taken id is removed as it is taken; without that the top count
-    // fills every slot.
-    const result = topPairIds(
-      new Map([
-        ["shorts", 5],
-        ["socks", 3],
-      ]),
-      2,
-    );
-    expect(new Set(result).size).toBe(result.length);
+    expect(topPairs(new Map(), 2)).toStrictEqual([]);
   });
 
   it("leaves the caller's map alone", () => {
     const counts = new Map([["shorts", 5]]);
-    topPairIds(counts, 2);
+    topPairs(counts, 2);
     expect(counts.get("shorts")).toBe(5);
+  });
+});
+
+describe("pairsFor (round 22: up to three, absent under 3 runs)", () => {
+  const four = new Map([
+    ["a", 4],
+    ["b", 3],
+    ["c", 2],
+    ["d", 1],
+  ]);
+
+  it("says nothing for a piece with two runs, however they paired", () => {
+    expect(pairsFor(summary({ runCount: 2 }), four)).toStrictEqual([]);
+  });
+
+  it("lists up to three once the piece has three runs", () => {
+    expect(
+      pairsFor(summary({ runCount: 3 }), four).map((pair) => pair.itemId),
+    ).toStrictEqual(["a", "b", "c"]);
+  });
+
+  it("lists nothing for a piece never dialed alongside anything", () => {
+    expect(pairsFor(summary({ runCount: 9 }), undefined)).toStrictEqual([]);
   });
 });

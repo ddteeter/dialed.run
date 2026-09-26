@@ -19,6 +19,10 @@ const formProps = {
   submitLabel: "Save",
   pendingLabel: "Saving",
   successMessage: "Saved.",
+  photo: {
+    upload: () => Promise.resolve({ ok: true as const }),
+    remove: () => Promise.resolve(),
+  },
 };
 
 describe("the thirteen names (design round 11 §AH)", () => {
@@ -144,7 +148,12 @@ describe("colour on the garment form", () => {
 
   it("offers the photo as a sampler when there is one", async () => {
     const user = userEvent.setup();
-    render(<GarmentForm {...formProps} photoUrl="/closet/photo/01ITEM/card" />);
+    render(
+      <GarmentForm
+        {...formProps}
+        photo={{ ...formProps.photo, url: "/closet/photo/01ITEM/card" }}
+      />,
+    );
     await user.click(screen.getByRole("radio", { name: "Navy" }));
     await user.click(screen.getByRole("button", { name: /exact shade/i }));
 

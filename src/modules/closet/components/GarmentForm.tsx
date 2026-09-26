@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ColorName,
@@ -24,6 +24,8 @@ import {
   Bracketed,
   ChoiceField,
   ChoiceList,
+  FailureBand,
+  FileWell,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -34,7 +36,10 @@ import {
   ToggleField,
   useFormSubmit,
 } from "../../../ui";
+import { photoAcceptAttribute } from "../../../lib/photo-constraints";
+import type { PhotoStep } from "../../../ui";
 import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
+import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
 import { ShadeSheet } from "./ShadeSheet";
 
 type Category = (typeof garmentCategories)[number];
@@ -83,7 +88,6 @@ const LABELS = {
   colorName: "Color",
   colorHex: "Hex",
   visibilityLevel: "Visibility",
-  productUrl: "Product link",
 };
 
 /**
@@ -185,19 +189,78 @@ export interface GarmentFormProps {
    * which one it is.
    */
   save: (garment: Garment) => Promise<{ id: string }>;
+  /**
+   * Writes the fields onto a row this form already saved. The add form
+   * passes it: once a create has succeeded and only the photo failed, the
+   * next submit must *update* that row — resending the create returns the
+   * first row unchanged (it is idempotent on the form's key), so a runner
+   * who fixed the name while picking another photo lost the fix while
+   * being told "Added to your closet". The edit form's `save` is already
+   * an update, so it passes nothing.
+   */
+  updateSaved?:
+    ((itemId: string, garment: Garment) => Promise<{ id: string }>) | undefined;
   onSaved: (result: { id: string }) => Promise<void>;
   submitLabel: string;
   pendingLabel: string;
   successMessage: string;
   /**
-   * The garment's own photo, when it has one — the shade sampler reads a
-   * pixel out of it.
+   * Everything about the well, as one prop because it is one field: what
+   * is stored, the two writes, and the step a picked photo goes through.
+   */
+  photo: GarmentPhoto;
+}
+
+interface GarmentPhoto {
+  /**
+   * The garment's stored photo, when it has one: the well's preview, and
+   * what §AH's shade sampler reads a pixel out of.
    *
    * Handed in rather than derived, because the add form has no photo yet
-   * (a piece is photographed on detail, after it exists) and the edit form
-   * does. §AH: no photo, no sampler — the hex field stands alone.
+   * and the edit form may. §AH: no photo, no sampler — the hex field
+   * stands alone.
    */
-  photoUrl?: string | undefined;
+  url?: string | undefined;
+  /**
+   * The photo's two writes, run after the save once the row exists — the
+   * add form has no id to attach a photo to until then. Handed in for the
+   * same reason as `save`.
+   */
+  upload: (input: {
+    data: FormData;
+  }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  remove: (input: { data: { itemId: string } }) => Promise<unknown>;
+  /**
+  W3's blur, composed by the route — see `usePhotoPick`.
+  */
+  renderStep?: PhotoStep | undefined;
+}
+
+/**
+ * What the runner is told when the garment saved and its photo did not —
+ * the owner's words (task 122). Both halves are true at once, so the
+ * sentence says both: the save is not undone, and only the photo is tried
+ * again.
+ */
+const PHOTO_NOT_SAVED = "Garment saved, photo didn't. Try again?";
+
+/**
+ * A blob URL for the held photo, revoked when it is replaced or dropped.
+ */
+function useObjectUrl(file: File | undefined): string | undefined {
+  const [url, setUrl] = useState<string | undefined>();
+  useEffect(() => {
+    if (file === undefined) {
+      setUrl(undefined);
+      return;
+    }
+    const next = URL.createObjectURL(file);
+    setUrl(next);
+    return () => {
+      URL.revokeObjectURL(next);
+    };
+  }, [file]);
+  return url;
 }
 
 /**
@@ -219,16 +282,18 @@ export interface GarmentFormProps {
  * sentence or the failure band — so the schema is the single gate and
  * `useFormSubmit` renders what it says.
  */
+// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
 export function GarmentForm({
   initial,
   brandOptions,
   onBrandInput,
   save,
+  updateSaved,
   onSaved,
   submitLabel,
   pendingLabel,
   successMessage,
-  photoUrl,
+  photo,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
@@ -236,14 +301,98 @@ export function GarmentForm({
   });
   const fields = fieldsForCategory(values.category);
   const [shadeOpen, setShadeOpen] = useState(false);
+  /**
+   * The photo is part of the form, so nothing about it is written until
+   * the save: a picked photo is held (after W3's blur) and previewed from
+   * the device, and Remove marks the stored one to go.
+   */
+  const [held, setHeld] = useState<File | undefined>();
+  const [removed, setRemoved] = useState(false);
+  /**
+  The row a submit already saved, when a later step of that submit failed.
+  */
+  const [savedId, setSavedId] = useState<string | undefined>();
+  /**
+   * The saved garment whose photo did not go up, when that is the state:
+   * what the band's Try again writes the photo against. Holding the id
+   * rather than a flag means the retry cannot be offered without one.
+   */
+  const [photoFailedFor, setPhotoFailedFor] = useState<string | undefined>();
+  const [photoError, setPhotoError] = useState<string | undefined>();
+  const [photoPending, setPhotoPending] = useState(false);
+  const photoInFlight = useRef(false);
+  const heldUrl = useObjectUrl(held);
+  const preview = heldUrl ?? (removed ? undefined : photo.url);
+  const pick = usePhotoPick({
+    renderPhotoStep: photo.renderStep,
+    onReady: setHeld,
+  });
 
   const form = useFormSubmit({
     schema: garmentFormSchema,
-    action: save,
+    action: async (garment: Garment) => {
+      const saved =
+        savedId === undefined || updateSaved === undefined
+          ? await save(garment)
+          : await updateSaved(savedId, garment);
+      setSavedId(saved.id);
+      return saved;
+    },
     successMessage,
     labels: LABELS,
-    onSuccess: onSaved,
+    onSuccess: async (saved) => {
+      await finishWithPhoto(saved.id);
+    },
   });
+
+  /**
+   * The photo's write, after the row it belongs to exists — the add form
+   * has no id before then. A refusal (type, size) marks the well, because
+   * the fix is another file; any failure raises the band, because the
+   * garment is saved and only the photo is owed. Returns whether the photo
+   * is now as the runner left it.
+   */
+  async function didWritePhoto(itemId: string): Promise<boolean> {
+    setPhotoError(undefined);
+    setPhotoFailedFor(undefined);
+    setPhotoPending(true);
+    try {
+      if (held !== undefined) {
+        const data = new FormData();
+        data.set("itemId", itemId);
+        data.set("photo", held);
+        const result = await photo.upload({ data });
+        if (!result.ok) {
+          setPhotoError(result.error);
+          throw new Error(result.error);
+        }
+      } else if (removed && photo.url !== undefined) {
+        await photo.remove({ data: { itemId } });
+      }
+      return true;
+    } catch {
+      setPhotoFailedFor(itemId);
+      form.announce(PHOTO_NOT_SAVED);
+      return false;
+    } finally {
+      setPhotoPending(false);
+    }
+  }
+
+  /**
+   * Write the photo, and move on only if it landed. One at a time: the
+   * guard is a ref because two presses inside one render would both read
+   * `photoPending` as false.
+   */
+  async function finishWithPhoto(itemId: string): Promise<void> {
+    if (photoInFlight.current) return;
+    photoInFlight.current = true;
+    try {
+      if (await didWritePhoto(itemId)) await onSaved({ id: itemId });
+    } finally {
+      photoInFlight.current = false;
+    }
+  }
 
   const estimate = useMemo(
     () =>
@@ -479,7 +628,7 @@ export function GarmentForm({
               open={shadeOpen}
               colorName={COLOR_LABELS[values.colorName]}
               value={values.colorHex}
-              photoUrl={photoUrl}
+              photoUrl={preview}
               onUse={(picked) => {
                 update("colorHex", picked);
                 setShadeOpen(false);
@@ -525,21 +674,43 @@ export function GarmentForm({
         field={form.field}
         error={form.fieldErrors.color}
       />
-      <TextField
-        name="productUrl"
-        label={LABELS.productUrl}
-        value={values.productUrl}
-        onChange={(value) => {
-          update("productUrl", value);
+      {/* Round 22, item 17: the well is the last thing before the save —
+          identity, Size, Colorway, photo, Add to closet. The product-link
+          field that sat here is gone for v1 (AC2b: a field that can only
+          say "pending" is a promise the build can't keep); F2a/F2b return
+          with enrichment. A stored link still round-trips untouched,
+          because the value rides in the form state the field no longer
+          draws. */}
+      <FileWell
+        part="photo-well"
+        copy={GARMENT_PHOTO_COPY}
+        pending={pick.stepping || (photoPending && held !== undefined)}
+        accept={photoAcceptAttribute}
+        error={photoError}
+        preview={
+          preview === undefined ? undefined : { src: preview, alt: values.name }
+        }
+        onRemove={() => {
+          setHeld(undefined);
+          setRemoved(true);
         }}
-        field={form.field}
-        error={form.fieldErrors.productUrl}
-        type="url"
+        onFiles={(files) => {
+          if (files === null) return;
+          const file = files[0];
+          if (file === undefined) return;
+          setPhotoError(undefined);
+          pick.pick(file);
+        }}
       />
-      {values.productUrl === "" ? undefined : (
-        <p className="text-micro text-muted">
-          <Mono>Enrichment pending — lane 107</Mono>
-        </p>
+      {pick.step(form.announce)}
+      {photoFailedFor === undefined ? undefined : (
+        <FailureBand
+          kicker="Photo not saved"
+          message={PHOTO_NOT_SAVED}
+          onRetry={() => {
+            void finishWithPhoto(photoFailedFor);
+          }}
+        />
       )}
 
       <FormFailureBand

@@ -47,6 +47,7 @@ export function wardrobeItem(
     origin: "manual",
     idempotencyKey: NOTHING,
     retired: false,
+    retiredAt: NOTHING,
     // "ok" is what closet/service.ts actually writes and what
     // service-edges.test.ts asserts. The fixture said "public", a value no
     // production path ever stores — harmless while the column was untyped

@@ -4,7 +4,6 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Page } from "@playwright/test";
 
-import { user } from "../../src/db/schema-auth";
 import {
   entryPhotos,
   entryTags,
@@ -19,9 +18,9 @@ import {
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { accountEmail } from "../support/accounts";
 import { colorRole } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
+import { userIdOf } from "./logging-fixtures";
 
 /**
  * What the feed lane's conformance specs share: who the signed-in runner
@@ -38,15 +37,7 @@ import { withLocalDb } from "../support/local-db";
 The `feed` demo account's user id — the runner these specs sign in as.
 */
 export async function feedUserId(): Promise<string> {
-  return withLocalDb(async ({ core }) => {
-    const [row] = await core
-      .select({ id: user.id })
-      .from(user)
-      .where(eq(user.email, accountEmail("feed")))
-      .limit(1);
-    if (!row) throw new Error("no feed account — demo-setup did not run");
-    return row.id;
-  });
+  return userIdOf("feed");
 }
 
 /**

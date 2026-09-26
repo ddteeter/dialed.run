@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   fireEvent,
   screen,
   waitFor,
@@ -386,6 +387,45 @@ describe("A1: sending and reading", () => {
     // would parse the file twice and call the runner's own retry "Already
     // logged".
     expect(second?.get("idempotencyKey")).toBe(first?.get("idempotencyKey"));
+  });
+
+  it("never calls an idle form slow", async () => {
+    // The stall clock is the read's, not the page's: a runner who opens
+    // A1 and wanders off has sent nothing that could be slow.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await renderWithRouter(form({}));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(25_000);
+    });
+
+    expect(
+      screen.queryByText("Our end is slow. Your file is fine."),
+    ).toBeNull();
+    expect(well()).toHaveAttribute("data-state", "empty");
+  });
+
+  it("leaves no timer behind once it is gone, mid-read", async () => {
+    // Two timers outlived the form. The stall timer was left to fire,
+    // and react-query's default scheduled a five-minute collection of a
+    // cache that only this form's own client could ever reach. Both fired
+    // into a torn-down window in this project (test/dom-setup.ts).
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const upload = vi.fn<Upload>(() =>
+      Promise.resolve({ importId: "01IMPORT" }),
+    );
+    await renderWithRouter(form({ upload }));
+    fireEvent.change(dropInput(), { target: { files: [gpx()] } });
+    await waitFor(() => {
+      expect(upload).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(well()).toHaveAttribute("data-state", "uploading");
+    });
+
+    cleanup();
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("gives a retried import twenty seconds of its own before calling it slow again", async () => {

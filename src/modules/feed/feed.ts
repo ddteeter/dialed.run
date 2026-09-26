@@ -161,14 +161,12 @@ async function hydrateEntries(
   // the right state (round 22). Its own read on the same primary key
   // rather than a column on every reaction row: one row per mark, and
   // only the viewer's.
-  const viewerMarks = and(
-    eq(reactions.userId, viewerId),
-    inArray(reactions.entryId, entryIds),
-  );
   const markedQuery = database
     .select({ entryId: reactions.entryId })
     .from(reactions)
-    .where(viewerMarks);
+    .where(
+      and(eq(reactions.userId, viewerId), inArray(reactions.entryId, entryIds)),
+    );
 
   const [
     runRows,

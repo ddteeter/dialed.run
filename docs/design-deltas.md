@@ -361,6 +361,41 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       Useful back that fails reads `STILL MARKED`, by the same rule — "the
       kicker names the state still true". **The ask:** confirm.
 
+## Answered in round 25 (imported 2026-09-24)
+
+Three asks from the build lanes, answered on a new board (`Round 25
+Rulings.dc.html`) and applied to the Desktop Contract, both Remaining
+Screens boards, round 22's coverage board and design's product.md. No
+contract values moved.
+
+- **Log a run is a desk page.** Design withdrew the panel for it: _"the
+  panel was a rule about inputs that got drawn as a rule about width."_
+  From 1040 up, A1–A3 use DS1's two columns: every input and the primary
+  action in the primary column (max 620, phone order), read-only context
+  cards in a `data-part="rail"` — conditions, "you in this band", the run,
+  the kit being judged. The rail never holds an input, button or radio, and
+  the harness is to check that. A2b takes over the primary column (a push,
+  not a modal); A3's verdict row stays at 390; the primary action sizes to
+  its label. No frame or card around the form; the ink bar is unchanged and
+  no nav link underlines (the pill carries `aria-current`). 720–1039 is the
+  620 reflow, not the panel. **F follows** (drawn in round 26; panel until
+  then). **Auth and onboarding stay in the panel.** Not built.
+- **Strava: "Strava reminds. You upload."** The connected receipt, T3b's
+  Kept/Stops, the reminder (push and S1 row: "New run on Strava · Add it
+  here: upload the file, then what you wore", timed by when the run
+  _landed_), T3a's status line ("CONNECTED · LAST RUN SEEN …"), the
+  auto-import toggle removed, and T2's import-progress screen retired. The
+  reminder is one per run and clears when a file with a matching start time
+  is uploaded. DS2's header reads "6 RUNS · NO VERDICT YET". Not built.
+- **Your conditions: "in these conditions".** Eyebrow `SAME CONDITIONS ·
+FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
+  {precip}, {window}, wherever they were." Wind leaves the eyebrow; no line
+  names a place. E1's compact line and N's privacy card follow. Not built.
+
+**Round 24's asks are still open** — the time correction on A1, R2b's
+options, the delete-with-runs sheet, "Garment saved, photo didn't", the
+swatch conflict, per-item flags on another runner's D, usernames, and item 27.
+
 ## Answered in round 22 (imported 2026-09-23)
 
 The coverage request (`docs/reconciliation/2026-09-23-design-coverage.md`)

@@ -127,6 +127,20 @@
       "when": 1789861657275,
       "tag": "0017_add_garment_structured_color",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1790277088107,
+      "tag": "0018_add_wardrobe_item_retired_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790306609411,
+      "tag": "0019_add_outbox",
+      "breakpoints": true
     }
   ]
 }

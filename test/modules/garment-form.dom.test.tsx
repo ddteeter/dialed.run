@@ -23,17 +23,6 @@ import { garmentCategoriesInOrder } from "../../src/lib/garment-fields";
  * silently did nothing.
  */
 
-/**
-The same dodge `test/lib/contracts-boundaries.test.ts` documents: a literal
-`http://` in a test is autofixed to `https://` — `unicorn/prefer-https` and
-`sonarjs/no-clear-text-protocols` both do it — which silently turns "this
-insecure URL is rejected" into "this secure URL is rejected". Built from a
-variable so no fixer can see it. Reported as guardrails#63.
-*/
-function urlWithScheme(scheme: string): string {
-  return `${scheme}://example.com`;
-}
-
 function nothing() {
   // the save is not what is under test here
 }
@@ -61,6 +50,10 @@ function renderForm(overrides: Partial<GarmentFormProps> = {}) {
     submitLabel: "Save",
     pendingLabel: "Saving",
     successMessage: "Saved.",
+    photo: {
+      upload: () => Promise.resolve({ ok: true }),
+      remove: () => Promise.resolve(),
+    },
     ...overrides,
   };
   const view = render(<GarmentForm {...props} />);
@@ -157,7 +150,6 @@ describe("GarmentForm: identity leads", () => {
     expect(screen.getByLabelText(/Model \/ name/)).toHaveValue("");
     expect(screen.getByLabelText("Size")).toHaveValue("");
     expect(screen.getByLabelText("Colorway")).toHaveValue("");
-    expect(screen.getByLabelText("Product link")).toHaveValue("");
     expect(screen.getByLabelText("Layer")).toHaveValue("");
     expect(screen.getByLabelText("Weight")).toHaveValue("");
     expect(screen.getByLabelText("Fabric")).toHaveValue("");
@@ -197,17 +189,12 @@ describe("GarmentForm: identity leads", () => {
     await user.type(screen.getByLabelText(/Model \/ name/), "Harrier");
     await user.type(screen.getByLabelText("Size"), "M");
     await user.type(screen.getByLabelText("Colorway"), "Navy");
-    await user.type(
-      screen.getByLabelText("Product link"),
-      "https://example.com/harrier",
-    );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await saved(save)).toMatchObject({
       name: "Harrier",
       size: "M",
       color: "Navy",
-      productUrl: "https://example.com/harrier",
     });
   });
 
@@ -263,28 +250,19 @@ describe("GarmentForm: the failure path D-17 was about", () => {
     expect(named("Water resistant")).toBe("waterResistant");
     expect(named("Size")).toBe("size");
     expect(named("Colorway")).toBe("color");
-    expect(named("Product link")).toBe("productUrl");
   });
 
-  it("marks the product link and says why, instead of doing nothing", async () => {
-    // The bug this replaces, exactly: `type="url"` accepts the scheme, the
-    // schema does not, and the parse used to throw into a `void`-ed
+  it("marks a field and says why, instead of doing nothing", async () => {
+    // The bug D-17 replaced: the parse used to throw into a `void`-ed
     // handler — no message, no mark, a button that did nothing at all.
     const user = userEvent.setup();
     const { save } = renderForm();
 
-    await user.type(screen.getByLabelText(/Model \/ name/), "Harrier");
-    await user.type(
-      screen.getByLabelText("Product link"),
-      urlWithScheme("http"),
-    );
+    await user.type(screen.getByLabelText(/Model \/ name/), "x".repeat(81));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(
-      await screen.findByText("Product links need to start with https://"),
-    ).toBeVisible();
     expect(save).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Product link")).toHaveAttribute(
+    expect(screen.getByLabelText(/Model \/ name/)).toHaveAttribute(
       "aria-invalid",
       "true",
     );
@@ -591,18 +569,51 @@ describe("GarmentForm: the estimate", () => {
   });
 });
 
-describe("GarmentForm: the product link", () => {
-  it("says enrichment is pending only once a link is there", async () => {
-    const user = userEvent.setup();
+describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
+  it("draws no link field and no pending line", () => {
+    // AC2b: a field that can only say "pending" is a promise the build
+    // can't keep. F2a/F2b return with enrichment.
     renderForm();
 
+    expect(screen.queryByLabelText("Product link")).toBeNull();
     expect(screen.queryByText(/Enrichment pending/)).toBeNull();
+  });
 
-    await user.type(
-      screen.getByLabelText("Product link"),
-      "https://example.com/x",
-    );
+  it("keeps a stored link, untouched, through an edit", async () => {
+    // The field went; the value did not. An edit must not quietly erase
+    // what a runner saved before the field was removed.
+    const user = userEvent.setup();
+    const { save } = renderForm({
+      initial: { name: "Harrier", productUrl: "https://example.com/harrier" },
+    });
 
-    expect(screen.getByText(/Enrichment pending/)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await saved(save)).toMatchObject({
+      productUrl: "https://example.com/harrier",
+    });
+  });
+
+  it("puts Size, Colorway and the photo after the identity, in that order", () => {
+    // Round 22, item 17: "AH1 identity → Size → Colorway → photo well →
+    // Add to closet."
+    renderForm();
+
+    const order = [
+      screen.getByLabelText(/Model \/ name/),
+      screen.getByRole("group", { name: "Color" }),
+      screen.getByLabelText("Size"),
+      screen.getByLabelText("Colorway"),
+      screen.getByLabelText(/Add a photo/),
+      screen.getByRole("button", { name: "Save" }),
+    ];
+    for (const [index, element] of order.slice(1).entries()) {
+      const before = order[index];
+      if (before === undefined) throw new Error("no element before");
+      expect(
+        before.compareDocumentPosition(element) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
   });
 });

@@ -353,7 +353,10 @@ exception, the human never polls dashboards.
 flowchart LR
     Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
-    CRON2[Daily digest cron] -->|only if anomalies| ADMIN[Admin email/notification:\nDLQ depth, weather_pending backlog,\nfailed-import rate, cron staleness]
+    CRON2[Daily digest cron] -->|only if anomalies| ADMIN[Admin email/notification:\nDLQ depth, weather_pending backlog,\nfailed-import rate, cron staleness,\nexhausted outbox rows]
+    REQ[Request: D1 change +\noutbox row, one batch] -->|fast path| R2[(R2)]
+    REQ -->|fast path failed| OB[(outbox table)]
+    CRON2 -->|drain: claim, work, back off| OB
     W[Worker] -->|exceptions| SENTRY[Sentry free tier]
     PING[External uptime ping] --> HEALTH["/health: D1 SELECT 1,\nR2 head, build info"]
 ```
@@ -361,6 +364,16 @@ flowchart LR
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
   a dead-lettered job becomes a user-visible failure + Sentry event, never
   silence.
+- **Two systems, one outbox** (law 8c): a write that owes work to another
+  system records the debt in the generic `outbox` table in the same
+  `db.batch()` as the change, runs the work as a fast path, and deletes the
+  row on success. The daily digest drains what is left
+  (`modules/ops/outbox.ts`): due rows per kind, capped, claimed by a
+  compare-and-swap on `next_attempt_at`, dispatched by `kind` to an
+  idempotent handler, backed off on failure, and named in the digest once
+  they pass five attempts or carry a kind the running build cannot read.
+  The first kind is `photo_delete` (Remove, Replace and Delete on a
+  garment); `strava_revocations` predates it and keeps its own table.
 - **Alerting is exception-based**: the daily digest cron emails/notifies
   **only when** thresholds trip (DLQ > 0, weather_pending > N for > 24h, any
   cron that hasn't checkpointed on schedule). A quiet inbox means healthy.
