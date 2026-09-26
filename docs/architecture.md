@@ -79,8 +79,8 @@ Key decisions embedded here:
 
   **Its attribution line is not in the module** (moved by task 115).
   `WeatherAttribution` is an anchor and a sentence, imports nothing from
-  weather, and Visual Crossing's free tier requires it *wherever
-  conditions are shown* — a rule about every screen, which is what `ui/`
+  weather, and Visual Crossing's free tier requires it _wherever
+  conditions are shown_ — a rule about every screen, which is what `ui/`
   is for. It had to move rather than merely wanting to: reaching it meant
   importing the weather **barrel**, which exports `attachObservation`,
   which reaches `src/env`, which is a bare re-export of
@@ -380,7 +380,8 @@ flowchart LR
 
 **Launch gate** (must merge before public sign-ups): Task 106 trust & safety
 floor — photo screening via Workers AI, report→hide→review, link hygiene,
-ban mechanics — plus the dashboard-side CSAM scanning tool. MVP lanes
+ban mechanics — plus the dashboard-side CSAM scanning tool and a
+published privacy policy (D-105). MVP lanes
 101–105 + 107 can land and be dogfooded privately without it.
 
 **Post-MVP** (see `docs/post-mvp.md` — documented so agents don't build

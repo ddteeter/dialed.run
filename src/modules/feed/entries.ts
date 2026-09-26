@@ -131,7 +131,11 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   if (input.itemIds.length > 0) {
     const itemIds = [...input.itemIds];
     const owned = await database
-      .select({ id: wardrobeItems.id, userId: wardrobeItems.userId })
+      .select({
+        id: wardrobeItems.id,
+        userId: wardrobeItems.userId,
+        retired: wardrobeItems.retired,
+      })
       .from(wardrobeItems)
       .where(inArray(wardrobeItems.id, itemIds));
     const ownedIds = new Set(
@@ -141,6 +145,13 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
       if (!ownedIds.has(itemId)) {
         throw new ForbiddenError("picker may only use the user's own items");
       }
+    }
+    // A retired garment is kept for the entries it is already on, never
+    // put on a new one: the picker hides it, and a kit that names it anyway
+    // — a stale suggestion, a replayed request — is refused here rather
+    // than trusted to the screen.
+    if (owned.some((row) => row.retired)) {
+      throw new ForbiddenError("a retired garment cannot join a new kit");
     }
   }
 

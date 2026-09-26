@@ -4,8 +4,8 @@
  * the fourth, `WeatherAttribution`, moved to `src/ui/` in task 115 — it is
  * a presentational anchor with no weather dependency, and reaching it
  * through this barrel pulled `cloudflare:workers` into the client bundle.
- * See that file's own note. `observationForRun`/`observationsForRuns` are added
- * because lane 104's packet expects a conditions read API and this is the
+ * See that file's own note. `manualReadingsForRuns`/`observationsForRuns` are
+ * added because lane 104's packet expects a conditions read API and this is the
  * only module allowed to touch `dialed-weather` (docs/architecture.md).
  * `retryPendingWeather` is exported solely so `modules/ops/scheduled.ts` —
  * a different module — can reach it through this barrel per
@@ -24,5 +24,5 @@ export { climateNormals } from "./normals";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
 export type { CacheKey } from "./store";
-export { observationForRun, observationsForRuns } from "./read";
+export { manualReadingsForRuns, observationsForRuns } from "./read";
 export type { WeatherReading } from "./read";

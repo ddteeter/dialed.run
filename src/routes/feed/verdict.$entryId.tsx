@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
-
 import { bandFloorC } from "../../lib/temperature";
 import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/components/VerdictForm";
@@ -11,7 +9,6 @@ import {
   entryDetailQuery,
   itemBandWearStatQuery,
   submitVerdictAction,
-  uploadPhotoAction,
   verdictBandCountsQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
@@ -56,8 +53,6 @@ function VerdictPage() {
         history={history}
         units={units}
         submitVerdict={submitVerdictAction}
-        uploadPhoto={uploadPhotoAction}
-        renderPhotoStep={photoBlurStep}
         itemBandWearStat={itemBandWearStatQuery}
       />
     </Layout>

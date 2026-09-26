@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { RunDraft } from "../../src/lib/contracts";
 import { tcxSource } from "../../src/modules/runs/parsers/tcx";
 import {
+  NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
@@ -36,9 +37,20 @@ async function failureFrom(text: string): Promise<RunParseError> {
   throw new Error("expected the parse to fail");
 }
 
+/**
+ * The runner's sentence a failure earns (round 22): a file that read and
+ * held no lap, or no totals on it, has no track; anything else could not
+ * be read.
+ */
+function sentenceFor(reason: string): string {
+  return /no Lap element|lap missing positive/u.test(reason)
+    ? NO_TRACK_MESSAGE
+    : PARSE_FAILURE_MESSAGE;
+}
+
 async function reasonFor(text: string): Promise<string> {
   const failure = await failureFrom(text);
-  expect(failure.message).toBe(PARSE_FAILURE_MESSAGE);
+  expect(failure.message).toBe(sentenceFor(failure.reason));
   return failure.reason;
 }
 

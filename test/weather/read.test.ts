@@ -5,15 +5,15 @@ import { runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import {
-  observationForRun,
+  manualReadingsForRuns,
   observationsForRuns,
   recordManualObservation,
-  type WeatherReading,
 } from "../../src/modules/weather";
 import {
   cacheKeyFor,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
+import { makeObservation } from "../feed/helpers";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -47,42 +47,37 @@ async function insertRun(
   return id;
 }
 
-describe("observationForRun (103, read API for 104)", () => {
-  it("returns undefined when nothing is cached yet", async () => {
+describe("manualReadingsForRuns: a band is its own run's (B1)", () => {
+  it("answers nothing for a run with no band", async () => {
     const runId = await insertRun({ lat: 71.1, lng: 31.1 });
-    expect(await observationForRun(runId)).toBeUndefined();
+    const bands = await manualReadingsForRuns([runId]);
+    expect(bands.size).toBe(0);
   });
 
-  it("returns a manual reading tagged with its source", async () => {
+  it("returns a band tagged manual, with its sentinels", async () => {
     const runId = await insertRun({ lat: 72.1, lng: 32.1 });
     await recordManualObservation(runId, -8);
-    const reading: WeatherReading | undefined = await observationForRun(runId);
-    expect(reading?.source).toBe("manual");
-    expect(reading?.tempC).toBe(-8);
+
+    const bands = await manualReadingsForRuns([runId]);
+    expect(bands.get(runId)).toStrictEqual({
+      tempC: -8,
+      feelsLikeC: -8,
+      humidity: 0,
+      windKph: 0,
+      precipMm: 0,
+      condition: "manual",
+      source: "manual",
+    });
   });
 
-  it("returns a real reading tagged with its source", async () => {
-    const runId = await insertRun({
-      lat: 73.1,
-      lng: 33.1,
-      startedAt: 1_768_500_000,
-    });
-    const key = cacheKeyFor(73.1, 33.1, new Date(1_768_500_000 * 1000));
-    await upsertRealObservation(
-      key,
-      {
-        tempC: 2,
-        feelsLikeC: 0,
-        humidity: 70,
-        windKph: 10,
-        precipMm: 0,
-        condition: "cloudy",
-      },
-      runId,
-    );
-    const reading = await observationForRun(runId);
-    expect(reading?.source).toBe("visualcrossing");
-    expect(reading?.tempC).toBe(2);
+  it("never answers for another run in the same place and hour", async () => {
+    const theirs = await insertRun({ lat: 72.2, lng: 32.2 });
+    await recordManualObservation(theirs, -8);
+    const mine = await insertRun({ lat: 72.2, lng: 32.2 });
+
+    const bands = await manualReadingsForRuns([theirs, mine]);
+    expect(bands.has(theirs)).toBe(true);
+    expect(bands.has(mine)).toBe(false);
   });
 });
 
@@ -109,6 +104,23 @@ describe("observationsForRuns (103, consensus batch read for 104)", () => {
     const results = await observationsForRuns([manualRun, realRun]);
     expect(results.has(manualRun)).toBe(false);
     expect(results.get(realRun)?.tempC).toBe(4);
+  });
+
+  it("skips a legacy band still in the cache cell", async () => {
+    // Written before `manual_conditions` existed: somebody's band, in a
+    // cell every runner there reads.
+    await makeObservation({
+      lat: 74.2,
+      lng: 34.2,
+      startedAt: 1_768_500_000,
+      tempC: -2,
+      feelsLikeC: -2,
+      source: "manual",
+    });
+    const runId = await insertRun({ lat: 74.2, lng: 34.2 });
+
+    const results = await observationsForRuns([runId]);
+    expect(results.has(runId)).toBe(false);
   });
 
   it("returns an empty map for an empty input", async () => {
@@ -148,24 +160,6 @@ async function plantAt(lat: number, lng: number): Promise<void> {
     undefined,
   );
 }
-
-describe("observationForRun declines what it cannot key", () => {
-  it("returns undefined for a run that does not exist", async () => {
-    expect(await observationForRun(newUlid())).toBeUndefined();
-  });
-
-  it("returns undefined for a run missing only its longitude", async () => {
-    await plantAt(79.1, 0);
-    const runId = await insertRun({ omit: "lng", lat: 79.1 });
-    expect(await observationForRun(runId)).toBeUndefined();
-  });
-
-  it("returns undefined for a run missing only its latitude", async () => {
-    await plantAt(0, 39.1);
-    const runId = await insertRun({ omit: "lat", lng: 39.1 });
-    expect(await observationForRun(runId)).toBeUndefined();
-  });
-});
 
 describe("observationsForRuns answers about exactly the runs it was asked about", () => {
   it("drops a run missing either coordinate rather than keying it to zero", async () => {

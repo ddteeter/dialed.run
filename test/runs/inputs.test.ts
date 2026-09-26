@@ -6,10 +6,11 @@ import {
   MAX_IMPORT_BYTES,
 } from "../../src/modules/runs/imports";
 import {
+  conditionsBandInput,
   importIdInput,
   importUploadFrom,
   manualRunInput,
-  manualTempInput,
+  retimeRunInput,
   runIdInput,
   stravaCallbackInput,
   stravaCallbackSearch,
@@ -67,26 +68,49 @@ describe("the id inputs", () => {
   });
 });
 
-describe("manualTempInput", () => {
-  it("takes the ends of the habitable range", () => {
-    expect(manualTempInput.parse({ runId: "01RUN", tempC: -60 }).tempC).toBe(
-      -60,
+describe("conditionsBandInput", () => {
+  it("takes one of the bands R2b offers, at either end", () => {
+    const runId = newUlid();
+    expect(conditionsBandInput.parse({ runId, bandFloorC: -20 })).toStrictEqual(
+      {
+        runId,
+        bandFloorC: -20,
+      },
     );
-    expect(manualTempInput.parse({ runId: "01RUN", tempC: 60 }).tempC).toBe(60);
+    expect(
+      conditionsBandInput.parse({ runId, bandFloorC: 35 }).bandFloorC,
+    ).toBe(35);
   });
 
-  it("refuses a temperature nobody ran in", () => {
-    // Outside this range is a typo or a unit mix-up (°F typed into a °C
-    // field), and it would poison the fallback it exists to feed.
-    expect(() =>
-      manualTempInput.parse({ runId: "01RUN", tempC: -61 }),
-    ).toThrow();
-    expect(() =>
-      manualTempInput.parse({ runId: "01RUN", tempC: 61 }),
-    ).toThrow();
-    expect(() =>
-      manualTempInput.parse({ runId: "01RUN", tempC: "10" }),
-    ).toThrow();
+  it("refuses a number R2b never offered — a typed one, or one off the list", () => {
+    const runId = newUlid();
+    for (const bandFloorC of [12, -25, 40, 12.5]) {
+      const result = conditionsBandInput.safeParse({ runId, bandFloorC });
+      expect(result.success, String(bandFloorC)).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe("Pick one of the bands.");
+    }
+    expect(
+      conditionsBandInput.safeParse({ runId: "01RUN", bandFloorC: 10 }).success,
+    ).toBe(false);
+  });
+});
+
+describe("retimeRunInput", () => {
+  it("takes the new start itself, in whole seconds, never a shift", () => {
+    const runId = newUlid();
+    expect(
+      retimeRunInput.parse({ runId, startedAt: 1_755_000_000 }).startedAt,
+    ).toBe(1_755_000_000);
+    expect(retimeRunInput.parse({ runId, startedAt: 0 }).startedAt).toBe(0);
+    expect(retimeRunInput.safeParse({ runId, startedAt: -1 }).success).toBe(
+      false,
+    );
+    expect(retimeRunInput.safeParse({ runId, startedAt: 1.5 }).success).toBe(
+      false,
+    );
+    expect(retimeRunInput.safeParse({ runId, shiftS: 600 }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -185,5 +209,21 @@ describe("importUploadFrom", () => {
 
     expect(importUploadFrom(atTheCap).file.size).toBe(MAX_IMPORT_BYTES);
     expect(() => importUploadFrom(overIt)).toThrow(/larger than 25 MB/);
+  });
+
+  it("carries the key a retry of the same upload is sent under", () => {
+    const key = newUlid();
+    const form = upload(fileOfSize(10));
+    form.append("idempotencyKey", key);
+
+    expect(importUploadFrom(form).idempotencyKey).toBe(key);
+  });
+
+  it("takes an upload with no key at all, and refuses one that is not a ULID", () => {
+    const keyless = upload(fileOfSize(10));
+    expect(importUploadFrom(keyless).idempotencyKey).toBeUndefined();
+    const form = upload(fileOfSize(10));
+    form.append("idempotencyKey", "not-a-key");
+    expect(() => importUploadFrom(form)).toThrow();
   });
 });

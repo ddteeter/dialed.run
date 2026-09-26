@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { desc, eq, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
@@ -9,6 +9,7 @@ import { attachKit } from "./entries";
 import { garmentNamesByIds } from "./garment-names";
 import { nearestMatch, type BestMatch, type HistoryEntry } from "./prefill";
 import { forIds } from "../../lib/for-ids";
+import { runsAwaitingVerdict } from "../runs";
 
 /**
  * DS2 — the verdict backlog's reads.
@@ -49,10 +50,13 @@ const HISTORY_LIMIT = 200;
  * Reading them in the component would mean a component making a server
  * call, which it may not.
  */
-export interface BacklogSuggestion {
+export interface BacklogKit {
   entryId: string;
   itemIds: readonly string[];
   itemNames: readonly string[];
+}
+
+export interface BacklogSuggestion extends BacklogKit {
   /**
   When the run that kit was worn on started, so the cell can say which day
   it is offering rather than "a previous run".
@@ -71,6 +75,17 @@ export interface BacklogRow {
   nothing to be near, so it gets no suggestion either.
   */
   conditions: Conditions | undefined;
+  /**
+   * The kit this run already has, when the runner attached one and never
+   * gave a verdict — the owner's ruling puts that run in the backlog too.
+   * The row shows it and saves only the verdict: `attachKit` never
+   * replaces a kit, so offering another here would save a verdict against
+   * a kit the runner never saw.
+   */
+  kit: BacklogKit | undefined;
+  /**
+  What the outfit cell offers a run with no kit yet; none for one that has.
+  */
   suggestion: BacklogSuggestion | undefined;
 }
 
@@ -79,13 +94,9 @@ export interface Backlog {
 }
 
 /**
- * Runs this runner has logged that carry no outfit entry, oldest first.
- *
- * A LEFT JOIN with `IS NULL` rather than a `NOT IN (SELECT …)`: both
- * sides are index-backed — `runs_user_started` for the scan and the
- * UNIQUE `entries_run` for the probe — and the anti-join lets D1 stop at
- * the first matching entry per run instead of materialising every entry
- * id the runner has.
+ * Runs this runner has logged that still await a verdict, oldest first —
+ * read through `runsAwaitingVerdict`, which owns the query and its index
+ * notes.
  *
  * **No filter on `source`.** DS2 calls these "imported from Strava",
  * which is where a backlog comes from in practice, but a run without an
@@ -94,20 +105,11 @@ export interface Backlog {
  * on source would hide it with nothing to say so.
  */
 async function unjudgedRuns(userId: string) {
-  return drizzle(env.DIALED_CORE)
-    .select({
-      id: runs.id,
-      startedAt: runs.startedAt,
-      durationS: runs.durationS,
-      distanceM: runs.distanceM,
-      lat: runs.lat,
-      lng: runs.lng,
-    })
-    .from(runs)
-    .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
-    .where(and(eq(runs.userId, userId), isNull(outfitEntries.id)))
-    .orderBy(asc(runs.startedAt))
-    .limit(BACKLOG_LIMIT);
+  // The set is the runs module's one definition (owner's ruling: DS2 and
+  // the bell count the same runs) — no entry, or an entry with no verdict,
+  // at any age. A row that already has a kit saves through `attachKit`'s
+  // existing-entry path, which writes the verdict and leaves the kit.
+  return runsAwaitingVerdict(drizzle(env.DIALED_CORE), userId, BACKLOG_LIMIT);
 }
 
 /**
@@ -137,29 +139,38 @@ async function ownHistory(userId: string): Promise<
 }
 
 /**
- * The kits behind a set of suggested entries, as ids and as names.
+ * The kits behind a set of suggested entries, and the kits already on a set
+ * of runs, as ids and as names — keyed by entry either way.
  *
  * Two reads for the whole table rather than two per row: the entries are
  * asked for together and the garments they name are asked for together
- * after that.
+ * after that. The runs' own kits are found by run rather than by entry, so
+ * a run with no entry needs no filtering out: it simply joins nothing.
  */
 interface Kit {
   itemIds: string[];
   itemNames: string[];
 }
 
-async function kitsFor(
-  entryIds: readonly string[],
-): Promise<Map<string, Kit>> {
+async function kitsFor(ask: {
+  entryIds: readonly string[];
+  runIds: readonly string[];
+}): Promise<Map<string, Kit>> {
   const database = drizzle(env.DIALED_CORE);
-  const rows = await forIds(entryIds, () =>
+  const rows = await forIds([...ask.entryIds, ...ask.runIds], () =>
     database
       .select({
         entryId: outfitEntryItems.entryId,
         itemId: outfitEntryItems.itemId,
       })
       .from(outfitEntryItems)
-      .where(inArray(outfitEntryItems.entryId, [...entryIds])),
+      .innerJoin(outfitEntries, eq(outfitEntries.id, outfitEntryItems.entryId))
+      .where(
+        or(
+          inArray(outfitEntryItems.entryId, [...ask.entryIds]),
+          inArray(outfitEntries.runId, [...ask.runIds]),
+        ),
+      ),
   );
   const names = await garmentNamesByIds(
     database,
@@ -223,8 +234,10 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
     return {
       run,
       conditions,
+      // A run that already has a kit is offered no other: it saves its
+      // verdict against the kit it has.
       best:
-        conditions === undefined
+        conditions === undefined || run.entryId !== null
           ? undefined
           : nearestMatch(history, historyConditions, conditions),
     };
@@ -235,9 +248,15 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
   // mutant of it is observable. Emptying the arm strands a row's
   // suggestion; replacing it puts a non-match into the id list and the
   // `.map` below throws on it.
-  const kits = await kitsFor(
-    matched.flatMap(({ best }) => best ?? []).map((best) => best.entry.id),
-  );
+  //
+  // The kits already on the rows are read in the same pass as the
+  // suggested ones: one read for every entry the table names.
+  const kits = await kitsFor({
+    entryIds: matched
+      .flatMap(({ best }) => best ?? [])
+      .map((best) => best.entry.id),
+    runIds: unjudged.map((run) => run.id),
+  });
 
   return {
     rows: matched.map(({ run, conditions, best }) => ({
@@ -246,9 +265,26 @@ export async function verdictBacklog(userId: string): Promise<Backlog> {
       durationS: run.durationS,
       distanceM: run.distanceM,
       conditions,
+      kit: existingKit(run.entryId, kits),
       suggestion: suggestionFrom(best, kits),
     })),
   };
+}
+
+/**
+ * The kit a row's run already has, or none when it has no entry.
+ *
+ * An entry with no garments is still a kit the runner chose — nothing —
+ * and the row draws it as such rather than offering to replace it, which
+ * `attachKit` would not do.
+ */
+function existingKit(
+  entryId: string | null,
+  kits: ReadonlyMap<string, Kit>,
+): BacklogKit | undefined {
+  if (entryId === null) return undefined;
+  const kit = kits.get(entryId) ?? { itemIds: [], itemNames: [] };
+  return { entryId, itemIds: kit.itemIds, itemNames: kit.itemNames };
 }
 
 /**

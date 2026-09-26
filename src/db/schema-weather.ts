@@ -37,3 +37,20 @@ export const weatherObservations = /*#__PURE__*/ sqliteTable(
     uniqueIndex("observations_cache_key").on(t.latR, t.lngR, t.hourBucket),
   ],
 );
+
+/**
+ * A band a runner set for one run (R2b, D-24), keyed by that run.
+ *
+ * **Not in `weather_observations`, on purpose.** That table is a shared
+ * cache keyed by place and hour: a row there answers for every runner at
+ * that cell. A band is one runner's pick for one run, so putting it in the
+ * cache handed it to anyone else who ran there that hour — as a hit, which
+ * made their run `manual` too, dropped it from consensus and stopped it
+ * ever fetching (review blocker B1). Here it belongs to its run and to
+ * nothing else, and the cache holds real observations only.
+ */
+export const manualConditions = /*#__PURE__*/ sqliteTable("manual_conditions", {
+  runId: text("run_id").primaryKey(),
+  tempC: real("temp_c").notNull(),
+  setAt: integer("set_at").notNull(),
+});

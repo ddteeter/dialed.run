@@ -1,28 +1,41 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
+import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { unreadNotificationCountFn } from "../../modules/notifications/functions";
 import { UploadForm } from "../../modules/runs/components/UploadForm";
-import { startFileImport } from "../../modules/runs/functions";
+import {
+  getImportOutcomeFn,
+  retimeRunFn,
+  startFileImport,
+} from "../../modules/runs/functions";
 import { Page } from "../../ui";
 
 /**
-Screen A1: upload & auto-conditions (docs/product.md). The dupe-warning
-and manual-temp fallback live on the import-status and run-detail screens
-this flow lands on, not here.
+Screen A1: upload & auto-conditions (docs/product.md). Every outcome — the
+parsed card, a duplicate's receipt, a parse failure, a stall — renders here,
+in place; nothing navigates while a file is read (round 22).
 */
 export const Route = createFileRoute("/runs/new")({
-  loader: async () => ({ unreadCount: await unreadNotificationCountFn() }),
+  loader: async () => ({
+    units: await viewerUnitsQuery(),
+    unreadCount: await unreadNotificationCountFn(),
+  }),
   component: NewRunPage,
 });
 
 function NewRunPage() {
-  const { unreadCount } = Route.useLoaderData();
+  const { units, unreadCount } = Route.useLoaderData();
 
   return (
     <BelledLayout unreadCount={unreadCount}>
-      <Page title="Add a run">
-        <UploadForm upload={startFileImport} />
+      <Page title="Add a run" width="panel">
+        <UploadForm
+          upload={startFileImport}
+          getOutcome={getImportOutcomeFn}
+          retime={retimeRunFn}
+          units={units}
+        />
         <p className="text-center text-small text-muted">
           No file?{" "}
           <Link
