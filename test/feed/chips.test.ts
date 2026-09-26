@@ -114,6 +114,19 @@ describe("suggestChips: garment flags", () => {
     expect(flags(chips)).toEqual(["known:too_much"]);
   });
 
+  it("[assumption 2] needs two runs in the band before a garment can be weakest", () => {
+    // Round 21: "one bad run isn't a record". `once` has the worst share
+    // on the board — 0 of 1 — and still is not suggested; `twice`, at
+    // exactly the floor, is.
+    const chips = suggestChips({
+      verdict: -1,
+      ...kitOf(["once", record(0, 1, 0)], ["twice", record(1, 1, 0)]),
+      tagUse: {},
+      ...NONE,
+    });
+    expect(flags(chips)).toEqual(["twice:not_enough"]);
+  });
+
   it("[assumption 2] treats a garment with no record at all as never worn", () => {
     // The run has no band, or the read missed it: no key, not a zero.
     const chips = suggestChips({

@@ -1,16 +1,26 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
+import { imports, outfitEntries, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
   ImportUploadError,
   MAX_IMPORT_BYTES,
-  getImportStatus,
+  getImportOutcome,
   startImport,
 } from "../../src/modules/runs/imports";
 import { newUlid } from "../../src/lib/ids";
+import { selectOwnedRow } from "../../src/lib/owned";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { nowSeconds } from "../../src/lib/now";
+
+/**
+The stored row, read the way the module reads it — owner-scoped.
+*/
+async function importRow(userId: string, importId: string) {
+  return selectOwnedRow(coreDb(), imports, { id: importId, userId });
+}
 
 function fakeQueue() {
   const sent: ImportJob[] = [];
@@ -74,7 +84,7 @@ describe("startImport (102 §2)", () => {
 
     expect(queue.sent).toEqual([{ type: "import", importId }]);
 
-    const status = await getImportStatus(db, userId, importId);
+    const status = await importRow(userId, importId);
     expect(status?.status).toBe("pending");
     expect(status?.r2Key).toBe(`imports/${userId}/${importId}.gpx`);
 
@@ -82,7 +92,7 @@ describe("startImport (102 §2)", () => {
     expect(object).not.toBeNull();
   });
 
-  it("scopes getImportStatus to the requesting user", async () => {
+  it("reads an import's outcome back only for the user who started it", async () => {
     const db = coreDb();
     const queue = fakeQueue();
     const userId = newUlid();
@@ -93,15 +103,124 @@ describe("startImport (102 §2)", () => {
       bytes: new TextEncoder().encode("<tcx></tcx>").buffer,
     });
 
-    expect(await getImportStatus(db, otherUserId, importId)).toBeUndefined();
-    expect(await getImportStatus(db, userId, importId)).toBeDefined();
+    expect(await getImportOutcome(db, otherUserId, importId)).toBeUndefined();
+    const outcome = await getImportOutcome(db, userId, importId);
+    expect(outcome?.status).toBe("pending");
+    expect(outcome?.failureReason).toBeNull();
+    expect(outcome).toHaveProperty("run", undefined);
+  });
+});
+
+/**
+ * An import row pointing at a run, as the consumer leaves it once it
+ * has parsed a file or found it already logged.
+ */
+async function landed(
+  status: "done" | "duplicate",
+  options: { withEntry?: boolean } = {},
+) {
+  const db = coreDb();
+  const userId = newUlid();
+  const runId = newUlid();
+  const importId = newUlid();
+  await db.insert(runs).values({
+    id: runId,
+    userId,
+    source: "file",
+    startedAt: 1_756_000_000,
+    durationS: 3098,
+    distanceM: 9978,
+    title: "Morning run",
+    weatherStatus: "pending",
+    lat: 44.98,
+    lng: -93.27,
+  });
+  await db.insert(imports).values({
+    id: importId,
+    userId,
+    r2Key: `imports/${userId}/${importId}.gpx`,
+    status,
+    runId,
+    createdAt: nowSeconds(),
+  });
+  if (options.withEntry === true) {
+    await db.insert(outfitEntries).values({
+      id: newUlid(),
+      userId,
+      runId,
+      isPublic: true,
+      createdAt: nowSeconds(),
+    });
+  }
+  return { db, userId, runId, importId };
+}
+
+describe("getImportOutcome: what A1 draws in place", () => {
+  it("carries the run a parse made, as the list and run detail see it", async () => {
+    const { db, userId, runId, importId } = await landed("done");
+
+    const outcome = await getImportOutcome(db, userId, importId);
+
+    expect(outcome?.status).toBe("done");
+    expect(outcome?.run).toMatchObject({
+      id: runId,
+      source: "file",
+      distanceM: 9978,
+      durationS: 3098,
+      weatherStatus: "pending",
+      entryId: undefined,
+      hasVerdict: false,
+      conditions: undefined,
+    });
+  });
+
+  it("carries the run already logged, with its entry, for a duplicate", async () => {
+    const { db, userId, runId, importId } = await landed("duplicate", {
+      withEntry: true,
+    });
+
+    const outcome = await getImportOutcome(db, userId, importId);
+
+    expect(outcome?.status).toBe("duplicate");
+    expect(outcome?.run?.id).toBe(runId);
+    expect(outcome?.run?.entryId).toEqual(expect.any(String));
+  });
+
+  it("carries the reason for a file that would not parse, and no run", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const importId = newUlid();
+    await db.insert(imports).values({
+      id: importId,
+      userId,
+      r2Key: `imports/${userId}/${importId}.gpx`,
+      status: "failed",
+      failureReason: "This file has no track in it. Export the run again.",
+      createdAt: nowSeconds(),
+    });
+
+    expect(await getImportOutcome(db, userId, importId)).toStrictEqual({
+      status: "failed",
+      failureReason: "This file has no track in it. Export the run again.",
+      run: undefined,
+    });
+  });
+
+  it("has no run when the one it pointed at is gone", async () => {
+    const { db, userId, runId, importId } = await landed("done");
+    await db.delete(runs).where(eq(runs.id, runId));
+
+    const outcome = await getImportOutcome(db, userId, importId);
+
+    expect(outcome?.status).toBe("done");
+    expect(outcome?.run).toBeUndefined();
   });
 });
 
 describe("startImport: the rules, in the words the user reads", () => {
   const bytes = new TextEncoder().encode("<gpx/>").buffer;
 
-  it("names the formats it accepts", async () => {
+  it("says a file of another type is not one it reads, in round 22's words", async () => {
     // The copy lists them, and the list is the same one the parsers are
     // registered under.
     await expect(
@@ -110,7 +229,7 @@ describe("startImport: the rules, in the words the user reads", () => {
         filename: "run.csv",
         bytes,
       }),
-    ).rejects.toThrow(/fit, gpx, tcx/);
+    ).rejects.toThrow("That's not a GPX, TCX or FIT file.");
   });
 
   it("caps uploads at 25 MB, in bytes", () => {
@@ -159,7 +278,7 @@ describe("startImport: the rules, in the words the user reads", () => {
       bytes,
     });
 
-    const row = await getImportStatus(coreDb(), userId, importId);
+    const row = await importRow(userId, importId);
     expect(row?.r2Key).toBe(`imports/${userId}/${importId}.tcx`);
     expect(await env.IMPORTS.get(row?.r2Key ?? "")).not.toBeNull();
   });
@@ -239,7 +358,7 @@ describe("startImport: the rules, in the words the user reads", () => {
       bytes,
     });
 
-    const row = await getImportStatus(coreDb(), userId, importId);
+    const row = await importRow(userId, importId);
     expect(row?.status).toBe("pending");
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);

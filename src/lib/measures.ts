@@ -16,9 +16,40 @@ const METRES_PER_MILE = 1609.34;
 const METRES_PER_KM = 1000;
 
 export function formatDistance(distanceM: number, unit: DistanceUnit): string {
-  return unit === "km"
-    ? `${(distanceM / METRES_PER_KM).toFixed(1)}km`
-    : `${(distanceM / METRES_PER_MILE).toFixed(1)}mi`;
+  return `${distanceNumber(distanceM, unit)}${unit}`;
+}
+
+/**
+ * Metres in one of the runner's distance units.
+ */
+function metresPer(unit: DistanceUnit): number {
+  return unit === "km" ? METRES_PER_KM : METRES_PER_MILE;
+}
+
+/**
+ * The distance alone, at one decimal, in the runner's unit — "6.2".
+ *
+ * For the lines that set the number apart from its unit: A3's header
+ * reads "6.2 AT 41°" and A2's "6.2 MI · 41°F DAMP", where the unit is a
+ * word of its own or not there at all. `formatDistance` is this with the
+ * unit glued on, so the two cannot round differently.
+ */
+export function distanceNumber(distanceM: number, unit: DistanceUnit): string {
+  return (distanceM / metresPer(unit)).toFixed(1);
+}
+
+/**
+ * Pace — time per mile or kilometre — as A1's parsed card and R's run
+ * strip write it: "8:19 /mi". The time is `formatDuration`'s, so a slow
+ * hour-long mile reads "1:02:10 /mi" rather than "62:10".
+ */
+export function formatPace(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): string {
+  const perUnitS = Math.round((durationS * metresPer(unit)) / distanceM);
+  return `${formatDuration(perUnitS)} /${unit}`;
 }
 
 /**

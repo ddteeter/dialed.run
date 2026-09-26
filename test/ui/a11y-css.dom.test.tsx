@@ -144,4 +144,17 @@ describe("03 · 44px targets", () => {
     expect(target).not.toMatch(/(?<!min-)(?:height|width):/u);
     expect(target).not.toMatch(/font-size|font:/u);
   });
+
+  it("reaches 44 on a 32px chip with a seam six pixels proud, not a taller box", () => {
+    // Round 21, ask 4: "a `::before` at `inset: -6px 0` makes the target
+    // 44". 32 + 6 + 6. The chip is the pseudo-element's containing block,
+    // so it must be positioned — without that the seam would size itself
+    // against whatever ancestor happened to be.
+    const seam = blockAfter("@utility target-seam");
+    expect(seam).toContain("position: relative");
+    expect(seam).toMatch(/&::before\s*\{[^}]*content: "";/u);
+    expect(seam).toMatch(/&::before\s*\{[^}]*position: absolute;/u);
+    expect(seam).toMatch(/&::before\s*\{[^}]*inset: -6px 0;/u);
+    expect(seam).not.toMatch(/min-height|min-width/u);
+  });
 });

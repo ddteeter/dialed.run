@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import type { JSX, KeyboardEvent } from "react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import type { VerdictValue } from "../../../lib/contracts";
 import {
@@ -12,12 +12,21 @@ import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { formatTemp } from "../../../lib/temperature";
 import {
+  Bracketed,
+  classifyFailure,
+  ControlFailureBand,
   Mono,
   PendingLabel,
   verdictHue,
   WeatherAttribution,
 } from "../../../ui";
-import type { BacklogRow, BacklogSuggestion, Conditions } from "../../feed";
+import type { ControlFailure } from "../../../ui";
+import type {
+  BacklogKit,
+  BacklogRow,
+  BacklogSuggestion,
+  Conditions,
+} from "../../feed";
 import type { VerdictSlot } from "../backlog-keys";
 import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
 
@@ -103,6 +112,30 @@ function conditionsLine(conditions: Conditions, units: Units): string {
   ].join(" · ");
 }
 
+/**
+ * A kit as the row draws it: its pieces as chips, read-only.
+ *
+ * An entry saved with nothing on it says so in words, rather than leaving
+ * an empty cell that reads as a failed load.
+ */
+function KitChips({ kit }: Readonly<{ kit: BacklogKit }>): JSX.Element {
+  if (kit.itemNames.length === 0) {
+    return <span className="text-small text-quiet">No kit on this run</span>;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {kit.itemNames.map((name) => (
+        <Mono
+          key={name}
+          step="xs"
+          className="rounded-pill border border-ink px-2 py-1"
+        >
+          {name}
+        </Mono>
+      ))}
+    </div>
+  );
+}
 
 /**
  * The outfit cell: the kit this row will save, or the offer of one.
@@ -110,6 +143,11 @@ function conditionsLine(conditions: Conditions, units: Units): string {
  * *"Same as Monday? Use · Pick"* — and `Pick` is A2 at its own route,
  * which at width is the centred panel. That is the whole of "editing an
  * outfit still opens A2 in the panel": no picker is rebuilt here.
+ *
+ * **A run that already has a kit offers neither.** It is in the backlog
+ * for its verdict alone (the owner's ruling), and `attachKit` never
+ * replaces a kit — so the row shows the kit the verdict will be saved
+ * against, and saves only the verdict.
  */
 function OutfitCell({
   runId,
@@ -119,28 +157,19 @@ function OutfitCell({
 }: Readonly<{
   runId: string;
   suggestion: BacklogSuggestion | undefined;
-  chosen: BacklogSuggestion | undefined;
+  chosen: BacklogKit | undefined;
   onUse: (kit: BacklogSuggestion) => void;
 }>): JSX.Element {
-  if (chosen !== undefined) {
-    return (
-      <div className="flex flex-wrap items-center gap-1">
-        {chosen.itemNames.map((name) => (
-          <Mono
-            key={name}
-            step="xs"
-            className="rounded-pill border border-ink px-2 py-1"
-          >
-            {name}
-          </Mono>
-        ))}
-      </div>
-    );
-  }
+  if (chosen !== undefined) return <KitChips kit={chosen} />;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {suggestion === undefined ? undefined : (
+      {/* Round 20: "Same as …?" offers the nearest kit; with nothing near
+          enough the cell says so — "No usual kit here · Pick" — rather
+          than leaving Pick on its own to explain itself. */}
+      {suggestion === undefined ? (
+        <span className="text-small text-quiet">No usual kit here ·</span>
+      ) : (
         <>
           <span className="text-small text-quiet">
             Same as {dayLabel(suggestion.wornAt)}?
@@ -221,20 +250,27 @@ function VerdictSlotButton({
 function BacklogRail({
   row,
   units,
-}: Readonly<{ row: BacklogRow | undefined; units: Units }>): JSX.Element {
+}: Readonly<{ row: BacklogRow; units: Units }>): JSX.Element {
   return (
     <aside
       data-slot="backlog-rail"
       className="flex flex-col gap-4 desk:sticky desk:top-6"
     >
-      {row?.conditions === undefined ? undefined : (
+      {
         <div className="flex flex-col gap-3 rounded-card border border-hairline bg-panel p-4">
           <Mono step="xs" className="text-muted">
             Selected · {runDay(row)}
           </Mono>
-          <Mono step="lg">{conditionsLine(row.conditions, units)}</Mono>
+          {/* Round 22, item 18: a row with no conditions keeps the card
+              and says so — "No weather on this run." — and the verdict is
+              still allowed. */}
+          {row.conditions === undefined ? (
+            <p className="m-0 text-body">No weather on this run.</p>
+          ) : (
+            <Mono step="lg">{conditionsLine(row.conditions, units)}</Mono>
+          )}
         </div>
-      )}
+      }
       {/* The rail had a paragraph here — "Verdicts saved here count
           exactly like verdicts from the phone…" — which is a *note* on the
           Desktop Contract (`data-annotation`), design explaining the table
@@ -266,13 +302,14 @@ export function VerdictBacklog({
   const [verdicts, setVerdicts] = useState<ReadonlyMap<string, VerdictValue>>(
     new Map(),
   );
-  const [kits, setKits] = useState<ReadonlyMap<string, BacklogSuggestion>>(
-    new Map(),
-  );
+  const [kits, setKits] = useState<ReadonlyMap<string, BacklogKit>>(new Map());
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [saving, setSaving] = useState<string | undefined>();
-  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
+  const [failures, setFailures] = useState<ReadonlyMap<string, ControlFailure>>(
+    new Map(),
+  );
   const [said, setSaid] = useState("");
+  const router = useRouter();
 
   function use(row: BacklogRow, kit: BacklogSuggestion): void {
     setKits(new Map(kits).set(row.runId, kit));
@@ -282,9 +319,16 @@ export function VerdictBacklog({
     setVerdicts(new Map(verdicts).set(row.runId, value));
   }
 
+  /**
+  The kit a row will save: the one its run already has, or the one taken.
+  */
+  function kitOf(row: BacklogRow): BacklogKit | undefined {
+    return row.kit ?? kits.get(row.runId);
+  }
+
   async function save(row: BacklogRow): Promise<void> {
     const verdict = verdicts.get(row.runId);
-    const kit = kits.get(row.runId);
+    const kit = kitOf(row);
     // Both halves, and the message names the missing one: a row is A3's
     // three inputs, and A3 does not save without an outfit either.
     if (kit === undefined) {
@@ -295,42 +339,56 @@ export function VerdictBacklog({
       setSaid("Choose how it felt, 1 to 5.");
       return;
     }
-    // A retry starts clean: leaving last attempt's mark on a row that is
+    // A retry starts clean: leaving last attempt's band on a row that is
     // being saved again would say "this failed" about something still in
     // flight.
-    setFailed(without(failed, row.runId));
+    setFailures(without(failures, row.runId));
     setSaving(row.runId);
     try {
       await saveRow({
         data: { runId: row.runId, itemIds: [...kit.itemIds], verdict },
       });
-      setSaved(new Set(saved).add(row.runId));
+      const nowSaved = new Set(saved).add(row.runId);
+      setSaved(nowSaved);
       setSaid(`Saved ${runDay(row)}.`);
       setSelected(rowAfterMove(selected, 1, rows.length));
-    } catch {
-      // Law 5, and round 4's §AF: "the control that did the thing says
-      // what happened, **in its own place**". So the failure is marked on
-      // the row as well as announced — a table where the only sign is a
-      // line at the foot leaves a runner clearing a queue with no idea
-      // which of fifty rows did not land. The row keeps its kit and its
-      // verdict, so Enter tries again.
+      // The last row cleared: the queue is empty, so the bar's count goes
+      // (round 22, item 18) — asked of the server, which is the only thing
+      // that knows the count.
+      if (rows.every((each) => nowSaved.has(each.runId))) {
+        await router.invalidate();
+      }
+    } catch (error: unknown) {
+      // Round 22, item 18: "the row keeps its place and choice, a failure
+      // band spans it, Try again inside." A row is a control, not a form
+      // (round 23, item 9), so its band is the control's: the kicker names
+      // what is still true — the run is not logged — and the cause is the
+      // classifier's own, so a dropped connection reads here exactly as it
+      // does under Log it.
       //
       // Nothing animates: the failure path is static (task 114's
       // `failure-path-is-static` test says so for the form components,
       // and the rule is the doctrine's, not that file's).
-      setFailed(new Set(failed).add(row.runId));
+      setFailures(
+        new Map(failures).set(row.runId, {
+          kicker: "Not logged",
+          message: classifyFailure(error).message,
+        }),
+      );
       setSaid(`Could not save ${runDay(row)}. Try again.`);
     } finally {
       setSaving(undefined);
     }
   }
 
-  function onKeyDown(event: KeyboardEvent<HTMLTableSectionElement>): void {
-    const row = rows[selected];
+  function onKeyDown(
+    event: KeyboardEvent<HTMLTableSectionElement>,
+    row: BacklogRow,
+  ): void {
     const action = actionForKey(event.key);
     // A key the table does not claim stays the browser's — Tab above all,
     // which is how the outfit cell is reached at all.
-    if (action === undefined || row === undefined) return;
+    if (action === undefined) return;
     event.preventDefault();
     if (action.kind === "move") {
       setSelected(rowAfterMove(selected, action.by, rows.length));
@@ -344,120 +402,51 @@ export function VerdictBacklog({
     void save(row);
   }
 
+  // Every row cleared — on this visit, or before it. "Clearing the last
+  // shows [ ALL LOGGED ] and the bar's count goes."
+  const isClear = rows.every((row) => saved.has(row.runId));
+  // The row the table is on, or none once it is clear — which is also the
+  // only way to have no rows at all (a typed URL with an empty queue), so
+  // the one question narrows both.
+  const current = isClear ? undefined : rows[selected];
+
   return (
-    <div className="flex flex-col gap-6 px-6 py-8 desk:grid desk:grid-cols-[1.55fr_1fr] desk:items-start desk:gap-6">
+    <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-6 py-8 desk:mx-0 desk:grid desk:max-w-page desk:grid-cols-[1.55fr_1fr] desk:items-start desk:gap-6">
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h1 className="m-0 font-display text-title uppercase">
             Needs a verdict
           </h1>
-          <Mono step="sm" className="text-muted">
-            {rows.length} runs · oldest first
-          </Mono>
+          {current === undefined ? undefined : (
+            <Mono step="sm" className="text-muted">
+              {rows.length} runs · oldest first
+            </Mono>
+          )}
         </div>
 
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="border-b border-hairline">
-              {["Run", "Conditions", "Outfit", "Did it work?"].map(
-                (heading) => (
-                  <th key={heading} scope="col" className="px-2 pb-2">
-                    <Mono step="xs" className="text-muted">
-                      {heading}
-                    </Mono>
-                  </th>
-                ),
-              )}
-            </tr>
-          </thead>
-          {/* The keys live on the body rather than on each row: `↑`/`↓`
-              move between rows, so the handler has to outlive the row that
-              had focus when it was pressed. */}
-          <tbody onKeyDown={onKeyDown}>
-            {rows.map((row, index) => (
-              <tr
-                key={row.runId}
-                // Roving focus: one row is in the tab order and the arrows
-                // move which. A table of fifty rows that put every row in
-                // the sequence would be fifty tab stops before the rail.
-                tabIndex={index === selected ? 0 : -1}
-                aria-current={index === selected ? "true" : undefined}
-                data-saved={saved.has(row.runId) ? "true" : undefined}
-                data-failed={failed.has(row.runId) ? "true" : undefined}
-                onFocus={() => {
-                  setSelected(index);
-                }}
-                className={rowClass(saved.has(row.runId), failed.has(row.runId))}
-              >
-                <td className="px-2 py-2">
-                  <span className="block text-body font-semibold">
-                    {runDay(row)}
-                  </span>
-                  <Mono step="sm" className="text-muted">
-                    {formatDuration(row.durationS)} ·{" "}
-                    {formatDistance(row.distanceM, units.distance)}
-                  </Mono>
-                </td>
-                <td className="px-2 py-2">
-                  <Mono step="sm" className="text-quiet">
-                    {row.conditions === undefined
-                      ? "No conditions"
-                      : conditionsLine(row.conditions, units)}
-                  </Mono>
-                </td>
-                <td className="px-2 py-2">
-                  <OutfitCell
-                    runId={row.runId}
-                    suggestion={row.suggestion}
-                    chosen={kits.get(row.runId)}
-                    onUse={(kit) => {
-                      use(row, kit);
-                    }}
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  {/* `aria-pressed`, not a `radiogroup`, and for a
-                      sharper reason than A3's: the arrow keys here move
-                      between *rows*, so a group promising arrow-key
-                      selection would be a promise the table cannot keep.
-                      A3 reached the same answer from the other side
-                      (D-84), and one answer to "what is a verdict
-                      control" is the point. */}
-                  <div className="flex gap-1">
-                    {verdictKeys.map((slot) => (
-                      <VerdictSlotButton
-                        key={slot.key}
-                        slot={slot}
-                        day={runDay(row)}
-                        isChosen={verdicts.get(row.runId) === slot.value}
-                        onChoose={() => {
-                          choose(row, slot.value);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <Mono step="xs" className="text-muted">
-            Keys
-          </Mono>
-          {LEGEND.map(({ keys, does }) => (
-            <span key={does} className="flex items-center gap-2 text-small">
-              <Mono step="sm" className="border border-hairline-2 px-2 py-1">
-                {keys}
-              </Mono>
-              {does}
-            </span>
-          ))}
-          <Mono step="sm" className="ml-auto text-muted">
-            {saved.size} of {rows.length} saved
-          </Mono>
-        </div>
+        {current === undefined ? (
+          <Bracketed>All logged</Bracketed>
+        ) : (
+          <BacklogTable
+            rows={rows}
+            units={units}
+            selection={{
+              selected,
+              onSelect: setSelected,
+              onKeyDown: (event) => {
+                onKeyDown(event, current);
+              },
+            }}
+            rowState={{ saved, failures, kitOf, verdicts }}
+            rowActions={{
+              onUse: use,
+              onChoose: choose,
+              onSave: (row) => {
+                void save(row);
+              },
+            }}
+          />
+        )}
 
         {/* Rule 07: one live region per screen, and this is the screen's.
             Everything the keyboard does says so here — a table driven by
@@ -472,11 +461,231 @@ export function VerdictBacklog({
         </p>
       </div>
 
-      <BacklogRail row={rows[selected]} units={units} />
+      {current === undefined ? undefined : (
+        <BacklogRail row={current} units={units} />
+      )}
     </div>
   );
 }
 
+/**
+ * A row's place in the layout below the desk threshold.
+ *
+ * **Between 720 and 1039 there is no table** (round 22, item 18): *"A3,
+ * one at a time, in the panel."* So below `desk` only the selected row is
+ * drawn, its cells stacked as A3's are, and the rest wait their turn;
+ * from `desk` up every row is a table row again. One set of markup, two
+ * layouts — the server cannot know the width, and two copies of a row
+ * would be two answers to "what is this run's verdict".
+ */
+const ROW_HERE = "flex flex-col gap-3 py-3 desk:table-row desk:py-0";
+const ROW_WAITING = "hidden desk:table-row";
+
+/**
+ * A row's saved mark, its failure (if any), and what it currently holds —
+ * the three things the table reads per row but a row itself never sets.
+ */
+interface BacklogRowState {
+  saved: ReadonlySet<string>;
+  failures: ReadonlyMap<string, ControlFailure>;
+  kitOf: (row: BacklogRow) => BacklogKit | undefined;
+  verdicts: ReadonlyMap<string, VerdictValue>;
+}
+
+/**
+ * The three things a row can do, all bubbling up to the screen that owns
+ * `save`/`use`/`choose` — grouped so the table's own signature says "state"
+ * and "actions" rather than eleven same-shaped props in a row.
+ */
+interface BacklogRowActions {
+  onUse: (row: BacklogRow, kit: BacklogSuggestion) => void;
+  onChoose: (row: BacklogRow, value: VerdictValue) => void;
+  onSave: (row: BacklogRow) => void;
+}
+
+/**
+ * Which row has the roving focus, and the two ways that changes — a mouse
+ * focus and an arrow key. Grouped for the same reason `BacklogRowState` and
+ * `BacklogRowActions` are: one thing the table is told, not three loose
+ * same-shaped props.
+ */
+interface BacklogSelection {
+  selected: number;
+  onSelect: (index: number) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLTableSectionElement>) => void;
+}
+
+/**
+ * The table, its keys, and the count beneath it — everything DS2 draws
+ * while there is something left to log.
+ */
+function BacklogTable({
+  rows,
+  units,
+  selection,
+  rowState,
+  rowActions,
+}: Readonly<{
+  rows: readonly BacklogRow[];
+  units: Units;
+  selection: Readonly<BacklogSelection>;
+  rowState: Readonly<BacklogRowState>;
+  rowActions: Readonly<BacklogRowActions>;
+}>): JSX.Element {
+  const { selected, onSelect, onKeyDown } = selection;
+  const { saved, failures, kitOf, verdicts } = rowState;
+  const { onUse, onChoose, onSave } = rowActions;
+  return (
+    <>
+      <table className="block w-full border-collapse text-left desk:table">
+        <thead className="hidden desk:table-header-group">
+          <tr className="border-b border-hairline">
+            {["Run", "Conditions", "Outfit", "Did it work?"].map((heading) => (
+              <th key={heading} scope="col" className="px-2 pb-2">
+                <Mono step="xs" className="text-muted">
+                  {heading}
+                </Mono>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {/* The keys live on the body rather than on each row: `↑`/`↓`
+            move between rows, so the handler has to outlive the row that
+            had focus when it was pressed. */}
+        <tbody onKeyDown={onKeyDown} className="block desk:table-row-group">
+          {rows.map((row, index) => {
+            const failure = failures.get(row.runId);
+            const isHere = index === selected;
+            return (
+              <Fragment key={row.runId}>
+                <tr
+                  // Roving focus: one row is in the tab order and the
+                  // arrows move which. A table of fifty rows that put every
+                  // row in the sequence would be fifty tab stops before the
+                  // rail.
+                  tabIndex={isHere ? 0 : -1}
+                  aria-current={isHere ? "true" : undefined}
+                  data-saved={saved.has(row.runId) ? "true" : undefined}
+                  data-failed={failure === undefined ? undefined : "true"}
+                  onFocus={() => {
+                    onSelect(index);
+                  }}
+                  className={`${rowClass(saved.has(row.runId), failure !== undefined)} ${isHere ? ROW_HERE : ROW_WAITING}`}
+                >
+                  <td className="block px-2 py-2 desk:table-cell">
+                    <span className="block text-body font-semibold">
+                      {runDay(row)}
+                    </span>
+                    <Mono step="sm" className="text-muted">
+                      {formatDuration(row.durationS)} ·{" "}
+                      {formatDistance(row.distanceM, units.distance)}
+                    </Mono>
+                  </td>
+                  <td className="block px-2 py-2 desk:table-cell">
+                    <Mono step="sm" className="text-quiet">
+                      {row.conditions === undefined
+                        ? "No conditions"
+                        : conditionsLine(row.conditions, units)}
+                    </Mono>
+                  </td>
+                  <td className="block px-2 py-2 desk:table-cell">
+                    <OutfitCell
+                      runId={row.runId}
+                      suggestion={row.suggestion}
+                      chosen={kitOf(row)}
+                      onUse={(kit) => {
+                        onUse(row, kit);
+                      }}
+                    />
+                  </td>
+                  <td className="block px-2 py-2 desk:table-cell">
+                    {/* `aria-pressed`, not a `radiogroup`, and for a
+                        sharper reason than A3's: the arrow keys here move
+                        between *rows*, so a group promising arrow-key
+                        selection would be a promise the table cannot keep.
+                        A3 reached the same answer from the other side
+                        (D-84), and one answer to "what is a verdict
+                        control" is the point. */}
+                    <div className="flex gap-1">
+                      {verdictKeys.map((slot) => (
+                        <VerdictSlotButton
+                          key={slot.key}
+                          slot={slot}
+                          day={runDay(row)}
+                          isChosen={verdicts.get(row.runId) === slot.value}
+                          onChoose={() => {
+                            onChoose(row, slot.value);
+                          }}
+                        />
+                      ))}
+                    </div>
+                    {/* Below the desk there is no Enter to press and no
+                        arrow to move with: A3's own verb, and a way on. */}
+                    <div className="mt-3 flex gap-2 desk:hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSave(row);
+                        }}
+                        className="target flex-1 rounded-card border-none bg-action px-4 font-display text-body uppercase text-ink"
+                      >
+                        Log it
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelect(rowAfterMove(selected, 1, rows.length));
+                        }}
+                        className="target rounded-card border border-hairline bg-transparent px-4 text-body font-semibold"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {failure === undefined ? undefined : (
+                  // The band spans the row it is about, directly under it.
+                  <tr
+                    data-slot="row-failure"
+                    className={isHere ? "block desk:table-row" : ROW_WAITING}
+                  >
+                    <td colSpan={4} className="block px-2 pb-3 desk:table-cell">
+                      <ControlFailureBand
+                        failure={failure}
+                        onRetry={() => {
+                          onSave(row);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="hidden flex-wrap items-center gap-4 desk:flex">
+          <Mono step="xs" className="text-muted">
+            Keys
+          </Mono>
+          {LEGEND.map(({ keys, does }) => (
+            <span key={does} className="flex items-center gap-2 text-small">
+              <Mono step="sm" className="border border-hairline-2 px-2 py-1">
+                {keys}
+              </Mono>
+              {does}
+            </span>
+          ))}
+        </span>
+        <Mono step="sm" className="ml-auto text-muted">
+          {saved.size} of {rows.length} saved
+        </Mono>
+      </div>
+    </>
+  );
+}
 const ROW_CLASS = "row-press border-b border-hairline";
 const ROW_SAVED_CLASS = "row-press border-b border-hairline bg-tint";
 /**
@@ -493,11 +702,14 @@ function rowClass(isSaved: boolean, hasFailed: boolean): string {
 }
 
 /**
- * `set` without `key`. A `Set` has no non-mutating delete, and mutating
- * the one in state would not re-render.
+ * `map` without `key`. A `Map` in state is replaced, never mutated —
+ * mutating the one in state would not re-render.
  */
-function without(set: ReadonlySet<string>, key: string): ReadonlySet<string> {
-  const next = new Set(set);
+function without<TValue>(
+  map: ReadonlyMap<string, TValue>,
+  key: string,
+): ReadonlyMap<string, TValue> {
+  const next = new Map(map);
   next.delete(key);
   return next;
 }

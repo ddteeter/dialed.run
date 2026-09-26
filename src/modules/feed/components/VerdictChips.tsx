@@ -10,6 +10,15 @@ import type { Chip } from "../chips";
  * `close` glyph, decorative, because `aria-pressed` already says it is
  * chosen and a second announcement would say it twice.
  *
+ * **Drawn at 32, hit at 44** (round 21, ask 4): `h-8` is the drawing and
+ * `target-seam` the target — a `::before` six pixels proud above and
+ * below. `target` would pad the box itself to 44, which is the height the
+ * ruling takes away.
+ *
+ * **Read-only, a chosen chip keeps its ink and loses its ✕.** Round 21:
+ * *"After Log it the chips stay, read-only (chosen still inked, no ✕)"*.
+ * The ✕ is the offer to un-choose, and a receipt makes no offers.
+ *
  * A3's row and A3b's tag list are the same control, so they share this
  * rather than each drawing a pill.
  */
@@ -36,13 +45,29 @@ export function ChipToggle({
       }}
       className={
         pressed
-          ? "target flex items-center gap-1 rounded-pill border border-ink bg-ink px-3 py-2 text-ground"
-          : "target flex items-center gap-1 rounded-pill border border-hairline px-3 py-2 text-quiet"
+          ? "target-seam flex h-8 items-center gap-1 rounded-pill border border-ink bg-ink px-3 text-ground"
+          : "target-seam flex h-8 items-center gap-1 rounded-pill border border-hairline px-3 text-quiet"
       }
     >
-      <Mono step="xs">{children}</Mono>
-      {pressed ? <Icon name="close" size={12} /> : undefined}
+      <Mono step="sm">{children}</Mono>
+      {pressed && !readOnly ? <Icon name="close" size={12} /> : undefined}
     </button>
+  );
+}
+
+/**
+ * The chips' group: wrapping, with round 21's `12px 7px` gap — the row gap
+ * is the one that makes two rows' 44px targets meet at the seam rather
+ * than overlap. A3's row and A3b's tags both sit in one.
+ */
+export function ChipRow({
+  slot,
+  children,
+}: Readonly<{ slot?: string | undefined; children: ReactNode }>) {
+  return (
+    <div data-slot={slot} className="flex flex-wrap gap-x-[7px] gap-y-3">
+      {children}
+    </div>
   );
 }
 
@@ -54,6 +79,10 @@ export function ChipToggle({
  * which are pressed. A chip is pressed when the runner's answer already
  * holds it — its garment flagged that way, or its tag on — so a choice
  * made in A3b shows up here as a pressed chip too.
+ *
+ * **MORE › leaves with share and submit when Noted lands** (round 21, ask
+ * 1a): *"An inert control that still looks tappable is a lie"*. So a
+ * read-only row has no MORE at all, rather than one that does nothing.
  */
 export function VerdictChips({
   chips,
@@ -77,7 +106,7 @@ export function VerdictChips({
       </h2>
       {/* The name design's board gives this region, so the conformance
           run can diff the two directly. */}
-      <div data-slot="flag-chips" className="flex flex-wrap gap-2">
+      <ChipRow slot="flag-chips">
         {chips.map((chip) => {
           const isPressed =
             chip.kind === "flag"
@@ -98,19 +127,18 @@ export function VerdictChips({
             </ChipToggle>
           );
         })}
-        <button
-          type="button"
-          data-slot="flag-more"
-          aria-haspopup="dialog"
-          aria-disabled={readOnly || undefined}
-          onClick={() => {
-            if (!readOnly) onMore();
-          }}
-          className="target rounded-pill border border-hairline px-3 py-2 font-semibold text-cold-text"
-        >
-          <Mono step="xs">More &rsaquo;</Mono>
-        </button>
-      </div>
+        {readOnly ? undefined : (
+          <button
+            type="button"
+            data-slot="flag-more"
+            aria-haspopup="dialog"
+            onClick={onMore}
+            className="target-seam flex h-8 items-center rounded-pill border border-hairline px-3 font-semibold text-cold-text"
+          >
+            <Mono step="sm">More &rsaquo;</Mono>
+          </button>
+        )}
+      </ChipRow>
     </div>
   );
 }

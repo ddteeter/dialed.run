@@ -129,3 +129,27 @@ summary:focus-visible,
   min-height: 44px;
   min-width: 44px;
 }
+
+/* ------------------------------------------------------------------
+ * 03 · THE SEAM TARGET — a 44 hit area on a 32px chip
+ *
+ * Round 21, ask 4: "Hit area without the height. Chips draw at 32px; a
+ * `::before` at `inset: -6px 0` makes the target 44. Row gap becomes 12px
+ * so neighbouring targets touch but never overlap." Padding cannot do
+ * that — `target` grows the box, and the ruling is that the box stays 32.
+ * So the hit area is a pseudo-element six pixels proud of the chip above
+ * and below, and the chip is its containing block.
+ *
+ * **A3's chips and A3b's tags, and nowhere else by default** — "any other
+ * 32px chip must prove the same seam". Horizontally it needs nothing:
+ * every chip is wider than 44.
+ * ------------------------------------------------------------------ */
+@utility target-seam {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -6px 0;
+  }
+}

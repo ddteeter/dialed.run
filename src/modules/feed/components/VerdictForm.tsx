@@ -1,21 +1,16 @@
-import { useNavigate } from "@tanstack/react-router";
-import type { ChangeEvent } from "react";
-import { useRef, useState } from "react";
+import type { JSX } from "react";
+import { useState } from "react";
 
 import { entryTags, verdictScale } from "../../../lib/contracts";
 import type { Units, VerdictValue } from "../../../lib/contracts";
-import { bandLabel } from "../../../lib/temperature";
-import { newUlid } from "../../../lib/ids";
+import { clockLabel, dayLabel } from "../../../lib/dates";
+import { distanceNumber } from "../../../lib/measures";
+import { bandLabel, formatTemp } from "../../../lib/temperature";
 import {
-  isAllowedPhotoType,
-  maxPhotosPerEntry,
-} from "../../../lib/photo-constraints";
-import {
+  FieldMessage,
   FlowStep,
   FormErrorSummary,
   FormFailureBand,
-  FieldGroup,
-  FormField,
   FormStatus,
   LOG_FLOW,
   Mono,
@@ -23,7 +18,6 @@ import {
   useFormSubmit,
   verdictHue,
 } from "../../../ui";
-import type { PhotoStep } from "../../../ui";
 
 /**
  * `relative` and a horizontal gutter, because the brackets frame the cell.
@@ -99,6 +93,7 @@ import { SpecificsSheet } from "./SpecificsSheet";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
 import { suggestChips } from "../chips";
+import { notedPlan } from "../noted";
 import type { Chip, Flag, ItemFlagChoice } from "../chips";
 import type { entryDetailForViewer } from "../entries";
 import { toggledIn } from "../../../lib/toggled-in";
@@ -128,20 +123,68 @@ const LABELS = {
 };
 
 /**
+ * The header's question, which is also the verdict row's name: the row's
+ * `fieldset` is labelled by it rather than carrying a legend of its own,
+ * because the board draws the question once, in the header.
+ */
+const QUESTION_ID = "verdict-question";
+
+/**
+ * A3's ink header: the run, where and when it happened, and the question.
+ *
+ * *"SAT AUG 29 · 6:04 AM / 6.2 AT 41° / Did it work?"* — the date and time
+ * are the run's own zone (D-96, from the observation), the distance is the
+ * runner's unit, and the temperature is the one the run started in. With
+ * no conditions the line names the unit instead ("6.2 MI", the
+ * nothing-moved frame), since there is no "at" to say.
+ *
+ * `data-ground="ink"` is the product's inverted block (the top bar is the
+ * first), so the tokens inside it flip rather than each class naming a
+ * dark-on-light pair.
+ */
+function RunHeader({
+  entry,
+  units,
+}: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
+  const zone = entry.conditions?.timeZone;
+  const distance = distanceNumber(entry.distanceM, units.distance);
+  const headline =
+    entry.conditions === undefined
+      ? `${distance} ${units.distance}`
+      : `${distance} at ${formatTemp(entry.conditions.tempC, units.temp)}`;
+  return (
+    <header
+      data-slot="header"
+      data-ground="ink"
+      className="-mx-5 -mt-6 flex flex-col gap-2 bg-ground px-5 py-5 text-ink"
+    >
+      <Mono step="xs" className="text-muted">
+        {dayLabel(entry.startedAt, zone)} · {clockLabel(entry.startedAt, zone)}
+      </Mono>
+      <p className="m-0 font-display text-display uppercase">{headline}</p>
+      <h1 id={QUESTION_ID} className="m-0 text-body font-normal text-quiet">
+        {LABELS.verdict}
+      </h1>
+    </header>
+  );
+}
+
+/**
  * The verdict (screen A3) — the one screen the whole product turns on.
  *
  * A verdict is per-run, stored as -2..+2 with 0 meaning dialed, and the
  * per-item signal is a `flag`, not a second verdict (docs/contracts.md).
- * Photos are optional and capped; the cap and the allowed types are read
- * from `lib/photo-constraints` rather than restated, because the server
- * enforces the same two facts and a second copy would drift.
+ *
+ * **A3 never navigates** (round 21, ask 3; product.md §5). Logging lands
+ * Noted in the submit's place and the tab bar is the exit, on every run —
+ * including the two with nothing to count, which used to be sent to their
+ * entry instead. And **the photo is not here any more**: round 20 moved
+ * the outfit photo to A2, where the kit is chosen.
  */
 export function VerdictForm({
   entry,
   bandFloor,
   submitVerdict,
-  uploadPhoto,
-  renderPhotoStep,
   itemBandWearStat,
   units,
   history,
@@ -149,8 +192,8 @@ export function VerdictForm({
   entry: Entry;
   bandFloor: number | undefined;
   /**
-   * The runner's own units, for the band in the history line and in
-   * Noted's sentence ("…8 of 9 in 38–46°").
+   * The runner's own units, for the header's distance and temperature, the
+   * band in the history line, and Noted's sentence ("…8 of 9 in 38–46°").
    */
   units: Units;
   /**
@@ -168,24 +211,10 @@ export function VerdictForm({
       }
     | undefined;
   submitVerdict: (input: { data: Record<string, unknown> }) => Promise<unknown>;
-  uploadPhoto: (input: { data: FormData }) => Promise<{ key: string }>;
-  /**
-   * W3's step between picking a photo and uploading it: the route hands
-   * in something that takes the picked file and calls back with the bytes
-   * to send. A render slot rather than a direct import, because this
-   * module may not reach `modules/safety` — dependency-cruiser forbids
-   * the deep import and the safety barrel reaches D1.
-   *
-   * Absent, a picked file is uploaded as-is, which is what every caller
-   * did before W3 existed.
-   */
-  renderPhotoStep?: PhotoStep;
   itemBandWearStat: (input: {
     data: { itemId: string; bandFloorC: number };
   }) => Promise<{ worn: number; total: number }>;
 }>) {
-  const navigate = useNavigate();
-
   const [verdict, setVerdict] = useState<number | undefined>(entry.verdict);
   const [tags, setTags] = useState<Set<string>>(new Set(entry.tags));
   const [isPublic, setIsPublic] = useState(entry.isPublic);
@@ -199,35 +228,16 @@ export function VerdictForm({
       entry.items.map((item) => [item.itemId, item.flag ?? "none"]),
     ),
   );
-  const [noted, setNoted] = useState<string | undefined>();
+  // Present once the verdict is saved. The sentence inside it can still be
+  // absent: the save landed and only the record's count failed to come
+  // back, and the receipt is not held hostage to it.
+  const [noted, setNoted] = useState<{ sentence: string | undefined }>();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [photoKeys, setPhotoKeys] = useState<string[]>(entry.photoKeys);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
   // EntryDetail carried: two sources for one fact, one from the URL params
   // and one from the loader, which a route can silently disagree with
   // itself about.
   const entryId = entry.id;
-  const [photoError, setPhotoError] = useState<string | undefined>();
-  /**
-   * A picked file waiting on W3's blur step. One at a time: the step is a
-   * screen, and two of them at once is not a thing a runner can answer.
-   */
-  /**
-   * The picked file and the step that will answer for it, together.
-   *
-   * **A pair rather than just the file, because the pair is the
-   * invariant.** Only the branch that has a step sets this, so a held
-   * file always has one — but TypeScript cannot see that across a state
-   * update, so the render needed a `?.` for a case no input could reach.
-   * Carrying the step makes the guarantee a type, and it also means the
-   * step a runner is looking at is the one that opened, even if the
-   * parent stops supplying one mid-way.
-   */
-  const [pending, setPending] = useState<
-    { file: File; step: PhotoStep } | undefined
-  >();
-  const [uploading, setUploading] = useState(false);
-  const uploadInFlight = useRef(false);
 
   // Equivalent mutant on the fallback: every item is seeded above, so the
   // lookup always finds one. The `??` is `noUncheckedIndexedAccess`'s, not
@@ -237,100 +247,27 @@ export function VerdictForm({
   const flagFor = (itemId: string) => flags[itemId] ?? "none";
 
   /**
-   * Uploads one file. Multipart: the browser streams it and nothing
-   * transcodes it — TanStack passes FormData to the server function
-   * untouched (its types special-case it for POST).
+   * Noted's sentence: what the verdict just did to a record, or — when
+   * there was nothing to count — which input was missing (`notedPlan`).
+   *
+   * **Nothing here may fail the save.** This runs after the verdict has
+   * landed, and a throw from it used to reach `useFormSubmit` as the
+   * submission's own failure: "Nothing saved", the form unlocked, and a
+   * runner invited to log a verdict that was already logged. A count that
+   * does not come back leaves the receipt without its sentence instead.
    */
-  async function sendPhoto(file: File): Promise<void> {
-    const upload = new FormData();
-    upload.append("entryId", entryId);
-    upload.append("photo", file);
-    // One key per file, not per submission: each photo is its own create.
-    upload.append("idempotencyKey", newUlid());
-    const { key } = await uploadPhoto({ data: upload });
-    setPhotoKeys((previous) => [...previous, key]);
-  }
-
-  /**
-   * What the blur step handed back — the bytes that actually get sent.
-   */
-  async function handlePhotoReady(ready: File): Promise<void> {
-    setPending(undefined);
-    setUploading(true);
+  async function notedSentence(): Promise<string | undefined> {
+    const plan = notedPlan(bandFloor, entry.items);
+    if (plan.kind === "nothing-moved") return plan.sentence;
     try {
-      await sendPhoto(ready);
+      const stat = await itemBandWearStat({
+        data: { itemId: plan.itemId, bandFloorC: plan.bandFloorC },
+      });
+      return `${plan.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(plan.bandFloorC, units.temp)}.`;
     } catch {
-      setPhotoError("Couldn't upload that photo. Try again.");
-    } finally {
-      // No `uploadInFlight` reset here: `handlePhotoSelect`'s own `finally`
-      // already released it on the way out to the step, so a second reset
-      // is a line that cannot change an answer.
-      setUploading(false);
+      // The count did not come back; the save it would describe did land.
     }
-  }
-
-  async function handlePhotoSelect(event: ChangeEvent<HTMLInputElement>) {
-    // The guard the `disabled` attribute used to be. A second selection
-    // mid-upload would race the cap count below, which is counted locally
-    // precisely because state does not settle between iterations.
-    if (uploadInFlight.current) return;
-    uploadInFlight.current = true;
-    // Copy out of the live FileList BEFORE clearing the input. `files` is
-    // a live view onto the input, so resetting `value` first empties it —
-    // the loop below then saw zero files and the upload silently did
-    // nothing, with no error to show for it. Clearing is still needed so
-    // re-picking the same file fires `change` again.
-    // Two equivalent mutants below. A `change` from a file input always
-    // carries a `FileList` — empty when the picker was dismissed — so the
-    // `[]` fallback is the compiler's, not the runtime's. And proceeding
-    // with an empty list does nothing observable: the loop has no
-    // iterations, and React batches the `uploading` flag on and off inside
-    // one commit, so no render ever shows it. The guard is here to say
-    // what it means, not because anything can see it.
-    // Stryker disable next-line ArrayDeclaration,ConditionalExpression
-    const files = event.target.files ? [...event.target.files] : [];
-    event.target.value = "";
-    // Stryker disable next-line ConditionalExpression
-    if (files.length === 0) return;
-    setPhotoError(undefined);
-    setUploading(true);
-    // Counted locally, not read back off state.
-    //
-    // `photoKeys` is captured when this render ran, and `setPhotoKeys`
-    // inside the loop does not change it — so the cap check used to see
-    // the same number on every iteration and a multi-select could put an
-    // entry over the limit. The server refuses the extra one, which meant
-    // the runner got "couldn't upload that photo" instead of being told
-    // about the cap.
-    let count = photoKeys.length;
-    try {
-      for (const file of files) {
-        if (count >= maxPhotosPerEntry) {
-          setPhotoError(`Up to ${String(maxPhotosPerEntry)} photos per entry.`);
-          break;
-        }
-        if (!isAllowedPhotoType(file.type)) {
-          setPhotoError("Photos must be JPEG, PNG, or WebP.");
-          continue;
-        }
-        const step = renderPhotoStep;
-        if (step !== undefined) {
-          // W3: the picked file does not go anywhere until the blur step
-          // hands back the bytes to send. Queued rather than uploaded, and
-          // one at a time — the step is a screen, and two of them at once
-          // is not a thing a runner can answer.
-          setPending({ file, step });
-          return;
-        }
-        await sendPhoto(file);
-        count += 1;
-      }
-    } catch {
-      setPhotoError("Couldn't upload that photo. Try again.");
-    } finally {
-      setUploading(false);
-      uploadInFlight.current = false;
-    }
+    return undefined;
   }
 
   /**
@@ -350,20 +287,7 @@ export function VerdictForm({
     successMessage: "Verdict saved.",
     labels: LABELS,
     onSuccess: async () => {
-      // The calibration note is the reason to log a verdict at all, so
-      // when there is one the screen stays and shows it rather than
-      // navigating away from it.
-      const firstItem = entry.items[0];
-      if (firstItem && bandFloor !== undefined) {
-        const stat = await itemBandWearStat({
-          data: { itemId: firstItem.itemId, bandFloorC: bandFloor },
-        });
-        setNoted(
-          `${firstItem.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(bandFloor, units.temp)}.`,
-        );
-        return;
-      }
-      await navigate({ to: "/feed/entry/$entryId", params: { entryId } });
+      setNoted({ sentence: await notedSentence() });
     },
   });
 
@@ -433,7 +357,7 @@ export function VerdictForm({
           void form.submit(payload());
         }}
       >
-        <h1 className="font-display text-title uppercase">Verdict</h1>
+        <RunHeader entry={entry} units={units} />
         <FormStatus>{form.status}</FormStatus>
         <FormErrorSummary
           rows={form.summaryRows}
@@ -448,13 +372,16 @@ export function VerdictForm({
             a layout rather than remembered: the labels break inside their
             own cell instead of the row breaking.
 
-            `FieldGroup`, not `FormField`, for the same round-17 ruling —
-            "neither the row nor the chips sit inside a field box" — and
-            because the box was suppressing each button's focus ring. */}
-        <FieldGroup
-          name="verdict"
-          legend={LABELS.verdict}
-          error={form.fieldErrors.verdict}
+            A bare `fieldset`, not `FormField`, for the same round-17
+            ruling — "neither the row nor the chips sit inside a field box"
+            — and because the box was suppressing each button's focus
+            ring. Labelled by the header's question rather than by a legend
+            of its own: the board asks "Did it work?" once, in the ink
+            header, and a second copy on the paper beneath would be the
+            question twice. */}
+        <fieldset
+          aria-labelledby={QUESTION_ID}
+          className="m-0 flex flex-col gap-2 border-0 p-0"
         >
           <div
             // The name design's board gives this region
@@ -521,7 +448,8 @@ export function VerdictForm({
               );
             })}
           </div>
-        </FieldGroup>
+          <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
+        </fieldset>
 
         {history === undefined || bandFloor === undefined ? undefined : (
           <BandHistory
@@ -550,75 +478,14 @@ export function VerdictForm({
           onClose={() => {
             setSheetOpen(false);
           }}
+          verdict={verdict}
           items={entry.items}
-          flagFor={flagFor}
-          onFlag={setFlag}
-          tags={tags}
-          onTag={toggleTag}
+          answer={{ flagFor, onFlag: setFlag, tags, onTag: toggleTag }}
           field={form.field}
         />
 
-        <div className="flex flex-col gap-2">
-          <h2>
-            <Mono step="xs">Photos</Mono>
-          </h2>
-          {photoKeys.length > 0 ? (
-            <div className="grid grid-cols-4 gap-2">
-              {photoKeys.map((key) => (
-                <img
-                  key={key}
-                  src={`/feed/photo/${key}`}
-                  alt=""
-                  className="aspect-square w-full rounded-field object-cover"
-                />
-              ))}
-            </div>
-          ) : undefined}
-          {/*
-            The field outlives the control. "Up to 4 photos per entry." is
-            set exactly when the cap is reached — which is exactly when the
-            Add-a-photo link stops rendering — so putting the message
-            inside that conditional hid it in the one case it exists for.
-          */}
-          {photoError !== undefined || photoKeys.length < maxPhotosPerEntry ? (
-            <FormField
-              name="photo"
-              label={uploading ? "Uploading…" : "Add a photo"}
-              error={photoError}
-            >
-              {photoKeys.length < maxPhotosPerEntry ? (
-                <input
-                  id="photo"
-                  name="photo"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  // Not `disabled` while uploading (§5): it drops focus and
-                  // stops announcing. The re-entry guard is in the handler,
-                  // where it can also survive a re-render.
-                  aria-busy={uploading || undefined}
-                  onChange={(event) => {
-                    void handlePhotoSelect(event);
-                  }}
-                  className="text-body"
-                />
-              ) : undefined}
-            </FormField>
-          ) : undefined}
-
-          {pending === undefined
-            ? undefined
-            : pending.step(
-                pending.file,
-                (ready) => {
-                  void handlePhotoReady(ready);
-                },
-                form.announce,
-              )}
-        </div>
-
         {isLocked ? (
-          <NotedReceipt sentence={noted} />
+          <NotedReceipt sentence={noted.sentence} />
         ) : (
           <>
             {/* A3's share-toggle as round 19 draws it: "Share to feed", with

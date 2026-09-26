@@ -24,5 +24,10 @@
  */
 export type { CoverageBand } from "./coverage";
 export { coverageLadder } from "./ladder-read";
-export type { Backlog, BacklogRow, BacklogSuggestion } from "./backlog";
+export type {
+  Backlog,
+  BacklogKit,
+  BacklogRow,
+  BacklogSuggestion,
+} from "./backlog";
 export type { Conditions } from "./conditions-shape";
