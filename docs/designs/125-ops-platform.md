@@ -1,0 +1,94 @@
+# Design: 125 Ops & platform
+
+## Problem
+
+The app has to run unattended, and today it cannot say when it is not:
+Sentry sends are probably cancelled (0.4), day two of the digest is silent
+(0.5), no cron checks in, the auth limiter is off (0.7) and weather bills
+24 records to keep one (0.6). This lane fixes that, and builds what other
+lanes stand on: the Desk shell (D0), Turnstile, headers, icons, the OG card.
+
+## Approach
+
+- **OPS-1** `ops/sentry.ts`: every Toucan gets `context: { waitUntil }`.
+  `waitUntil` is the `cloudflare:workers` export, re-exported by `src/env`
+  (the one binding module), so fetch, queue and cron all keep the send alive
+  without threading `ctx`. It is a required parameter of `reportException`,
+  so the compiler holds every caller to it.
+- **OPS-2** the digest groups its checks by **kind** and sends one event per
+  kind, fingerprinted `["daily-digest", kind, day]` and tagged
+  `digest=daily`, `digest_kind=<kind>`. A new day is a new issue, and the
+  tag gives an alert rule something to match every event on.
+- **OPS-3 · Sentry Crons**, via Toucan's `captureCheckIn` with a
+  `monitorConfig` upsert (monitors create themselves; no dashboard step, no
+  new secret, no new vendor). `in_progress` then `ok`/`error` per firing.
+  Cost: one monitor is free on every plan; the other three are $0.78/month
+  each. The free alternative, healthchecks.io (20 checks free), needs a new
+  secret and a new account — owner's veto if $2.34/month is not worth it.
+- **OPS-4** (after #104) `instance.ts` passes `BETTER_AUTH_URL`;
+  `createAuth` sets `rateLimit { enabled, storage: "database" }` and
+  `advanced.useSecureCookies` from the URL's scheme. Migration
+  `add_auth_rate_limit` (core, additive). `/api/health` names a missing
+  `BETTER_AUTH_URL`.
+- **OPS-5** `ops/turnstile.ts`: one `siteverify` POST, 10 s timeout, zod
+  parse, fail closed (missing token, missing secret, non-2xx, timeout, bad
+  body all refuse). `ui/Turnstile.tsx`: explicit render, token by callback
+  and the widget's own hidden input; removed on unmount.
+- **OPS-6 · one record per hour-key, not a day per hour-key.** Measured
+  against Visual Crossing's docs: a datetime request with `include=current`
+  costs **1 record**; a day with hours costs **24**. For a run spanning six
+  hour-keys: today 6 × 24 = **144**; storing the whole day = **24** (48 if
+  the run crosses midnight); single datetime = **6**. The day only wins if
+  four other runs use the same ~1 km cell the same day, which a small app
+  will not see. So the adapter asks for the hour (epoch seconds, so the
+  zone is unambiguous) with `include=current`. Test: six hour-keys, cold
+  cache → six upstream calls, each `include=current` (6 records, not 144).
+- **OPS-7** `routes/desk/route.tsx` (shell) + `desk/index.tsx` (Today).
+  `ops/desk.ts` holds the gate (a non-admin, signed in or not, gets
+  `notFound`, never 403) and `todayCounts()`: reports waiting and the oldest,
+  photos the screener could not finish, bans this week and all time. **The
+  digest calls the same `todayCounts()`**, so Today and the digest cannot
+  disagree (D5). Shell: `data-ground="ink"`, hi-viz for counts that need a
+  person, a rail of Today · Review · Duplicates · Gave up · Runners · Access;
+  entries whose page does not exist yet render as text, not links.
+- **OPS-8** `ops/security-headers.ts`, applied around `startFetch`: CSP
+  **report-only** (reports to Sentry's security endpoint, derived from the
+  DSN), `frame-ancestors 'none'`, HSTS, Referrer-Policy, Permissions-Policy,
+  nosniff. Enforcing needs a script nonce through `router.tsx` (not this
+  lane's file), so the policy allows inline scripts until then.
+- **OPS-9** `public/` icons + manifest + `robots.txt`; head tags in
+  `__root.tsx` after #104 merges (it edits that file).
+- **OPS-12/13** docs, plus `docs/proposals/125-ci-migrate-before-deploy.md`.
+- **OPS-14** `weather/store.ts` and `read.ts` stop special-casing legacy
+  `source='manual'` rows. Dropping `"manual"` from the schema enum is a
+  tightened constraint, so it is a question, not a change.
+- **OPS-15** after #104 merges. **OPS-16** once the library is measured
+  (numbers below, added before adopting). **OPS-11** after 126's ACC-2.
+
+## Contract touches
+
+- Schema: `add_auth_rate_limit` (core, additive, listed for this lane).
+- Routes: `desk/route.tsx`, `desk/index.tsx`, `og/*`.
+- Bindings/queues/crons: **none**. New secrets (not bindings):
+  `TURNSTILE_SECRET_KEY`, var `TURNSTILE_SITE_KEY`, var `BETTER_AUTH_URL`.
+- Screens: D0 shell, Today.
+
+## Test plan
+
+Worker: send registered with `waitUntil`; digest events per kind with
+fingerprint and tags; check-ins `in_progress` → `ok`/`error` per cron;
+Turnstile missing/invalid/expired/timeout refused; six hour-keys → six
+1-record calls; `todayCounts` against seeded rows, and the digest reading
+it; the Desk gate returns not-found for a non-admin; headers on HTML and on
+a photo response. UI: Turnstile widget, Desk shell and Today. e2e:
+`e2e/desk/` and a header check.
+
+## Open questions
+
+- OPS-3: Sentry Crons at $2.34/month, or healthchecks.io at $0 plus a
+  secret and an account? Proceeding on Sentry.
+- OPS-14: drop `"manual"` from `weather_observations.source`'s enum (no SQL
+  changes; nothing has been deployed)? Recommend yes, with 129 removing
+  `feed/conditions.ts`'s two `ne(source, "manual")` filters.
+- Turnstile fails closed when `TURNSTILE_SECRET_KEY` is unset, so CI's e2e
+  needs Cloudflare's always-pass test secret (in the CI proposal).
