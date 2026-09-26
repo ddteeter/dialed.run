@@ -7,12 +7,12 @@
  * **The cache holds real observations only** (review blocker B1). A band a
  * runner sets by hand (R2b, D-24) is theirs, for one run, and lives in
  * `manual_conditions` keyed by that run. Before that table existed the band
- * was written here, as a `source='manual'` row in the shared cell, where it
- * answered for every other runner there that hour. Those legacy rows are
- * still in the table: `findObservationRow` does not see them, and a real
- * fetch upgrades one in place (the upsert's `setWhere`).
+ * was written here, as a `source='manual'` row in the shared cell. Nothing
+ * has written one since, and no production database has ever held one —
+ * the app was never deployed with that code (OPS-14) — so the reads below
+ * no longer step around them.
  */
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { manualConditions, weatherObservations } from "../../db/schema-weather";
@@ -67,9 +67,7 @@ export function matchesKey(key: CacheKey) {
 }
 
 /**
- * The real observation at this cell, if one has been fetched. A legacy
- * manual row there is somebody's band, not the weather, so it reads as a
- * miss: the run asking fetches, and the write upgrades the row.
+ * The observation at this cell, if one has been fetched.
  */
 export async function findObservationRow(
   key: CacheKey,
@@ -77,21 +75,21 @@ export async function findObservationRow(
   const rows = await weatherDb()
     .select()
     .from(weatherObservations)
-    .where(and(matchesKey(key), ne(weatherObservations.source, "manual")))
+    .where(matchesKey(key))
     .limit(1);
   return rows[0];
 }
 
 /**
- * Write-through after a successful provider fetch. Upgrades a legacy
- * manual row squatting the cell in place; never clobbers an existing real
- * row (a concurrent fetch for the same cell already won). Returns the row
- * now at that key — always real once this resolves without throwing.
+ * Write-through after a successful provider fetch. Never clobbers an
+ * existing row: a concurrent fetch for the same cell already won, and both
+ * asked the same upstream about the same hour. Returns the row now at that
+ * key.
  *
- * `setWhere` is the load-bearing part: an existing row is only overwritten
- * when it is `source='manual'`, so a real observation never loses and a
- * legacy band is always replaced by real data. The conflict target is the
- * UNIQUE key, and silently stops upserting if the index ever changes.
+ * No conflict target: the cache key's UNIQUE index is the only constraint
+ * a fresh row can hit (its id is new), so "any conflict" and "a conflict
+ * on the key" are the same statement, and naming the columns would be a
+ * second copy of the index to keep in step.
  */
 async function upsertObservation(
   key: CacheKey,
@@ -100,26 +98,7 @@ async function upsertObservation(
   await weatherDb()
     .insert(weatherObservations)
     .values(values)
-    .onConflictDoUpdate({
-      target: [
-        weatherObservations.latR,
-        weatherObservations.lngR,
-        weatherObservations.hourBucket,
-      ],
-      set: {
-        runId: values.runId,
-        tempC: values.tempC,
-        feelsLikeC: values.feelsLikeC,
-        humidity: values.humidity,
-        windKph: values.windKph,
-        precipMm: values.precipMm,
-        condition: values.condition,
-        timeZone: values.timeZone,
-        source: values.source,
-        fetchedAt: values.fetchedAt,
-      },
-      setWhere: eq(weatherObservations.source, "manual"),
-    });
+    .onConflictDoNothing();
   const row = await findObservationRow(key);
   // Unreachable, and deliberately kept: the insert either wrote the row or
   // conflicted with one already there, so the read that follows always
@@ -156,9 +135,8 @@ export async function upsertRealObservation(
     windKph: observation.windKph,
     precipMm: observation.precipMm,
     condition: observation.condition,
-    // Absent when the fetch named none. The upsert below only ever
-    // overwrites a *manual* row, and manual rows carry no zone, so there
-    // is never a stale one to clear.
+    // Absent when the fetch named none. The write never overwrites a
+    // row, so there is never a stale zone to clear.
     timeZone: observation.timeZone,
     source: "visualcrossing" as const,
     fetchedAt,

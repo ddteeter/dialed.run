@@ -7,7 +7,7 @@ import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { retryPendingWeather } from "../../src/modules/weather";
 import { handleScheduled } from "../../src/modules/ops";
-import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
+import { mockVisualCrossing } from "./fixtures/visual-crossing-observation";
 import { nowSeconds } from "../../src/lib/now";
 
 const HOUR = 3600;
@@ -69,7 +69,7 @@ afterEach(() => {
 describe("retryPendingWeather (103, hourly cron)", () => {
   it("pending -> success: a claimed run resolves on this pass", async () => {
     const runId = await insertPendingRun({ lat: 60.1, lng: 20.1 });
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
 
     const result = await retryPendingWeather();
 
@@ -111,7 +111,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
 describe("ops.handleScheduled dispatches the weather retry cron", () => {
   it("writes its own heartbeat and reattaches pending runs", async () => {
     const runId = await insertPendingRun({ lat: 63.1, lng: 23.1 });
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
 
     await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
 
@@ -143,7 +143,7 @@ async function clearPendingRuns(): Promise<void> {
 describe("retryPendingWeather counts what it actually did", () => {
   it("returns three zeros when nothing is pending, and asks the provider nothing", async () => {
     await clearPendingRuns();
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
 
     expect(await retryPendingWeather()).toStrictEqual({
       claimed: 0,

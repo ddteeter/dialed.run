@@ -47,13 +47,24 @@ const visualCrossingHourSchema = z.object({
   conditions: z.string(),
 });
 
-const visualCrossingDaySchema = z.object({
-  datetime: z.string(),
-  hours: z.array(visualCrossingHourSchema),
-});
-
-const visualCrossingResponseSchema = z.object({
-  days: z.array(visualCrossingDaySchema).min(1),
+/**
+ * A single-datetime Timeline answer with `include=current`: the conditions
+ * at the requested moment (Visual Crossing picks the nearest hour) under
+ * `currentConditions`, and nothing else — no `days`, no `hours`.
+ *
+ * **One record, where a day is twenty-four** (OPS-6, audit finding 0.6).
+ * The docs, quoted: a datetime request "will include the daily and hourly
+ * detail for the day… This query cost will therefore be 24", and "if you
+ * only need the specific time data… you can reduce the query costing using
+ * the include parameter. In this case the query cost will be one." The
+ * adapter used to ask for the whole day and keep one hour of it.
+ *
+ * The shape is the documented one, not yet a recorded one: there is no API
+ * key to probe with (see the fixture). `currentConditions` carries the same
+ * element names as an hour, which is what this schema reads.
+ */
+const visualCrossingCurrentSchema = z.object({
+  currentConditions: visualCrossingHourSchema,
   /**
    * The IANA zone of the location — at the response root, beside
    * `tzoffset` (D-96). It used to be stripped here, which is why every
@@ -96,31 +107,6 @@ const visualCrossingStatsSchema = z.object({
 
 const MEAN = 1;
 
-type VisualCrossingHour = z.infer<typeof visualCrossingHourSchema>;
-
-function pickNearestHour(
-  days: z.infer<typeof visualCrossingDaySchema>[],
-  targetEpochSeconds: number,
-): VisualCrossingHour {
-  let best: VisualCrossingHour | undefined;
-  let bestDiff = Infinity;
-  for (const day of days) {
-    for (const hour of day.hours) {
-      const diff = Math.abs(hour.datetimeEpoch - targetEpochSeconds);
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        best = hour;
-      }
-    }
-  }
-  if (!best) {
-    throw new WeatherUnavailableError(
-      "Visual Crossing response had no hourly data",
-    );
-  }
-  return best;
-}
-
 /**
  * A Timeline URL. One function for both reads, because the endpoint is one
  * endpoint — what differs is the date and the `include`, which is exactly
@@ -134,7 +120,7 @@ function pickNearestHour(
 function timelineUrl(
   location: string,
   date: string,
-  include: "hours" | "stats",
+  include: "current" | "stats",
   apiKey: string,
 ): URL {
   const url = new URL(
@@ -219,18 +205,23 @@ async function fetchTimeline(
       "VISUAL_CROSSING_API_KEY is not configured",
     );
   }
+  // Epoch seconds, not a local date-time: Timeline reads
+  // `yyyy-MM-ddTHH:mm:ss` in the location's own zone, which the adapter
+  // does not know until the answer names it. Epoch seconds are UTC by
+  // definition, so the moment asked about is the moment meant.
+  const moment = String(Math.floor(at.getTime() / 1000));
   const parsed = await timelineJson(
     timelineUrl(
       locationPath({ kind: "coordinates", lat, lng }),
-      at.toISOString().slice(0, 10),
-      "hours",
+      moment,
+      "current",
       apiKey,
     ),
-    visualCrossingResponseSchema,
+    visualCrossingCurrentSchema,
     "observation",
     fetchImpl,
   );
-  const hour = pickNearestHour(parsed.days, Math.floor(at.getTime() / 1000));
+  const hour = parsed.currentConditions;
   const mapped = {
     tempC: hour.temp,
     feelsLikeC: hour.feelslike,

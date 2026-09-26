@@ -5,7 +5,11 @@ import {
   WeatherUnavailableError,
   createVisualCrossingProvider,
 } from "../../src/modules/weather/provider/visual-crossing";
-import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
+import {
+  visualCrossingCurrentBody,
+  visualCrossingHours,
+  visualCrossingObservationFixture,
+} from "./fixtures/visual-crossing-observation";
 import {
   visualCrossingSummerStatsFixture,
   visualCrossingWinterStatsFixture,
@@ -16,11 +20,11 @@ function jsonFetch(body: unknown, status = 200): typeof fetch {
 }
 
 describe("visual crossing adapter (103)", () => {
-  it("zod-parses a fixture response and maps the nearest hour", async () => {
+  it("zod-parses a fixture response and maps its current conditions", async () => {
     const fetchImpl = jsonFetch(visualCrossingObservationFixture);
     const provider = createVisualCrossingProvider("test-key", fetchImpl);
 
-    // 07:03 local-equivalent epoch — closest to the 07:00 fixture hour.
+    // 07:03 — Visual Crossing answers with the 07:00 hour.
     const at = new Date(1_768_485_780 * 1000);
     const observation = await provider.observation(44.98, -93.27, at);
 
@@ -70,15 +74,19 @@ describe("visual crossing adapter (103)", () => {
   });
 
   it("defaults a null precip field to 0", async () => {
-    const fetchImpl = jsonFetch(visualCrossingObservationFixture);
+    const fetchImpl = jsonFetch(
+      visualCrossingCurrentBody(visualCrossingHours[2]),
+    );
     const provider = createVisualCrossingProvider("test-key", fetchImpl);
-    const at = new Date(1_768_489_200 * 1000); // 08:00 hour, precip: null
+    const at = new Date(1_768_489_200 * 1000); // 08:00 hour, no precip key
     const observation = await provider.observation(44.98, -93.27, at);
     expect(observation.precipMm).toBe(0);
   });
 
   it("forecast() shares the same Timeline query as observation()", async () => {
-    const fetchImpl = jsonFetch(visualCrossingObservationFixture);
+    const fetchImpl = jsonFetch(
+      visualCrossingCurrentBody(visualCrossingHours[0]),
+    );
     const provider = createVisualCrossingProvider("test-key", fetchImpl);
     const at = new Date(1_768_482_000 * 1000);
     const observation = await provider.forecast(44.98, -93.27, at);
@@ -121,15 +129,6 @@ describe("visual crossing adapter (103)", () => {
  * asserted the error's *class*. A `WeatherUnavailableError` saying nothing
  * is what an operator gets at 3am.
  */
-const FIXTURE_HOURS = visualCrossingObservationFixture.days[0]?.hours ?? [];
-
-/**
-A response body shaped like Visual Crossing's, with the given hours.
-*/
-function bodyWithHours(hours: unknown[]): unknown {
-  return { days: [{ datetime: "2026-01-15", hours }] };
-}
-
 /**
 Awaits a call that must fail, and hands back the adapter's own error.
 */
@@ -171,20 +170,23 @@ function urlOf(input: RequestInfo | URL): URL {
 }
 
 describe("the request the adapter builds", () => {
-  it("asks for metric hourly JSON at the run's date, with the key", async () => {
+  it("asks for one metric record at the run's moment, with the key", async () => {
     const fetchImpl = jsonFetch(visualCrossingObservationFixture);
     const provider = createVisualCrossingProvider("secret-key", fetchImpl);
 
-    await provider.observation(44.98, -93.27, new Date(1_768_485_600 * 1000));
+    await provider.observation(44.98, -93.27, new Date(1_768_485_780_250));
 
     const [input, init] = vi.mocked(fetchImpl).mock.calls[0] ?? [];
     const asUrl = urlOf(input ?? "https://example.invalid");
-    // The date, not the timestamp: Timeline takes a day and we pick the
-    // hour ourselves.
-    expect(asUrl.pathname).toMatch(/\/44\.98,-93\.27\/2026-01-15$/);
+    // The moment in epoch seconds, not a date: a day is 24 records, and a
+    // local date-time would be read in the place's zone, which the adapter
+    // does not know yet. Whole seconds — Timeline takes no fraction.
+    expect(asUrl.pathname).toMatch(/\/44\.98,-93\.27\/1768485780$/);
     // `metric` is the whole reason the numbers mean what the schema says.
     expect(asUrl.searchParams.get("unitGroup")).toBe("metric");
-    expect(asUrl.searchParams.get("include")).toBe("hours");
+    // `current` is what makes it one record rather than twenty-four
+    // (OPS-6): without it the answer carries the whole day's hours.
+    expect(asUrl.searchParams.get("include")).toBe("current");
     expect(asUrl.searchParams.get("contentType")).toBe("json");
     expect(asUrl.searchParams.get("key")).toBe("secret-key");
     // Law 4: every outbound fetch is bounded.
@@ -221,9 +223,14 @@ describe("the adapter says why it is unavailable", () => {
     expect(error.cause).toBeDefined();
   });
 
-  it("reports a day with no hours in it", async () => {
-    const error = await failureFrom(bodyWithHours([]));
-    expect(error.message).toMatch(/no hourly data/);
+  it("refuses a day of hours where one record was asked for", async () => {
+    // The old, 24-record answer: parsing it now would mean the request
+    // lost its `include=current` and is billing a day again.
+    const error = await failureFrom({
+      timezone: "America/Chicago",
+      days: [{ datetime: "2026-01-15", hours: [...visualCrossingHours] }],
+    });
+    expect(error.message).toMatch(/failed validation/);
   });
 
   it("reports an hour that maps to an impossible observation", async () => {
@@ -231,7 +238,7 @@ describe("the adapter says why it is unavailable", () => {
     // but 150% is outside the contract, and the mapped-observation parse
     // is the second gate that catches it.
     const error = await failureFrom(
-      bodyWithHours([{ ...FIXTURE_HOURS[1], humidity: 150 }]),
+      visualCrossingCurrentBody({ ...visualCrossingHours[1], humidity: 150 }),
     );
     expect(error.message).toMatch(/invalid observation/);
     expect(error.cause).toBeDefined();
@@ -248,46 +255,6 @@ describe("the adapter says why it is unavailable", () => {
     );
     expect(error.message).toMatch(/request failed/);
     expect(error.cause).toBe(boom);
-  });
-});
-
-describe("picking the hour", () => {
-  it("takes the earlier hour when a run starts exactly between two", async () => {
-    // 06:30 is 1800s from both 06:00 and 07:00. `<` keeps the first seen,
-    // `<=` would silently take the later one — a whole hour of difference
-    // in what a run is remembered as, decided by a comparison nobody
-    // tested.
-    const fetchImpl = jsonFetch(visualCrossingObservationFixture);
-    const provider = createVisualCrossingProvider("test-key", fetchImpl);
-
-    const observation = await provider.observation(
-      44.98,
-      -93.27,
-      new Date((1_768_482_000 + 1800) * 1000),
-    );
-
-    expect(observation.tempC).toBeCloseTo(-5.6, 5);
-  });
-
-  it("searches every day the response carries, not just the first", async () => {
-    // Timeline answers with a day range when the requested hour is near a
-    // boundary. Capping the array at one day would drop the half of the
-    // window that holds the answer.
-    const fetchImpl = jsonFetch({
-      days: [
-        { datetime: "2026-01-14", hours: [FIXTURE_HOURS[0]] },
-        { datetime: "2026-01-15", hours: [FIXTURE_HOURS[2]] },
-      ],
-    });
-    const provider = createVisualCrossingProvider("test-key", fetchImpl);
-
-    const observation = await provider.observation(
-      44.98,
-      -93.27,
-      new Date(1_768_489_200 * 1000),
-    );
-
-    expect(observation.tempC).toBeCloseTo(-3.9, 5);
   });
 });
 

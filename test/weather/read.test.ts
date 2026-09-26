@@ -13,7 +13,6 @@ import {
   cacheKeyFor,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
-import { makeObservation } from "../feed/helpers";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -104,23 +103,6 @@ describe("observationsForRuns (103, consensus batch read for 104)", () => {
     const results = await observationsForRuns([manualRun, realRun]);
     expect(results.has(manualRun)).toBe(false);
     expect(results.get(realRun)?.tempC).toBe(4);
-  });
-
-  it("skips a legacy band still in the cache cell", async () => {
-    // Written before `manual_conditions` existed: somebody's band, in a
-    // cell every runner there reads.
-    await makeObservation({
-      lat: 74.2,
-      lng: 34.2,
-      startedAt: 1_768_500_000,
-      tempC: -2,
-      feelsLikeC: -2,
-      source: "manual",
-    });
-    const runId = await insertRun({ lat: 74.2, lng: 34.2 });
-
-    const results = await observationsForRuns([runId]);
-    expect(results.has(runId)).toBe(false);
   });
 
   it("returns an empty map for an empty input", async () => {
