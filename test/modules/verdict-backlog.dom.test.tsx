@@ -727,7 +727,7 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     expect(screen.getByText("[All logged]")).toBeVisible();
     expect(screen.queryByRole("table")).toBeNull();
     expect(document.querySelector("[data-slot='backlog-rail']")).toBeNull();
-    expect(screen.queryByText(/runs · oldest first/)).toBeNull();
+    expect(screen.queryByText(/runs · no verdict yet/)).toBeNull();
   });
 
   it("clears to [ ALL LOGGED ] when the last row lands, and asks for the bar's count again", async () => {
@@ -770,7 +770,8 @@ describe("VerdictBacklog: 720–1039, one run at a time", () => {
     expect(rowsOf()[1]).toHaveClass("hidden", "desk:table-row");
     expect(screen.getByRole("table")).toHaveClass("block", "desk:table");
     // The count heads the queue while there is one to count.
-    expect(screen.getByText(/^2 runs · oldest first$/u)).toBeVisible();
+    // Round 25: DS2 reads "6 RUNS · NO VERDICT YET".
+    expect(screen.getByText(/^2 runs · no verdict yet$/u)).toBeVisible();
   });
 
   it("logs the row with A3's own verb where there is no Enter to press", async () => {

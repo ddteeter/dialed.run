@@ -393,7 +393,12 @@ export async function getRunSummary(
  * re-drives (law 8c).
  */
 export interface WeatherWrites {
-  attach: (runId: Ulid) => Promise<unknown>;
+  /**
+   * What the attempt came to — `attachObservation`'s outcome: "attached"
+   * or "manual" when the run's conditions are settled, anything else when
+   * they are not.
+   */
+  attach: (runId: Ulid) => Promise<string>;
   record: (runId: Ulid, tempC: number, sky: ManualSky) => Promise<void>;
 }
 
@@ -475,27 +480,46 @@ export async function didSetRunConditions(
 const RETIME_LIMIT_S = 86_400;
 
 /**
- * A1's one correction (round 20): the run started at another time. The
- * start becomes `startedAt`, and a run with a place to look the weather up
- * at has it asked for again at the new hour — the old hour's reading was
- * for a run that did not happen then. Weather itself is never edited.
+ * What A1's correction did: the run moved; the weather for the new time
+ * could not be had, so nothing moved; or the request was refused (not this
+ * runner's run, or another day).
+ */
+export type RetimeOutcome = "moved" | "no-weather" | "refused";
+
+/**
+ * A1's one correction (round 20; round 26, item 1): the run started at
+ * another time. The start becomes `startedAt`, and a run with a place to
+ * look the weather up at has it asked for again at the new hour — the old
+ * hour's reading was for a run that did not happen then. Weather itself is
+ * never edited.
+ *
+ * **A run never carries a time whose weather we lack** (round 26). If the
+ * provider cannot answer for the new hour, the start and the status go
+ * back to what they were — the old hour's observation is still in the
+ * cache, so the old conditions come back with them — and the answer says
+ * so, for the runner to try again.
+ *
+ * The revert is a second write, and the two cannot be one batch: the
+ * attach between them is another database (law 8c). If the worker dies in
+ * between, the run is left `pending` at the new time, which the hourly
+ * weather retry re-drives — the reconciliation marker doing its job.
  *
  * **Absolute, so a retry is harmless** (law 8b). It used to take a shift,
  * and a retry after a lost response applied it twice. A start that is
- * already where it was asked to be is the first call having landed: true,
- * and nothing written or fetched again.
+ * already where it was asked to be is the first call having landed:
+ * "moved", and nothing written or fetched again.
  */
-export async function didRetimeRun(
+export async function retimeRun(
   db: CoreDb,
   weather: Pick<WeatherWrites, "attach">,
   userId: string,
   runId: string,
   startedAt: number,
-): Promise<boolean> {
+): Promise<RetimeOutcome> {
   const run = await getRun(db, userId, runId);
-  if (run === undefined) return false;
-  if (Math.abs(startedAt - run.startedAt) > RETIME_LIMIT_S) return false;
-  if (startedAt === run.startedAt) return true;
+  if (run === undefined) return "refused";
+  if (Math.abs(startedAt - run.startedAt) > RETIME_LIMIT_S) return "refused";
+  if (startedAt === run.startedAt) return "moved";
   const isLocated = run.lat !== null && run.lng !== null;
   // One write: the new start and, where there is weather to ask for, the
   // marker that says it is owed.
@@ -506,6 +530,12 @@ export async function didRetimeRun(
       ...(isLocated && { weatherStatus: "pending" as const }),
     })
     .where(eq(runs.id, runId));
-  if (isLocated) await weather.attach(ulidSchema.parse(runId));
-  return true;
+  if (!isLocated) return "moved";
+  const attached = await weather.attach(ulidSchema.parse(runId));
+  if (attached === "attached" || attached === "manual") return "moved";
+  await db
+    .update(runs)
+    .set({ startedAt: run.startedAt, weatherStatus: run.weatherStatus })
+    .where(eq(runs.id, runId));
+  return "no-weather";
 }

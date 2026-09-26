@@ -35,6 +35,10 @@ import {
 } from "./queue-messages";
 import type { StoredToken, StravaApi } from "./strava/api";
 import { deauthorizeAthlete } from "./strava/deauthorize";
+import {
+  clearMatchingReminder,
+  hasMatchingUpload,
+} from "./strava/reminder-match";
 import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 
 export interface ConsumerDeps {
@@ -183,10 +187,20 @@ async function processImportJob(
     }
   }
 
-  await deps.db
-    .update(imports)
-    .set({ status: "done", runId })
-    .where(eq(imports.id, importRow.id));
+  // The import is done, and the Strava reminder this file answers — if it
+  // had one — is answered (round 25). One batch: both record the same
+  // fact, that this run is now in the log.
+  await deps.db.batch([
+    deps.db
+      .update(imports)
+      .set({ status: "done", runId })
+      .where(eq(imports.id, importRow.id)),
+    clearMatchingReminder(
+      deps.db,
+      importRow.userId,
+      draft.startedAt + draft.durationS,
+    ),
+  ]);
 
   await createNotification(deps.db, {
     userId: importRow.userId,
@@ -195,6 +209,14 @@ async function processImportJob(
     body: "Add your kit for the run you just imported.",
   });
 }
+
+/**
+ * The S1 row a run landing on Strava leaves (round 25, "Strava reminds.
+ * You upload."). Timed by when the run landed, which is the row's own
+ * time; it names nothing about the run, because we know nothing about it.
+ */
+const STRAVA_REMINDER_BODY =
+  "New run on Strava · Add it here: upload the file, then what you wore";
 
 /**
  * The work the webhook used to do before it could reply. Doing it here
@@ -229,22 +251,27 @@ async function processReminderJob(
     })
     .onConflictDoNothing();
 
-  // An athlete nobody has connected: record the event so it is not
+  // An athlete nobody has connected, or a run whose file is already in the
+  // log (round 25: one reminder per run): record the event so it is not
   // reconsidered, and stop.
-  if (connected === undefined) {
+  if (
+    connected === undefined ||
+    (await hasMatchingUpload(deps.db, connected.userId, job.eventTime))
+  ) {
     await claim;
     return;
   }
 
   await deps.db.batch([
     claim,
-    // D-33: zero activity data in the body — deep link is /runs/new, not a
-    // pre-created run.
+    // D-33: zero activity data in the body — no distance, no time, no
+    // name. Round 25's words: Strava tells us a run happened, we remind,
+    // the runner adds the file.
     notificationInsert(deps.db, {
       userId: connected.userId,
       kind: "strava_reminder",
       subjectId: job.objectId,
-      body: "New run on Strava — log your kit?",
+      body: STRAVA_REMINDER_BODY,
     }),
   ]);
 }

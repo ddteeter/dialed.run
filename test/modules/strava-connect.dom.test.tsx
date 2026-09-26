@@ -7,6 +7,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { clockLabel, dayLabel, deviceTimeZone } from "../../src/lib/dates";
@@ -118,6 +119,40 @@ describe("StravaConnect: the last run seen (round 25, T3a)", () => {
         `Connected · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`,
       ),
     ).toHaveClass("text-dialed-text");
+  });
+
+  it("leaves the time out of the first paint, which the server renders without the runner's zone", () => {
+    const html = renderToString(
+      <StravaConnect
+        configured
+        connected
+        lastRunSeenAt={1_788_000_000}
+        runCount={1}
+        disconnect={nothing}
+      />,
+    );
+
+    expect(html).toContain("Connected");
+    expect(html).not.toContain("Last run seen");
+  });
+
+  it("reads the time in UTC when the device names no zone it would accept", async () => {
+    const resolved = new Intl.DateTimeFormat().resolvedOptions();
+    const spy = vi
+      .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+      .mockReturnValue({ ...resolved, timeZone: "Not/A_Zone" });
+    try {
+      const at = Math.floor(Date.UTC(2026, 7, 29, 23, 30) / 1000);
+      await screenFor(true, { lastRunSeenAt: at });
+
+      expect(
+        await screen.findByText(
+          "Connected · Last run seen Sat Aug 29, 11:30 PM",
+        ),
+      ).toBeVisible();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("says only connected before the first run lands", async () => {

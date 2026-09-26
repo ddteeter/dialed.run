@@ -110,7 +110,7 @@ function form(
         overrides.upload ?? (() => Promise.resolve({ importId: "01IMPORT" }))
       }
       getOutcome={overrides.getOutcome ?? (() => Promise.resolve(outcome()))}
-      retime={overrides.retime ?? (() => Promise.resolve(true))}
+      retime={overrides.retime ?? (() => Promise.resolve("moved"))}
       units={overrides.units ?? { temp: "f", distance: "mi" }}
     />
   );
@@ -672,7 +672,7 @@ describe("A1: the parsed card", () => {
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(
       within(card).getByRole("button", {
-        name: "Started 6:04 AM — change the time",
+        name: "Change start time, 6:04 AM",
       }),
     ).toHaveTextContent("6:04 AM");
     expect(document.querySelector("[data-part='drop-zone']")).toBeNull();
@@ -682,7 +682,7 @@ describe("A1: the parsed card", () => {
     expect(conditions).toHaveTextContent("Conditions · auto-attached");
     expect(conditions).toHaveTextContent("41°F");
     expect(conditions).toHaveTextContent(
-      "Never typed by hand. Wrong time? Tap it on the run card and we’ll refetch.",
+      "Never typed by hand. Wrong time? Change it on the run card and we’ll refetch.",
     );
     expect(conditions?.querySelector("input")).toBeNull();
 
@@ -746,76 +746,184 @@ describe("A1: the parsed card", () => {
     expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
   });
 
-  it("moves the start to the time the runner picks, on the run's own clock, and asks again", async () => {
+  it("opens the START TIME row in the time's place, with the hint and focus on the field", async () => {
     const user = userEvent.setup();
-    const retime = vi.fn<Retime>(() => Promise.resolve(true));
+    await renderWithRouter(form({ getOutcome: parsed() }));
+    await user.upload(dropInput(), gpx());
+
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+
+    // The row replaces the time on the stats line; the date stays.
+    const card = region("parsed-card");
+    expect(
+      within(card).queryByRole("button", { name: /Change start time/u }),
+    ).toBeNull();
+    expect(within(card).getByText("Sat Aug 29")).toBeVisible();
+    const field = within(card).getByLabelText("Start time");
+    // The run's own clock: 6:04 in Chicago, not 11:04 UTC.
+    expect(field).toHaveValue("06:04");
+    expect(field).toHaveFocus();
+    expect(
+      within(card).getByText(
+        "The file said 6:04 AM. Change it if your watch's clock was off.",
+      ),
+    ).toBeVisible();
+    expect(
+      within(card).getByRole("button", { name: "Get weather" }),
+    ).toBeVisible();
+  });
+
+  it("moves the start on the run's own clock, and says CHANGED when the weather comes", async () => {
+    const user = userEvent.setup();
+    const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     const getOutcome = vi.fn<GetOutcome>(parsed());
     await renderWithRouter(form({ getOutcome, retime }));
     await user.upload(dropInput(), gpx());
-    await screen.findByText("Parsed · run.gpx");
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
     const asked = getOutcome.mock.calls.length;
 
-    const time = screen.getByRole("button", { name: /change the time/u });
-    expect(time).toHaveAttribute("aria-expanded", "false");
-    await user.click(time);
-    expect(time).toHaveAttribute("aria-expanded", "true");
-
-    const field = screen.getByLabelText("Started");
-    // The run's own clock: 6:04 in Chicago, not 11:04 UTC.
-    expect(field).toHaveValue("06:04");
+    const field = screen.getByLabelText("Start time");
     await user.clear(field);
     await user.type(field, "07:34");
-    await user.click(screen.getByRole("button", { name: "Refetch" }));
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
 
     await waitFor(() => {
       expect(retime).toHaveBeenCalledWith({
         data: { runId: RUN_ID, startedAt: SAT_MORNING + 90 * 60 },
       });
     });
-    await waitFor(() => {
-      expect(screen.queryByLabelText("Started")).toBeNull();
+    const changed = await screen.findByRole("button", {
+      name: "Change start time, 7:34 AM",
     });
+    expect(changed).toHaveTextContent("7:34 AM · Changed");
+    expect(screen.queryByLabelText("Start time")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Start time changed to 7:34 AM.",
+    );
+    // The run is asked for again, so the block fills in for the new hour.
     expect(getOutcome.mock.calls.length).toBeGreaterThan(asked);
   });
 
-  it("closes the time field on a second tap, sending nothing", async () => {
+  it("says what it is getting, and what it was, while the weather is fetched", async () => {
     const user = userEvent.setup();
-    const retime = vi.fn<Retime>(() => Promise.resolve(true));
+    const pending = Promise.withResolvers<"moved">();
+    const retime = vi.fn<Retime>(() => pending.promise);
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
-    const time = await screen.findByRole("button", {
-      name: /change the time/u,
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+    const field = screen.getByLabelText("Start time");
+    await user.clear(field);
+    await user.type(field, "06:34");
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
+
+    const block = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>(
+        "[data-slot='conditions'][data-state='fetching']",
+      );
+      if (found === null) throw new Error("not fetching yet");
+      return found;
     });
+    expect(block).toHaveTextContent("Weather for 6:34 AM");
+    expect(block).toHaveTextContent("[Getting it]");
+    expect(block).toHaveTextContent("Was 41°F damp · feels 36° · at 6:04 AM");
+    // The block is read-only, and at the desk it is the rail.
+    expect(block.closest("[data-part='rail']")).not.toBeNull();
+    expectBusy(screen.getByRole("button", { name: "Getting" }));
 
-    await user.click(time);
-    await user.click(time);
+    pending.resolve("moved");
+    await waitFor(() => {
+      expect(document.querySelector("[data-state='fetching']")).toBeNull();
+    });
+  });
 
-    expect(screen.queryByLabelText("Started")).toBeNull();
-    expect(retime).not.toHaveBeenCalled();
+  it("says STILL the old time, and offers the same time again, when there is no weather for the new one", async () => {
+    const user = userEvent.setup();
+    const retime = vi
+      .fn<Retime>()
+      .mockResolvedValueOnce("no-weather")
+      .mockResolvedValueOnce("moved");
+    await renderWithRouter(form({ getOutcome: parsed(), retime }));
+    await user.upload(dropInput(), gpx());
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+    const field = screen.getByLabelText("Start time");
+    await user.clear(field);
+    await user.type(field, "07:34");
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
+
+    const band = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>(
+        "[data-part='rail'] [data-part='failure-band']",
+      );
+      if (found === null) throw new Error("no band yet");
+      return found;
+    });
+    expect(band).toHaveTextContent("Still 6:04 AM");
+    expect(band).toHaveTextContent(
+      "Couldn't get weather for 7:34 AM. Try again?",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Still 6:04 AM. Couldn't get weather for 7:34 AM. Try again?",
+    );
+    // The time did not move: the server put it back.
+    expect(screen.getByLabelText("Start time")).toBeVisible();
+
+    await user.click(within(band).getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => {
+      expect(retime).toHaveBeenCalledTimes(2);
+    });
+    const sent = retime.mock.calls.map((call) => call[0].data.startedAt);
+    expect(sent).toStrictEqual([SAT_MORNING + 90 * 60, SAT_MORNING + 90 * 60]);
+    await waitFor(() => {
+      expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+    });
   });
 
   it("asks for a time when the field is emptied, in the schema's words", async () => {
     const user = userEvent.setup();
-    const retime = vi.fn<Retime>(() => Promise.resolve(true));
+    const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: /change the time/u }),
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
     );
 
-    await user.clear(screen.getByLabelText("Started"));
-    await user.click(screen.getByRole("button", { name: "Refetch" }));
+    await user.clear(screen.getByLabelText("Start time"));
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
 
     expect(
       await screen.findByText("Pick the time the run started."),
     ).toBeVisible();
-    expect(screen.getByLabelText("Started")).toHaveAccessibleDescription(
+    expect(screen.getByLabelText("Start time")).toHaveAccessibleDescription(
       "Pick the time the run started.",
     );
     expect(retime).not.toHaveBeenCalled();
   });
 
-  it("says the time moved, and keeps the page where it is", async () => {
+  it("treats a refused correction as a failure: nothing changed", async () => {
+    const user = userEvent.setup();
+    const retime = vi.fn<Retime>(() => Promise.resolve("refused"));
+    await renderWithRouter(form({ getOutcome: parsed(), retime }));
+    await user.upload(dropInput(), gpx());
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
+
+    expect(await screen.findByText("Nothing saved")).toBeVisible();
+    expect(screen.getByLabelText("Start time")).toBeVisible();
+  });
+
+  it("keeps the page where it is when the time is sent", async () => {
     const user = userEvent.setup();
     const submitted: SubmitEvent[] = [];
     const onSubmit = (event: SubmitEvent) => {
@@ -826,18 +934,68 @@ describe("A1: the parsed card", () => {
       await renderWithRouter(form({ getOutcome: parsed() }));
       await user.upload(dropInput(), gpx());
       await user.click(
-        await screen.findByRole("button", { name: /change the time/u }),
+        await screen.findByRole("button", {
+          name: "Change start time, 6:04 AM",
+        }),
       );
 
-      await user.click(screen.getByRole("button", { name: "Refetch" }));
+      await user.click(screen.getByRole("button", { name: "Get weather" }));
 
       expect(
-        await screen.findByText("Time changed. Fetching the weather for it."),
+        await screen.findByText("Start time changed to 6:04 AM."),
       ).toBeInTheDocument();
       expect(submitted.map((event) => event.defaultPrevented)).toEqual([true]);
     } finally {
       document.removeEventListener("submit", onSubmit);
     }
+  });
+
+  it("holds the primary action in brackets while the weather is fetched, then goes", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<"moved">();
+    const retime = vi.fn<Retime>(() => pending.promise);
+    const { router } = await renderWithRouter(
+      form({ getOutcome: parsed(), retime }),
+    );
+    await user.upload(dropInput(), gpx());
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
+    await waitFor(() => {
+      expectBusy(screen.getByRole("button", { name: "Getting" }));
+    });
+
+    const next = screen.getByRole("link", {
+      name: "Looks right — what did you wear?",
+    });
+    await user.click(next);
+
+    // Waiting, not gone, and never disabled.
+    expect(router.state.location.pathname).toBe("/");
+    expect(next).toHaveTextContent("[Looks right — what did you wear?]");
+    expect(next).not.toHaveAttribute("aria-disabled");
+
+    pending.resolve("moved");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/feed/attach/${RUN_ID}`);
+    });
+  });
+
+  it("goes straight away when nothing is being fetched", async () => {
+    const user = userEvent.setup();
+    const { router } = await renderWithRouter(form({ getOutcome: parsed() }));
+    await user.upload(dropInput(), gpx());
+
+    await user.click(
+      await screen.findByRole("link", {
+        name: "Looks right — what did you wear?",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/feed/attach/${RUN_ID}`);
+    });
   });
 
   it("reads a run with no conditions on the runner's own clock, not UTC", async () => {
@@ -850,7 +1008,7 @@ describe("A1: the parsed card", () => {
       timeZone: "America/Los_Angeles",
     });
     const user = userEvent.setup();
-    const retime = vi.fn<Retime>(() => Promise.resolve(true));
+    const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     await renderWithRouter(
       form({
         getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
@@ -860,15 +1018,15 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     const time = await screen.findByRole("button", {
-      name: /change the time/u,
+      name: "Change start time, 4:04 AM",
     });
     expect(time).toHaveTextContent("4:04 AM");
     await user.click(time);
-    const field = screen.getByLabelText("Started");
+    const field = screen.getByLabelText("Start time");
     expect(field).toHaveValue("04:04");
     await user.clear(field);
     await user.type(field, "05:04");
-    await user.click(screen.getByRole("button", { name: "Refetch" }));
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
 
     await waitFor(() => {
       expect(retime).toHaveBeenCalledWith({
@@ -884,16 +1042,16 @@ describe("A1: the parsed card", () => {
     const retime = vi
       .fn<Retime>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockResolvedValue(true);
+      .mockResolvedValue("moved");
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: /change the time/u }),
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
     );
-    const field = screen.getByLabelText("Started");
+    const field = screen.getByLabelText("Start time");
     await user.clear(field);
     await user.type(field, "07:34");
-    await user.click(screen.getByRole("button", { name: "Refetch" }));
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
     await user.click(await screen.findByRole("button", { name: "Try again" }));
 
     await waitFor(() => {

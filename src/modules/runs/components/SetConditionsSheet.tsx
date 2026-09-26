@@ -7,6 +7,7 @@ import { bandLabel } from "../../../lib/temperature";
 import {
   ChoiceList,
   ControlFailureBand,
+  FormErrorSummary,
   FormFailureBand,
   FormStatus,
   inFlight,
@@ -199,6 +200,11 @@ function SetConditionsForm({
       }}
     >
       <FormStatus>{form.status}</FormStatus>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
       <p className="m-0 text-small text-label">
         Roughly is fine. This stays on your run and never counts toward anyone
         else&rsquo;s.

@@ -1,4 +1,5 @@
 export { Bracketed } from "./Bracketed";
+export { DeskSplit, RailCard } from "./DeskSplit";
 export { Digits } from "./Digits";
 export { FileWell } from "./FileWell";
 export { FlowStep, LOG_FLOW } from "./FlowStep";

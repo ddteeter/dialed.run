@@ -761,7 +761,9 @@ describe("what the consumer tells the runner", () => {
       .from(notifications)
       .where(eq(notifications.userId, userId));
     expect(notification?.kind).toBe("strava_reminder");
-    expect(notification?.body).toBe("New run on Strava — log your kit?");
+    expect(notification?.body).toBe(
+      "New run on Strava · Add it here: upload the file, then what you wore",
+    );
   });
 
   it("asks for the kit on a run it just imported", async () => {

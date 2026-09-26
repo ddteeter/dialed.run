@@ -9,7 +9,7 @@ import {
   retimeRunFn,
   startFileImport,
 } from "../../modules/runs/functions";
-import { Page } from "../../ui";
+import { AddRunShell } from "../../modules/runs/components/AddRunShell";
 
 /**
 Screen A1: upload & auto-conditions (docs/product.md). Every outcome — the
@@ -29,14 +29,14 @@ function NewRunPage() {
 
   return (
     <BelledLayout unreadCount={unreadCount}>
-      <Page title="Add a run" width="panel">
+      <AddRunShell>
         <UploadForm
           upload={startFileImport}
           getOutcome={getImportOutcomeFn}
           retime={retimeRunFn}
           units={units}
         />
-        <p className="text-center text-small text-muted">
+        <p className="text-center text-small text-muted desk:max-w-column">
           No file?{" "}
           <Link
             to="/runs/manual"
@@ -47,7 +47,7 @@ function NewRunPage() {
           </Link>{" "}
           instead.
         </p>
-      </Page>
+      </AddRunShell>
     </BelledLayout>
   );
 }

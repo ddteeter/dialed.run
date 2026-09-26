@@ -419,7 +419,7 @@ export function VerdictBacklog({
           </h1>
           {current === undefined ? undefined : (
             <Mono step="sm" className="text-muted">
-              {rows.length} runs · oldest first
+              {rows.length} runs · no verdict yet
             </Mono>
           )}
         </div>
