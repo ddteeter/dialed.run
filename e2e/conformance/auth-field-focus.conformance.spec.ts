@@ -40,12 +40,37 @@ test("a focused field rings its box, and only its box", async ({ page }) => {
     return {
       outlineStyle: style.outlineStyle,
       outlineWidth: style.outlineWidth,
+      outlineOffset: style.outlineOffset,
     };
   });
 
   expect(input.outlineStyle, "the input draws a ring of its own").toBe("none");
+  // On the border (decision D-48, round 26 #16): one line, not two.
   expect(box, "the field has no .field-box").toEqual({
     outlineStyle: "solid",
     outlineWidth: "2px",
+    outlineOffset: "-1px",
   });
+});
+
+test("every other control keeps its ring 2px outside it", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/auth/login");
+  await hydrated(page);
+
+  const button = page.getByRole("button", { name: "Log in" });
+  await page.keyboard.press("Shift");
+  await button.focus();
+  await expect(button).toBeFocused();
+
+  const ring = await button.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineOffset: style.outlineOffset,
+    };
+  });
+
+  // Accessibility Contract §06, which D-48 overrides for FormFields only.
+  expect(ring).toEqual({ outlineStyle: "solid", outlineOffset: "2px" });
 });

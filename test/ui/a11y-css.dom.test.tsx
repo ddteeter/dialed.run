@@ -109,7 +109,8 @@ describe("06 · focus is visible and square", () => {
     const ring = blockAfter(".field-box:has(:focus-visible)");
     const removed = blockAfter(".field-box :focus-visible");
     expect(ring).toContain("outline: 2px solid var(--ink)");
-    expect(ring).toContain("outline-offset: 2px");
+    // On the border, not 2px outside it (decision D-48): one line.
+    expect(ring).toContain("outline-offset: -1px");
     expect(removed.trim()).toBe("outline: none;");
     // Adjacent, so the two halves cannot be separated in an edit.
     expect(rules).toMatch(

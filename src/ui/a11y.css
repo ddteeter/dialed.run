@@ -74,6 +74,13 @@ summary:focus-visible,
  * had gone. Here the two halves are one declaration block: you cannot take
  * the ring off the input without the ancestor that puts it back.
  *
+ * **On the border, not outside it** (decision D-48; design round 26 #16):
+ * offset −1px lays the 2px ring over the box's 1px border, so a focused
+ * field shows one line rather than a border and a ring 2px beyond it.
+ * FormFields only — every other control keeps §06's offset 2px above.
+ * Error is the 2px border plus the hi-viz band, so the band, not the ring,
+ * is what tells an errored field from a focused one.
+ *
  * `:has()` rather than `:focus-within`, because the second rule needs the
  * descendant selector anyway and one mechanism is better than two.
  *
@@ -89,7 +96,7 @@ summary:focus-visible,
  */
 .field-box:has(:focus-visible) {
   outline: 2px solid var(--ink);
-  outline-offset: 2px;
+  outline-offset: -1px;
 }
 
 .field-box :focus-visible {
