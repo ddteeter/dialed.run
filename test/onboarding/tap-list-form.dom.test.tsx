@@ -116,7 +116,7 @@ describe("TapListForm", () => {
     expect(disclosure()).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("reveals the rest, and keeps its own name while doing it", async () => {
+  it("reveals the rest as the same rows continued, ending in Fewer", async () => {
     const user = userEvent.setup();
     renderForm();
 
@@ -124,10 +124,19 @@ describe("TapListForm", () => {
 
     expect(screen.getByRole("checkbox", { name: "Singlet" })).toBeVisible();
     expect(screen.getByRole("checkbox", { name: "Running cap" })).toBeVisible();
-    // The name is what it discloses; `aria-expanded` is the state. A label
-    // that flipped to "Fewer" would announce a different control each press.
-    expect(disclosure()).toHaveAttribute("aria-expanded", "true");
+    // Round 22, item 25: "the same rows, continued, with 'Fewer' at the
+    // end" — the control after the last row, still carrying the state.
+    const fewer = screen.getByRole("button", { name: "Fewer" });
+    expect(fewer).toHaveAttribute("aria-expanded", "true");
+    const chips = screen.getAllByRole("checkbox");
+    expect(chips.at(-1)?.compareDocumentPosition(fewer)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+    // And closes again from there.
+    await user.click(fewer);
     expect(disclosure()).toHaveTextContent("Everything else · 2 more");
+    expect(disclosure()).toHaveAttribute("aria-expanded", "false");
   });
 
   it("shows no disclosure when nothing is hidden", () => {
@@ -179,7 +188,7 @@ describe("TapListForm", () => {
 
     await user.click(disclosure());
     await user.click(screen.getByRole("checkbox", { name: "Singlet" }));
-    await user.click(disclosure());
+    await user.click(screen.getByRole("button", { name: "Fewer" }));
 
     expect(screen.queryByRole("checkbox", { name: "Singlet" })).toBeNull();
     expect(counter()).toHaveTextContent("Closet: 1 pieces");

@@ -294,9 +294,10 @@ describe("NamePieces", () => {
     await user.click(screen.getByRole("button", { name: /Everything else/ }));
 
     expect(screen.getByText("Running socks")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: /Everything else/ }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Fewer" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
   });
 
   it("announces the piece it named, from one live region", async () => {

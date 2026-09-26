@@ -5,15 +5,15 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { storageStateFor } from "../support/accounts";
 import { DESK, PHONE } from "../support/bars";
-import { fillsOf, leavesOf, openBoard, part } from "../support/conformance";
-import { withLocalDb } from "../support/local-db";
 import {
-  feedUserId,
-  holdForever,
+  fillsOf,
   hydrated,
-  removeSeeded,
-  seeded,
-} from "./feed-support";
+  leavesOf,
+  openBoard,
+  part,
+} from "../support/conformance";
+import { withLocalDb } from "../support/local-db";
+import { feedUserId, holdForever, removeSeeded, seeded } from "./feed-support";
 
 /**
  * M, redrawn to S2c — round 22's "M Mark all read in flight" — and the

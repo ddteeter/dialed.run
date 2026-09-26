@@ -1,47 +1,84 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { useState } from "react";
 
-import { signUpSchema } from "../../lib/contracts";
-import { AuthCrossLink, AuthPage } from "../../modules/auth/auth-page";
+import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../lib/contracts";
+import {
+  AuthCrossLink,
+  AuthLegal,
+  AuthPage,
+  PasswordField,
+  useAuthForm,
+} from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
-import { TextField, useFormSubmit } from "../../ui";
+import { useGoogleSignIn } from "../../modules/auth/google-button";
+import {
+  googleReturn,
+  parseSignInSearch,
+} from "../../modules/auth/sign-in-search";
+import { TextField } from "../../ui";
 
-export const Route = createFileRoute("/auth/signup")({ component: SignupPage });
+/**
+ * Au1. The name field stays until the username task replaces it (owner,
+ * 2026-09-24): the board's two fields are that task's, not this one's.
+ */
+export const Route = createFileRoute("/auth/signup")({
+  // Only `error` matters here: a failed Google round trip comes back to
+  // sign-up, and says so (Au6).
+  validateSearch: parseSignInSearch,
+  component: SignupPage,
+});
 
 const LABELS = { name: "Name", email: "Email", password: "Password" };
 
 function SignupPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const form = useFormSubmit({
+  const search = Route.useSearch();
+  const google = useGoogleSignIn({
+    ...googleReturn("/auth/signup", search),
+    returnedError: search.error,
+    leave: (url) => {
+      globalThis.location.assign(url);
+    },
+  });
+  const { form, cause } = useAuthForm({
     schema: signUpSchema,
     action: signUp,
     successMessage: "Account created.",
     labels: LABELS,
     onSuccess: async () => {
+      await router.invalidate();
       await navigate({ to: "/" });
     },
   });
 
   return (
     <AuthPage
-      heading="Sign up"
-      submitLabel="Sign up"
-      pendingLabel="Signing up"
+      heading="Create account"
+      submitLabel="Create account"
+      pendingLabel="Creating account"
       form={form}
-      onSubmit={() => {
-        void form.submit({ name, email, password });
-      }}
-      footer={
+      cause={cause}
+      google={google}
+      legal={<AuthLegal />}
+      crossLink={
         <AuthCrossLink
-          prompt="Already have an account?"
+          prompt="Have an account?"
           to="/auth/login"
           label="Log in"
         />
       }
+      onSubmit={() => {
+        void form.submit({ name, email, password });
+      }}
     >
       <TextField
         name="name"
@@ -62,16 +99,14 @@ function SignupPage() {
         field={form.field}
         error={form.fieldErrors.email}
       />
-      <TextField
-        name="password"
+      <PasswordField
         label={LABELS.password}
-        type="password"
         autoComplete="new-password"
         value={password}
         onChange={setPassword}
         field={form.field}
         error={form.fieldErrors.password}
-        hint="At least 8 characters."
+        hint={`At least ${String(PASSWORD_MIN_LENGTH)} characters.`}
       />
     </AuthPage>
   );

@@ -6,6 +6,7 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
+  Icon,
   Mono,
   Sheet,
   SubmitButton,
@@ -165,7 +166,20 @@ export function ReportSheet({
           onFocusField={form.focusField}
         />
 
-        <h2 className="text-lead font-semibold">Report this entry</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lead font-semibold">Report this entry</h2>
+          {/* W1's ✕ (round 22, item 21): "closes and discards without
+              confirm". A button, not the form's reset — nothing is asked,
+              and the caller mounts a fresh sheet for the next report. */}
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="target inline-flex cursor-pointer items-center justify-center border-none bg-transparent p-0 text-ink"
+          >
+            <Icon name="close" size={20} />
+          </button>
+        </div>
         <p className="text-micro text-quiet">{subject.label}</p>
 
         {/* Yes, this is valid TSX, and it is not a trick. A JSX element

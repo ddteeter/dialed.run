@@ -1,6 +1,6 @@
 /**
  * Covers: O1 (calibrate), O3 (the one list), P2.5 (make them real), P3 (now
- * go run), O6 (the Call teaser) — one journey, one video.
+ * go run), K (the Call teaser), U1/N (settings) — one journey, one video.
  *
  * The journey is the packet's own done-criterion read literally: a fresh
  * account reaches "now go run" with a real closet, and the Call tab then
@@ -49,6 +49,18 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // permission produces, and it has to work.
   await scene(page, "O1 · one question is the whole requirement");
   await page.getByLabel(/^Run a little cold/).check();
+
+  // Round 22, item 19: "Use my location" is a text button, and a refusal
+  // moves focus to the field with one plain line — not a failure.
+  await scene(page, "Location refused: focus to the field, one plain line");
+  await page.getByRole("button", { name: "Use my location" }).click();
+  await expect(
+    page.getByText("Location’s off. Type your city instead."),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel("Where you run")).toBeFocused();
+  await scene(page, "Units are two segmented pairs, from the locale");
+  await expect(page.getByRole("radio", { name: "°F" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "mi" })).toBeChecked();
   await page.getByLabel("Where you run").fill("Minneapolis");
   await page.getByRole("button", { name: "Start running" }).click();
 
@@ -168,8 +180,33 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // O6. The teaser with no verdicts behind it: it says it is listening, and
   // it makes no call. A recommendation here would be the one thing this
   // screen exists to avoid shipping.
-  await scene(page, "O6 · it says it is listening, and makes no call");
+  await scene(page, "K · the meter at nothing, and one instruction");
   await page.goto("/call");
   await hydrated(page);
-  await expect(page.getByText(/Logging now, calling later/)).toBeVisible();
+  await expect(page.getByText(/verdicts and the Call starts\./u)).toBeVisible();
+  await expect(page.getByRole("meter")).toHaveAttribute("aria-valuenow", "0");
+
+  // Settings as U1's index (round 22, item 20): rows that say their value,
+  // and one small form per sub-page with its own Save.
+  await scene(page, "Settings · an index that says every value");
+  await page.goto("/onboarding/settings");
+  await hydrated(page);
+  await expect(
+    page.getByRole("link", { name: /^How you run.*Run a little cold/u }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /^Units.*Fahrenheit, miles/u }),
+  ).toBeVisible();
+  await scene(page, "Units is its own small form, with its own Save");
+  await page.getByRole("link", { name: /^Units/u }).click();
+  await hydrated(page);
+  await page.getByRole("radio", { name: "°C" }).check();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Units saved." }),
+  ).toHaveCount(1);
+  await page.getByRole("link", { name: "Settings" }).first().click();
+  await expect(
+    page.getByRole("link", { name: /^Units.*Celsius, miles/u }),
+  ).toBeVisible({ timeout: 15_000 });
 });

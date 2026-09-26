@@ -25,7 +25,6 @@ import { Route as NotificationsIndexRouteImport } from './routes/notifications/i
 import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding/done'
 import { Route as OnboardingNameRouteImport } from './routes/onboarding/name'
-import { Route as OnboardingSettingsRouteImport } from './routes/onboarding/settings'
 import { Route as OnboardingTaplistRouteImport } from './routes/onboarding/taplist'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
@@ -43,6 +42,8 @@ import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entry
 import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
 import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
 import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
+import { Route as OnboardingSettingsIndexRouteImport } from './routes/onboarding/settings/index'
+import { Route as OnboardingSettingsSectionRouteImport } from './routes/onboarding/settings/$section'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
 import { Route as SafetyReviewPhotoSplatRouteImport } from './routes/safety/review-photo.$'
 import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
@@ -125,11 +126,6 @@ const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
 const OnboardingNameRoute = OnboardingNameRouteImport.update({
   id: '/onboarding/name',
   path: '/onboarding/name',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingSettingsRoute = OnboardingSettingsRouteImport.update({
-  id: '/onboarding/settings',
-  path: '/onboarding/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingTaplistRoute = OnboardingTaplistRouteImport.update({
@@ -217,6 +213,17 @@ const FeedVerdictEntryIdRoute = FeedVerdictEntryIdRouteImport.update({
   path: '/feed/verdict/$entryId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingSettingsIndexRoute = OnboardingSettingsIndexRouteImport.update({
+  id: '/onboarding/settings/',
+  path: '/onboarding/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingSettingsSectionRoute =
+  OnboardingSettingsSectionRouteImport.update({
+    id: '/onboarding/settings/$section',
+    path: '/onboarding/settings/$section',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
   id: '/runs/import/$importId',
   path: '/runs/import/$importId',
@@ -246,7 +253,6 @@ export interface FileRoutesByFullPath {
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/name': typeof OnboardingNameRoute
-  '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/backlog': typeof RunsBacklogRoute
@@ -268,8 +274,10 @@ export interface FileRoutesByFullPath {
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
+  '/onboarding/settings/': typeof OnboardingSettingsIndexRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesByTo {
@@ -285,7 +293,6 @@ export interface FileRoutesByTo {
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/name': typeof OnboardingNameRoute
-  '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/backlog': typeof RunsBacklogRoute
@@ -307,8 +314,10 @@ export interface FileRoutesByTo {
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
+  '/onboarding/settings': typeof OnboardingSettingsIndexRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRoutesById {
@@ -325,7 +334,6 @@ export interface FileRoutesById {
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/name': typeof OnboardingNameRoute
-  '/onboarding/settings': typeof OnboardingSettingsRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/runs/backlog': typeof RunsBacklogRoute
@@ -347,8 +355,10 @@ export interface FileRoutesById {
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
+  '/onboarding/settings/': typeof OnboardingSettingsIndexRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
 export interface FileRouteTypes {
@@ -366,7 +376,6 @@ export interface FileRouteTypes {
     | '/onboarding/calibrate'
     | '/onboarding/done'
     | '/onboarding/name'
-    | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/backlog'
@@ -388,8 +397,10 @@ export interface FileRouteTypes {
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/onboarding/settings/$section'
     | '/runs/import/$importId'
     | '/safety/review-photo/$'
+    | '/onboarding/settings/'
     | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -405,7 +416,6 @@ export interface FileRouteTypes {
     | '/onboarding/calibrate'
     | '/onboarding/done'
     | '/onboarding/name'
-    | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/backlog'
@@ -427,8 +437,10 @@ export interface FileRouteTypes {
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/onboarding/settings/$section'
     | '/runs/import/$importId'
     | '/safety/review-photo/$'
+    | '/onboarding/settings'
     | '/closet/photo/$itemId/$size'
   id:
     | '__root__'
@@ -444,7 +456,6 @@ export interface FileRouteTypes {
     | '/onboarding/calibrate'
     | '/onboarding/done'
     | '/onboarding/name'
-    | '/onboarding/settings'
     | '/onboarding/taplist'
     | '/runs/$runId'
     | '/runs/backlog'
@@ -466,8 +477,10 @@ export interface FileRouteTypes {
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/onboarding/settings/$section'
     | '/runs/import/$importId'
     | '/safety/review-photo/$'
+    | '/onboarding/settings/'
     | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
 }
@@ -484,7 +497,6 @@ export interface RootRouteChildren {
   OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
   OnboardingDoneRoute: typeof OnboardingDoneRoute
   OnboardingNameRoute: typeof OnboardingNameRoute
-  OnboardingSettingsRoute: typeof OnboardingSettingsRoute
   OnboardingTaplistRoute: typeof OnboardingTaplistRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
   RunsBacklogRoute: typeof RunsBacklogRoute
@@ -506,8 +518,10 @@ export interface RootRouteChildren {
   FeedPhotoSplatRoute: typeof FeedPhotoSplatRoute
   FeedUUserIdRoute: typeof FeedUUserIdRoute
   FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
+  OnboardingSettingsSectionRoute: typeof OnboardingSettingsSectionRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
   SafetyReviewPhotoSplatRoute: typeof SafetyReviewPhotoSplatRoute
+  OnboardingSettingsIndexRoute: typeof OnboardingSettingsIndexRoute
   ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
 
@@ -623,13 +637,6 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/name'
       fullPath: '/onboarding/name'
       preLoaderRoute: typeof OnboardingNameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/settings': {
-      id: '/onboarding/settings'
-      path: '/onboarding/settings'
-      fullPath: '/onboarding/settings'
-      preLoaderRoute: typeof OnboardingSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/taplist': {
@@ -751,6 +758,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedVerdictEntryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/settings/': {
+      id: '/onboarding/settings/'
+      path: '/onboarding/settings'
+      fullPath: '/onboarding/settings/'
+      preLoaderRoute: typeof OnboardingSettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/settings/$section': {
+      id: '/onboarding/settings/$section'
+      path: '/onboarding/settings/$section'
+      fullPath: '/onboarding/settings/$section'
+      preLoaderRoute: typeof OnboardingSettingsSectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs/import/$importId': {
       id: '/runs/import/$importId'
       path: '/runs/import/$importId'
@@ -788,7 +809,6 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingCalibrateRoute: OnboardingCalibrateRoute,
   OnboardingDoneRoute: OnboardingDoneRoute,
   OnboardingNameRoute: OnboardingNameRoute,
-  OnboardingSettingsRoute: OnboardingSettingsRoute,
   OnboardingTaplistRoute: OnboardingTaplistRoute,
   RunsRunIdRoute: RunsRunIdRoute,
   RunsBacklogRoute: RunsBacklogRoute,
@@ -810,8 +830,10 @@ const rootRouteChildren: RootRouteChildren = {
   FeedPhotoSplatRoute: FeedPhotoSplatRoute,
   FeedUUserIdRoute: FeedUUserIdRoute,
   FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
+  OnboardingSettingsSectionRoute: OnboardingSettingsSectionRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
   SafetyReviewPhotoSplatRoute: SafetyReviewPhotoSplatRoute,
+  OnboardingSettingsIndexRoute: OnboardingSettingsIndexRoute,
   ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }
 export const routeTree = rootRouteImport

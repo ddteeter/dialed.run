@@ -44,7 +44,7 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
     await page.getByLabel("Name").fill("Demo Runner");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("a-long-enough-password");
-    await page.getByRole("button", { name: "Sign up" }).click();
+    await page.getByRole("button", { name: "Create account" }).click();
 
     // A new account lands in O1 now (D-52), and `/` sends it back here
     // until `onboarding_complete` is set. Every demo but `onboarding`

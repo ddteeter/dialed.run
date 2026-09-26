@@ -73,6 +73,65 @@ describe("saveCalibration", () => {
     });
   });
 
+  it("replaces a place whole: a new label never keeps the old coordinates", async () => {
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Minneapolis, MN",
+      lat: 44.98,
+      lng: -93.27,
+    });
+
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Austin, TX",
+    });
+
+    const row = await profileOf(userId);
+    expect(row?.cityLabel).toBe("Austin, TX");
+    expect(row?.lat).toBeNull();
+    expect(row?.lng).toBeNull();
+  });
+
+  it("replaces a place whole: located coordinates never keep the old label", async () => {
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Minneapolis, MN",
+      lat: 44.98,
+      lng: -93.27,
+    });
+
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      lat: 30.27,
+      lng: -97.74,
+    });
+
+    const row = await profileOf(userId);
+    expect(row?.cityLabel).toBeNull();
+    expect(row).toMatchObject({ lat: 30.27, lng: -97.74 });
+  });
+
+  it("keeps the stored place when a recalibration names none", async () => {
+    const userId = newUlid();
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 0,
+      cityLabel: "Minneapolis, MN",
+      lat: 44.98,
+      lng: -93.27,
+    });
+
+    await saveCalibration(coreDb(), userId, { thermalLevel: 2 });
+
+    expect(await profileOf(userId)).toMatchObject({
+      thermalLevel: 2,
+      cityLabel: "Minneapolis, MN",
+      lat: 44.98,
+      lng: -93.27,
+    });
+  });
+
   it("finishes with the one answer that is required", async () => {
     // A denied geolocation permission must not block O1, so everything
     // except the thermal level is optional.
@@ -243,6 +302,29 @@ describe("savePreferences and currentSettings", () => {
       tempUnit: "c",
       distanceUnit: "km",
       shareDefault: false,
+    });
+  });
+
+  it("writes only the sub-page's own fields (round 22, item 20)", async () => {
+    // Each sub-page is its own small form: saving units cannot reset the
+    // sharing default, and saving sharing cannot reset the units.
+    const userId = newUlid();
+    await savePreferences(coreDb(), userId, { shareDefault: false });
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "c",
+      distanceUnit: "km",
+    });
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: false,
+    });
+
+    await savePreferences(coreDb(), userId, { shareDefault: true });
+    expect(await currentSettings(coreDb(), userId)).toMatchObject({
+      tempUnit: "c",
+      distanceUnit: "km",
+      shareDefault: true,
     });
   });
 

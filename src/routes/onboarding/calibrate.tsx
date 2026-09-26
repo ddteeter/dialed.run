@@ -5,6 +5,7 @@ import { CalibrateForm } from "../../modules/onboarding/components/CalibrateForm
 import {
   localeUnitsQuery,
   saveCalibrationFn,
+  lookUpCityFn,
 } from "../../modules/onboarding/functions";
 import { geolocate } from "../../modules/onboarding/geolocate";
 import { Page } from "../../ui";
@@ -15,8 +16,8 @@ import { Page } from "../../ui";
  */
 // fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/onboarding/calibrate")({
-  loader: async () => {
-    await requireSession();
+  loader: async ({ location }) => {
+    await requireSession(location.href);
     return { defaults: await localeUnitsQuery() };
   },
   component: CalibratePage,
@@ -31,6 +32,7 @@ function CalibratePage() {
       <CalibrateForm
         defaults={defaults}
         locate={geolocate}
+        lookUpCity={lookUpCityFn}
         saveCalibration={saveCalibrationFn}
         onSaved={() => {
           void navigate({ to: "/onboarding/taplist" });

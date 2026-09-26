@@ -1,11 +1,9 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { authClient } from "../modules/auth/client";
-import { SessionActions } from "../modules/auth/components/SessionActions";
+import { Landing } from "../modules/auth/components/Landing";
 import { getSession } from "../modules/auth/functions";
 import { onboardingGateQuery } from "../modules/onboarding/functions";
 import { startOnboardingIfNeeded } from "../modules/onboarding/route-decisions";
-import { Bracketed, Layout, Wordmark } from "../ui";
 
 /**
  * The marketing page, and the door into onboarding (D-52).
@@ -24,35 +22,12 @@ export const Route = createFileRoute("/")({
       onboardingGateQuery(),
     ]);
     startOnboardingIfNeeded(isUnfinished);
-    return { session };
+    return { signedIn: session !== null };
   },
   component: Home,
 });
 
 function Home() {
-  const { session } = Route.useLoaderData();
-  const router = useRouter();
-
-  return (
-    <Layout>
-      <main className="mx-auto flex w-full max-w-column flex-col items-start gap-6 px-6 pt-16">
-        <Wordmark className="text-title" />
-        <h1 className="m-0 font-display text-display uppercase">
-          Every run has an outfit. Log it.
-        </h1>
-        <p className="m-0 max-w-panel text-body text-quiet">
-          A virtual wardrobe for runners: what you wore, on which run, in which
-          weather.
-        </p>
-        <SessionActions
-          email={session?.user.email}
-          signOut={async () => {
-            await authClient.signOut();
-            await router.invalidate();
-          }}
-        />
-        <Bracketed step="md">Phase 0</Bracketed>
-      </main>
-    </Layout>
-  );
+  const { signedIn } = Route.useLoaderData();
+  return <Landing signedIn={signedIn} />;
 }

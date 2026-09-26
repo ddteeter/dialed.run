@@ -11,14 +11,18 @@ import { env } from "../../env";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
+import { captureException } from "../ops";
 import { climateNormals } from "../weather";
 import {
   brandPrefixInput,
   calibrationInput,
   nameGarmentInput,
-  preferencesInput,
+  sharingInput,
+  unitsInput,
 } from "./inputs";
 import { ladderFrom } from "./ladder";
+import { cityLookupInput, lookUpCity } from "./place";
+import type { PlaceResolver } from "./place";
 import {
   completeOnboarding,
   currentSettings,
@@ -60,10 +64,63 @@ export const settingsQuery = createServerFn({ method: "GET" }).handler(
   async () => currentSettings(db(), await requireUserId()),
 );
 
-export const savePreferencesFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => preferencesInput.parse(data))
+/**
+ * What every settings sub-page loader needs: the current settings and the
+ * bell's unread count, resolved together. Takes the unread-count promise
+ * already in flight, rather than importing modules/notifications' functions
+ * here — this file is onboarding's own server-fn glue, and reaching into
+ * another module's `functions.ts` would be the deep-import
+ * `no-cross-module-deep-imports` forbids. The two settings sub-page routes
+ * (units, sharing) call this instead of each hand-rolling the same
+ * `Promise.all`.
+ */
+export async function settingsSubPageData(
+  unreadCount: Promise<number>,
+): Promise<{
+  current: Awaited<ReturnType<typeof settingsQuery>>;
+  unreadCount: number;
+}> {
+  const [current, resolvedUnreadCount] = await Promise.all([
+    settingsQuery(),
+    unreadCount,
+  ]);
+  return { current, unreadCount: resolvedUnreadCount };
+}
+
+export const saveUnitsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => unitsInput.parse(data))
   .handler(async ({ data }) =>
     savePreferences(db(), await requireUserId(), data),
+  );
+
+export const saveSharingFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => sharingInput.parse(data))
+  .handler(async ({ data }) =>
+    savePreferences(db(), await requireUserId(), data),
+  );
+
+/**
+ * SEAM — O1's place resolver. Lane 123's `resolvePlace` (modules/weather,
+ * Visual Crossing) lands with PR #102; until then there is none, and a
+ * typed city is saved as a label alone, exactly as before O1 could resolve
+ * anything. Wiring it is this one line:
+ * `const O1_PLACE_RESOLVER: PlaceResolver | undefined = resolvePlace;`
+ */
+const O1_PLACE_RESOLVER: PlaceResolver | undefined = undefined;
+
+/**
+ * Resolves O1's typed city once, when the runner confirms — never per
+ * keystroke. A POST because it can reach a billed upstream.
+ */
+export const lookUpCityFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => cityLookupInput.parse(data))
+  .handler(async ({ data }) =>
+    lookUpCity({
+      label: data.label,
+      resolver: O1_PLACE_RESOLVER,
+      report: captureException,
+      userId: await requireUserId(),
+    }),
   );
 
 export const onboardingGateQuery = createServerFn({ method: "GET" }).handler(

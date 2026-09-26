@@ -41,8 +41,15 @@ export const calibrationInput = z.object({
 export type Calibration = z.infer<typeof calibrationInput>;
 
 /**
- * What the settings screen writes: the two display units and the sharing
- * default.
+ * The city field's message when the typed place cannot be found. Beside
+ * the schema whose field it lands on, because it is that field's error
+ * copy — it just comes from the place lookup rather than from a parse.
+ */
+export const CITY_NOT_FOUND =
+  "We couldn't find that place. Check the spelling.";
+
+/**
+ * What the units sub-page writes: the two display units.
  *
  * **Required here, optional in `calibrationInput`, and the difference is
  * the screen.** O1 offers a guess from the locale and must let someone
@@ -56,9 +63,20 @@ export type Calibration = z.infer<typeof calibrationInput>;
  * with a visible offset and not a row in a preferences form (requirement
  * 6). One question, one place it is asked.
  */
-export const preferencesInput = z.object({
+export const unitsInput = z.object({
   tempUnit: tempUnitSchema,
   distanceUnit: distanceUnitSchema,
+});
+
+/**
+ * The sharing sub-page's one answer.
+ *
+ * **Its own schema, because it is its own form** (round 22, item 20:
+ * *"Each sub-page is its own small form with its own Save"*). A save on
+ * the units page cannot carry a stale sharing default, and the other way
+ * round, because neither sends the other's field at all.
+ */
+export const sharingInput = z.object({
   /**
    * The per-entry toggle's starting position, never a lock: the contract
    * is "public by default with a per-entry toggle and a per-user default
@@ -66,7 +84,9 @@ export const preferencesInput = z.object({
    */
   shareDefault: z.boolean(),
 });
-export type Preferences = z.infer<typeof preferencesInput>;
+export type UnitsChoice = z.infer<typeof unitsInput>;
+export type SharingChoice = z.infer<typeof sharingInput>;
+export type Preferences = UnitsChoice & SharingChoice;
 
 /**
  * What P2.5 writes: a brand, and optionally which one of that brand's.

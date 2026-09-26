@@ -3,12 +3,17 @@ import { expect, test } from "@playwright/test";
 import { nowSeconds } from "../../src/lib/now";
 import { storageStateFor } from "../support/accounts";
 import { PHONE } from "../support/bars";
-import { cellsOf, leavesOf, openBoard, part } from "../support/conformance";
+import {
+  cellsOf,
+  fillOf,
+  hydrated,
+  leavesOf,
+  openBoard,
+  part,
+} from "../support/conformance";
 import {
   feedUserId,
-  fillOf,
   folded,
-  hydrated,
   partsIn,
   removeSeeded,
   seedEntry,

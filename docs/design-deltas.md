@@ -372,6 +372,26 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       Useful back that fails reads `STILL MARKED`, by the same rule — "the
       kicker names the state still true". **The ask:** confirm.
 
+28. **The breached-password refusal has placeholder copy (PR #104).**
+    **ANSWERED by round 26 (item 17): the placeholder is confirmed, and the
+    screen fails open.** Sign-up
+    and a password change now screen the new password against known
+    breaches (NIST SP 800-63B §3.1.1.2 — a blocklist, and no composition
+    rules). A match lands on Password as "That password has turned up in a
+    data breach. Pick another." — the owner's draft, built in the Au3 field
+    failure pattern. **The ask:** word it, and say whether Au1 should hint
+    at the screen before a runner meets it.
+
+29. **The Google button needs drawing around Google's official "G" (PR
+    #104).** **ANSWERED by round 26 (item 13): drawn light and dark; the
+    build is lane 126's.** Google's Sign in with Google branding guidelines forbid a
+    custom or monochrome mark ("must be the standard color version"), and
+    Au1–Au7 draw a ring-and-letter "G". The build now uses Google's own
+    full-colour mark, as a sanctioned brand exception outside the icon
+    manifest with its own fixed colours. **The ask:** redraw the Au button
+    around that mark — size, spacing against the label, and the in-flight
+    and failed states.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25

@@ -1,9 +1,16 @@
 import { eq } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import { defaultUnits } from "../../lib/contracts";
-import type { Calibration, Preferences } from "./inputs";
+import { orSqlNull } from "../../lib/sql-null";
+import type {
+  Calibration,
+  Preferences,
+  SharingChoice,
+  UnitsChoice,
+} from "./inputs";
 
 /**
  * O1's write, and the first thing in the app to create a `user_profiles`
@@ -25,9 +32,7 @@ export async function saveCalibration(
 ): Promise<void> {
   const calibrated = {
     thermalLevel: input.thermalLevel,
-    cityLabel: input.cityLabel,
-    lat: input.lat,
-    lng: input.lng,
+    ...placeColumns(input),
     tempUnit: input.tempUnit,
     distanceUnit: input.distanceUnit,
   };
@@ -35,6 +40,32 @@ export async function saveCalibration(
     .insert(userProfiles)
     .values({ userId, ...calibrated })
     .onConflictDoUpdate({ target: userProfiles.userId, set: calibrated });
+}
+
+/**
+ * Where the runner runs, as the three columns it is stored in — all three,
+ * or none.
+ *
+ * **Drizzle drops an `undefined` key from `set`**, so writing a new place
+ * as `{ cityLabel, lat: undefined, lng: undefined }` left the *old*
+ * coordinates under the new label: a runner who moved from Minneapolis to
+ * a typed "Austin" kept Minneapolis's weather. So when any part of a place
+ * arrives, the parts that did not are written as NULL (`orSqlNull`). When none does —
+ * a recalibration that answered only the thermal question — the stored
+ * place is left alone rather than erased.
+ */
+function placeColumns(input: Calibration): {
+  cityLabel?: string | SQL;
+  lat?: number | SQL;
+  lng?: number | SQL;
+} {
+  const { cityLabel, lat, lng } = input;
+  if ([cityLabel, lat, lng].every((part) => part === undefined)) return {};
+  return {
+    cityLabel: orSqlNull(cityLabel),
+    lat: orSqlNull(lat),
+    lng: orSqlNull(lng),
+  };
 }
 
 /**
@@ -78,27 +109,26 @@ export async function hasOnboarded(
 }
 
 /**
- * The settings screen's write: two display units and the sharing default.
+ * A settings sub-page's write: the units, or the sharing default.
  *
  * An upsert for the same reason `saveCalibration` is one — nothing else
- * creates this row — and it names only its own three columns, so saving
- * preferences cannot reset a calibration and recalibrating cannot reset
- * preferences. The two screens write disjoint sets on purpose.
+ * creates this row — and it names only the columns it was handed, so
+ * saving units cannot reset the sharing default, saving sharing cannot
+ * reset units, and neither can reset a calibration. Each sub-page is its
+ * own small form (round 22, item 20), and each writes a disjoint set.
+ *
+ * The input is whatever the sub-page's schema parsed (`unitsInput`,
+ * `sharingInput`), so no field outside those two sets can reach it.
  */
 export async function savePreferences(
   db: DrizzleD1Database,
   userId: string,
-  input: Preferences,
+  input: UnitsChoice | SharingChoice,
 ): Promise<void> {
-  const preferences = {
-    tempUnit: input.tempUnit,
-    distanceUnit: input.distanceUnit,
-    shareDefault: input.shareDefault,
-  };
   await db
     .insert(userProfiles)
-    .values({ userId, ...preferences })
-    .onConflictDoUpdate({ target: userProfiles.userId, set: preferences });
+    .values({ userId, ...input })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: input });
 }
 
 /**

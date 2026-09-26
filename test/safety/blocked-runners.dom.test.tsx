@@ -24,7 +24,11 @@ describe("what the screen leads with", () => {
     expect(
       screen.getByRole("heading", { name: /what blocking does/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/That's normal/)).toBeInTheDocument();
+    // Round 22, item 21: one line, no brackets.
+    expect(screen.getByText("You haven't blocked anyone.")).toBeInTheDocument();
+    expect(screen.queryByText(/That's normal/u)).toBeNull();
+    // Nothing has happened yet, so the one status region is silent.
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
 
   it("promises both directions, because one row means both", () => {
@@ -123,5 +127,88 @@ describe("the roster", () => {
       expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
     });
     expect(screen.getByText("gearfiend22")).toBeInTheDocument();
+  });
+});
+
+describe("Unblock as a control that can fail (round 22, item 21)", () => {
+  it("waits behind [ Unblocking ], keeping the row until the server says yes", async () => {
+    const user = userEvent.setup();
+    const answer = Promise.withResolvers<unknown>();
+    const unblock = vi.fn().mockReturnValue(answer.promise);
+    render(<BlockedRunners blocked={[runner()]} unblock={unblock} />);
+
+    const button = screen.getByRole("button", { name: "Unblock" });
+    await user.click(button);
+
+    // Not optimistic: the row is still here, the button is busy and still
+    // a live control, and its label breathes.
+    expect(screen.getByText("j_holloway")).toBeInTheDocument();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).not.toHaveAttribute("disabled");
+    expect(button).toHaveTextContent("Unblocking");
+    expect(button.querySelectorAll(".breathe")).toHaveLength(2);
+
+    // A second press while it waits sends nothing more.
+    await user.click(button);
+    expect(unblock).toHaveBeenCalledTimes(1);
+
+    answer.resolve({});
+    await waitFor(() => {
+      expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
+    });
+  });
+
+  it("keeps the row on failure, with a band inside it that says Still blocked", async () => {
+    const user = userEvent.setup();
+    const unblock = vi.fn().mockRejectedValue(new Error("D1 down"));
+    render(
+      <BlockedRunners
+        blocked={[runner(), runner({ userId: "u-2", displayName: "gearfiend22" })]}
+        unblock={unblock}
+      />,
+    );
+
+    const [first] = screen.getAllByRole("button", { name: "Unblock" });
+    if (!first) throw new Error("no unblock buttons rendered");
+    await user.click(first);
+
+    const band = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>("[data-part='failure-band']");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    // Inside the row that failed, not the other one and not the page.
+    const row = screen.getByText("j_holloway").closest("li");
+    expect(row).toContainElement(band);
+    expect(screen.getByText("gearfiend22").closest("li")).not.toContainElement(
+      band,
+    );
+    expect(band).toHaveTextContent("Still blocked");
+    expect(band).toHaveTextContent("Our end failed.");
+    expect(screen.getByText("[2 blocked]")).toBeInTheDocument();
+    // The one status region says it once.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Still blocked. Our end failed.",
+    );
+  });
+
+  it("tries again from the band, and the row leaves when that works", async () => {
+    const user = userEvent.setup();
+    const unblock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("D1 down"))
+      .mockResolvedValueOnce({});
+    render(<BlockedRunners blocked={[runner()]} unblock={unblock} />);
+
+    await user.click(screen.getByRole("button", { name: "Unblock" }));
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
+    });
+    expect(unblock).toHaveBeenCalledTimes(2);
+    expect(unblock).toHaveBeenLastCalledWith({ data: { userId: "u-1" } });
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
 });
