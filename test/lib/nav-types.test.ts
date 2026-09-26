@@ -190,6 +190,7 @@ describe("which type an edge resolves to", () => {
       ["/feed", "/feed/search"],
       ["/runs", "/runs/r1"],
       ["/runs/import/i1", "/runs/r1"],
+      ["/runs", "/runs/import/i1"],
       ["/feed", "/notifications"],
       ["/closet", "/notifications"],
       ["/feed/me", "/runs"],
