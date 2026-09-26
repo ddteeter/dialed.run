@@ -1,17 +1,20 @@
 /**
- * Covers: C (the closet), F (add a garment), E (garment detail's photo
- * well, round 22), §AG (what a garment is made
- * of), §AH (colour as a constraint) — one journey, one video.
+ * Covers: C (the closet, round 22 ruling 16), F (add a garment, ruling
+ * 17), Y (garment detail, round 22 `#y`: the photo well, Remove, the
+ * retire confirm), §AG (what a garment is made of), §AH (colour as a
+ * constraint) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts.
  *
- * The journey: sign up, add two garments with real brand + product-name
- * identity (product identity is the app's differentiator — a generic "top"
- * is not what this screen is for), browse the categorized closet, then
- * retire one item and confirm it moves behind the retired toggle instead
- * of disappearing (CLAUDE.md: retire, don't delete).
+ * The journey: an empty closet that says so and offers the dashed tile;
+ * two garments added with real brand + product-name identity (product
+ * identity is the app's differentiator — a generic "top" is not what this
+ * screen is for), the second with its photo taken in F's well; detail in
+ * round 22's order, the photo removed; then one retired through the
+ * confirm sheet, landing on the closet where it is still there, last and
+ * marked (CLAUDE.md: retire, don't delete).
  *
  * Round 11's colour rides on the second piece, because that is where it
  * lives on screen: the fifth attribute inside F's already-collapsed group,
@@ -49,7 +52,7 @@ const PNG_1X1 = Buffer.from(
   "base64",
 );
 
-test("add garments with product identity -> browse the closet -> retire, don't delete", async ({
+test("add garments with product identity -> detail in round 22's order -> retire through the confirm", async ({
   page,
 }, testInfo) => {
   // Generous, because recording pace is not a latency budget. `scene()`
@@ -60,13 +63,23 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   testInfo.setTimeout(150_000);
   await page.goto("/closet");
   await hydrated(page);
-  await scene(page, "C · an empty closet says so plainly");
-  await expect(page.getByText("Nothing in here yet")).toBeVisible();
+
+  // Ruling 16: the statement, one line, and the dashed tile — the only
+  // way in, because adding is the grid's tile and never a bar action.
+  await scene(page, "C · empty: a statement, one line, the dashed tile");
+  await expect(
+    page.getByRole("heading", { name: /Nothing in here yet/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Add what you run in most. Three pieces is enough to start."),
+  ).toBeVisible();
 
   // First piece: real product identity, not a generic placeholder — brand
   // autocomplete + model name lead, per screen F.
-  await scene(page, "F · identity first — a brand and a model, not a top");
-  await page.getByRole("link", { name: "Add a piece" }).click();
+  await scene(page, "F · identity first — and no product-link field (AC2b)");
+  await page.getByRole("link", { name: "Add garment" }).click();
+  await hydrated(page);
+  await expect(page.getByLabel("Product link")).toHaveCount(0);
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
   await page.getByLabel("Category").selectOption("shoes");
@@ -75,11 +88,15 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   await expect(
     page.getByRole("heading", { name: "Nike Pegasus 41" }),
   ).toBeVisible();
+  // No photo, so no well: "adding one is Edit's job".
+  await expect(page.locator("[data-part='photo-well']")).toHaveCount(0);
 
   // Second piece, a different category, same identity-first discipline.
   await bar(page).getByRole("link", { name: "Closet" }).click();
+  await hydrated(page);
   await scene(page, "A second piece, another category, same discipline");
-  await page.getByRole("link", { name: "Add", exact: true }).click();
+  await page.getByRole("link", { name: "Add garment" }).click();
+  await hydrated(page);
   await page.getByLabel("Brand").fill("Patagonia");
   await page.getByLabel("Model / name").fill("Houdini Jacket");
   await page.getByLabel("Category").selectOption("top");
@@ -89,8 +106,7 @@ test("add garments with product identity -> browse the closet -> retire, don't d
 
   // §AH. Colour is the fifth attribute, inside the group that is already
   // open — so the happy path's tap count does not move. Chips are words,
-  // never swatches: thirteen swatches would be thirteen accents in one
-  // viewport, and hue already means verdict everywhere in this app.
+  // never swatches.
   await scene(page, "§AH · colour is words, and it is the fifth attribute");
   await page.getByRole("radio", { name: "Reflective trim" }).check();
   await page.getByRole("radio", { name: "Black" }).check();
@@ -105,15 +121,38 @@ test("add garments with product identity -> browse the closet -> retire, don't d
     page.getByRole("button", { name: "Exact shade · #1f2a44" }),
   ).toBeVisible();
 
+  // Ruling 17: Size, Colorway, then the photo well, then the save. The
+  // photo goes through W3's blur and is held, previewed in the well, until
+  // the save has made the row it belongs to.
+  await scene(page, "F · the photo well, last before the save");
+  const well = page.locator("[data-part='photo-well']");
+  await expect(well).toHaveAttribute("data-state", "empty");
+  await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
+    name: "houdini.png",
+    mimeType: "image/png",
+    buffer: PNG_1X1,
+  });
+  await expect(well).toHaveAttribute("data-state", "filled", {
+    timeout: 20_000,
+  });
+  await expect(well.locator('img[src^="blob:"]')).toBeVisible();
+
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(
     page.getByRole("heading", { name: "Patagonia Houdini Jacket" }),
   ).toBeVisible();
 
-  // §AH rule 08: the name on the identity line, beside the colourway, as
-  // words. No swatch here either.
-  await scene(page, "§AH · the name on the identity line, never a swatch");
-  await expect(page.getByText(/reflective trim · black/)).toBeVisible();
+  // Round 22's Y: identity (the colourway as words, the chosen shade as
+  // the square beside it), then the photo in its well, stats, composition.
+  await scene(page, "Y · identity, then the photo — the well is the preview");
+  await expect(page.locator("[data-part='identity']")).toContainText("black");
+  await expect(
+    page.locator("[data-part='identity'] [data-content]"),
+  ).toBeVisible();
+  await expect(well).toHaveAttribute("data-state", "filled");
+  await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
+  await expect(page.getByText("Replace")).toBeVisible();
+  await expect(page.getByText("light · wind resistant · reflective trim")).toBeVisible();
 
   // §AG. Composition belongs to the product, not to the runner's copy —
   // enrichment writes it from a brand's page, so the demo writes the row
@@ -145,38 +184,19 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   await expect(page.getByText("87% polyester · 13% elastane")).toBeVisible();
   await expect(page.getByText("As labelled by Patagonia")).toBeVisible();
 
-  // Round 22, item 8: the photo sits in the well. It passes through W3's
-  // blur first — garment photos used to skip it (D-102) — and once stored
-  // the well IS the preview, with Replace under it, never an image above a
-  // well that still says "Add a photo".
-  await scene(page, "The photo goes through the blur, then sits in the well");
-  const well = page.locator("[data-part='photo-well']");
-  await expect(well).toHaveAttribute("data-state", "empty");
-  await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
-    name: "houdini.png",
-    mimeType: "image/png",
-    buffer: PNG_1X1,
-  });
-  await expect(well).toHaveAttribute("data-state", "filled", {
-    timeout: 20_000,
-  });
-  await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
-  await expect(page.getByText("Replace")).toBeVisible();
-  await expect(page.getByText("Add a photo")).toHaveCount(0);
+  // Round 22's well: Remove takes the photo away — row and storage — and
+  // with no photo, detail has no well at all.
+  await scene(page, "Y · Remove: the photo goes, and so does the well");
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.locator("[data-part='photo-well']")).toHaveCount(0);
 
-  // Browse the closet: both pieces show real brand + model, grouped by
-  // the derived UI group (an "outer" layer groups on its own, ahead of
-  // its base category).
-  await scene(page, "C · grouped by derived group — outer sits above top");
+  // C at desk: one flat grid, the count on the left. §AG rule 03: the
+  // closet is for finding, so no composition on the grid.
+  await scene(page, "C · one flat grid, and the count says how many");
   await bar(page).getByRole("link", { name: "Closet" }).click();
-  // §AG rule 03: the closet is for finding. No composition on the grid.
+  await hydrated(page);
+  await expect(page.getByRole("heading", { name: "2 pieces" })).toBeVisible();
   await expect(page.getByText("Made of")).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", { name: "Shoes", level: 2 }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Outer", level: 2 }),
-  ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();
@@ -184,14 +204,8 @@ test("add garments with product identity -> browse the closet -> retire, don't d
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toBeVisible();
 
-  // Into a piece and back out of it (task 117). `NAV` types
-  // Closet -> Garment detail a `push`, and "back reverses both", so this
-  // records the same move running the other way — which the Closet tab
-  // link would not, because a tab is a `cut`.
-  //
-  // Browser back rather than a link, because that is the gesture the
-  // reversal is read from: the router compares history indexes, and a
-  // link to the same place is a forward navigation to it.
+  // Into a piece and back out of it (task 117). Browser back rather than a
+  // link, because that is the gesture the reversal is read from.
   await scene(page, "Back leaves the way it came");
   await page.getByRole("link", { name: /Nike Pegasus 41/ }).click();
   await hydrated(page);
@@ -200,44 +214,48 @@ test("add garments with product identity -> browse the closet -> retire, don't d
   ).toBeVisible();
   await page.goBack();
   await hydrated(page);
-  await expect(
-    page.getByRole("heading", { name: "Shoes", level: 2 }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "2 pieces" })).toBeVisible();
 
-  // Retire, don't delete. Retiring lands back on the closet with retired
-  // items already shown, so the shoes are visibly still there and marked —
-  // the point of the product rule, and the answer to "where did it go?".
-  await scene(page, "Retire, don't delete — still here, and marked");
+  // Retire, don't delete — and ask first. The sheet names the piece and
+  // what it keeps; focus lands on Keep it.
+  await scene(page, "Y · Retire asks first, and focus lands on Keep it");
   await page.getByRole("link", { name: /Nike Pegasus 41/ }).click();
-  await page.getByRole("button", { name: "Retire" }).click();
+  await hydrated(page);
+  await page
+    .locator("[data-part='actions']")
+    .getByRole("button", { name: "Retire" })
+    .click();
+  const sheet = page.locator("[data-part='sheet']");
+  await expect(
+    sheet.getByRole("heading", { name: "Retire the Pegasus 41?" }),
+  ).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Keep it" })).toBeFocused();
+
+  // Retiring lands back on the closet with retired pieces shown, so the
+  // shoes are visibly still there — last, and marked in the kicker.
+  await scene(page, "Retired: still here, sorted last, [RETIRED] in the kicker");
+  await sheet.getByRole("button", { name: "Retire" }).click();
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();
   await expect(page.getByText("[Retired]", { exact: true })).toBeVisible();
+  const toggle = page.getByRole("switch", { name: "Show retired" });
+  await expect(toggle).toBeChecked();
 
-  // And they are genuinely retired: hiding them takes the shoes out of the
-  // default view, where the jacket stays.
-  //
-  // This is also where two of the doctrine's moves are on film (task 114):
-  // the retired row collapses its own height rather than blinking out —
-  // "collapse says removed from the list; a fade says still there, just
-  // hidden" — and what remains reflows into the space instead of fading
-  // and re-entering. The demo project records with `reducedMotion:
-  // "no-preference"` on purpose, so both are visible at recorded pace.
-  await scene(page, "Hiding it: the row collapses, the rest reflow");
-  await page.getByRole("button", { name: "Hide retired (1)" }).click();
+  // The switch off: the retired tile collapses its own height rather than
+  // blinking out, and what remains reflows (task 114). The demo project
+  // records with `reducedMotion: "no-preference"` on purpose.
+  await scene(page, "The switch off: the tile collapses, the rest reflow");
+  await toggle.uncheck();
   await expect(page.getByRole("link", { name: /Nike Pegasus 41/ })).toHaveCount(
     0,
   );
-  await expect(
-    page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "1 piece" })).toBeVisible();
 
-  // And back, which is the same move the other way: the rows that were
-  // already there travel to their new places, and the one arriving does
-  // not re-enter — "the garments did not go anywhere".
+  // And back — the tiles already there travel, the one arriving does not
+  // re-enter: "the garments did not go anywhere".
   await scene(page, "And back — they travel, they do not reappear");
-  await page.getByRole("button", { name: "Show retired (1)" }).click();
+  await toggle.check();
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();

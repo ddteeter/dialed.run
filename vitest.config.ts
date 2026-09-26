@@ -49,6 +49,24 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 const DOM_TESTS = "test/**/*.dom.test.tsx";
 const BROWSER_TESTS = "test/**/*.browser.test.ts";
 
+/**
+ * The per-test deadline: 20s for any ordinary run, a minute inside stryker.
+ * Why 20s at all is on the worker project below. It was not enough for
+ * stryker's serial dry run: on 2026-09-25 two lanes lost six push attempts
+ * between them to `Test timed out in 20000ms`, a DIFFERENT slow test each
+ * time (closet photos' image encode, onboarding's naming step), each of which
+ * passes in about a second alone — the same varying-victim signature that
+ * moved it off 5s.
+ *
+ * Raised only where that harness runs. Stryker's core starts every test
+ * runner in a child process with `STRYKER_MUTATOR_WORKER` set, so this reads
+ * that rather than a flag someone must remember to pass. `npm test` and CI's
+ * test job keep 20s, so a test that genuinely hangs still fails promptly
+ * there. Owner's call, 2026-09-25.
+ */
+const TEST_TIMEOUT_MS =
+  process.env.STRYKER_MUTATOR_WORKER === undefined ? 20_000 : 60_000;
+
 export default defineConfig(async () => {
   const coreMigrations = await readD1Migrations("src/db/migrations/core");
   const weatherMigrations = await readD1Migrations("src/db/migrations/weather");
@@ -119,8 +137,9 @@ export default defineConfig(async () => {
             // rule rather than that one file's private workaround. It
             // weakens no assertion — every test still runs and still has to
             // pass — it only moves the deadline at which we call the
-            // harness wedged.
-            testTimeout: 20_000,
+            // harness wedged. Stryker gets longer still: see
+            // TEST_TIMEOUT_MS.
+            testTimeout: TEST_TIMEOUT_MS,
             include: ["test/**/*.test.{ts,tsx}"],
             exclude: [DOM_TESTS, BROWSER_TESTS],
             setupFiles: ["test/apply-migrations.ts"],
@@ -129,7 +148,7 @@ export default defineConfig(async () => {
         defineProject({
           test: {
             name: "ui",
-            testTimeout: 20_000,
+            testTimeout: TEST_TIMEOUT_MS,
             environment: "happy-dom",
             include: [DOM_TESTS],
             setupFiles: ["test/dom-setup.ts"],
@@ -138,7 +157,7 @@ export default defineConfig(async () => {
         defineProject({
           test: {
             name: "browser",
-            testTimeout: 20_000,
+            testTimeout: TEST_TIMEOUT_MS,
             include: [BROWSER_TESTS],
             browser: {
               enabled: true,

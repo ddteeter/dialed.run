@@ -350,7 +350,18 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     the row), so the pattern may already be "the band, sized to the thing
     that failed" — design to confirm.
 
+    **Still open after round 26**, which was not asked it again. Every new
+    failure it draws is that pattern: a §4a band sized to the thing that
+    failed (A1's refetch, F's photo, Find, Resend, and E2-lite's and
+    search's "Didn't load", confirmed as "the §4a band sized to the block").
+    That is strong evidence for the answer, but it is not a ruling.
+
 27. **Two words round 22–23 do not give, built from their rule (task 120).**
+    **CLOSED by round 26 (item 8): both confirmed.** The hint stays derived,
+    and every "HEIC" on round 22's photo-well frames is now "JPG, PNG or
+    WebP". `STILL MARKED` is §4a applied as written. The comments in
+    `src/lib/photo-constraints.ts` and its test that say the board draws HEIC
+    are now stale.
     - **The photo well's formats.** Round 22 draws "Flat on the floor works
       best. JPG, PNG or HEIC." The server accepts JPEG, PNG and WebP, not
       HEIC, so the hint reads "JPG, PNG or WebP" — derived from
@@ -361,7 +372,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       Useful back that fails reads `STILL MARKED`, by the same rule — "the
       kicker names the state still true". **The ask:** confirm.
 
-28. **The breached-password refusal has placeholder copy (PR #104).** Sign-up
+28. **The breached-password refusal has placeholder copy (PR #104).**
+    **ANSWERED by round 26 (item 17): the placeholder is confirmed, and the
+    screen fails open.** Sign-up
     and a password change now screen the new password against known
     breaches (NIST SP 800-63B §3.1.1.2 — a blocklist, and no composition
     rules). A match lands on Password as "That password has turned up in a
@@ -370,13 +383,355 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     at the screen before a runner meets it.
 
 29. **The Google button needs drawing around Google's official "G" (PR
-    #104).** Google's Sign in with Google branding guidelines forbid a
+    #104).** **ANSWERED by round 26 (item 13): drawn light and dark; the
+    build is lane 126's.** Google's Sign in with Google branding guidelines forbid a
     custom or monochrome mark ("must be the standard color version"), and
     Au1–Au7 draw a ring-and-letter "G". The build now uses Google's own
     full-colour mark, as a sanctioned brand exception outside the icon
     manifest with its own fixed colours. **The ask:** redraw the Au button
     around that mark — size, spacing against the label, and the in-flight
     and failed states.
+
+## Answered in round 26 (imported 2026-09-25)
+
+Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25
+promised, eight new ones, and four addenda from the owner (19–22). **All
+twenty-two are answered.** They are on a new board, `Round 26
+Rulings.dc.html`, each section marked with the board it will fold into, and
+mirrored in `design/docs/product.md` §Round 26. Design also changed `Round 22
+Coverage.dc.html`: every "HEIC" on the photo well is now "JPG, PNG or WebP",
+and the `[TOO MUCH]` flag is gone from "D Someone else's entry".
+
+**No contract file changed.** `tokens.js`, `motion.js`, `icons.js`,
+`Theme.dc.html` and the Form, Desktop and Accessibility Contracts are
+byte-identical to round 25, and the token, contrast, icon and motion tests
+pass unchanged. **Several rulings nonetheless describe values the contracts
+do not hold.** They are listed at the end of this section. Until a contract
+file says otherwise, the contract wins.
+
+Lanes are the launch plan's: 125 ops/platform, 126 accounts, 127
+Strava/logging, 128 content/safety, 129 feed. The plan names no closet lane,
+so closet items name task 122's code and need an owner.
+
+**Carried from round 24, drawn**
+
+1. **A1 · fixing the start time.** _Drawn:_ "A1 Time correction" and "A1
+   Time correction desk". The time on the stats line is a button, "Change
+   start time, 6:04 AM". It opens a START TIME row inside the parsed card
+   with the hint "The file said {t}. Change it if your watch's clock was
+   off.", a time field, and **"Get weather"** (not "Refetch": _"Refetch is
+   our word, and the runner's word is weather"_). While it fetches, the
+   conditions block reads `WEATHER FOR {t}` · [ Getting it ] · `WAS {old} ·
+AT {t0}`. At the desk that block is in the rail. On success the row
+   closes and the stats line reads `{t} · CHANGED`. On failure a §4a band
+   reads `STILL {t0}` · "Couldn't get weather for {t}. Try again?", and
+   **both the time and the conditions revert**, so a run never carries a
+   time whose weather we don't have. The date is fixed. A primary action
+   pressed mid-fetch waits in brackets and then goes. _Build:_ rename the
+   button, add the WAS state and the revert. 127 (task 121's code).
+2. **R2b · Set conditions.** _Drawn:_ "R2b Set conditions". There are two
+   required picks and nothing is preselected. **How warm:** the build's
+   twelve 5 °C bands, labelled in the runner's unit (°F −4–5 … 95–104, all
+   whole numbers), in a 3-column radiogroup, coldest top-left, with no
+   open-ended cells. **Sky:** Dry / Damp / Rain / Snow. The button reads "Set
+   {band} and {sky}" ("Set conditions" before either pick). The missing-pick
+   messages are "Pick how warm it was." and "Pick the sky.". The run strip
+   badge reads `SET · 41–50° · RAIN` and never shows the stored midpoint.
+   _Build:_ add the sky pick, which needs somewhere to live.
+   `manual_conditions` holds `temp_c` only, so this is an **additive
+   nullable column**. 127 (task 121's code).
+3. **Deleting a garment that has runs.** _Drawn:_ "Y Delete with runs". The
+   title is "Delete the {piece}? Retire it instead.", with "It's on {n}
+   runs." Below it: GOES "It comes off the kit of all {n} runs", GOES "Its
+   record in {b} bands", STAYS "Every entry and verdict, and the rest of
+   each kit", and "This can't be undone." Buttons: pink **Retire it**,
+   hairline **Delete it and its record**, Cancel. No second confirm. On
+   success the runner lands on C with "{piece} deleted."; on failure the
+   kicker is `Not deleted`. _Build:_ the sheet for the with-runs case.
+   Closet (task 122's code).
+4. **F · garment saved, photo refused.** _Drawn:_ "F Photo failed". The
+   form fields go, because the row exists, and the action becomes **Done**
+   (→ Y). Under the well is a §4a band: `PHOTO NOT ADDED` · "Garment saved,
+   photo didn't. Try again?" plus the reason ("IMG_2231.HEIC isn't a JPG,
+   PNG or WebP."). **"Try again" is offered only for a network failure**, and
+   it re-sends the same file. For a size or type refusal the only choice is
+   "Pick another". Closet (task 122's code).
+
+**Carried from round 24, ruled**
+
+5. **The swatch.** _Ruling:_ round 22 is right, and so is the build. The
+   square shows only when the shade is exact. §AH rule 08 is "amended to
+   say 'no swatch unless the shade is exact'", but only on the new board;
+   the §AH board itself did not change. _Build:_ none.
+6. **Per-item flags on a stranger's entry.** _Ruling:_ dropped. The contract
+   wins, and the D frame now shows the name alone. The OG card (item 22)
+   repeats the rule. _Build:_ none. `feed/entries.ts` already returns
+   flags to the entry's owner only, so the board now agrees with the build.
+7. **Usernames.** _Drawn:_ "O0 Handle taken" and "Handle placements". The
+   `@handle` replaces the name **everywhere, in one style: Archivo 600, "@"
+   included, lowercase, never mono**. Search, G and H move from mono to this
+   style. That covers the feed author row, D, S1 ("@x found your 41° run
+   useful.") and the report sheet ("Report @x's entry?"). **Sign-up asks for
+   email and password only.** Everyone, email or Google, picks a handle at
+   **O0, the first step of onboarding** ("What should runners call you?",
+   STEP 1 OF 4). The rule is 3–20 of `[a-z0-9_]`, not starting with `_`,
+   unique regardless of case, and lowercased as typed. It is checked on
+   Next, not while typing. A taken handle reads "@x is taken. Try another,
+   like @x_pdx.", with one real free suggestion (the typed handle plus the
+   city slug, or else plus a digit). The other refusals are "Use 3–20
+   letters, numbers or _." and "Handles can't start with _.". Settings ›
+   Username changes it later. **An old `/@handle` shows "This runner changed
+   their name." and never redirects**, because a redirect would link the old
+   handle to the new one. _Build:_ 126 owns the field, O0, settings and the
+   rule. 129 owns the placements, 128 the report sheet. **Schema:** a
+   `username` column with a case-insensitive unique index is additive.
+   Dropping `display_name` is destructive and goes expand→contract.
+   Answering "changed their name" needs old handles kept somewhere.
+8. **Task 120's two calls.** _Ruling:_ both confirmed ("JPG, PNG or WebP";
+   `STILL MARKED`). Closes open item 27. _Build:_ none.
+9. **The round 21–23 placeholders.** _Ruling:_ all confirmed except two.
+   City field error copy is superseded by item 12. **Date order is US**: mono
+   labels read "SAT AUG 29" and prose reads "Sat, Aug 29", via Intl with the
+   month before the day; "Sat 29 Aug" is wrong for en-US. Details added to
+   the confirms:
+   - E2-lite "No weather yet" becomes "No weather for {place} yet. It shows
+     after the first reading."
+   - "Didn't load" is the §4a band sized to the block, with no
+     illustration.
+   - The bell's names are "Notifications" and "Notifications, 3 new".
+   - Consensus bar colours also need a word label (rule 10).
+   - "Find runners" is a right-aligned text link, not a bar icon.
+   - "Show retired (4)", with no count at 0.
+   - The phone's way back reads "← Closet".
+
+   _Build:_ the date formatter (127, task 121's code; every lane renders
+   dates). E2-lite copy and the bar labels (129). The Show retired count
+   (closet).
+
+**Promised in round 25**
+
+10. **F at the desk.** _Drawn:_ "F Add garment desk" (DS1 split). The rail
+    holds **one card: "Already in your closet · {CATEGORY} · {TYPE}"**. It
+    lists the same category and type, newest first, up to five, retired
+    pieces included and marked `RETIRED`, and a brand+name match is marked
+    `SAME NAME`. The rows are read-only and don't link, because a link would
+    fire the leave rule. Empty: "No half-zips yet." There is no card before
+    a category is picked. It is **not** the photo preview (the well already
+    is one) and **not** "worn in" (a new piece has worn nothing). The
+    photo-failed state (#4) sits in the primary column, and the rail stays.
+    Closet (task 122's code).
+
+**New, drawn**
+
+11. **Email verification.** _Drawn:_ "Au4 Check your email", "Email verify",
+    "Email existing account", "Link expired", "Link used", "Link success",
+    "Resend states" and "Au2 Sign up redraw". **Every email sign-up ends on
+    Au4**, whether the address is new or registered. A registered address
+    gets the email "You already have a dialed.run account", so **Au3's
+    exception is retired** and the page reveals nothing. The link works
+    once, for 24 hours. Resend shows [ Sending ], then "Sent ✓" for 60 s
+    (the old link stops working), then when rate-limited a §4a band
+    `NOT SENT` "That's 5 links this hour. You can send another at {time}.".
+    **Unverified accounts can do everything private.** What waits is anything
+    another runner would see or that trusts the address: share (it queues,
+    with the sub-line "Shares when you confirm your email."; it then posts in
+    logged order with original dates and "3 runs shared."), Useful, report
+    (both open a "Confirm your email first" sheet), email change, and reset
+    by email. There is one nag, a hairline band on Feed and You with no
+    dismiss. Google accounts skip Au4. The ruling rejects the build's default
+    of allowing everything and nagging: _"allowing everything and nagging is
+    the spam path."_ _Build:_ 126, and 129 for the share queue and the
+    band. It needs an email-sending binding, which does not exist yet
+    (125; `wrangler.jsonc` is human-managed). **"Queued" is a new state for
+    an entry**, not public and not private, so it touches `docs/contracts.md`
+    sharing rules: contract-shaped.
+12. **The typed city.** _Drawn:_ "City field empty", "City field resolved",
+    "City field not found" and "O1 City step". The hint reads "Add the
+    state or country. We'll show you the place we found before we use it."
+    Beside the field is **Find**. It returns "Weather for {resolved}" with
+    **Use this** ("Not it? Add more to the name."), and nothing is saved
+    until Use this is pressed. A place that doesn't exist gets the field
+    message "We couldn't find "{q}". Check the spelling, or try a nearby
+    city."; a failed lookup gets the §4a band `NOT FOUND YET`. On O1 the
+    resolved string, uppercased, becomes the chip, and "Change city"
+    reopens the field. Enter means Find. Next with an unconfirmed entry
+    reads "Press Find, or clear the field to skip.". Your conditions'
+    header reads `WEATHER FOR {RESOLVED}`. _Build:_ 129 for Your conditions
+    (task 123's code) and 126 for O1 (task 124's code).
+13. **The Google button.** _Drawn:_ "Google button light" and "Google button
+    dark". Google's light and dark specs are taken whole (fill, 1px stroke,
+    **Roboto Medium**, the official G) in our pill, 48 high, reading
+    "Continue with Google" on both Au1 and Au2. `data-part="google-button"`
+    is exempt from the palette and icon-pack checks, and nothing else is.
+    Focus follows rule 06. _Build:_ 126 (task 124's code).
+14. **Privacy policy.** _Drawn:_ "Privacy policy desk", with the phone
+    described in notes. `/privacy` is a reading page with a sticky contents
+    column at the desk and a plain list under the H1 on the phone. Each H2
+    carries an id and "↑ Contents". There are no accordions, and inline links
+    are underlined. It uses the signed-in shell when signed in. **It is
+    linked from the signed-out footer, under Au2 only** ("Creating an
+    account means you've read our Privacy policy."), from Settings › About,
+    and from every email footer. **Not under Au1**: _"logging in isn't
+    consent to anything new."_ _Build:_ 126 (D-105).
+
+**New, ruled**
+
+15. **The Call's threshold is 15.** _Drawn:_ "K Call teaser 15", which
+    supersedes round 22's K. It shows 15 cells, `4 OF 15 VERDICTS`, "Log 15
+    verdicts and the Call starts." and "11 to go. …". At 0 it reads "Your
+    first verdict is one run away." _Build:_ K's copy and meter. 126 (task
+    124's code).
+16. **Field focus.** _Drawn:_ "Field focus states". On a FormField **the ring
+    sits on the border** (outline 2px ink, offset −1px), so a focused field
+    shows one line. Error is a 2px ink border plus the band. Error with focus
+    looks the same plus the band, and **the band is what tells error from
+    focus**. _Build:_ `ui/form.tsx` (task 120's primitives; 125 as the
+    platform lane). **This contradicts the Accessibility Contract as
+    written**; see below.
+17. **Breached password.** _Ruling:_ the placeholder is confirmed: "That
+    password has turned up in a data breach. Pick another." It never says
+    "your password was breached". If the check can't be reached, it fails
+    open. _Build:_ 126.
+18. **Small confirms.** _Ruling:_
+    - **W3:** counts are digits, always, including "You blurred 1 spot."
+      (128; task 120's code).
+    - **Password:** the hint is "At least 10 characters.", the refusal is
+      "Use at least 10 characters.", and Au1 shows no length hint (126).
+    - **G:** a settings icon button (`settings` is in the pack, named
+      "Settings") sits at the right of G's identity line in every state. Day
+      one keeps its inline link too (129; task 123's code).
+
+**Addenda from the owner**
+
+19. **Notification email.** _Drawn:_ "Email run reminder", "Settings
+    notifications" and "Unsubscribe landing". In v1 **only the Strava run
+    reminder can be emailed**. It is on by default and sent 20 minutes after
+    the run lands. It is skipped if a matching file was uploaded or the push
+    was opened, and at most one goes out a day, with the next one counting
+    both ("2 runs landed on Strava yesterday and today."). Subject "New run
+    on Strava. Add it here.", body "A run landed on Strava at {time}. Upload
+    its file, then add what you wore.", button "Add it". The footer reads
+    "You get this because Strava is connected." · Stop run reminder emails ·
+    Email settings · Privacy policy. It sends List-Unsubscribe with one-click.
+    Settings › Notifications has Push/Email switches per kind:
+    - Run reminders: push and email.
+    - Useful: push; email reads "IN THE APP ONLY".
+    - Account and security: email reads "ALWAYS SENT", with no switch.
+
+    Unsubscribing is a signed, never-expiring link for one address and one
+    kind. Opening it unsubscribes, with no log-in and no confirm, and lands
+    on "Run reminder emails are off" · Turn them back on. An invalid link
+    reads "That link doesn't work. Change emails in Settings ›
+    Notifications." _Build:_ 127 (the reminder and its skip rule), 125
+    (sending, the delayed dispatch, headers, the signed link), and 126
+    (settings). It needs the same email binding as item 11.
+
+20. **Invite-only sign-up.** _Drawn:_ "Au2 Invite code", "Au5 Request
+    access", "Au5 Request receipt" and "D7 Access". **INVITE CODE is Au2's
+    first field**, above email and Google, and `/join?code=` fills it in. A
+    used code reads "That code has already been used. Ask whoever sent it
+    for another."; an invalid or revoked code reads "That code doesn't work.
+    Check it against the email or message it came in." "No code? Request
+    access" opens Au5: email plus an optional 280-character note. The receipt
+    is **"You're on the list", the same for a new, repeat or registered
+    address**, and a repeat updates the note. The invite email is "Your
+    dialed.run invite" · "Here's your code: DIAL-7K3P. It works once." ·
+    Create your account. Desk **D7 Access** has two lists:
+    - **Requests**, oldest first. Send invite mints a single-use code,
+      emails it and moves the row to Codes. Decline is silent.
+    - **Codes**: `DIAL-XXXX` without 0/O/1/I, case ignored, with a label,
+      a uses limit, used-by @handles, Copy link, and Revoke (no confirm, 10 s
+      undo).
+
+    A code is consumed at account creation, not at verification. The owner's
+    account is seeded. At public launch one flag removes the field and the
+    request link. _Build:_ 126 (Au2, Au5, codes) and 125 (D7 on the Desk).
+    New tables, all additive. D7's nav also lists a "Runners" page that no
+    board draws.
+
+21. **Strava's Connect button.** _Drawn (slot only):_ "T1 Strava official
+    button" and "O3 Strava official button". Strava's **orange** "Connect
+    with Strava" asset goes on both themes, 48 tall, unaltered, left-aligned
+    where our pill was, and wrapped in our `<a>` named "Connect with
+    Strava". Focus is rule 06, square, offset 2. While OAuth is in flight
+    our brackets ("[ Connecting ]") show beside it, and the asset never
+    changes. Disconnect stays our hairline pill. There is no "Powered by
+    Strava" mark, because we show no Strava data. `data-part="strava-button"`
+    joins the Google button as the only palette exemptions. _Build:_ 127.
+    The asset has to be vendored from Strava's brand kit.
+22. **Icons and the share card.** _Drawn:_ "App icon 512", "Apple touch
+    180", "Favicon 32", "Favicon 16", "OG Entry card" and "OG Default card".
+    Every icon is "[d]": pink brackets and a paper d on an ink tile. At 16
+    only the brackets remain. The files are `favicon.svg`, `favicon.ico`
+    16/32, apple-touch 180, manifest 192/512 plus a 512 maskable, and
+    `theme_color` `#0B0B0E`. **OG for a shared entry, 1200×630:** wordmark,
+    date, conditions, verdict chip (hue plus word), distance/feels/wind,
+    kit and @handle, **never the photo**, note, route or flags. The title is
+    `@handle · {temp} {precip}, {verdict}` and the description is the kit
+    in kit order. Private, deleted, banned or unverified-queued entries
+    serve the default card ("What to wear for the run you're about to do.")
+    titled "dialed.run". _Build:_ 125 (icons, manifest, default card) and
+    129 (the entry card and its meta). Rendering an image in a Worker needs
+    a library we don't have, which is an owner call.
+
+**Where a ruling and a contract, or an owner decision, disagree.** None of
+these is resolved by this import. Each needs design to amend the contract
+file or the owner to decide.
+
+- **Field focus (16) vs Accessibility Contract §06**, which still reads
+  "2px solid outline, offset 2px" for every control. The ruling moves one
+  control class to offset −1px, and the contract file was not changed.
+- **The Google and Strava exemptions (13, 21)** are declared on a board.
+  T1's table and `icons.js` don't carry them. The Google button also brings
+  **Roboto Medium**, a fourth font family outside the stack's three.
+- **Privacy page type (14):** "680 measure" is not a `MEASURE` (620 is the
+  document measure), and "17/1.65" is not a TYPE step (`lead` is 17/1.5).
+  By the contract, it collapses to `column` and `lead`.
+- **Privacy link placement (14) vs D-105**, which says "a link from the
+  signed-out shell and both auth forms". Design says not under Au1.
+- **Unverified shares queue (11).** An entry that is neither public nor
+  private is a change to the sharing rules in `docs/contracts.md`.
+- **§AH rule 08 (5)** is amended only on the rulings board, so the §AH board
+  still reads "no swatch".
+- **The reminder email (19)** is a second effect of the Strava webhook.
+  CLAUDE.md's product rules say its only effect is a notification row.
+  D-105's policy note already expects "an activity id per reminder", so this
+  is wording to update, not a conflict of substance.
+
+## Answered in round 25 (imported 2026-09-24)
+
+Three asks from the build lanes, answered on a new board (`Round 25
+Rulings.dc.html`) and applied to the Desktop Contract, both Remaining
+Screens boards, round 22's coverage board and design's product.md. No
+contract values moved.
+
+- **Log a run is a desk page.** Design withdrew the panel for it: _"the
+  panel was a rule about inputs that got drawn as a rule about width."_
+  From 1040 up, A1–A3 use DS1's two columns: every input and the primary
+  action in the primary column (max 620, phone order), read-only context
+  cards in a `data-part="rail"` — conditions, "you in this band", the run,
+  the kit being judged. The rail never holds an input, button or radio, and
+  the harness is to check that. A2b takes over the primary column (a push,
+  not a modal); A3's verdict row stays at 390; the primary action sizes to
+  its label. No frame or card around the form; the ink bar is unchanged and
+  no nav link underlines (the pill carries `aria-current`). 720–1039 is the
+  620 reflow, not the panel. **F follows** (drawn in round 26; panel until
+  then). **Auth and onboarding stay in the panel.** Not built.
+- **Strava: "Strava reminds. You upload."** The connected receipt, T3b's
+  Kept/Stops, the reminder (push and S1 row: "New run on Strava · Add it
+  here: upload the file, then what you wore", timed by when the run
+  _landed_), T3a's status line ("CONNECTED · LAST RUN SEEN …"), the
+  auto-import toggle removed, and T2's import-progress screen retired. The
+  reminder is one per run and clears when a file with a matching start time
+  is uploaded. DS2's header reads "6 RUNS · NO VERDICT YET". Not built.
+- **Your conditions: "in these conditions".** Eyebrow `SAME CONDITIONS ·
+FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
+  {precip}, {window}, wherever they were." Wind leaves the eyebrow; no line
+  names a place. E1's compact line and N's privacy card follow. Not built.
+
+**Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
+options, the delete-with-runs sheet, "Garment saved, photo didn't", the
+swatch conflict, per-item flags on another runner's D, usernames, and item 27.
 
 ## Answered in round 22 (imported 2026-09-23)
 

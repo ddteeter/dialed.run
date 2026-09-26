@@ -44,7 +44,12 @@ import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/thermal";
 import { estimateTempRange } from "../../lib/thermal";
 import { enqueueEnrichment } from "../enrichment";
-import { captureException } from "../ops";
+import {
+  captureException,
+  oweOutbox,
+  outboxInsert,
+  settleOutbox,
+} from "../ops";
 import {
   getProductAttributeDefaultsBulk,
   getProductForDetail,
@@ -365,55 +370,80 @@ export async function nameItem(
   });
 }
 
+/**
+ * Retire, with its date in the same write — round 22's `[RETIRED SEP 12]`.
+ * One statement, so the flag and the date can never disagree.
+ */
 export async function retireItem(
   db: Db,
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  return updateOwnedItem(db, userId, itemId, { retired: true });
+  return updateOwnedItem(db, userId, itemId, {
+    retired: true,
+    retiredAt: nowSeconds(),
+  });
 }
 
+/**
+Unretire, clearing the date with the flag.
+*/
 export async function unretireItem(
   db: Db,
   userId: string,
   itemId: string,
 ): Promise<WardrobeItemRow> {
-  return updateOwnedItem(db, userId, itemId, { retired: false });
-}
-
-export interface DeleteOutcome {
-  action: "deleted" | "retired";
+  return updateOwnedItem(db, userId, itemId, {
+    retired: false,
+    retiredAt: sql`NULL`,
+  });
 }
 
 /**
- * Retire, don't delete (CLAUDE.md product rule): an item referenced by any
- * outfit_entry_item can only be retired; an unreferenced item is hard-deleted.
+ * Delete a garment, whatever it was worn on (owner's ruling on task 122:
+ * Retire stays the recommended action, Delete is offered beside it).
+ *
+ * **Entries and verdicts stay.** The piece leaves the kit of every run it
+ * was on — its `outfit_entry_items` rows go — and the garment row goes,
+ * in one `db.batch()`: a failure between the two would leave kit rows
+ * naming a garment that no longer exists, or a garment whose history was
+ * half erased. `outfit_entry_items` has no foreign key to cascade, which
+ * is why the first statement exists.
+ *
+ * **Then the photo, through the outbox** (law 8c). The batch also writes
+ * an `outbox` row owing the garment's R2 prefix a delete, so the rows and
+ * the debt land together or not at all: a failed batch leaves the garment
+ * and its photo whole, and a committed one always leaves the bytes owed.
+ * The fast path clears them straight after; if R2 fails, the Delete has
+ * still succeeded and the daily drainer finishes it (law 5). Proving
+ * ownership later needs no row: the prefix is built from the signed-in
+ * runner's own id, so a cleanup can only ever reach their objects.
  */
-export async function deleteOrRetireItem(
+export async function deleteItem(
   db: Db,
   userId: string,
   itemId: string,
-): Promise<DeleteOutcome> {
+): Promise<void> {
   await getOwnedItem(db, userId, itemId);
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(outfitEntryItems)
-    .where(eq(outfitEntryItems.itemId, itemId));
-  // Equivalent mutant on the optional chain: `count(*)` always answers with
-  // exactly one row. It is here because `noUncheckedIndexedAccess` types
-  // `rows[0]` as possibly absent, which is the compiler being right about
-  // arrays rather than about this query.
-  // Stryker disable next-line OptionalChaining
-  const isReferenced = (row?.count ?? 0) > 0;
-  if (isReferenced) {
-    await db
-      .update(wardrobeItems)
-      .set({ retired: true })
-      .where(ownedItemWhere(userId, itemId));
-    return { action: "retired" };
-  }
-  await db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId));
-  return { action: "deleted" };
+  const debt = oweOutbox({ kind: "photo_delete", payload: { userId, itemId } });
+  // Reached through this runner's entries rather than by `item_id` alone:
+  // the only index on the table is (entry_id, item_id), so an item-only
+  // filter would scan every runner's kit rows. `entries_user_created`
+  // finds the entries, and the pair index finds each row.
+  const ownEntries = db
+    .select({ id: outfitEntries.id })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.userId, userId));
+  const inOwnKits = and(
+    inArray(outfitEntryItems.entryId, ownEntries),
+    eq(outfitEntryItems.itemId, itemId),
+  );
+  await db.batch([
+    db.delete(outfitEntryItems).where(inOwnKits),
+    db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
+    outboxInsert(db, debt),
+  ]);
+  await settleOutbox(db, debt);
 }
 
 // ---- UI groups -----------------------------------------------------------
@@ -460,16 +490,30 @@ export function effectiveTempRange(
 // ---- Performance (D-27 filters; per-item verdict summary) ------------------
 
 export interface PerformanceSummary {
+  /**
+   * Runs this piece was worn on, verdict or not — the count the retire and
+   * delete sheets name ("Its 14 runs and verdicts stay"), and the one
+   * pairs-with waits on.
+   */
+  runCount: number;
   verdictCount: number;
   dialedCount: number;
   lastWornAt: number | undefined;
   mileageM: number;
 }
 
+/**
+One "pairs with" chip: the other piece, and how many dialed runs they share.
+*/
+export interface PairWith {
+  itemId: string;
+  count: number;
+}
+
 export interface ItemPerformance {
   summary: PerformanceSummary;
   buckets: PerformanceBucket[];
-  pairsWith: string[];
+  pairsWith: PairWith[];
 }
 
 export function classifyPerformance(
@@ -511,42 +555,66 @@ export interface EntryItemRow {
   createdAt: number;
   verdict: number | null;
   distanceM: number;
+  /**
+  Whether the worn piece is retired now — it may be worn, never suggested.
+  */
+  retired: boolean;
 }
 
 async function fetchUserEntryItemRows(
   db: Db,
   userId: string,
 ): Promise<EntryItemRow[]> {
-  return db
-    .select({
-      entryId: outfitEntries.id,
-      itemId: outfitEntryItems.itemId,
-      createdAt: outfitEntries.createdAt,
-      verdict: outfitEntries.verdict,
-      distanceM: runs.distanceM,
-    })
-    .from(outfitEntries)
-    .innerJoin(outfitEntryItems, eq(outfitEntryItems.entryId, outfitEntries.id))
-    .innerJoin(runs, eq(runs.id, outfitEntries.runId))
-    .where(eq(outfitEntries.userId, userId));
+  return (
+    db
+      .select({
+        entryId: outfitEntries.id,
+        itemId: outfitEntryItems.itemId,
+        createdAt: outfitEntries.createdAt,
+        verdict: outfitEntries.verdict,
+        distanceM: runs.distanceM,
+        retired: wardrobeItems.retired,
+      })
+      .from(outfitEntries)
+      .innerJoin(
+        outfitEntryItems,
+        eq(outfitEntryItems.entryId, outfitEntries.id),
+      )
+      .innerJoin(runs, eq(runs.id, outfitEntries.runId))
+      // By primary key, so it costs a lookup per row and scans nothing. The
+      // retired flag has to come back rather than filter here: a retired
+      // piece still has its own history to show (WORKED AT, its mileage),
+      // it just never takes a pairs-with slot from a piece still in use.
+      .innerJoin(wardrobeItems, eq(wardrobeItems.id, outfitEntryItems.itemId))
+      .where(eq(outfitEntries.userId, userId))
+  );
 }
 
-/** Groups the flat entry/item rows into per-item summaries and, alongside,
- * the per-entry item lists co-occurrence needs. */
+/**
+ * Groups the flat entry/item rows into per-item summaries and, alongside,
+ * the per-entry item lists of the **dialed** runs, which is what
+ * co-occurrence counts.
+ *
+ * Dialed only, because round 22 titles the list "PAIRS WITH · WHEN
+ * DIALED": two pieces worn together on a run that went wrong are not a
+ * pairing anybody should repeat.
+ */
 export function summarizeByItem(rows: EntryItemRow[]): {
   summaries: Map<string, PerformanceSummary>;
-  entryItems: Map<string, string[]>;
+  dialedKits: Map<string, string[]>;
 } {
   const summaries = new Map<string, PerformanceSummary>();
-  const entryItems = new Map<string, string[]>();
+  const dialedKits = new Map<string, string[]>();
 
   for (const row of rows) {
     const summary = summaries.get(row.itemId) ?? {
+      runCount: 0,
       verdictCount: 0,
       dialedCount: 0,
       lastWornAt: undefined,
       mileageM: 0,
     };
+    summary.runCount += 1;
     if (row.verdict !== null) {
       summary.verdictCount += 1;
       if (row.verdict === 0) summary.dialedCount += 1;
@@ -558,12 +626,16 @@ export function summarizeByItem(rows: EntryItemRow[]): {
     summary.mileageM += row.distanceM;
     summaries.set(row.itemId, summary);
 
-    const items = entryItems.get(row.entryId) ?? [];
-    items.push(row.itemId);
-    entryItems.set(row.entryId, items);
+    // A retired piece is left out of the kits a pairing is read from, so it
+    // is never offered as something to wear with another.
+    if (row.verdict === 0 && !row.retired) {
+      const items = dialedKits.get(row.entryId) ?? [];
+      items.push(row.itemId);
+      dialedKits.set(row.entryId, items);
+    }
   }
 
-  return { summaries, entryItems };
+  return { summaries, dialedKits };
 }
 
 /** Co-occurrence counts per item, from the per-entry item lists. Isolated in
@@ -594,18 +666,38 @@ function addPairCounts(
 }
 
 /**
- * Top `limit` co-occurring item ids by count. The selection itself is
- * `lib/top-by-count` — the profile's "most worn" is the same one, and both
- * had their own loop.
+ * Top `limit` co-occurring items by count, with the count — the chip says
+ * it ("BANDIT 5" SPLIT · 6"). The selection itself is `lib/top-by-count` —
+ * the profile's "most worn" is the same one, and both had their own loop.
  */
-export function topPairIds(
+export function topPairs(
   counts: Map<string, number>,
   limit: number,
-): string[] {
-  return topByCount(counts, limit).map(([itemId]) => itemId);
+): PairWith[] {
+  return topByCount(counts, limit).map(([itemId, count]) => ({
+    itemId,
+    count,
+  }));
 }
 
-const PAIRS_WITH_LIMIT = 2;
+/**
+ * Round 22, Y: *"Pairs with lists up to three, by co-dialed count, and is
+ * absent under 3 runs."* Under three runs a pairing is one outing, and a
+ * suggestion drawn from one outing is a coincidence with a label on it.
+ */
+const PAIRS_WITH_LIMIT = 3;
+const PAIRS_WITH_MIN_RUNS = 3;
+
+/**
+The pairs a piece shows, or none while it has too few runs to have any.
+*/
+export function pairsFor(
+  summary: PerformanceSummary,
+  counts: Map<string, number> | undefined,
+): PairWith[] {
+  if (summary.runCount < PAIRS_WITH_MIN_RUNS) return [];
+  return topPairs(counts ?? new Map<string, number>(), PAIRS_WITH_LIMIT);
+}
 
 /**
  * One index-covered scan of the user's whole logging history, aggregated in
@@ -618,20 +710,16 @@ export async function computeUserPerformance(
   userId: string,
 ): Promise<Map<string, ItemPerformance>> {
   const rows = await fetchUserEntryItemRows(db, userId);
-  const { summaries, entryItems } = summarizeByItem(rows);
-  const coOccurrence = buildCoOccurrence(entryItems);
+  const { summaries, dialedKits } = summarizeByItem(rows);
+  const coOccurrence = buildCoOccurrence(dialedKits);
 
   const now = nowSeconds();
   const result = new Map<string, ItemPerformance>();
   for (const [itemId, summary] of summaries) {
-    const pairsWith = topPairIds(
-      coOccurrence.get(itemId) ?? new Map<string, number>(),
-      PAIRS_WITH_LIMIT,
-    );
     result.set(itemId, {
       summary,
       buckets: classifyPerformance(summary, now),
-      pairsWith,
+      pairsWith: pairsFor(summary, coOccurrence.get(itemId)),
     });
   }
   return result;
@@ -838,6 +926,42 @@ export async function getItemsByIds(
     .where(
       and(eq(wardrobeItems.userId, userId), inArray(wardrobeItems.id, itemIds)),
     );
+}
+
+/**
+One "pairs with" chip, named: the other piece, and the dialed runs shared.
+*/
+export interface PairedItem {
+  item: WardrobeItemRow;
+  count: number;
+}
+
+/**
+ * Garment detail in full: the detail, and its pairs with their names.
+ *
+ * Here rather than in `getItemFn`, because matching the named rows back to
+ * the counts is a decision — the order is the count's, not the query's —
+ * and `functions.ts` is where no test can reach one (D-41). A pair whose
+ * row is gone (another runner's, or deleted) simply drops out.
+ */
+export async function getItemDetailWithPairs(
+  db: Db,
+  userId: string,
+  itemId: string,
+): Promise<ItemDetail & { pairedItems: PairedItem[] }> {
+  const detail = await getItemDetail(db, userId, itemId);
+  const pairs = detail.performance?.pairsWith ?? [];
+  const rows = await getItemsByIds(
+    db,
+    userId,
+    pairs.map((pair) => pair.itemId),
+  );
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const pairedItems = pairs.flatMap((pair) => {
+    const item = byId.get(pair.itemId);
+    return item === undefined ? [] : [{ item, count: pair.count }];
+  });
+  return { ...detail, pairedItems };
 }
 
 /**

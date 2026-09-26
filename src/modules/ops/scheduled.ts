@@ -13,6 +13,7 @@ import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
+import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import { captureException } from "./sentry";
 import {
   classifierFromEnv,
@@ -417,6 +418,11 @@ async function runDailyDigest(): Promise<string[]> {
   await checkExtractionYield(anomalies);
   await checkAbandonedEnrichments(anomalies);
   await redispatchStrandedRevocations(anomalies);
+  // The generic outbox rides the same firing as the Strava one: drain
+  // first, so the backlog check below counts only what is still owed.
+  const db = drizzle(env.DIALED_CORE);
+  await drainOutbox(db, anomalies);
+  await checkOutboxBacklog(db, anomalies);
   await redispatchStalledImports(anomalies);
   await checkReviewQueueDepth(anomalies);
   // Threshold checks fill in as their features land:
