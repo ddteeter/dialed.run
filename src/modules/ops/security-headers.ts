@@ -1,7 +1,13 @@
 /**
- * The response headers every page carries (OPS-8, audit §3.9). Set in
- * `server.ts` around the framework's fetch handler, so a route cannot
- * forget them and nothing has to be configured at the zone.
+ * The security headers (OPS-8, audit §3.9), in two places that must agree:
+ * `server.ts` sets them around the framework's fetch handler, so a route
+ * cannot forget them, and `public/_headers` sets them on the static assets,
+ * which Cloudflare answers without running the Worker. A test pins the
+ * second to this file. A request that throws gets the platform's own error
+ * page, and none of them.
+ *
+ * Pure of bindings, so the ui project's test can import it; the shell that
+ * reads the DSN is ./secure-response.
  *
  * **The CSP ships report-only.** A policy that blocks is a policy that can
  * take the app down on a script origin nobody listed, so it reports first
@@ -17,8 +23,6 @@
  * Framing, object embeds, base-tag hijacking and foreign form targets are
  * refused regardless.
  */
-
-import { env } from "../../env";
 
 /**
  * Report-only until the reports are quiet; then this becomes
@@ -129,11 +133,4 @@ export function withSecurityHeaders(
     if (!secured.headers.has(name)) secured.headers.set(name, value);
   }
   return secured;
-}
-
-/**
- * What `server.ts` calls: the headers, reporting to the deployed DSN.
- */
-export function secureResponse(response: Response): Response {
-  return withSecurityHeaders(response, sentryReportUri(env.SENTRY_DSN));
 }

@@ -412,16 +412,20 @@ flowchart LR
 - **Abuse without moderators**, built and not:
   - **Built**: Turnstile's verification (`ops/turnstile.ts`, fail closed) and
     widget (`ui/Turnstile.tsx`), which task 126 places on sign-up and request
-    access; hard size and type caps on every upload; invite-only sign-up
-    (decision D-39, task 126).
-  - **Not built yet**: Better Auth's own rate limiter, explicitly on with
+    access; hard size and type caps on every upload.
+  - **Not built yet**: invite-only sign-up (decision D-39, task 126);
+    Better Auth's own rate limiter, explicitly on with
     database storage so the count is shared across isolates (OPS-4). Until
     then it is off in production, because it keys on `NODE_ENV`.
   - **Not built, and not code**: WAF and rate-limiting rules at the zone,
     which need the custom domain (deployment plan). A Workers Rate Limiting
     binding would be a `wrangler.jsonc` change, which is the owner's.
-- **Security headers** on every response, set in `server.ts` around the
-  framework's fetch (OPS-8): a report-only CSP reporting to Sentry,
+- **Security headers** on every response the Worker generates, set in
+  `server.ts` around the framework's fetch, and on the static assets through
+  `public/_headers`, since the assets layer answers those without running
+  the Worker (OPS-8). A request that throws gets the platform's error page
+  without them. A report-only CSP reporting to Sentry (the static copy has
+  no report-uri, which comes from a secret),
   `frame-ancestors 'none'`, HSTS, Referrer-Policy, Permissions-Policy and
   nosniff. The CSP allows inline script until a nonce is threaded through
   `router.tsx`.

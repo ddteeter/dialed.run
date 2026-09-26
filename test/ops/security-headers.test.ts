@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 
+import { secureResponse } from "../../src/modules/ops/secure-response";
 import {
   contentSecurityPolicy,
-  secureResponse,
   sentryReportUri,
   withSecurityHeaders,
 } from "../../src/modules/ops/security-headers";
