@@ -6,6 +6,7 @@ import {
   cronCheckpoints,
   entryPhotos,
   imports,
+  outbox,
   outfitEntries,
   products,
   reports,
@@ -17,6 +18,8 @@ import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
+import { digestKinds, digestReport } from "../../src/modules/ops/scheduled";
+import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
   createOrGetBrand,
   createOrGetProduct,
@@ -87,6 +90,8 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   const db = coreDb();
   await db.delete(imports);
   await db.delete(stravaRevocations);
+  await db.delete(outbox);
+  await db.delete(products);
   await db.delete(runs);
   // The moderation tables belong on this list too: the digest counts the
   // review queue's depth, so a row left behind by one test appears as
@@ -491,20 +496,226 @@ describe("the weather backlog check", () => {
   });
 });
 
-describe("everything the digest found, in one report", () => {
-  it("raises a single Sentry event carrying every anomaly", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+/**
+ * A reporter that records instead of sending: what each firing checked in
+ * and which digest events it raised. The real one is silent here, because
+ * the test bindings carry no DSN.
+ */
+/**
+ * One row that makes the digest speak under the given kind.
+ */
+async function seedAnomaly(
+  kind:
+    | "extraction-yield"
+    | "abandoned-enrichment"
+    | "strava-revocation"
+    | "outbox"
+    | "review-queue",
+): Promise<void> {
+  const db = coreDb();
+  switch (kind) {
+    case "extraction-yield": {
+      await db.delete(products);
+      await insertProduct("done", HOUR);
+      return;
+    }
+    case "abandoned-enrichment": {
+      await db.delete(products);
+      await insertProduct("failed", 2 * 24 * HOUR);
+      return;
+    }
+    case "strava-revocation": {
+      await db.insert(stravaRevocations).values({
+        id: newUlid(),
+        accessToken: "token",
+        createdAt: nowSeconds(),
+      });
+      return;
+    }
+    case "outbox": {
+      // A kind this build cannot drain: the backlog check says so.
+      await db.insert(outbox).values({
+        id: newUlid(),
+        kind: "retired-kind",
+        dedupeKey: newUlid(),
+        payload: "{}",
+        nextAttemptAt: nowSeconds() + HOUR,
+        createdAt: nowSeconds(),
+      });
+      return;
+    }
+    case "review-queue": {
+      await queueItem();
+      return;
+    }
+  }
+}
+
+function recordingReporter() {
+  const checkIns: { slug: string; schedule: string; status: string }[] = [];
+  const events: { error: unknown; report: SentryReport }[] = [];
+  const reporter: CronReporter = {
+    checkIn: (monitor) => {
+      checkIns.push({ ...monitor, status: "in_progress" });
+      return {
+        finish: (status) => {
+          checkIns.push({ ...monitor, status });
+        },
+      };
+    },
+    report: (error, report) => {
+      events.push({ error, report });
+    },
+  };
+  return { reporter, checkIns, events };
+}
+
+describe("the digest reports each kind on its own (OPS-2)", () => {
+  it("raises one event per kind, fingerprinted by kind and day and tagged", async () => {
     await insertRun({ weatherStatus: "failed" });
     await insertImport({ createdAt: nowSeconds() - HOUR });
+    const { reporter, events } = recordingReporter();
+
+    const outcome = await handleScheduled(DIGEST, reporter);
+
+    const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+    expect(outcome.anomalies).toHaveLength(2);
+    expect(events.map((event) => event.report)).toStrictEqual([
+      {
+        context: { kind: "weather-backlog", anomalies: outcome.anomalies[0] },
+        tags: { digest: "daily", digest_kind: "weather-backlog" },
+        fingerprint: ["daily-digest", "weather-backlog", day],
+      },
+      {
+        context: { kind: "stalled-import", anomalies: outcome.anomalies[1] },
+        tags: { digest: "daily", digest_kind: "stalled-import" },
+        fingerprint: ["daily-digest", "stalled-import", day],
+      },
+    ]);
+    // The title too: one "daily digest anomalies" for every kind is the
+    // same issue under a different fingerprint, and reads as one.
+    expect(events.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "daily digest: weather-backlog" }),
+      expect.objectContaining({ message: "daily digest: stalled-import" }),
+    ]);
+  });
+
+  it("joins a kind's lines into one event rather than one event a line", () => {
+    expect(
+      digestReport("outbox", ["2 rows owed", "1 row gave up"], "2026-09-25"),
+    ).toStrictEqual({
+      context: { kind: "outbox", anomalies: "2 rows owed; 1 row gave up" },
+      tags: { digest: "daily", digest_kind: "outbox" },
+      fingerprint: ["daily-digest", "outbox", "2026-09-25"],
+    });
+  });
+
+  it("raises nothing on a quiet day", async () => {
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(DIGEST, reporter);
+
+    expect(events).toStrictEqual([]);
+  });
+
+  it("hands each kind to Sentry by default, which logs it without a DSN", async () => {
+    // The production reporter, not the recording one: nothing else shows
+    // that the digest's events reach `reportException` at all.
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertRun({ weatherStatus: "failed" });
 
     const outcome = await handleScheduled(DIGEST);
 
-    expect(outcome.anomalies).toHaveLength(2);
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
-      { anomalies: outcome.anomalies.join("; ") },
-      expect.objectContaining({ message: "daily digest anomalies" }),
+      { kind: "weather-backlog", anomalies: outcome.anomalies[0] },
+      expect.objectContaining({ message: "daily digest: weather-backlog" }),
     );
+  });
+
+  it.each([
+    "extraction-yield",
+    "abandoned-enrichment",
+    "strava-revocation",
+    "outbox",
+    "review-queue",
+  ] as const)("reports %s under its own kind", async (kind) => {
+    await seedAnomaly(kind);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(DIGEST, reporter);
+
+    expect(events.map((event) => event.report.tags)).toContainEqual({
+      digest: "daily",
+      digest_kind: kind,
+    });
+  });
+
+  it("names every kind it can raise, and no other", () => {
+    expect(digestKinds).toStrictEqual([
+      "weather-backlog",
+      "extraction-yield",
+      "abandoned-enrichment",
+      "strava-revocation",
+      "outbox",
+      "stalled-import",
+      "review-queue",
+    ]);
+  });
+});
+
+describe("every cron checks in (OPS-3)", () => {
+  it.each([
+    ["0 12 * * *", "daily-digest"],
+    ["0 * * * *", "weather-retry"],
+    ["30 * * * *", "enrichment-retry"],
+    ["15 * * * *", "screening-retry"],
+  ])("%s opens and closes one firing of %s", async (cron, slug) => {
+    const { reporter, checkIns } = recordingReporter();
+
+    await handleScheduled({ cron } as ScheduledController, reporter);
+
+    expect(checkIns).toStrictEqual([
+      { slug, schedule: cron, status: "in_progress" },
+      { slug, schedule: cron, status: "ok" },
+    ]);
+  });
+
+  it("closes a firing that throws as an error, and still throws", async () => {
+    const { reporter, checkIns } = recordingReporter();
+    const boom = new Error("database gone");
+    // Let the heartbeat row land, then fail the cron's own first query, so
+    // the throw comes from inside the work the check-in brackets.
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    let statements = 0;
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      statements += 1;
+      if (statements > 1) throw boom;
+      return prepare(query);
+    });
+
+    await expect(
+      handleScheduled({ cron: "0 * * * *" } as ScheduledController, reporter),
+    ).rejects.toBe(boom);
+
+    // Rethrown, so the platform records the failed invocation as well.
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+
+  it("does not check in for a schedule it does not know", async () => {
+    const { reporter, checkIns } = recordingReporter();
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    await handleScheduled(
+      { cron: "*/7 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(checkIns).toStrictEqual([]);
   });
 });
 

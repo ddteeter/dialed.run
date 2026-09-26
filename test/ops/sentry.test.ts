@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { reportException } from "../../src/modules/ops/sentry";
+import { openCheckIn, reportException } from "../../src/modules/ops/sentry";
 
 /**
  * The error reporter, which is the one thing that must not fail.
@@ -13,6 +13,15 @@ import { reportException } from "../../src/modules/ops/sentry";
  */
 
 const DSN = "https://abc123@o1.ingest.sentry.io/42";
+
+/**
+ * A keep-alive that holds nothing, for tests that do not ask about it.
+ */
+function keep(): void {
+  /*
+   * Deliberately empty.
+   */
+}
 
 function nothing(): void {
   /*
@@ -30,7 +39,10 @@ describe("with no DSN configured", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const boom = new Error("boom");
 
-    reportException(undefined, boom, { runId: "r1" });
+    reportException(undefined, keep, boom, {
+      context: { runId: "r1" },
+      tags: {},
+    });
 
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
@@ -47,7 +59,10 @@ describe("with no DSN configured", () => {
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    reportException("", new Error("boom"), { runId: "r2" });
+    reportException("", keep, new Error("boom"), {
+      context: { runId: "r2" },
+      tags: {},
+    });
 
     expect(error).toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -61,7 +76,10 @@ describe("with a DSN configured", () => {
       .mockResolvedValue(new Response("{}"));
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
 
-    reportException(DSN, new Error("boom"), { runId: "r3" });
+    reportException(DSN, keep, new Error("boom"), {
+      context: { runId: "r3" },
+      tags: {},
+    });
     await vi.waitFor(() => {
       expect(fetchSpy).toHaveBeenCalled();
     });
@@ -80,7 +98,10 @@ describe("with a DSN configured", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}"));
 
-    reportException(DSN, new Error("boom"), { runId: "r4", surface: "import" });
+    reportException(DSN, keep, new Error("boom"), {
+      context: { runId: "r4", surface: "import" },
+      tags: {},
+    });
     await vi.waitFor(() => {
       expect(fetchSpy).toHaveBeenCalled();
     });
@@ -115,3 +136,196 @@ function contextsOf(envelope: string): unknown {
   }
   return contexts;
 }
+
+/**
+ * Every JSON line of every envelope the fetch spy was handed.
+ */
+function sentItems(fetchSpy: { mock: { calls: unknown[][] } }): unknown[] {
+  return fetchSpy.mock.calls.flatMap((call) => {
+    const init = call[1];
+    const body =
+      typeof init === "object" && init !== null && "body" in init
+        ? init.body
+        : undefined;
+    const text = typeof body === "string" ? body : "";
+    return text
+      .split("\n")
+      .filter((line) => line.length > 0)
+      .map((line): unknown => JSON.parse(line));
+  });
+}
+
+function checkInIdOf(item: unknown): unknown {
+  return typeof item === "object" && item !== null && "check_in_id" in item
+    ? item.check_in_id
+    : undefined;
+}
+
+describe("the send outlives the invocation (audit finding 0.4)", () => {
+  it("hands the in-flight send to waitUntil, rather than merely starting it", async () => {
+    // Toucan only registers its fetch with the runtime when given a
+    // context. Without this, a Worker that reports and then returns lets
+    // the runtime cancel the send: the event is "reported" and never
+    // arrives. What waitUntil holds must therefore be the send itself —
+    // still pending while the fetch is, and settled only when it is —
+    // which is what separates "registered" from "a function was called".
+    const upstream = Promise.withResolvers<Response>();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(upstream.promise);
+    const kept: Promise<unknown>[] = [];
+
+    reportException(
+      DSN,
+      (promise) => {
+        kept.push(promise);
+      },
+      new Error("boom"),
+      { context: { surface: "scheduled" }, tags: {} },
+    );
+    await vi.waitFor(() => {
+      expect(kept).toHaveLength(1);
+    });
+    const [held] = kept;
+    let isSettled = false;
+    void held?.then(() => {
+      isSettled = true;
+    });
+    await Promise.resolve();
+    expect(isSettled).toBe(false);
+
+    upstream.resolve(new Response("{}", { status: 200 }));
+
+    await expect(held).resolves.toMatchObject({ statusCode: 200 });
+  });
+
+  it("never asks waitUntil for anything when there is no DSN", () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const keepAlive = vi.fn();
+
+    reportException(undefined, keepAlive, new Error("boom"), {
+      context: {},
+      tags: {},
+    });
+
+    expect(keepAlive).not.toHaveBeenCalled();
+  });
+});
+
+describe("grouping and tags (OPS-2)", () => {
+  it("carries the fingerprint and the tags it was given", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}"));
+
+    reportException(DSN, keep, new Error("digest"), {
+      context: { kind: "outbox" },
+      tags: { digest: "daily", digest_kind: "outbox" },
+      fingerprint: ["daily-digest", "outbox", "2026-09-25"],
+    });
+    await vi.waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalled();
+    });
+
+    expect(sentItems(fetchSpy)).toContainEqual(
+      expect.objectContaining({
+        fingerprint: ["daily-digest", "outbox", "2026-09-25"],
+        tags: { digest: "daily", digest_kind: "outbox" },
+      }),
+    );
+  });
+
+  it("leaves grouping to Sentry when no fingerprint is given", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}"));
+
+    reportException(DSN, keep, new Error("ordinary"), {
+      context: { runId: "r5" },
+      tags: {},
+    });
+    await vi.waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalled();
+    });
+
+    const event = sentItems(fetchSpy).find(
+      (item) => typeof item === "object" && item !== null && "contexts" in item,
+    );
+    expect(event).toBeDefined();
+    expect(event).not.toHaveProperty("fingerprint");
+  });
+});
+
+describe("cron check-ins (OPS-3)", () => {
+  const MONITOR = { slug: "daily-digest", schedule: "0 12 * * *" };
+
+  it("opens a firing with in_progress and the monitor's schedule", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}"));
+    const kept: Promise<unknown>[] = [];
+
+    openCheckIn(
+      DSN,
+      (promise) => {
+        kept.push(promise);
+      },
+      MONITOR,
+    );
+    await vi.waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalled();
+    });
+
+    // The monitor config rides on the opening check-in, which is Sentry's
+    // upsert: the monitor creates itself, so there is no dashboard step.
+    expect(sentItems(fetchSpy)).toContainEqual(
+      expect.objectContaining({
+        monitor_slug: "daily-digest",
+        status: "in_progress",
+        monitor_config: {
+          schedule: { type: "crontab", value: "0 12 * * *" },
+          checkin_margin: 5,
+          max_runtime: 10,
+          timezone: "Etc/UTC",
+        },
+      }),
+    );
+    // A check-in is a send like any other and must outlive the firing.
+    expect(kept).toHaveLength(1);
+  });
+
+  it("closes the same firing it opened, with the status it ended on", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}"));
+
+    openCheckIn(DSN, keep, MONITOR).finish("error");
+    await vi.waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    const checkIns = sentItems(fetchSpy).filter(
+      (item) =>
+        typeof item === "object" && item !== null && "check_in_id" in item,
+    );
+    const [opened, closed] = checkIns;
+    expect(opened).toMatchObject({ status: "in_progress" });
+    expect(closed).toMatchObject({
+      monitor_slug: "daily-digest",
+      status: "error",
+    });
+    // Without the id, Sentry reads the close as a second, separate firing
+    // and the opening one times out as a failure.
+    const openedId = checkInIdOf(opened);
+    expect(openedId).toMatch(/^[0-9a-f]{32}$/);
+    expect(checkInIdOf(closed)).toBe(openedId);
+  });
+
+  it("does nothing at all without a DSN", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const keepAlive = vi.fn();
+
+    openCheckIn(undefined, keepAlive, MONITOR).finish("ok");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(keepAlive).not.toHaveBeenCalled();
+  });
+});
