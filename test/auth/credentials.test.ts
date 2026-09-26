@@ -99,12 +99,14 @@ describe("signIn", () => {
 });
 
 describe("signUp", () => {
-  const account = { name: "Dana", ...person };
+  const account = person;
 
-  it("resolves when the account is made", async () => {
+  it("resolves when the account is made, sending Better Auth an empty name", async () => {
+    // Sign-up asks email and password only (round 26 #7); Better Auth's
+    // endpoint requires a `name`, which nothing reads.
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
     await expect(signUp(account)).resolves.toBeUndefined();
-    expect(client.signUp).toHaveBeenCalledWith(account);
+    expect(client.signUp).toHaveBeenCalledWith({ ...person, name: "" });
   });
 
   it("lands a taken email on Email — Au3's one exception", async () => {

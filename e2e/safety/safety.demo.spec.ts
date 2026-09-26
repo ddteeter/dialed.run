@@ -47,7 +47,7 @@ test("report a runner, block them, and take the block back", async ({
   await withLocalDb(async ({ core }) => {
     await core.insert(userProfiles).values({
       userId: strangerId,
-      displayName: strangerName,
+      username: strangerName,
       cityLabel: "Portland, OR",
     });
     await core.insert(runs).values({

@@ -92,7 +92,7 @@ describe("PostCard: order and absence", () => {
 
 describe("PostCard: the author row", () => {
   it("names the author, with their initial and when the run was", async () => {
-    const post = await card({ authorDisplayName: "dana_k" });
+    const post = await card({ authorUsername: "dana_k" });
 
     const author = post.querySelector('[data-part="author"]');
     expect(author).toHaveTextContent("Ddana_k2h ago · 10:00 AM");

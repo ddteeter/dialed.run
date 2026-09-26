@@ -4,6 +4,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 
+import { usernameQuery } from "../../../modules/account/functions";
 import { SignOutButton } from "../../../modules/auth/components/SignOutButton";
 import { signOut } from "../../../modules/auth/credentials";
 import { requireSession } from "../../../modules/auth/functions";
@@ -21,18 +22,21 @@ import { Page } from "../../../ui";
 export const Route = createFileRoute("/onboarding/settings/")({
   loader: async ({ location }) => {
     await requireSession(location.href);
-    const [current, { blocked }, unreadCount] = await Promise.all([
-      settingsQuery(),
-      blockedRunnersQuery(),
-      unreadNotificationCountFn(),
-    ]);
-    return { current, blockedCount: blocked.length, unreadCount };
+    const [current, { blocked }, unreadCount, { username }] =
+      await Promise.all([
+        settingsQuery(),
+        blockedRunnersQuery(),
+        unreadNotificationCountFn(),
+        usernameQuery(),
+      ]);
+    return { current, blockedCount: blocked.length, unreadCount, username };
   },
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { current, blockedCount, unreadCount } = Route.useLoaderData();
+  const { current, blockedCount, unreadCount, username } =
+    Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
 
@@ -41,6 +45,7 @@ function SettingsPage() {
       <Page title="Settings" width="column">
         <SettingsIndex
           current={current}
+          username={username}
           blockedCount={blockedCount}
           signOut={
             <SignOutButton

@@ -73,7 +73,7 @@ function band(
 function ownProfile(coverage: readonly CoverageBand[]): OwnProfileData {
   return {
     userId: "01USER",
-    displayName: undefined,
+    username: undefined,
     cityLabel: undefined,
     thermalLevel: undefined,
     followerCount: 0,

@@ -43,7 +43,7 @@ const VERDICT_WORD: Readonly<Record<VerdictKind, string>> = {
  *   otherwise.
  */
 export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
-  const name = profile.displayName ?? "You";
+  const name = profile.username ?? "You";
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       <div data-part="header" className="flex flex-col gap-3">

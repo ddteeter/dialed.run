@@ -75,13 +75,13 @@ beforeEach(async () => {
 
 describe("ownProfile: the empty case", () => {
   it("answers for a runner with no entries at all", async () => {
-    const userId = await makeUser({ displayName: "Fresh runner" });
+    const userId = await makeUser({ username: "Fresh runner" });
 
     const profile = await ownProfile(userId);
 
     expect(profile).toMatchObject({
       userId,
-      displayName: "Fresh runner",
+      username: "Fresh runner",
       entryCount: 0,
       coverage: [],
       mostWornItems: [],
@@ -94,7 +94,7 @@ describe("ownProfile: the empty case", () => {
   it("answers for a user id with no profile row", async () => {
     // A signed-up account that has not filled anything in is not an error.
     const profile = await ownProfile("01JNOPROFILE0000000000000");
-    expect(profile.displayName).toBeUndefined();
+    expect(profile.username).toBeUndefined();
     expect(profile.cityLabel).toBeUndefined();
   });
 });
@@ -318,7 +318,7 @@ describe("otherProfile", () => {
   it("shows public entries and hides private ones", async () => {
     // The privacy boundary. A private entry never appears in feeds or on
     // anyone else's screen.
-    const userId = await makeUser({ displayName: "Public runner" });
+    const userId = await makeUser({ username: "Public runner" });
     const shown = await ratedEntry({
       userId,
       lat: 47.11,
@@ -336,7 +336,7 @@ describe("otherProfile", () => {
 
     const profile = await otherProfile(userId);
 
-    expect(profile?.displayName).toBe("Public runner");
+    expect(profile?.username).toBe("Public runner");
     expect(
       profile?.recentPublicEntries.map((entry) => entry.entryId),
     ).toStrictEqual([shown]);

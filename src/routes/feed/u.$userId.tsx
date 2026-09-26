@@ -44,9 +44,9 @@ function OtherProfilePage() {
             subject={{
               type: "profile",
               id: profile.userId,
-              label: profile.displayName ?? "A runner",
+              label: profile.username ?? "A runner",
               authorId: profile.userId,
-              authorName: profile.displayName ?? undefined,
+              authorName: profile.username ?? undefined,
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}

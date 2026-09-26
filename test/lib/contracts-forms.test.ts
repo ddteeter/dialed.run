@@ -3,9 +3,14 @@ import type { z } from "zod";
 
 import {
   PASSWORD_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  normalizeUsername,
   runDraftSchema,
   signInSchema,
   signUpSchema,
+  usernameInput,
+  usernameSchema,
 } from "../../src/lib/contracts";
 
 /**
@@ -72,30 +77,22 @@ describe("signInSchema", () => {
   });
 });
 
-const signUp = { name: "Dee", ...signIn, password: "hunter22hunter22" };
+const signUp = { ...signIn, password: "hunter22hunter22" };
 
 describe("signUpSchema", () => {
   it("takes a well-formed registration", () => {
     expect(signUpSchema.safeParse(signUp).success).toBe(true);
   });
 
-  it("requires all three fields", () => {
+  it("asks for email and password only — the handle is O0's (round 26 #7)", () => {
     expect(signUpSchema.safeParse({}).success).toBe(false);
-    expect(signUpSchema.safeParse({ ...signUp, name: undefined }).success).toBe(
-      false,
+    expect(Object.keys(signUpSchema.shape)).toStrictEqual([
+      "email",
+      "password",
+    ]);
+    expect(signUpSchema.parse({ ...signUp, name: "Dee" })).toStrictEqual(
+      signUp,
     );
-  });
-
-  it("holds the name between 1 and 60 characters", () => {
-    expect(
-      messagesFor(signUpSchema, { ...signUp, name: "" }, "name"),
-    ).toStrictEqual(["Tell us what to call you."]);
-    expect(
-      signUpSchema.safeParse({ ...signUp, name: "a".repeat(60) }).success,
-    ).toBe(true);
-    expect(
-      signUpSchema.safeParse({ ...signUp, name: "a".repeat(61) }).success,
-    ).toBe(false);
   });
 
   it("refuses a nine-character password and takes a ten (owner, 2026-09-24)", () => {
@@ -168,5 +165,61 @@ describe("runDraftSchema", () => {
         effort: "steady",
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("usernameSchema (round 26 #7)", () => {
+  it("stores what was typed lowercased, without the @ or the spaces", () => {
+    expect(normalizeUsername("  @Maya_Runs ")).toBe("maya_runs");
+    expect(normalizeUsername("maya@runs")).toBe("maya@runs");
+    expect(usernameSchema.parse(" @Maya_Runs")).toBe("maya_runs");
+    expect(usernameInput.parse({ username: "DEE" })).toStrictEqual({
+      username: "dee",
+    });
+  });
+
+  it("takes 3 to 20 of a-z, 0-9 and _, at each bound", () => {
+    expect(USERNAME_MIN_LENGTH).toBe(3);
+    expect(USERNAME_MAX_LENGTH).toBe(20);
+    expect(usernameSchema.safeParse("abc").success).toBe(true);
+    expect(usernameSchema.safeParse("a".repeat(20)).success).toBe(true);
+    expect(usernameSchema.safeParse("r_2_d_2").success).toBe(true);
+    const shape = ["Use 3–20 letters, numbers or _."];
+    expect(
+      messagesFor(usernameInput, { username: "ab" }, "username"),
+    ).toStrictEqual(shape);
+    expect(
+      messagesFor(usernameInput, { username: "a".repeat(21) }, "username"),
+    ).toStrictEqual(shape);
+    expect(
+      messagesFor(usernameInput, { username: "" }, "username"),
+    ).toStrictEqual(shape);
+    expect(
+      messagesFor(usernameInput, { username: "maya.runs" }, "username"),
+    ).toStrictEqual(shape);
+    expect(
+      messagesFor(usernameInput, { username: "mayä" }, "username"),
+    ).toStrictEqual(shape);
+    // Anchored at both ends: a good run inside a bad handle is not enough.
+    expect(
+      messagesFor(usernameInput, { username: "maya runs" }, "username"),
+    ).toStrictEqual(shape);
+    expect(
+      messagesFor(usernameInput, { username: "-maya" }, "username"),
+    ).toStrictEqual(shape);
+    expect(
+      messagesFor(usernameInput, { username: "maya-" }, "username"),
+    ).toStrictEqual(shape);
+  });
+
+  it("refuses a leading _ in its own words, and only that", () => {
+    expect(
+      messagesFor(usernameInput, { username: "_maya" }, "username"),
+    ).toStrictEqual(["Handles can't start with _."]);
+    expect(usernameSchema.safeParse("maya_").success).toBe(true);
+    // A handle wrong in both ways reads the shape sentence alone.
+    expect(
+      messagesFor(usernameInput, { username: "_m" }, "username"),
+    ).toStrictEqual(["Use 3–20 letters, numbers or _."]);
   });
 });

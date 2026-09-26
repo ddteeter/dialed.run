@@ -1,5 +1,5 @@
 /**
- * Runner search: prefix match on `user_profiles.display_name`, public
+ * Runner search: prefix match on `user_profiles.username`, public
  * profiles only (all profiles are public at MVP — see design doc), served
  * by the NOCASE expression index.
  *
@@ -19,7 +19,7 @@ const RESULT_LIMIT = 20;
 
 export interface SearchResult {
   userId: string;
-  displayName: string;
+  username: string;
   following: boolean;
 }
 
@@ -33,12 +33,12 @@ export async function searchRunners(
   const rows = await database
     .select({
       userId: userProfiles.userId,
-      displayName: userProfiles.displayName,
+      username: userProfiles.username,
     })
     .from(userProfiles)
     .where(
       and(
-        like(userProfiles.displayName, `${trimmed}%`),
+        like(userProfiles.username, `${trimmed}%`),
         ne(userProfiles.userId, viewerId),
       ),
     )
@@ -71,7 +71,7 @@ export async function searchRunners(
   // Stryker disable ConditionalExpression,MethodExpression
   return rows.filter(isNamed).map((r) => ({
     userId: r.userId,
-    displayName: r.displayName,
+    username: r.username,
     following: followed.has(r.userId),
   }));
 }
@@ -79,8 +79,8 @@ export async function searchRunners(
 
 function isNamed(row: {
   userId: string;
-  displayName: string | null;
-}): row is { userId: string; displayName: string } {
+  username: string | null;
+}): row is { userId: string; username: string } {
   // Stryker disable next-line ConditionalExpression
-  return row.displayName !== null;
+  return row.username !== null;
 }

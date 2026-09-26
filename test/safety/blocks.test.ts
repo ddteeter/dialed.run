@@ -138,14 +138,14 @@ describe("the W2 roster", () => {
 
   it("lists who I blocked, with their names and when", async () => {
     const me = await makeUser();
-    const them = await makeUser({ displayName: "j_holloway" });
+    const them = await makeUser({ username: "j_holloway" });
     await blockRunner(me, them);
 
     const roster = await blockedRunners(me);
 
     expect(roster).toHaveLength(1);
     expect(roster[0]?.userId).toBe(them);
-    expect(roster[0]?.displayName).toBe("j_holloway");
+    expect(roster[0]?.username).toBe("j_holloway");
     // In seconds, bounded both ways — the roster is ordered by it, and a
     // millisecond value sorts one block above every other forever.
     const now = nowSeconds();

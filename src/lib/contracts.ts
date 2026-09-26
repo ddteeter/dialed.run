@@ -252,8 +252,13 @@ export const signInSchema = z.object({
  */
 export const PASSWORD_MIN_LENGTH = 10;
 
+/**
+ * Sign-up asks for email and password only (round 26 #7): the handle is
+ * picked at O0, the first onboarding step, so email and Google share one
+ * path and a taken handle never shares a screen with "is this email
+ * registered?".
+ */
 export const signUpSchema = z.object({
-  name: z.string().min(1, "Tell us what to call you.").max(60),
   email: emailField,
   password: z
     .string()
@@ -262,6 +267,54 @@ export const signUpSchema = z.object({
       `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
     ),
 });
+
+/**
+ * The handle's length bounds (round 26 #7: "3–20 letters, numbers or _").
+ */
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 20;
+
+/**
+ * What a runner typed, as it would be stored: lowercased, without the "@"
+ * the field shows in front of it or any space around it. The field applies
+ * this as they type ("The field lowercases as you type, so you see what's
+ * stored"), and the schema applies it again, so a handle reaching the
+ * server by any other road is compared the way the unique index compares.
+ */
+export function normalizeUsername(typed: string): string {
+  return typed.trim().replace(/^@/u, "").toLowerCase();
+}
+
+/**
+ * A handle (round 26 #7). The two refusals are the board's, one at a time:
+ * the shape first, and "can't start with _" only for a handle whose shape
+ * is otherwise fine — so `_x` reads the first, not both. Uniqueness and the
+ * reserved list are the server's (`modules/account/username.ts`), because
+ * only it can know them.
+ */
+const USERNAME_SHAPE = new RegExp(
+  `^[a-z0-9_]{${String(USERNAME_MIN_LENGTH)},${String(USERNAME_MAX_LENGTH)}}$`,
+  "u",
+);
+
+const storedUsername = z
+  .string()
+  .check(
+    z.regex(USERNAME_SHAPE, {
+      message: "Use 3–20 letters, numbers or _.",
+      abort: true,
+    }),
+  )
+  .refine((handle) => !handle.startsWith("_"), {
+    message: "Handles can't start with _.",
+  });
+
+export const usernameSchema = z
+  .string()
+  .transform(normalizeUsername)
+  .pipe(storedUsername);
+
+export const usernameInput = z.object({ username: usernameSchema });
 
 /**
  * A WGS84 coordinate pair, bounded. Written out four times before this —

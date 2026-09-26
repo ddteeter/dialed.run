@@ -104,17 +104,18 @@ interface SignInValues {
   password: string;
 }
 
-interface SignUpValues extends SignInValues {
-  name: string;
-}
-
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
   throwIfRefused(error, SIGN_IN_REFUSALS);
 }
 
-export async function signUp(values: SignUpValues): Promise<void> {
-  const { error } = await authClient.signUp.email(values);
+/**
+ * Better Auth's `user.name` is required by its sign-up endpoint and read by
+ * nothing here: a runner's name is their handle, picked at O0 (round 26 #7),
+ * which lives on `user_profiles`. So it is sent empty rather than asked for.
+ */
+export async function signUp(values: SignInValues): Promise<void> {
+  const { error } = await authClient.signUp.email({ ...values, name: "" });
   throwIfRefused(error, SIGN_UP_REFUSALS);
 }
 

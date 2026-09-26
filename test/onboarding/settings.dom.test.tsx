@@ -49,9 +49,18 @@ function row(name: RegExp) {
 describe("the index (U1/N)", () => {
   it("says every row's current value, and each opens somewhere", async () => {
     await renderWithRouter(
-      <SettingsIndex current={ANSWERED} blockedCount={2} signOut={undefined} />,
+      <SettingsIndex
+        current={ANSWERED}
+        username="maya_runs"
+        blockedCount={2}
+        signOut={undefined}
+      />,
     );
 
+    // Round 26 #7: "Settings › Username changes it later." The handle is
+    // shown as it is everywhere, "@" included.
+    expect(row(/^Username/u)).toHaveAttribute("href", "/account/username");
+    expect(row(/^Username/u)).toHaveTextContent("@maya_runs");
     expect(row(/^How you run/u)).toHaveAttribute(
       "href",
       "/onboarding/calibrate",
@@ -80,7 +89,12 @@ describe("the index (U1/N)", () => {
 
   it("groups the rows under U1's headings, in U1's order", async () => {
     await renderWithRouter(
-      <SettingsIndex current={ANSWERED} blockedCount={0} signOut={undefined} />,
+      <SettingsIndex
+        current={ANSWERED}
+        username="maya_runs"
+        blockedCount={0}
+        signOut={undefined}
+      />,
     );
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
@@ -90,12 +104,17 @@ describe("the index (U1/N)", () => {
       within(you ?? document.body)
         .getAllByRole("link")
         .map((link) => link.getAttribute("href")),
-    ).toEqual(["/onboarding/calibrate", "/onboarding/settings/units"]);
+    ).toEqual([
+      "/account/username",
+      "/onboarding/calibrate",
+      "/onboarding/settings/units",
+    ]);
   });
 
   it("says the other value of each row the other way round", async () => {
     await renderWithRouter(
       <SettingsIndex
+        username={undefined}
         current={{
           thermalLevel: -2,
           tempUnit: "c",
@@ -110,6 +129,8 @@ describe("the index (U1/N)", () => {
     expect(row(/^Privacy/u)).toHaveTextContent("New runs stay private");
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
+    // An account that has not reached O0 has no handle to show.
+    expect(row(/^Username/u)).toHaveTextContent(/^UsernameNot picked›$/u);
   });
 
   it("asks the unanswered calibration as the ruling words it", async () => {
@@ -117,6 +138,7 @@ describe("the index (U1/N)", () => {
     await renderWithRouter(
       <SettingsIndex
         current={{ ...ANSWERED, thermalLevel: undefined }}
+        username="maya_runs"
         blockedCount={0}
         signOut={undefined}
       />,
@@ -134,6 +156,7 @@ describe("the index (U1/N)", () => {
     await renderWithRouter(
       <SettingsIndex
         current={ANSWERED}
+        username="maya_runs"
         blockedCount={0}
         signOut={<button type="button">Sign out</button>}
       />,

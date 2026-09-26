@@ -141,6 +141,13 @@
       "when": 1790306609411,
       "tag": "0019_add_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790447946618,
+      "tag": "0020_replace_display_name_with_username",
+      "breakpoints": true
     }
   ]
 }

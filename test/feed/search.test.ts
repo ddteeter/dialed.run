@@ -20,29 +20,29 @@ describe("searchRunners", () => {
     // Including one that is only spaces: an untrimmed blank becomes
     // `LIKE ' %'`, which is a full scan for nothing.
     const viewer = await makeUser();
-    await makeUser({ displayName: "Somebody" });
+    await makeUser({ username: "Somebody" });
     expect(await searchRunners(viewer, "")).toStrictEqual([]);
     expect(await searchRunners(viewer, " ".repeat(3))).toStrictEqual([]);
   });
 
   it("matches on a trimmed prefix", async () => {
     const viewer = await makeUser();
-    const userId = await makeUser({ displayName: "Tracksmith Runner" });
+    const userId = await makeUser({ username: "Tracksmith Runner" });
 
     expect(await searchRunners(viewer, "  Tracksmith ")).toStrictEqual([
-      { userId, displayName: "Tracksmith Runner", following: false },
+      { userId, username: "Tracksmith Runner", following: false },
     ]);
   });
 
   it("matches a prefix, not a substring", async () => {
     const viewer = await makeUser();
-    await makeUser({ displayName: "Fast Runner" });
+    await makeUser({ username: "Fast Runner" });
     expect(await searchRunners(viewer, "Runner")).toStrictEqual([]);
   });
 
   it("never offers the viewer themself", async () => {
-    const viewer = await makeUser({ displayName: "Dana Kim" });
-    const other = await makeUser({ displayName: "Dana Lee" });
+    const viewer = await makeUser({ username: "Dana Kim" });
+    const other = await makeUser({ username: "Dana Lee" });
 
     const results = await searchRunners(viewer, "Dana");
 
@@ -52,8 +52,8 @@ describe("searchRunners", () => {
   it("says which results the viewer already follows, and only the viewer's follows", async () => {
     const viewer = await makeUser();
     const someoneElse = await makeUser();
-    const followed = await makeUser({ displayName: "Ana Followed" });
-    const notYet = await makeUser({ displayName: "Ana Stranger" });
+    const followed = await makeUser({ username: "Ana Followed" });
+    const notYet = await makeUser({ username: "Ana Stranger" });
     await follow(viewer, followed);
     await follow(someoneElse, notYet);
 

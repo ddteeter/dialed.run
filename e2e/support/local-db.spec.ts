@@ -20,14 +20,14 @@ test("withLocalDb round-trips a row through the dev server's D1", async () => {
     await withLocalDb(async ({ core }) => {
       await core
         .insert(userProfiles)
-        .values({ userId, displayName: "Local DB probe" });
+        .values({ userId, username: "Local DB probe" });
     });
 
     const found = await withLocalDb(async ({ core }) =>
       core.select().from(userProfiles).where(eq(userProfiles.userId, userId)),
     );
     expect(found).toHaveLength(1);
-    expect(found[0]?.displayName).toBe("Local DB probe");
+    expect(found[0]?.username).toBe("Local DB probe");
   } finally {
     await withLocalDb(async ({ core }) => {
       await core.delete(userProfiles).where(eq(userProfiles.userId, userId));

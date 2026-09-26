@@ -50,7 +50,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   return {
     id: "01JENTRY000000000000000000",
     userId: "01JSER00000000000000000000",
-    authorDisplayName: undefined,
+    authorUsername: undefined,
     runId: "01JRAN00000000000000000000",
     runTitle: "Evening run",
     distanceM: 8047,
