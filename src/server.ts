@@ -12,6 +12,7 @@ import {
   captureException,
   handleQueueBatch,
   handleScheduled,
+  secureResponse,
 } from "./modules/ops";
 
 const startFetch = createStartHandler(defaultStreamHandler);
@@ -19,7 +20,10 @@ const startFetch = createStartHandler(defaultStreamHandler);
 export default {
   async fetch(request): Promise<Response> {
     try {
-      return await startFetch(request);
+      // OPS-8: every response leaves with the security headers, set here
+      // so no route can forget them. A thrown error gets none, and needs
+      // none: the platform answers it with its own error page.
+      return secureResponse(await startFetch(request));
     } catch (error) {
       captureException(error, { surface: "fetch" });
       throw error;
