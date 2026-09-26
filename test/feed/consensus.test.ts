@@ -48,7 +48,6 @@ async function runner(
     precipMm?: number;
     categories?: Category[];
     userId?: string;
-    source?: "visualcrossing" | "manual";
   } = {},
 ): Promise<string> {
   place.next += 1;
@@ -70,7 +69,6 @@ async function runner(
     tempC: 8,
     feelsLikeC: options.feelsLikeC ?? 7,
     precipMm: options.precipMm ?? 0,
-    ...(options.source !== undefined && { source: options.source }),
   });
   return userId;
 }
@@ -136,9 +134,8 @@ describe("matchTally: who matched", () => {
     expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(0);
   });
 
-  it("leaves out a different precip class, a manual observation, and an unresolved one", async () => {
+  it("leaves out a different precip class and an unresolved one", async () => {
     await runner({ precipMm: 5 });
-    await runner({ source: "manual" });
     const author = await makeUser();
     const runId = await makeRun({
       userId: author,
