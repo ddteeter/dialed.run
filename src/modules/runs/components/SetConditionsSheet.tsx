@@ -209,21 +209,18 @@ function SetConditionsForm({
         Roughly is fine. This stays on your run and never counts toward anyone
         else&rsquo;s.
       </p>
-      {/* Three to a row, coldest top-left (round 26, item 2): the primitive
-          wraps its chips, and this is the grid they wrap into. */}
-      <div className="[&_fieldset>div]:grid [&_fieldset>div]:grid-cols-3">
-        <ChoiceList
-          name="bandFloorC"
-          legend={`How warm · °${units.temp.toUpperCase()}`}
-          layout="chips"
-          options={BAND_OPTIONS}
-          optionLabels={bandLabels}
-          value={band}
-          field={form.field}
-          onChange={setBand}
-          error={form.fieldErrors.bandFloorC}
-        />
-      </div>
+      {/* Three to a row, coldest top-left (round 26, item 2). */}
+      <ChoiceList
+        name="bandFloorC"
+        legend={`How warm · °${units.temp.toUpperCase()}`}
+        layout="chip-grid"
+        options={BAND_OPTIONS}
+        optionLabels={bandLabels}
+        value={band}
+        field={form.field}
+        onChange={setBand}
+        error={form.fieldErrors.bandFloorC}
+      />
       <ChoiceList
         name="sky"
         legend="Sky"

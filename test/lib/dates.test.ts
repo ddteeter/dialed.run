@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  calendarDay,
   clockLabel,
   dayLabel,
   dayTimeLabel,
@@ -232,5 +233,13 @@ describe("deviceTimeZone", () => {
   it("is none when the device names a zone Intl would not take back", () => {
     deviceReads("Nowhere/Special");
     expect(deviceTimeZone()).toBeUndefined();
+  });
+});
+
+describe("calendarDay", () => {
+  it("keys the day an instant falls on, in the zone asked", () => {
+    const lateChicago = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
+    expect(calendarDay(lateChicago)).toBe("22 Sept 2026");
+    expect(calendarDay(lateChicago, "America/Chicago")).toBe("21 Sept 2026");
   });
 });

@@ -1,10 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, lt } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   notifications,
   processedWebhookEvents,
 } from "../../src/db/schema-core";
+import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
@@ -127,5 +128,42 @@ describe("the daily digest runs the prune (the production call site)", () => {
     await handleScheduled(DIGEST);
 
     expect(await eventsFor(old)).toStrictEqual([]);
+  });
+});
+
+async function planOf(sql: string, params: unknown[]): Promise<string> {
+  const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+    .bind(...params)
+    .all<{ detail: string }>();
+  return plan.results.map((row) => row.detail).join("\n");
+}
+
+describe("the prune reads by index, not by scanning (D1 bills rows scanned)", () => {
+  it("finds old dedupe keys and old reminders through their indexes", async () => {
+    const db = coreDb();
+    const cutoff = 1_700_000_000;
+    const keys = db
+      .delete(processedWebhookEvents)
+      .where(lt(processedWebhookEvents.eventTime, cutoff))
+      .toSQL();
+    const reminders = db
+      .update(notifications)
+      .set({ read: true })
+      .where(
+        and(
+          eq(notifications.kind, "strava_reminder"),
+          isNotNull(notifications.subjectId),
+          lt(notifications.createdAt, cutoff),
+        ),
+      )
+      .toSQL();
+
+    const keysPlan = await planOf(keys.sql, keys.params);
+    const remindersPlan = await planOf(reminders.sql, reminders.params);
+
+    expect(keysPlan).toMatch(/webhook_events_time/u);
+    expect(keysPlan).not.toMatch(/SCAN\s+processed_webhook_events/iu);
+    expect(remindersPlan).toMatch(/notifications_kind_created/u);
+    expect(remindersPlan).not.toMatch(/SCAN\s+notifications/iu);
   });
 });

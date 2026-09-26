@@ -180,6 +180,19 @@ export function timeOfDay(epochSeconds: number, timeZone?: string): string {
   });
 }
 
+/**
+ * The calendar day an instant falls on in a zone, as a comparable key —
+ * "29 Aug 2026". For a rule about the date rather than for display: A1's
+ * correction may move a start's time and never its date (round 26, #1).
+ */
+export function calendarDay(epochSeconds: number, timeZone?: string): string {
+  return part(epochSeconds, timeZone, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function minutesOf(hhmm: string): number {
   const [hours = 0, minutes = 0] = hhmm.split(":").map(Number);
   return hours * 60 + minutes;

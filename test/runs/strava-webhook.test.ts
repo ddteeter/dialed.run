@@ -268,12 +268,31 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     expect(capture.errors).toHaveLength(0);
   });
 
-  it("logs and never throws on an invalid payload", async () => {
+  it("stays silent about a body that does not name our subscription", async () => {
+    // A forger's `{}` must not reach Sentry any more than the queue.
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    for (const body of [
+      {},
+      { garbage: true },
+      undefined,
+      { subscription_id: "1" },
+    ]) {
+      await deliver(queue, capture.captureException, body);
+    }
+
+    expect(queue.sent).toStrictEqual([]);
+    expect(capture.errors).toStrictEqual([]);
+  });
+
+  it("logs and never throws on an invalid payload that claims to be ours", async () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
     await expect(
       deliver(queue, capture.captureException, {
+        subscription_id: 1,
         garbage: true,
       }),
     ).resolves.toBeUndefined();

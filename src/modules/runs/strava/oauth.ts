@@ -6,6 +6,15 @@
  * live credentials; functions.ts supplies the real `createStravaApi` when
  * secrets are configured.
  *
+ * `captureException` is injected into `connectFromCallback` and
+ * `disconnectStrava` for the same reason `StravaApi` is: importing it from
+ * `modules/ops` here would pull in `ops/queues.ts` and `ops/scheduled.ts`
+ * through the barrel, both of which import this module's own barrel
+ * (`../runs`) to reach the imports consumer and `pruneStravaIds` —
+ * `runs -> strava/oauth -> ops -> queues.ts -> runs`, a cycle
+ * dependency-cruiser's `no-circular` rejects. `functions.ts` supplies the
+ * real `captureException` from `modules/ops`, which is not on that path.
+ *
  * **There is no token refresh here, on purpose** (task 127, STR-1). The
  * app never reads activity data, so a stored grant is used for exactly one
  * thing — revoking it — and `/oauth/revoke` takes the refresh token, which
@@ -24,7 +33,6 @@ import {
 } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
-import { captureException } from "../../ops";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
 import type { RevokeJob } from "../queue-messages";
@@ -202,26 +210,30 @@ export async function completeStravaConnect(
   code: string,
 ): Promise<void> {
   const tokens = await api.exchangeCode(code);
-  await db
-    .insert(stravaConnections)
-    .values({
-      userId,
-      athleteId: tokens.athleteId,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresAt,
-      status: "ok",
-    })
-    .onConflictDoUpdate({
-      target: stravaConnections.userId,
-      set: {
-        athleteId: tokens.athleteId,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresAt,
-        status: "ok",
-      },
-    });
+  const connection = {
+    athleteId: tokens.athleteId,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresAt: tokens.expiresAt,
+    status: "ok" as const,
+    connectedAt: nowSeconds(),
+  };
+  // A reconnect cancels a revocation still owed for the same grant, in the
+  // same batch: Strava may hand back the refresh token it issued before,
+  // and a stale `strava_revocations` row would then revoke the grant the
+  // runner has just made.
+  await db.batch([
+    db
+      .insert(stravaConnections)
+      .values({ userId, ...connection })
+      .onConflictDoUpdate({
+        target: stravaConnections.userId,
+        set: connection,
+      }),
+    db
+      .delete(stravaRevocations)
+      .where(eq(stravaRevocations.refreshToken, tokens.refreshToken)),
+  ]);
 }
 
 /**
@@ -263,6 +275,7 @@ export async function connectFromCallback(
   api: StravaApi | undefined,
   userId: string,
   callback: Parameters<typeof stravaCallbackOutcome>[0],
+  captureException: (error: unknown, context: Record<string, string>) => void,
 ): Promise<StravaConnectResult> {
   const outcome = stravaCallbackOutcome(callback);
   if (!outcome.ok) return { ...outcome, full: false };
@@ -299,6 +312,7 @@ export async function disconnectStrava(
   db: CoreDb,
   queue: RevokeQueueProducer | undefined,
   userId: string,
+  captureException: (error: unknown, context: Record<string, string>) => void,
 ): Promise<void> {
   const connection = await getStravaConnection(db, userId);
   if (connection === undefined) return;

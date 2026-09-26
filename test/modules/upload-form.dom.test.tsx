@@ -687,7 +687,7 @@ describe("A1: the parsed card", () => {
     expect(conditions).toHaveTextContent("Conditions · auto-attached");
     expect(conditions).toHaveTextContent("41°F");
     expect(conditions).toHaveTextContent(
-      "Never typed by hand. Wrong time? Change it on the run card and we’ll refetch.",
+      "Never typed by hand. Wrong time? Change it on the run card and we’ll get the weather for it.",
     );
     expect(conditions?.querySelector("input")).toBeNull();
 
@@ -801,7 +801,11 @@ describe("A1: the parsed card", () => {
 
     await waitFor(() => {
       expect(retime).toHaveBeenCalledWith({
-        data: { runId: RUN_ID, startedAt: SAT_MORNING + 90 * 60 },
+        data: {
+          runId: RUN_ID,
+          startedAt: SAT_MORNING + 90 * 60,
+          timeZone: "America/Chicago",
+        },
       });
     });
     const changed = await screen.findByRole("button", {
@@ -868,11 +872,13 @@ describe("A1: the parsed card", () => {
 
     const band = await waitFor(() => {
       const found = document.querySelector<HTMLElement>(
-        "[data-part='rail'] [data-part='failure-band']",
+        "[data-part='failure-band']",
       );
       if (found === null) throw new Error("no band yet");
       return found;
     });
+    // A control, so never in the read-only rail (round 25).
+    expect(band.closest("[data-part='rail']")).toBeNull();
     expect(band).toHaveTextContent("Still 6:04 AM");
     expect(band).toHaveTextContent(
       "Couldn't get weather for 7:34 AM. Try again?",
@@ -1093,7 +1099,11 @@ describe("A1: the parsed card", () => {
 
     await waitFor(() => {
       expect(retime).toHaveBeenCalledWith({
-        data: { runId: RUN_ID, startedAt: SAT_MORNING + 3600 },
+        data: {
+          runId: RUN_ID,
+          startedAt: SAT_MORNING + 3600,
+          timeZone: "America/Los_Angeles",
+        },
       });
     });
   });

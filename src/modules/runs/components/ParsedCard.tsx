@@ -34,7 +34,7 @@ import { ConditionsRow } from "./ConditionsBlock";
  * The server function that moves a run's start, in its own shape.
  */
 export type Retime = (input: {
-  data: { runId: string; startedAt: number };
+  data: { runId: string; startedAt: number; timeZone?: string | undefined };
 }) => Promise<"moved" | "no-weather" | "refused">;
 
 /**
@@ -54,7 +54,7 @@ const retimeSchema = z.object({
  * both of its destinations.
  */
 const PRIMARY_ACTION =
-  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink desk:col-start-1 desk:row-start-2 desk:self-start desk:justify-self-start";
+  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink desk:col-start-1 desk:row-start-3 desk:self-start desk:justify-self-start";
 
 const LOOKS_RIGHT = "Looks right — what did you wear?";
 
@@ -253,7 +253,9 @@ function useRetimeForm({
     schema: retimeSchema,
     action: async (values) => {
       const startedAt = startAtTimeOfDay(run.startedAt, zone, values.time);
-      const outcome = await retime({ data: { runId: run.id, startedAt } });
+      const outcome = await retime({
+        data: { runId: run.id, startedAt, timeZone: zone },
+      });
       // Refused is the server saying no to a run this card should not be
       // able to ask about — another day, or not this runner's. A failure
       // like any other: nothing changed.
@@ -394,7 +396,7 @@ export function ParsedCard({
       </div>
       <div
         data-part="rail"
-        className="flex flex-col gap-3 desk:col-start-2 desk:row-start-1 desk:row-span-2"
+        className="flex flex-col gap-3 desk:col-start-2 desk:row-start-1 desk:row-span-3"
       >
         {form.pending ? (
           <WeatherFor
@@ -409,11 +411,15 @@ export function ParsedCard({
             note={
               <p className="m-0 text-small text-quiet">
                 Never typed by hand. Wrong time? Change it on the run card and
-                we&rsquo;ll refetch.
+                we&rsquo;ll get the weather for it.
               </p>
             }
           />
         )}
+      </div>
+      {/* The band says what is still true under the block, and holds Try
+          again — a control, so in the primary column and never the rail. */}
+      <div className="flex flex-col desk:col-start-1 desk:row-start-2">
         <ControlFailureBand
           failure={
             noWeatherFor === undefined

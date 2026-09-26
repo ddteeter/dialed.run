@@ -55,6 +55,10 @@ export const retimeRunInput = z.object({
   // second move. How far it may be from the old one is the service's rule,
   // because only the service knows the old one.
   startedAt: z.number().int().nonnegative(),
+  // The zone the card read the time in — the run's own, or the device's
+  // for a run with none — so the server holds the date fixed on the same
+  // clock. Anything `Intl` will not accept reads as UTC (`lib/dates`).
+  timeZone: z.string().max(64).optional(),
 });
 
 /**

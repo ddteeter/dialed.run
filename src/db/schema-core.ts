@@ -307,6 +307,12 @@ export const runs = /*#__PURE__*/ sqliteTable(
     })
       .notNull()
       .default("none"),
+    // When the Strava reminder this file run answers landed (task 127,
+    // round 25: "one upload clears one reminder"). Set when an import
+    // clears a reminder, or when a reminder arrives for a file already
+    // uploaded; a run with it set can neither clear nor suppress another.
+    // NULL for a manual run and for a file with no reminder yet.
+    reminderMatchedAt: integer("reminder_matched_at"),
   },
   (t) => [
     index("runs_user_started").on(t.userId, t.startedAt),
@@ -455,6 +461,9 @@ export const notifications = /*#__PURE__*/ sqliteTable(
   (t) => [
     uniqueIndex("notifications_dedupe").on(t.userId, t.kind, t.subjectId),
     index("notifications_user_read").on(t.userId, t.read),
+    // The daily Strava prune's read (task 127, STR-10): reminders of one
+    // kind older than a cutoff. Without it the prune scans the table.
+    index("notifications_kind_created").on(t.kind, t.createdAt),
   ],
 );
 
@@ -478,6 +487,10 @@ export const stravaConnections = /*#__PURE__*/ sqliteTable(
     // revocation. Reset to 0/NULL on success.
     refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
     refreshFirstFailedAt: integer("refresh_first_failed_at"),
+    // When this grant was made, epoch seconds (task 127). A deauthorization
+    // event older than this is about an earlier grant, and must not delete
+    // a runner's newer connection. NULL on rows made before the column.
+    connectedAt: integer("connected_at"),
   },
   (t) => [
     // One Strava athlete maps to at most one user. Without this, two
@@ -561,6 +574,8 @@ export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
   },
   (t) => [
     uniqueIndex("webhook_events_pk").on(t.objectId, t.aspectType, t.eventTime),
+    // The same prune deletes keys older than a week by event time.
+    index("webhook_events_time").on(t.eventTime),
   ],
 );
 

@@ -38,6 +38,12 @@ const webhookEventSchema = z.object({
 type WebhookEvent = z.infer<typeof webhookEventSchema>;
 
 /**
+ * The one field read before anything else: which subscription an event
+ * claims to belong to.
+ */
+const subscriptionSchema = z.object({ subscription_id: z.number() });
+
+/**
  * A runner revoking dialed.run from Strava's side: an athlete event whose
  * `updates.authorized` is false. Strava's API Policy §7.4 gives us thirty
  * days to delete what we hold; the consumer does it at once.
@@ -90,6 +96,19 @@ export async function handleStravaWebhookEvent(
   body: unknown,
   subscriptionId: string | undefined,
 ): Promise<void> {
+  // Ours first, and silently. A body that does not even name our
+  // subscription is someone else's noise — reporting it, or reporting that
+  // it failed to parse, would let anyone fill Sentry as easily as they
+  // could have filled the queue.
+  const claimed = subscriptionSchema.safeParse(body);
+  if (
+    !claimed.success ||
+    String(claimed.data.subscription_id) !== subscriptionId
+  ) {
+    return;
+  }
+  // Only an event that claims to be ours is worth a report when it will
+  // not parse: that is Strava changing its payload, which a human must see.
   const parsed = webhookEventSchema.safeParse(body);
   if (!parsed.success) {
     captureException(new Error("invalid strava webhook payload"), {
@@ -98,9 +117,6 @@ export async function handleStravaWebhookEvent(
     return;
   }
   const event = parsed.data;
-  // Not reported: a forged event is noise, and reporting it would let
-  // anyone fill Sentry as easily as they could have filled the queue.
-  if (String(event.subscription_id) !== subscriptionId) return;
 
   if (isDeauthorization(event)) {
     await queue.send({

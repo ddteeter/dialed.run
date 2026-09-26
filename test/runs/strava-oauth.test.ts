@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -28,35 +28,24 @@ import {
 
 import { nowSeconds } from "../../src/lib/now";
 /**
- * What a maintainer would see in Sentry.
- *
- * `captureException` is imported by the module rather than injected, and
- * with no DSN bound it writes `["[sentry-disabled]", context, error]` to
- * the console. That line is the only observable side of a report, so this
- * captures it. `stubGlobal`, not `spyOn(console, …)`: inside the workers
- * pool the console a test file holds is not the one a src module writes to.
+ * `captureException` is injected (the same seam as `StravaApi` and the
+ * revoke queue) rather than imported from `modules/ops`, so this module has
+ * no edge back into ops at all — importing it would reintroduce the cycle
+ * `runs -> strava/oauth -> ops -> queues/scheduled -> runs`
+ * (dependency-cruiser's `no-circular`). `functions.ts` wires the real
+ * `captureException`; this stands in for it and records every call.
  */
-async function reportsDuring(
-  work: () => Promise<void>,
-): Promise<{ context: Record<string, string>; error: unknown }[]> {
-  const lines: unknown[][] = [];
-  vi.stubGlobal("console", {
-    ...globalThis.console,
-    error: (...args: unknown[]) => {
-      lines.push(args);
+function captureExceptionSpy(): {
+  reports: { context: Record<string, string>; error: unknown }[];
+  captureException: (error: unknown, context: Record<string, string>) => void;
+} {
+  const reports: { context: Record<string, string>; error: unknown }[] = [];
+  return {
+    reports,
+    captureException: (error, context) => {
+      reports.push({ error, context });
     },
-  });
-  try {
-    await work();
-  } finally {
-    vi.unstubAllGlobals();
-  }
-  return lines
-    .filter((line) => line[0] === "[sentry-disabled]")
-    .map((line) => ({
-      context: line[1] as Record<string, string>,
-      error: line[2],
-    }));
+  };
 }
 
 function fakeRevokeQueue(): {
@@ -189,7 +178,12 @@ describe("disconnectStrava", () => {
     });
     const queue = fakeRevokeQueue();
 
-    await disconnectStrava(db, queue, userId);
+    await disconnectStrava(
+      db,
+      queue,
+      userId,
+      captureExceptionSpy().captureException,
+    );
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
 
@@ -230,11 +224,11 @@ describe("disconnectStrava", () => {
       send: () => Promise.reject(new Error("queue unavailable")),
     };
 
-    const reports = await reportsDuring(async () => {
-      await expect(
-        disconnectStrava(db, failing, userId),
-      ).resolves.toBeUndefined();
-    });
+    const spy = captureExceptionSpy();
+    await expect(
+      disconnectStrava(db, failing, userId, spy.captureException),
+    ).resolves.toBeUndefined();
+    const reports = spy.reports;
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
     // Scoped to this test's token: these tests share a database, so a
@@ -260,20 +254,24 @@ describe("disconnectStrava", () => {
     const userId = newUlid();
     await completeStravaConnect(db, fakeApi(), userId, "auth-code");
 
-    const reports = await reportsDuring(async () => {
-      await disconnectStrava(db, undefined, userId);
-    });
+    const spy = captureExceptionSpy();
+    await disconnectStrava(db, undefined, userId, spy.captureException);
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
     // No queue is a configuration, not a failure — nothing to report.
-    expect(reports).toHaveLength(0);
+    expect(spy.reports).toHaveLength(0);
   });
 
   it("is a no-op (besides being idempotent) when there is no connection", async () => {
     const db = coreDb();
     const queue = fakeRevokeQueue();
     await expect(
-      disconnectStrava(db, queue, newUlid()),
+      disconnectStrava(
+        db,
+        queue,
+        newUlid(),
+        captureExceptionSpy().captureException,
+      ),
     ).resolves.toBeUndefined();
     expect(queue.sent).toHaveLength(0);
   });
@@ -411,7 +409,12 @@ describe("disconnectStrava when there is nothing connected", () => {
     const db = coreDb();
     const queue = fakeRevokeQueue();
 
-    await disconnectStrava(db, queue, newUlid());
+    await disconnectStrava(
+      db,
+      queue,
+      newUlid(),
+      captureExceptionSpy().captureException,
+    );
 
     expect(queue.sent).toStrictEqual([]);
   });
@@ -430,7 +433,12 @@ describe("disconnectStrava when there is nothing connected", () => {
       status: "ok",
     });
 
-    await disconnectStrava(db, undefined, userId);
+    await disconnectStrava(
+      db,
+      undefined,
+      userId,
+      captureExceptionSpy().captureException,
+    );
 
     expect(await getStravaConnection(db, userId)).toBeUndefined();
     const [pending] = await db
@@ -570,7 +578,13 @@ describe("connectFromCallback (the callback, as one decision)", () => {
     const db = coreDb();
     const userId = newUlid();
 
-    const result = await connectFromCallback(db, fakeApi(), userId, GOOD);
+    const result = await connectFromCallback(
+      db,
+      fakeApi(),
+      userId,
+      GOOD,
+      captureExceptionSpy().captureException,
+    );
 
     expect(result).toStrictEqual({ ok: true });
     const connection = await getStravaConnection(db, userId);
@@ -589,6 +603,7 @@ describe("connectFromCallback (the callback, as one decision)", () => {
       { ...fakeApi(), exchangeCode },
       userId,
       { ...GOOD, state: "other" },
+      captureExceptionSpy().captureException,
     );
 
     expect(result).toStrictEqual({
@@ -606,6 +621,7 @@ describe("connectFromCallback (the callback, as one decision)", () => {
       undefined,
       newUlid(),
       GOOD,
+      captureExceptionSpy().captureException,
     );
 
     expect(result).toStrictEqual({
@@ -629,10 +645,14 @@ describe("connectFromCallback (the callback, as one decision)", () => {
         ),
     });
 
-    let result: unknown;
-    const reports = await reportsDuring(async () => {
-      result = await connectFromCallback(db, full, userId, GOOD);
-    });
+    const spy = captureExceptionSpy();
+    const result = await connectFromCallback(
+      db,
+      full,
+      userId,
+      GOOD,
+      spy.captureException,
+    );
 
     expect(result).toStrictEqual({
       ok: false,
@@ -640,7 +660,7 @@ describe("connectFromCallback (the callback, as one decision)", () => {
       full: true,
     });
     // Expected, not a fault: capacity is a known limit of the friends stage.
-    expect(reports).toHaveLength(0);
+    expect(spy.reports).toHaveLength(0);
     expect(await getStravaConnection(db, userId)).toBeUndefined();
   });
 
@@ -652,18 +672,22 @@ describe("connectFromCallback (the callback, as one decision)", () => {
         Promise.reject(new StravaApiError("Strava responded 500", 500)),
     });
 
-    let result: unknown;
-    const reports = await reportsDuring(async () => {
-      result = await connectFromCallback(db, down, userId, GOOD);
-    });
+    const spy = captureExceptionSpy();
+    const result = await connectFromCallback(
+      db,
+      down,
+      userId,
+      GOOD,
+      spy.captureException,
+    );
 
     expect(result).toStrictEqual({
       ok: false,
       reason: "Strava didn't connect.",
       full: false,
     });
-    expect(reports).toHaveLength(1);
-    expect(reports[0]?.context).toStrictEqual({
+    expect(spy.reports).toHaveLength(1);
+    expect(spy.reports[0]?.context).toStrictEqual({
       userId,
       surface: "strava-connect",
     });
@@ -766,5 +790,60 @@ describe("stravaStatusOf (T1 and T3a)", () => {
       connected: true,
       lastRunSeenAt: 3000,
     });
+  });
+});
+
+describe("completeStravaConnect: a grant made now", () => {
+  it("stamps when the grant was made", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const before = nowS();
+
+    await completeStravaConnect(db, fakeApi(), userId, "code");
+
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.connectedAt).toBeGreaterThanOrEqual(before);
+    expect(connection?.connectedAt).toBeLessThanOrEqual(nowS());
+  });
+
+  it("cancels a revocation still owed for the grant it reconnects", async () => {
+    // Strava may return the refresh token it issued before; a stale
+    // revocation would then revoke the grant just made.
+    const db = coreDb();
+    const userId = newUlid();
+    const refreshToken = `refresh-${newUlid()}`;
+    const otherToken = `refresh-${newUlid()}`;
+    await db.insert(stravaRevocations).values([
+      { id: newUlid(), accessToken: "a", refreshToken, createdAt: 1 },
+      {
+        id: newUlid(),
+        accessToken: "b",
+        refreshToken: otherToken,
+        createdAt: 1,
+      },
+    ]);
+
+    await completeStravaConnect(
+      db,
+      fakeApi({
+        exchangeCode: () =>
+          Promise.resolve({
+            athleteId: newUlid(),
+            accessToken: "access",
+            refreshToken,
+            expiresAt: nowS() + 3600,
+          }),
+      }),
+      userId,
+      "code",
+    );
+
+    const owed = await db
+      .select({ token: stravaRevocations.refreshToken })
+      .from(stravaRevocations)
+      .where(
+        inArray(stravaRevocations.refreshToken, [refreshToken, otherToken]),
+      );
+    expect(owed).toStrictEqual([{ token: otherToken }]);
   });
 });

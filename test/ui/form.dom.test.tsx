@@ -1450,7 +1450,7 @@ describe("ChoiceList's chip layout (§AH)", () => {
   const OPTIONS = ["navy", "red"] as const;
   const LABELS = { navy: "Navy", red: "Red" };
 
-  function chips(extra: { layout?: "chips" } = {}) {
+  function chips(extra: { layout?: "chips" | "chip-grid" } = {}) {
     return render(
       <ChoiceList
         name="colorName"
@@ -1522,5 +1522,18 @@ describe("ChoiceList's chip layout (§AH)", () => {
     chips({ layout: "chips" });
     const chip = screen.getByRole("radio", { name: "Navy" }).closest("label");
     expect(chip).not.toHaveClass("rounded-field");
+  });
+
+  it("sets the same chips in three columns for a scale read in order", () => {
+    // R2b's twelve bands, "a 3-column radiogroup, coldest top-left".
+    chips({ layout: "chip-grid" });
+    const chip = screen.getByRole("radio", { name: "Navy" }).closest("label");
+    expect(chip?.parentElement).toHaveClass("grid", "grid-cols-3", "gap-2");
+    expect(chip?.parentElement).not.toHaveClass("flex-wrap");
+    expect(chip).toHaveClass("rounded-pill");
+    expect(screen.getByRole("radio", { name: "Navy" })).toHaveClass(
+      "absolute",
+      "inset-0",
+    );
   });
 });

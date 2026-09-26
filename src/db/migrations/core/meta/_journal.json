@@ -148,6 +148,27 @@
       "when": 1790398358713,
       "tag": "0020_add_strava_revocation_refresh_token",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790438958646,
+      "tag": "0021_add_run_reminder_matched_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1790438970049,
+      "tag": "0022_add_strava_connection_connected_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1790438977189,
+      "tag": "0023_add_strava_prune_indexes",
+      "breakpoints": true
     }
   ]
 }

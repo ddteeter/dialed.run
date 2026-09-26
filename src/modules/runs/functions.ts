@@ -38,6 +38,7 @@ import {
   listRunSummaries,
 } from "./service";
 import { env } from "../../env";
+import { captureException } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
 import {
   connectFromCallback,
@@ -113,7 +114,7 @@ export const retimeRunFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => retimeRunInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return retimeRun(coreDb(), weather, userId, data.runId, data.startedAt);
+    return retimeRun(coreDb(), weather, userId, data);
   });
 // ---- Strava connect/disconnect (102 §6) ------------------------------
 //
@@ -141,10 +142,13 @@ export const completeStravaConnectFn = createServerFn({ method: "POST" })
     const userId = await requireUserId();
     const expectedState = getCookie(STRAVA_STATE_COOKIE);
     deleteCookie(STRAVA_STATE_COOKIE);
-    return connectFromCallback(coreDb(), stravaApiFromEnv(), userId, {
-      ...data,
-      expectedState,
-    });
+    return connectFromCallback(
+      coreDb(),
+      stravaApiFromEnv(),
+      userId,
+      { ...data, expectedState },
+      captureException,
+    );
   });
 
 export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
@@ -156,6 +160,7 @@ export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
       coreDb(),
       stravaConfigFromEnv() === undefined ? undefined : env.IMPORTS_QUEUE,
       userId,
+      captureException,
     );
   },
 );

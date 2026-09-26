@@ -916,23 +916,26 @@ describe("weather attachment is only attempted where it can help", () => {
   });
 });
 
-async function seedConnection(): Promise<{
+async function seedConnection(connectedAt?: number): Promise<{
   userId: string;
   athleteId: string;
+  refreshToken: string;
 }> {
   const userId = newUlid();
   const athleteId = newUlid();
+  const refreshToken = `refresh-${athleteId}`;
   await coreDb()
     .insert(stravaConnections)
     .values({
       userId,
       athleteId,
       accessToken: "access",
-      refreshToken: "refresh",
+      refreshToken,
       expiresAt: nowSeconds() + 3600,
       status: "ok",
+      connectedAt,
     });
-  return { userId, athleteId };
+  return { userId, athleteId, refreshToken };
 }
 
 async function revokedRows(userId: string) {
@@ -949,7 +952,7 @@ async function revokedRows(userId: string) {
 
 describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
   it("deletes the connection's tokens and athlete id, and tells the runner", async () => {
-    const { userId, athleteId } = await seedConnection();
+    const { userId, athleteId, refreshToken } = await seedConnection();
 
     const { batch, wrapped } = fakeBatch([
       {
@@ -972,16 +975,78 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       subjectId: "1516126040",
-      body: "You disconnected dialed.run on Strava, so run reminders have stopped.",
+      body: "Strava says dialed.run was disconnected, so run reminders have stopped.",
       read: false,
     });
-    // Nothing is owed back to Strava: the athlete already revoked us.
+    // The revoke is owed anyway, because the event may be forged: a
+    // genuine deauthorization makes it a no-op, a forged one closes the
+    // grant nothing here could otherwise reach.
+    const owed = await coreDb()
+      .select()
+      .from(stravaRevocations)
+      .where(eq(stravaRevocations.refreshToken, refreshToken));
+    expect(owed).toHaveLength(1);
+  });
+
+  it("leaves a connection made after the event alone", async () => {
+    // A redelivery arriving after the runner reconnected is about the
+    // earlier grant, not this one.
+    const { userId, athleteId, refreshToken } = await seedConnection(2000);
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "strava_deauthorize", athleteId, eventTime: 1999 } },
+      ]).batch,
+      makeDeps(),
+    );
+
+    const kept = await coreDb()
+      .select()
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, athleteId));
+    expect(kept).toHaveLength(1);
+    expect(await revokedRows(userId)).toStrictEqual([]);
     expect(
       await coreDb()
         .select()
         .from(stravaRevocations)
-        .where(eq(stravaRevocations.refreshToken, "refresh")),
+        .where(eq(stravaRevocations.refreshToken, refreshToken)),
     ).toStrictEqual([]);
+  });
+
+  it("deletes a connection made at or before the event", async () => {
+    const { athleteId } = await seedConnection(2000);
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "strava_deauthorize", athleteId, eventTime: 2000 } },
+      ]).batch,
+      makeDeps(),
+    );
+
+    const left = await coreDb()
+      .select()
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, athleteId));
+    expect(left).toStrictEqual([]);
+  });
+
+  it("performs the deletion when the job is dead-lettered (law 6)", async () => {
+    const { userId, athleteId } = await seedConnection();
+    const deps = makeDeps();
+
+    const { batch, wrapped } = fakeBatch([
+      { body: { type: "strava_deauthorize", athleteId, eventTime: 7 } },
+    ]);
+    await handleImportsDlqBatch(batch, deps);
+
+    expect(wrapped[0]?.wasAcked).toBe(true);
+    const left = await coreDb()
+      .select()
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, athleteId));
+    expect(left).toStrictEqual([]);
+    expect(await revokedRows(userId)).toHaveLength(1);
   });
 
   it("is a no-op on redelivery", async () => {

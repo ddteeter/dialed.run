@@ -5,6 +5,7 @@ import { storageStateFor } from "../support/accounts";
 import { DESK, PHONE } from "../support/bars";
 import type { Seeded } from "./logging-fixtures";
 import {
+  gpx,
   hydrated,
   seedEntry,
   seedItem,
@@ -41,7 +42,7 @@ async function expectRailBeside(page: Page, primary: string): Promise<void> {
   expect(primaryBox.width).toBeLessThanOrEqual(620);
 }
 
-test("A2 and A3 at the desk: the step in the column, a read-only rail beside it", async ({
+test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside it", async ({
   page,
 }) => {
   const seeded: Seeded = {
@@ -64,6 +65,19 @@ test("A2 and A3 at the desk: the step in the column, a read-only rail beside it"
 
   try {
     await page.setViewportSize(DESK);
+
+    // A1: the parsed card in the column, its conditions in the rail.
+    await page.goto("/runs/new");
+    await hydrated(page);
+    await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
+      name: "rail_run.gpx",
+      mimeType: "application/gpx+xml",
+      buffer: gpx(1_770_000_000, 6),
+    });
+    await expect(page.locator('[data-slot="parsed-card"]')).toBeVisible({
+      timeout: 20_000,
+    });
+    await expectRailBeside(page, '[data-slot="parsed-card"]');
 
     await page.goto(`/feed/attach/${kitless}`);
     await hydrated(page);

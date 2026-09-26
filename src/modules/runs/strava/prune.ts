@@ -36,10 +36,10 @@ const SEVEN_DAYS_S = 7 * 24 * 60 * 60;
  * or authorises the other — but they are one policy, so they are one
  * batch, and a failure leaves both for tomorrow rather than half.
  *
- * Both filters are table scans today: neither table has an index on its
- * time column, and adding one is a migration this lane was not given. The
- * dedupe table holds a week of events by construction, and the scan is
- * once a day. Recorded in the PR's register.
+ * Both filters are index-backed (`add_strava_prune_indexes`, owner
+ * approved 2026-09-26): `notifications_kind_created` and
+ * `webhook_events_time`, so the prune reads what it changes rather than
+ * both tables. `test/runs/strava-prune.test.ts` holds the query plans.
  */
 export async function pruneStravaIds(db: CoreDb): Promise<void> {
   const cutoff = nowSeconds() - SEVEN_DAYS_S;

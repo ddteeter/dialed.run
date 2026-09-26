@@ -116,6 +116,36 @@ describe("conditionsBandInput", () => {
   });
 });
 
+describe("retimeRunInput: the zone the card read the time in", () => {
+  it("carries a zone when sent, and caps its length", () => {
+    const runId = newUlid();
+    expect(
+      retimeRunInput.parse({
+        runId,
+        startedAt: 1,
+        timeZone: "America/Chicago",
+      }).timeZone,
+    ).toBe("America/Chicago");
+    expect(
+      retimeRunInput.parse({ runId, startedAt: 1 }).timeZone,
+    ).toBeUndefined();
+    expect(
+      retimeRunInput.safeParse({
+        runId,
+        startedAt: 1,
+        timeZone: "x".repeat(65),
+      }).success,
+    ).toBe(false);
+    expect(
+      retimeRunInput.safeParse({
+        runId,
+        startedAt: 1,
+        timeZone: "x".repeat(64),
+      }).success,
+    ).toBe(true);
+  });
+});
+
 describe("retimeRunInput", () => {
   it("takes the new start itself, in whole seconds, never a shift", () => {
     const runId = newUlid();

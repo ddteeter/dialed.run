@@ -15,8 +15,9 @@ import { handleImportsBatch } from "../../src/modules/runs/consumer";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
   REMINDER_MATCH_WINDOW_S,
-  clearMatchingReminder,
-  hasMatchingUpload,
+  pairRunWith,
+  pairWithReminder,
+  unpairedUploadFor,
 } from "../../src/modules/runs/strava/reminder-match";
 import { batchOf, fakeMessage } from "../queue-fakes";
 import validTcx from "./fixtures/valid.tcx?raw";
@@ -79,11 +80,12 @@ async function seedFileRun(
   endedAt: number,
   durationS: number,
   source: "file" | "manual" = "file",
-): Promise<void> {
+): Promise<string> {
+  const id = newUlid();
   await coreDb()
     .insert(runs)
     .values({
-      id: newUlid(),
+      id,
       userId,
       source,
       startedAt: endedAt - durationS,
@@ -93,6 +95,7 @@ async function seedFileRun(
       title: "Seeded",
       weatherStatus: "none",
     });
+  return id;
 }
 
 async function importTcx(userId: string): Promise<void> {
@@ -108,74 +111,6 @@ async function importTcx(userId: string): Promise<void> {
   });
   await deliver({ type: "import", importId });
 }
-
-describe("an upload clears the reminder its run left", () => {
-  it("marks the reminder read when the run's file is imported", async () => {
-    const userId = newUlid();
-    const reminder = await seedReminder(userId, TCX_ENDED_AT + HOUR);
-
-    await importTcx(userId);
-
-    expect(await isRead(reminder)).toBe(true);
-  });
-
-  it("leaves a reminder that landed before the run ended, or too long after", async () => {
-    const userId = newUlid();
-    const before = await seedReminder(userId, TCX_ENDED_AT - 60);
-    const tooLate = await seedReminder(
-      userId,
-      TCX_ENDED_AT + REMINDER_MATCH_WINDOW_S + 60,
-    );
-
-    await importTcx(userId);
-
-    expect(await isRead(before)).toBe(false);
-    expect(await isRead(tooLate)).toBe(false);
-  });
-});
-
-describe("clearMatchingReminder", () => {
-  it("clears only the oldest unread match, and only this runner's", async () => {
-    const userId = newUlid();
-    const endedAt = 1_800_000_000;
-    const newer = await seedReminder(userId, endedAt + 2 * HOUR);
-    const oldest = await seedReminder(userId, endedAt + HOUR);
-    const alreadyRead = await seedReminder(userId, endedAt + 30, {
-      read: true,
-    });
-    const otherKind = await seedReminder(userId, endedAt + 10, {
-      kind: "kit_reminder",
-    });
-    const someoneElse = await seedReminder(newUlid(), endedAt + 10);
-
-    await clearMatchingReminder(coreDb(), userId, endedAt);
-
-    expect(await isRead(oldest)).toBe(true);
-    expect(await isRead(newer)).toBe(false);
-    expect(await isRead(alreadyRead)).toBe(true);
-    expect(await isRead(otherKind)).toBe(false);
-    expect(await isRead(someoneElse)).toBe(false);
-  });
-
-  it("takes both edges of the window", async () => {
-    const userId = newUlid();
-    const endedAt = 1_800_100_000;
-    const atEnd = await seedReminder(userId, endedAt);
-    await clearMatchingReminder(coreDb(), userId, endedAt);
-    expect(await isRead(atEnd)).toBe(true);
-
-    const atEdge = await seedReminder(
-      userId,
-      endedAt + REMINDER_MATCH_WINDOW_S,
-    );
-    await clearMatchingReminder(coreDb(), userId, endedAt);
-    expect(await isRead(atEdge)).toBe(true);
-  });
-
-  it("is twelve hours wide", () => {
-    expect(REMINDER_MATCH_WINDOW_S).toBe(12 * HOUR);
-  });
-});
 
 async function connect(userId: string): Promise<string> {
   const athleteId = newUlid();
@@ -204,12 +139,119 @@ async function reminders(userId: string) {
     );
 }
 
+async function pairedAt(runId: string): Promise<number | null | undefined> {
+  const [row] = await coreDb()
+    .select({ at: runs.reminderMatchedAt })
+    .from(runs)
+    .where(eq(runs.id, runId));
+  return row?.at;
+}
+
+async function landReminder(athleteId: string, landedAt: number) {
+  await deliver({
+    type: "strava_reminder",
+    athleteId,
+    objectId: newUlid(),
+    aspectType: "create",
+    eventTime: landedAt,
+  });
+}
+
+describe("an upload clears the reminder its run left", () => {
+  it("marks the reminder read when the run's file is imported, and pairs them", async () => {
+    const userId = newUlid();
+    const landed = TCX_ENDED_AT + HOUR;
+    const reminder = await seedReminder(userId, landed);
+
+    await importTcx(userId);
+
+    expect(await isRead(reminder)).toBe(true);
+    const [run] = await coreDb()
+      .select({ at: runs.reminderMatchedAt })
+      .from(runs)
+      .where(eq(runs.userId, userId));
+    expect(run?.at).toBe(landed);
+  });
+
+  it("leaves a reminder that landed before the run ended, or too long after", async () => {
+    const userId = newUlid();
+    const before = await seedReminder(userId, TCX_ENDED_AT - 60);
+    const tooLate = await seedReminder(
+      userId,
+      TCX_ENDED_AT + REMINDER_MATCH_WINDOW_S + 60,
+    );
+
+    await importTcx(userId);
+
+    expect(await isRead(before)).toBe(false);
+    expect(await isRead(tooLate)).toBe(false);
+    const [run] = await coreDb()
+      .select({ at: runs.reminderMatchedAt })
+      .from(runs)
+      .where(eq(runs.userId, userId));
+    expect(run?.at).toBeNull();
+  });
+});
+
+describe("pairWithReminder: one upload clears one reminder", () => {
+  it("clears only the oldest unread match, and only this runner's", async () => {
+    const userId = newUlid();
+    const endedAt = 1_800_000_000;
+    const runId = await seedFileRun(userId, endedAt, 1800);
+    const newer = await seedReminder(userId, endedAt + 2 * HOUR);
+    const oldest = await seedReminder(userId, endedAt + HOUR);
+    const alreadyRead = await seedReminder(userId, endedAt + 30, {
+      read: true,
+    });
+    const otherKind = await seedReminder(userId, endedAt + 10, {
+      kind: "kit_reminder",
+    });
+    const someoneElse = await seedReminder(newUlid(), endedAt + 10);
+
+    const pairing = pairWithReminder(coreDb(), userId, runId, endedAt);
+    await coreDb().batch([pairing.pairRun, pairing.markRead]);
+
+    expect(await isRead(oldest)).toBe(true);
+    expect(await pairedAt(runId)).toBe(endedAt + HOUR);
+    expect(await isRead(newer)).toBe(false);
+    expect(await isRead(alreadyRead)).toBe(true);
+    expect(await isRead(otherKind)).toBe(false);
+    expect(await isRead(someoneElse)).toBe(false);
+  });
+
+  it("takes both edges of the window", async () => {
+    const userId = newUlid();
+    const endedAt = 1_800_100_000;
+    const first = await seedFileRun(userId, endedAt, 1800);
+    const second = await seedFileRun(userId, endedAt, 1700);
+    const atEnd = await seedReminder(userId, endedAt);
+    const atEdge = await seedReminder(
+      userId,
+      endedAt + REMINDER_MATCH_WINDOW_S,
+    );
+
+    const one = pairWithReminder(coreDb(), userId, first, endedAt);
+    await coreDb().batch([one.pairRun, one.markRead]);
+    expect(await isRead(atEnd)).toBe(true);
+    expect(await isRead(atEdge)).toBe(false);
+
+    const two = pairWithReminder(coreDb(), userId, second, endedAt);
+    await coreDb().batch([two.pairRun, two.markRead]);
+    expect(await isRead(atEdge)).toBe(true);
+    expect(await pairedAt(second)).toBe(endedAt + REMINDER_MATCH_WINDOW_S);
+  });
+
+  it("is twelve hours wide", () => {
+    expect(REMINDER_MATCH_WINDOW_S).toBe(12 * HOUR);
+  });
+});
+
 describe("a reminder for a run already uploaded is not written", () => {
-  it("claims the event and writes no row when the file is already in", async () => {
+  it("claims the event, writes no row, and pairs the upload", async () => {
     const userId = newUlid();
     const athleteId = await connect(userId);
     const landedAt = 1_800_200_000;
-    await seedFileRun(userId, landedAt - HOUR, 3000);
+    const runId = await seedFileRun(userId, landedAt - HOUR, 3000);
     const objectId = newUlid();
 
     await deliver({
@@ -221,6 +263,7 @@ describe("a reminder for a run already uploaded is not written", () => {
     });
 
     expect(await reminders(userId)).toStrictEqual([]);
+    expect(await pairedAt(runId)).toBe(landedAt);
     const claimed = await coreDb()
       .select()
       .from(processedWebhookEvents)
@@ -236,42 +279,85 @@ describe("a reminder for a run already uploaded is not written", () => {
     await seedFileRun(userId, landedAt - REMINDER_MATCH_WINDOW_S - 60, 3000);
     await seedFileRun(userId, landedAt - HOUR, 3000, "manual");
 
-    await deliver({
-      type: "strava_reminder",
-      athleteId,
-      objectId: newUlid(),
-      aspectType: "create",
-      eventTime: landedAt,
-    });
+    await landReminder(athleteId, landedAt);
 
     expect(await reminders(userId)).toHaveLength(1);
   });
+
+  it("does not let the morning's upload swallow the evening's reminder", async () => {
+    // The owner's case (2026-09-26): the AM run ends at 09:00 and its
+    // reminder lands at 09:30; the file is uploaded at 10:00 and clears it.
+    // The PM run ends at 17:30 and its reminder lands at 18:00 — inside the
+    // AM run's twelve hours, but the AM run is already paired.
+    const userId = newUlid();
+    const athleteId = await connect(userId);
+    const day = 1_800_400_000;
+    // The morning reminder as the consumer wrote it when it landed.
+    await seedReminder(userId, day + 9.5 * HOUR);
+    const morning = await seedFileRun(userId, day + 9 * HOUR, 3000);
+    const pairing = pairWithReminder(coreDb(), userId, morning, day + 9 * HOUR);
+    await coreDb().batch([pairing.pairRun, pairing.markRead]);
+
+    await landReminder(athleteId, day + 18 * HOUR);
+
+    const rows = await reminders(userId);
+    expect(rows).toHaveLength(2);
+    expect(rows.filter((row) => !row.read)).toHaveLength(1);
+    expect(await pairedAt(morning)).toBe(day + 9.5 * HOUR);
+  });
 });
 
-describe("hasMatchingUpload", () => {
+describe("unpairedUploadFor and pairRunWith", () => {
   it("finds a long run that ended at the window's early edge", async () => {
     // Started well before the window opened; what matters is its end.
     const userId = newUlid();
-    const landedAt = 1_800_400_000;
-    await seedFileRun(userId, landedAt - REMINDER_MATCH_WINDOW_S, 5 * HOUR);
+    const landedAt = 1_800_500_000;
+    const runId = await seedFileRun(
+      userId,
+      landedAt - REMINDER_MATCH_WINDOW_S,
+      5 * HOUR,
+    );
 
-    expect(await hasMatchingUpload(coreDb(), userId, landedAt)).toBe(true);
+    expect(await unpairedUploadFor(coreDb(), userId, landedAt)).toBe(runId);
   });
 
   it("finds a run that ended as the reminder landed, and none that ended after", async () => {
     const userId = newUlid();
-    const landedAt = 1_800_500_000;
+    const landedAt = 1_800_600_000;
     await seedFileRun(userId, landedAt + 60, 1800);
-    expect(await hasMatchingUpload(coreDb(), userId, landedAt)).toBe(false);
+    expect(await unpairedUploadFor(coreDb(), userId, landedAt)).toBeUndefined();
 
-    await seedFileRun(userId, landedAt, 1800);
-    expect(await hasMatchingUpload(coreDb(), userId, landedAt)).toBe(true);
+    const runId = await seedFileRun(userId, landedAt, 1800);
+    expect(await unpairedUploadFor(coreDb(), userId, landedAt)).toBe(runId);
+  });
+
+  it("offers the oldest unpaired run, and none already paired", async () => {
+    const userId = newUlid();
+    const landedAt = 1_800_700_000;
+    const later = await seedFileRun(userId, landedAt - HOUR, 1800);
+    const earlier = await seedFileRun(userId, landedAt - 3 * HOUR, 1800);
+
+    expect(await unpairedUploadFor(coreDb(), userId, landedAt)).toBe(earlier);
+    await pairRunWith(coreDb(), earlier, landedAt);
+    expect(await unpairedUploadFor(coreDb(), userId, landedAt)).toBe(later);
+  });
+
+  it("pairs a run once: a second reminder does not re-pair it", async () => {
+    const userId = newUlid();
+    const runId = await seedFileRun(userId, 1_800_800_000, 1800);
+
+    await pairRunWith(coreDb(), runId, 1_800_801_000);
+    await pairRunWith(coreDb(), runId, 1_800_802_000);
+
+    expect(await pairedAt(runId)).toBe(1_800_801_000);
   });
 
   it("finds nothing for another runner's upload", async () => {
-    const landedAt = 1_800_600_000;
+    const landedAt = 1_800_900_000;
     await seedFileRun(newUlid(), landedAt - HOUR, 1800);
 
-    expect(await hasMatchingUpload(coreDb(), newUlid(), landedAt)).toBe(false);
+    expect(
+      await unpairedUploadFor(coreDb(), newUlid(), landedAt),
+    ).toBeUndefined();
   });
 });

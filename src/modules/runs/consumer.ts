@@ -36,8 +36,9 @@ import {
 import type { StoredToken, StravaApi } from "./strava/api";
 import { deauthorizeAthlete } from "./strava/deauthorize";
 import {
-  clearMatchingReminder,
-  hasMatchingUpload,
+  pairRunWith,
+  pairWithReminder,
+  unpairedUploadFor,
 } from "./strava/reminder-match";
 import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 
@@ -188,18 +189,21 @@ async function processImportJob(
   }
 
   // The import is done, and the Strava reminder this file answers — if it
-  // had one — is answered (round 25). One batch: both record the same
-  // fact, that this run is now in the log.
+  // had one — is answered (round 25; one upload clears one reminder). One
+  // batch: all three record the same fact, that this run is now in the log.
+  const pairing = pairWithReminder(
+    deps.db,
+    importRow.userId,
+    runId,
+    draft.startedAt + draft.durationS,
+  );
   await deps.db.batch([
     deps.db
       .update(imports)
       .set({ status: "done", runId })
       .where(eq(imports.id, importRow.id)),
-    clearMatchingReminder(
-      deps.db,
-      importRow.userId,
-      draft.startedAt + draft.durationS,
-    ),
+    pairing.pairRun,
+    pairing.markRead,
   ]);
 
   await createNotification(deps.db, {
@@ -251,17 +255,29 @@ async function processReminderJob(
     })
     .onConflictDoNothing();
 
-  // An athlete nobody has connected, or a run whose file is already in the
-  // log (round 25: one reminder per run): record the event so it is not
+  // An athlete nobody has connected: record the event so it is not
   // reconsidered, and stop.
-  if (
-    connected === undefined ||
-    (await hasMatchingUpload(deps.db, connected.userId, job.eventTime))
-  ) {
+  if (connected === undefined) {
     await claim;
     return;
   }
 
+  // A run whose file is already in the log (round 25: one reminder per
+  // run, one upload per reminder): pair them, write no reminder, and stop.
+  const uploaded = await unpairedUploadFor(
+    deps.db,
+    connected.userId,
+    job.eventTime,
+  );
+  if (uploaded !== undefined) {
+    await deps.db.batch([claim, pairRunWith(deps.db, uploaded, job.eventTime)]);
+    return;
+  }
+
+  // STR-9's call site: the reminder email (decision D-43; round 26 #19) is
+  // scheduled here, after the batch, once task 126 publishes `modules/email`
+  // and the runner's switch (ACC-11) — 20 minutes after the run landed,
+  // with the skip rule checked when it is due.
   await deps.db.batch([
     claim,
     // D-33: zero activity data in the body — no distance, no time, no
@@ -371,6 +387,11 @@ DLQ ownership (102 §8): a dead-lettered ImportJob marks the import `failed`
 with a user-facing reason and notifies the user — no import ends in
 silence. A dead-lettered ReminderJob has no user-visible entity to mark, so
 it only reports to Sentry.
+
+A dead-lettered deauthorization is different: it is a deletion Strava's
+API Policy §7.4 requires, and nothing else records that it is owed (law 6).
+So the DLQ performs it — the same idempotent delete the consumer would have
+made — rather than only reporting that it did not happen.
 */
 export async function handleImportsDlqBatch(
   batch: MessageBatch,
@@ -378,6 +399,10 @@ export async function handleImportsDlqBatch(
 ): Promise<void> {
   await deadLetterEach(batch, importsQueueMessageSchema, {
     onJob: async (job) => {
+      if (job.type === "strava_deauthorize") {
+        await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+        return;
+      }
       if (job.type !== "import") return;
       const importRow = await importById(deps.db, job.importId);
       if (

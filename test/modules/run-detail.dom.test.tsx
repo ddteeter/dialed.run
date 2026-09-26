@@ -238,6 +238,10 @@ describe("R2b: no weather saved", () => {
     const bands = within(warm).getAllByRole("radio");
     expect(bands).toHaveLength(12);
     expect(bands[0]).toHaveAccessibleName("-20–-15°");
+    // Three to a row, coldest top-left.
+    expect(bands[0]?.closest("label")?.parentElement).toHaveClass(
+      "grid-cols-3",
+    );
     expect(bands.at(-1)).toHaveAccessibleName("35–40°");
     const sky = within(sheet).getByRole("group", { name: "Sky" });
     const skies = within(sky).getAllByRole("radio");
