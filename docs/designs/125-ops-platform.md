@@ -102,12 +102,41 @@ it; the Desk gate returns not-found for a non-admin; headers on HTML and on
 a photo response. UI: Turnstile widget, Desk shell and Today. e2e:
 `e2e/desk/` and a header check.
 
+## Decision log
+
+Owner's answers, 2026-09-26:
+
+- **OPS-3: Sentry Crons, kept** (~$2.34/month past the one free monitor).
+- **OPS-14: `'manual'` dropped from `weather_observations.source`.** Task
+  129 removes feed's two `ne(source, 'manual')` filters first; the enum
+  edit follows, since a drizzle enum without the value no longer
+  typechecks against them. `docs/contracts.md` updated here.
+- **The CI proposal: approved.** Applied by this lane as its own small PR
+  once #104 has merged, exactly the diff in
+  `docs/proposals/125-ci-migrate-before-deploy.md`.
+- **`wrangler.jsonc` vars: approved** — `TURNSTILE_SITE_KEY` and
+  `BETTER_AUTH_URL=https://dialed.run`, with local dev and CI overriding
+  `BETTER_AUTH_URL` through `.dev.vars`. Lands with OPS-4 after #104.
+  `TURNSTILE_SECRET_KEY` stays with the deployment sweep.
+- **The CSP nonce** is not an owner question: it needs `router.tsx`, so it
+  is a cross-lane item after #104.
+
+Review of PR #112, applied:
+
+- `/api/health` stays green until OPS-4 wires `BETTER_AUTH_URL`; naming a
+  missing var returns in that change.
+- Static assets skip the Worker, so `public/_headers` carries the same
+  headers (pinned by a test), and the claims say so.
+- Share cards are cached on origin + pathname. Cloudflare's docs promise a
+  functional Cache API on custom domains and do not promise it on
+  workers.dev, so the TTLs are a ceiling on work, not a guarantee.
+- "Waiting" has one definition, safety's `pendingReviewCount` (pending
+  only); the digest reads it alone, and Today reads it too.
+- Turnstile checks the answer's `hostname` (Cloudflare's test key, which
+  always answers `example.com` with a testing flag, is let through on the
+  flag), and the widget tells the visitor when it cannot run.
+- D0 has a conformance spec, waiting on the same CI line as the demo.
+
 ## Open questions
 
-- OPS-3: Sentry Crons at $2.34/month, or healthchecks.io at $0 plus a
-  secret and an account? Proceeding on Sentry.
-- OPS-14: drop `"manual"` from `weather_observations.source`'s enum (no SQL
-  changes; nothing has been deployed)? Recommend yes, with 129 removing
-  `feed/conditions.ts`'s two `ne(source, "manual")` filters.
-- Turnstile fails closed when `TURNSTILE_SECRET_KEY` is unset, so CI's e2e
-  needs Cloudflare's always-pass test secret (in the CI proposal).
+None open; see the decision log.
