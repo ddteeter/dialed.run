@@ -669,7 +669,7 @@ describe("A1: the parsed card", () => {
     expect(card).toHaveAttribute("data-state", "parsed");
     expect(within(card).getByText("6.2 mi · 51:38")).toBeVisible();
     expect(within(card).getByText("8:20 /mi")).toBeVisible();
-    expect(within(card).getByText("Sat 29 Aug")).toBeVisible();
+    expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(
       within(card).getByRole("button", {
         name: "Started 6:04 AM — change the time",
@@ -911,7 +911,7 @@ describe("A1: the parsed card", () => {
     const pace = await screen.findByText("8:20 /mi");
 
     expect(pace.closest("p")).toHaveTextContent(
-      /^8:20 \/mi\|Sat 29 Aug\|6:04 AM$/u,
+      /^8:20 \/mi\|Sat Aug 29\|6:04 AM$/u,
     );
   });
 });
@@ -934,7 +934,7 @@ describe("A1: a run already logged", () => {
     expect(card).toHaveAttribute("data-state", "duplicate");
     expect(within(card).getByText("MORNING_RUN_0829.GPX")).toBeVisible();
     expect(within(card).getByText("6.2 mi · 51:38")).toBeVisible();
-    expect(within(card).getByText("Sat 29 Aug")).toBeVisible();
+    expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("6:04 AM")).toBeVisible();
     expect(within(card).getByText("41°F damp")).toHaveClass("text-dialed-text");
     expect(

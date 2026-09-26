@@ -16,8 +16,10 @@
  * UTC had already turned over: server `9/21/2026`, client `9/22/2026`.
  * An afternoon run would have agreed and the bug would have stayed hidden.
  *
- * So the locale and the zone are pinned rather than asked for. `en-GB`
- * because it is what the board draws — "Mon 2 Sep", not "Mon, Sep 2".
+ * So the locale and the zone are pinned rather than asked for. The parts
+ * come from `en-GB`; the **order is US**, month before day (design round
+ * 26, item 9): "SAT AUG 29" as a mono label and "Sat, Aug 29" in prose.
+ * "Sat 29 Aug" is wrong for an en-US reader.
  *
  * **The zone is the run's own, when we know it** (D-96). A run's date is
  * where the run happened — a Chicago run viewed from Berlin is still a
@@ -84,10 +86,10 @@ function part(
  *   not what the artboards draw; September is the only month where the two
  *   disagree, which is exactly the kind of difference that survives review
  *   and then looks like a typo in one row of a table.
- * - **Order is the board's, not the locale's.** "Mon 21 Sep" is drawn;
- *   asking a locale to order the parts makes the layout a property of a
- *   locale tag, which is the class of thing this file exists to stop
- *   depending on.
+ * - **Order is the ruling's, not the locale's.** Month before day, "Mon
+ *   Sep 21" (round 26, item 9); asking a locale to order the parts makes
+ *   the layout a property of a locale tag, which is the class of thing
+ *   this file exists to stop depending on.
  * - **`formatToParts` needs a fallback that can never fire.** Looking each
  *   field up by type gives `string | undefined`, so the code carries a
  *   `?? ""` for a case the formatter's own options rule out — dead code
@@ -97,15 +99,37 @@ function part(
  *
  * `timeZone` is the run's own (D-96); omitted or invalid, it is UTC.
  */
-export function dayLabel(epochSeconds: number, timeZone?: string): string {
-  const weekday = part(epochSeconds, timeZone, { weekday: "short" });
-  const day = part(epochSeconds, timeZone, { day: "numeric" });
-  const month = part(epochSeconds, timeZone, { month: "short" }).slice(0, 3);
-  return `${weekday} ${day} ${month}`;
+function dayParts(
+  epochSeconds: number,
+  timeZone: string | undefined,
+): { weekday: string; month: string; day: string } {
+  return {
+    weekday: part(epochSeconds, timeZone, { weekday: "short" }),
+    month: part(epochSeconds, timeZone, { month: "short" }).slice(0, 3),
+    day: part(epochSeconds, timeZone, { day: "numeric" }),
+  };
 }
 
 /**
- * A day and the time on it — "Mon 2 Sep, 14:30".
+ * The day as a mono label draws it — "Sat Aug 29", which the mono step's
+ * CSS sets as "SAT AUG 29". No comma: a label is a row of cells.
+ */
+export function dayLabel(epochSeconds: number, timeZone?: string): string {
+  const { weekday, month, day } = dayParts(epochSeconds, timeZone);
+  return `${weekday} ${month} ${day}`;
+}
+
+/**
+ * The day as a sentence says it — "Sat, Aug 29", with the comma en-US
+ * prose puts after the weekday.
+ */
+export function proseDayLabel(epochSeconds: number, timeZone?: string): string {
+  const { weekday, month, day } = dayParts(epochSeconds, timeZone);
+  return `${weekday}, ${month} ${day}`;
+}
+
+/**
+ * A day and the time on it — "Mon Sep 2, 14:30".
  *
  * For a notification, where the time of day is the point: two notifications
  * on the same day are otherwise indistinguishable in a list sorted by it.

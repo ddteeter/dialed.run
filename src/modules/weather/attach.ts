@@ -10,6 +10,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { imports, runs } from "../../db/schema-core";
 import { env } from "../../env";
+import type { ManualSky } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
 import { weatherProvider } from "./provider";
 import {
@@ -203,6 +204,8 @@ export async function attachObservation(runId: Ulid): Promise<AttachOutcome> {
 export async function recordManualObservation(
   runId: Ulid,
   tempC: number,
+  // R2b's sky (task 127, STR-12); optional, so the write stays additive.
+  sky?: ManualSky,
 ): Promise<void> {
   const [run] = await coreDb()
     .select()
@@ -231,7 +234,7 @@ export async function recordManualObservation(
   // `failed` one R2b is offered for, so saving again lands the same row and
   // then the status. And `resolveAndAttach` reads the band first, so any
   // re-drive of the run settles it as `manual` too.
-  await upsertManualBand(runId, tempC);
+  await upsertManualBand(runId, tempC, sky);
   await setStatus(runId, "manual");
 }
 

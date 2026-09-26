@@ -34,6 +34,7 @@ import { Route as RunsManualRouteImport } from './routes/runs/manual'
 import { Route as RunsNewRouteImport } from './routes/runs/new'
 import { Route as RunsStravaRouteImport } from './routes/runs/strava'
 import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
+import { Route as RunsStravaConnectRouteImport } from './routes/runs/strava-connect'
 import { Route as SafetyBlockedRouteImport } from './routes/safety/blocked'
 import { Route as SafetyReviewRouteImport } from './routes/safety/review'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -172,6 +173,11 @@ const RunsStravaCallbackRoute = RunsStravaCallbackRouteImport.update({
   path: '/runs/strava-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RunsStravaConnectRoute = RunsStravaConnectRouteImport.update({
+  id: '/runs/strava-connect',
+  path: '/runs/strava-connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SafetyBlockedRoute = SafetyBlockedRouteImport.update({
   id: '/safety/blocked',
   path: '/safety/blocked',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
   '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
@@ -293,6 +300,7 @@ export interface FileRoutesByTo {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
   '/safety/review': typeof SafetyReviewRoute
   '/call': typeof CallIndexRoute
@@ -333,6 +341,7 @@ export interface FileRoutesById {
   '/runs/new': typeof RunsNewRoute
   '/runs/strava': typeof RunsStravaRoute
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
+  '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
   '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/runs/strava-connect'
     | '/safety/blocked'
     | '/safety/review'
     | '/call/'
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/runs/strava-connect'
     | '/safety/blocked'
     | '/safety/review'
     | '/call'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/runs/new'
     | '/runs/strava'
     | '/runs/strava-callback'
+    | '/runs/strava-connect'
     | '/safety/blocked'
     | '/safety/review'
     | '/call/'
@@ -492,6 +504,7 @@ export interface RootRouteChildren {
   RunsNewRoute: typeof RunsNewRoute
   RunsStravaRoute: typeof RunsStravaRoute
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
+  RunsStravaConnectRoute: typeof RunsStravaConnectRoute
   SafetyBlockedRoute: typeof SafetyBlockedRoute
   SafetyReviewRoute: typeof SafetyReviewRoute
   CallIndexRoute: typeof CallIndexRoute
@@ -688,6 +701,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsStravaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runs/strava-connect': {
+      id: '/runs/strava-connect'
+      path: '/runs/strava-connect'
+      fullPath: '/runs/strava-connect'
+      preLoaderRoute: typeof RunsStravaConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/safety/blocked': {
       id: '/safety/blocked'
       path: '/safety/blocked'
@@ -796,6 +816,7 @@ const rootRouteChildren: RootRouteChildren = {
   RunsNewRoute: RunsNewRoute,
   RunsStravaRoute: RunsStravaRoute,
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
+  RunsStravaConnectRoute: RunsStravaConnectRoute,
   SafetyBlockedRoute: SafetyBlockedRoute,
   SafetyReviewRoute: SafetyReviewRoute,
   CallIndexRoute: CallIndexRoute,

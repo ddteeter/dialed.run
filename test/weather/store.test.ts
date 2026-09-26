@@ -177,7 +177,7 @@ describe("what a stored observation records about itself", () => {
     // placeholders — but `condition` is read straight onto the screen, and
     // an empty string there renders as a blank chip.
     expect(
-      bandObservation({ runId: newUlid(), tempC: -8, setAt: 0 }),
+      bandObservation({ runId: newUlid(), tempC: -8, setAt: 0, sky: "snow" }),
     ).toStrictEqual({
       tempC: -8,
       feelsLikeC: -8,

@@ -507,10 +507,16 @@ export const stravaRevocations = /*#__PURE__*/ sqliteTable(
   "strava_revocations",
   {
     id: text("id").primaryKey(),
-    // The only thing deauthorize needs. The connection row it came from is
-    // already gone by the time this exists.
+    // The connection row it came from is already gone by the time this
+    // exists. Kept for rows written before `refresh_token` existed; an
+    // access token is dead six hours after it was issued.
     accessToken: text("access_token").notNull(),
     createdAt: integer("created_at").notNull(),
+    // What the drain revokes with (task 127, STR-2). `/oauth/revoke` takes
+    // either token, and a refresh token does not expire until it is
+    // rotated — which nothing does once the connection row is gone. NULL
+    // only on rows written before this column.
+    refreshToken: text("refresh_token"),
   },
 );
 

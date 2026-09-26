@@ -400,7 +400,7 @@ describe("AttachKit: most likely", () => {
     );
 
     const card = await screen.findByText(
-      "Most likely · from 43° damp, Fri 14 Aug",
+      "Most likely · from 43° damp, Fri Aug 14",
     );
     const block = region("most-likely");
     expect(block).toHaveAttribute("data-state", "suggestion");

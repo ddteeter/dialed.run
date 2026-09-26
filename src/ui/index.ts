@@ -14,6 +14,7 @@ export type { PhotoStep } from "./photo-step";
 export { ProductLink } from "./ProductLink";
 export { Sheet } from "./Sheet";
 export { Skeleton } from "./Skeleton";
+export { StravaButton } from "./StravaButton";
 export {
   ChoiceField,
   ChoiceList,

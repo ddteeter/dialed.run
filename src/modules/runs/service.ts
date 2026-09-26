@@ -6,8 +6,9 @@
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
+import { roundCoordinate } from "../../lib/coords";
 import { chunked, readInChunks } from "../../lib/chunked";
-import type { RunDraft } from "../../lib/contracts";
+import type { ManualSky, RunDraft } from "../../lib/contracts";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import type { Ulid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
@@ -32,6 +33,24 @@ export function initialWeatherStatus(
   if (draft.indoor) return "none";
   if (draft.lat !== undefined && draft.lng !== undefined) return "pending";
   return "failed";
+}
+
+/**
+ * Where a run is stored as starting (STR-14): nowhere for an indoor run,
+ * and otherwise its point rounded to the precision the weather works at —
+ * before it is stored, which is also before it is sent, because the
+ * provider is asked about the stored point. See `lib/coords.ts`.
+ */
+export function storedStart(draft: {
+  indoor: boolean;
+  lat?: number | undefined;
+  lng?: number | undefined;
+}): { lat: number | undefined; lng: number | undefined } {
+  if (draft.indoor) return { lat: undefined, lng: undefined };
+  return {
+    lat: draft.lat === undefined ? undefined : roundCoordinate(draft.lat),
+    lng: draft.lng === undefined ? undefined : roundCoordinate(draft.lng),
+  };
 }
 
 /**
@@ -113,8 +132,7 @@ export async function createManualRun(
     startedAt: draft.startedAt,
     durationS: draft.durationS,
     distanceM: draft.distanceM,
-    lat: withHome.indoor ? undefined : lat,
-    lng: withHome.indoor ? undefined : lng,
+    ...storedStart(withHome),
     indoor: draft.indoor,
     effort: draft.effort,
     title: draft.title,
@@ -157,6 +175,11 @@ export interface RunConditions {
   condition: string;
   timeZone: string | undefined;
   isSetByYou: boolean;
+  /**
+   * The sky the runner picked in R2b, when they set the conditions and
+   * the sheet asked (round 26, item 2). Never on a real reading.
+   */
+  sky: ManualSky | undefined;
 }
 
 /**
@@ -177,6 +200,7 @@ function asRunConditions(
     condition: reading.condition,
     timeZone: reading.timeZone,
     isSetByYou,
+    sky: reading.sky,
   };
 }
 
@@ -370,7 +394,7 @@ export async function getRunSummary(
  */
 export interface WeatherWrites {
   attach: (runId: Ulid) => Promise<unknown>;
-  record: (runId: Ulid, tempC: number) => Promise<void>;
+  record: (runId: Ulid, tempC: number, sky: ManualSky) => Promise<void>;
 }
 
 /**
@@ -433,10 +457,14 @@ export async function didSetRunConditions(
   weather: Pick<WeatherWrites, "record">,
   userId: string,
   runId: string,
-  bandFloorC: number,
+  pick: { bandFloorC: number; sky: ManualSky },
 ): Promise<boolean> {
   return didWriteEligibleRun(db, userId, runId, () =>
-    weather.record(ulidSchema.parse(runId), bandMiddleC(bandFloorC)),
+    weather.record(
+      ulidSchema.parse(runId),
+      bandMiddleC(pick.bandFloorC),
+      pick.sky,
+    ),
   );
 }
 

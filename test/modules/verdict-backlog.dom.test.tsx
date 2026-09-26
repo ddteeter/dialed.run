@@ -144,7 +144,9 @@ describe("VerdictBacklog: what a row offers", () => {
 
     // "Same as Monday? Use · Pick" — the suggestion names the day it came
     // from rather than saying "a previous run".
-    expect(screen.getByText(/^Same as/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Same as [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}\?$/u),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use" })).toBeInTheDocument();
     // Pick is A2 at its own route, which at width is the centred panel.
     // No picker is rebuilt here, which is the whole of "not a new form".
@@ -559,9 +561,9 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     ]);
 
     const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("Wed 2 Sep");
-    expect(rail?.textContent).not.toContain("Thu 3 Sep");
-    expect(screen.getAllByText("Wed 2 Sep").length).toBeGreaterThan(0);
+    expect(rail?.textContent).toContain("Wed Sep 2");
+    expect(rail?.textContent).not.toContain("Thu Sep 3");
+    expect(screen.getAllByText("Wed Sep 2").length).toBeGreaterThan(0);
   });
 
   it("dates a row with no known zone in UTC", async () => {
@@ -569,7 +571,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     await renderTable([row({ startedAt: lateEvening })]);
 
     const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("Thu 3 Sep");
+    expect(rail?.textContent).toContain("Thu Sep 3");
   });
 
   it("writes the conditions as one measured line", async () => {
@@ -667,7 +669,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     // The day is in the receipt: "Saved" with no day in it is a receipt
     // for whichever row you like.
     expect(screen.getByText(/^Saved /)).toBeVisible();
-    expect(screen.getByRole("status").textContent).toContain("2 Sep");
+    expect(screen.getByRole("status").textContent).toContain("Sep 2");
   });
 });
 
@@ -679,10 +681,10 @@ describe("VerdictBacklog: the rail", () => {
     expect(rail?.textContent).toContain("Selected");
     // Every row here shares one observation, so what proves the rail
     // follows the selection is the day it names.
-    expect(rail?.textContent).toContain("2 Sep");
+    expect(rail?.textContent).toContain("Sep 2");
 
     fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
-    expect(rail?.textContent).toContain("4 Sep");
+    expect(rail?.textContent).toContain("Sep 4");
   });
 
   it("attributes the weather it shows, and carries none of design's notes", async () => {

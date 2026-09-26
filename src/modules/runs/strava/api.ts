@@ -1,10 +1,15 @@
 /**
- * All Strava HTTP behind one seam (design doc 102). Credentials don't
- * exist yet — `createStravaApi` is the only thing that touches the
- * network, so the OAuth logic in ./oauth.ts is fully unit-testable
- * against a hand-rolled `StravaApi` fake. Every outbound fetch gets a
- * timeout and a zod parse (resilience law 4) — a slow or malformed
- * upstream must never wedge a request.
+ * All Strava HTTP behind one seam (design doc 102). `createStravaApi` is
+ * the only thing that touches the network, so the OAuth logic in
+ * ./oauth.ts is fully unit-testable against a hand-rolled `StravaApi`
+ * fake. Every outbound fetch gets a timeout and a zod parse (resilience
+ * law 4) — a slow or malformed upstream must never wedge a request.
+ *
+ * **Two calls, and neither needs a live access token** (task 127). We
+ * never read activity data, so the only thing a stored grant is ever used
+ * for is revoking it, and `/oauth/revoke` accepts the refresh token. The
+ * refresh grant this file used to make had no production caller (finding
+ * 0.1) and now has no reason to exist.
  */
 import { z } from "zod";
 
@@ -20,77 +25,107 @@ export interface ExchangedTokens {
   expiresAt: number;
 }
 
-export interface RefreshedTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
+/**
+ * A token to revoke, and which kind it is — Strava's `token_type_hint`.
+ */
+export interface StoredToken {
+  token: string;
+  kind: "access_token" | "refresh_token";
 }
 
 export interface StravaApi {
   exchangeCode(code: string): Promise<ExchangedTokens>;
-  refreshToken(refreshToken: string): Promise<RefreshedTokens>;
   /**
-  Best-effort revoke on disconnect; caller degrades on failure.
-  */
-  deauthorize(accessToken: string): Promise<void>;
+   * Revoke a grant through `POST /oauth/revoke` (STR-5), with either of its
+   * tokens. Strava: "Revoking a refresh token will also revoke any
+   * associated access tokens, and vice versa", and it answers 200 "whether
+   * or not the token was found" — so a grant that is already dead settles
+   * exactly as a live one does.
+   */
+  revoke(token: StoredToken): Promise<void>;
 }
 
 const TOKEN_URL = "https://www.strava.com/oauth/token";
-const DEAUTHORIZE_URL = "https://www.strava.com/oauth/deauthorize";
+/**
+ * The successor to `/oauth/deauthorize`, which Strava stops supporting on
+ * 1 June 2027. Authenticated with HTTP Basic client credentials.
+ */
+const REVOKE_URL = "https://www.strava.com/oauth/revoke";
 const FETCH_TIMEOUT_MS = 10_000;
 
-const tokenResponseSchema = z.object({
+const exchangeResponseSchema = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1),
   expires_at: z.number().int().positive(),
-});
-
-const exchangeResponseSchema = tokenResponseSchema.extend({
   athlete: z.object({ id: z.number().int() }),
 });
 
+/**
+ * A refusal body, as far as we read one: Strava's errors carry a
+ * `message`, and nothing else in them is needed.
+ */
+const refusalSchema = z.object({ message: z.string() });
+
 export class StravaApiError extends Error {
   /**
-   * True only when Strava said the grant itself is no longer valid — 400
-   * or 401 on a token exchange, which is what a user revoking access looks
-   * like. Everything else (5xx, a timeout, DNS, a parse failure) is
-   * transient and must not be treated as "reconnect your account".
+   * What Strava answered, or undefined when the failure was ours — a body
+   * we could not read.
    */
-  readonly isTerminal: boolean;
+  readonly status: number | undefined;
 
-  constructor(message: string, isTerminal: boolean) {
+  /**
+   * The refusal's own `message`, when it sent one.
+   */
+  readonly refusal: string | undefined;
+
+  constructor(message: string, status?: number, refusal?: string) {
     super(message);
     this.name = "StravaApiError";
-    this.isTerminal = isTerminal;
+    this.status = status;
+    this.refusal = refusal;
   }
 }
 
 /**
- * Terminal for anything that came back as a revoked grant, false for
- * everything else — including a non-StravaApiError, since a TypeError from
- * fetch is the most transient failure there is.
+ * A refusal's body, read as JSON only when it says it is JSON. A refusal is
+ * not promised to be JSON — a proxy's 502 is HTML — and one that is not is
+ * still a refusal, with no message of its own.
  */
-export function isTerminalStravaError(error: unknown): boolean {
-  return error instanceof StravaApiError && error.isTerminal;
+async function refusalBody(response: Response): Promise<unknown> {
+  const isJson =
+    response.headers.get("content-type")?.includes("json") === true;
+  return isJson ? response.json() : undefined;
 }
 
-async function postForm(
+/**
+ * A refused response as an error, keeping Strava's own `message` when the
+ * body has one.
+ */
+async function refusedBy(response: Response): Promise<StravaApiError> {
+  const parsed = refusalSchema.safeParse(await refusalBody(response));
+  return new StravaApiError(
+    `Strava responded ${String(response.status)}`,
+    response.status,
+    parsed.success ? parsed.data.message : undefined,
+  );
+}
+
+async function post(
   url: string,
   body: Record<string, string>,
-): Promise<unknown> {
+  headers: Record<string, string>,
+): Promise<Response> {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      ...headers,
+    },
     body: new URLSearchParams(body),
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (!response.ok) {
-    throw new StravaApiError(
-      `Strava responded ${String(response.status)}`,
-      response.status === 400 || response.status === 401,
-    );
-  }
-  return response.json();
+  if (!response.ok) throw await refusedBy(response);
+  return response;
 }
 
 /**
@@ -112,77 +147,45 @@ export function stravaConfigFrom(
 }
 
 /**
- * A token-grant round trip: post the credentials plus the grant, parse the
- * answer, or refuse it.
- *
- * `exchangeCode` and `refreshToken` are the same call with a different
- * grant and a different schema — the credentials, the `safeParse`, and the
- * refusal were written out twice.
- *
- * **The `false` is the fact worth having in one place.** `StravaApiError`'s
- * second argument says whether the grant is gone, and a response we cannot
- * parse never means that: it means a bug on our side or a change on
- * Strava's. Getting it wrong in either direction is a real failure — `true`
- * here would silently disconnect a working account on a Strava schema
- * change (resilience law 5: degrade, don't destroy), while `true` missing
- * from `postForm`'s 400/401 would retry a grant the user actually revoked.
+ * HTTP Basic credentials for the app — how `/oauth/revoke` authenticates
+ * its caller, where the token endpoint takes the same pair in the form.
  */
-async function tokenGrant<TSchema extends z.ZodType>(
-  config: StravaConfig,
-  grant: Record<string, string>,
-  schema: TSchema,
-  malformed: string,
-): Promise<z.output<TSchema>> {
-  const json = await postForm(TOKEN_URL, {
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    ...grant,
-  });
-  const parsed = schema.safeParse(json);
-  if (!parsed.success) throw new StravaApiError(malformed, false);
-  return parsed.data;
+function basicAuth(config: StravaConfig): string {
+  const pair = `${config.clientId}:${config.clientSecret}`;
+  return `Basic ${btoa(pair)}`;
 }
 
 export function createStravaApi(config: StravaConfig): StravaApi {
   return {
     async exchangeCode(code) {
-      const data = await tokenGrant(
-        config,
-        { code, grant_type: "authorization_code" },
-        exchangeResponseSchema,
-        "Malformed token-exchange response.",
+      const response = await post(
+        TOKEN_URL,
+        {
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          code,
+          grant_type: "authorization_code",
+        },
+        {},
       );
-      return {
-        athleteId: String(data.athlete.id),
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: data.expires_at,
-      };
-    },
-    async refreshToken(refreshToken) {
-      const data = await tokenGrant(
-        config,
-        { refresh_token: refreshToken, grant_type: "refresh_token" },
-        tokenResponseSchema,
-        "Malformed token-refresh response.",
-      );
-      return {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: data.expires_at,
-      };
-    },
-    async deauthorize(accessToken) {
-      const response = await fetch(
-        `${DEAUTHORIZE_URL}?access_token=${encodeURIComponent(accessToken)}`,
-        { method: "POST", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
-      );
-      if (!response.ok) {
-        throw new StravaApiError(
-          `Strava responded ${String(response.status)}`,
-          false, // deauthorize is best-effort; the caller degrades either way
-        );
+      const parsed = exchangeResponseSchema.safeParse(await response.json());
+      if (!parsed.success) {
+        throw new StravaApiError("Malformed token-exchange response.");
       }
+      return {
+        athleteId: String(parsed.data.athlete.id),
+        accessToken: parsed.data.access_token,
+        refreshToken: parsed.data.refresh_token,
+        expiresAt: parsed.data.expires_at,
+      };
+    },
+    async revoke({ token, kind }) {
+      // The body is empty on success, and nothing in it is read.
+      await post(
+        REVOKE_URL,
+        { token, token_type_hint: kind },
+        { authorization: basicAuth(config) },
+      );
     },
   };
 }

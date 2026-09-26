@@ -1513,7 +1513,7 @@ describe("VerdictForm: the run header (round 21)", () => {
     const header = screen.getByRole("banner");
     expect(header).toHaveAttribute("data-slot", "header");
     expect(header).toHaveAttribute("data-ground", "ink");
-    expect(within(header).getByText("Sat 29 Aug · 6:04 AM")).toBeVisible();
+    expect(within(header).getByText("Sat Aug 29 · 6:04 AM")).toBeVisible();
     expect(within(header).getByText("6.2 at 41°")).toBeVisible();
   });
 
@@ -1526,7 +1526,7 @@ describe("VerdictForm: the run header (round 21)", () => {
 
     const header = screen.getByRole("banner");
     expect(within(header).getByText("6.2 mi")).toBeVisible();
-    expect(within(header).getByText("Sat 29 Aug · 11:04 AM")).toBeVisible();
+    expect(within(header).getByText("Sat Aug 29 · 11:04 AM")).toBeVisible();
   });
 
   it("reads the runner's own units", async () => {

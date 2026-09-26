@@ -8,20 +8,22 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
-import { unreadNotificationCount } from "../../src/modules/notifications";
 import type {
   ExchangedTokens,
-  RefreshedTokens,
   StravaApi,
 } from "../../src/modules/runs/strava/api";
 import { StravaApiError } from "../../src/modules/runs/strava/api";
 import {
   completeStravaConnect,
+  connectFromCallback,
   disconnectStrava,
   getStravaConnection,
-  refreshStravaToken,
+  isCapacityRefusal,
+  STRAVA_STATE_COOKIE,
   stravaAuthorizeUrl,
   stravaCallbackOutcome,
+  stravaConnectRedirect,
+  stravaStatusOf,
 } from "../../src/modules/runs/strava/oauth";
 
 import { nowSeconds } from "../../src/lib/now";
@@ -75,25 +77,12 @@ function nowS(): number {
   return nowSeconds();
 }
 
-interface FakeApiCalls {
-  refreshCalls: string[];
-  deauthorizeCalls: string[];
-}
-
 function fakeApi(
   overrides: Partial<{
     exchangeCode: () => Promise<ExchangedTokens>;
-    refreshToken: () => Promise<RefreshedTokens>;
-    deauthorizeFails: boolean;
-    refreshFails: boolean;
-    refreshFailsTerminally: boolean;
   }> = {},
-): StravaApi & FakeApiCalls {
-  const refreshCalls: string[] = [];
-  const deauthorizeCalls: string[] = [];
+): StravaApi {
   return {
-    refreshCalls,
-    deauthorizeCalls,
     exchangeCode:
       overrides.exchangeCode ??
       (() =>
@@ -106,31 +95,7 @@ function fakeApi(
           refreshToken: "refresh-1",
           expiresAt: nowS() + 3600,
         })),
-    async refreshToken(token: string) {
-      refreshCalls.push(token);
-      if (overrides.refreshFailsTerminally === true) {
-        // What a revoked grant looks like: Strava rejects the token itself.
-        throw new StravaApiError("Strava responded 401", true);
-      }
-      if (overrides.refreshFails === true) {
-        // What a blip looks like: fetch itself failed, so not even a
-        // StravaApiError.
-        throw new Error("refresh failed");
-      }
-      if (overrides.refreshToken) return overrides.refreshToken();
-      return {
-        accessToken: "access-2",
-        refreshToken: "refresh-2",
-        expiresAt: nowS() + 3600,
-      };
-    },
-    deauthorize(accessToken: string) {
-      deauthorizeCalls.push(accessToken);
-      if (overrides.deauthorizeFails === true) {
-        return Promise.reject(new Error("deauthorize failed"));
-      }
-      return Promise.resolve();
-    },
+    revoke: () => Promise.reject(new Error("oauth.ts never revokes")),
   };
 }
 
@@ -203,132 +168,6 @@ describe("completeStravaConnect (102 §6)", () => {
   });
 });
 
-describe("refreshStravaToken (resilience: never loop on a dead grant)", () => {
-  it("persists refreshed tokens on success", async () => {
-    const db = coreDb();
-    const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-
-    const result = await refreshStravaToken(db, fakeApi(), userId);
-
-    expect(result).toBe("ok");
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.accessToken).toBe("access-2");
-    expect(connection?.status).toBe("ok");
-  });
-
-  it("marks the connection broken immediately when Strava revokes the grant", async () => {
-    const db = coreDb();
-    const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-
-    const result = await refreshStravaToken(
-      db,
-      fakeApi({ refreshFailsTerminally: true }),
-      userId,
-    );
-
-    expect(result).toBe("broken");
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.status).toBe("broken");
-    expect(await unreadNotificationCount(db, userId)).toBe(1);
-  });
-
-  /**
-   * The bug this policy exists for: one blip used to tell a user with a
-   * perfectly good connection to go and reconnect it.
-   */
-  it("leaves a working connection alone through a transient failure", async () => {
-    const db = coreDb();
-    const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-
-    const result = await refreshStravaToken(
-      db,
-      fakeApi({ refreshFails: true }),
-      userId,
-    );
-
-    expect(result).toBe("degraded");
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.status).toBe("ok");
-    expect(connection?.refreshFailureCount).toBe(1);
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
-  });
-
-  it("does not break on repeated transient failures inside the window", async () => {
-    const db = coreDb();
-    const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-
-    // Three failures in quick succession — a short outage, not a
-    // revocation. The count is reached but the window is not.
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
-    }
-
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.status).toBe("ok");
-    expect(connection?.refreshFailureCount).toBe(3);
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
-  });
-
-  it("breaks once failures have persisted past the window", async () => {
-    const db = coreDb();
-    const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-    await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
-
-    // Backdate the run of failures past the window: same count, but now it
-    // has been going on long enough to stop retrying.
-    await db
-      .update(stravaConnections)
-      .set({
-        refreshFailureCount: 2,
-        refreshFirstFailedAt: nowS() - 4 * 24 * 60 * 60,
-      })
-      .where(eq(stravaConnections.userId, userId));
-
-    const result = await refreshStravaToken(
-      db,
-      fakeApi({ refreshFails: true }),
-      userId,
-    );
-
-    expect(result).toBe("broken");
-    const broken = await getStravaConnection(db, userId);
-    expect(broken?.status).toBe("broken");
-
-    // Deliberately NOT notified. A transient failure that never resolved
-    // could be Strava being down for everyone, and telling a user to
-    // reconnect then makes them break a working grant. A human hears about
-    // it via Sentry instead.
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
-  });
-
-  it("clears the failure run on a later success", async () => {
-    const db = coreDb();
-    const userId = newUlid();
-    await completeStravaConnect(db, fakeApi(), userId, "auth-code");
-    await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
-    const afterFailure = await getStravaConnection(db, userId);
-    expect(afterFailure?.refreshFailureCount).toBe(1);
-
-    await refreshStravaToken(db, fakeApi(), userId);
-
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.refreshFailureCount).toBe(0);
-    expect(connection?.refreshFirstFailedAt).toBeNull();
-    expect(connection?.status).toBe("ok");
-  });
-
-  it("reports not_connected when there's nothing to refresh", async () => {
-    const db = coreDb();
-    const result = await refreshStravaToken(db, fakeApi(), newUlid());
-    expect(result).toBe("not_connected");
-  });
-});
-
 describe("disconnectStrava", () => {
   /**
    * The revoke is queued, not called. The user's own action must not wait
@@ -360,6 +199,9 @@ describe("disconnectStrava", () => {
       .from(stravaRevocations)
       .where(eq(stravaRevocations.accessToken, "access-live"));
     expect(pending?.accessToken).toBe("access-live");
+    // STR-2: the token a revoke can still use hours later. An access token
+    // is dead six hours after issue; the refresh token lives until rotated.
+    expect(pending?.refreshToken).toBe("refresh-1");
 
     // The queue message is only a pointer to it — no secret on the wire.
     expect(queue.sent).toEqual([
@@ -599,248 +441,6 @@ describe("disconnectStrava when there is nothing connected", () => {
   });
 });
 
-async function connectionThatHasBeenFailing(overrides: {
-  status?: "ok" | "broken";
-  refreshFailureCount?: number;
-  refreshFirstFailedAt?: number;
-}): Promise<string> {
-  const db = coreDb();
-  const userId = newUlid();
-  await db.insert(stravaConnections).values({
-    userId,
-    athleteId: newUlid(),
-    accessToken: "access",
-    refreshToken: "refresh",
-    expiresAt: nowS() - 10,
-    status: overrides.status ?? "ok",
-    refreshFailureCount: overrides.refreshFailureCount ?? 0,
-    refreshFirstFailedAt: overrides.refreshFirstFailedAt,
-  });
-  return userId;
-}
-
-describe("refreshStravaToken: who hears about a broken connection", () => {
-  it("tells the user when Strava says the grant is dead", async () => {
-    // A terminal failure is per-user and true, so the user is told — once,
-    // on the ok -> broken transition.
-    const db = coreDb();
-    const userId = await connectionThatHasBeenFailing({ status: "ok" });
-
-    let result;
-    const reports = await reportsDuring(async () => {
-      result = await refreshStravaToken(
-        db,
-        fakeApi({ refreshFailsTerminally: true }),
-        userId,
-      );
-    });
-
-    expect(result).toBe("broken");
-    expect(await unreadNotificationCount(db, userId)).toBe(1);
-
-    // The runner reads this sentence, so it is pinned: it has to name the
-    // action they can take, and it is the only record they get.
-    const [told] = await db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.userId, userId));
-    expect(told?.kind).toBe("strava_broken");
-    expect(told?.body).toBe("Your Strava connection needs to be reconnected.");
-
-    // And nobody is paged: a dead grant is the user's to fix, not ours.
-    expect(reports).toHaveLength(0);
-  });
-
-  it("does not tell them twice for a connection already broken", async () => {
-    const db = coreDb();
-    const userId = await connectionThatHasBeenFailing({ status: "broken" });
-
-    await refreshStravaToken(
-      db,
-      fakeApi({ refreshFailsTerminally: true }),
-      userId,
-    );
-
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
-  });
-
-  it("tells nobody but a maintainer when the failures are only exhausted", async () => {
-    // Strava down, our config wrong, a network partition — all ambiguous.
-    // Telling a runner to reconnect then is worse than saying nothing:
-    // they would disconnect a working account to fix a problem that was
-    // never theirs.
-    const db = coreDb();
-    // Read the clock once. Calling `nowS()` again in the assertion below
-    // made this fail whenever the two calls landed either side of a second
-    // — rare locally, and it took down a CI mutation shard.
-    const firstFailedAt = nowS() - 4 * 24 * 60 * 60;
-    const userId = await connectionThatHasBeenFailing({
-      status: "ok",
-      refreshFailureCount: 2,
-      refreshFirstFailedAt: firstFailedAt,
-    });
-
-    let result;
-    const reports = await reportsDuring(async () => {
-      result = await refreshStravaToken(
-        db,
-        fakeApi({ refreshFails: true }),
-        userId,
-      );
-    });
-
-    expect(result).toBe("broken");
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
-    expect(await getStravaConnection(db, userId)).toMatchObject({
-      status: "broken",
-    });
-
-    // Law 6: the failure lands where a human eventually sees it, with
-    // enough context to tell an outage from a config mistake.
-    expect(reports).toHaveLength(1);
-    expect((reports[0]?.error as Error).message).toBe(
-      "strava refresh exhausted without a 4xx",
-    );
-    expect(reports[0]?.context).toStrictEqual({
-      userId,
-      failureCount: "3",
-      firstFailedAt: String(firstFailedAt),
-    });
-  });
-
-  it("does not page a maintainer twice for the same broken connection", async () => {
-    // The transition is the guard here too. A connection already marked
-    // broken keeps failing on every cron pass, and one ambiguous outage
-    // must not become a report per pass.
-    const db = coreDb();
-    const userId = await connectionThatHasBeenFailing({
-      status: "broken",
-      refreshFailureCount: 2,
-      refreshFirstFailedAt: nowS() - 4 * 24 * 60 * 60,
-    });
-
-    const reports = await reportsDuring(async () => {
-      await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
-    });
-
-    expect(reports).toHaveLength(0);
-  });
-
-  it("gives up exactly at the window, not a second before", async () => {
-    // `>=` rather than `>` on the window, and nothing distinguished the
-    // two: the nearest cases were 60 seconds and four days from a
-    // three-day boundary, so both operators agreed on every input this
-    // suite offered. A mutation shard found it.
-    //
-    // The clock is pinned for the whole test, and that is what makes the
-    // assertion mean anything. `refreshStravaToken` reads `Date.now()`
-    // itself, some milliseconds after this test reads one — on a fast
-    // machine the two land in the same second and the boundary is exact;
-    // on a loaded runner the drift makes the age strictly greater, both
-    // operators agree again, and the mutant comes back alive. Same trap as
-    // `test/weather/retry.test.ts`.
-    const db = coreDb();
-    const now = nowS();
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    const MIN_WINDOW_S = 3 * 24 * 60 * 60;
-
-    // The count is already met (2 stored, +1 for this attempt), so the
-    // window is the only thing left deciding.
-    const atTheLimit = await connectionThatHasBeenFailing({
-      refreshFailureCount: 2,
-      refreshFirstFailedAt: now - MIN_WINDOW_S,
-    });
-    const justInside = await connectionThatHasBeenFailing({
-      refreshFailureCount: 2,
-      refreshFirstFailedAt: now - MIN_WINDOW_S + 1,
-    });
-
-    await reportsDuring(async () => {
-      // Three days of failures to the second has had its window.
-      expect(
-        await refreshStravaToken(
-          db,
-          fakeApi({ refreshFails: true }),
-          atTheLimit,
-        ),
-      ).toBe("broken");
-      // A second short of it has not, however many times it has failed.
-      expect(
-        await refreshStravaToken(
-          db,
-          fakeApi({ refreshFails: true }),
-          justInside,
-        ),
-      ).toBe("degraded");
-    });
-
-    vi.restoreAllMocks();
-  });
-
-  it("needs both the count and the window, not either", async () => {
-    // Three failures inside one short outage must not break a connection,
-    // and neither must one failure that happens to be old.
-    const db = coreDb();
-    const manyButRecent = await connectionThatHasBeenFailing({
-      refreshFailureCount: 5,
-      refreshFirstFailedAt: nowS() - 60,
-    });
-    const oldButFew = await connectionThatHasBeenFailing({
-      refreshFailureCount: 1,
-      refreshFirstFailedAt: nowS() - 30 * 24 * 60 * 60,
-    });
-
-    expect(
-      await refreshStravaToken(
-        db,
-        fakeApi({ refreshFails: true }),
-        manyButRecent,
-      ),
-    ).toBe("degraded");
-    expect(
-      await refreshStravaToken(db, fakeApi({ refreshFails: true }), oldButFew),
-    ).toBe("degraded");
-  });
-
-  it("gives up at exactly three days, not a moment before", async () => {
-    const db = coreDb();
-    const threeDays = 3 * 24 * 60 * 60;
-    const atTheLimit = await connectionThatHasBeenFailing({
-      refreshFailureCount: 2,
-      refreshFirstFailedAt: nowS() - threeDays,
-    });
-    const justInside = await connectionThatHasBeenFailing({
-      refreshFailureCount: 2,
-      refreshFirstFailedAt: nowS() - threeDays + 60,
-    });
-
-    expect(
-      await refreshStravaToken(db, fakeApi({ refreshFails: true }), atTheLimit),
-    ).toBe("broken");
-    expect(
-      await refreshStravaToken(db, fakeApi({ refreshFails: true }), justInside),
-    ).toBe("degraded");
-  });
-
-  it("remembers when the failures started, not when the last one was", async () => {
-    // The window is measured from the first failure of the run. Resetting
-    // it on every failure means a connection that fails daily is never
-    // called broken.
-    const db = coreDb();
-    const firstFailedAt = nowS() - 2 * 24 * 60 * 60;
-    const userId = await connectionThatHasBeenFailing({
-      refreshFailureCount: 1,
-      refreshFirstFailedAt: firstFailedAt,
-    });
-
-    await refreshStravaToken(db, fakeApi({ refreshFails: true }), userId);
-
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.refreshFirstFailedAt).toBe(firstFailedAt);
-    expect(connection?.refreshFailureCount).toBe(2);
-  });
-});
-
 describe("stravaCallbackOutcome (the CSRF guard, D-41)", () => {
   /**
    * This used to be a branch inside `functions.ts`, which imports TanStack
@@ -918,5 +518,253 @@ describe("stravaCallbackOutcome (the CSRF guard, D-41)", () => {
         error: "access_denied",
       }),
     ).toMatchObject({ reason: "Strava connection was cancelled." });
+  });
+});
+
+describe("isCapacityRefusal (STR-6: the eleventh athlete)", () => {
+  it("is Strava's 403 naming the connected-athlete limit", () => {
+    // The response pinned: status 403, message "Limit of connected
+    // athletes exceeded" — what the token exchange answers when the app is
+    // at its athlete cap.
+    expect(
+      isCapacityRefusal(
+        new StravaApiError(
+          "Strava responded 403",
+          403,
+          "Limit of connected athletes exceeded",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("needs both the status and the message", () => {
+    expect(
+      isCapacityRefusal(
+        new StravaApiError(
+          "Strava responded 400",
+          400,
+          "Limit of connected athletes exceeded",
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      isCapacityRefusal(
+        new StravaApiError("Strava responded 403", 403, "Forbidden"),
+      ),
+    ).toBe(false);
+    expect(
+      isCapacityRefusal(new StravaApiError("Strava responded 403", 403)),
+    ).toBe(false);
+  });
+
+  it("is never true of an error that is not Strava's", () => {
+    expect(isCapacityRefusal(new Error("connected athletes"))).toBe(false);
+    expect(isCapacityRefusal(undefined)).toBe(false);
+  });
+});
+
+describe("connectFromCallback (the callback, as one decision)", () => {
+  const GOOD = { expectedState: "s-1", state: "s-1", code: "code-1" };
+
+  it("connects a callback whose state matches", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+
+    const result = await connectFromCallback(db, fakeApi(), userId, GOOD);
+
+    expect(result).toStrictEqual({ ok: true });
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.status).toBe("ok");
+  });
+
+  it("refuses a forged callback without calling Strava", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const exchangeCode = vi.fn(() =>
+      Promise.reject(new Error("must not be called")),
+    );
+
+    const result = await connectFromCallback(
+      db,
+      { ...fakeApi(), exchangeCode },
+      userId,
+      { ...GOOD, state: "other" },
+    );
+
+    expect(result).toStrictEqual({
+      ok: false,
+      reason: "That connection link expired. Try again.",
+      full: false,
+    });
+    expect(exchangeCode).not.toHaveBeenCalled();
+    expect(await getStravaConnection(db, userId)).toBeUndefined();
+  });
+
+  it("says Strava is not configured when there is no api", async () => {
+    const result = await connectFromCallback(
+      coreDb(),
+      undefined,
+      newUlid(),
+      GOOD,
+    );
+
+    expect(result).toStrictEqual({
+      ok: false,
+      reason: "Strava isn't configured yet.",
+      full: false,
+    });
+  });
+
+  it("tells the eleventh athlete the app is full, and reports nothing", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const full = fakeApi({
+      exchangeCode: () =>
+        Promise.reject(
+          new StravaApiError(
+            "Strava responded 403",
+            403,
+            "Limit of connected athletes exceeded",
+          ),
+        ),
+    });
+
+    let result: unknown;
+    const reports = await reportsDuring(async () => {
+      result = await connectFromCallback(db, full, userId, GOOD);
+    });
+
+    expect(result).toStrictEqual({
+      ok: false,
+      reason: "Strava is full for now.",
+      full: true,
+    });
+    // Expected, not a fault: capacity is a known limit of the friends stage.
+    expect(reports).toHaveLength(0);
+    expect(await getStravaConnection(db, userId)).toBeUndefined();
+  });
+
+  it("answers any other exchange failure as a result, and reports it", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const down = fakeApi({
+      exchangeCode: () =>
+        Promise.reject(new StravaApiError("Strava responded 500", 500)),
+    });
+
+    let result: unknown;
+    const reports = await reportsDuring(async () => {
+      result = await connectFromCallback(db, down, userId, GOOD);
+    });
+
+    expect(result).toStrictEqual({
+      ok: false,
+      reason: "Strava didn't connect.",
+      full: false,
+    });
+    expect(reports).toHaveLength(1);
+    expect(reports[0]?.context).toStrictEqual({
+      userId,
+      surface: "strava-connect",
+    });
+  });
+});
+
+describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
+  const CONFIG = { clientId: "client-1", clientSecret: "secret" };
+
+  it("sends a runner to Strava with a fresh nonce in a cookie", () => {
+    const response = stravaConnectRedirect({
+      userId: newUlid(),
+      config: CONFIG,
+      origin: "https://dialed.run",
+      state: "nonce-1",
+    });
+
+    expect(response.status).toBe(302);
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.origin + location.pathname).toBe(
+      "https://www.strava.com/oauth/authorize",
+    );
+    expect(location.searchParams.get("client_id")).toBe("client-1");
+    expect(location.searchParams.get("state")).toBe("nonce-1");
+    expect(location.searchParams.get("redirect_uri")).toBe(
+      "https://dialed.run/runs/strava-callback",
+    );
+    expect(response.headers.get("set-cookie")).toBe(
+      `${STRAVA_STATE_COOKIE}=nonce-1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
+    );
+    expect(STRAVA_STATE_COOKIE).toBe("strava_oauth_state");
+  });
+
+  it("sends a signed-out visitor to log in, with no nonce", () => {
+    const response = stravaConnectRedirect({
+      userId: undefined,
+      config: CONFIG,
+      origin: "https://dialed.run",
+      state: "nonce-1",
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "https://dialed.run/auth/login",
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("sends a runner back to Strava settings when Strava is not configured", () => {
+    const response = stravaConnectRedirect({
+      userId: newUlid(),
+      config: undefined,
+      origin: "https://dialed.run",
+      state: "nonce-1",
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "https://dialed.run/runs/strava",
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+});
+
+async function reminder(
+  userId: string,
+  createdAt: number,
+  kind = "strava_reminder",
+) {
+  await coreDb().insert(notifications).values({
+    id: newUlid(),
+    userId,
+    kind,
+    subjectId: newUlid(),
+    body: "New run on Strava",
+    createdAt,
+  });
+}
+
+describe("stravaStatusOf (T1 and T3a)", () => {
+  it("is not connected, with no run seen, for a runner who never connected", async () => {
+    expect(await stravaStatusOf(coreDb(), newUlid())).toStrictEqual({
+      connected: false,
+      lastRunSeenAt: undefined,
+    });
+  });
+
+  it("is connected, and names the newest reminder's time", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await completeStravaConnect(db, fakeApi(), userId, "code");
+    await reminder(userId, 1000);
+    await reminder(userId, 3000);
+    await reminder(userId, 2000);
+    // Neither another kind nor another runner's reminder counts.
+    await reminder(userId, 9000, "kit_reminder");
+    await reminder(newUlid(), 8000);
+
+    expect(await stravaStatusOf(db, userId)).toStrictEqual({
+      connected: true,
+      lastRunSeenAt: 3000,
+    });
   });
 });

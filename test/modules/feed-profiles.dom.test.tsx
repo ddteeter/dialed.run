@@ -369,19 +369,19 @@ describe("OtherProfile (H)", () => {
     );
 
     const [first, second] = screen.getAllByRole("link", {
-      name: /Tue 12 Aug/u,
+      name: /Tue Aug 12/u,
     });
     expect(first).toHaveAttribute("href", "/feed/entry/01A");
     expect(first).toHaveTextContent(
-      /^Tue 12 AugDialedRain stopped at mile 2\.$/u,
+      /^Tue Aug 12DialedRain stopped at mile 2\.$/u,
     );
     // No verdict, no badge; no caption, no line.
     expect(second).toHaveAttribute("href", "/feed/entry/01B");
-    expect(second).toHaveTextContent(/^Tue 12 Aug$/u);
+    expect(second).toHaveTextContent(/^Tue Aug 12$/u);
     expect(second?.children).toHaveLength(1);
     // And Report still closes the list.
     expect(part("entries")?.lastElementChild).toBe(part("report"));
-    expect(screen.getAllByText("Tue 12 Aug")[0]).toHaveClass("font-mono");
+    expect(screen.getAllByText("Tue Aug 12")[0]).toHaveClass("font-mono");
   });
 
   it("goes back to the feed", async () => {

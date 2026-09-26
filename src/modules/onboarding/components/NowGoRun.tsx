@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { Mono } from "../../../ui";
+import { Mono, StravaButton } from "../../../ui";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -121,20 +121,15 @@ function Steps(): JSX.Element {
 function StravaOffer(): JSX.Element {
   return (
     <div className="flex flex-col gap-3 rounded-sheet border border-hairline p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-body font-semibold">Connect Strava</span>
-          <span className="text-micro text-muted">
-            So we can remind you. Optional.
-          </span>
-        </div>
-        <Link
-          to="/runs/strava"
-          className="target inline-flex items-center shrink-0 rounded-pill border border-hairline px-4 py-2"
-        >
-          <Mono step="xs">Connect</Mono>
-        </Link>
+      <div className="flex flex-col gap-1">
+        <span className="text-body font-semibold">Connect Strava</span>
+        <span className="text-micro text-muted">
+          So we can remind you. Optional.
+        </span>
       </div>
+      {/* Strava's own button in our pill's place, left-aligned (round 26,
+          item 21; task 127, STR-7). */}
+      <StravaButton />
       <p className="m-0 text-micro text-muted">
         We read that a run happened. Nothing else.
       </p>

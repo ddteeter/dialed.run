@@ -28,12 +28,14 @@ import { createNotification, notificationInsert } from "../notifications";
 import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
+  type DeauthorizeJob,
   type ImportJob,
   type ReminderJob,
   type RevokeJob,
 } from "./queue-messages";
-import type { StravaApi } from "./strava/api";
-import { findDuplicateRun, initialWeatherStatus } from "./service";
+import type { StoredToken, StravaApi } from "./strava/api";
+import { deauthorizeAthlete } from "./strava/deauthorize";
+import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 
 export interface ConsumerDeps {
   db: CoreDb;
@@ -53,7 +55,7 @@ export interface ConsumerDeps {
   Present when Strava credentials are configured; the revoke job is a
   no-op without them.
   */
-  stravaApi?: Pick<StravaApi, "deauthorize"> | undefined;
+  stravaApi?: Pick<StravaApi, "revoke"> | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -165,8 +167,7 @@ async function processImportJob(
     startedAt: draft.startedAt,
     durationS: draft.durationS,
     distanceM: draft.distanceM,
-    lat: draft.indoor ? undefined : draft.lat,
-    lng: draft.indoor ? undefined : draft.lng,
+    ...storedStart(draft),
     indoor: draft.indoor,
     title: draft.title,
     weatherStatus,
@@ -249,10 +250,25 @@ async function processReminderJob(
 }
 
 /**
+ * The token a revocation is made with: the refresh token (STR-2), which
+ * does not expire, or — for a row written before that column existed —
+ * the access token it copied, which is the best there is.
+ */
+function revocationToken(row: {
+  accessToken: string;
+  refreshToken: string | null;
+}): StoredToken {
+  return row.refreshToken === null
+    ? { token: row.accessToken, kind: "access_token" }
+    : { token: row.refreshToken, kind: "refresh_token" };
+}
+
+/**
  * Revoke a Strava grant the user has already been disconnected from.
  *
- * Idempotent by nature: revoking an already-revoked token is a no-op
- * upstream, and there is no local state left to reconcile. A failure here
+ * Idempotent by nature: Strava answers 200 to a revoke "whether or not the
+ * token was found", so a grant already dead settles the row exactly as a
+ * live one does, and there is no local state left to reconcile. A failure here
  * throws so the queue retries; exhausting retries puts it in the DLQ,
  * which is where a grant we could not revoke should end up.
  */
@@ -280,7 +296,7 @@ async function processRevokeJob(
     .limit(1);
   if (pending === undefined) return; // already revoked
 
-  await deps.stravaApi.deauthorize(pending.accessToken);
+  await deps.stravaApi.revoke(revocationToken(pending));
   // Only after Strava confirms. A failure above throws, the queue retries,
   // and the row stays — which is the whole point of writing it down.
   await deps.db
@@ -290,9 +306,13 @@ async function processRevokeJob(
 
 async function processJob(
   deps: ConsumerDeps,
-  job: ImportJob | ReminderJob | RevokeJob,
+  job: ImportJob | ReminderJob | RevokeJob | DeauthorizeJob,
 ): Promise<void> {
   switch (job.type) {
+    case "strava_deauthorize": {
+      await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+      return;
+    }
     case "import": {
       await processImportJob(deps, job);
       return;

@@ -74,7 +74,7 @@ describe("R: a row", () => {
     const lateSaturday = Math.floor(Date.UTC(2026, 7, 30, 1, 30) / 1000);
     await renderWithRouter(list([runSummary({ startedAt: lateSaturday })]));
 
-    expect(within(onlyRow()).getByText("6.2 mi · Sat 29 Aug")).toBeVisible();
+    expect(within(onlyRow()).getByText("6.2 mi · Sat Aug 29")).toBeVisible();
   });
 
   it("opens run detail for a run with no entry", async () => {
@@ -158,10 +158,25 @@ describe("R: the badges, and the one breath", () => {
     );
 
     const row = onlyRow();
-    expect(within(row).getByText("55°F · set by you")).toHaveClass(
-      "text-label",
+    expect(within(row).getByText("Set by you")).toHaveClass("text-label");
+    // Round 26, item 2: the range and the sky, never the stored middle.
+    expect(within(row).getByText("Set · 50–59° · Rain")).toHaveClass(
+      "border-hairline",
     );
-    expect(within(row).getByText("Set")).toHaveClass("border-hairline");
+    expect(row).not.toHaveTextContent("55°");
+  });
+
+  it("badges a band set before the sheet asked for a sky with the range alone", async () => {
+    await renderWithRouter(
+      list([
+        runSummary({
+          weatherStatus: "manual",
+          conditions: { ...SET_BY_YOU, sky: undefined },
+        }),
+      ]),
+    );
+
+    expect(within(onlyRow()).getByText("Set · 50–59°")).toBeVisible();
   });
 
   it("breathes instead of badging while the weather is asked for", async () => {
@@ -247,11 +262,15 @@ describe("R: R2b from the list", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
-    await user.click(within(sheet).getByRole("button", { name: "50–59°" }));
+    await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
+    await user.click(within(sheet).getByRole("radio", { name: "Rain" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set 50–59° and rain" }),
+    );
 
     await waitFor(() => {
       expect(setConditions).toHaveBeenCalledWith({
-        data: { runId: "01B", bandFloorC: 10 },
+        data: { runId: "01B", bandFloorC: 10, sky: "rain" },
       });
     });
     await waitFor(() => {
@@ -327,8 +346,8 @@ describe("R: R2b from the list", () => {
       }),
     );
     sheet = await screen.findByRole("dialog");
-    expect(
-      within(sheet).getByRole("button", { name: "Set conditions" }),
-    ).toBeVisible();
+    // The first step, not the last run's picks.
+    expect(sheet).toHaveAccessibleName("No weather saved");
+    expect(within(sheet).queryByRole("radio")).toBeNull();
   });
 });

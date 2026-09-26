@@ -1,19 +1,32 @@
 /**
- * Strava connect/disconnect (102 §6). Writes only `strava_connections` —
- * no other module may import that table (docs/contracts.md). Pure of
- * request plumbing (the `StravaApi` seam is injected) so this is fully
- * unit-testable without live credentials; functions.ts supplies the real
- * `createStravaApi` when secrets are configured.
+ * Strava connect/disconnect (102 §6, task 127). Writes only
+ * `strava_connections` and `strava_revocations` — no other module may
+ * import those tables (docs/contracts.md). Pure of request plumbing (the
+ * `StravaApi` seam is injected) so this is fully unit-testable without
+ * live credentials; functions.ts supplies the real `createStravaApi` when
+ * secrets are configured.
+ *
+ * **There is no token refresh here, on purpose** (task 127, STR-1). The
+ * app never reads activity data, so a stored grant is used for exactly one
+ * thing — revoking it — and `/oauth/revoke` takes the refresh token, which
+ * does not expire until it is rotated. The refresh path and D-1's "broken
+ * after three failures" logic it carried had no production caller
+ * (finding 0.1), and with revocation fixed they have no reason to exist.
+ * A grant the runner kills on Strava's side arrives as a deauthorization
+ * event instead (./deauthorize.ts).
  */
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
-import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
+import {
+  notifications,
+  stravaConnections,
+  stravaRevocations,
+} from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
 import { captureException } from "../../ops";
-import { notificationInsert } from "../../notifications";
-import { isTerminalStravaError } from "./api";
-import type { StravaApi } from "./api";
+import { StravaApiError } from "./api";
+import type { StravaApi, StravaConfig } from "./api";
 import type { RevokeJob } from "../queue-messages";
 import { nowSeconds } from "../../../lib/now";
 
@@ -23,9 +36,17 @@ export interface RevokeQueueProducer {
 
 export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
 
-function nowS(): number {
-  return nowSeconds();
-}
+/**
+ * The cookie the OAuth `state` nonce round-trips in (D-41). Named once:
+ * the connect redirect writes it and the callback reads it.
+ */
+export const STRAVA_STATE_COOKIE = "strava_oauth_state";
+
+/**
+ * How long a runner has on Strava's consent screen before the nonce is
+ * gone and the callback says the link expired.
+ */
+const STATE_COOKIE_MAX_AGE_S = 600;
 
 /**
  * Whether a Strava callback may be exchanged for tokens (D-41).
@@ -69,7 +90,7 @@ export function stravaCallbackOutcome(callback: {
 
 /**
 Pure builder — the redirect_uri is derived by the caller from the live
-request (functions.ts), never hardcoded, so this works in any environment.
+request, never hardcoded, so this works in any environment.
 */
 export function stravaAuthorizeUrl(
   clientId: string,
@@ -87,6 +108,48 @@ export function stravaAuthorizeUrl(
   return `https://www.strava.com/oauth/authorize?${params.toString()}`;
 }
 
+/**
+ * The official Connect with Strava button's destination (STR-7, round 26
+ * #21): *"The button is the link."* A link cannot mint a nonce, so it
+ * points here, and this answers with the nonce in a cookie and a 302 to
+ * Strava's `/oauth/authorize`.
+ *
+ * Signed out, the runner goes to log in; with no credentials configured,
+ * back to T1, which draws no connect button in that case — so neither is
+ * a dead end, and neither mints a nonce for a flow that cannot finish.
+ */
+export function stravaConnectRedirect(request: {
+  userId: string | undefined;
+  config: StravaConfig | undefined;
+  origin: string;
+  state: string;
+}): Response {
+  if (request.userId === undefined) {
+    return redirectTo(`${request.origin}/auth/login`);
+  }
+  if (request.config === undefined) {
+    return redirectTo(`${request.origin}/runs/strava`);
+  }
+  const response = redirectTo(
+    stravaAuthorizeUrl(
+      request.config.clientId,
+      `${request.origin}/runs/strava-callback`,
+      request.state,
+    ),
+  );
+  // `Path=/` because the callback is a different path from this one, and a
+  // cookie with no path is scoped to the directory that set it.
+  response.headers.append(
+    "set-cookie",
+    `${STRAVA_STATE_COOKIE}=${request.state}; Path=/; Max-Age=${String(STATE_COOKIE_MAX_AGE_S)}; HttpOnly; Secure; SameSite=Lax`,
+  );
+  return response;
+}
+
+function redirectTo(location: string): Response {
+  return new Response(undefined, { status: 302, headers: { location } });
+}
+
 export async function getStravaConnection(
   db: CoreDb,
   userId: string,
@@ -100,9 +163,37 @@ export async function getStravaConnection(
 }
 
 /**
+ * What T1 and T3a draw: whether this runner is connected, and when Strava
+ * last told us a run landed (round 25: "CONNECTED · LAST RUN SEEN …").
+ *
+ * The time is the newest reminder's, because a reminder is the only trace
+ * a run landing leaves — we keep no activity. A reminder is marked read
+ * when its file is uploaded, never deleted, so the time outlives that.
+ * Read on `notifications_dedupe`, whose (user, kind) prefix covers it.
+ */
+export async function stravaStatusOf(
+  db: CoreDb,
+  userId: string,
+): Promise<{ connected: boolean; lastRunSeenAt: number | undefined }> {
+  const reminderRows = and(
+    eq(notifications.userId, userId),
+    eq(notifications.kind, "strava_reminder"),
+  );
+  const [connection, [latest]] = await Promise.all([
+    getStravaConnection(db, userId),
+    db
+      .select({ at: notifications.createdAt })
+      .from(notifications)
+      .where(reminderRows)
+      .orderBy(desc(notifications.createdAt))
+      .limit(1),
+  ]);
+  return { connected: connection !== undefined, lastRunSeenAt: latest?.at };
+}
+
+/**
 Exchanges the OAuth `code` and upserts the connection as `ok`. Re-running
-with a fresh code (e.g. the user reconnects after `broken`) replaces the
-row outright.
+with a fresh code (the runner reconnects) replaces the row outright.
 */
 export async function completeStravaConnect(
   db: CoreDb,
@@ -134,161 +225,75 @@ export async function completeStravaConnect(
 }
 
 /**
- * How many consecutive refresh failures, and how long they must have been
- * going on, before a connection is called broken.
+ * Strava's refusal when the app is at its athlete capacity (STR-6): the
+ * friends stage runs at the self-serve cap of ten, and the eleventh
+ * friend's token exchange is refused with **403** and the message "Limit
+ * of connected athletes exceeded".
  *
- * Both are required, and the window is the important half. How long three
- * failures take is entirely a function of how often something calls the
- * refresh — three retries during one short Strava outage would trip a bare
- * counter instantly, while an inactive user might take weeks to accumulate
- * three. The window makes the decision about elapsed trouble rather than
- * about attempt count.
- *
- * Three days, not thirty minutes. A bad day at Strava fails every user's
- * refresh at once, and a short window would turn that into a fleet-wide
- * "reconnect your account" — telling thousands of people to break a grant
- * that was never broken. Three days is longer than any outage we should
- * plan to survive silently, and the user-facing consequence of waiting is
- * only a late reminder.
+ * Both halves are keyed on, so a 403 for any other reason stays a generic
+ * failure rather than telling a runner the app is full when it is not.
  */
-const MAX_CONSECUTIVE_REFRESH_FAILURES = 3;
-const MIN_FAILURE_WINDOW_S = 3 * 24 * 60 * 60;
+export function isCapacityRefusal(error: unknown): boolean {
+  return (
+    error instanceof StravaApiError &&
+    error.status === 403 &&
+    (error.refusal?.includes("connected athletes") ?? false)
+  );
+}
 
 /**
-On-demand refresh. Success clears any failure run; a *terminal* failure
-(Strava rejecting the grant, i.e. the user revoked access) marks the
-connection broken immediately; a transient one is counted and otherwise
-left alone. Still no retry loop here — the user must reconnect to clear a
-broken connection, and the queue owns retries everywhere else.
+ * What the callback screen draws: connected, or why not — with `full`
+ * set only for the capacity refusal, which has its own receipt.
+ */
+export type StravaConnectResult =
+  { ok: true } | { ok: false; reason: string; full: boolean };
 
-The user is notified once, ever, per broken connection: notifications are
-deduped on (user, kind, subject) and this one's subject is the userId. So
-a flapping connection cannot produce a notification storm — but the same
-dedupe means a *second* genuine breakage after a repair is silent, which
-is recorded as its own item in docs/deferred.md.
-*/
-export async function refreshStravaToken(
+/**
+ * The whole callback, as one decision the server function delegates to:
+ * the CSRF guard, the configuration, the exchange, and what each failure
+ * tells the runner.
+ *
+ * An exchange Strava refuses or never answers is a result, not a throw —
+ * the screen says so and offers Try again, where a throw from a loader was
+ * a crash page. It is reported, because a failure here that is not the
+ * capacity is something we did not expect.
+ */
+export async function connectFromCallback(
   db: CoreDb,
-  api: StravaApi,
+  api: StravaApi | undefined,
   userId: string,
-): Promise<"ok" | "broken" | "degraded" | "not_connected"> {
-  const connection = await getStravaConnection(db, userId);
-  if (connection === undefined) return "not_connected";
+  callback: Parameters<typeof stravaCallbackOutcome>[0],
+): Promise<StravaConnectResult> {
+  const outcome = stravaCallbackOutcome(callback);
+  if (!outcome.ok) return { ...outcome, full: false };
+  if (api === undefined) {
+    return { ok: false, reason: "Strava isn't configured yet.", full: false };
+  }
   try {
-    const refreshed = await api.refreshToken(connection.refreshToken);
-    await db
-      .update(stravaConnections)
-      .set({
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
-        expiresAt: refreshed.expiresAt,
-        status: "ok",
-        refreshFailureCount: 0,
-        // drizzle drops `undefined` set-values, so clearing a column
-        // needs a real SQL NULL.
-        refreshFirstFailedAt: sql`NULL`,
-      })
-      .where(eq(stravaConnections.userId, userId));
-    return "ok";
+    await completeStravaConnect(db, api, userId, outcome.code);
+    return { ok: true };
   } catch (error) {
-    return recordRefreshFailure(db, connection, userId, error);
+    if (isCapacityRefusal(error)) {
+      return { ok: false, reason: "Strava is full for now.", full: true };
+    }
+    captureException(error, { userId, surface: "strava-connect" });
+    return { ok: false, reason: "Strava didn't connect.", full: false };
   }
 }
 
-async function recordRefreshFailure(
-  db: CoreDb,
-  connection: {
-    status: "ok" | "broken";
-    refreshFailureCount: number;
-    refreshFirstFailedAt: number | null;
-  },
-  userId: string,
-  error: unknown,
-): Promise<"broken" | "degraded"> {
-  const now = nowS();
-  const firstFailedAt = connection.refreshFirstFailedAt ?? now;
-  const failureCount = connection.refreshFailureCount + 1;
-  const isExhausted =
-    failureCount >= MAX_CONSECUTIVE_REFRESH_FAILURES &&
-    now - firstFailedAt >= MIN_FAILURE_WINDOW_S;
-
-  if (!isExhausted && !isTerminalStravaError(error)) {
-    // Transient, and not yet persistent enough to be worth telling anyone
-    // about. Remember it and leave the connection alone.
-    await db
-      .update(stravaConnections)
-      .set({
-        refreshFailureCount: failureCount,
-        refreshFirstFailedAt: firstFailedAt,
-      })
-      .where(eq(stravaConnections.userId, userId));
-    return "degraded";
-  }
-
-  const markBroken = db
-    .update(stravaConnections)
-    .set({
-      status: "broken",
-      refreshFailureCount: failureCount,
-      refreshFirstFailedAt: firstFailedAt,
-    })
-    .where(eq(stravaConnections.userId, userId));
-
-  // Who hears about this depends on whether we actually know it is the
-  // user's problem.
-  //
-  // A terminal failure is Strava saying this grant is dead, which is
-  // per-user and true, so the user is told — once, on the ok -> broken
-  // transition (`strava_broken` has no subject, and a UNIQUE index does not
-  // dedupe NULLs, so the transition is the guard).
-  //
-  // Exhausted transient failures are ambiguous: Strava down, our config
-  // wrong, a network partition. Telling a user to reconnect then is worse
-  // than saying nothing — they will disconnect a working account to fix a
-  // problem that was never theirs. So the connection is marked broken to
-  // stop hammering, and a human hears about it instead (law 6).
-  //
-  // The notification lands in the same batch as the status change, because
-  // it is the only record the user gets of it: separate awaits leave a
-  // window where the connection reads `broken` and nobody was told, and
-  // the transition guard means the next attempt will not tell them either.
-  const shouldNotify =
-    isTerminalStravaError(error) && connection.status !== "broken";
-  await (shouldNotify
-    ? db.batch([
-        markBroken,
-        notificationInsert(db, {
-          userId,
-          kind: "strava_broken",
-          body: "Your Strava connection needs to be reconnected.",
-        }),
-      ])
-    : markBroken);
-
-  if (!isTerminalStravaError(error) && connection.status !== "broken") {
-    captureException(new Error("strava refresh exhausted without a 4xx"), {
-      userId,
-      failureCount: String(failureCount),
-      firstFailedAt: String(firstFailedAt),
-    });
-  }
-  return "broken";
-}
-
-/**
-Best-effort revoke, then always delete the local row (law 5 — a failing
-upstream call must never block the user's own disconnect action). Refreshes
-first only when the stored access token has actually expired.
-*/
 /**
  * Disconnect locally, then hand the upstream revoke to the queue.
  *
  * The local delete is what the user asked for and it happens immediately —
- * law 5, a failing upstream must never block the user's own action. What
- * changed is that the revoke is no longer a best-effort call swallowed in
- * a `catch`: if Strava is down at that moment we used to simply leave a
- * live grant behind forever. The queue retries it, and a genuinely
- * unrevokable grant ends up in the DLQ where a human sees it.
+ * law 5, a failing upstream must never block the user's own action. The
+ * revoke is owed to another system, so its intent is a row
+ * (`strava_revocations`) written in the same batch as the delete (law 8c),
+ * and the queue message is only a fast path to it.
+ *
+ * **The row carries the refresh token** (STR-2). It used to copy the
+ * access token, which Strava kills six hours after issue — so a
+ * revocation drained any later than that was refused, retried and
+ * re-dispatched every day, forever, while the grant stayed live.
  */
 export async function disconnectStrava(
   db: CoreDb,
@@ -296,24 +301,16 @@ export async function disconnectStrava(
   userId: string,
 ): Promise<void> {
   const connection = await getStravaConnection(db, userId);
-  if (connection === undefined) {
-    await db
-      .delete(stravaConnections)
-      .where(eq(stravaConnections.userId, userId));
-    return;
-  }
+  if (connection === undefined) return;
 
-  // Delete and "remember to revoke" land together, because they are two
-  // halves of one decision and no transaction spans the database and the
-  // queue. Writing the intent first makes dispatch a separate, retryable
-  // problem instead of a fire-and-forget call that can vanish.
   const revocationId = newUlid();
   await db.batch([
     db.delete(stravaConnections).where(eq(stravaConnections.userId, userId)),
     db.insert(stravaRevocations).values({
       id: revocationId,
       accessToken: connection.accessToken,
-      createdAt: nowS(),
+      refreshToken: connection.refreshToken,
+      createdAt: nowSeconds(),
     }),
   ]);
 

@@ -405,7 +405,7 @@ The weather module's writes, recorded rather than performed.
 */
 function fakeWeather() {
   const attached: Ulid[] = [];
-  const recorded: { runId: Ulid; tempC: number }[] = [];
+  const recorded: { runId: Ulid; tempC: number; sky: string }[] = [];
   return {
     attached,
     recorded,
@@ -413,8 +413,8 @@ function fakeWeather() {
       attached.push(runId);
       return Promise.resolve();
     },
-    record: (runId: Ulid, tempC: number) => {
-      recorded.push({ runId, tempC });
+    record: (runId: Ulid, tempC: number, sky: string) => {
+      recorded.push({ runId, tempC, sky });
       return Promise.resolve();
     },
   };
@@ -454,6 +454,7 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
         condition: "clear",
         timeZone: "America/Chicago",
         isSetByYou: false,
+        sky: undefined,
       },
       entryId: undefined,
       hasVerdict: false,
@@ -465,12 +466,13 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
   it("marks a band chosen in R2b as set by you, in the list as on the run", async () => {
     const userId = newUlid();
     const runId = await aRun(userId, { startedAt: START + 7200 });
-    await recordManualObservation(runId as Ulid, 12.5);
+    await recordManualObservation(runId as Ulid, 12.5, "damp");
 
     const [listed] = await listRunSummaries(coreDb(), userId);
     expect(listed?.weatherStatus).toBe("manual");
     expect(listed?.conditions?.tempC).toBe(12.5);
     expect(listed?.conditions?.isSetByYou).toBe(true);
+    expect(listed?.conditions?.sky).toBe("damp");
     const summary = await getRunSummary(coreDb(), userId, runId);
     expect(summary?.conditions?.isSetByYou).toBe(true);
   });
@@ -631,9 +633,14 @@ describe("didSetRunConditions: R2b's pick", () => {
     const weather = fakeWeather();
 
     expect(
-      await didSetRunConditions(coreDb(), weather, userId, runId, 10),
+      await didSetRunConditions(coreDb(), weather, userId, runId, {
+        bandFloorC: 10,
+        sky: "rain",
+      }),
     ).toBe(true);
-    expect(weather.recorded).toStrictEqual([{ runId, tempC: 12.5 }]);
+    expect(weather.recorded).toStrictEqual([
+      { runId, tempC: 12.5, sky: "rain" },
+    ]);
   });
 
   it("refuses a run whose weather arrived, one with no place, and someone else's", async () => {
@@ -645,7 +652,10 @@ describe("didSetRunConditions: R2b's pick", () => {
 
     for (const runId of [attached, nowhere, theirs]) {
       expect(
-        await didSetRunConditions(coreDb(), weather, userId, runId, 10),
+        await didSetRunConditions(coreDb(), weather, userId, runId, {
+          bandFloorC: 10,
+          sky: "rain",
+        }),
       ).toBe(false);
     }
     expect(weather.recorded).toHaveLength(0);

@@ -19,10 +19,11 @@ import { manualConditions, weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
-import type { WeatherObservation } from "../../lib/contracts";
+import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import { readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
+import { orSqlNull } from "../../lib/sql-null";
 
 export interface CacheKey {
   latR: number;
@@ -175,14 +176,17 @@ export async function upsertRealObservation(
 export async function upsertManualBand(
   runId: Ulid,
   tempC: number,
+  // R2b's sky (task 127, STR-12). Optional so a caller that predates the
+  // pick still writes a band; a later pick replaces it either way.
+  sky?: ManualSky,
 ): Promise<void> {
   const stampedAt = nowSeconds();
   await weatherDb()
     .insert(manualConditions)
-    .values({ runId, tempC, setAt: stampedAt })
+    .values({ runId, tempC, setAt: stampedAt, sky })
     .onConflictDoUpdate({
       target: manualConditions.runId,
-      set: { tempC, setAt: stampedAt },
+      set: { tempC, setAt: stampedAt, sky: orSqlNull(sky) },
     });
 }
 

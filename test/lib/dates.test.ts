@@ -5,6 +5,7 @@ import {
   dayLabel,
   dayTimeLabel,
   isTimeZone,
+  proseDayLabel,
   deviceTimeZone,
   startAtTimeOfDay,
   timeOfDay,
@@ -27,26 +28,46 @@ const LATE_ON_THE_21ST = Math.floor(Date.UTC(2026, 8, 21, 23, 30) / 1000);
 const EARLY_ON_THE_22ND = Math.floor(Date.UTC(2026, 8, 22, 0, 30) / 1000);
 
 describe("dayLabel", () => {
-  it("formats the board's shape — weekday, day, short month", () => {
-    // "Mon 2 Sep", not "Mon, Sep 2": en-GB is pinned because it is what
-    // the artboards draw, not because of where anyone is.
-    expect(dayLabel(LATE_ON_THE_21ST)).toBe("Mon 21 Sep");
+  it("formats a mono label's shape — weekday, short month, day", () => {
+    // US order, month before day (round 26, item 9), and no comma: the
+    // mono step sets it as "MON SEP 21".
+    expect(dayLabel(LATE_ON_THE_21ST)).toBe("Mon Sep 21");
+  });
+
+  it("keeps the month to three letters, September included", () => {
+    // en-GB's short September is "Sept"; the boards draw "SEP".
+    expect(dayLabel(LATE_ON_THE_21ST)).not.toContain("Sept");
+  });
+});
+
+describe("proseDayLabel", () => {
+  it("writes the day as a sentence says it — with the comma", () => {
+    expect(proseDayLabel(LATE_ON_THE_21ST)).toBe("Mon, Sep 21");
+    expect(proseDayLabel(0)).toBe("Thu, Jan 1");
+  });
+
+  it("dates the day in the run's own zone, like dayLabel", () => {
+    const afterUtcMidnight = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
+    expect(proseDayLabel(afterUtcMidnight, "America/Chicago")).toBe(
+      "Mon, Sep 21",
+    );
+    expect(proseDayLabel(afterUtcMidnight)).toBe("Tue, Sep 22");
   });
 
   it("reads the epoch in UTC, whatever the runtime's zone is", () => {
     // Half an hour later is the next UTC day. Both assertions together
     // are what pin the zone: one of them moves if `timeZone` is dropped
     // and the test host is not on UTC.
-    expect(dayTimeLabel(LATE_ON_THE_21ST)).toBe("Mon 21 Sep, 23:30");
-    expect(dayLabel(EARLY_ON_THE_22ND)).toBe("Tue 22 Sep");
+    expect(dayTimeLabel(LATE_ON_THE_21ST)).toBe("Mon Sep 21, 23:30");
+    expect(dayLabel(EARLY_ON_THE_22ND)).toBe("Tue Sep 22");
   });
 
   it("takes seconds, not milliseconds", () => {
     // Every `*_at` column stores seconds. Passing milliseconds is the
     // mistake this signature exists to make impossible to forget, and it
     // lands about 55,000 years out rather than failing loudly.
-    expect(dayLabel(0)).toBe("Thu 1 Jan");
-    expect(dayLabel(86_400)).toBe("Fri 2 Jan");
+    expect(dayLabel(0)).toBe("Thu Jan 1");
+    expect(dayLabel(86_400)).toBe("Fri Jan 2");
   });
 
   it("is stable across calls, so a shared formatter is safe to reuse", () => {
@@ -60,12 +81,12 @@ describe("dayTimeLabel", () => {
   it("adds a zero-padded 24-hour time to the day", () => {
     // Two notifications on the same day are indistinguishable without
     // it, and a list sorted by time would look unsorted.
-    expect(dayTimeLabel(EARLY_ON_THE_22ND)).toBe("Tue 22 Sep, 00:30");
+    expect(dayTimeLabel(EARLY_ON_THE_22ND)).toBe("Tue Sep 22, 00:30");
   });
 
   it("pads both halves, so the column does not ragged-edge", () => {
     const nineOhFive = Math.floor(Date.UTC(2026, 8, 2, 9, 5) / 1000);
-    expect(dayTimeLabel(nineOhFive)).toBe("Wed 2 Sep, 09:05");
+    expect(dayTimeLabel(nineOhFive)).toBe("Wed Sep 2, 09:05");
   });
 
   it("renders midnight as 00:00, never 24:00", () => {
@@ -74,7 +95,7 @@ describe("dayTimeLabel", () => {
     // guards the engine rather than the code — which is why it is pinned
     // rather than left to be noticed.
     const midnight = Math.floor(Date.UTC(2026, 8, 22, 0, 0) / 1000);
-    expect(dayTimeLabel(midnight)).toBe("Tue 22 Sep, 00:00");
+    expect(dayTimeLabel(midnight)).toBe("Tue Sep 22, 00:00");
   });
 
   it("carries the same day as dayLabel for the same epoch", () => {
@@ -95,18 +116,18 @@ const AFTER_UTC_MIDNIGHT = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
 
 describe("the run's own zone (D-96)", () => {
   it("dates a run where it happened, not where UTC is", () => {
-    expect(dayLabel(AFTER_UTC_MIDNIGHT)).toBe("Tue 22 Sep");
-    expect(dayLabel(AFTER_UTC_MIDNIGHT, "America/Chicago")).toBe("Mon 21 Sep");
+    expect(dayLabel(AFTER_UTC_MIDNIGHT)).toBe("Tue Sep 22");
+    expect(dayLabel(AFTER_UTC_MIDNIGHT, "America/Chicago")).toBe("Mon Sep 21");
     // East of UTC too, so the zone is not merely "subtract five hours".
-    expect(dayLabel(AFTER_UTC_MIDNIGHT, "Asia/Tokyo")).toBe("Tue 22 Sep");
+    expect(dayLabel(AFTER_UTC_MIDNIGHT, "Asia/Tokyo")).toBe("Tue Sep 22");
   });
 
   it("carries the zone into the time of day as well", () => {
     expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "America/Chicago")).toBe(
-      "Mon 21 Sep, 22:30",
+      "Mon Sep 21, 22:30",
     );
     expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "Asia/Tokyo")).toBe(
-      "Tue 22 Sep, 12:30",
+      "Tue Sep 22, 12:30",
     );
   });
 
@@ -114,9 +135,9 @@ describe("the run's own zone (D-96)", () => {
     // The zone is stored from a third party. An invalid one must not
     // become a RangeError on every screen that shows the run.
     expect(dayLabel(AFTER_UTC_MIDNIGHT, "Mars/Olympus_Mons")).toBe(
-      "Tue 22 Sep",
+      "Tue Sep 22",
     );
-    expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "")).toBe("Tue 22 Sep, 03:30");
+    expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "")).toBe("Tue Sep 22, 03:30");
   });
 });
 

@@ -17,6 +17,7 @@ import {
   importFailureReason,
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
+import type { StoredToken, StravaApi } from "../../src/modules/runs/strava/api";
 import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
@@ -552,37 +553,78 @@ describe("the import consumer's quieter paths", () => {
   });
 });
 
-async function seedRevocation(accessToken = "token"): Promise<string> {
+async function seedRevocation(
+  accessToken = "token",
+  refreshToken?: string,
+): Promise<string> {
   const id = newUlid();
   await coreDb().insert(stravaRevocations).values({
     id,
     accessToken,
+    refreshToken,
     createdAt: nowSeconds(),
   });
   return id;
 }
 
-describe("the Strava revoke job (the outbox's other half)", () => {
-  it("revokes upstream, then deletes the row", async () => {
-    // The order is the guarantee: the row is what says we still owe Strava
-    // a call, so it goes only after Strava confirms.
-    const revoked: string[] = [];
-    const revocationId = await seedRevocation("the-token");
-    const deps = makeDeps({
-      stravaApi: {
-        deauthorize: (accessToken: string) => {
-          revoked.push(accessToken);
-          return Promise.resolve();
-        },
+/**
+ * A Strava api whose revoke records what it was handed.
+ */
+function recordingRevoke(): {
+  revoked: StoredToken[];
+  stravaApi: Pick<StravaApi, "revoke">;
+} {
+  const revoked: StoredToken[] = [];
+  return {
+    revoked,
+    stravaApi: {
+      revoke: (token) => {
+        revoked.push(token);
+        return Promise.resolve();
       },
-    });
+    },
+  };
+}
+
+describe("the Strava revoke job (the outbox's other half)", () => {
+  it("revokes with the refresh token, then deletes the row", async () => {
+    // STR-2: the refresh token, because it is still good however late the
+    // drain runs. The order is the guarantee: the row is what says we
+    // still owe Strava a call, so it goes only after Strava confirms.
+    const { revoked, stravaApi } = recordingRevoke();
+    const revocationId = await seedRevocation("the-access", "the-refresh");
+    const deps = makeDeps({ stravaApi });
 
     const { batch } = fakeBatch([
       { body: { type: "strava_revoke", revocationId } },
     ]);
     await handleImportsBatch(batch, deps);
 
-    expect(revoked).toStrictEqual(["the-token"]);
+    expect(revoked).toStrictEqual([
+      { token: "the-refresh", kind: "refresh_token" },
+    ]);
+    const rows = await coreDb()
+      .select()
+      .from(stravaRevocations)
+      .where(eq(stravaRevocations.id, revocationId));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("revokes a row written before the refresh token with its access token", async () => {
+    // Law 9's cousin for tables: a row the previous deploy wrote still
+    // drains. Strava answers 200 whether or not the token is found, so
+    // even a dead access token settles the row.
+    const { revoked, stravaApi } = recordingRevoke();
+    const revocationId = await seedRevocation("legacy-access");
+
+    const { batch } = fakeBatch([
+      { body: { type: "strava_revoke", revocationId } },
+    ]);
+    await handleImportsBatch(batch, makeDeps({ stravaApi }));
+
+    expect(revoked).toStrictEqual([
+      { token: "legacy-access", kind: "access_token" },
+    ]);
     const rows = await coreDb()
       .select()
       .from(stravaRevocations)
@@ -596,7 +638,7 @@ describe("the Strava revoke job (the outbox's other half)", () => {
     const revocationId = await seedRevocation();
     const deps = makeDeps({
       stravaApi: {
-        deauthorize: () => Promise.reject(new Error("Strava is down")),
+        revoke: () => Promise.reject(new Error("Strava is down")),
       },
     });
 
@@ -618,7 +660,7 @@ describe("the Strava revoke job (the outbox's other half)", () => {
     let called = 0;
     const deps = makeDeps({
       stravaApi: {
-        deauthorize: () => {
+        revoke: () => {
           called += 1;
           return Promise.resolve();
         },
@@ -869,5 +911,138 @@ describe("weather attachment is only attempted where it can help", () => {
       .from(imports)
       .where(eq(imports.id, importId));
     expect(attached).toStrictEqual([after?.runId]);
+  });
+});
+
+async function seedConnection(): Promise<{
+  userId: string;
+  athleteId: string;
+}> {
+  const userId = newUlid();
+  const athleteId = newUlid();
+  await coreDb()
+    .insert(stravaConnections)
+    .values({
+      userId,
+      athleteId,
+      accessToken: "access",
+      refreshToken: "refresh",
+      expiresAt: nowSeconds() + 3600,
+      status: "ok",
+    });
+  return { userId, athleteId };
+}
+
+async function revokedRows(userId: string) {
+  return coreDb()
+    .select()
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.kind, "strava_broken"),
+      ),
+    );
+}
+
+describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
+  it("deletes the connection's tokens and athlete id, and tells the runner", async () => {
+    const { userId, athleteId } = await seedConnection();
+
+    const { batch, wrapped } = fakeBatch([
+      {
+        body: {
+          type: "strava_deauthorize",
+          athleteId,
+          eventTime: 1_516_126_040,
+        },
+      },
+    ]);
+    await handleImportsBatch(batch, makeDeps());
+
+    expect(wrapped[0]?.wasAcked).toBe(true);
+    const left = await coreDb()
+      .select()
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, athleteId));
+    expect(left).toStrictEqual([]);
+    const rows = await revokedRows(userId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      subjectId: "1516126040",
+      body: "You disconnected dialed.run on Strava, so run reminders have stopped.",
+      read: false,
+    });
+    // Nothing is owed back to Strava: the athlete already revoked us.
+    expect(
+      await coreDb()
+        .select()
+        .from(stravaRevocations)
+        .where(eq(stravaRevocations.refreshToken, "refresh")),
+    ).toStrictEqual([]);
+  });
+
+  it("is a no-op on redelivery", async () => {
+    const { userId, athleteId } = await seedConnection();
+    const body = { type: "strava_deauthorize", athleteId, eventTime: 42 };
+
+    await handleImportsBatch(fakeBatch([{ body }]).batch, makeDeps());
+    const { batch, wrapped } = fakeBatch([{ body }]);
+    await handleImportsBatch(batch, makeDeps());
+
+    expect(wrapped[0]?.wasAcked).toBe(true);
+    expect(await revokedRows(userId)).toHaveLength(1);
+  });
+
+  it("writes one row even when two deliveries race past the read", async () => {
+    // Both see the connection; the event time as subject is what makes the
+    // second notification insert nothing.
+    const { userId, athleteId } = await seedConnection();
+    const body = { type: "strava_deauthorize", athleteId, eventTime: 77 };
+
+    await Promise.all([
+      handleImportsBatch(fakeBatch([{ body }]).batch, makeDeps()),
+      handleImportsBatch(fakeBatch([{ body }]).batch, makeDeps()),
+    ]);
+
+    expect(await revokedRows(userId)).toHaveLength(1);
+  });
+
+  it("acknowledges and ignores an athlete nobody connected", async () => {
+    const deps = makeDeps();
+    const { batch, wrapped } = fakeBatch([
+      {
+        body: {
+          type: "strava_deauthorize",
+          athleteId: newUlid(),
+          eventTime: 1,
+        },
+      },
+    ]);
+
+    await handleImportsBatch(batch, deps);
+
+    expect(wrapped[0]?.wasAcked).toBe(true);
+    expect(wrapped[0]?.wasRetried).toBe(false);
+    expect(deps.exceptions).toStrictEqual([]);
+  });
+
+  it("leaves every other runner's connection alone", async () => {
+    const other = await seedConnection();
+    const { athleteId } = await seedConnection();
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "strava_deauthorize", athleteId, eventTime: 5 } },
+      ]).batch,
+      makeDeps(),
+    );
+
+    const kept = await coreDb()
+      .select()
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, other.athleteId));
+    expect(kept).toHaveLength(1);
+    expect(await revokedRows(other.userId)).toStrictEqual([]);
   });
 });

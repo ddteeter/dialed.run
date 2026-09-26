@@ -11,6 +11,7 @@ import {
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/keyed-read";
+import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor } from "./crons";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
@@ -425,6 +426,9 @@ async function runDailyDigest(): Promise<string[]> {
   await checkOutboxBacklog(db, anomalies);
   await redispatchStalledImports(anomalies);
   await checkReviewQueueDepth(anomalies);
+  // Strava's seven-day cache rule, on the activity ids we hold (task 127,
+  // STR-10). Rides this firing rather than a cron of its own.
+  await pruneStravaIds(db);
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)
   // - stale cron_checkpoints rows

@@ -633,6 +633,16 @@ export const weatherObservationSchema = z.object({
 export type WeatherObservation = z.infer<typeof weatherObservationSchema>;
 
 /**
+ * R2b's second pick (design round 26, item 2): the sky a runner says they
+ * ran under, when the weather gave up on a run. Stored beside the band in
+ * `manual_conditions.sky`, in the order the sheet offers them, driest
+ * first. Like the band, it is excluded from every aggregate.
+ */
+export const manualSkies = ["dry", "damp", "rain", "snow"] as const;
+export const manualSkySchema = z.enum(manualSkies);
+export type ManualSky = z.infer<typeof manualSkySchema>;
+
+/**
  * What a place is like in a season, rather than on a day.
  *
  * Means over the provider's statistical period, not a single reading: a

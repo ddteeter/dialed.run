@@ -71,26 +71,47 @@ describe("the id inputs", () => {
 describe("conditionsBandInput", () => {
   it("takes one of the bands R2b offers, at either end", () => {
     const runId = newUlid();
-    expect(conditionsBandInput.parse({ runId, bandFloorC: -20 })).toStrictEqual(
-      {
-        runId,
-        bandFloorC: -20,
-      },
-    );
     expect(
-      conditionsBandInput.parse({ runId, bandFloorC: 35 }).bandFloorC,
+      conditionsBandInput.parse({ runId, bandFloorC: -20, sky: "dry" }),
+    ).toStrictEqual({
+      runId,
+      bandFloorC: -20,
+      sky: "dry",
+    });
+    expect(
+      conditionsBandInput.parse({ runId, bandFloorC: 35, sky: "snow" })
+        .bandFloorC,
     ).toBe(35);
   });
 
   it("refuses a number R2b never offered — a typed one, or one off the list", () => {
     const runId = newUlid();
     for (const bandFloorC of [12, -25, 40, 12.5]) {
-      const result = conditionsBandInput.safeParse({ runId, bandFloorC });
+      const result = conditionsBandInput.safeParse({
+        runId,
+        bandFloorC,
+        sky: "rain",
+      });
       expect(result.success, String(bandFloorC)).toBe(false);
       expect(result.error?.issues[0]?.message).toBe("Pick one of the bands.");
     }
     expect(
-      conditionsBandInput.safeParse({ runId: "01RUN", bandFloorC: 10 }).success,
+      conditionsBandInput.safeParse({
+        runId: "01RUN",
+        bandFloorC: 10,
+        sky: "rain",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires one of the four skies (round 26, item 2)", () => {
+    const runId = newUlid();
+    expect(
+      conditionsBandInput.safeParse({ runId, bandFloorC: 10 }).success,
+    ).toBe(false);
+    expect(
+      conditionsBandInput.safeParse({ runId, bandFloorC: 10, sky: "fog" })
+        .success,
     ).toBe(false);
   });
 });
