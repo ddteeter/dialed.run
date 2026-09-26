@@ -34,12 +34,20 @@ Audit §3.1 item 5, confirmed against `ci.yml` on `main`:
 +      # ADMIN_USER_IDS: the Desk's operator in e2e/desk (register D-72).
 +      # The TURNSTILE_* pair are Cloudflare's documented always-pass test
 +      # keys, so sign-up works in CI once the widget is on it (OPS-5).
++      # BETTER_AUTH_URL: overrides the production var in wrangler.jsonc so
++      # local sign-in keeps working (OPS-4). The STRAVA_* values are fake
++      # placeholders so lane 127's webhook demo runs (owner, 2026-09-26);
++      # nothing real is ever called with them.
 +      - run: |
 +          {
 +            echo "BETTER_AUTH_SECRET=ci-only-secret"
 +            echo "ADMIN_USER_IDS=e2e-desk-operator"
 +            echo "TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA"
 +            echo "TURNSTILE_SITE_KEY=1x00000000000000000000AA"
++            echo "BETTER_AUTH_URL=http://localhost:3000"
++            echo "STRAVA_CLIENT_ID=0"
++            echo "STRAVA_CLIENT_SECRET=ci-placeholder-not-a-secret"
++            echo "STRAVA_SUBSCRIPTION_ID=1"
 +          } > .dev.vars
        - run: npx wrangler d1 migrations apply dialed-core --local
        - run: npx wrangler d1 migrations apply dialed-weather --local
@@ -75,6 +83,9 @@ Audit §3.1 item 5, confirmed against `ci.yml` on `main`:
          run: npx wrangler deploy
          env:
 ```
+
+**Approved by the owner on 2026-09-26**, including the placeholder Strava
+values, to be applied by task 125 as its own small PR once #104 has merged.
 
 ## What it needs besides the diff
 
