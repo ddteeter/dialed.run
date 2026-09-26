@@ -10,3 +10,6 @@ export {
   type TurnstileRefusal,
   type TurnstileVerdict,
 } from "./turnstile";
+// The share card, for task 129's entry route (FEED-14).
+export { entryCardResponse } from "./og/respond";
+export type { EntryCardData } from "./og/cards";

@@ -24,6 +24,7 @@ import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
+import { Route as OgDefaultRouteImport } from './routes/og/default'
 import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding/done'
 import { Route as OnboardingNameRouteImport } from './routes/onboarding/name'
@@ -122,6 +123,11 @@ const FeedSearchRoute = FeedSearchRouteImport.update({
 const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
   id: '/notifications/',
   path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgDefaultRoute = OgDefaultRouteImport.update({
+  id: '/og/default',
+  path: '/og/default',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingCalibrateRoute = OnboardingCalibrateRouteImport.update({
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/name': typeof OnboardingNameRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/name': typeof OnboardingNameRoute
@@ -338,6 +346,7 @@ export interface FileRoutesById {
   '/closet/new': typeof ClosetNewRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/name': typeof OnboardingNameRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
     | '/onboarding/name'
@@ -421,6 +431,7 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
     | '/onboarding/name'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/closet/new'
     | '/feed/me'
     | '/feed/search'
+    | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
     | '/onboarding/name'
@@ -504,6 +516,7 @@ export interface RootRouteChildren {
   ClosetNewRoute: typeof ClosetNewRoute
   FeedMeRoute: typeof FeedMeRoute
   FeedSearchRoute: typeof FeedSearchRoute
+  OgDefaultRoute: typeof OgDefaultRoute
   OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
   OnboardingDoneRoute: typeof OnboardingDoneRoute
   OnboardingNameRoute: typeof OnboardingNameRoute
@@ -639,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications/'
       preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/default': {
+      id: '/og/default'
+      path: '/og/default'
+      fullPath: '/og/default'
+      preLoaderRoute: typeof OgDefaultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/calibrate': {
@@ -835,6 +855,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClosetNewRoute: ClosetNewRoute,
   FeedMeRoute: FeedMeRoute,
   FeedSearchRoute: FeedSearchRoute,
+  OgDefaultRoute: OgDefaultRoute,
   OnboardingCalibrateRoute: OnboardingCalibrateRoute,
   OnboardingDoneRoute: OnboardingDoneRoute,
   OnboardingNameRoute: OnboardingNameRoute,

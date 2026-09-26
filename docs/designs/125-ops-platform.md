@@ -62,8 +62,27 @@ lanes stand on: the Desk shell (D0), Turnstile, headers, icons, the OG card.
 - **OPS-14** `weather/store.ts` and `read.ts` stop special-casing legacy
   `source='manual'` rows. Dropping `"manual"` from the schema enum is a
   tightened constraint, so it is a question, not a change.
-- **OPS-15** after #104 merges. **OPS-16** once the library is measured
-  (numbers below, added before adopting). **OPS-11** after 126's ACC-2.
+- **OPS-15** after #104 merges. **OPS-11** after 126's ACC-2.
+- **OPS-16 · `@cf-wasm/og` 0.5.0**, measured (wrangler 4.129, `deploy
+--dry-run` and `wrangler dev`, a card of ~10 text nodes, three fonts):
+
+  | option                  | Worker JS gzip | WASM raw (gzip)      | cold / warm render | verdict                                                         |
+  | ----------------------- | -------------- | -------------------- | ------------------ | --------------------------------------------------------------- |
+  | `workers-og` 0.0.27     | 147 KB         | 1.46 MB (562 KB)     | 95 / ~30 ms        | logs an init error on every warm hit                            |
+  | satori 0.32 + resvg 2.6 | 178 KB         | 2.55 MB (987 KB)     | 100 / ~25 ms       | works, largest                                                  |
+  | satori 0.33 (latest)    | —              | + harfbuzz 978 KB    | fails in workerd   | ruled out                                                       |
+  | **`@cf-wasm/og` 0.5.0** | **207 KB**     | **1.45 MB (559 KB)** | **84 / ~26 ms**    | **adopted**: same author and wasm pattern as the photon we ship |
+  | SVG only                | —              | yoga only            | 39 / ~5 ms         | no social preview takes an SVG                                  |
+
+  The Worker is 6.5 MB raw today; this adds ~2.3 MB raw (~0.8 MB gzip),
+  against a 64 MiB uncompressed limit with no compressed limit (Workers
+  limits page, checked 2026-09-25), 128 MB memory and 1 s startup. The
+  import is lazy, so the wasm compiles on the first card, not per isolate.
+  Fonts are vendored static latin WOFF (satori reads no WOFF2), as `.bin`
+  so the vite plugin hands over bytes. **Not large, so adopted without
+  stopping.** The route is `/og/default`; the entry card is built and
+  tested, and 129 wires `/og/entry/$id` to feed's public read
+  (`entryCardResponse`, exported from `modules/ops`).
 
 ## Contract touches
 
