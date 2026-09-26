@@ -2,7 +2,7 @@
 
 `privacy-policy.md` is only true while the code below stays as it is. This
 file maps each claim to the code or config that makes it true, as of
-`origin/main` at `f544c67` (2026-09-25). **A change to any file named here
+`origin/main` at `be70c6d` (2026-09-25). **A change to any file named here
 should come with a check of the matching policy line**, and a change to the
 policy should come with a check of the code.
 
