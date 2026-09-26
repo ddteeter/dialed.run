@@ -1,0 +1,13 @@
+# Security headers for the static assets (OPS-8). The assets layer answers
+# these files without running the Worker, so server.ts's wrapper never sees
+# them; Cloudflare applies this file instead, and to nothing the Worker
+# generates. The values are ops/security-headers.ts's, without a report-uri
+# (it is derived from the SENTRY_DSN secret, which this file cannot read),
+# and test/ops/static-headers.dom.test.tsx fails if the two drift.
+/*
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://www.strava.com
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), payment=(), usb=(), geolocation=(self)
+  Strict-Transport-Security: max-age=31536000

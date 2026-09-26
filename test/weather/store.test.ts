@@ -13,7 +13,6 @@ import {
   upsertManualBand,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
-import { makeObservation } from "../feed/helpers";
 
 import { nowSeconds } from "../../src/lib/now";
 const OBSERVATION = {
@@ -61,26 +60,6 @@ describe("weather cache (103)", () => {
     expect(row).toBeDefined();
   });
 
-  it("does not find a legacy band in the cell: it is not the weather (B1)", async () => {
-    const at = new Date("2026-03-01T09:00:00Z");
-    await plantLegacyBand(40.1, -80.2, at);
-
-    expect(
-      await findObservationRow(cacheKeyFor(40.1, -80.2, at)),
-    ).toBeUndefined();
-  });
-
-  it("a real fetch upgrades a legacy band occupying the same cell", async () => {
-    const at = new Date("2026-03-02T09:00:00Z");
-    const key = cacheKeyFor(40.2, -80.3, at);
-    await plantLegacyBand(40.2, -80.3, at);
-
-    await upsertRealObservation(key, OBSERVATION, newUlid());
-    const row = await findObservationRow(key);
-    expect(row?.source).toBe("visualcrossing");
-    expect(row?.tempC).toBe(5);
-  });
-
   it("a real row is never overwritten by a later fetch", async () => {
     const at = new Date("2026-04-01T09:00:00Z");
     const key = cacheKeyFor(41.1, -81.2, at);
@@ -91,20 +70,6 @@ describe("weather cache (103)", () => {
     expect(row?.tempC).toBe(5);
   });
 });
-
-/**
-A band written the way it was before `manual_conditions`: into the cell.
-*/
-async function plantLegacyBand(lat: number, lng: number, at: Date) {
-  await makeObservation({
-    lat,
-    lng,
-    startedAt: at.getTime() / 1000,
-    tempC: 30,
-    feelsLikeC: 30,
-    source: "manual",
-  });
-}
 
 describe("a run's band (R2b, B1)", () => {
   it("is found by its run, and by no other", async () => {
@@ -207,13 +172,11 @@ describe("the observation's zone (D-96)", () => {
     });
   });
 
-  it("stores no zone when the fetch that upgrades a legacy band names none", async () => {
-    // The only rows an upsert overwrites are legacy bands (`setWhere`),
-    // and those never carry a zone — so a fetch without one leaves the
-    // column empty rather than inventing or keeping anything.
+  it("stores no zone when the fetch names none", async () => {
+    // A fetch without a zone leaves the column empty rather than inventing
+    // one, and the observation read back carries none.
     const at = new Date("2026-04-02T11:00:00Z");
     const key = cacheKeyFor(41.89, -87.64, at);
-    await plantLegacyBand(41.89, -87.64, at);
     await upsertRealObservation(key, OBSERVATION, newUlid());
 
     const row = await findObservationRow(key);
