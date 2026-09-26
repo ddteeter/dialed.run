@@ -205,8 +205,10 @@ needs its own Strava app, not a second subscription.
 
 ## 8. After the first deploy
 
-- `GET /api/health` — reports per-binding status; expect every check `ok`.
-  A failure here names the binding, which is faster than reading a stack.
+- `GET /api/health` — reports per-binding status; expect every check `ok`
+  and `missing` empty. A failure here names the binding, and `missing`
+  names any required var by its own name (today, `BETTER_AUTH_URL`), which
+  is faster than reading a stack. Either makes it answer 503.
 - Confirm all four cron triggers are listed under Settings → Triggers.
 - Confirm the four queues show a consumer attached.
 - **Prove Sentry delivers, from a fetch and from a cron**, before relying on

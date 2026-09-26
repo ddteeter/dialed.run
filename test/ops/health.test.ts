@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "../../src/env";
 import { checkHealth } from "../../src/modules/ops";
@@ -13,8 +13,18 @@ import { nowSeconds } from "../../src/lib/now";
  * databases would have passed.
  */
 
+// Every case starts from a configured deployment, so a binding failure is
+// the only thing making a report unhealthy — the configuration cases below
+// take the var away themselves.
+const CONFIGURED_URL: unknown = env.BETTER_AUTH_URL;
+
+beforeEach(() => {
+  Reflect.set(env, "BETTER_AUTH_URL", "https://dialed.test");
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
+  Reflect.set(env, "BETTER_AUTH_URL", CONFIGURED_URL);
 });
 
 describe("checkHealth when something is down", () => {
@@ -79,5 +89,44 @@ describe("what a healthy report says", () => {
 
     expect(report.at).toBeGreaterThanOrEqual(before - 5);
     expect(report.at).toBeLessThanOrEqual(before + 5);
+  });
+});
+
+describe("required configuration (OPS-4)", () => {
+  const ORIGINAL: unknown = env.BETTER_AUTH_URL;
+
+  afterEach(() => {
+    Reflect.set(env, "BETTER_AUTH_URL", ORIGINAL);
+  });
+
+  it("names a missing BETTER_AUTH_URL, and is not healthy without it", async () => {
+    Reflect.deleteProperty(env, "BETTER_AUTH_URL");
+
+    const report = await checkHealth();
+
+    expect(report.missing).toStrictEqual(["BETTER_AUTH_URL"]);
+    expect(report.ok).toBe(false);
+  });
+
+  it("treats an empty BETTER_AUTH_URL as missing", async () => {
+    Reflect.set(env, "BETTER_AUTH_URL", "");
+
+    const report = await checkHealth();
+
+    expect(report.missing).toStrictEqual(["BETTER_AUTH_URL"]);
+  });
+
+  it("is healthy with every binding up and nothing missing", async () => {
+    Reflect.set(env, "BETTER_AUTH_URL", "https://dialed.run");
+
+    const report = await checkHealth();
+
+    expect(report.missing).toStrictEqual([]);
+    expect(report.checks).toStrictEqual({
+      coreDb: "ok",
+      weatherDb: "ok",
+      media: "ok",
+    });
+    expect(report.ok).toBe(true);
   });
 });
