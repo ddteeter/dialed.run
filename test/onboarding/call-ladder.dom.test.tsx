@@ -78,32 +78,39 @@ describe("K's header", () => {
   });
 });
 
-describe("zero verdicts (round 22, item 24)", () => {
-  it("is K as drawn: the meter at nothing, and the one instruction", async () => {
+/**
+The meter's cells, and which of them are logged.
+*/
+function cells() {
+  const meter = screen.getByRole("img", { name: /verdicts logged$/u });
+  const all = within(meter).queryAllByText("", { selector: "span" });
+  return {
+    meter,
+    total: all.length,
+    logged: all.filter((cell) => cell.dataset.state === "logged"),
+    empty: all.filter((cell) => cell.dataset.state === undefined),
+  };
+}
+
+describe("zero verdicts (round 26 #15)", () => {
+  it("is K as drawn: 0 of 15, an empty meter, the instruction and the zero line", async () => {
     await renderLadder(<CallLadder ladder={ladderFrom([])} />);
 
-    const meter = screen.getByRole("meter", {
-      name: "Verdicts toward your first call",
-    });
-    expect(meter).toHaveAttribute("aria-valuemin", "0");
-    expect(meter).toHaveAttribute(
-      "aria-valuemax",
-      String(CALL_VERDICT_THRESHOLD),
-    );
-    expect(meter).toHaveAttribute("aria-valuenow", "0");
-    expect(document.querySelector("[data-part='meter-fill']")).toHaveStyle({
-      width: "0%",
-    });
-    expect(countdown()).toHaveTextContent(
-      `[0 of ${String(CALL_VERDICT_THRESHOLD)}]`,
-    );
-    expect(countdown()).toHaveTextContent(
-      `${String(CALL_VERDICT_THRESHOLD)}verdicts`,
-    );
+    expect(CALL_VERDICT_THRESHOLD).toBe(15);
     expect(
-      screen.getByText(
-        `Log ${String(CALL_VERDICT_THRESHOLD)} verdicts and the Call starts.`,
-      ),
+      within(countdown()).getByText("The Call · 0 of 15 verdicts"),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Log 15 verdicts and the Call starts."),
+    ).toHaveClass("font-display");
+    const meter = cells();
+    expect(meter.meter).toHaveAccessibleName("0 of 15 verdicts logged");
+    expect(meter.total).toBe(15);
+    expect(meter.logged).toHaveLength(0);
+    expect(meter.empty[0]).toHaveClass("border-accent-ink");
+    expect(meter.empty[0]).not.toHaveClass("bg-accent-ink");
+    expect(
+      screen.getByText("Your first verdict is one run away."),
     ).toBeVisible();
     // No ladder at all rather than an empty frame, and nothing to ask for.
     expect(screen.queryByRole("list")).toBeNull();
@@ -121,20 +128,35 @@ describe("zero verdicts (round 22, item 24)", () => {
   });
 });
 
-describe("partway", () => {
-  it("counts down, fills the meter by what is logged, and asks for the thinnest band", async () => {
+describe("partway (round 26 #15: 4 OF 15)", () => {
+  it("counts in the kicker, fills one cell per verdict, and says how many to go", async () => {
     await renderLadder(
       <CallLadder ladder={ladderFrom([band(-5), band(0, { dialed: 4 })])} />,
     );
 
-    const remaining = CALL_VERDICT_THRESHOLD - 4;
-    expect(countdown()).toHaveTextContent(`${String(remaining)}verdicts`);
-    expect(screen.getByRole("meter")).toHaveAttribute("aria-valuenow", "4");
-    expect(document.querySelector("[data-part='meter-fill']")).toHaveStyle({
-      width: `${String((4 / CALL_VERDICT_THRESHOLD) * 100)}%`,
-    });
-    // Neither end's sentence: the number says it.
-    expect(screen.queryByText(/and the Call starts/u)).toBeNull();
+    expect(
+      within(countdown()).getByText("The Call · 4 of 15 verdicts"),
+    ).toBeVisible();
+    const meter = cells();
+    expect(meter.meter).toHaveAccessibleName("4 of 15 verdicts logged");
+    expect(meter.logged).toHaveLength(4);
+    expect(meter.empty).toHaveLength(11);
+    expect(meter.logged[0]).toHaveClass("bg-accent-ink");
+    // The logged cells come first.
+    expect(
+      meter.logged
+        .at(-1)
+        ?.compareDocumentPosition(meter.empty[0] ?? document.body),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      screen.getByText(
+        "11 to go. Each one teaches it what you run warm or cold in.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Log 15 verdicts and the Call starts."),
+    ).toBeVisible();
+    expect(screen.queryByText(/one run away/u)).toBeNull();
     expect(screen.queryByText(/enough to call/u)).toBeNull();
     // The ask, on ink, with its hi-viz eyebrow.
     const ask = screen.getByText("Log this next").closest("section");
@@ -144,13 +166,18 @@ describe("partway", () => {
     expect(screen.getByRole("link", { name: "Log a run" })).toBeVisible();
   });
 
-  it("says verdict, not verdicts, with one left", async () => {
+  it("with one left, says one to go", async () => {
     await renderLadder(
       <CallLadder
         ladder={ladderFrom([band(0, { dialed: CALL_VERDICT_THRESHOLD - 1 })])}
       />,
     );
-    expect(countdown()).toHaveTextContent(/1verdict\[/u);
+    expect(cells().logged).toHaveLength(14);
+    expect(
+      screen.getByText(
+        "1 to go. Each one teaches it what you run warm or cold in.",
+      ),
+    ).toBeVisible();
   });
 });
 
@@ -162,21 +189,16 @@ describe("threshold met (round 22, item 24)", () => {
       />,
     );
 
-    expect(screen.getByRole("meter")).toHaveAttribute(
-      "aria-valuenow",
-      String(CALL_VERDICT_THRESHOLD),
-    );
-    expect(document.querySelector("[data-part='meter-fill']")).toHaveStyle({
-      width: "100%",
-    });
-    expect(countdown()).toHaveTextContent(
-      `[${String(CALL_VERDICT_THRESHOLD)} of ${String(CALL_VERDICT_THRESHOLD)}]`,
-    );
     expect(
-      screen.getByText(
-        "That’s enough to call. The Call arrives in the next release.",
-      ),
+      within(countdown()).getByText("The Call · 15 of 15 verdicts"),
     ).toBeVisible();
+    expect(cells().logged).toHaveLength(15);
+    expect(cells().empty).toHaveLength(0);
+    expect(screen.getByText("That’s enough to call.")).toBeVisible();
+    expect(
+      screen.getByText("The Call arrives in the next release."),
+    ).toBeVisible();
+    expect(screen.queryByText(/and the Call starts/u)).toBeNull();
     // "No button — there's no B1 to hand off to."
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
