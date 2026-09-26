@@ -1,12 +1,14 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { ZodError } from "zod";
 
+import type { CityLookup } from "../../src/lib/contracts";
 import { ConditionsTab } from "../../src/modules/feed/components/ConditionsTab";
 import type { ConsensusResult } from "../../src/modules/feed/consensus";
-import type { ConditionsHome, SavedCity } from "../../src/modules/feed/home";
+import type { ConditionsHome } from "../../src/modules/feed/home";
+import type { Place } from "../../src/modules/onboarding";
+import { CITY_HINT } from "../../src/ui";
 import { MILES, renderFeedScreen } from "./feed-fixtures";
 
 /**
@@ -20,8 +22,14 @@ interface Coords {
 }
 
 const PORTLAND = { lat: 45.52, lng: -122.68 };
-// What a save answers: the place, under the provider's name for it.
-const SAVED: SavedCity = {
+// What Find answers: the place, under the provider's name for it.
+const FOUND: CityLookup = {
+  kind: "found",
+  address: "Portland, OR, United States",
+  ...PORTLAND,
+};
+// What Use this saves, and the save answers with.
+const SAVED: Place = {
   ...PORTLAND,
   cityLabel: "Portland, OR, United States",
 };
@@ -36,7 +44,8 @@ function tab(
     conditionsFor?: (input: {
       data: Coords;
     }) => Promise<ConsensusResult | undefined>;
-    saveCity?: (input: { data: { cityLabel: string } }) => Promise<SavedCity>;
+    lookUpCity?: (input: { data: { label: string } }) => Promise<CityLookup>;
+    saveCity?: (input: { data: Place }) => Promise<Place>;
   } = {},
 ) {
   return (
@@ -46,11 +55,27 @@ function tab(
       conditionsFor={
         overrides.conditionsFor ?? (() => Promise.resolve(undefined))
       }
+      lookUpCity={overrides.lookUpCity ?? (() => Promise.resolve(FOUND))}
       saveCity={overrides.saveCity ?? (() => Promise.resolve(SAVED))}
       units={MILES}
     />
   );
 }
+
+/**
+Types a city, presses Find, and presses Use this on what came back.
+*/
+async function findAndUse(
+  user: ReturnType<typeof userEvent.setup>,
+  typed: string,
+): Promise<void> {
+  await user.type(await screen.findByLabelText("Your city"), typed);
+  await user.click(screen.getByRole("button", { name: "Find" }));
+  await user.click(await screen.findByRole("button", { name: "Use this" }));
+}
+
+const attribution = () =>
+  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
 
 function block(): HTMLElement {
   const element = document.querySelector<HTMLElement>(
@@ -67,6 +92,8 @@ describe("ConditionsTab: waiting", () => {
 
     expect(block()).toHaveAttribute("data-state", "waiting");
     expect(block()).toHaveAttribute("aria-busy", "true");
+    // One status region, and nothing said in it yet.
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
     expect(screen.getByText("Your conditions")).toHaveClass("font-mono");
     expect(screen.getByText("Finding weather")).toBeVisible();
     const brackets = block().querySelectorAll(".breathe");
@@ -154,7 +181,7 @@ describe("ConditionsTab: when what it was given changes", () => {
 });
 
 describe("ConditionsTab: location denied", () => {
-  it("asks where they run, with a city field — not a failure, so no band", async () => {
+  it("asks where they run, with the city field and Find — not a failure, so no band", async () => {
     await renderFeedScreen(tab({ locate: () => Promise.resolve(undefined) }));
 
     expect(await screen.findByText("Where do you run?")).toBeVisible();
@@ -164,13 +191,15 @@ describe("ConditionsTab: location denied", () => {
         "Location is off. Type your city and we’ll match its weather instead.",
       ),
     ).toBeVisible();
-    expect(screen.getByLabelText("City")).toBeVisible();
-    // One name is often not enough to find a city (PR #102 review).
-    expect(screen.getByText("City and state, e.g. Portland, OR")).toBeVisible();
+    expect(screen.getByLabelText("Your city")).toBeVisible();
+    expect(screen.getByText(CITY_HINT)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Find" })).toBeVisible();
     expect(
       screen.getByText("Saved to your settings. Change it any time under You."),
     ).toBeVisible();
     expect(document.querySelector('[data-part="failure-band"]')).toBeNull();
+    // No reading is shown, so there is nothing to attribute.
+    expect(attribution()).toBeNull();
   });
 
   it("never asks again once a city is saved: no reading, no form", async () => {
@@ -182,11 +211,20 @@ describe("ConditionsTab: location denied", () => {
     );
 
     expect(await screen.findByText("No weather yet")).toBeVisible();
-    expect(screen.queryByLabelText("City")).toBeNull();
+    // A label with no coordinates was never found, so it heads nothing.
+    expect(document.querySelector('[data-part="resolved-place"]')).toBeNull();
+    // Round 26 #9 names the place.
+    expect(
+      screen.getByText(
+        "No weather for Portland, OR yet. It shows after the first reading.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByLabelText("Your city")).toBeNull();
   });
 
-  it("saves the typed city, then matches the weather where it was found", async () => {
+  it("saves nothing on Find, then saves the found place on Use this and matches there", async () => {
     const user = userEvent.setup();
+    const lookUpCity = vi.fn(() => Promise.resolve(FOUND));
     const saveCity = vi.fn(() => Promise.resolve(SAVED));
     const conditionsFor = vi.fn(() =>
       Promise.resolve({
@@ -198,18 +236,21 @@ describe("ConditionsTab: location denied", () => {
     await renderFeedScreen(
       tab({
         locate: () => Promise.resolve(undefined),
+        lookUpCity,
         saveCity,
         conditionsFor,
       }),
     );
 
-    await user.type(await screen.findByLabelText("City"), "  Portland, OR ");
-    await user.click(screen.getByRole("button", { name: "Use this city" }));
+    await user.type(await screen.findByLabelText("Your city"), " Portland ");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await screen.findByRole("button", { name: "Use this" });
+    expect(lookUpCity).toHaveBeenCalledWith({ data: { label: "Portland" } });
+    expect(saveCity).not.toHaveBeenCalled();
 
-    expect(saveCity).toHaveBeenCalledWith({
-      data: { cityLabel: "Portland, OR" },
-    });
-    // Announced before the screen moves on (the form contract's order).
+    await user.click(screen.getByRole("button", { name: "Use this" }));
+
+    expect(saveCity).toHaveBeenCalledWith({ data: SAVED });
     await waitFor(
       () => {
         expect(screen.getByRole("status")).toHaveTextContent("City saved.");
@@ -221,33 +262,46 @@ describe("ConditionsTab: location denied", () => {
     expect(conditionsFor).toHaveBeenCalledWith({ data: PORTLAND });
   });
 
-  it("shows which place the city resolved to, in the provider's words, once saved", async () => {
+  it("heads the tab WEATHER FOR the place it saved, in the provider's words", async () => {
     const user = userEvent.setup();
+    const maine = { lat: 43.66, lng: -70.26 };
     await renderFeedScreen(
       tab({
         locate: () => Promise.resolve(undefined),
-        saveCity: () =>
+        lookUpCity: () =>
           Promise.resolve({
-            lat: 43.66,
-            lng: -70.26,
-            cityLabel: "Portland, ME, United States",
+            kind: "found",
+            address: "Portland, ME, United States",
+            ...maine,
           }),
+        saveCity: ({ data }) => Promise.resolve(data),
       }),
     );
 
-    await user.type(await screen.findByLabelText("City"), "Portland");
-    await user.click(screen.getByRole("button", { name: "Use this city" }));
+    await findAndUse(user, "Portland");
 
-    const place = await screen.findByText("Portland, ME, United States");
-    expect(place).toBeVisible();
-    expect(place.closest("p")).toHaveTextContent(
-      "Weather for Portland, ME, United States",
-    );
     // It stays through the answer, which is when "which Portland?" matters.
     expect(await screen.findByText("No weather yet")).toBeVisible();
+    const header = document.querySelector('[data-part="resolved-place"]');
+    expect(header).toHaveTextContent("Weather for Portland, ME, United States");
+    // Mono, uppercased in CSS (round 26 #12: `WEATHER FOR {RESOLVED}`).
+    expect(header?.querySelector(".uppercase")).not.toBeNull();
     expect(
-      screen.getByText("Portland, ME, United States").closest("p"),
-    ).toHaveAttribute("data-part", "resolved-place");
+      screen.getByText(
+        "No weather for Portland, ME, United States yet. It shows after the first reading.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("heads the tab with a saved place from the start", async () => {
+    await renderFeedScreen(
+      tab({ home: { coords: PORTLAND, cityLabel: SAVED.cityLabel } }),
+    );
+
+    expect(await screen.findByText("No weather yet")).toBeVisible();
+    expect(
+      document.querySelector('[data-part="resolved-place"]'),
+    ).toHaveTextContent("Weather for Portland, OR, United States");
   });
 
   it("names no place for a runner it located, since nothing was typed", async () => {
@@ -256,40 +310,36 @@ describe("ConditionsTab: location denied", () => {
     expect(await screen.findByText("No weather yet")).toBeVisible();
     expect(document.querySelector('[data-part="resolved-place"]')).toBeNull();
     expect(screen.queryByText(/Weather for/u)).toBeNull();
+    expect(
+      screen.getByText(
+        "No weather for where you are yet. It shows after the first reading.",
+      ),
+    ).toBeVisible();
   });
 
-  it("says why on the city field when the city cannot be found, and keeps the form", async () => {
+  it("says why on the field when the city cannot be found, and saves nothing", async () => {
     const user = userEvent.setup();
-    // What the server sends for a city the provider could not find: the
-    // schema's issue on the city field, as any field error arrives.
-    const notFound = new ZodError([
-      {
-        code: "custom",
-        path: ["cityLabel"],
-        message: "We couldn't find that city. Add the state or country.",
-        input: undefined,
-      },
-    ]);
+    const saveCity = vi.fn(() => Promise.resolve(SAVED));
     await renderFeedScreen(
       tab({
         locate: () => Promise.resolve(undefined),
-        saveCity: () => Promise.reject(notFound),
+        lookUpCity: () => Promise.resolve({ kind: "not-found" }),
+        saveCity,
       }),
     );
 
-    await user.type(await screen.findByLabelText("City"), "Atlantis");
-    await user.click(screen.getByRole("button", { name: "Use this city" }));
+    await user.type(await screen.findByLabelText("Your city"), "Atlantis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
 
-    expect(
-      await screen.findByText(
-        "We couldn't find that city. Add the state or country.",
-      ),
-    ).toBeVisible();
-    expect(screen.getByLabelText("City")).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
-    expect(document.querySelector('[data-part="failure-band"]')).toBeNull();
+    const sentence = `We couldn't find "Atlantis". Check the spelling, or try a nearby city.`;
+    // On the field, and said in the screen's one status region.
+    await waitFor(() => {
+      expect(document.querySelector("#cityLabel-message")).toHaveTextContent(
+        sentence,
+      );
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(sentence);
+    expect(saveCity).not.toHaveBeenCalled();
   });
 
   it("waits on the weather where the saved city is, breathing, before it answers", async () => {
@@ -302,52 +352,39 @@ describe("ConditionsTab: location denied", () => {
       }),
     );
 
-    await user.type(await screen.findByLabelText("City"), "Portland");
-    await user.click(screen.getByRole("button", { name: "Use this city" }));
+    await findAndUse(user, "Portland");
 
     expect(await screen.findByText("Finding weather")).toBeVisible();
     pending.resolve(undefined);
     expect(await screen.findByText("No weather yet")).toBeVisible();
   });
 
-  it("keeps the page where it is when the city is sent", async () => {
-    await renderFeedScreen(tab({ locate: () => Promise.resolve(undefined) }));
-    const field = await screen.findByLabelText("City");
-    const form = field.closest("form");
-    if (form === null) throw new Error("no form");
-    // `fireEvent` answers whether the default went ahead: it must not.
-    expect(fireEvent.submit(form)).toBe(false);
-  });
-
-  it("marks an empty city with the schema's sentence and saves nothing", async () => {
+  it("says Not saved when Use this fails, keeps the place, and tries the save again", async () => {
     const user = userEvent.setup();
-    const saveCity = vi.fn(() => Promise.resolve(SAVED));
+    const saveCity = vi
+      .fn<(input: { data: Place }) => Promise<Place>>()
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockResolvedValueOnce(SAVED);
     await renderFeedScreen(
       tab({ locate: () => Promise.resolve(undefined), saveCity }),
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Use this city" }),
+    await findAndUse(user, "Portland");
+
+    const band = await screen.findByText("Not saved");
+    expect(band.closest('[data-part="failure-band"]')).toHaveTextContent(
+      "Your connection dropped.",
     );
+    expect(screen.getByLabelText("Your city")).toHaveValue("Portland");
+    expect(screen.getByText("Portland, OR, United States")).toBeVisible();
 
-    expect(await screen.findByText("Type the city you run in.")).toBeVisible();
-    expect(saveCity).not.toHaveBeenCalled();
-  });
+    await user.click(screen.getByRole("button", { name: "Try again" }));
 
-  it("keeps the form and says Nothing saved when the save fails", async () => {
-    const user = userEvent.setup();
-    await renderFeedScreen(
-      tab({
-        locate: () => Promise.resolve(undefined),
-        saveCity: () => Promise.reject(new TypeError("offline")),
-      }),
-    );
-
-    await user.type(await screen.findByLabelText("City"), "Portland");
-    await user.click(screen.getByRole("button", { name: "Use this city" }));
-
-    expect(await screen.findByText("Nothing saved")).toBeVisible();
-    expect(screen.getByLabelText("City")).toHaveValue("Portland");
+    expect(saveCity.mock.calls).toStrictEqual([
+      [{ data: SAVED }],
+      [{ data: SAVED }],
+    ]);
+    expect(await screen.findByText("No weather yet")).toBeVisible();
   });
 });
 
@@ -381,6 +418,8 @@ describe("ConditionsTab: no matches", () => {
     );
     // Teal means matched, so an empty answer never wears it.
     expect(block()).not.toHaveClass("bg-teal");
+    // The band in the eyebrow is a reading, so it is credited.
+    expect(attribution()).not.toBeNull();
   });
 });
 
@@ -439,10 +478,16 @@ describe("ConditionsTab: matched", () => {
     );
 
     const rows = await screen.findAllByRole("listitem");
+    // Colour is never alone (round 26 #9, rule 10): each bar says it too.
     expect(rows.map((row) => row.textContent)).toStrictEqual([
-      "Tops5/6",
-      "Bottoms3/6",
-      "Shoes2/6",
+      "TopsMost5/6",
+      "BottomsSome3/6",
+      "ShoesSome2/6",
+    ]);
+    expect(rows.map((row) => row.dataset.share)).toStrictEqual([
+      "most",
+      "some",
+      "some",
     ]);
     const fills = rows.map(
       (row) => row.querySelector<HTMLElement>(":scope > span > span") ?? row,
@@ -457,7 +502,20 @@ describe("ConditionsTab: matched", () => {
     expect(fills[1]).toHaveClass("bg-hairline-2");
     expect(fills[2]).toHaveClass("bg-hairline-2");
     expect(screen.getByText("5/6")).toHaveClass("font-mono");
+    expect(screen.getByText("Most")).toHaveClass("font-mono");
     expect(screen.getByText("What they wore")).toBeVisible();
+  });
+
+  it("credits Visual Crossing beside the conditions it shows (FEED-8)", async () => {
+    await renderFeedScreen(
+      tab({ conditionsFor: () => Promise.resolve(matched) }),
+    );
+
+    expect(await screen.findByText("6 runners logged this")).toBeVisible();
+    expect(attribution()).toHaveAttribute(
+      "href",
+      "https://www.visualcrossing.com/weather-data",
+    );
   });
 
   it("drops the list when no group reached two runners", async () => {
@@ -469,6 +527,8 @@ describe("ConditionsTab: matched", () => {
 
     expect(await screen.findByText("6 runners logged this")).toBeVisible();
     expect(screen.queryByText("What they wore")).toBeNull();
+    // The conditions are still shown, so the credit stays.
+    expect(attribution()).not.toBeNull();
   });
 });
 
@@ -479,6 +539,7 @@ describe("ConditionsTab: what round 22 does not draw", () => {
     expect(await screen.findByText("No weather yet")).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "no-weather");
     expect(screen.getByRole("link", { name: "Open the Call" })).toBeVisible();
+    expect(attribution()).toBeNull();
   });
 
   it("says Didn't load when the read fails, and tries again", async () => {
@@ -510,8 +571,7 @@ describe("ConditionsTab: what round 22 does not draw", () => {
       .mockResolvedValueOnce({ status: "too-few", windowDays: 14, band });
     await renderFeedScreen(tab({ locate, conditionsFor }));
 
-    await user.type(await screen.findByLabelText("City"), "Portland, OR");
-    await user.click(screen.getByRole("button", { name: "Use this city" }));
+    await findAndUse(user, "Portland, OR");
     await user.click(await screen.findByRole("button", { name: "Try again" }));
 
     expect(await screen.findByText("Not enough runs yet")).toBeVisible();
@@ -520,7 +580,7 @@ describe("ConditionsTab: what round 22 does not draw", () => {
       [{ data: PORTLAND }],
     ]);
     expect(locate).toHaveBeenCalledTimes(1);
-    expect(screen.queryByLabelText("City")).toBeNull();
+    expect(screen.queryByLabelText("Your city")).toBeNull();
   });
 });
 

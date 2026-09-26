@@ -4,6 +4,8 @@ import { ulidSchema } from "../../lib/ids";
 
 import {
   distanceUnitSchema,
+  latitudeSchema,
+  longitudeSchema,
   tempUnitSchema,
   thermalLevelSchema,
 } from "../../lib/contracts";
@@ -24,29 +26,43 @@ import {
 export const calibrationInput = z.object({
   thermalLevel: thermalLevelSchema,
   /**
-   * Free text, because the fallback is someone typing where they live. It
-   * is a label for a human, never parsed into coordinates.
+   * The provider's name for the place the runner found and confirmed
+   * (round 26 #12) — a label for a human, never parsed into coordinates.
+   * Up to 200, because it is Visual Crossing's `resolvedAddress`, which
+   * the weather module caps there.
    */
   cityLabel: z
     .string()
     .trim()
     .min(1, { message: "Tell us where you run, or skip this." })
-    .max(120)
+    .max(200)
     .optional(),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
+  lat: latitudeSchema.optional(),
+  lng: longitudeSchema.optional(),
   tempUnit: tempUnitSchema.optional(),
   distanceUnit: distanceUnitSchema.optional(),
 });
 export type Calibration = z.infer<typeof calibrationInput>;
 
 /**
- * The city field's message when the typed place cannot be found. Beside
- * the schema whose field it lands on, because it is that field's error
- * copy — it just comes from the place lookup rather than from a parse.
+ * Next pressed with a city typed but never found (round 26 #12): the
+ * field message says the two ways on. Beside the schema whose field it
+ * lands on, because it is that field's copy — it comes from the form's
+ * own check rather than from a parse.
  */
-export const CITY_NOT_FOUND =
-  "We couldn't find that place. Check the spelling.";
+export const CITY_UNCONFIRMED = "Press Find, or clear the field to skip.";
+
+/**
+ * A place the runner found and pressed Use this on: the provider's name
+ * for it and where it is (round 26 #12). What the one writer of the
+ * profile's place takes (FEED-5), from O1 and from Your conditions alike.
+ */
+export const placeInput = z.object({
+  cityLabel: z.string().trim().min(1).max(200),
+  lat: latitudeSchema,
+  lng: longitudeSchema,
+});
+export type Place = z.infer<typeof placeInput>;
 
 /**
  * What the units sub-page writes: the two display units.

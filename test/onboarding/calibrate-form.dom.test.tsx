@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CalibrateForm } from "../../src/modules/onboarding/components/CalibrateForm";
 import type { Calibration } from "../../src/modules/onboarding/inputs";
-import type { CityLookup } from "../../src/modules/onboarding/place";
+import type { CityLookup } from "../../src/lib/contracts";
 
 /**
  * Screen O1, with round 22's location step (item 19). The behaviour that
@@ -19,7 +19,12 @@ import type { CityLookup } from "../../src/modules/onboarding/place";
  */
 const DEFAULTS = { temp: "f", distance: "mi" } as const;
 
-const FOUND: CityLookup = { kind: "found", lat: 44.98, lng: -93.27 };
+const FOUND: CityLookup = {
+  kind: "found",
+  address: "Minneapolis, MN, United States",
+  lat: 44.98,
+  lng: -93.27,
+};
 
 function renderForm(
   overrides: {
@@ -135,7 +140,7 @@ describe("the question", () => {
     const { user, save } = renderForm();
 
     await user.click(screen.getByLabelText("Where you run"));
-    await user.paste("x".repeat(121));
+    await user.paste("x".repeat(201));
     await user.click(submit());
 
     expect(save).not.toHaveBeenCalled();
@@ -158,85 +163,70 @@ describe("the question", () => {
   });
 });
 
-describe("where you run: typed, resolved on submit (owner, 2026-09-24)", () => {
-  it("explains the field, and offers no list of any kind", () => {
+describe("where you run: Find, then Use this (round 26 #12)", () => {
+  it("offers the city field with Find, and no list of any kind", () => {
     renderForm();
-    expect(
-      screen.getByText(
-        "Sets your climate cohort — runners who face the same winters.",
-      ),
-    ).toBeVisible();
+    expect(screen.getByLabelText("Where you run")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Find" })).toBeVisible();
     expect(screen.queryByRole("list")).toBeNull();
   });
 
-  it("never asks while typing — only once, on submit", async () => {
-    const { user, lookUpCity } = renderForm();
+  it("never asks while typing, and Enter finds rather than submitting", async () => {
+    const { user, lookUpCity, save } = renderForm({
+      lookUpCity: () => Promise.resolve(FOUND),
+    });
 
     await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
     expect(lookUpCity).not.toHaveBeenCalled();
 
-    await user.click(screen.getByLabelText(/^About average/u));
-    await user.click(submit());
+    await user.type(screen.getByLabelText("Where you run"), "{Enter}");
+
     expect(lookUpCity).toHaveBeenCalledTimes(1);
     expect(lookUpCity).toHaveBeenCalledWith({
       data: { label: "Minneapolis" },
     });
+    expect(save).not.toHaveBeenCalled();
   });
 
-  it("saves a found city with its coordinates, and shows it as the chip", async () => {
-    const answer = Promise.withResolvers<unknown>();
-    const save = vi.fn<(input: { data: Calibration }) => Promise<unknown>>(
-      () => answer.promise,
-    );
-    const lookUpCity = vi.fn(() => Promise.resolve(FOUND));
-    const user = userEvent.setup();
-    render(
-      <CalibrateForm
-        defaults={DEFAULTS}
-        locate={() => Promise.resolve(undefined)}
-        lookUpCity={lookUpCity}
-        saveCalibration={save}
-        onSaved={vi.fn()}
-      />,
-    );
+  it("makes the found place the chip on Use this, and saves it with its coordinates", async () => {
+    const { user, save } = renderForm({
+      lookUpCity: () => Promise.resolve(FOUND),
+    });
 
-    await user.type(screen.getByLabelText("Where you run"), "  Minneapolis ");
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.click(await screen.findByRole("button", { name: "Use this" }));
+
+    const chip = document.querySelector("[data-part='city-chip']");
+    expect(chip).toHaveTextContent("Minneapolis, MN, United States");
+    // Uppercase is CSS, so the accessible name stays in normal case.
+    expect(chip?.querySelector(".uppercase")).toHaveTextContent(
+      "Minneapolis, MN, United States",
+    );
+    expect(chip).toHaveClass("bg-teal");
+    expect(screen.queryByLabelText("Where you run")).toBeNull();
+    expect(save).not.toHaveBeenCalled();
+
     await user.click(screen.getByLabelText(/^About average/u));
     await user.click(submit());
-
-    await waitFor(() => {
-      expect(save).toHaveBeenCalledTimes(1);
-    });
     expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { cityLabel: "Minneapolis", lat: 44.98, lng: -93.27 },
-    });
-    // The label asked about is the trimmed one the schema parsed.
-    expect(lookUpCity).toHaveBeenCalledWith({
-      data: { label: "Minneapolis" },
-    });
-    const chip = document.querySelector("[data-part='city-chip']");
-    expect(chip).toHaveTextContent("Minneapolis");
-    expect(screen.queryByLabelText("Where you run")).toBeNull();
-
-    await act(async () => {
-      answer.resolve({});
-      await answer.promise;
+      data: {
+        cityLabel: "Minneapolis, MN, United States",
+        lat: 44.98,
+        lng: -93.27,
+      },
     });
   });
 
-  it("puts a place it cannot find on the field, in the field's words, and saves nothing", async () => {
-    const { user, save } = renderForm({
-      lookUpCity: () => Promise.resolve({ kind: "not-found" }),
-    });
+  it("refuses Next with a typed city nobody found, on the field, and saves nothing", async () => {
+    const { user, save, lookUpCity } = renderForm();
 
-    await user.type(screen.getByLabelText("Where you run"), "Nowhereville");
+    await user.type(screen.getByLabelText("Where you run"), "Seattle, WA");
     await user.click(screen.getByLabelText(/^About average/u));
     await user.click(submit());
 
     expect(
-      await screen.findByText(
-        "We couldn't find that place. Check the spelling.",
-      ),
+      await screen.findByText("Press Find, or clear the field to skip."),
     ).toBeVisible();
     expect(screen.getByLabelText("Where you run")).toHaveAttribute(
       "aria-invalid",
@@ -246,25 +236,7 @@ describe("where you run: typed, resolved on submit (owner, 2026-09-24)", () => {
       expect(screen.getByLabelText("Where you run")).toHaveFocus();
     });
     expect(save).not.toHaveBeenCalled();
-    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
-  });
-
-  it("saves the label alone when the lookup cannot answer", async () => {
-    const { user, save } = renderForm({
-      lookUpCity: () => Promise.resolve({ kind: "unavailable" }),
-    });
-
-    await user.type(screen.getByLabelText("Where you run"), "Seattle, WA");
-    await user.click(screen.getByLabelText(/^About average/u));
-    await user.click(submit());
-
-    await waitFor(() => {
-      expect(save).toHaveBeenCalledTimes(1);
-    });
-    expect(save.mock.calls[0]?.[0]).toMatchObject({
-      data: { cityLabel: "Seattle, WA", lat: undefined, lng: undefined },
-    });
-    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+    expect(lookUpCity).not.toHaveBeenCalled();
   });
 
   it("sends no city, and asks nothing, for a field of spaces", async () => {
@@ -278,38 +250,6 @@ describe("where you run: typed, resolved on submit (owner, 2026-09-24)", () => {
       data: { cityLabel: undefined },
     });
     expect(lookUpCity).not.toHaveBeenCalled();
-  });
-
-  it("does not ask again for a place already resolved", async () => {
-    const save = vi
-      .fn<(input: { data: Calibration }) => Promise<unknown>>()
-      .mockRejectedValueOnce(new Error("D1 down"))
-      .mockResolvedValueOnce({});
-    const lookUpCity = vi.fn(() => Promise.resolve(FOUND));
-    const user = userEvent.setup();
-    render(
-      <CalibrateForm
-        defaults={DEFAULTS}
-        locate={() => Promise.resolve(undefined)}
-        lookUpCity={lookUpCity}
-        saveCalibration={save}
-        onSaved={vi.fn()}
-      />,
-    );
-    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
-    await user.click(screen.getByLabelText(/^About average/u));
-    await user.click(submit());
-    await screen.findByRole("button", { name: "Try again" });
-
-    await user.click(submit());
-
-    await waitFor(() => {
-      expect(save).toHaveBeenCalledTimes(2);
-    });
-    expect(lookUpCity).toHaveBeenCalledTimes(1);
-    expect(save.mock.calls[1]?.[0]).toMatchObject({
-      data: { cityLabel: "Minneapolis", lat: 44.98, lng: -93.27 },
-    });
   });
 
   it("sends the located place, not the text left in the field under the chip", async () => {
@@ -331,20 +271,59 @@ describe("where you run: typed, resolved on submit (owner, 2026-09-24)", () => {
     expect(lookUpCity).not.toHaveBeenCalled();
   });
 
-  it("puts the field back, with what was typed, when the chip is changed", async () => {
-    const { user } = renderForm({
+  it("brings the field back empty on Change city", async () => {
+    const { user } = renderForm({ lookUpCity: () => Promise.resolve(FOUND) });
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.click(await screen.findByRole("button", { name: "Use this" }));
+
+    await user.click(screen.getByRole("button", { name: "Change city" }));
+
+    expect(screen.getByLabelText("Where you run")).toHaveValue("");
+    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+  });
+
+  it("removes the chip by its named remove button too", async () => {
+    const { user, save } = renderForm({
       locate: () => Promise.resolve({ lat: 1, lng: 2 }),
     });
-    await user.type(screen.getByLabelText("Where you run"), "Mi");
     await user.click(locateButton());
-    await waitFor(() => {
-      expect(document.querySelector("[data-part='city-chip']")).not.toBeNull();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Remove your location" }),
+    );
+
+    expect(screen.getByLabelText("Where you run")).toHaveValue("");
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: { lat: undefined, lng: undefined },
     });
+  });
 
-    await user.click(screen.getByRole("button", { name: "Change" }));
+  it("names a found place in its remove button", async () => {
+    const { user } = renderForm({ lookUpCity: () => Promise.resolve(FOUND) });
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.click(await screen.findByRole("button", { name: "Use this" }));
 
-    expect(screen.getByLabelText("Where you run")).toHaveValue("Mi");
-    expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Remove Minneapolis, MN, United States",
+      }),
+    ).toBeVisible();
+  });
+
+  it("says what Find found in the screen's status region", async () => {
+    const { user } = renderForm({ lookUpCity: () => Promise.resolve(FOUND) });
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Weather for Minneapolis, MN, United States.",
+      );
+    });
   });
 });
 

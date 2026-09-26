@@ -7,6 +7,7 @@ import { defaultUnits } from "../../lib/contracts";
 import { orSqlNull } from "../../lib/sql-null";
 import type {
   Calibration,
+  Place,
   Preferences,
   SharingChoice,
   UnitsChoice,
@@ -43,6 +44,33 @@ export async function saveCalibration(
 }
 
 /**
+ * **The one writer of the profile's place** (FEED-5): the three columns
+ * `user_profiles` keeps it in, written together from a place the runner
+ * found and confirmed. Your conditions' Use this calls it directly; O1's
+ * calibration writes the same columns through the same `placeColumns`, in
+ * the one upsert that also carries the thermal answer and the units.
+ *
+ * An upsert for `saveCalibration`'s reason — nothing else creates this
+ * row — and its `set` names only the place, so a runner's calibration,
+ * units and sharing default are untouched.
+ *
+ * Answers with what it saved, so the screen shows the stored place rather
+ * than its own copy of what it sent.
+ */
+export async function savePlace(
+  db: DrizzleD1Database,
+  userId: string,
+  place: Place,
+): Promise<Place> {
+  const columns = placeColumns(place);
+  await db
+    .insert(userProfiles)
+    .values({ userId, ...columns })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: columns });
+  return place;
+}
+
+/**
  * Where the runner runs, as the three columns it is stored in — all three,
  * or none.
  *
@@ -54,7 +82,7 @@ export async function saveCalibration(
  * a recalibration that answered only the thermal question — the stored
  * place is left alone rather than erased.
  */
-function placeColumns(input: Calibration): {
+function placeColumns(input: Pick<Calibration, "cityLabel" | "lat" | "lng">): {
   cityLabel?: string | SQL;
   lat?: number | SQL;
   lng?: number | SQL;

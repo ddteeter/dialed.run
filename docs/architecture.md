@@ -154,6 +154,7 @@ flowchart TD
     FEED -->|index.ts only| RUNS
     FEED -->|index.ts only| WX
     ONB -->|index.ts only| CLOSET
+    FEED -->|index.ts only: the place writer| ONB
     CLOSET -->|index.ts only| PROD
     FEED -->|index.ts only| PROD
     OPS[modules/ops] -->|index.ts only| WX

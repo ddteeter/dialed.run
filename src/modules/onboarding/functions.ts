@@ -8,11 +8,12 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
+import { cityLookupInput } from "../../lib/contracts";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
-import { climateNormals } from "../weather";
+import { climateNormals, resolvePlace } from "../weather";
 import {
   brandPrefixInput,
   calibrationInput,
@@ -21,8 +22,7 @@ import {
   unitsInput,
 } from "./inputs";
 import { ladderFrom } from "./ladder";
-import { cityLookupInput, lookUpCity } from "./place";
-import type { PlaceResolver } from "./place";
+import { lookUpCity } from "./place";
 import {
   completeOnboarding,
   currentSettings,
@@ -100,24 +100,18 @@ export const saveSharingFn = createServerFn({ method: "POST" })
   );
 
 /**
- * SEAM — O1's place resolver. Lane 123's `resolvePlace` (modules/weather,
- * Visual Crossing) lands with PR #102; until then there is none, and a
- * typed city is saved as a label alone, exactly as before O1 could resolve
- * anything. Wiring it is this one line:
- * `const O1_PLACE_RESOLVER: PlaceResolver | undefined = resolvePlace;`
- */
-const O1_PLACE_RESOLVER: PlaceResolver | undefined = undefined;
-
-/**
- * Resolves O1's typed city once, when the runner confirms — never per
- * keystroke. A POST because it can reach a billed upstream.
+ * Find (round 26 #12): resolves a typed city once, when the runner presses
+ * Find — never per keystroke — through Visual Crossing's `resolvePlace`
+ * (FEED-2). Saves nothing. O1's city step and Your conditions both call
+ * it; what Use this then does is theirs. A POST because it can reach a
+ * billed upstream.
  */
 export const lookUpCityFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => cityLookupInput.parse(data))
   .handler(async ({ data }) =>
     lookUpCity({
       label: data.label,
-      resolver: O1_PLACE_RESOLVER,
+      resolver: resolvePlace,
       report: captureException,
       userId: await requireUserId(),
     }),

@@ -1,11 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import type { ComponentProps } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { FormStatus, Mono } from "../../../ui";
-import type { ConsensusResult } from "../consensus";
 import type { FeedItem } from "../feed";
-import type { ConditionsHome, SavedCity } from "../home";
 import { isBacklogWorthOpening } from "../route-decisions";
 import { BracketHeadline } from "./BracketHeadline";
 import { ConditionsTab } from "./ConditionsTab";
@@ -59,16 +58,10 @@ export interface FeedProps {
   unjudgedCount: number;
   setUseful: SetUsefulFn;
   /**
-  Everything Your conditions needs, handed through untouched.
+  Everything Your conditions needs, handed through untouched — its own
+  props, read off it, less the units this screen already passes.
   */
-  conditions: {
-    home: ConditionsHome;
-    locate: () => Promise<{ lat: number; lng: number } | undefined>;
-    conditionsFor: (input: {
-      data: { lat: number; lng: number };
-    }) => Promise<ConsensusResult | undefined>;
-    saveCity: (input: { data: { cityLabel: string } }) => Promise<SavedCity>;
-  };
+  conditions: Omit<ComponentProps<typeof ConditionsTab>, "units">;
 }
 
 export function Feed(props: Readonly<FeedProps>) {

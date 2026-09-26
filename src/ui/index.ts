@@ -44,3 +44,4 @@ export { useListMotion } from "./use-list-motion";
 export { WeatherAttribution } from "./WeatherAttribution";
 export { verdictHue } from "./verdict-hue";
 export { Wordmark } from "./Wordmark";
+export { CITY_HINT, CityFinder } from "./CityFinder";
