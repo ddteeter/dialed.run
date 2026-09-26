@@ -132,6 +132,11 @@ describe("A1 at rest", () => {
       "From your watch export or any tracking app.",
     );
     expect(dropInput()).toHaveAttribute("accept", ".fit,.gpx,.tcx");
+    // Round 25: before a file, the well keeps the primary column's measure
+    // at the desk, and nothing sits beside it.
+    expect(
+      well().closest(`.${CSS.escape("desk:max-w-column")}`),
+    ).not.toBeNull();
   });
 
   it("holds no file name in the reading label it keeps in reserve", async () => {
@@ -761,6 +766,9 @@ describe("A1: the parsed card", () => {
       within(card).queryByRole("button", { name: /Change start time/u }),
     ).toBeNull();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
+    expect(within(card).getByText("8:20 /mi").closest("p")).toHaveTextContent(
+      /^8:20 \/mi\|Sat Aug 29$/u,
+    );
     const field = within(card).getByLabelText("Start time");
     // The run's own clock: 6:04 in Chicago, not 11:04 UTC.
     expect(field).toHaveValue("06:04");
@@ -966,7 +974,7 @@ describe("A1: the parsed card", () => {
       expectBusy(screen.getByRole("button", { name: "Getting" }));
     });
 
-    const next = screen.getByRole("link", {
+    const next = screen.getByRole("button", {
       name: "Looks right — what did you wear?",
     });
     await user.click(next);
@@ -975,6 +983,7 @@ describe("A1: the parsed card", () => {
     expect(router.state.location.pathname).toBe("/");
     expect(next).toHaveTextContent("[Looks right — what did you wear?]");
     expect(next).not.toHaveAttribute("aria-disabled");
+    expect(next).toHaveClass("bg-action", "target");
 
     pending.resolve("moved");
     await waitFor(() => {
@@ -982,20 +991,74 @@ describe("A1: the parsed card", () => {
     });
   });
 
-  it("goes straight away when nothing is being fetched", async () => {
+  it("goes straight away, as a plain link, when nothing is being fetched", async () => {
     const user = userEvent.setup();
     const { router } = await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
+    const next = await screen.findByRole("link", {
+      name: "Looks right — what did you wear?",
+    });
+    // The log verb's pink, as a 44px target.
+    expect(next).toHaveClass("bg-action", "target");
 
-    await user.click(
-      await screen.findByRole("link", {
-        name: "Looks right — what did you wear?",
-      }),
-    );
+    await user.click(next);
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/feed/attach/${RUN_ID}`);
     });
+  });
+
+  it("says there was no weather before, when the run had none", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<"moved">();
+    await renderWithRouter(
+      form({
+        getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
+        retime: () => pending.promise,
+      }),
+    );
+    await user.upload(dropInput(), gpx());
+    await user.click(
+      await screen.findByRole("button", { name: /Change start time/u }),
+    );
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
+
+    const block = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>(
+        "[data-state='fetching']",
+      );
+      if (found === null) throw new Error("not fetching yet");
+      return found;
+    });
+    expect(block).toHaveTextContent(/Was no weather · at /u);
+    pending.resolve("moved");
+  });
+
+  it("announces only the answer, never a sentence of its own first", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+    await user.upload(dropInput(), gpx());
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+    const status = screen.getByRole("status");
+    const said: string[] = [];
+    const observer = new MutationObserver(() => {
+      said.push(status.textContent);
+    });
+    observer.observe(status, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Get weather" }));
+    await screen.findByText("Start time changed to 6:04 AM.");
+    observer.disconnect();
+
+    expect(said.filter((text) => text !== "")).toStrictEqual([
+      "Start time changed to 6:04 AM.",
+    ]);
   });
 
   it("reads a run with no conditions on the runner's own clock, not UTC", async () => {

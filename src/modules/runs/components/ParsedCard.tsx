@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import type { Units } from "../../../lib/contracts";
@@ -53,6 +53,11 @@ const retimeSchema = z.object({
  * a run is navigation, not the log verb"* (round 22). One treatment for
  * both of its destinations.
  */
+const PRIMARY_ACTION =
+  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink desk:col-start-1 desk:row-start-2 desk:self-start desk:justify-self-start";
+
+const LOOKS_RIGHT = "Looks right — what did you wear?";
+
 const OPEN_THAT_RUN =
   "target flex items-center justify-center rounded-card bg-ink px-6 py-4 font-display text-body uppercase text-ground no-underline";
 
@@ -156,6 +161,16 @@ function WeatherFor({
 }
 
 /**
+ * Focus the time field as the row opens (round 26: *"Pressing it replaces
+ * the time on the stats line with the row, and focus moves to the
+ * field"*). A ref callback at module scope: its identity never changes, so
+ * React calls it once as the input mounts and once, with null, as it goes.
+ */
+function focusOnMount(input: HTMLInputElement | null): void {
+  input?.focus();
+}
+
+/**
  * A1's START TIME row (round 26, item 1), inside the parsed card: the
  * hint, a time field, and **Get weather** — *"Refetch is our word, and the
  * runner's word is weather."* Focus moves to the field when it opens.
@@ -171,11 +186,6 @@ function StartTimeRow({
   fileSaid: string;
   onTime: (time: string) => void;
 }>): JSX.Element {
-  const input = useRef<HTMLInputElement>(null);
-  // Focus on open, once: the row mounts when the time is pressed.
-  useEffect(() => {
-    input.current?.focus();
-  }, []);
   return (
     <form
       ref={form.formRef}
@@ -197,7 +207,7 @@ function StartTimeRow({
       >
         <input
           {...form.field("time")}
-          ref={input}
+          ref={focusOnMount}
           id="time"
           type="time"
           value={time}
@@ -247,7 +257,7 @@ function useRetimeForm({
       // Refused is the server saying no to a run this card should not be
       // able to ask about — another day, or not this runner's. A failure
       // like any other: nothing changed.
-      if (outcome === "refused") throw new Error("Start time refused.");
+      if (outcome === "refused") throw new Error(outcome);
       return { outcome, startedAt };
     },
     // The sentence depends on the answer, so `onSuccess` says it.
@@ -418,23 +428,35 @@ export function ParsedCard({
           }}
         />
       </div>
-      <Link
-        to="/feed/attach/$runId"
-        params={{ runId: run.id }}
-        data-slot="primary-action"
-        onClick={(event) => {
-          if (!form.pending) return;
-          event.preventDefault();
-          setIsWaitingToGo(true);
-        }}
-        className="target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink no-underline desk:col-start-1 desk:row-start-2 desk:self-start desk:justify-self-start"
-      >
-        <PendingLabel
-          label="Looks right — what did you wear?"
-          pendingLabel="Looks right — what did you wear?"
-          pending={isWaitingToGo}
-        />
-      </Link>
+      {/* While the weather is fetched the primary action is a button that
+          holds the runner's press, and a link again once it has settled —
+          so a press mid-fetch waits in brackets and then goes, and is
+          never disabled (round 26, item 1). */}
+      {form.pending ? (
+        <button
+          type="button"
+          data-slot="primary-action"
+          onClick={() => {
+            setIsWaitingToGo(true);
+          }}
+          className={`border-none ${PRIMARY_ACTION}`}
+        >
+          <PendingLabel
+            label={LOOKS_RIGHT}
+            pendingLabel={LOOKS_RIGHT}
+            pending={isWaitingToGo}
+          />
+        </button>
+      ) : (
+        <Link
+          to="/feed/attach/$runId"
+          params={{ runId: run.id }}
+          data-slot="primary-action"
+          className={`no-underline ${PRIMARY_ACTION}`}
+        >
+          {LOOKS_RIGHT}
+        </Link>
+      )}
     </div>
   );
 }

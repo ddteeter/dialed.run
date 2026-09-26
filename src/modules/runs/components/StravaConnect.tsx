@@ -44,16 +44,18 @@ const SECONDARY =
  * only the device knows, so it is drawn after mount and never in the
  * server's first paint (see `lib/dates.ts`).
  *
- * The effect has no dependency list on purpose: it sets the same string
+ * The effect has no dependency list on purpose: it sets the same value
  * after every render, which React ignores, and leaves no array for a
- * mutant to replace.
+ * mutant to replace. A device that names no zone it would accept reads
+ * as UTC, which `lib/dates` already does for an undefined zone.
  */
 function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
-  const [zone, setZone] = useState<string | undefined>();
+  const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
-    setZone(deviceTimeZone() ?? "UTC");
+    setIsMounted(true);
   });
-  if (zone === undefined) return <></>;
+  if (!isMounted) return <></>;
+  const zone = deviceTimeZone();
   return (
     <>{` · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`}</>
   );
