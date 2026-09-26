@@ -23,10 +23,14 @@ import { Mono } from "../../../ui";
  * `role="status"`, so the sentence is announced when it lands: the
  * control the runner pressed has just disappeared, and this is what took
  * its place.
+ *
+ * With no sentence — the verdict saved, and only the record's count failed
+ * to come back — the receipt is "Noted" alone. The save is what it
+ * vouches for, and that happened.
  */
 export function NotedReceipt({
   sentence,
-}: Readonly<{ sentence: string }>): JSX.Element {
+}: Readonly<{ sentence: string | undefined }>): JSX.Element {
   return (
     <div
       role="status"
@@ -34,7 +38,9 @@ export function NotedReceipt({
       className="flex flex-col gap-2 rounded-card bg-teal p-4 text-accent-ink"
     >
       <Mono step="xs">Noted</Mono>
-      <p className="m-0 text-body font-semibold">{sentence}</p>
+      {sentence === undefined ? undefined : (
+        <p className="m-0 text-body font-semibold">{sentence}</p>
+      )}
     </div>
   );
 }

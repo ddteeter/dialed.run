@@ -393,7 +393,8 @@ flowchart LR
 
 **Launch gate** (must merge before public sign-ups): Task 106 trust & safety
 floor — photo screening via Workers AI, report→hide→review, link hygiene,
-ban mechanics — plus the dashboard-side CSAM scanning tool. MVP lanes
+ban mechanics — plus the dashboard-side CSAM scanning tool and a
+published privacy policy (D-105). MVP lanes
 101–105 + 107 can land and be dogfooded privately without it.
 
 **Post-MVP** (see `docs/post-mvp.md` — documented so agents don't build

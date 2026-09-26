@@ -282,6 +282,7 @@ function useObjectUrl(file: File | undefined): string | undefined {
  * sentence or the failure band — so the schema is the single gate and
  * `useFormSubmit` renders what it says.
  */
+// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
 export function GarmentForm({
   initial,
   brandOptions,

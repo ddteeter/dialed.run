@@ -5,31 +5,31 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { JSX, ReactElement } from "react";
+import { useState } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import {
-  AttachKit,
-  pickerQueryFor,
-} from "../../src/modules/feed/components/AttachKit";
+import type { AttachContext } from "../../src/modules/feed/attach-context";
+import { AttachKit } from "../../src/modules/feed/components/AttachKit";
 import type { PickerGroup } from "../../src/modules/feed/picker";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
-import {
-  expectAvailable,
-  expectBusy,
-  expectUnavailable,
-} from "../ui/unavailable";
+import type { PhotoStep } from "../../src/ui";
+import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
- * Attach the kit (screen A2) — and the prefill idea, which is the feature.
- *
- * Before the picker opens there are three resting states: waiting on a
- * location, a most-likely kit to accept in one tap, or nothing to suggest.
- * Which one a runner sees is what the screen is for, and none of them
- * could be reached while this was markup in a route.
+ * Attach the kit (screen A2), to round 22's two frames and round 20's
+ * rules: the picker from the first frame, only most-likely waiting, a kit
+ * required, the photo here rather than on A3, and a failed attach that
+ * says "nothing attached" under the button rather than in a pink line.
  */
 const NOTHING = z.null().parse(JSON.parse("null"));
 
@@ -45,8 +45,13 @@ async function renderWithRouter(element: ReactElement) {
     path: "/feed/verdict/$entryId",
     component: () => <p>Verdict time</p>,
   });
+  const runsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/runs",
+    component: () => <p>Runs</p>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, verdictRoute]),
+    routeTree: rootRoute.addChildren([indexRoute, verdictRoute, runsRoute]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   await router.load();
@@ -62,672 +67,1200 @@ function neverSettles<T>(): Promise<T> {
   });
 }
 
-function withLocation(coords?: { latitude: number; longitude: number }) {
-  vi.stubGlobal("navigator", {
-    geolocation: {
-      getCurrentPosition: (
-        onSuccess: (position: { coords: unknown }) => void,
-        onError: () => void,
-      ) => {
-        if (coords === undefined) onError();
-        else onSuccess({ coords });
-      },
-    },
-  });
-}
-
-function withoutGeolocation() {
-  // A plain object rather than a copy of the real navigator: spreading a
-  // class instance loses its prototype, and all this needs to be is
-  // "something without geolocation on it".
-  vi.stubGlobal("navigator", {});
-}
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
 const conditions = {
-  tempC: 10,
-  feelsLikeC: 8,
-  precipMm: 0,
-  condition: "Clear",
+  tempC: 5,
+  feelsLikeC: 3,
+  precipMm: 1,
+  condition: "Rain",
   windKph: 5,
   source: "visualcrossing" as const,
-  span: { minTempC: 10, maxTempC: 10, minFeelsLikeC: 8, maxFeelsLikeC: 8 },
+  timeZone: "America/Chicago",
+  span: { minTempC: 5, maxTempC: 5, minFeelsLikeC: 3, maxFeelsLikeC: 3 },
 };
+
+function piece(
+  id: string,
+  name: string,
+  overrides: Partial<PickerGroup["items"][number]> = {},
+): PickerGroup["items"][number] {
+  return {
+    id,
+    name,
+    brand: NOTHING,
+    category: "top",
+    layer: NOTHING,
+    matches: true,
+    untested: false,
+    ...overrides,
+  };
+}
+
+const HOUDINI = "01HQA00000000000000000000A";
+const HARRIER = "01HQA00000000000000000000B";
+const SINGLET = "01HQA00000000000000000000C";
+const TIGHTS = "01HQA00000000000000000000D";
+const GLOVES = "01HQA00000000000000000000E";
+
+const GROUPS: PickerGroup[] = [
+  {
+    group: "tops",
+    items: [
+      piece(HOUDINI, "Houdini", { brand: "Patagonia" }),
+      piece(HARRIER, "Harrier", { untested: true }),
+      piece(SINGLET, "Singlet", { matches: false }),
+    ],
+    matchCount: 2,
+    hiddenByFilterCount: 1,
+  },
+  {
+    group: "bottoms",
+    items: [piece(TIGHTS, "Tights", { category: "bottom" })],
+    matchCount: 1,
+    hiddenByFilterCount: 0,
+  },
+  {
+    group: "hands_head",
+    items: [piece(GLOVES, "Gloves", { category: "gloves" })],
+    matchCount: 1,
+    hiddenByFilterCount: 0,
+  },
+];
+
+function context(overrides: Partial<AttachContext> = {}): AttachContext {
+  return {
+    distanceM: 9978,
+    conditions,
+    groups: GROUPS,
+    entryId: undefined,
+    ...overrides,
+  };
+}
 
 function candidate(
   overrides: Partial<PrefillCandidate> = {},
 ): PrefillCandidate {
   return {
     entryId: "01PREV",
-    itemIds: ["01A", "01B"],
-    conditions,
-    createdAt: 1_755_000_000,
+    itemIds: [HOUDINI, TIGHTS],
+    conditions: { ...conditions, tempC: 6 },
+    // 2026-08-14T12:00Z — a Friday in Chicago.
+    createdAt: Math.floor(Date.UTC(2026, 7, 14, 12) / 1000),
     feelsLikeDeltaC: 1.4,
     ...overrides,
   };
 }
 
-function group(overrides: Partial<PickerGroup> = {}): PickerGroup {
-  return {
-    group: "tops",
-    items: [
-      {
-        id: "01A",
-        name: "Houdini",
-        brand: "Patagonia",
-        category: "top",
-        layer: NOTHING,
-        matches: true,
-        untested: false,
-      },
-    ],
-    matchCount: 1,
-    hiddenByFilterCount: 0,
-    ...overrides,
-  };
+interface Overrides {
+  context?: AttachContext;
+  prefillFor?: () => Promise<PrefillCandidate | undefined>;
+  attachKit?: (input: {
+    data: { runId: string; itemIds: string[] };
+  }) => Promise<{ entryId: string }>;
+  uploadPhoto?: (input: { data: FormData }) => Promise<{ key: string }>;
+  renderPhotoStep?: PhotoStep;
+  units?: { temp: "f" | "c"; distance: "mi" | "km" };
 }
 
-function attach(
-  overrides: {
-    prefillFor?: () => Promise<PrefillCandidate | undefined>;
-    pickerGroupsFor?: () => Promise<PickerGroup[]>;
-    attachKit?: (input: {
-      data: { runId: string; itemIds: string[] };
-    }) => Promise<{ entryId: string }>;
-  } = {},
-) {
+function attach(overrides: Overrides = {}) {
   return (
     <AttachKit
-      units={{ temp: "f", distance: "mi" }}
+      units={overrides.units ?? { temp: "f", distance: "mi" }}
       runId="01RUN"
+      context={overrides.context ?? context()}
       prefillFor={overrides.prefillFor ?? (() => Promise.resolve(undefined))}
-      pickerGroupsFor={overrides.pickerGroupsFor ?? (() => Promise.resolve([]))}
       attachKit={
         overrides.attachKit ?? (() => Promise.resolve({ entryId: "01NEW" }))
       }
+      uploadPhoto={
+        overrides.uploadPhoto ?? (() => Promise.resolve({ key: "k" }))
+      }
+      renderPhotoStep={overrides.renderPhotoStep}
     />
   );
 }
 
-describe("pickerQueryFor", () => {
-  it("passes the position through when there is one", () => {
+function primary(): HTMLElement {
+  return screen.getByRole("button", { name: "Next — did it work?" });
+}
+
+function region(slot: string): HTMLElement {
+  const found = document.querySelector<HTMLElement>(
+    `[data-slot='${CSS.escape(slot)}'], [data-part='${CSS.escape(slot)}']`,
+  );
+  if (found === null) throw new Error(`no ${slot} region`);
+  return found;
+}
+
+function photoWell(): HTMLElement {
+  return region("photo-well");
+}
+
+function photoInput(): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>(
+    "[data-part='photo-well'] input[type='file']",
+  );
+  if (input === null) throw new Error("no photo input");
+  return input;
+}
+
+function jpeg(name = "kit.jpg", bytes = 3): File {
+  return new File([new Uint8Array(bytes)], name, { type: "image/jpeg" });
+}
+
+/**
+ * The preview's object URL, spied rather than stubbed wholesale: the
+ * router constructs `URL`s of its own, and a plain object standing in for
+ * the class would take the constructor away from it.
+ */
+const createObjectURL = vi.fn<(file: Blob | MediaSource) => string>(
+  () => "blob:preview",
+);
+const revokeObjectURL = vi.fn<(url: string) => void>();
+
+beforeEach(() => {
+  createObjectURL.mockClear();
+  revokeObjectURL.mockClear();
+  vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL);
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("AttachKit: the header", () => {
+  it("says how far, in what, and how many pieces — none yet", async () => {
+    // "6.2 MI · 41°F DAMP · 0 PIECES": a kit is required, and the count
+    // is how "nothing yet" is said.
+    await renderWithRouter(attach());
+
+    const header = screen.getByRole("banner");
+    expect(header).toHaveAttribute("data-ground", "ink");
     expect(
-      pickerQueryFor({
-        latitude: 44.98,
-        longitude: -93.27,
-      } as GeolocationCoordinates),
-    ).toStrictEqual({ lat: 44.98, lng: -93.27 });
+      within(header).getByRole("heading", {
+        level: 1,
+        name: "What did you wear?",
+      }),
+    ).toBeVisible();
+    expect(
+      within(header).getByText("6.2 mi · 41°F damp · 0 pieces"),
+    ).toBeVisible();
+    // Nothing to announce until something happens.
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
 
-  it("asks for nothing when there is no position, and while still asking", () => {
-    // Both cases mean the same thing to the query: no condition filter.
-    expect(pickerQueryFor("none")).toStrictEqual({});
-    expect(pickerQueryFor(undefined)).toStrictEqual({});
+  it("counts the pieces as they are chosen, one and then many", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Tights" }));
+    expect(screen.getByText("6.2 mi · 41°F damp · 2 pieces")).toBeVisible();
+  });
+
+  it("loses its temperature cell when the run has no conditions", async () => {
+    await renderWithRouter(
+      attach({
+        context: context({ conditions: undefined }),
+        units: { temp: "c", distance: "km" },
+      }),
+    );
+
+    expect(screen.getByText("10.0 km · 0 pieces")).toBeVisible();
+  });
+
+  it("writes the temperature in the runner's own unit", async () => {
+    await renderWithRouter(attach({ units: { temp: "c", distance: "km" } }));
+
+    expect(screen.getByText("10.0 km · 5°C damp · 0 pieces")).toBeVisible();
   });
 });
 
-describe("AttachKit: before the picker opens", () => {
-  it("offers the picker when the runner denies the location prompt", async () => {
-    // The bug this replaced: a denied prompt left `coords` undefined
-    // forever, which is also what "still asking" looked like — so the
-    // screen sat on its skeleton and there was no way to attach a kit at
-    // all.
-    withLocation();
-    const prefillFor = vi.fn(() => Promise.resolve(candidate()));
-    await renderWithRouter(attach({ prefillFor }));
+describe("AttachKit: most likely", () => {
+  it("waits on the suggestion alone, with the picker already live", async () => {
+    // Round 22, "A2 Waiting": only most-likely changes. The picker, the
+    // photo row and the button are there from the first frame.
+    await renderWithRouter(attach({ prefillFor: neverSettles }));
 
+    const waiting = region("most-likely");
+    expect(waiting).toHaveAttribute("data-state", "waiting");
+    expect(waiting).toHaveAttribute("aria-busy", "true");
+    expect(within(waiting).getByText("Most likely")).toBeVisible();
     expect(
-      await screen.findByRole("button", { name: "Choose your kit" }),
+      within(waiting).getByText("Checking what you wore at 41°"),
     ).toBeVisible();
-    // And no suggestion is asked for: there is no position to match a
-    // previous run against, so the query could only answer nothing.
-    expect(prefillFor).not.toHaveBeenCalled();
+    expect(waiting.querySelectorAll(".breathe")).toHaveLength(2);
+
+    expect(screen.getByRole("button", { name: "Houdini" })).toBeVisible();
+    expect(primary()).toBeVisible();
+    expect(document.querySelector("[data-part='photo-well']")).not.toBeNull();
+    // "OR PICK FROM THE CLOSET" while a suggestion may yet come.
+    expect(screen.getByText("Or pick from the closet")).toBeVisible();
   });
 
-  it("shows a skeleton while it waits on a location", async () => {
-    // No spinner, per §System states.
-    withLocation({ latitude: 1, longitude: 2 });
-    const { container } = await renderWithRouter(
-      attach({ prefillFor: neverSettles }),
+  it("waits without a temperature to name when the run has none", async () => {
+    await renderWithRouter(
+      attach({
+        context: context({ conditions: undefined }),
+        prefillFor: neverSettles,
+      }),
     );
 
-    expect(
-      screen.getByRole("heading", { name: "What did you wear?" }),
-    ).toBeVisible();
-    expect(container.querySelectorAll(".breathe").length).toBeGreaterThan(0);
+    expect(screen.getByText("Checking what you wore")).toBeVisible();
   });
 
-  it("asks for a prefill at the coordinates it was given", async () => {
-    withLocation({ latitude: 44.98, longitude: -93.27 });
+  it("asks for the suggestion by the run, once", async () => {
     const prefillFor = vi.fn(() => Promise.resolve(undefined));
     await renderWithRouter(attach({ prefillFor }));
 
     await waitFor(() => {
-      expect(prefillFor).toHaveBeenCalledWith({
-        data: { lat: 44.98, lng: -93.27 },
-      });
+      expect(prefillFor).toHaveBeenCalledTimes(1);
+    });
+    expect(prefillFor).toHaveBeenCalledWith({ data: { runId: "01RUN" } });
+  });
+
+  it("asks again when the screen moves on to another run", async () => {
+    const user = userEvent.setup();
+    const prefillFor = vi.fn(() => Promise.resolve(undefined));
+    function TwoRuns(): JSX.Element {
+      const [runId, setRunId] = useState("01RUN");
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setRunId("02RUN");
+            }}
+          >
+            Another run
+          </button>
+          <AttachKit
+            units={{ temp: "f", distance: "mi" }}
+            runId={runId}
+            context={context()}
+            prefillFor={prefillFor}
+            attachKit={() => Promise.resolve({ entryId: "01NEW" })}
+            uploadPhoto={() => Promise.resolve({ key: "k" })}
+          />
+        </>
+      );
+    }
+    await renderWithRouter(<TwoRuns />);
+
+    await user.click(screen.getByRole("button", { name: "Another run" }));
+
+    await waitFor(() => {
+      expect(prefillFor).toHaveBeenLastCalledWith({ data: { runId: "02RUN" } });
     });
   });
 
-  it("offers the most likely kit, and says why it thinks so", async () => {
-    withLocation({ latitude: 44.98, longitude: -93.27 });
+  it("says in one line that there is no usual kit yet — no card", async () => {
+    // "One line, no card: an empty card is a promise we're not keeping."
+    await renderWithRouter(attach());
+
+    const none = await screen.findByText("No usual kit at 41° yet.");
+    const block = region("most-likely");
+    expect(block).toHaveAttribute("data-state", "none");
+    expect(block).toContainElement(none);
+    expect(
+      screen.getByText(
+        "Pick what you wore. After a few runs here, we’ll suggest it.",
+      ),
+    ).toBeVisible();
+    expect(block).not.toHaveClass("rounded-card");
+    // "OR PICK" loses its OR.
+    expect(screen.getByText("From the closet")).toBeVisible();
+    expect(screen.queryByText("Or pick from the closet")).toBeNull();
+  });
+
+  it("names the missing weather, and drops the sub-line, when the run has none", async () => {
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }) }),
+    );
+
+    expect(
+      await screen.findByText("No weather on this run, so no suggestion."),
+    ).toBeVisible();
+    expect(screen.queryByText(/After a few runs here/)).toBeNull();
+  });
+
+  it("treats a suggestion that failed to load as no suggestion", async () => {
+    // Degrade, don't fail: the picker is already the way on.
+    await renderWithRouter(
+      attach({ prefillFor: () => Promise.reject(new Error("D1 down")) }),
+    );
+
+    expect(await screen.findByText("No usual kit at 41° yet.")).toBeVisible();
+  });
+
+  it("offers the suggestion: where it is from, the pieces, and one tap", async () => {
     await renderWithRouter(
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    // The reason is the conditions it matched and how far off they were —
-    // a suggestion with no reason is a guess the runner cannot check.
-    expect(await screen.findByText(/Most likely/)).toHaveTextContent(
-      "[Most likely · from 50°, 1° off]",
+    const card = await screen.findByText(
+      "Most likely · from 43° damp, Fri 14 Aug",
     );
-    expect(screen.getByRole("button", { name: "That’s it" })).toBeVisible();
+    const block = region("most-likely");
+    expect(block).toHaveAttribute("data-state", "suggestion");
+    expect(block).toContainElement(card);
+    expect(block).toHaveClass("bg-hi-viz");
+    const pieces = within(block)
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+    expect(pieces).toEqual(["Houdini", "Tights"]);
   });
 
-  it("attaches the suggested kit in one tap, and moves to the verdict", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
-    const { router } = await renderWithRouter(
+  it("leaves out a suggested piece the closet no longer has", async () => {
+    // Retired since: it is not in the picker, so it is not named here.
+    await renderWithRouter(
       attach({
         prefillFor: () =>
-          Promise.resolve(candidate({ itemIds: ["01A", "01B"] })),
+          Promise.resolve(candidate({ itemIds: [HOUDINI, "01GONE"] })),
+      }),
+    );
+
+    await screen.findByText(/Most likely · from/);
+    expect(
+      within(region("most-likely"))
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["Houdini"]);
+    // Nothing stands in for the missing piece, either.
+    expect(within(region("most-likely")).getByRole("list")).toHaveTextContent(
+      /^Houdini$/u,
+    );
+  });
+
+  it("sends only the pieces it shows, on That's it and on Change", async () => {
+    // A suggested piece retired since is hidden from the card, so it is
+    // not sent either — "That's it" means the list the runner read.
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    await renderWithRouter(
+      attach({
+        prefillFor: () =>
+          Promise.resolve(candidate({ itemIds: [HOUDINI, "01GONE"] })),
         attachKit,
       }),
     );
 
-    await screen.findByRole("button", { name: "That’s it" });
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "That’s it" }));
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+    expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
+  });
+
+  it("sends only the shown pieces when That's it is pressed", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    await renderWithRouter(
+      attach({
+        prefillFor: () =>
+          Promise.resolve(candidate({ itemIds: [HOUDINI, "01GONE"] })),
+        attachKit,
+      }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "That’s it" }));
 
     await waitFor(() => {
       expect(attachKit).toHaveBeenCalledWith({
-        data: { runId: "01RUN", itemIds: ["01A", "01B"] },
+        data: { runId: "01RUN", itemIds: [HOUDINI] },
       });
     });
+  });
+
+  it("sends the suggested kit on That's it, and goes on to the verdict", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const { router } = await renderWithRouter(
+      attach({ prefillFor: () => Promise.resolve(candidate()), attachKit }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "That’s it" }));
+
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
     });
+    expect(attachKit).toHaveBeenCalledWith({
+      data: { runId: "01RUN", itemIds: [HOUDINI, TIGHTS] },
+    });
   });
 
-  it("offers the picker straight away when there is nothing to suggest", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    await renderWithRouter(attach());
-
-    expect(
-      await screen.findByRole("button", { name: "Choose your kit" }),
-    ).toBeVisible();
-    expect(screen.queryByRole("button", { name: "That’s it" })).toBeNull();
-  });
-
-  it("does the same when the browser will not give a location", async () => {
-    // Degrades to the condition-filtered picker rather than blocking —
-    // and asks for nothing it cannot answer. An exception in the effect
-    // would surface as an uncaught error rather than a failed assertion,
-    // so it is listened for.
-    const raised: string[] = [];
-    const watch = (event: ErrorEvent) => {
-      raised.push(event.message);
-    };
-    globalThis.addEventListener("error", watch);
-    try {
-      withoutGeolocation();
-      const prefillFor = vi.fn(() => Promise.resolve(candidate()));
-      await renderWithRouter(attach({ prefillFor }));
-
-      expect(prefillFor).not.toHaveBeenCalled();
-      expect(raised).toStrictEqual([]);
-    } finally {
-      globalThis.removeEventListener("error", watch);
-    }
-  });
-
-  it("waits, rather than offering the picker, until it knows", async () => {
-    // The skeleton is the "we might have a suggestion" state. Showing
-    // "choose your kit" first and replacing it a beat later would be a
-    // flash of the wrong screen.
-    withLocation({ latitude: 1, longitude: 2 });
-    await renderWithRouter(attach({ prefillFor: neverSettles }));
-
-    expect(
-      screen.queryByRole("button", { name: "Choose your kit" }),
-    ).toBeNull();
-    expect(screen.queryByRole("button", { name: "That’s it" })).toBeNull();
-  });
-
-  it("stops waiting once a suggestion arrives", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const { container } = await renderWithRouter(
+  it("takes the suggestion into the picker on Change, and puts the card away", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    await screen.findByRole("button", { name: "That’s it" });
-    expect(container.querySelectorAll(".breathe")).toHaveLength(0);
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+
+    expect(document.querySelector("[data-slot='most-likely']")).toBeNull();
+    expect(screen.getByRole("button", { name: "Houdini" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Tights" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("6.2 mi · 41°F damp · 2 pieces")).toBeVisible();
   });
 });
 
-async function openPicker(groups: PickerGroup[]) {
-  withLocation({ latitude: 1, longitude: 2 });
-  const user = userEvent.setup();
-  const rendered = await renderWithRouter(
-    attach({ pickerGroupsFor: () => Promise.resolve(groups) }),
-  );
-  await user.click(
-    await screen.findByRole("button", { name: "Choose your kit" }),
-  );
-  return { user, ...rendered };
-}
+describe("AttachKit: the closet picker", () => {
+  it("draws a row of tiles for the pieces a kit is built around, and chips for the rest", async () => {
+    await renderWithRouter(attach());
 
-describe("AttachKit: the picker", () => {
-  it("lists each group with its match count", async () => {
-    await openPicker([group({ matchCount: 1 })]);
-
-    // `closest`, because the label is a <Mono> span inside the legend now
-    // — matching on the span would assert half the sentence.
-    const label = await screen.findByText(/Tops/);
-    const legend = label.closest("legend");
-    // The space between the label and the count is a deliberate `{" "}`.
-    expect(legend).toHaveTextContent("Tops [1 of 1]");
-    expect(screen.getByLabelText(/Houdini/)).toBeInTheDocument();
+    const list = region("kit-list");
+    expect(within(list).getByText("Tops · 2 of 3 match")).toBeVisible();
+    expect(within(list).getByText("Bottoms · 1 of 1 match")).toBeVisible();
+    // The conditions filter is on: the singlet has no history at 41°.
+    expect(within(list).queryByRole("button", { name: "Singlet" })).toBeNull();
+    // Hands and head are a chip, not a row.
+    expect(within(list).queryByRole("button", { name: "Gloves" })).toBeNull();
+    expect(
+      within(list).getByRole("button", { name: "+ Hands / head 1" }),
+    ).toHaveAttribute("aria-haspopup", "dialog");
+    expect(screen.getByText("Showing 4 of 5")).toBeVisible();
   });
 
-  it("asks for the closet at the runner's coordinates", async () => {
-    withLocation({ latitude: 44.98, longitude: -93.27 });
-    const pickerGroupsFor = vi.fn(() => Promise.resolve([group()]));
+  it("gives every piece an outer layer a row of its own", async () => {
+    const outerOnly = context({
+      groups: [
+        {
+          group: "outer",
+          items: [piece(HOUDINI, "Shell")],
+          matchCount: 1,
+          hiddenByFilterCount: 0,
+        },
+      ],
+    });
+    await renderWithRouter(attach({ context: outerOnly }));
+
+    expect(screen.getByRole("button", { name: "Shell" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^\+ / })).toBeNull();
+  });
+
+  it("turns the conditions filter off and shows the whole closet", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(attach({ pickerGroupsFor }));
-    await user.click(
-      await screen.findByRole("button", { name: "Choose your kit" }),
+    await renderWithRouter(attach());
+
+    const filter = screen.getByRole("button", { name: "41° damp" });
+    expect(filter).toHaveAttribute("aria-pressed", "true");
+    await user.click(filter);
+
+    expect(filter).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Singlet" })).toBeVisible();
+    expect(screen.getByText("Tops · 3")).toBeVisible();
+    expect(screen.getByText("Showing 5 of 5")).toBeVisible();
+    await user.click(filter);
+    expect(screen.queryByRole("button", { name: "Singlet" })).toBeNull();
+  });
+
+  it("offers no filter at all without conditions to filter by", async () => {
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }) }),
     );
+
+    expect(screen.getByText("Tops · 3")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Singlet" })).toBeVisible();
+    expect(screen.queryByText(/^Showing/)).toBeNull();
+  });
+
+  it("marks a chosen tile in ink, and unmarks it on a second tap", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    const tile = screen.getByRole("button", { name: "Houdini" });
+    expect(tile).toHaveAttribute("aria-pressed", "false");
+    expect(tile).toHaveClass("border-hairline", "bg-panel");
+    await user.click(tile);
+    expect(tile).toHaveAttribute("aria-pressed", "true");
+    expect(tile).toHaveClass("border-ink", "bg-ink", "text-ground");
+    await user.click(tile);
+    expect(tile).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("draws no chip row when every group is a row", async () => {
+    const rowsOnly = context({ groups: GROUPS.slice(0, 2) });
+    await renderWithRouter(attach({ context: rowsOnly }));
+
+    expect(
+      within(region("kit-list")).queryAllByRole("button", {
+        name: /^\+/,
+      }),
+    ).toHaveLength(0);
+    expect(region("kit-list").children).toHaveLength(2);
+  });
+});
+
+describe("AttachKit: A2b, one category as a sheet", () => {
+  it("is named for picking while no category is open", async () => {
+    await renderWithRouter(attach());
+
+    const sheet = document.querySelector("dialog");
+    expect(sheet).toHaveAttribute("aria-label", "Pick");
+    expect(sheet).not.toHaveAttribute("open");
+  });
+
+  it("never filters a category when the run has no conditions", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }) }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+    expect(
+      within(sheet).getByRole("checkbox", { name: "Singlet" }),
+    ).toBeVisible();
+    expect(within(sheet).queryByText(/Hidden by the filter/)).toBeNull();
+  });
+
+  it("says nothing is hidden when the filter hides nothing", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Bottoms" }));
+    const sheet = await screen.findByRole("dialog", { name: "Bottoms" });
+    expect(
+      within(sheet).getByRole("button", { name: "Matches conditions" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(within(sheet).queryByText(/Hidden by the filter/)).toBeNull();
+  });
+
+  it("opens from ALL ›, filtered, and says how much the filter hides", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+
+    expect(within(sheet).getByRole("heading", { name: "Tops" })).toBeVisible();
+    expect(within(sheet).getByText("2 of 3 match 41° damp")).toBeVisible();
+    expect(within(sheet).getByText("0 selected")).toBeVisible();
+    expect(within(sheet).getByText("Hidden by the filter · 1")).toBeVisible();
+    expect(
+      within(sheet).getByRole("checkbox", { name: "Patagonia Houdini" }),
+    ).not.toBeChecked();
+    expect(
+      within(sheet).queryByRole("checkbox", { name: "Singlet" }),
+    ).toBeNull();
+    // An untested piece is shown and said to be untested.
+    const harrier = within(sheet).getByRole("checkbox", {
+      name: /Harrier/,
+    });
+    expect(harrier.closest("label")).toHaveTextContent(/untested/i);
+  });
+
+  it("edits the same kit the screen does", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+    await user.click(
+      within(sheet).getByRole("checkbox", { name: "Patagonia Houdini" }),
+    );
+    expect(within(sheet).getByText("1 selected")).toBeVisible();
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
 
     await waitFor(() => {
-      expect(pickerGroupsFor).toHaveBeenCalledWith({
-        data: { lat: 44.98, lng: -93.27 },
-      });
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
+    expect(screen.getByRole("button", { name: "Houdini" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
-  it("asks for it without coordinates when there are none", async () => {
-    // The picker still works with no location — it just cannot filter by
-    // conditions.
-    withoutGeolocation();
-    const pickerGroupsFor = vi.fn(() => Promise.resolve([group()]));
+  it("shows the whole category with the filter off, and hides nothing", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(attach({ pickerGroupsFor }));
-    await user.click(
-      await screen.findByRole("button", { name: "Choose your kit" }),
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+    const filter = within(sheet).getByRole("button", {
+      name: "Matches conditions",
+    });
+    expect(filter).toHaveAttribute("aria-pressed", "true");
+    await user.click(filter);
+
+    expect(filter).toHaveAttribute("aria-pressed", "false");
+    expect(
+      within(sheet).getByRole("checkbox", { name: "Singlet" }),
+    ).toBeVisible();
+    expect(within(sheet).queryByText(/Hidden by the filter/)).toBeNull();
+  });
+
+  it("searches by brand and name, in any case", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+    const search = within(sheet).getByRole("searchbox", { name: "Search" });
+    expect(search).toHaveAttribute("placeholder", "Search tops…");
+
+    // The brand is searched as well as the name.
+    await user.type(search, "PATAG");
+    expect(
+      within(sheet)
+        .getAllByRole("checkbox")
+        .map((box) => box.closest("label")?.textContent),
+    ).toEqual(["Patagonia Houdini"]);
+    await user.clear(search);
+    // Brand and name read as the row writes them, a space between.
+    await user.type(search, "patagonia houdini");
+    expect(within(sheet).getAllByRole("checkbox")).toHaveLength(1);
+    await user.clear(search);
+    // A piece with no brand is still found by its name alone.
+    await user.type(search, "harr");
+    const [only, ...rest] = within(sheet).getAllByRole("checkbox");
+    expect(rest).toHaveLength(0);
+    expect(only?.closest("label")).toHaveTextContent(/^Harrier/u);
+  });
+
+  it("opens a category with nothing matching with the filter off", async () => {
+    // Round 20: "a category with zero matches opens with the filter off".
+    const user = userEvent.setup();
+    const nothingMatches = context({
+      groups: [
+        {
+          group: "shoes",
+          items: [piece(GLOVES, "Spikes", { matches: false })],
+          matchCount: 0,
+          hiddenByFilterCount: 1,
+        },
+      ],
+    });
+    await renderWithRouter(attach({ context: nothingMatches }));
+
+    await user.click(screen.getByRole("button", { name: "+ Shoes 0" }));
+    const sheet = await screen.findByRole("dialog", { name: "Shoes" });
+    expect(
+      within(sheet).getByRole("checkbox", { name: "Spikes" }),
+    ).toBeVisible();
+    expect(
+      within(sheet).getByRole("button", { name: "Matches conditions" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("counts pieces rather than matches, with no filter, when the run has no conditions", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }) }),
     );
 
+    await user.click(screen.getByRole("button", { name: "+ Hands / head 1" }));
+    const sheet = await screen.findByRole("dialog", { name: "Hands / head" });
+    expect(within(sheet).getByText("1 pieces")).toBeVisible();
+    expect(
+      within(sheet).queryByRole("button", { name: "Matches conditions" }),
+    ).toBeNull();
+    expect(within(sheet).queryByText(/Hidden by the filter/)).toBeNull();
+  });
+
+  it("starts each category's search afresh", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    let sheet = await screen.findByRole("dialog", { name: "Tops" });
+    await user.type(within(sheet).getByRole("searchbox"), "zzz");
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
     await waitFor(() => {
-      expect(pickerGroupsFor).toHaveBeenCalledWith({ data: {} });
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
-  });
 
-  it("asks for the closet once, not on every keystroke", async () => {
-    // `groups !== undefined` is the guard: without it, every re-render —
-    // and typing is one per character — would refetch the whole closet.
-    withLocation({ latitude: 1, longitude: 2 });
-    const pickerGroupsFor = vi.fn(() => Promise.resolve([group()]));
+    await user.click(screen.getByRole("button", { name: "All Bottoms" }));
+    sheet = await screen.findByRole("dialog", { name: "Bottoms" });
+    expect(within(sheet).getByRole("searchbox")).toHaveValue("");
+    expect(
+      within(sheet).getByRole("checkbox", { name: "Tights" }),
+    ).toBeVisible();
+  });
+});
+
+describe("AttachKit: a kit is required", () => {
+  it("never relabels the button, and marks the picker when nothing is chosen", async () => {
+    // Round 20: "the button label never changes, and tapping it with none
+    // chosen marks the closet-picker group with the message band 'Pick at
+    // least one piece.'" The round-13 "Attach 0 items" is superseded.
     const user = userEvent.setup();
-    await renderWithRouter(attach({ pickerGroupsFor }));
-    await user.click(
-      await screen.findByRole("button", { name: "Choose your kit" }),
-    );
-    await screen.findByText(/Tops/);
-    expect(pickerGroupsFor).toHaveBeenCalledTimes(1);
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    await renderWithRouter(attach({ attachKit }));
 
-    await user.type(screen.getByPlaceholderText("Search your closet"), "hou");
+    expectAvailable(primary());
+    await user.click(primary());
 
-    expect(pickerGroupsFor).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText(/Houdini/)).toBeInTheDocument();
+    const message = screen.getByText("Pick at least one piece.");
+    expect(region("closet-picker")).toContainElement(message);
+    expect(message).toHaveAttribute("id", "kit-message");
+    expect(attachKit).not.toHaveBeenCalled();
+    expect(primary()).toBeVisible();
   });
 
-  it("asks for nothing until the picker is opened", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const pickerGroupsFor = vi.fn(() => Promise.resolve([group()]));
+  it("clears the mark when the suggested kit is sent instead", async () => {
+    const user = userEvent.setup();
     await renderWithRouter(
       attach({
         prefillFor: () => Promise.resolve(candidate()),
-        pickerGroupsFor,
+        attachKit: neverSettles,
       }),
     );
-    await screen.findByRole("button", { name: "That’s it" });
 
-    expect(pickerGroupsFor).not.toHaveBeenCalled();
+    await user.click(primary());
+    expect(screen.getByText("Pick at least one piece.")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "That’s it" }));
+    expect(screen.queryByText("Pick at least one piece.")).toBeNull();
   });
 
-  it("names an item with its brand, and marks an untested one", async () => {
-    await openPicker([
-      group({
-        items: [
-          {
-            id: "01A",
-            name: "Houdini",
-            brand: "Patagonia",
-            category: "top",
-            layer: NOTHING,
-            matches: true,
-            untested: true,
-          },
-        ],
-      }),
-    ]);
+  it("clears the mark as soon as a piece is chosen", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
 
-    expect(await screen.findByText("Patagonia Houdini")).toBeVisible();
-    expect(screen.getByText("[untested]")).toBeVisible();
+    await user.click(primary());
+    expect(screen.getByText("Pick at least one piece.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    expect(screen.queryByText("Pick at least one piece.")).toBeNull();
   });
 
-  it("names an item with no brand without a leading space", async () => {
-    await openPicker([
-      group({
-        items: [
-          {
-            id: "01A",
-            name: "Long sleeve top",
-            brand: NOTHING,
-            category: "top",
-            layer: NOTHING,
-            matches: true,
-            untested: false,
-          },
-        ],
-      }),
-    ]);
+  it("sends what was chosen, and goes on to the verdict", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const { router } = await renderWithRouter(attach({ attachKit }));
 
-    const label = await screen.findByText("Long sleeve top");
-    expect(label.textContent).toBe("Long sleeve top");
+    await user.click(primary());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Tights" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(attachKit).toHaveBeenCalledWith({
+      data: { runId: "01RUN", itemIds: [HOUDINI, TIGHTS] },
+    });
   });
 
-  it("marks a tested item by leaving it unmarked", async () => {
-    await openPicker([group()]);
-    await screen.findByText(/Tops/);
-    expect(screen.queryByText("[untested]")).toBeNull();
-  });
+  it("offers the way out: the run stays in the queue", async () => {
+    await renderWithRouter(attach());
 
-  it("says how many the conditions filter hid", async () => {
-    // The count is the honest half of a filtered list: a closet that looks
-    // half empty is alarming without it.
-    await openPicker([group({ hiddenByFilterCount: 3 })]);
-    expect(await screen.findByText("3 hidden by conditions")).toBeVisible();
-  });
-
-  it("says nothing about hidden items when none were", async () => {
-    await openPicker([group({ hiddenByFilterCount: 0 })]);
-    await screen.findByText("Tops");
-    expect(screen.queryByText(/hidden by conditions/)).toBeNull();
-  });
-
-  it("filters what is shown as the runner searches", async () => {
-    const { user } = await openPicker([
-      group({
-        items: [
-          {
-            id: "01A",
-            name: "Houdini",
-            brand: NOTHING,
-            category: "top",
-            layer: NOTHING,
-            matches: true,
-            untested: false,
-          },
-          {
-            id: "01B",
-            name: "Merino base",
-            brand: NOTHING,
-            category: "top",
-            layer: NOTHING,
-            matches: true,
-            untested: false,
-          },
-        ],
-      }),
-    ]);
-    await screen.findByText("Tops");
-
-    await user.type(
-      screen.getByPlaceholderText("Search your closet"),
-      "merino",
-    );
-
-    expect(screen.getByLabelText(/Merino base/)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Houdini/)).toBeNull();
-  });
-
-  it("drops a group entirely when nothing in it matches the search", async () => {
-    const { user } = await openPicker([group()]);
-    await screen.findByText("Tops");
-
-    await user.type(screen.getByPlaceholderText("Search your closet"), "zzz");
-
-    expect(screen.queryByText("Tops")).toBeNull();
-  });
-
-  it("will not attach nothing, and stays reachable while it refuses", async () => {
-    // Design's round-13 "not yet": full strength, `aria-disabled`, silent
-    // on press. "The count is the sentence: it says what is missing on the
-    // button the runner is looking at" — so `Attach 0 items` is the whole
-    // message and there is nothing else to announce.
-    await openPicker([group()]);
-    expectUnavailable(
-      await screen.findByRole("button", { name: /Attach 0 items/ }),
+    const out = screen.getByRole("link", { name: "leave it in the queue" });
+    expect(out).toHaveAttribute("href", "/runs");
+    expect(out.closest("p")).toHaveTextContent(
+      "Not now — leave it in the queue.",
     );
   });
+});
 
-  it("counts the selection, in the singular at one", async () => {
-    const { user } = await openPicker([
-      group({
-        items: [
-          {
-            id: "01A",
-            name: "Houdini",
-            brand: NOTHING,
-            category: "top",
-            layer: NOTHING,
-            matches: true,
-            untested: false,
-          },
-          {
-            id: "01B",
-            name: "Tights",
-            brand: NOTHING,
-            category: "top",
-            layer: NOTHING,
-            matches: true,
-            untested: false,
-          },
-        ],
-      }),
-    ]);
-    await screen.findByText("Tops");
-
-    await user.click(screen.getByLabelText(/Houdini/));
-    expectAvailable(screen.getByRole("button", { name: "Attach 1 item" }));
-
-    await user.click(screen.getByLabelText(/Tights/));
-    expect(
-      screen.getByRole("button", { name: "Attach 2 items" }),
-    ).toBeVisible();
-  });
-
-  it("takes a selection back when it is tapped again", async () => {
-    const { user } = await openPicker([group()]);
-    await screen.findByText("Tops");
-
-    await user.click(screen.getByLabelText(/Houdini/));
-    await user.click(screen.getByLabelText(/Houdini/));
-
-    expectUnavailable(screen.getByRole("button", { name: /Attach 0 items/ }));
-  });
-
-  it("attaches once, however many times the button is pressed", async () => {
-    // The guard rule 07 makes necessary, and the one with the worst
-    // failure in the app: `attachKit` **creates an entry**, so without it
-    // a double press is two entries against one run. `disabled` used to
-    // cover only "nothing selected" — while the attach was actually
-    // running the button sat at full strength with nothing stopping a
-    // second press.
+describe("AttachKit: a failed attach (round 23, item 9)", () => {
+  it("waits behind its in-flight label, and sends once", async () => {
+    const user = userEvent.setup();
     const pending = Promise.withResolvers<{ entryId: string }>();
     const attachKit = vi.fn(() => pending.promise);
-    withLocation({ latitude: 1, longitude: 2 });
-    const user = userEvent.setup();
-    await renderWithRouter(
-      attach({
-        pickerGroupsFor: () => Promise.resolve([group()]),
-        attachKit,
-      }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: "Choose your kit" }),
-    );
-    await screen.findByText("Tops");
-    await user.click(screen.getByLabelText(/Houdini/));
-    const button = screen.getByRole("button", { name: "Attach 1 item" });
+    await renderWithRouter(attach({ attachKit }));
 
-    await user.click(button);
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    // Found by its region: while it works, the name it answers to is the
+    // in-flight verb, because the rest label is hidden rather than removed.
+    const button = region("primary-action");
     await waitFor(() => {
       expectBusy(button);
     });
+    expect(button).toHaveAccessibleName("Attaching");
     await user.click(button);
-    await user.click(button);
-
     expect(attachKit).toHaveBeenCalledTimes(1);
     pending.resolve({ entryId: "01NEW" });
   });
 
-  it("attaches what was chosen", async () => {
-    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
-    withLocation({ latitude: 1, longitude: 2 });
+  it("says nothing attached under the button, and tries again with the same kit", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(
-      attach({
-        pickerGroupsFor: () => Promise.resolve([group()]),
-        attachKit,
-      }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: "Choose your kit" }),
-    );
-    await screen.findByText("Tops");
-    await user.click(screen.getByLabelText(/Houdini/));
-
-    await user.click(screen.getByRole("button", { name: "Attach 1 item" }));
-
-    await waitFor(() => {
-      expect(attachKit).toHaveBeenCalledWith({
-        data: { runId: "01RUN", itemIds: ["01A"] },
-      });
-    });
-  });
-
-  it("can be reached from the suggestion, when the suggestion is wrong", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const user = userEvent.setup();
-    await renderWithRouter(
-      attach({
-        prefillFor: () => Promise.resolve(candidate()),
-        pickerGroupsFor: () => Promise.resolve([group()]),
-      }),
-    );
-    await screen.findByRole("button", { name: "That’s it" });
-
-    await user.click(screen.getByRole("button", { name: "Change" }));
-
-    expect(await screen.findByText("Tops")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "That’s it" })).toBeNull();
-  });
-
-  it("shows a skeleton while the closet loads", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const user = userEvent.setup();
-    const { container } = await renderWithRouter(
-      attach({ pickerGroupsFor: neverSettles }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: "Choose your kit" }),
-    );
-
-    expect(container.querySelectorAll(".breathe").length).toBeGreaterThan(0);
-  });
-});
-
-describe("AttachKit: when it cannot save", () => {
-  it("says so, and leaves the choice intact", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const user = userEvent.setup();
-    await renderWithRouter(
-      attach({
-        prefillFor: () => Promise.resolve(candidate()),
-        attachKit: () => Promise.reject(new Error("D1 unavailable")),
-      }),
-    );
-    await user.click(await screen.findByRole("button", { name: "That’s it" }));
-
-    expect(
-      await screen.findByText("Couldn't save that. Try again."),
-    ).toBeVisible();
-    expect(screen.getByRole("button", { name: "That’s it" })).toBeVisible();
-  });
-
-  it("says nothing at rest — no empty line reserved for it", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const { container } = await renderWithRouter(attach());
-    await screen.findByRole("button", { name: "Choose your kit" });
-    expect(container.querySelectorAll("p")).toHaveLength(0);
-  });
-
-  it("clears the last failure when the runner tries again", async () => {
-    withLocation({ latitude: 1, longitude: 2 });
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ entryId: string }>();
     const attachKit = vi
-      .fn<() => Promise<{ entryId: string }>>()
+      .fn<
+        (input: {
+          data: { runId: string; itemIds: string[] };
+        }) => Promise<{ entryId: string }>
+      >()
       .mockRejectedValueOnce(new Error("D1 unavailable"))
-      .mockReturnValueOnce(pending.promise);
-    await renderWithRouter(
-      attach({ prefillFor: () => Promise.resolve(candidate()), attachKit }),
+      .mockResolvedValueOnce({ entryId: "01NEW" });
+    const { router } = await renderWithRouter(attach({ attachKit }));
+
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    const band = await screen.findByText("Nothing attached");
+    expect(band.closest("[data-part='failure-band']")).not.toBeNull();
+    expect(screen.getByText("Our end failed.")).toBeVisible();
+    // One status region on the screen, and it says the same.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Nothing attached. Our end failed.",
     );
-    const button = await screen.findByRole("button", { name: "That’s it" });
-
-    await user.click(button);
+    // Not the pink line it used to be, and still where it was.
+    expect(screen.queryByText("Couldn't save that. Try again.")).toBeNull();
     expect(
-      await screen.findByText("Couldn't save that. Try again."),
-    ).toBeVisible();
+      band.closest("[data-part='failure-band']")?.previousElementSibling,
+    ).toBe(region("primary-action"));
+    expect(router.state.location.pathname).toBe("/");
 
-    await user.click(button);
+    await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(screen.queryByText("Couldn't save that. Try again.")).toBeNull();
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
     });
-    pending.resolve({ entryId: "01NEW" });
+    expect(attachKit).toHaveBeenLastCalledWith({
+      data: { runId: "01RUN", itemIds: [HOUDINI] },
+    });
   });
 });
 
 /**
- * The log flow's three screens are three routes, so the move that carries
- * "which way you are travelling" has to be on each of them — and a screen
- * that quietly loses its wrapper animates nothing, with nothing to say so.
+ * A step that records what it was handed and lets the test decide when the
+ * blurred bytes come back — W3's contract: the picked file waits, and
+ * something else says what is kept.
  */
-describe("AttachKit: the log flow", () => {
-  it("is step two of the log flow, and enters from an edge", async () => {
-    withoutGeolocation();
+function recordingStep() {
+  const seen: File[] = [];
+  let release: ((ready: File) => void) | undefined;
+  let say: ((sentence: string) => void) | undefined;
+  const step: PhotoStep = (file, onReady, announce) => {
+    seen.push(file);
+    release = onReady;
+    say = announce;
+    return <p>step for {file.name}</p>;
+  };
+  return {
+    seen,
+    step,
+    hand: (ready: File) => release?.(ready),
+    announce: (sentence: string) => {
+      say?.(sentence);
+    },
+  };
+}
+
+describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
+  it("is the one well, with A2's words, from the first frame", async () => {
+    await renderWithRouter(attach({ prefillFor: neverSettles }));
+
+    const well = document.querySelector("[data-part='photo-well']");
+    expect(well).toHaveAttribute("data-state", "empty");
+    expect(well).toHaveTextContent("Outfit photo · optional");
+    expect(well).toHaveTextContent("Add a photo");
+    expect(well).toHaveTextContent("Flat on the floor works best.");
+    // The desk's words ride along, shown from the wide breakpoint up.
+    expect(well).toHaveTextContent("Drop a photo, or browse");
+  });
+
+  it("says let go while a photo is dragged over it", async () => {
     await renderWithRouter(attach());
 
-    const step = document.querySelector("[data-flow-direction]");
-    expect(step).not.toBeNull();
-    // Mounted with no step before it, so this is the way in: the class is
-    // absent precisely because the rise is the move — as its three sibling
-    // screens already assert.
-    //
-    // **This asserted `flow-step-(forward|back)` and passed because of a
-    // bug.** Arrival was recomputed on every render, and AttachKit is the
-    // one step that re-renders on its own after mounting (its geolocation
-    // effect), so by the time this looked, the re-render had read its own
-    // record and added the slide class. That is the same bug that slid the
-    // whole verdict screen sideways when a verdict was chosen. The other
-    // three screens do not re-render unprompted, which is why their tests
-    // captured the mount state and this one captured the bug.
-    expect(step).toHaveAttribute("data-flow-direction", "entering");
-    expect(step?.className).toBe("");
+    const transfer = new DataTransfer();
+    transfer.items.add(jpeg());
+    fireEvent.dragOver(photoWell(), { dataTransfer: transfer });
+
+    expect(photoWell()).toHaveTextContent("Let go to add it");
+    expect(photoInput()).toHaveAttribute(
+      "accept",
+      "image/jpeg,image/png,image/webp",
+    );
+  });
+
+  it("holds the picked file for W3's step, and keeps the bytes it hands back", async () => {
+    const user = userEvent.setup();
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+
+    await user.upload(photoInput(), jpeg("raw.jpg"));
+
+    expect(screen.getByText("step for raw.jpg")).toBeVisible();
+    expect(recording.seen.map((file) => file.name)).toEqual(["raw.jpg"]);
+    // While the step is open the well says it is adding.
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "uploading",
+    );
+    expect(photoWell()).toHaveTextContent("Adding");
+
+    recording.hand(jpeg("blurred.jpg"));
+    await waitFor(() => {
+      expect(screen.queryByText("step for raw.jpg")).toBeNull();
+    });
+    // The preview arrives one effect after the photo is kept.
+    await waitFor(() => {
+      expect(
+        document.querySelector("[data-part='photo-well']"),
+      ).toHaveAttribute("data-state", "filled");
+    });
+    expect(
+      within(document.body).getByRole("img", { name: "Your outfit" }),
+    ).toHaveAttribute("src", "blob:preview");
+    expect(createObjectURL).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "blurred.jpg" }),
+    );
+  });
+
+  it("lends the step the screen's one status region", async () => {
+    // Rule 08: one `role="status"` per screen.
+    const user = userEvent.setup();
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+    await user.upload(photoInput(), jpeg());
+
+    recording.announce("Blurring 1 face.");
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Blurring 1 face.");
+    });
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
+
+  it("keeps a picked photo as it is when there is no step", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.upload(photoInput(), jpeg("plain.jpg"));
+
+    await waitFor(() => {
+      expect(
+        document.querySelector("[data-part='photo-well']"),
+      ).toHaveAttribute("data-state", "filled");
+    });
+    expect(createObjectURL).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "plain.jpg" }),
+    );
+  });
+
+  it("refuses a type the server would, on the well's field message", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+
+    await user.upload(
+      photoInput(),
+      new File(["x"], "kit.heic", { type: "image/heic" }),
+    );
+
+    expect(screen.getByText("Photos must be JPG, PNG or WebP.")).toBeVisible();
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "error",
+    );
+    expect(recording.seen).toHaveLength(0);
+  });
+
+  it("refuses a photo over the cap, and clears the mark for the next one", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.upload(photoInput(), jpeg("huge.jpg", 10 * 1024 * 1024 + 1));
+    expect(
+      screen.getByText("That photo is over 10 MB. Pick a smaller one."),
+    ).toBeVisible();
+
+    await user.upload(photoInput(), jpeg("fine.jpg"));
+    expect(screen.queryByText(/over 10 MB/)).toBeNull();
+  });
+
+  it("does nothing when a change carries no file list, or an empty one", async () => {
+    await renderWithRouter(attach());
+    // A handler that throws is reported, not raised: React hands it to the
+    // window, so that is where a crash on a missing file would show.
+    const thrown: unknown[] = [];
+    const record = (event: ErrorEvent): void => {
+      thrown.push(event.error);
+    };
+    globalThis.addEventListener("error", record);
+
+    fireEvent.change(photoInput(), { target: { files: NOTHING } });
+    fireEvent.change(photoInput(), { target: { files: [] } });
+
+    globalThis.removeEventListener("error", record);
+    expect(thrown).toEqual([]);
+    expect(photoWell()).toHaveAttribute("data-state", "empty");
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("does nothing when the picker is dismissed", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.upload(photoInput(), []);
+
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "empty",
+    );
+  });
+
+  it("removes the held photo and lets its preview go", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+    await user.upload(photoInput(), jpeg());
+
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "empty",
+    );
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+  });
+
+  it("uploads the held photo to the entry the attach made, then goes on", async () => {
+    const user = userEvent.setup();
+    const order: string[] = [];
+    const attachKit = vi.fn(() => {
+      order.push("attach");
+      return Promise.resolve({ entryId: "01NEW" });
+    });
+    const uploadPhoto = vi.fn<
+      (input: { data: FormData }) => Promise<{ key: string }>
+    >(() => {
+      order.push("photo");
+      return Promise.resolve({ key: "k" });
+    });
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg("kit.jpg"));
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(order).toEqual(["attach", "photo"]);
+    const sent = uploadPhoto.mock.calls[0]?.[0].data;
+    expect(sent?.get("entryId")).toBe("01NEW");
+    expect(sent?.get("photo")).toEqual(
+      expect.objectContaining({ name: "kit.jpg" }),
+    );
+    expect(sent?.get("idempotencyKey")).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/u);
+  });
+
+  it("says a failed photo on the well, never that nothing attached", async () => {
+    // The entry exists once the attach lands; the photo is secondary
+    // (law 5), so its failure is the well's and the kit stays attached.
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValueOnce(new Error("R2 hiccup"));
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    expect(
+      await screen.findByText(
+        "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Nothing attached")).toBeNull();
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+    // The photo is still held, so it can be sent again or removed.
+    expect(photoWell()).toHaveAttribute("data-state", "filled");
+    expect(router.state.location.pathname).toBe("/");
+    expect(attachKit).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the photo again under the same key on Next, without attaching twice", async () => {
+    const user = userEvent.setup();
+    const secondSend = Promise.withResolvers<{ key: string }>();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValueOnce(new Error("R2 hiccup"))
+      .mockReturnValueOnce(secondSend.promise);
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+    await screen.findByText(/The photo didn't upload/u);
+    await user.click(primary());
+
+    // Sending again: last attempt's message is not left standing over it.
+    await waitFor(() => {
+      expect(photoWell()).toHaveAttribute("data-state", "uploading");
+    });
+    expect(screen.queryByText(/The photo didn't upload/u)).toBeNull();
+    secondSend.resolve({ key: "k" });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(attachKit).toHaveBeenCalledTimes(1);
+    expect(uploadPhoto).toHaveBeenCalledTimes(2);
+    const [first, second] = uploadPhoto.mock.calls.map((call) =>
+      call[0].data.get("idempotencyKey"),
+    );
+    expect(second).toBe(first);
+    expect(uploadPhoto.mock.calls[1]?.[0].data.get("entryId")).toBe("01NEW");
+  });
+
+  it("goes on without the photo once it is removed after a failed upload", async () => {
+    const user = userEvent.setup();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValue(new Error("R2 down"));
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+    await screen.findByText(/The photo didn't upload/u);
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    expect(attachKit).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the well sending while the photo goes up, and sends it once", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<{ key: string }>();
+    const uploadPhoto = vi.fn(() => pending.promise);
+    await renderWithRouter(attach({ uploadPhoto }));
+
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(photoWell()).toHaveAttribute("data-state", "uploading");
+    });
+    await user.click(region("primary-action"));
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    pending.resolve({ key: "k" });
+  });
+
+  it("sends no photo when none was kept", async () => {
+    const user = userEvent.setup();
+    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
+    const { router } = await renderWithRouter(attach({ uploadPhoto }));
+
+    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    expect(uploadPhoto).not.toHaveBeenCalled();
   });
 });

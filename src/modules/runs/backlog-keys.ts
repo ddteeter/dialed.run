@@ -85,4 +85,3 @@ export function actionForKey(key: string): BacklogAction | undefined {
 export function rowAfterMove(from: number, by: number, count: number): number {
   return Math.min(Math.max(from + by, 0), Math.max(count - 1, 0));
 }
-

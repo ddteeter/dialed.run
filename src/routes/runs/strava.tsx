@@ -38,6 +38,7 @@ function StravaPage() {
         <StravaConnect
           configured={strava.configured}
           status={strava.status}
+          runCount={strava.runCount}
           getAuthorizeUrl={getStravaAuthorizeUrlFn}
           disconnect={disconnectStravaFn}
         />

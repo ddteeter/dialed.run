@@ -116,7 +116,13 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
       // caller's to change.
       // Stryker disable next-line CallExpression
       rotate();
-      await navigate({ to: "/runs/$runId", params: { runId: created.id } });
+      // Onto picking the outfit, as R1 ends — "Next · pick the outfit" —
+      // not onto run detail (D-102): manual entry adds the run and hands
+      // off to the same two steps as an import.
+      await navigate({
+        to: "/feed/attach/$runId",
+        params: { runId: created.id },
+      });
     },
   });
 
@@ -254,7 +260,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
           retryRef={form.retryRef}
         />
         <SubmitButton
-          label="Log run"
+          label="Next · pick the outfit"
           pendingLabel="Logging"
           pending={form.pending}
         />

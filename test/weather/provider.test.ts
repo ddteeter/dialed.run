@@ -55,7 +55,10 @@ describe("visual crossing adapter (103)", () => {
     // local date, never its observation.
     const provider = createVisualCrossingProvider(
       "test-key",
-      jsonFetch({ ...visualCrossingObservationFixture, timezone: "Mars/Olympus_Mons" }),
+      jsonFetch({
+        ...visualCrossingObservationFixture,
+        timezone: "Mars/Olympus_Mons",
+      }),
     );
     const observation = await provider.observation(
       44.98,

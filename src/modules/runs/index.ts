@@ -6,3 +6,4 @@
  */
 export { handleImportsBatch, handleImportsDlqBatch } from "./consumer";
 export { stravaApiFromEnv } from "./strava/api-from-env";
+export { runsAwaitingVerdict } from "./awaiting-verdict";

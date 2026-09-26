@@ -163,6 +163,11 @@ When a lane's design doc requests a schema change:
    the NEVER list holds, and reduced-motion collapses to 90ms opacity
    (never zero). Verify by watching the demo videos — they record full
    motion by design.
+6. **Publish a privacy policy** and link it from the signed-out shell and
+   both auth forms (D-105, owner 2026-09-25). The Strava API Agreement has
+   us warrant compliance with privacy law (§5.1, §11.1), and strangers
+   hand us an email, photos and a Strava grant. The text is a human
+   decision; the page and links are a small lane.
 
 Dogfooding with invited runners is fine before the gate; strangers are not.
 

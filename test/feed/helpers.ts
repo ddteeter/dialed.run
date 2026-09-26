@@ -18,7 +18,10 @@ import {
   userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
-import { weatherObservations } from "../../src/db/schema-weather";
+import {
+  manualConditions,
+  weatherObservations,
+} from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { cacheKeyFor } from "../../src/modules/weather";
 import { newUlid } from "../../src/lib/ids";
@@ -181,7 +184,19 @@ export async function resetTables(): Promise<void> {
     follows,
     userProfiles,
   ]);
-  await deleteAllFrom(weatherDb(), [weatherObservations]);
+  await deleteAllFrom(weatherDb(), [weatherObservations, manualConditions]);
+}
+
+/**
+A band a runner set for this run in R2b: the run's own, never a cache cell.
+*/
+export async function makeManualBand(
+  runId: string,
+  tempC: number,
+): Promise<void> {
+  await weatherDb()
+    .insert(manualConditions)
+    .values({ runId, tempC, setAt: NOW });
 }
 
 export async function makeObservation(params: {
