@@ -4,8 +4,17 @@ import {
   BACKLOG_MINIMUM,
   bandContextFor,
   isBacklogWorthOpening,
+  noindexHead,
   shouldAskForVerdict,
 } from "../../src/modules/feed/route-decisions";
+
+describe("noindexHead (FEED-1)", () => {
+  it("tells a crawler not to index the page", () => {
+    expect(noindexHead()).toStrictEqual({
+      meta: [{ name: "robots", content: "noindex" }],
+    });
+  });
+});
 
 /**
  * The two decisions that used to live in route loaders.

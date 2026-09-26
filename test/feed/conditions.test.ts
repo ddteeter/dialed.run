@@ -298,27 +298,6 @@ describe("a run's own band (B1)", () => {
     expect(observations.get(mine)?.source).toBe("visualcrossing");
   });
 
-  it("skips a legacy band still in the cache cell: it is somebody's, not the weather", async () => {
-    const runId = await makeRun({
-      userId: await makeUser(),
-      lat: 47.44,
-      lng: -93.27,
-    });
-    await makeObservation({
-      lat: 47.44,
-      lng: -93.27,
-      startedAt: NOW,
-      tempC: 30,
-      feelsLikeC: 30,
-      source: "manual",
-    });
-
-    const observations = await observationsForRuns([
-      { id: runId, lat: 47.44, lng: -93.27, startedAt: NOW, durationS: 0 },
-    ]);
-
-    expect(observations.has(runId)).toBe(false);
-  });
 });
 
 describe("the run's own zone (D-96)", () => {
@@ -461,21 +440,6 @@ describe("currentConditions", () => {
     const conditions = await currentConditions(54.11, -93.27, NOW);
 
     expect(conditions?.tempC).toBe(8);
-  });
-
-  it("ignores a temperature a human typed", async () => {
-    // Manual rows are excluded from anything aggregated or offered as
-    // current — the call is built on resolved observations.
-    await makeObservation({
-      lat: 50.11,
-      lng: -93.27,
-      startedAt: NOW,
-      tempC: 99,
-      feelsLikeC: 99,
-      source: "manual",
-    });
-
-    expect(await currentConditions(50.11, -93.27, NOW)).toBeUndefined();
   });
 
   it("ignores an observation older than the fresh window", async () => {

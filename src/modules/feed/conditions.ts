@@ -14,7 +14,7 @@
  * env-touching file breaks the client build (Vite/Rolldown must resolve
  * `cloudflare:workers` even for bindings the component never uses).
  */
-import { and, desc, inArray, ne, or } from "drizzle-orm";
+import { desc, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -167,11 +167,13 @@ export async function observationsForRuns(
     // Stryker disable ArrowFunction
     const cells = chunk.map(({ key }) => matchesKey(key));
     // Stryker restore ArrowFunction
-    // Real observations only: a legacy manual row is somebody's band.
+    // The cache holds real observations only: a band a runner set lives
+    // in `manual_conditions`, read below, and no `source='manual'` cache
+    // row has ever been written (contracts.md).
     const found = await db
       .select()
       .from(weatherObservations)
-      .where(and(ne(weatherObservations.source, "manual"), or(...cells)));
+      .where(or(...cells));
     for (const row of found) {
       byCell.set(cellKey(row.latR, row.lngR, row.hourBucket), row);
     }
@@ -251,7 +253,7 @@ const FRESH_BUCKETS = 2;
 
 /**
  * The viewer's current conditions from the shared cache: the freshest
- * non-manual observation at their rounded location, within
+ * observation at their rounded location, within
  * FRESH_BUCKETS hour-buckets. Undefined degrades to the widened/empty
  * consensus state (law 5) — fetching a fresh observation is the weather
  * lane's job.
@@ -268,10 +270,7 @@ export async function currentConditions(
   );
   const atBucket = (bucket: number) =>
     matchesKey({ ...cacheKeyFor(lat, lng, new Date()), hourBucket: bucket });
-  const scope = and(
-    ne(weatherObservations.source, "manual"),
-    or(...buckets.map((bucket) => atBucket(bucket))),
-  );
+  const scope = or(...buckets.map((bucket) => atBucket(bucket)));
   const db = drizzle(env.DIALED_WEATHER);
   const [best] = await db
     .select()

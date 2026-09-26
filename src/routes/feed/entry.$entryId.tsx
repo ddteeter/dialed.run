@@ -4,7 +4,10 @@ import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
 import { fileReportAction } from "../../modules/safety/functions";
-import { shouldAskForVerdict } from "../../modules/feed/route-decisions";
+import {
+  noindexHead,
+  shouldAskForVerdict,
+} from "../../modules/feed/route-decisions";
 import {
   entryDetailQuery,
   recordVerdictPromptedAction,
@@ -17,6 +20,7 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/entry/$entryId")({
+  head: noindexHead,
   beforeLoad: async () => {
     requireSignedIn(await getSession());
   },

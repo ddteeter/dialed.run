@@ -79,3 +79,20 @@ export const BACKLOG_MINIMUM = 2;
 export function isBacklogWorthOpening(unjudgedCount: number): boolean {
   return unjudgedCount >= BACKLOG_MINIMUM;
 }
+
+/**
+ * The head a public profile (H) and an entry (D) carry: **not indexed**
+ * (FEED-1). Whether runners' names, kit and photos belong in a search
+ * engine is the owner's open decision 1, and until it is made the answer is
+ * no — matching the `robots.txt` lines task 125 adds for the same paths.
+ * The meta tag is the half that holds even when a crawler reaches the page
+ * by a link rather than by crawling.
+ *
+ * Previews are a separate question (FEED-14): a link preview reads the
+ * page's Open Graph tags, which `noindex` does not touch.
+ */
+export function noindexHead(): {
+  meta: { name: string; content: string }[];
+} {
+  return { meta: [{ name: "robots", content: "noindex" }] };
+}
