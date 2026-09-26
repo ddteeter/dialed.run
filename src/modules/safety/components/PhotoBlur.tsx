@@ -10,9 +10,10 @@ import {
   type LoadedImage,
 } from "../blur/pipeline";
 import {
+  BLUR_OFF_LINE,
+  afterTap,
   blurSummary,
   detectedRegions,
-  tapRegion,
   toImageCoordinates,
   type BlurRegion,
 } from "../blur/regions";
@@ -237,14 +238,19 @@ export function PhotoBlur({
         Happens on your device, before upload.
       </p>
 
+      {/* Visible copy, and **not a live region any more**. It was a second
+          `aria-live` on a screen that already had the form's, which rule 08
+          forbids and which loses one of the two announcements. The
+          sentence still reaches a reader — through `onAnnounce`, into the
+          one region the screen has.
+
+          One slot for both states (round 22, item 22): blur off says what
+          that means, in the same place and weight — "not a warning colour;
+          the sentence does the work". */}
+      <p className="text-small">{isOn ? shown : BLUR_OFF_LINE}</p>
+
       {isOn ? (
         <>
-          {/* Visible copy, and **not a live region any more**. It was a
-              second `aria-live` on a screen that already had the form's,
-              which rule 08 forbids and which loses one of the two
-              announcements. The sentence still reaches a reader — through
-              `onAnnounce`, into the one region the screen has. */}
-          <p className="text-small">{shown}</p>
           {/* Rendered only once there is a decoded photo. A canvas on
               screen while the copy still says "checking" is a blank
               rectangle that accepts taps it cannot place — and the guard
@@ -265,13 +271,15 @@ export function PhotoBlur({
                   ready.width,
                   ready.height,
                 );
-                setRegions((current) => [
-                  ...current,
-                  {
-                    ...tapRegion(point.x, point.y, ready.width, ready.height),
-                    source: "tapped",
-                  },
-                ]);
+                setRegions((current) =>
+                  afterTap(
+                    current,
+                    point.x,
+                    point.y,
+                    ready.width,
+                    ready.height,
+                  ),
+                );
               }}
             />
           )}

@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { distanceUnitSchema, tempUnitSchema } from "../../../lib/contracts";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
-import { ChoiceField } from "../../../ui";
+import { ChoiceList } from "../../../ui";
 import type { FieldProps } from "../../../ui";
 
 /**
@@ -18,29 +18,29 @@ export const UNIT_LABELS = {
   distanceUnit: "Distance",
 };
 
+/**
+ * The segments' own words: N draws `°F °C` and `MI KM`. Short because a
+ * segmented pair is read at a glance, and the legend already says which
+ * quantity each pair is.
+ */
 const TEMP_LABELS: Readonly<Record<TempUnit, string>> = {
-  f: "Fahrenheit",
-  c: "Celsius",
+  f: "°F",
+  c: "°C",
 };
 const DISTANCE_LABELS: Readonly<Record<DistanceUnit, string>> = {
-  mi: "Miles",
-  km: "Kilometres",
+  mi: "mi",
+  km: "km",
 };
 
 /**
- * The two unit selects, which two screens ask for identically.
+ * The two unit pairs, which O1 and the units sub-page ask identically.
  *
- * O1 offers them as a locale guess a runner can correct, and settings
- * shows the saved pair back. The controls are the same in both — same
- * enums, same words, same order — and they were written out twice, which
- * semantic dupes found as a 25-line clone.
- *
- * **It is the words that make this worth extracting, not the markup.**
- * "Kilometres" versus "Kilometers" is a real choice, and so is which of
- * the pair comes first; a second copy is how one screen ends up saying
- * something the other does not. The enums already come from the schema
- * (`tempUnitSchema.options`), so the only thing that was ever duplicated
- * is the part a person reads.
+ * **Two segmented pairs** (round 22, item 19: *"Units: two segmented
+ * pairs, °F/°C and mi/km, defaulted from locale"*) — both answers visible
+ * at once, which is a radio group's job and not a select's, so each pair
+ * is `ChoiceList` laid out as chips. The enums come from the schema
+ * (`tempUnitSchema.options`), so the only thing written here is the part a
+ * person reads.
  */
 export function UnitFields({
   tempUnit,
@@ -52,8 +52,8 @@ export function UnitFields({
 }: Readonly<{
   tempUnit: TempUnit | "";
   distanceUnit: DistanceUnit | "";
-  onTempUnit: (value: TempUnit | "") => void;
-  onDistanceUnit: (value: DistanceUnit | "") => void;
+  onTempUnit: (value: TempUnit) => void;
+  onDistanceUnit: (value: DistanceUnit) => void;
   field: (name: string) => FieldProps;
   /**
    * The two messages, if either field has one. Taken as a pair rather than
@@ -66,10 +66,11 @@ export function UnitFields({
   }>;
 }>): JSX.Element {
   return (
-    <>
-      <ChoiceField
+    <div data-part="units" className="flex flex-wrap gap-6">
+      <ChoiceList
         name="tempUnit"
-        label={UNIT_LABELS.tempUnit}
+        legend={UNIT_LABELS.tempUnit}
+        layout="chips"
         field={field}
         value={tempUnit}
         options={tempUnitSchema.options}
@@ -77,9 +78,10 @@ export function UnitFields({
         onChange={onTempUnit}
         error={errors.tempUnit}
       />
-      <ChoiceField
+      <ChoiceList
         name="distanceUnit"
-        label={UNIT_LABELS.distanceUnit}
+        legend={UNIT_LABELS.distanceUnit}
+        layout="chips"
         field={field}
         value={distanceUnit}
         options={distanceUnitSchema.options}
@@ -87,6 +89,6 @@ export function UnitFields({
         onChange={onDistanceUnit}
         error={errors.distanceUnit}
       />
-    </>
+    </div>
   );
 }

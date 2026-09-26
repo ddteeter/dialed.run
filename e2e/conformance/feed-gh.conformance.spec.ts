@@ -2,12 +2,16 @@ import { expect, test } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
 import { PHONE } from "../support/bars";
-import { cellsOf, openBoard, part } from "../support/conformance";
+import {
+  cellsOf,
+  fillOf,
+  hydrated,
+  openBoard,
+  part,
+} from "../support/conformance";
 import {
   feedUserId,
-  fillOf,
   folded,
-  hydrated,
   removeSeeded,
   seeded,
   seedRunner,

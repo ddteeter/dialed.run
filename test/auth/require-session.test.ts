@@ -26,9 +26,12 @@ function signedOut(): Promise<{ user: { id: string } } | null> {
 /**
 The redirect `sessionOrRedirect` throws for a signed-out visitor.
 */
-function redirectFrom(session: { user: { id: string } } | null): unknown {
+function redirectFrom(
+  session: { user: { id: string } } | null,
+  returnTo?: string,
+): unknown {
   try {
-    sessionOrRedirect(session);
+    sessionOrRedirect(session, returnTo);
   } catch (error) {
     return error;
   }
@@ -49,5 +52,12 @@ describe("sessionOrRedirect", () => {
     const thrown = redirectFrom(await signedOut());
     // TanStack wraps the target in `options` on the Response it throws.
     expect(thrown).toMatchObject({ options: { to: "/auth/login" } });
+  });
+
+  it("carries the guarded page as log-in's way back", async () => {
+    const thrown = redirectFrom(await signedOut(), "/call?from=tab");
+    expect(thrown).toMatchObject({
+      options: { to: "/auth/login", search: { redirect: "/call?from=tab" } },
+    });
   });
 });

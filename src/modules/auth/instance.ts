@@ -2,6 +2,8 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
+import { captureException } from "../ops";
+import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
 
 /**
@@ -12,4 +14,8 @@ export const auth = createAuth({
   secret: env.BETTER_AUTH_SECRET,
   google: googleCredentials(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
   plugins: [tanstackStartCookies()],
+  passwordScreen: {
+    verdict: (password) => breachVerdict(password),
+    report: captureException,
+  },
 });

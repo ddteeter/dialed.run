@@ -6,8 +6,9 @@ import {
 } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
+import { PendingLabel } from "./form";
 import { Icon } from "./icons";
-import { LAUNCHER, TABS, bar, tabToLight } from "./tabs";
+import { LAUNCHER, TABS, bar, tabToLight, useSlowRoute } from "./tabs";
 import { Wordmark } from "./Wordmark";
 
 /**
@@ -61,15 +62,26 @@ function BarTab({
   to,
   label,
   active,
+  waiting,
 }: Readonly<{
   to: NonNullable<LinkProps["to"]>;
   label: string;
   active: boolean;
+  /**
+   * X3 at desk: *"same on the bar-nav item"* — the lit link's label
+   * breathes once its screen has taken 300ms. Only while waiting, so a
+   * resting link's text is its label and nothing else.
+   */
+  waiting: boolean;
 }>): JSX.Element {
   return (
     <li className="flex">
       <Link to={to} className={active ? ACTIVE_LINK_CLASS : RESTING_LINK_CLASS}>
-        {label}
+        {waiting ? (
+          <PendingLabel label={label} pendingLabel={label} pending />
+        ) : (
+          label
+        )}
       </Link>
     </li>
   );
@@ -126,6 +138,7 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
   // reading one memory is what stops the hidden one remembering a
   // different tab than the visible one across a resize.
   const active = tabToLight(pathname, bar.lastOnTab);
+  const { isSlow } = useSlowRoute();
 
   return (
     <div
@@ -157,6 +170,7 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
                   // the filter: `tabToLight` answers in seats, and the
                   // launcher holds one.
                   active={index === active}
+                  waiting={index === active && isSlow}
                 />
               ),
             )}
@@ -178,6 +192,89 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
           {bell}
           <BarLauncher to={LAUNCHER.to} label={LAUNCH_LABEL} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The one thing a landing bar may offer (round 21, item 23).
+ *
+ * - `log-in` — signed out on `/`: *"'Log in' is secondary (hairline)
+ *   because the hero owns the primary ask"*.
+ * - `closet` — signed in on `/`: *"the one action is ink-filled — it's the
+ *   only thing a returning runner came to do"*.
+ * - `none` — the auth pages (round 22, Auth §2): *"'Log in' on the log-in
+ *   page would point at itself"*, and the form's cross-link does the job.
+ *
+ * Never pink: *"--action belongs to the product's own verbs"*.
+ */
+export type LandingAction = "none" | "log-in" | "closet";
+
+const LANDING_ACTION_CLASS =
+  "target inline-flex items-center rounded-pill px-5 text-small no-underline";
+
+function LandingActionLink({
+  action,
+}: Readonly<{ action: LandingAction }>): JSX.Element | undefined {
+  if (action === "log-in") {
+    return (
+      <Link
+        to="/auth/login"
+        data-part="bar-actions"
+        className={`${LANDING_ACTION_CLASS} border border-hairline font-semibold text-ink`}
+      >
+        Log in
+      </Link>
+    );
+  }
+  if (action === "closet") {
+    return (
+      <Link
+        to="/closet"
+        data-part="bar-actions"
+        className={`${LANDING_ACTION_CLASS} bg-ink font-bold text-ground`}
+      >
+        Your closet
+      </Link>
+    );
+  }
+  return undefined;
+}
+
+/**
+ * The landing bar: the signed-out pages' only chrome, from 720 up.
+ *
+ * Round 21 drew it for `/` and round 22 gave it to the auth pages: paper,
+ * a hairline foot, the plain wordmark linking to `/`, and at most one
+ * action. **Not the product bar** — no nav, no search, no bell, no "Log a
+ * run" — because every one of those is a signed-in place, and a signed-out
+ * page never shows them (Auth §2, "The tab bar, signed out: Never").
+ *
+ * **Below 720 there is no bar at all**, so it is `hidden wide:block`; the
+ * page's own wordmark does the job there. The row keeps a target's height
+ * whether or not it carries an action, so `/` and `/auth/login` share a
+ * baseline (Au2 1040's note).
+ */
+export function LandingBar({
+  action,
+}: Readonly<{ action: LandingAction }>): JSX.Element {
+  return (
+    <div
+      data-slot="landing-bar"
+      data-part="top-bar"
+      className="hidden border-b border-hairline bg-ground px-6 py-4 text-ink wide:block"
+    >
+      <div className="mx-auto flex min-h-11 w-full max-w-page items-center justify-between">
+        <Link
+          to="/"
+          aria-label="dialed.run home"
+          data-part="wordmark"
+          className="target flex items-center no-underline"
+        >
+          <Wordmark brackets={false} className="text-title" />
+        </Link>
+        <LandingActionLink action={action} />
       </div>
     </div>
   );
