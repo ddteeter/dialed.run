@@ -705,45 +705,6 @@ export interface ResolvedPlace {
   address: string;
 }
 
-/**
- * What Find came to (round 26 #12), for the city field on O1 and on Your
- * conditions. Three answers, because the field does three different things
- * with them:
- *
- * - `found` — "Weather for {address}", with Use this;
- * - `not-found` — a field message: the fix is in the field;
- * - `unavailable` — the lookup itself failed, the `NOT FOUND YET` band.
- *
- * Here rather than in onboarding because the field is a `ui/` component,
- * and `ui/` imports `lib/`, never a module.
- */
-export type CityLookup =
-  | ({ kind: "found" } & ResolvedPlace)
-  | { kind: "not-found" }
-  | { kind: "unavailable" };
-
-/**
- * What Find sends, and the one field message it can fail with before it
- * asks. Error copy lives in the schema (§Forms & failure); here because the
- * city field that reads it is in `ui/` and the server function that parses
- * with it is onboarding's.
- */
-export const cityLookupInput = z.object({
-  label: z
-    .string()
-    .trim()
-    .min(1, { message: "Type the city you run in." })
-    .max(120),
-});
-
-/**
- * The field message for a place the provider cannot find (round 26 #12),
- * quoting what was typed so the runner can see the typo.
- */
-export function cityNotFound(label: string): string {
-  return `We couldn't find "${label}". Check the spelling, or try a nearby city.`;
-}
-
 // ---- Onboarding / profile -------------------------------------------------
 
 /** UI: +2 "always freezing" … −2 "sweating in a t-shirt at 40°".

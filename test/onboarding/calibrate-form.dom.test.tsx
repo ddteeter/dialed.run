@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CalibrateForm } from "../../src/modules/onboarding/components/CalibrateForm";
 import type { Calibration } from "../../src/modules/onboarding/inputs";
-import type { CityLookup } from "../../src/lib/contracts";
+import type { CityLookup } from "../../src/lib/city-lookup";
 
 /**
  * Screen O1, with round 22's location step (item 19). The behaviour that

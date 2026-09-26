@@ -1,8 +1,9 @@
 import type { JSX, KeyboardEvent } from "react";
 import { useState } from "react";
 
-import { cityLookupInput, cityNotFound } from "../lib/contracts";
-import type { CityLookup, ResolvedPlace } from "../lib/contracts";
+import { cityLookupInput, cityNotFound } from "../lib/city-lookup";
+import type { CityLookup } from "../lib/city-lookup";
+import type { ResolvedPlace } from "../lib/contracts";
 import { FailureBand, PendingLabel, TextField, inFlight } from "./form";
 import type { FieldProps } from "./use-form-submit";
 

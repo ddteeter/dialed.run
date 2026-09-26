@@ -1,4 +1,5 @@
-import type { CityLookup, ResolvedPlace } from "../../lib/contracts";
+import type { CityLookup } from "../../lib/city-lookup";
+import type { ResolvedPlace } from "../../lib/contracts";
 
 /**
  * The typed city, found before it is used (round 26 #12).

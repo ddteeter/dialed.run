@@ -8,7 +8,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { cityLookupInput } from "../../lib/contracts";
+import { cityLookupInput } from "../../lib/city-lookup";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";

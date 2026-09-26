@@ -2,12 +2,8 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
-import type {
-  CityLookup,
-  DistanceUnit,
-  TempUnit,
-  Units,
-} from "../../../lib/contracts";
+import type { CityLookup } from "../../../lib/city-lookup";
+import type { DistanceUnit, TempUnit, Units } from "../../../lib/contracts";
 import {
   Bracketed,
   ChoiceList,
