@@ -44,9 +44,11 @@ before the call; a 401 on refresh marks the connection broken and writes
 copies an access token that will be expired by the time it drains. Store
 what a later refresh needs (`add_strava_revocation_refresh_token`,
 additive, yours, if the design needs a column), and drain as
-refresh-then-revoke. `strava_revocations` stays its own table rather than
-moving into #101's generic `outbox`: its rows carry a credential, which the
-generic outbox forbids (D-103). Tests: a disconnect six hours after the
+refresh-then-revoke. **D-103 is the owner's open question** on folding
+`strava_revocations` into #101's generic `outbox`, and this rewrite is its
+natural moment: put it in your design doc and ask. The default is to keep it
+apart, because its rows carry a credential and the generic outbox forbids one
+in a payload. Tests: a disconnect six hours after the
 last refresh revokes on the first drain; a refresh refused as invalid
 settles the row (the grant is already dead).
 

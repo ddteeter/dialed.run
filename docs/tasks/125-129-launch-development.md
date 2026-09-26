@@ -11,13 +11,13 @@ Every item in your packet has an id (OPS-n, ACC-n, …) from the development
 plan, and a stage marker: **[F]** before friends, **[P]** before public.
 Finish your [F] items first.
 
-| task | lane             | packet                  | starts                          |
-| ---- | ---------------- | ----------------------- | ------------------------------- |
-| 125  | Ops & platform   | `125-ops-platform.md`   | now (OPS-4 waits for PR #104)   |
-| 126  | Accounts         | `126-accounts.md`       | after PR #104 merges            |
-| 127  | Strava & logging | `127-strava-logging.md` | now                             |
-| 128  | Content & safety | `128-content-safety.md` | now; SAF-3 after PR #101 merges |
-| 129  | Feed             | `129-feed.md`           | after PR #102 merges            |
+| task | lane             | packet                  | starts                        |
+| ---- | ---------------- | ----------------------- | ----------------------------- |
+| 125  | Ops & platform   | `125-ops-platform.md`   | now (OPS-4 waits for PR #104) |
+| 126  | Accounts         | `126-accounts.md`       | after PR #104 merges          |
+| 127  | Strava & logging | `127-strava-logging.md` | now                           |
+| 128  | Content & safety | `128-content-safety.md` | now                           |
+| 129  | Feed             | `129-feed.md`           | after PR #102 merges          |
 
 **Numbering.** A bare `D-N` is a row in `docs/deferred.md`; a decision-log
 row is always written "decision D-NN". The two registers share a prefix.
@@ -117,8 +117,8 @@ gap. The rule is instead **generate last, renumber on collision**:
 1. **Only the migrations listed below are yours to generate.** Anything else
    follows CLAUDE.md's protocol (additive: say so in the PR; destructive or
    contract-shaped: stop and ask).
-2. **Nobody generates until PR #101 has merged**, because it carries
-   `0018_add_wardrobe_item_retired_at` and `0019_add_outbox`.
+2. **Main's last core migration is `0019_add_outbox`** (PR #101, merged
+   2026-09-25), so the first lane to merge a migration takes `0020`.
 3. Develop against your schema edit, and generate locally to test. **Before
    your merge-ready push**, `git fetch`, rebase on `origin/main`, delete your
    generated files and regenerate, so your number follows main's last. Look

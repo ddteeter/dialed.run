@@ -16,7 +16,8 @@ people upload safe to publish and possible to take back.
 - `src/modules/safety/**`, `src/routes/safety/**`
 - `src/modules/feed/photos.ts`, `src/routes/feed/photo.$.tsx`
 - `src/modules/closet/photos.ts`, `src/routes/closet/photo.$itemId.$size.ts`,
-  and the photo block of garment detail (the component PR #101 leaves it in)
+  and the photo block of `closet/components/GarmentDetail.tsx` (additions only;
+  the rest of that component has no owner)
 - `src/lib/photo-pipeline.ts`, `src/lib/photo-constraints.ts`
 - New `src/modules/feed/retract.ts` and its components (entry and entry
   photo delete); new `src/modules/runs/delete-run.ts` and its component.
@@ -44,7 +45,6 @@ schema's message and never decoded; the browser project checks the
 downscale.
 
 **SAF-3 · Delete your own entry, run and entry photo [F]** (0.9, §2.5).
-Needs PR #101 merged (its generic `outbox`).
 
 - Server functions for each, owner-scoped. D1 change and an outbox row in
   one `db.batch()`, R2 deletion as the fast path, the outbox drain for the

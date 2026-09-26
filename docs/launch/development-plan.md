@@ -21,13 +21,13 @@ The lanes run in parallel worktrees. Their packets are
 `docs/tasks/125-129-launch-development.md` (shared rules) and one packet
 each:
 
-| task | lane             | packet                  | starts                                     |
-| ---- | ---------------- | ----------------------- | ------------------------------------------ |
-| 125  | Ops & platform   | `125-ops-platform.md`   | now                                        |
-| 126  | Accounts         | `126-accounts.md`       | after PR #104 merges                       |
-| 127  | Strava & logging | `127-strava-logging.md` | now                                        |
-| 128  | Content & safety | `128-content-safety.md` | now (after PR #101 merges, for the outbox) |
-| 129  | Feed             | `129-feed.md`           | after PR #102 merges                       |
+| task | lane             | packet                  | starts               |
+| ---- | ---------------- | ----------------------- | -------------------- |
+| 125  | Ops & platform   | `125-ops-platform.md`   | now                  |
+| 126  | Accounts         | `126-accounts.md`       | after PR #104 merges |
+| 127  | Strava & logging | `127-strava-logging.md` | now                  |
+| 128  | Content & safety | `128-content-safety.md` | now                  |
+| 129  | Feed             | `129-feed.md`           | after PR #102 merges |
 
 ## How to read the markers
 
@@ -104,7 +104,7 @@ slips the sweep knows which gate it can still open.
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----- |
 | SAF-1  | **EXIF stripped on the server**: every stored photo is re-encoded (Photon), entry photos included, with or without W3's blur; garment `original.*` too.                                                                               | 0.8                           | F     |
 | SAF-2  | **D-3**: the browser downscales before upload (long edge capped, e.g. 2048px, inside the existing W3 canvas step), and the server enforces a decoded-pixel cap as the backstop (decision D-45).                                       | D-3 (deferred), decision D-45 | F     |
-| SAF-3  | **Delete your own entry, run and entry photo**, with R2 deletion through #101's outbox (claim-then-delete; no reverse orphan). These are the primitives 126's account deletion reuses.                                                | 0.9, §2.5                     | F     |
+| SAF-3  | **Delete your own entry, run and entry photo**, with R2 deletion through the generic `outbox` (#101) (claim-then-delete; no reverse orphan). These are the primitives 126's account deletion reuses.                                  | 0.9, §2.5                     | F     |
 | SAF-4  | **Bans that work**: sign-in blocked (Operator Screens D4), content hidden everywhere through the one visibility rule, a Desk ban control (D3), the ban notice email via 126.                                                          | 0.3, §5                       | P     |
 | SAF-5  | **A moderator's Remove deletes the bytes**, except where the NCMEC procedure requires preservation, in which case it quarantines them.                                                                                                | 0.9, §1.10                    | P     |
 | SAF-6  | **Admin takedown (DMCA)**: remove a named photo or entry from the Desk, with an audit row.                                                                                                                                            | §1.2                          | P     |
@@ -247,6 +247,8 @@ Lanes build to the default in brackets and do not wait:
    webhook, or zone WAF rules only [WAF rules only; the binding is not
    authorised].
 5. **Legacy weather rows** (OPS-14), if removing them is destructive.
+6. **D-103**: fold `strava_revocations` into the generic `outbox`? 127 asks
+   it with STR-2 [keep apart: its rows carry a credential].
 
 ## Not placed, and why
 
