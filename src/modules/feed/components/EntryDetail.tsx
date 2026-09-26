@@ -5,12 +5,12 @@ import type { ReactNode } from "react";
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatDistance, formatPace } from "../../../lib/measures";
-import { FormStatus, Icon, Mono } from "../../../ui";
+import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
 import { runWhenLabel } from "../posted";
-import { stripConditions } from "../strip";
+import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { ReportFoot } from "./ReportFoot";
 import { UsefulButton } from "./UsefulButton";
@@ -225,6 +225,9 @@ function RunStrip({
       {conditions === undefined ? undefined : (
         <ConditionsCell cell={conditions} />
       )}
+      {isProvidersReading(entry.conditions) ? (
+        <WeatherAttribution />
+      ) : undefined}
     </div>
   );
 }

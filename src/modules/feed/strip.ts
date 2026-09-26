@@ -32,3 +32,15 @@ export function stripConditions(
   }
   return isIndoor ? { kind: "indoor" } : undefined;
 }
+
+/**
+ * Whether these conditions are Visual Crossing's reading — the data its
+ * licence says to credit "near the data, with a clickable link" (audit
+ * §1.8, FEED-8). A band a runner set in R2b is theirs, not the provider's,
+ * so it carries no credit; no conditions at all carry nothing to credit.
+ */
+export function isProvidersReading(
+  conditions: { source: string } | undefined,
+): boolean {
+  return conditions?.source === "visualcrossing";
+}

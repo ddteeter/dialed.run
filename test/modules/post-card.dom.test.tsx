@@ -148,6 +148,9 @@ function useful(): HTMLElement {
   return screen.getByRole("button", { name: /Useful/u });
 }
 
+const credit = () =>
+  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
+
 describe("PostCard: the strip", () => {
   it("reads DIST | TEMP · CONDITION, the conditions in teal", async () => {
     const post = await card({
@@ -173,6 +176,37 @@ describe("PostCard: the strip", () => {
   it("is one cell otherwise — no divider, no dash", async () => {
     const post = await card();
     expect(strip(post)).toHaveTextContent(/^5\.0mi$/u);
+  });
+
+  it("credits Visual Crossing beside its reading, outside the link to D (FEED-8)", async () => {
+    const post = await card({
+      conditions: pointConditions({ tempC: 5, feelsLikeC: 3 }),
+    });
+
+    const link = credit();
+    expect(link).toHaveAttribute(
+      "href",
+      "https://www.visualcrossing.com/weather-data",
+    );
+    expect(post).toContainElement(link);
+    // A link inside a link is not a link: it sits between the strip's
+    // link and Useful.
+    expect(link?.parentElement?.closest("a")).toBeNull();
+  });
+
+  it("credits nobody for a band the runner set, or for no weather", async () => {
+    await card({
+      conditions: {
+        ...pointConditions({ tempC: 5, feelsLikeC: 3 }),
+        source: "manual",
+      },
+    });
+    expect(credit()).toBeNull();
+  });
+
+  it("credits nobody when there are no conditions", async () => {
+    await card({ indoor: true });
+    expect(credit()).toBeNull();
   });
 });
 
