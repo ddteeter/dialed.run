@@ -143,9 +143,9 @@ export const recordVerdictPromptedAction = createServerFn({ method: "POST" })
 export const entryDetailQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
-    // A session, not an optional one (task 128, SAF-14): D requires
-    // sign-in, so its data does too. A crawler's link preview reads head
-    // meta through FEED-14's own path, never this.
+    // A session, not an optional one (task 128, SAF-14): "public" means
+    // visible to signed-in runners, never the open web (decision D-53), so
+    // a signed-out request — a crawler's included — gets nothing.
     const viewerId = await requireUserId();
     return entryDetailForViewer(data.entryId, viewerId);
   });

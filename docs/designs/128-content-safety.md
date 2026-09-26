@@ -31,8 +31,10 @@ nothing to filter there today — 129 applies the rule when they arrive.
 
 **SAF-14.** `entryDetailQuery` and `otherProfileQuery` take
 `requireUserId` (additions to feed's `functions.ts`); the photo route needs
-a session (PR 2 adds "or a valid signature"). FEED-14's crawler path reads
-head meta through `publiclyVisibleEntry()` with no viewer — never the data.
+a session (PR 2 adds "or a valid signature", issued only to signed-in
+viewers). Per the owner's clarification (decision D-53), "public" means
+visible to signed-in runners: there is no crawler exception, and link
+previews use only the site-wide generic card.
 
 **Bans (SAF-4).** A Better Auth plugin in `safety/ban-gate.ts` adds a
 `session.create.before` hook: a banned runner's session is refused with a

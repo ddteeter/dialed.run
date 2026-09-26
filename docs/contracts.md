@@ -222,6 +222,11 @@ caption      text      -- NULLABLE
 created_at   int
 ```
 
+- **"Public" means visible to any signed-in runner, never to the open
+  web** (decision D-53). A signed-out request gets nothing about an entry
+  or a profile — not its data, not its photo, not entry-specific head
+  meta. There is no crawler exception: link previews use the site-wide
+  generic card only.
 - A run appears in the feed **only when it has a public outfit_entry**.
 - The shared post shows the 5-state verdict label. What is never public:
   aggregate verdict history, coverage charts, per-item flags/notes, thermal level.
@@ -308,9 +313,15 @@ entry_photos:    + screen_status ('pending'|'pass'|'flagged'|
 ```
 
 **One rule for "visible to a stranger".** `is_public = 1 AND
-moderation_status = 'ok'`, expressed once as `publiclyVisibleEntry()` in
-`modules/safety` and imported by every read that shows entries to someone
-other than their author. Five call sites wrote the first half by hand
+moderation_status = 'ok'` and the author not banned, expressed once as
+`publiclyVisibleEntry()` in `modules/safety` and imported by every read
+that shows entries to someone other than their author. Given the viewer
+(`publiclyVisibleEntry(viewerId)`, and `entryVisibleTo(viewerId)` which
+adds "or it is the viewer's own"), it also drops a blocked pair, either
+direction, and entries the viewer reported (task 128). The anonymous form
+— no viewer — is what aggregates use, so blocks and a reporter's own hide
+move no counts; a ban does. The "stranger" is always a signed-in runner
+(decision D-53). Five call sites wrote the first half by hand
 before 106; a second condition would have made five copies of a rule, and
 the dangerous one is the consensus aggregate, where a missed clause hides
 nothing visibly and only skews the numbers.
