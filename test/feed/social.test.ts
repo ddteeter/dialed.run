@@ -8,7 +8,7 @@ import { newUlid } from "../../src/lib/ids";
 
 import {
   follow,
-  followeeIdsOf,
+  followingCount,
   isFollowing,
   unfollow,
 } from "../../src/modules/feed/follows";
@@ -75,11 +75,11 @@ describe("follows", () => {
     expect(await isFollowing(follower, followee)).toBe(false);
     await follow(follower, followee);
     expect(await isFollowing(follower, followee)).toBe(true);
-    expect(await followeeIdsOf(follower)).toEqual([followee]);
+    expect(await followingCount(follower)).toBe(1);
 
     await unfollow(follower, followee);
     expect(await isFollowing(follower, followee)).toBe(false);
-    expect(await followeeIdsOf(follower)).toEqual([]);
+    expect(await followingCount(follower)).toBe(0);
   });
 
   it("is idempotent under a repeated follow (queue-redelivery-safe)", async () => {
@@ -88,7 +88,7 @@ describe("follows", () => {
 
     await follow(follower, followee);
     await follow(follower, followee);
-    expect(await followeeIdsOf(follower)).toEqual([followee]);
+    expect(await followingCount(follower)).toBe(1);
   });
 });
 

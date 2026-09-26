@@ -11,6 +11,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import {
   entryPhotos,
   entryTags as entryTagsTable,
+  follows,
   outfitEntries,
   outfitEntryItems,
   reactions,
@@ -21,7 +22,7 @@ import { env } from "../../env";
 import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
-import { followeeIdsOf } from "./follows";
+import { followingCount } from "./follows";
 import { publicPhotoStatus, publiclyVisibleEntry } from "../safety";
 
 export interface FeedCursor {
@@ -42,14 +43,34 @@ function feedCursorPredicate(cursor: FeedCursor) {
   );
 }
 
+/**
+ * One page of E1: the viewer's own public entries and those of everyone
+ * they follow, newest first.
+ *
+ * **The followee list is a subquery on `follows`, not a bound list**
+ * (D-101). Binding the ids put one parameter per follow into the
+ * statement, and with the seven others the 93rd follow crossed D1's
+ * 100-parameter cap and failed the whole feed. The subquery binds the
+ * viewer's id once however many runners they follow, and the plan is the
+ * same shape it was: the page is still the `entries_public_created` seek,
+ * and the followee set is a `follows_pk` covering-index search
+ * (`feed.test.ts` pins both).
+ */
 export function followingFeedStatement(
   database: DrizzleD1Database,
-  userIds: readonly string[],
+  viewerId: string,
   cursor: FeedCursor | undefined,
   limit = PAGE_SIZE,
 ) {
+  const followees = database
+    .select({ id: follows.followeeId })
+    .from(follows)
+    .where(eq(follows.followerId, viewerId));
   const scope = and(
-    inArray(outfitEntries.userId, [...userIds]),
+    or(
+      eq(outfitEntries.userId, viewerId),
+      inArray(outfitEntries.userId, followees),
+    ),
     publiclyVisibleEntry(),
     cursor ? feedCursorPredicate(cursor) : undefined,
   );
@@ -244,20 +265,16 @@ export async function followingFeed(
   limit = PAGE_SIZE,
 ): Promise<FeedPage> {
   const database = drizzle(env.DIALED_CORE);
-  const followeeIds = await followeeIdsOf(viewerId);
-  const userIds = [viewerId, ...followeeIds];
-  const rows = await followingFeedStatement(
-    database,
-    userIds,
-    cursor,
-    limit + 1,
-  );
+  const [rows, followeeCount] = await Promise.all([
+    followingFeedStatement(database, viewerId, cursor, limit + 1),
+    followingCount(viewerId),
+  ]);
   const page = rows.slice(0, limit);
   const items = await hydrateEntries(database, page, viewerId);
   const last = page.at(-1);
   return {
     items,
-    followeeCount: followeeIds.length,
+    followeeCount,
     nextCursor:
       last && rows.length > limit
         ? { createdAt: last.createdAt, id: last.id }
