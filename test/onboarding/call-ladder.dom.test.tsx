@@ -1,15 +1,23 @@
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
+import { CALL_VERDICT_THRESHOLD } from "../../src/lib/contracts";
 import type { CoverageBand } from "../../src/modules/feed";
 import {
   CallLadder,
-  ThinnestAsk,
+  LogThisNext,
 } from "../../src/modules/onboarding/components/CallLadder";
 import { ladderFrom } from "../../src/modules/onboarding/ladder";
 
 /**
- * The Call tab's teaser (D-16, O6).
+ * The Call tab's teaser — K, as round 22's item 24 rules it.
  *
  * The assertion that matters most is the one about what is *absent*: this
  * screen shows progress and never a recommendation, because the call is
@@ -31,6 +39,25 @@ function band(
 }
 
 /**
+Renders inside a router, because "Log a run" is a typed link.
+*/
+async function renderLadder(element: ReactElement) {
+  const rootRoute = createRootRoute({ component: () => element });
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ["/call"] }),
+  });
+  await router.load();
+  return render(<RouterProvider router={router} />);
+}
+
+const countdown = () => {
+  const found = document.querySelector<HTMLElement>("[data-part='countdown']");
+  if (found === null) throw new Error("no countdown");
+  return found;
+};
+
+/**
 The band rows, not the legend's — both are lists of `<li>`.
 */
 function bandRows() {
@@ -38,49 +65,138 @@ function bandRows() {
   return within(bands ?? document.body).getAllByRole("listitem");
 }
 
-describe("CallLadder", () => {
-  it("tells a runner with nothing logged that it is listening", () => {
-    render(<CallLadder ladder={ladderFrom([])} />);
+describe("K's header", () => {
+  it("names the tab in the eyebrow and says what it is doing, on ink", async () => {
+    await renderLadder(<CallLadder ladder={ladderFrom([])} />);
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Learning your body.",
+    });
+    const header = heading.closest("header");
+    expect(header).toHaveAttribute("data-ground", "ink");
+    expect(header).toHaveTextContent(/^The CallLearning your body\.$/u);
+  });
+});
 
-    expect(screen.getByText(/Logging now, calling later/)).toBeVisible();
-    // No ladder at all rather than an empty frame: there is nothing to
-    // show, and a row of zeroes would read as a failure to load.
+describe("zero verdicts (round 22, item 24)", () => {
+  it("is K as drawn: the meter at nothing, and the one instruction", async () => {
+    await renderLadder(<CallLadder ladder={ladderFrom([])} />);
+
+    const meter = screen.getByRole("meter", {
+      name: "Verdicts toward your first call",
+    });
+    expect(meter).toHaveAttribute("aria-valuemin", "0");
+    expect(meter).toHaveAttribute(
+      "aria-valuemax",
+      String(CALL_VERDICT_THRESHOLD),
+    );
+    expect(meter).toHaveAttribute("aria-valuenow", "0");
+    expect(document.querySelector("[data-part='meter-fill']")).toHaveStyle({
+      width: "0%",
+    });
+    expect(countdown()).toHaveTextContent(
+      `[0 of ${String(CALL_VERDICT_THRESHOLD)}]`,
+    );
+    expect(countdown()).toHaveTextContent(
+      `${String(CALL_VERDICT_THRESHOLD)}verdicts`,
+    );
+    expect(
+      screen.getByText(
+        `Log ${String(CALL_VERDICT_THRESHOLD)} verdicts and the Call starts.`,
+      ),
+    ).toBeVisible();
+    // No ladder at all rather than an empty frame, and nothing to ask for.
     expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByText("Log this next")).toBeNull();
+    // The one thing that moves the meter.
+    expect(screen.getByRole("link", { name: "Log a run" })).toHaveAttribute(
+      "href",
+      "/runs/new",
+    );
   });
 
-  it("counts down to the first call", () => {
-    render(<CallLadder ladder={ladderFrom([band(0, { dialed: 4 })])} />);
-
-    expect(screen.getByText(/verdicts until your first call/)).toBeVisible();
-    expect(screen.getByText("11")).toBeVisible();
+  it("is one of K's two yellow moments", async () => {
+    await renderLadder(<CallLadder ladder={ladderFrom([])} />);
+    expect(countdown()).toHaveClass("bg-hi-viz", "text-accent-ink");
   });
+});
 
-  it("names the thinnest band, which is the ask", () => {
-    render(
+describe("partway", () => {
+  it("counts down, fills the meter by what is logged, and asks for the thinnest band", async () => {
+    await renderLadder(
       <CallLadder ladder={ladderFrom([band(-5), band(0, { dialed: 4 })])} />,
     );
 
-    // The words as well as the band: without them the line is a bracket
-    // floating under a countdown with nothing saying what it is.
-    // The whole sentence including the space, which is a deliberate
-    // `{" "}`: JSX drops whitespace between elements, so without it this
-    // reads "Thinnest so far:[-5–0°]". Asserting the two halves separately
-    // passes either way, which is how the missing space would ship.
-    expect(screen.getByText(/Thinnest so far/)).toHaveTextContent(
-      "Thinnest so far: [-5–0°]",
+    const remaining = CALL_VERDICT_THRESHOLD - 4;
+    expect(countdown()).toHaveTextContent(`${String(remaining)}verdicts`);
+    expect(screen.getByRole("meter")).toHaveAttribute("aria-valuenow", "4");
+    expect(document.querySelector("[data-part='meter-fill']")).toHaveStyle({
+      width: `${String((4 / CALL_VERDICT_THRESHOLD) * 100)}%`,
+    });
+    // Neither end's sentence: the number says it.
+    expect(screen.queryByText(/and the Call starts/u)).toBeNull();
+    expect(screen.queryByText(/enough to call/u)).toBeNull();
+    // The ask, on ink, with its hi-viz eyebrow.
+    const ask = screen.getByText("Log this next").closest("section");
+    expect(ask).toHaveAttribute("data-ground", "ink");
+    expect(ask).toHaveTextContent("[-5–0°]");
+    expect(screen.getByText("Log this next")).toHaveClass("text-hiviz-text");
+    expect(screen.getByRole("link", { name: "Log a run" })).toBeVisible();
+  });
+
+  it("says verdict, not verdicts, with one left", async () => {
+    await renderLadder(
+      <CallLadder
+        ladder={ladderFrom([band(0, { dialed: CALL_VERDICT_THRESHOLD - 1 })])}
+      />,
     );
+    expect(countdown()).toHaveTextContent(/1verdict\[/u);
+  });
+});
+
+describe("threshold met (round 22, item 24)", () => {
+  it("keeps K, fills the meter, says the Call is next, and offers no button", async () => {
+    await renderLadder(
+      <CallLadder
+        ladder={ladderFrom([band(0, { dialed: CALL_VERDICT_THRESHOLD + 3 })])}
+      />,
+    );
+
+    expect(screen.getByRole("meter")).toHaveAttribute(
+      "aria-valuenow",
+      String(CALL_VERDICT_THRESHOLD),
+    );
+    expect(document.querySelector("[data-part='meter-fill']")).toHaveStyle({
+      width: "100%",
+    });
+    expect(countdown()).toHaveTextContent(
+      `[${String(CALL_VERDICT_THRESHOLD)} of ${String(CALL_VERDICT_THRESHOLD)}]`,
+    );
+    expect(
+      screen.getByText(
+        "That’s enough to call. The Call arrives in the next release.",
+      ),
+    ).toBeVisible();
+    // "No button — there's no B1 to hand off to."
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("Log this next")).toBeNull();
+  });
+});
+
+describe("coverage", () => {
+  it("heads the ladder with the verdict total", async () => {
+    await renderLadder(
+      <CallLadder
+        ladder={ladderFrom([band(0, { dialed: 3 }), band(5, { cold: 2 })])}
+      />,
+    );
+    expect(screen.getByText("Your coverage")).toBeVisible();
+    expect(screen.getByText("[5 verdicts]")).toBeVisible();
   });
 
-  it("says the data is ready and the feature is not, once the threshold is met", () => {
-    render(<CallLadder ladder={ladderFrom([band(0, { dialed: 15 })])} />);
-
-    expect(screen.getByText(/The call is coming in an update/)).toBeVisible();
-    // And stops counting down.
-    expect(screen.queryByText(/verdicts until/)).toBeNull();
-  });
-
-  it("renders every band it was given, gaps included", () => {
-    render(
+  it("renders every band it was given, gaps included", async () => {
+    await renderLadder(
       <CallLadder
         ladder={ladderFrom([
           band(0, { dialed: 3 }),
@@ -95,16 +211,15 @@ describe("CallLadder", () => {
     // The gap is the point of the screen — it has to be visible to be
     // asked for.
     expect(rows[1]).toHaveTextContent("[5–10°]");
-    // Coverage lost its brackets with the §AB redraw — bracket notation is
-    // for measured values, and "unknown" is a level rather than a
-    // measurement. The band label keeps them.
     expect(rows[1]).toHaveTextContent("unknown");
   });
 
-  it("labels coverage as text, never as a mark alone", () => {
+  it("labels coverage as text, never as a mark alone", async () => {
     // Design round 6 §AB gave coverage ink density, and the words stay:
     // "the counts are there so the reading never depends on the swatch".
-    render(
+    // Lower case: `Mono` uppercases in CSS so the accessible name stays
+    // readable.
+    await renderLadder(
       <CallLadder
         ladder={ladderFrom([
           band(0, { dialed: 3 }),
@@ -115,22 +230,13 @@ describe("CallLadder", () => {
     );
 
     const rows = bandRows();
-    // Lower case on purpose, and this is the assertion for it: `Mono`
-    // applies the uppercase in CSS so the *accessible name* stays in
-    // normal case — several screen readers spell a short all-caps token
-    // out letter by letter. Typing "COVERED" here would pass while
-    // shipping a worse announcement.
     expect(rows[0]).toHaveTextContent("covered");
     expect(rows[1]).toHaveTextContent("partial");
     expect(rows[2]).toHaveTextContent("unknown");
   });
 
-  it("marks coverage in ink density, and never in a hue", () => {
-    // §AB rule 02: coverage is monochrome, on every surface. Hue means
-    // verdict — pink cold, teal dialed, grey warm — and a swatch that
-    // borrowed one would be teaching a second meaning for the same colour
-    // on the one screen that shows both ideas.
-    render(
+  it("marks coverage in ink density, and never in a hue", async () => {
+    await renderLadder(
       <CallLadder
         ladder={ladderFrom([
           band(0, { dialed: 3 }),
@@ -140,8 +246,6 @@ describe("CallLadder", () => {
       />,
     );
 
-    // Typed, because `querySelectorAll` answers with `Element` and only an
-    // `HTMLElement` carries `dataset`.
     const marks = [
       ...document.querySelectorAll<HTMLElement>("[data-coverage]"),
     ];
@@ -159,11 +263,8 @@ describe("CallLadder", () => {
     }
   });
 
-  it("counts the bands at each level, so a hollow year reads as hollow", () => {
-    // "Forty verdicts all at 50° leaves January hollow, and a hollow bar
-    // looks hollow." The legend is what makes that a number rather than a
-    // texture to decode.
-    render(
+  it("counts the bands at each level, so a hollow year reads as hollow", async () => {
+    await renderLadder(
       <CallLadder
         ladder={ladderFrom([
           band(0, { dialed: 3 }),
@@ -176,22 +277,16 @@ describe("CallLadder", () => {
 
     const legend = screen.getAllByRole("list")[1];
     expect(legend).toBeDefined();
-    expect(
-      within(legend ?? document.body).getByText(/covered 2/),
-    ).toBeVisible();
-    expect(
-      within(legend ?? document.body).getByText(/partial 1/),
-    ).toBeVisible();
-    expect(
-      within(legend ?? document.body).getByText(/unknown 1/),
-    ).toBeVisible();
+    const inLegend = within(legend ?? document.body);
+    expect(inLegend.getByText(/covered 2/)).toBeVisible();
+    expect(inLegend.getByText(/partial 1/)).toBeVisible();
+    expect(inLegend.getByText(/unknown 1/)).toBeVisible();
   });
 
-  it("shows how many verdicts each band holds, adding all three kinds", () => {
+  it("shows how many verdicts each band holds, adding all three kinds", async () => {
     // All three counts non-zero and distinct, so a sum that subtracted one
-    // of them would show a different number. With 2/4/1 a `cold - dialed +
-    // warm` reads -1, where 2/0/1 would still read 3 and pass.
-    render(
+    // of them would show a different number.
+    await renderLadder(
       <CallLadder
         ladder={ladderFrom([band(0, { cold: 2, dialed: 4, warm: 1 })])}
       />,
@@ -201,34 +296,21 @@ describe("CallLadder", () => {
     expect(row).toHaveTextContent("7");
   });
 
-  it("never recommends a garment", () => {
-    // The hard line in the packet. If this screen ever grows a kit, it has
-    // stopped being a teaser.
-    render(<CallLadder ladder={ladderFrom([band(0, { dialed: 20 })])} />);
-
+  it("never recommends a garment", async () => {
+    await renderLadder(
+      <CallLadder ladder={ladderFrom([band(0, { dialed: 20 })])} />,
+    );
     expect(screen.queryByText(/wear|jacket|tights|singlet/i)).toBeNull();
   });
 });
 
 /**
  * The ask, on its own, because inside the ladder its empty case cannot
- * happen — a runner with verdicts always has a thinnest band. Lifting it
- * out is what turned an equivalent mutant into a tested one.
+ * happen — a runner with verdicts always has a thinnest band.
  */
-describe("ThinnestAsk", () => {
-  it("names the band worth logging next", () => {
-    render(<ThinnestAsk band={band(-5, { dialed: 1 })} />);
-
-    expect(screen.getByText(/Thinnest so far/)).toHaveTextContent(
-      "Thinnest so far: [-5–0°]",
-    );
-  });
-
+describe("LogThisNext", () => {
   it("renders nothing when there is no band to ask for", () => {
-    // Not an empty paragraph: a blank line under the headline would read
-    // as something that failed to load.
-    const { container } = render(<ThinnestAsk band={undefined} />);
-
+    const { container } = render(<LogThisNext band={undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

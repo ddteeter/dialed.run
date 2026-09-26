@@ -1,8 +1,20 @@
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import { Bracketed, ListSection, Mono } from "../../../ui";
+import {
+  Bracketed,
+  ControlFailureBand,
+  FormStatus,
+  ListSection,
+  Mono,
+  PendingLabel,
+  inFlight,
+  useControlAction,
+} from "../../../ui";
 import type { BlockedRunner } from "../blocks";
 import { useSettled } from "./use-settled";
+
+type Unblock = (input: { data: { userId: string } }) => Promise<unknown>;
 
 /**
  * W2 · BLOCKED RUNNERS.
@@ -19,26 +31,29 @@ import { useSettled } from "./use-settled";
  * `blocks.ts` is imported by the consensus path, and `blocks.test.ts` pins
  * that from the outside.
  *
- * Nothing here animates. Unblocking is immediate and silent, which is the
- * artboard's "Unblocking takes effect immediately and doesn't re-follow
- * anyone" — so there is no confirmation step and no undo toast, because
- * both would imply the action is heavier than it is.
+ * **Unblock is a control that can fail** (round 22, item 21; round 23,
+ * item 9): no confirmation, and no optimism either. The row waits behind
+ * `[ Unblocking ]`, leaves only once the server has said yes, and on a
+ * failure keeps its place with a band inside it that says what is still
+ * true — `Still blocked`.
  */
 export function BlockedRunners({
   blocked,
   unblock,
 }: Readonly<{
   blocked: readonly BlockedRunner[];
-  unblock: (input: { data: { userId: string } }) => Promise<unknown>;
+  unblock: Unblock;
 }>): JSX.Element {
-  // Optimistic; `useSettled` says why that is safe here.
   const { remaining: visible, settle } = useSettled(
     blocked,
     (runner) => runner.userId,
   );
+  // The screen's one status region (rule 08); every row speaks through it.
+  const [status, setStatus] = useState("");
 
   return (
     <div className="flex flex-col gap-6">
+      <FormStatus>{status}</FormStatus>
       <section className="flex flex-col gap-2">
         <h2 className="text-quiet">
           <Mono step="xs">What blocking does</Mono>
@@ -68,26 +83,20 @@ export function BlockedRunners({
           items={visible}
           count
           whenEmpty={
-            <p className="text-small text-quiet">Nobody. That&apos;s normal.</p>
+            // Round 22, item 21: "one line, no brackets".
+            <p className="text-small text-quiet">
+              You haven&apos;t blocked anyone.
+            </p>
           }
         >
           {(runner) => (
-            <li
+            <BlockedRow
               key={runner.userId}
-              className="flex items-center justify-between gap-3 text-body"
-            >
-              <span>{runner.displayName ?? "A runner"}</span>
-              <button
-                className="target"
-                type="button"
-                onClick={() => {
-                  settle(runner.userId);
-                  void unblock({ data: { userId: runner.userId } });
-                }}
-              >
-                <Mono step="xs">Unblock</Mono>
-              </button>
-            </li>
+              runner={runner}
+              unblock={unblock}
+              onUnblocked={settle}
+              announce={setStatus}
+            />
           )}
         </ListSection>
         <p className="text-micro text-quiet">
@@ -95,5 +104,64 @@ export function BlockedRunners({
         </p>
       </section>
     </div>
+  );
+}
+
+/**
+ * One blocked runner, and the Unblock that belongs to them.
+ *
+ * A row per hook, so two rows can fail and retry independently and each
+ * band sits inside the row it is about.
+ */
+function BlockedRow({
+  runner,
+  unblock,
+  onUnblocked,
+  announce,
+}: Readonly<{
+  runner: BlockedRunner;
+  unblock: Unblock;
+  onUnblocked: (userId: string) => void;
+  announce: (sentence: string) => void;
+}>): JSX.Element {
+  const control = useControlAction<[]>({
+    action: () => unblock({ data: { userId: runner.userId } }),
+    kicker: "Still blocked",
+    onSuccess: () => {
+      onUnblocked(runner.userId);
+    },
+  });
+
+  useEffect(() => {
+    announce(control.status);
+  }, [announce, control.status]);
+
+  return (
+    <li className="flex flex-col gap-3 text-body">
+      <div className="flex items-center justify-between gap-3">
+        <span>{runner.displayName ?? "A runner"}</span>
+        <button
+          className="target cursor-pointer border-none bg-transparent p-0"
+          type="button"
+          {...inFlight(control.pending)}
+          onClick={() => {
+            void control.run();
+          }}
+        >
+          <Mono step="xs">
+            <PendingLabel
+              label="Unblock"
+              pendingLabel="Unblocking"
+              pending={control.pending}
+            />
+          </Mono>
+        </button>
+      </div>
+      <ControlFailureBand
+        failure={control.failure}
+        onRetry={control.retry}
+        retryRef={control.retryRef}
+      />
+    </li>
   );
 }

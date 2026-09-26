@@ -15,8 +15,8 @@ import { Page } from "../../ui";
  * idempotent by construction rather than by a guard (law 8b).
  */
 export const Route = createFileRoute("/onboarding/done")({
-  loader: async () => {
-    await requireSession();
+  loader: async ({ location }) => {
+    await requireSession(location.href);
     await completeOnboardingFn();
   },
   component: DonePage,

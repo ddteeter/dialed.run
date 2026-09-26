@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
+import { signedInQuery } from "../modules/auth/functions";
 import { Devtools } from "../ui/Devtools";
 
 export const Route = createRootRoute({
@@ -88,6 +89,11 @@ export const Route = createRootRoute({
       },
     ],
   }),
+  // Whether anyone is signed in, read once and kept until a sign-in or a
+  // sign-out invalidates it: the system states frame themselves by it
+  // (round 22, X1/X2) and nothing else here needs it fresh per navigation.
+  loader: () => signedInQuery(),
+  staleTime: Infinity,
   shellComponent: RootDocument,
 });
 

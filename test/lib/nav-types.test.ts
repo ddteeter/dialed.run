@@ -190,6 +190,7 @@ describe("which type an edge resolves to", () => {
       ["/feed", "/feed/search"],
       ["/runs", "/runs/r1"],
       ["/runs/import/i1", "/runs/r1"],
+      ["/runs", "/runs/import/i1"],
       ["/feed", "/notifications"],
       ["/closet", "/notifications"],
       ["/feed/me", "/runs"],
@@ -199,6 +200,8 @@ describe("which type an edge resolves to", () => {
       ["/onboarding/calibrate", "/onboarding/taplist"],
       ["/onboarding/taplist", "/onboarding/settings"],
       ["/onboarding/settings", "/onboarding/done"],
+      ["/onboarding/settings", "/onboarding/settings/units"],
+      ["/onboarding/settings", "/safety/blocked"],
     ] as const) {
       expect([from, to, typeOf(from, to)]).toEqual([from, to, "push"]);
     }
