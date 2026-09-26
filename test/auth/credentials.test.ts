@@ -86,6 +86,16 @@ describe("signIn", () => {
     expect(thrown).toMatchObject({ status: 429, name: "AuthRejected" });
     expect(thrown).not.toHaveProperty("issues");
   });
+
+  it("sends a refusal with no code to the band", async () => {
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { status: 500 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(thrown).toMatchObject({ status: 500 });
+  });
 });
 
 describe("signUp", () => {

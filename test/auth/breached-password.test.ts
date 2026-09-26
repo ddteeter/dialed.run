@@ -75,6 +75,14 @@ describe("breachVerdict", () => {
     );
     const lowercase = answering(`${SUFFIX.toLowerCase()}:4`);
     expect(await breachVerdict(PASSWORD, lowercase)).toBe("unknown");
+    // A row is anchored at both ends: a match with anything before or
+    // after it is not the format, and not a verdict.
+    expect(await breachVerdict(PASSWORD, answering(`X${SUFFIX}:4`))).toBe(
+      "unknown",
+    );
+    expect(await breachVerdict(PASSWORD, answering(`${SUFFIX}:4 extra`))).toBe(
+      "unknown",
+    );
   });
 });
 

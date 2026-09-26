@@ -29,15 +29,24 @@ const TIMEOUT_MS = 10_000;
 export type BreachVerdict = "breached" | "clean" | "unknown";
 
 /**
- * One response row: a 35-character uppercase hex suffix and a count.
+ * One response row: a 35-character uppercase hex suffix and a count,
+ * anchored at both ends — anything else in a row means the body is not
+ * the range format, and the screen cannot answer.
  */
+const ROW = /^[\dA-F]{35}:\d+$/u;
+
+/**
+Where a row's suffix ends: 35 hex characters, then the colon.
+*/
+const SUFFIX_LENGTH = 35;
+
 const rowSchema = z
   .string()
-  .regex(/^[\dA-F]{35}:\d+$/u)
-  .transform((row) => {
-    const [suffix = "", count = "0"] = row.split(":", 2);
-    return { suffix, count: Number(count) };
-  });
+  .regex(ROW)
+  .transform((row) => ({
+    suffix: row.slice(0, SUFFIX_LENGTH),
+    count: Number(row.slice(SUFFIX_LENGTH + 1)),
+  }));
 
 const rangeSchema = z
   .string()
@@ -63,7 +72,7 @@ export async function breachVerdict(
   const prefix = hash.slice(0, 5);
   const suffix = hash.slice(5);
 
-  let body: string;
+  let body: unknown;
   try {
     const response = await fetchImpl(`${RANGE_API}${prefix}`, {
       headers: { "Add-Padding": "true" },
@@ -72,7 +81,8 @@ export async function breachVerdict(
     if (!response.ok) return "unknown";
     body = await response.text();
   } catch {
-    return "unknown";
+    // Timed out or never arrived: `body` stays unset, and the parse below
+    // answers "unknown" for it.
   }
 
   const rows = rangeSchema.safeParse(body);

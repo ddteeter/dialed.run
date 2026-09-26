@@ -68,7 +68,7 @@ const EMAIL_TAKEN = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
  * wrong.
  */
 type FieldRefusals = ReadonlyMap<
-  string,
+  string | undefined,
   { readonly field: string; readonly message: string }
 >;
 
@@ -93,7 +93,7 @@ function throwIfRefused(
   refusals: FieldRefusals,
 ): void {
   if (!error) return;
-  const refusal = refusals.get(error.code ?? "");
+  const refusal = refusals.get(error.code);
   throw refusal === undefined
     ? new AuthRejected(error.status)
     : new AuthFieldError(refusal.field, refusal.message);
