@@ -149,18 +149,21 @@ that has stopped firing altogether.
 | `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                      |
 
 **Vars, not secrets** — printed into the page or read as configuration.
-These go in a `vars` block in `wrangler.jsonc`, which is human-managed, so
-the owner makes the edit:
+They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),
+which `test/bindings-conformance.test.ts` checks:
 
-| Var                  | Value                  | Without it                                                                                                               |
-| -------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_URL`    | `https://<the domain>` | Callbacks resolve against the wrong host, and cookies may lose the `__Secure-` prefix. `/api/health` names it when unset |
-| `TURNSTILE_SITE_KEY` | the widget's site key  | The widget renders nothing, and verification refuses                                                                     |
+| Var                  | Value                                      | Without it                                                                                                                                           |
+| -------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL`    | `https://dialed.run` (set)                 | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset |
+| `TURNSTILE_SITE_KEY` | empty until the widget exists — **set it** | The widget renders nothing, and verification refuses                                                                                                 |
 
-`NODE_ENV=production` was the old answer to Better Auth's rate limiter and
-secure cookies (audit finding 0.7). OPS-4 sets both explicitly in
-`createAuth`, so once it lands nothing reads `NODE_ENV`; until then, add it
-to the same `vars` block.
+**Local dev and CI override `BETTER_AUTH_URL`** in `.dev.vars`
+(`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).
+Without the override, local sign-in fails: the production value turns on
+`__Secure-` cookies, which a browser will not keep over plain http.
+
+`NODE_ENV` is not needed: OPS-4 sets Better Auth's rate limiter and secure
+cookies explicitly from `BETTER_AUTH_URL`'s scheme (audit finding 0.7).
 
 Locally and in CI, Cloudflare's documented test keys stand in for
 Turnstile: site key `1x00000000000000000000AA` and secret
@@ -205,8 +208,10 @@ needs its own Strava app, not a second subscription.
 
 ## 8. After the first deploy
 
-- `GET /api/health` — reports per-binding status; expect every check `ok`.
-  A failure here names the binding, which is faster than reading a stack.
+- `GET /api/health` — reports per-binding status; expect every check `ok`
+  and `missing` empty. A failure here names the binding, and `missing`
+  names any required var by its own name (today, `BETTER_AUTH_URL`), which
+  is faster than reading a stack. Either makes it answer 503.
 - Confirm all four cron triggers are listed under Settings → Triggers.
 - Confirm the four queues show a consumer attached.
 - **Prove Sentry delivers, from a fetch and from a cron**, before relying on

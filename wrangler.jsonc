@@ -14,6 +14,17 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  // Non-secret configuration (owner-approved, 2026-09-26; task 125 OPS-4).
+  // BETTER_AUTH_URL is the production origin: Better Auth builds callbacks
+  // from it, and its https scheme turns on secure cookies and rate
+  // limiting. Local dev and CI MUST override it in .dev.vars
+  // (BETTER_AUTH_URL=http://localhost:<port>), or sign-in breaks: a
+  // browser refuses a __Secure- cookie over plain http. The Turnstile site
+  // key is printed into the page; its secret is a `wrangler secret`.
+  "vars": {
+    "BETTER_AUTH_URL": "https://dialed.run",
+    "TURNSTILE_SITE_KEY": "",
+  },
   "d1_databases": [
     {
       "binding": "DIALED_CORE",

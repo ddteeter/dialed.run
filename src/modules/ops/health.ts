@@ -4,11 +4,32 @@ import { nowSeconds } from "../../lib/now";
 export interface HealthReport {
   ok: boolean;
   checks: Record<string, "ok" | "failed">;
+  /**
+   * Configuration the deployment needs and does not have, by its own name,
+   * so the fix is in the answer (OPS-4). Empty when nothing is missing.
+   */
+  missing: readonly string[];
   at: number;
 }
 
 /**
-/health backing (000 §10): D1 SELECT 1 on both DBs, R2 head.
+ * Vars a production deployment cannot do without, which a binding check
+ * would never notice. `BETTER_AUTH_URL` decides where Better Auth sends
+ * callbacks and whether its cookies carry the `__Secure-` prefix (audit
+ * finding 0.7); unset, auth half-works, which is worse than not at all.
+ */
+const REQUIRED_CONFIG = ["BETTER_AUTH_URL"] as const;
+
+function missingConfig(): string[] {
+  return REQUIRED_CONFIG.filter((name) => {
+    const value: unknown = env[name];
+    return typeof value !== "string" || value === "";
+  });
+}
+
+/**
+/health backing (000 §10): D1 SELECT 1 on both DBs, R2 head, and the
+required configuration by name.
 */
 export async function checkHealth(): Promise<HealthReport> {
   const checks: HealthReport["checks"] = {
@@ -45,9 +66,11 @@ export async function checkHealth(): Promise<HealthReport> {
     reported via ok:false
     */
   }
+  const missing = missingConfig();
   return {
-    ok: Object.values(checks).every((c) => c === "ok"),
+    ok: Object.values(checks).every((c) => c === "ok") && missing.length === 0,
     checks,
+    missing,
     at: nowSeconds(),
   };
 }
