@@ -281,7 +281,9 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       .getByRole("listitem")
       .filter({ hasText: "New run on Strava · Add it here" });
     await expect(reminder).toHaveCount(1);
-    await expect(reminder).toHaveClass(/bg-panel/u);
+    // Read: the paper and quiet text, where unread is a white row.
+    await expect(reminder).toHaveClass(/text-quiet/u);
+    await expect(reminder).not.toHaveClass(/bg-panel/u);
 
     // ---- R1 · by hand, straight on to the outfit ---------------------
     await page.setViewportSize(DESK);
