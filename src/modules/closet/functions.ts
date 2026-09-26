@@ -15,13 +15,12 @@ import {
   requireFormData,
   updateItemInput,
 } from "./inputs";
-import { uploadPhotoFromForm } from "./photos";
+import { removeItemPhoto, uploadPhotoFromForm } from "./photos";
 import {
   createItem,
   withResolvedProduct,
-  deleteOrRetireItem,
-  getItemDetail,
-  getItemsByIds,
+  deleteItem,
+  getItemDetailWithPairs,
   listItems,
   retireItem,
   unretireItem,
@@ -44,14 +43,7 @@ export const getItemFn = createServerFn({ method: "GET" })
   .validator((data: unknown) => itemIdInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const client = db();
-    const detail = await getItemDetail(client, userId, data.itemId);
-    const paired = await getItemsByIds(
-      client,
-      userId,
-      detail.performance?.pairsWith ?? [],
-    );
-    return { ...detail, pairedItems: paired };
+    return getItemDetailWithPairs(db(), userId, data.itemId);
   });
 
 export const createItemFn = createServerFn({ method: "POST" })
@@ -96,7 +88,7 @@ export const deleteItemFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => itemIdInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return deleteOrRetireItem(db(), userId, data.itemId);
+    await deleteItem(db(), userId, data.itemId);
   });
 
 export const addFromTapListFn = createServerFn({ method: "POST" })
@@ -111,4 +103,11 @@ export const uploadPhotoFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return uploadPhotoFromForm(db(), userId, data);
+  });
+
+export const removePhotoFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => itemIdInput.parse(data))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    await removeItemPhoto(db(), userId, data.itemId);
   });

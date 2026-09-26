@@ -95,6 +95,7 @@ function PieceTile({
  * "ALL ›" and "+ CATEGORY" opens A2b for that group — *"never a route,
  * never in place"* (round 20).
  */
+// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches closet/components/GarmentForm.tsx only by destructuring one prop per line; one picks a kit, the other edits a garment, and they share nothing to extract
 export function KitList({
   groups,
   conditions,
