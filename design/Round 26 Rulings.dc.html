@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Roboto:wght@500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 26 &nbsp;/&nbsp; 18 asks · carried, promised, new</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Say who you are once. Show what we found. Ask before it's gone.</h1>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <sc-for list="{{ toc }}" as="t" hint-placeholder-count="18">
+          <a href="{{ t.href }}" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">{{ t.label }}</a>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px;">Read <a href="#r7">7 · Usernames</a> first; it unblocks a lane. Frames are light-mode at 390 unless marked DESK. The dark boards follow the light boards by the usual token swap.</p>
+    </div>
+
+    <!-- 7 first: blocks a lane -->
+    <div id="r7" data-board="Round 22 Coverage · G/H + Auth + Onboarding" style="display: flex; flex-direction: column; gap: 28px;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">7 · @username is the name</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the handle replaces the name everywhere, in one style. Sign-up asks for email and password only. Everyone picks a handle at O0, the first step of onboarding.</strong> That gives email and Google one path, and a taken handle never shares a screen with the question "is this email registered?".</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">O0 · PICK A HANDLE · TAKEN, ON SUBMIT</span>
+          <div data-screen-label="O0 Handle taken" style="width: 390px; min-height: 700px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="padding: 20px 24px 0; display: flex; gap: 6px;"><span style="flex: 1; height: 3px; background: #0B0B0E;"></span><span style="flex: 1; height: 3px; background: #DCDBD2;"></span><span style="flex: 1; height: 3px; background: #DCDBD2;"></span><span style="flex: 1; height: 3px; background: #DCDBD2;"></span></div>
+            <div style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 18px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">STEP 1 OF 4</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">What should runners call you?</span>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">USERNAME</label>
+                <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">3–20 letters, numbers or _. It's on everything you share. You can change it in settings.</span>
+                <div style="display: flex; align-items: center; background: #FFFFFF; border: 2px solid #0B0B0E; border-radius: 10px; padding: 13px 15px; font-size: 16px;"><span style="color: #7A7A70;">@</span><span>maya_runs</span></div>
+                <span data-part="field-message" style="background: #F5FF3D; color: #0B0B0E; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">@maya_runs is taken. Try another, like @maya_runs_pdx.</span>
+              </div>
+              <span style="margin-top: auto; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Next</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 520px; min-width: 300px; display: flex; flex-direction: column; gap: 14px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">WHERE THE HANDLE SHOWS · ONE STYLE: ARCHIVO 600, "@" INCLUDED, LOWERCASE AS STORED</span>
+          <div data-screen-label="Handle placements" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+            <sc-for list="{{ handleRows }}" as="h" hint-placeholder-count="4">
+              <div style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid #DCDBD2;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ h.where }}</span>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; line-height: 1.4;">
+                  <span style="flex: 0 0 32px; height: 32px; border-radius: 100px; background: #DCDBD2;"></span>
+                  <span><span style="font-weight: 600;">{{ h.handle }}</span>{{ h.rest }}</span>
+                  <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">{{ h.meta }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Never mono.</strong> A handle is a name, not data. Search, G and H change from mono to this style. The avatar tile stays.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Checked on Next, not while typing.</strong> The server rule arrives through the field (§3). The suggestion is one real, free handle: the typed one plus the city slug, or else plus a digit. We never show a list.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Other refusals.</strong> "Use 3–20 letters, numbers or _." "Handles can't start with _." Uniqueness ignores case. The field lowercases as you type, so you see what's stored.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Changing it later.</strong> Settings › Username uses the same field and rule. Old links to /@old show "This runner changed their name." We don't redirect: a redirect would link the old handle to the new one.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1 -->
+    <div id="r1" data-board="Remaining Screens · A1 + Round 25 · A1 desk" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">1 · Fix the start time</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the underlined time on the stats line opens a "Start time" row inside the parsed card. Its button says "Get weather". While it fetches, the conditions block holds the old numbers under a "WAS" kicker, in brackets.</strong> Nothing new: "Refetch" is our word, and the runner's word is weather.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">A1 · PHONE · TIME ROW OPEN, FETCHING</span>
+          <div data-screen-label="A1 Time correction" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px; display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 14px; color: #B9B8AE;">← Back</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Add a run</span></div>
+            <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+              <div data-part="parsed-card" style="border: 1px solid #DCDBD2; border-radius: 16px; overflow: hidden; background: #FFFFFF;">
+                <div style="padding: 12px 16px; display: flex; background: #EDECE3; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #4E4E44;"><span>PARSED · MORNING_RUN_0829.GPX</span><span style="margin-left: auto; color: #00776A;">✓</span></div>
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em; line-height: 1;">6.2 MI · 51:38</span>
+                  <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #4E4E44;"><span>8:19 /MI</span><span style="color: #DCDBD2;">|</span><span>SAT AUG 29</span></div>
+                  <div data-part="time-row" style="border-top: 1px solid #EDECE3; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">START TIME</label>
+                    <span style="font-size: 13px; line-height: 1.4; color: #4E4E44;">The file said 6:04 AM. Change it if your watch's clock was off.</span>
+                    <div style="display: flex; gap: 8px;">
+                      <div style="flex: 1; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 12px 14px; font-size: 16px;">6:34 AM</div>
+                      <span aria-busy="true" style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 16px; font-size: 15px; font-weight: 700;"><span style="color: #FF2D8A;">[</span> Getting <span style="color: #FF2D8A;">]</span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div data-part="conditions" data-state="refetching" style="border-radius: 16px; background: #0B0B0E; color: #F4F3EF; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">WEATHER FOR 6:34 AM</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span> Getting it <span style="color: #FF2D8A;">]</span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">WAS 41°F DAMP · FEELS 36° · AT 6:04 AM</span>
+              </div>
+              <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">Looks right — what did you wear?</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 600px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">A1 · DESK ≥1040 · SAME ROW, RAIL CARRIES THE FETCH</span>
+          <div style="overflow-x: auto; max-width: 100%;">
+            <div data-screen-label="A1 Time correction desk" data-state="desk" style="width: 1040px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+              <div data-part="top-bar" style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 28px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span><span style="font-size: 15px; color: #B9B8AE;">Feed &nbsp; Closet &nbsp; Call &nbsp; You</span><span aria-current="page" style="margin-left: auto; background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 8px 16px; font-size: 15px; font-weight: 700;">Log a run</span></div>
+              <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px;">
+                <div data-part="primary" style="display: flex; flex-direction: column; gap: 16px;">
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">Add a run</span>
+                  <div style="border: 1px solid #DCDBD2; border-radius: 16px; overflow: hidden; background: #FFFFFF;">
+                    <div style="height: 150px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"></div>
+                    <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                      <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">6.2 MI · 51:38</span>
+                      <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #4E4E44;"><span>8:19 /MI</span><span style="color: #DCDBD2;">|</span><span>SAT AUG 29</span></div>
+                      <div style="border-top: 1px solid #EDECE3; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; max-width: 420px;">
+                        <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">START TIME</label>
+                        <div style="display: flex; gap: 8px;"><div style="flex: 1; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 12px 14px; font-size: 16px;">6:34 AM</div><span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 16px; font-size: 15px; font-weight: 700;"><span style="color: #FF2D8A;">[</span> Getting <span style="color: #FF2D8A;">]</span></span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <span style="align-self: flex-start; background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">Looks right — what did you wear?</span>
+                </div>
+                <div data-part="rail" style="display: flex; flex-direction: column; gap: 16px;">
+                  <div style="border-radius: 16px; background: #0B0B0E; color: #F4F3EF; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">WEATHER FOR 6:34 AM</span>
+                    <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span> Getting it <span style="color: #FF2D8A;">]</span></span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">WAS 41°F DAMP · FEELS 36° · AT 6:04 AM</span>
+                  </div>
+                  <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOU IN 38–46° DAMP</span><span style="font-size: 14px; line-height: 1.5; color: #7A7A70;">Updates when the weather does.</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Opening it.</strong> "6:04 AM" is a button named "Change start time, 6:04 AM". Pressing it replaces the time on the stats line with the row, and focus moves to the field. The date stays fixed: it comes from the file.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">After.</strong> The row closes, the stats line reads "6:34 AM · CHANGED", and the block fills in. If the primary action is pressed mid-fetch, it waits in brackets and then goes. It is never disabled.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Fails (§4a).</strong> A band under the block: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">STILL 6:04 AM</span> · "Couldn't get weather for 6:34. Try again?" The old conditions come back. The time goes back too, so the run never carries a time whose weather we don't have.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div id="r2" data-board="Round 22 Coverage · R2b" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">2 · R2b: two picks, no numbers typed</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: keep the build's twelve 5 °C bands. Label them in the runner's unit, and add the sky, because a band without precipitation can't match anything.</strong> 5 °C is exactly 9 °F, so every °F label is a whole number.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">R2b · SHEET · °F RUNNER · 41–50° + RAIN PICKED</span>
+          <div data-screen-label="R2b Set conditions" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="padding: 10px 0 0; display: flex; justify-content: center;"><span style="width: 36px; height: 4px; border-radius: 100px; background: #B9B8AE;"></span></div>
+            <div style="padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">Set conditions</span><span style="font-size: 20px;">✕</span></div>
+              <span style="font-size: 14px; line-height: 1.45; color: #4E4E44;">Roughly is fine. This stays on your run and never counts toward anyone else's.</span>
+              <div role="radiogroup" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">HOW WARM · °F</span>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                  <sc-for list="{{ bands }}" as="b" hint-placeholder-count="12">
+                    <span style="background: {{ b.bg }}; color: {{ b.fg }}; border: 1px solid {{ b.border }}; border-radius: 10px; padding: 12px 4px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: {{ b.weight }};">{{ b.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <div role="radiogroup" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">SKY</span>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                  <sc-for list="{{ skies }}" as="s" hint-placeholder-count="4">
+                    <span style="background: {{ s.bg }}; color: {{ s.fg }}; border: 1px solid {{ s.border }}; border-radius: 10px; padding: 12px 4px; text-align: center; font-size: 14px; font-weight: {{ s.weight }};">{{ s.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">Set 41–50° and rain</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1 1 420px; min-width: 280px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Bands.</strong> °F: −4–5, 5–14 … 95–104. °C: −20–−15 … 35–40. Three columns, coldest top-left. Nothing is preselected: a guess we make would look like a reading we took.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Sky.</strong> Dry, Damp, Rain, Snow, the same four words E2-lite uses. Both picks are required. Pressing Set with one missing puts a field message on the missing group: "Pick how warm it was." / "Pick the sky."</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The button says the pick.</strong> With no pick it reads "Set conditions". Afterwards the run strip badge reads <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">SET · 41–50° · RAIN</span>: a range, never the stored midpoint. Showing 45.5° would claim a precision nobody measured.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Outside the range.</strong> No "colder" or "hotter" cell. Runs beyond −4° or 104° are rare enough to sit in the end band.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 + 4 -->
+    <div id="r3" data-board="Round 22 Coverage · Y delete + F" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">3 · Delete with runs &nbsp;·&nbsp; <span id="r4">4 · Photo didn't</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">3: The sheet asks "Retire it instead?", with retire as the pink primary and delete as a hairline secondary. It lists what goes and what stays. 4: The owner's line goes in a §4a band under the photo well, and F's action becomes Done.</strong></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Y · DELETE SHEET · PIECE WITH 38 RUNS</span>
+          <div data-screen-label="Y Delete with runs" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="padding: 10px 0 0; display: flex; justify-content: center;"><span style="width: 36px; height: 4px; border-radius: 100px; background: #B9B8AE;"></span></div>
+            <div style="padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">Delete the Pegasus 40? Retire it instead.</span>
+              <span style="font-size: 15px; line-height: 1.5;">It's on 38 runs. Retiring takes it out of the picker and keeps everything it taught you.</span>
+              <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.4; border-top: 1px solid #DCDBD2; padding-top: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">IF YOU DELETE IT</span>
+                <sc-for list="{{ delRows }}" as="d" hint-placeholder-count="4">
+                  <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: {{ d.c }}; flex: 0 0 42px;">{{ d.k }}</span><span>{{ d.t }}</span></div>
+                </sc-for>
+              </div>
+              <span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">Retire it</span>
+              <span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 14px; text-align: center; font-size: 15px; font-weight: 600;">Delete it and its record</span>
+              <span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44;">Cancel</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">Numbers come from the piece: runs it's on, bands it has a record in. Delete goes straight through with no second confirm, because the sheet is the confirm. On success: C, with a status line "Pegasus 40 deleted." On failure: the §4a kicker "Not deleted".</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">F · SAVED, PHOTO REFUSED</span>
+          <div data-screen-label="F Photo failed" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-size: 14px; color: #4E4E44;">← Closet</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00776A;">SAVED TO CLOSET · TOP · HALF-ZIP</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Janji Rover Half-zip</span></div>
+              <div style="display: flex; flex-direction: column; gap: 0;">
+                <div data-part="photo-well" style="border: 2px dashed #B9B8AE; border-radius: 12px; padding: 22px 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span>
+                  <span style="font-size: 17px; font-weight: 700;">Add a photo</span>
+                  <span style="font-size: 13px; color: #6E6E64;">Flat on the floor works best. JPG, PNG or WebP.</span>
+                </div>
+                <div data-part="control-failure" role="status" style="margin-top: 8px; border: 1px solid #0B0B0E; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">PHOTO NOT ADDED</span>
+                  <span style="font-size: 15px; line-height: 1.45;">Garment saved, photo didn't. Try again?</span>
+                  <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">IMG_2231.HEIC isn't a JPG, PNG or WebP.</span>
+                  <div style="display: flex; gap: 8px;"><span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 10px 16px; font-size: 14px; font-weight: 700;">Try again</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 10px 16px; font-size: 14px; font-weight: 600;">Pick another</span></div>
+                </div>
+              </div>
+              <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">Done</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">The fields have gone because the row exists. F becomes the garment's own page, not a form to submit twice. "Try again" re-sends the same file, and is only offered for a network failure. For a size or type refusal, only "Pick another" shows, because the same file would fail again. Done goes to Y.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 -->
+    <div id="r10" data-board="Desktop Contract · DS3 · F" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">10 · F at the desk</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the rail holds one thing, "Already in your closet". It isn't the photo preview: the well already is the preview, and a copy beside it would be a second input. It isn't "worn in" either: a new piece has worn nothing.</strong> The rail stays empty until a category is picked.</span>
+      </div>
+      <div style="overflow-x: auto; max-width: 100%;">
+        <div data-screen-label="F Add garment desk" data-state="desk" style="width: 1180px; min-width: 1040px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+          <div data-part="top-bar" style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 28px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span><div style="display: flex; gap: 24px; font-size: 15px; color: #B9B8AE;"><span>Feed</span><span style="color: #F4F3EF; text-decoration: underline; text-underline-offset: 8px; text-decoration-thickness: 2px;">Closet</span><span>Call</span><span>You</span></div><span style="margin-left: auto; background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 8px 16px; font-size: 15px; font-weight: 700;">Log a run</span></div>
+          <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px;">
+            <div data-part="primary" style="display: flex; flex-direction: column; gap: 18px; max-width: 620px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 14px; color: #4E4E44;">← Closet</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">Add a garment</span></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">CATEGORY</span><div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px;"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 9px 14px; font-weight: 600;">Top</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Bottom</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Outer</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Hands</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Head</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Shoes</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Extras</span></div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">TYPE</span><div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px;"><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Singlet</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">Tee</span><span style="border: 1px solid #DCDBD2; border-radius: 100px; padding: 9px 14px;">L/S crew</span><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 9px 14px; font-weight: 600;">Half-zip</span></div></div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">BRAND · OPTIONAL</span><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 12px 14px; font-size: 16px;">Janji</div></div>
+                <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">NAME</span><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 12px 14px; font-size: 16px;">Rover Half-zip</div></div>
+              </div>
+              <div style="border: 2px dashed #B9B8AE; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PHOTO · OPTIONAL</span><span style="font-size: 16px; font-weight: 700;">Drop a photo, or browse</span><span style="font-size: 13px; color: #6E6E64;">Flat on the floor works best. JPG, PNG or WebP.</span></div>
+              <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">Add to closet</span>
+            </div>
+            <div data-part="rail" style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">ALREADY IN YOUR CLOSET · TOP · HALF-ZIP</span>
+                <sc-for list="{{ closetNear }}" as="c" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #EDECE3;">
+                    <span style="flex: 0 0 48px; height: 48px; border-radius: 8px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 5px, #E9E8DE 5px 10px);"></span>
+                    <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-size: 15px; font-weight: 600;">{{ c.name }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">{{ c.rec }}</span></div>
+                    <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{ c.flagC }};">{{ c.flag }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">What it matches.</strong> Same category and type, newest first, up to five. With a name typed, a piece whose brand and name match is marked <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">SAME NAME</span>. Retired pieces count, marked <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">RETIRED</span>: re-adding a retired piece is the likeliest duplicate.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Read-only.</strong> Rows don't link. A link would lead away from a half-filled form, and the leave rule would fire over a glance. None in this type: "No half-zips yet." Before a category: no card.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The photo-failed state at the desk</strong> is #4 in the primary column. The rail stays, because the saved piece is now one of the rows.</div>
+      </div>
+    </div>
+
+    <!-- 11 -->
+    <div id="r11" data-board="Auth · Au2 + verification" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">11 · Check your email</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: every sign-up ends on the same screen. Unverified accounts can do everything private. Anything another runner would see waits for the confirm: a share queues, and it isn't lost.</strong> Allowing everything and nagging is the spam path. Blocking everything punishes the runner who logs first and checks mail later.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Au4 · AFTER SIGN-UP · NEW OR EXISTING EMAIL, SAME SCREEN</span>
+          <div data-screen-label="Au4 Check your email" style="width: 390px; min-height: 640px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div style="padding: 32px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.03em; line-height: 1;">Check your email</span>
+              <p style="margin: 0; font-size: 16px; line-height: 1.5;">We sent a link to <strong>maya@example.com</strong>. Open it on any device to confirm the address.</p>
+              <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4E4E44;">It works once, for 24 hours. Not there? Check spam, or send it again.</p>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                <span style="align-self: flex-start; border: 1px solid #0B0B0E; border-radius: 100px; padding: 13px 20px; font-size: 15px; font-weight: 700;">Resend link</span>
+                <span style="font-size: 14px; color: #4E4E44;">Wrong address? <span style="color: #C21A6B; font-weight: 600;">Start over</span></span>
+              </div>
+              <span style="margin-top: auto; font-size: 14px; color: #4E4E44; border-top: 1px solid #DCDBD2; padding-top: 14px;">You're signed in. <span style="color: #C21A6B; font-weight: 600;">Carry on to your closet ›</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 520px; min-width: 300px; display: flex; flex-direction: column; gap: 22px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">THE EMAILS · PLAIN, ONE BUTTON</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px;">
+              <sc-for list="{{ emails }}" as="m" hint-placeholder-count="2">
+                <div data-screen-label="{{ m.screen }}" style="background: #FFFFFF; color: #0B0B0E; border-radius: 8px; overflow: hidden; border: 1px solid #DCDBD2;">
+                  <div style="background: #EDECE3; padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #4E4E44;">FROM dialed.run &lt;hello@dialed.run&gt;<br />SUBJECT <span style="color: #0B0B0E; font-weight: 600;">{{ m.subject }}</span></div>
+                  <div style="padding: 20px 18px; display: flex; flex-direction: column; gap: 12px;">
+                    <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #7A7A70;">.run</span><span style="color: #FF2D8A;">]</span></span>
+                    <p style="margin: 0; font-size: 15px; line-height: 1.5;">{{ m.body }}</p>
+                    <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 700;">{{ m.button }}</span>
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">{{ m.foot }}</p>
+                    <span style="font-size: 12px; color: #7A7A70; border-top: 1px solid #EDECE3; padding-top: 10px;">dialed.run · <span style="text-decoration: underline;">Privacy policy</span></span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">LINK LANDINGS · SIGNED-OUT SHELL</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px;">
+              <sc-for list="{{ landings }}" as="l" hint-placeholder-count="3">
+                <div data-screen-label="{{ l.screen }}" style="background: #F4F3EF; color: #0B0B0E; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: {{ l.kc }};">{{ l.kicker }}</span>
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; line-height: 1.1;">{{ l.head }}</span>
+                  <span style="font-size: 14px; line-height: 1.45; color: #4E4E44;">{{ l.body }}</span>
+                  <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">{{ l.action }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">RESEND · THREE STATES · NEVER DISABLED</span>
+            <div data-screen-label="Resend states" style="background: #F4F3EF; color: #0B0B0E; border-radius: 10px; padding: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SENDING</span><span aria-busy="true" style="align-self: flex-start; border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 18px; font-size: 15px; font-weight: 700;"><span style="color: #FF2D8A;">[</span> Sending <span style="color: #FF2D8A;">]</span></span></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SENT · FOR 60 S</span><span style="align-self: flex-start; border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 18px; font-size: 15px; font-weight: 700;">Sent ✓</span><span style="font-size: 13px; color: #4E4E44;">A new link is on its way. The old one no longer works.</span></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">RATE-LIMITED · §4a</span><span style="align-self: flex-start; border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 18px; font-size: 15px; font-weight: 700;">Resend link</span><div style="border: 1px solid #0B0B0E; padding: 10px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 2px 5px; align-self: flex-start;">NOT SENT</span><span style="font-size: 13px; line-height: 1.4;">That's 5 links this hour. You can send another at 7:42 PM.</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Au2 · REDRAWN · THE ONLY REFUSALS LEFT ARE ABOUT WHAT WAS TYPED</span>
+          <div data-screen-label="Au2 Sign up redraw" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div style="padding: 26px 24px 22px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">Create an account</span>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</label><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 13px 15px; font-size: 16px;">maya@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</label><span style="font-size: 13px; color: #4E4E44;">At least 10 characters.</span><div style="background: #FFFFFF; border: 2px solid #0B0B0E; border-radius: 10px; padding: 13px 15px; font-size: 16px; letter-spacing: 0.2em;">••••••••••••</div><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">That password has turned up in a data breach. Pick another.</span></div>
+              <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Create account</span>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+              <span data-part="google-button" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Roboto, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Creating an account means you've read our <span style="color: #C21A6B; font-weight: 600; text-decoration: underline; text-underline-offset: 2px;">Privacy policy</span>.</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1 1 520px; min-width: 300px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">UNVERIFIED · CAN AND CAN'T</span>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">CAN</span><br />Onboard, add garments, log runs and verdicts, the Call, connect Strava, read the feed and profiles, search, settings, delete the account.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #FF2D8A;">WAITS</span><br />Share to feed (it queues), mark Useful, report, change email, reset a password by email. Each of these either shows to another runner or trusts the address.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">A3 SHARE TOGGLE</span><br />It stays on. The sub-line reads "Shares when you confirm your email." After the confirm, queued entries post in logged order with their original dates, and the status line reads "3 runs shared."</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">USEFUL / REPORT</span><br />The control draws at full strength (rule 07: "not yet"). Pressing it opens a small sheet: "Confirm your email first. We sent a link to maya@…" · Resend link.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">THE NAG · ONE PLACE</span><br />A hairline band at the top of Feed and You: "Confirm your email to share runs. Resend link". No modal, no badge on the bell, and no dismiss, because it goes once verified. There are no reminder emails beyond the one the runner asked for.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">GOOGLE</span><br />Google accounts come verified. They skip Au4 and go to O0.</div>
+            <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #DEDDD6;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">Au3's EXCEPTION IS RETIRED</span><br />A registered email gets the second email, never a different screen. The page can't tell anyone who has an account. The owner of the address learns it in their inbox.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12 -->
+    <div id="r12" data-board="Remaining Screens · Your conditions + Onboarding · O1" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">12 · Type it, see what we found</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the field has a "Find" button beside it. Finding shows Visual Crossing's resolved place back as a sentence with a "Use this" button. Nothing is saved until the runner presses it.</strong> One place comes back, not a list, so the runner confirms it rather than picking from options.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ cityStates }}" as="c" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ c.label }}</span>
+            <div data-screen-label="{{ c.screen }}" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">YOUR CITY</label>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Add the state or country. We'll show you the place we found before we use it.</span>
+              <div style="display: flex; gap: 8px;">
+                <div style="flex: 1; background: #FFFFFF; border: {{ c.border }}; border-radius: 10px; padding: 13px 15px; font-size: 16px; color: {{ c.fg }};">{{ c.value }}</div>
+                <span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 18px; font-size: 15px; font-weight: 700;">Find</span>
+              </div>
+              <sc-if value="{{ c.found }}" hint-placeholder-val="{{ false }}">
+                <div data-part="resolved" style="margin-top: 6px; background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                  <span style="font-size: 15px; line-height: 1.4;">Weather for <strong>Portland, OR, United States</strong></span>
+                  <div style="display: flex; gap: 8px; align-items: center;"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Use this</span><span style="font-size: 13px; color: #4E4E44;">Not it? Add more to the name.</span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ c.missing }}" hint-placeholder-val="{{ false }}">
+                <span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">We couldn't find "Portlnd, OR". Check the spelling, or try a nearby city.</span>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">O1 · CITY STEP · REDRAWN · AFTER "USE THIS"</span>
+          <div data-screen-label="O1 City step" style="width: 390px; min-height: 600px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="padding: 20px 24px 0; display: flex; gap: 6px;"><span style="flex: 1; height: 3px; background: #0B0B0E;"></span><span style="flex: 1; height: 3px; background: #0B0B0E;"></span><span style="flex: 1; height: 3px; background: #DCDBD2;"></span><span style="flex: 1; height: 3px; background: #DCDBD2;"></span></div>
+            <div style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">STEP 2 OF 4 · OPTIONAL</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">Where do you usually run?</span>
+              <span style="font-size: 15px; line-height: 1.45; color: #4E4E44;">We use it for the forecast on the Call. Your runs still get the weather from their own GPS.</span>
+              <div style="display: flex; align-items: center; gap: 10px; align-self: flex-start; background: #00E0C6; border-radius: 100px; padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.04em;"><span>PORTLAND, OR, UNITED STATES</span><span aria-label="Remove Portland, OR, United States">✕</span></div>
+              <span style="font-size: 14px; color: #C21A6B; font-weight: 600;">Change city</span>
+              <span style="margin-top: auto; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Next</span>
+              <span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44;">Skip</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1 1 460px; min-width: 280px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">O1's sequence.</strong> The field and Find, then the resolved card, then Use this makes the chip, and the field and card go. "Change city" brings the field back empty. Enter in the field means Find, never Next. Next with a typed but unconfirmed city puts a field message on it: "Press Find, or clear the field to skip."</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The chip shows what's saved.</strong> Visual Crossing's resolved address, uppercased, as it will read everywhere. Your conditions shows the same string in its header: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">WEATHER FOR PORTLAND, OR, UNITED STATES</span>.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Find, in flight and failed.</strong> Brackets on the button while it looks. If the lookup itself fails, it's a §4a band: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">NOT FOUND YET</span> · "Couldn't look that up. Try again?" That band means the service failed. The field message means the city doesn't exist, and that's the difference between them.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 13 + 16 -->
+    <div id="r13" data-board="Auth · Au1/Au2 + Form Contract" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">13 · Google's button, Google's rules &nbsp;·&nbsp; <span id="r16">16 · One ring</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">13: Google's own light and dark specs, taken whole, in our pill shape: fill, stroke, Roboto Medium and the G. 16: on a field, the ring sits on the border (offset −1px, covering it), so a focused field shows one outline. The band is what tells error from focus.</strong></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div data-screen-label="Google button light" style="background: #F4F3EF; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; width: 340px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">LIGHT · #FFFFFF / 1PX #747775 / #1F1F1F</span>
+          <span style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Roboto, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span>
+        </div>
+        <div data-screen-label="Google button dark" style="background: #0B0B0E; border: 1px solid #2A2A31; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; width: 340px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">DARK · #131314 / 1PX #8E918F / #E3E3E3</span>
+          <span style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #131314; border: 1px solid #8E918F; border-radius: 100px; height: 48px; font-family: Roboto, sans-serif; font-weight: 500; font-size: 15px; color: #E3E3E3;"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span>
+        </div>
+        <div style="flex: 1 1 300px; min-width: 260px; font-size: 14px; line-height: 1.55; color: #DEDDD6; display: flex; flex-direction: column; gap: 8px;">
+          <span><strong style="color: #F4F3EF;">Label:</strong> "Continue with Google" on both Au1 and Au2. It's one of Google's sanctioned strings, and it's true either way.</span>
+          <span><strong style="color: #F4F3EF;">Scope:</strong> <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">data-part="google-button"</span> is exempt from the palette and icon-pack checks, and so is nothing else. Height 48 to match our pills; Google's minimum is 40. Focus follows rule 06.</span>
+        </div>
+      </div>
+
+      <div data-screen-label="Field focus states" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 20px;">
+        <sc-for list="{{ fieldStates }}" as="s" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ s.k }}</span>
+            <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</label>
+            <div style="background: #FFFFFF; border: {{ s.border }}; outline: {{ s.outline }}; outline-offset: -1px; border-radius: 10px; padding: 13px 15px; font-size: 16px;">maya@example</div>
+            <sc-if value="{{ s.err }}" hint-placeholder-val="{{ false }}"><span style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">Add the part after the @, like example.com.</span></sc-if>
+            <span style="font-size: 12px; line-height: 1.45; color: #4E4E44;">{{ s.note }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- 14 -->
+    <div id="r14" data-board="Auth · signed-out shell · privacy" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">14 · Privacy policy</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: a reading page, 680 measure, 17/1.65 Archivo. At the desk, a sticky contents column sits to the left. Linked from the signed-out footer, under Au2 only, in Settings › About, and in every email's footer.</strong> Au1 gets no line: logging in isn't consent to anything new, and the footer is one scroll away.</span>
+      </div>
+      <div style="overflow-x: auto; max-width: 100%;">
+        <div data-screen-label="Privacy policy desk" data-state="desk" style="width: 1180px; min-width: 1040px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+          <div style="background: #0B0B0E; height: 60px; padding: 0 24px; display: flex; align-items: center;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span><span style="margin-left: auto; display: flex; gap: 16px; align-items: center; font-size: 15px; color: #F4F3EF;"><span>Log in</span><span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 8px 16px; font-weight: 700;">Create account</span></span></div>
+          <div style="padding: 48px 24px 56px; display: grid; grid-template-columns: 220px minmax(0, 680px); gap: 64px; justify-content: center;">
+            <nav aria-label="Contents" style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; align-self: start; position: sticky; top: 24px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">CONTENTS</span>
+              <sc-for list="{{ policyToc }}" as="p" hint-placeholder-count="7"><span style="color: {{ p.c }}; font-weight: {{ p.w }};">{{ p.t }}</span></sc-for>
+            </nav>
+            <article style="display: flex; flex-direction: column; gap: 18px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">LAST UPDATED SEP 25, 2026</span>
+              <h1 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 44px; letter-spacing: -0.03em; line-height: 1;">Privacy policy</h1>
+              <div style="height: 16px; width: 100%; background: #E9E8DE;"></div>
+              <div style="height: 16px; width: 92%; background: #E9E8DE;"></div>
+              <div style="height: 16px; width: 96%; background: #E9E8DE;"></div>
+              <h2 style="margin: 14px 0 0; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.02em;">2. What we collect</h2>
+              <div style="height: 16px; width: 100%; background: #E9E8DE;"></div>
+              <div style="height: 16px; width: 88%; background: #E9E8DE;"></div>
+              <div style="height: 16px; width: 94%; background: #E9E8DE;"></div>
+              <div style="height: 16px; width: 60%; background: #E9E8DE;"></div>
+            </article>
+          </div>
+          <div style="border-top: 1px solid #DCDBD2; padding: 20px 24px; display: flex; gap: 20px; font-size: 14px; color: #4E4E44;"><span>© dialed.run</span><span style="margin-left: auto; color: #0B0B0E; font-weight: 600;">Privacy policy</span><span>Contact</span></div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Phone.</strong> One column with 20 side padding. Contents sits as a plain list under the H1. Each H2 has an id and "↑ Contents" after its section. No accordions: legal text you have to tap open is text people skip.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Type.</strong> Body 17/1.65, H2 Archivo Black 24, lists with a hanging indent. Mono only on the date. Links are underlined inline, the one place body links carry an underline, because legal cross-references have to be findable.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Signed-in.</strong> The same page in the signed-in shell, reached from Settings › About › Privacy policy. The route is /privacy for both. The footer link is the page's own link, never a modal.</div>
+      </div>
+    </div>
+
+    <!-- 19 -->
+    <div id="r19" data-board="Remaining Screens · S1 + Settings · notifications" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">19 · One kind of email you choose</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: in v1, the Strava run reminder is the only notification that can come by email. It's on by default, sent at most once a day, and skipped if you've already logged the run. Account emails always come and aren't a preference. Useful stays in the app.</strong> The reminder is the one message that gets a run logged. "Someone found your run useful" is nice to see, but not worth an inbox.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">THE REMINDER EMAIL · ITEM 11's TEMPLATE</span>
+          <div data-screen-label="Email run reminder" style="width: 360px; background: #FFFFFF; color: #0B0B0E; border-radius: 8px; overflow: hidden; border: 1px solid #DCDBD2;">
+            <div style="background: #EDECE3; padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #4E4E44;">FROM dialed.run &lt;hello@dialed.run&gt;<br />SUBJECT <span style="color: #0B0B0E; font-weight: 600;">New run on Strava. Add it here.</span></div>
+            <div style="padding: 20px 18px; display: flex; flex-direction: column; gap: 12px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #7A7A70;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">A run landed on Strava at 6:58 AM. Upload its file, then add what you wore.</p>
+              <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 700;">Add it</span>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">We don't copy runs from Strava. The file comes from your watch or a Strava export.</p>
+              <span style="font-size: 12px; line-height: 1.5; color: #7A7A70; border-top: 1px solid #EDECE3; padding-top: 10px;">You get this because Strava is connected. <span style="text-decoration: underline;">Stop run reminder emails</span> · <span style="text-decoration: underline;">Email settings</span> · <span style="text-decoration: underline;">Privacy policy</span></span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 360px;">It goes out 20 minutes after the run lands, so push gets the first chance. It's skipped if a matching file was uploaded or the push was opened. If a second run lands the same day, there's no second email. The next day's email counts both: "2 runs landed on Strava yesterday and today." It sends <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">List-Unsubscribe</span> and one-click headers.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">SETTINGS › NOTIFICATIONS · PER KIND</span>
+          <div data-screen-label="Settings notifications" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-size: 14px; color: #4E4E44;">← Settings</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">Notifications</span>
+              <sc-for list="{{ notifKinds }}" as="k" hint-placeholder-count="3">
+                <div role="group" aria-label="{{ k.title }}" style="border-top: 1px solid #DCDBD2; padding-top: 14px; display: flex; flex-direction: column; gap: 10px;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 16px; font-weight: 700;">{{ k.title }}</span><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ k.sub }}</span></div>
+                  <sc-for list="{{ k.channels }}" as="c" hint-placeholder-count="2">
+                    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px;">
+                      <span style="font-size: 15px;">{{ c.name }}</span>
+                      <sc-if value="{{ c.isSwitch }}" hint-placeholder-val="{{ true }}">
+                        <span role="switch" aria-checked="{{ c.on }}" style="width: 48px; height: 28px; border-radius: 100px; background: {{ c.track }}; border: 1px solid #0B0B0E; display: flex; justify-content: {{ c.justify }}; padding: 2px;"><span style="width: 22px; height: 22px; border-radius: 100px; background: {{ c.knob }};"></span></span>
+                      </sc-if>
+                      <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">{{ c.text }}</span>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44; border-top: 1px solid #DCDBD2; padding-top: 14px;">Emails go to maya@example.com. <span style="color: #C21A6B; font-weight: 600;">Change email</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">UNSUBSCRIBE LANDING · SIGNED-OUT SHELL · NO LOG-IN</span>
+          <div data-screen-label="Unsubscribe landing" style="width: 390px; min-height: 480px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div style="padding: 32px 24px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00776A;">DONE · MAYA@EXAMPLE.COM</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em; line-height: 1.05;">Run reminder emails are off</span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">You won't get another. If push is on, reminders still show on your phone. Account emails, like password changes, still come.</p>
+              <span style="align-self: flex-start; border: 1px solid #0B0B0E; border-radius: 100px; padding: 13px 20px; font-size: 15px; font-weight: 700;">Turn them back on</span>
+              <span style="margin-top: auto; font-size: 14px; color: #4E4E44;"><span style="color: #C21A6B; font-weight: 600;">All notification settings ›</span> (asks you to log in)</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">The link is signed for that one address and kind, so it works without logging in and never expires. Opening it is the unsubscribe: no confirm button and no "are you sure". "Turn them back on" undoes it on the same page. An invalid link: "That link doesn't work. Change emails in Settings › Notifications."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 20 -->
+    <div id="r20" data-board="Auth · Au2 invite + Operator Screens · D7 Access" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">20 · Invite first, then the door</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the code is the first field on Au2, above email and Google, because both ways in need it. An invite link fills it in. A request always gets the same receipt. At public launch one flag removes the field and the request link, and nothing else changes.</strong></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Au2 · INVITE STAGE · USED CODE ON SUBMIT</span>
+          <div data-screen-label="Au2 Invite code" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div style="padding: 26px 24px 22px; display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">Create an account</span><span style="font-size: 14px; color: #4E4E44;">dialed.run is invite-only for now.</span></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">INVITE CODE</label><div style="background: #FFFFFF; border: 2px solid #0B0B0E; border-radius: 10px; padding: 13px 15px; font-family: 'IBM Plex Mono', monospace; font-size: 16px; letter-spacing: 0.08em;">DIAL-7K3P</div><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">That code has already been used. Ask whoever sent it for another.</span></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</label><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 13px 15px; font-size: 16px;">maya@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">PASSWORD</label><span style="font-size: 13px; color: #4E4E44;">At least 10 characters.</span><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 13px 15px; font-size: 16px; letter-spacing: 0.2em;">••••••••••••</div></div>
+              <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Create account</span>
+              <span style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Roboto, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span>
+              <span style="font-size: 14px; color: #4E4E44;">No code? <span style="color: #C21A6B; font-weight: 600;">Request access</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">Au5 · REQUEST ACCESS → RECEIPT</span>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <div data-screen-label="Au5 Request access" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-size: 14px; color: #4E4E44;">← Create an account</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em; line-height: 1.02;">Request access</span>
+              <span style="font-size: 15px; line-height: 1.5;">We're letting runners in a few at a time. Leave your email and we'll send a code when there's room.</span>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">EMAIL</label><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 13px 15px; font-size: 16px;">sam@example.com</div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">A NOTE · OPTIONAL</label><span style="font-size: 13px; color: #4E4E44;">How you run, or who sent you. Up to 280 characters.</span><div style="background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 13px 15px; font-size: 16px; min-height: 84px; line-height: 1.45;">Winter runner in Duluth. Maya said to ask.</div></div>
+              <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Request access</span>
+            </div>
+            <div data-screen-label="Au5 Request receipt" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; align-self: flex-start;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00776A;">ON THE LIST</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em; line-height: 1.02;">You're on the list</span>
+              <span style="font-size: 15px; line-height: 1.5;">When there's room, we'll email a code to <strong>sam@example.com</strong>. There's nothing else to do until then.</span>
+              <span style="font-size: 14px; color: #4E4E44;">Have a code after all? <span style="color: #C21A6B; font-weight: 600;">Create an account</span></span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 796px;">The receipt is the same for a new request, a repeat request and an address that already has an account, so it reveals nothing (#11). A repeat request just updates the note. The code email: subject "Your dialed.run invite". Body "Here's your code: DIAL-7K3P. It works once." Button "Create your account" (link to /join?code=…). An invalid code reads "That code doesn't work. Check it against the email or message it came in." A revoked code gets the same line: we don't say why.</p>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto; max-width: 100%;">
+        <div data-screen-label="D7 Access" style="width: 1180px; min-width: 1040px; background: #0B0B0E; color: #F4F3EF; border: 1px solid #2A2A31; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; border-bottom: 1px solid #24242B;"><div style="display: flex; align-items: center; gap: 14px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.02em;">[dialed]</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #F5FF3D;">DESK</span></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">@mara · OPERATOR · SIGN OUT</span></div>
+          <div style="display: flex;">
+            <div style="flex: 0 0 220px; border-right: 1px solid #24242B; padding: 22px 0; display: flex; flex-direction: column; gap: 2px;">
+              <sc-for list="{{ deskNav }}" as="n" hint-placeholder-count="6">
+                <div style="padding: 11px 22px 11px {{ n.pl }}; display: flex; justify-content: space-between; background: {{ n.bg }}; border-left: {{ n.bl }};"><span style="font-size: 15px; font-weight: {{ n.w }}; color: #DEDDD6;">{{ n.t }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: {{ n.cc }};">{{ n.c }}</span></div>
+              </sc-for>
+            </div>
+            <div style="flex: 1; padding: 28px 32px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px;">
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between;"><h2 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Requests</h2><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">7 WAITING · OLDEST FIRST</span></div>
+                <sc-for list="{{ requests }}" as="r" hint-placeholder-count="3">
+                  <div style="background: #16161B; border: 1px solid #24242B; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="font-size: 15px; font-weight: 600;">{{ r.email }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8B8B93;">{{ r.age }}</span></div>
+                    <span style="font-size: 14px; line-height: 1.45; color: {{ r.noteC }};">{{ r.note }}</span>
+                    <div style="display: flex; gap: 8px;"><span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 8px 14px; font-size: 13px; font-weight: 700;">Send invite</span><span style="border: 1px solid #3A3A42; border-radius: 100px; padding: 8px 14px; font-size: 13px; color: #DEDDD6;">Decline</span></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between;"><h2 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Codes</h2><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">12 ACTIVE · 31 USED</span></div>
+                <div style="background: #16161B; border: 1px solid #24242B; padding: 14px 16px; display: flex; gap: 10px; align-items: flex-end;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">LABEL · FOR YOU ONLY</span><div style="border: 1px solid #3A3A42; border-radius: 8px; padding: 10px 12px; font-size: 14px;">Tuesday track group</div></div>
+                  <div style="flex: 0 0 90px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">USES</span><div style="border: 1px solid #3A3A42; border-radius: 8px; padding: 10px 12px; font-size: 14px;">8</div></div>
+                  <span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 10px 16px; font-size: 14px; font-weight: 700;">Create code</span>
+                </div>
+                <div style="border: 1px solid #24242B;">
+                  <div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 60px 120px; gap: 12px; padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93; border-bottom: 1px solid #24242B;"><span>CODE</span><span>LABEL · USED BY</span><span>USES</span><span></span></div>
+                  <sc-for list="{{ codes }}" as="c" hint-placeholder-count="4">
+                    <div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 60px 120px; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #24242B; align-items: baseline;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.06em; color: {{ c.codeC }};">{{ c.code }}</span>
+                      <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;"><span style="font-size: 14px;">{{ c.label }}</span><span style="font-size: 13px; color: #8B8B93;">{{ c.by }}</span></div>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ c.usesC }};">{{ c.uses }}</span>
+                      <span style="font-size: 13px; color: #DEDDD6; text-align: right;">{{ c.actions }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Send invite</strong> creates a single-use code, emails it, and moves the row into Codes, labelled with the request's email. <strong style="color: #F4F3EF;">Decline</strong> removes the row and sends nothing, because a no doesn't need an email. The operator can still invite that address later.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Codes.</strong> The format is <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">DIAL-XXXX</span>, with no 0/O or 1/I. Case is ignored. "Copy link" copies /join?code=… and the status line reads "Link copied." Revoke has no confirm; it's undoable for 10 s in the status line. A code is used when the account is created, not when it's verified.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Used by</strong> lists @handles, each linking to the runner's page under Runners. Before O0 is finished, it shows the account's email. The owner's own account needs no code; it's seeded.</div>
+      </div>
+    </div>
+
+    <!-- 21 -->
+    <div id="r21" data-board="Remaining Screens · T1 + Onboarding · Strava step" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">21 · Strava's button, as shipped</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: use the orange asset on both themes. It's 48 tall, unaltered, used as the image file, and left-aligned where our pill was. The white asset is only for orange or photo grounds, and we have neither.</strong> The frames below mark the slot, not the art. The build drops in Strava's own SVG.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ stravaFrames }}" as="s" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.label }}</span>
+            <div data-screen-label="{{ s.screen }}" style="width: 390px; background: {{ s.bg }}; color: {{ s.fg }}; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: {{ s.muted }};">{{ s.kicker }}</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em; line-height: 1.05;">{{ s.head }}</span>
+              <span style="font-size: 15px; line-height: 1.5;">After each run, we'll remind you to add it here. We don't copy runs from Strava.</span>
+              <span data-part="strava-button" role="img" aria-label="Connect with Strava" style="align-self: flex-start; height: 48px; padding: 0 18px; background: #FC5200; color: #FFFFFF; border-radius: 4px; display: flex; align-items: center; gap: 8px; font-family: Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; outline: 1px dashed {{ s.muted }}; outline-offset: 4px;">Connect with Strava <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 400; opacity: 0.85;">· ASSET</span></span>
+              <span style="font-size: 15px; font-weight: 600; color: {{ s.muted }};">{{ s.skip }}</span>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 360px; min-width: 260px; display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The button is the link.</strong> Wrap the asset in our <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">&lt;a&gt;</span> named "Connect with Strava". Focus is rule 06 in the square style, offset 2. While OAuth is in flight, the asset stays and our brackets show beside it ("[ Connecting ]"). We never swap its label.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Only on the connect action.</strong> T3's Disconnect stays our hairline pill. It isn't a Strava action, and their button art says "Connect". <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">data-part="strava-button"</span> joins the Google button as the only palette exemptions.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">No "Powered by Strava" mark.</strong> We show no Strava data, so we have nothing to attribute. T1's line names Strava in plain words, which is all the review needs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 22 -->
+    <div id="r22" data-board="Logo Directions · icons + share card" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">22 · The bracket, small and shared</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: every icon is "[d]": pink brackets and a paper d on an ink tile. At 16px the d goes and the brackets stay. The share card shows the entry's data, never its photo.</strong> A preview is cached by other companies, and a photo the runner later deletes would live on in their caches.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-end;">
+        <sc-for list="{{ icons }}" as="i" hint-placeholder-count="5">
+          <div style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+            <div data-screen-label="{{ i.screen }}" style="width: {{ i.size }}; height: {{ i.size }}; background: #0B0B0E; border-radius: {{ i.radius }}; display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif; font-size: {{ i.font }}; letter-spacing: -0.04em; line-height: 1; border: 1px solid #2A2A31;"><span style="color: #FF2D8A;">[</span><span style="color: #F4F3EF;">{{ i.letter }}</span><span style="color: #FF2D8A;">]</span></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #8B8B93; white-space: pre-line;">{{ i.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">OG · SHARED ENTRY · 1200×630, SHOWN AT 50%</span>
+          <div style="width: 600px; height: 315px; overflow: hidden; border-radius: 8px;">
+            <div data-screen-label="OG Entry card" style="width: 1200px; height: 630px; transform: scale(0.5); transform-origin: top left; background: #0B0B0E; color: #F4F3EF; padding: 64px 72px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 44px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; letter-spacing: 0.08em; color: #8B8B93;">SAT AUG 29</span></div>
+              <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div style="display: flex; align-items: center; gap: 28px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 150px; letter-spacing: -0.05em; line-height: 0.9;">41°F <span style="color: #00E0C6;">DAMP</span></span></div>
+                <div style="display: flex; align-items: center; gap: 20px;"><span style="background: #00E0C6; color: #0B0B0E; font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; letter-spacing: 0.06em; padding: 10px 18px;">DIALED</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 28px; letter-spacing: 0.04em; color: #DEDDD6;">6.2 MI · FEELS 36° · SE 9MPH</span></div>
+                <span style="font-size: 34px; line-height: 1.3; color: #DEDDD6;">Tracksmith Harrier · Bandit 5" Split · thin gloves</span>
+              </div>
+              <span style="font-size: 32px; font-weight: 600;">@maya_runs</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">OG · DEFAULT · HOME, PROFILES, PRIVATE OR GONE</span>
+          <div style="width: 600px; height: 315px; overflow: hidden; border-radius: 8px;">
+            <div data-screen-label="OG Default card" style="width: 1200px; height: 630px; transform: scale(0.5); transform-origin: top left; background: #0B0B0E; color: #F4F3EF; padding: 72px; display: flex; flex-direction: column; justify-content: space-between;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 44px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 112px; letter-spacing: -0.04em; line-height: 0.92; text-transform: uppercase;">What to wear<br />for the run<br /><span style="color: #FF2D8A;">you're about to do.</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Files.</strong> favicon.svg ("[d]", ink tile), favicon.ico 16/32 ("[ ]"), apple-touch-icon 180, and manifest icons 192/512 with a 512 maskable version (glyph inside the 80% safe zone, tile full-bleed). theme_color <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">#0B0B0E</span>. The ink tile works on light and dark tab strips, so no media query is needed.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Entry text.</strong> og:title "@maya_runs · 41°F damp, dialed". og:description is the kit, in kit order. Rendered server-side from public fields only. Per-item flags never appear (#6), and neither do the note or the route.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Private, deleted, banned or unverified-queued</strong> entries serve the default card with the title "dialed.run". A link can't reveal that something exists. The verdict chip uses the verdict's own hue, with the word always present (rule 10).</div>
+      </div>
+    </div>
+
+    <!-- rulings -->
+    <div id="rules" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · 5, 6, 8, 9, 15, 17, 18</span>
+      <sc-for list="{{ rulingGroups }}" as="g" hint-placeholder-count="4">
+        <div id="{{ g.id }}" style="display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">{{ g.title }}</span>
+          <div style="display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+              <div style="background: #0B0B0E; padding: 13px 18px; display: grid; grid-template-columns: minmax(0, 280px) 88px minmax(0, 1fr); gap: 18px; align-items: baseline;">
+                <span style="font-size: 14px; font-weight: 600; color: #F4F3EF;">{{ r.q }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+                <span style="font-size: 14px; line-height: 1.5; color: #DEDDD6;">{{ r.a }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+
+      <div id="r15" style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">K · CALL TEASER · 15</span>
+          <div data-screen-label="K Call teaser 15" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THE CALL · 4 OF 15 VERDICTS</span>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">Log 15 verdicts and the Call starts.</span>
+            <div role="img" aria-label="4 of 15 verdicts logged" style="display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px;">
+              <sc-for list="{{ meter }}" as="m" hint-placeholder-count="15"><span style="height: 18px; border-radius: 2px; background: {{ m.bg }}; border: 1px solid #0B0B0E;"></span></sc-for>
+            </div>
+            <span style="font-size: 14px; line-height: 1.45; color: #4E4E44;">11 to go. Each one teaches it what you run warm or cold in.</span>
+          </div>
+        </div>
+        <div style="flex: 1 1 400px; min-width: 260px; font-size: 14px; line-height: 1.55; color: #DEDDD6; display: flex; flex-direction: column; gap: 8px;">
+          <span><strong style="color: #F4F3EF;">15 · Yes.</strong> Fifteen cells, 3px gap, and it still fits 350 inside the phone. The meter stays cells rather than a bar, because each cell is one verdict you did. At 0 the kicker reads <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">0 OF 15 VERDICTS</span> and the line reads "Your first verdict is one run away." Round 22's K is superseded by this frame.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const toc = [
+      ['r1', '1 · Start time'], ['r2', '2 · R2b'], ['r3', '3 · Delete with runs'], ['r4', '4 · Photo didn\'t'],
+      ['g5', '5 · Swatch'], ['g5', '6 · Stranger flags'], ['r7', '7 · Usernames ★'], ['g5', '8 · Task 120'],
+      ['g9', '9 · Placeholders'], ['r10', '10 · F desk'], ['r11', '11 · Verification'], ['r12', '12 · Typed city'],
+      ['r13', '13 · Google G'], ['r14', '14 · Privacy'], ['r15', '15 · Call at 15'], ['r16', '16 · Field focus'],
+      ['g17', '17 · Breached'], ['g17', '18 · Small confirms'], ['r19', '19 · Notification email'], ['r20', '20 · Invite-only'], ['r21', '21 · Strava button'], ['r22', '22 · Icons + share card'],
+    ].map(([h, label]) => ({ href: '#' + h, label }));
+
+    const handleRows = [
+      { where: 'FEED AUTHOR ROW · E1', handle: '@maya_runs', rest: '', meta: '2H · PORTLAND, OR' },
+      { where: 'D · SOMEONE ELSE\'S ENTRY', handle: '@maya_runs', rest: '', meta: 'SAT AUG 29' },
+      { where: 'NOTIFICATION · S1', handle: '@maya_runs', rest: ' found your 41° run useful.', meta: '3H' },
+      { where: 'REPORT SHEET · TITLE', handle: 'Report @maya_runs\'s entry?', rest: '', meta: '' },
+    ];
+
+    const fLabels = ['−4–5°', '5–14°', '14–23°', '23–32°', '32–41°', '41–50°', '50–59°', '59–68°', '68–77°', '77–86°', '86–95°', '95–104°'];
+    const on = { bg: '#0B0B0E', fg: '#F4F3EF', border: '#0B0B0E', weight: 700 };
+    const off = { bg: '#FFFFFF', fg: '#0B0B0E', border: '#DCDBD2', weight: 400 };
+    const bands = fLabels.map((label, i) => ({ label, ...(i === 5 ? on : off) }));
+    const skies = ['Dry', 'Damp', 'Rain', 'Snow'].map((label) => ({ label, ...(label === 'Rain' ? on : off) }));
+
+    const delRows = [
+      { k: 'GOES', c: '#C21A6B', t: 'It comes off the kit of all 38 runs' },
+      { k: 'GOES', c: '#C21A6B', t: 'Its record in 4 bands' },
+      { k: 'STAYS', c: '#00776A', t: 'Every entry and verdict, and the rest of each kit' },
+      { k: '', c: '#0B0B0E', t: 'This can\'t be undone.' },
+    ];
+
+    const closetNear = [
+      { name: 'Tracksmith Harrier', rec: '41 RUNS · 8/9 DIALED 38–46°', flag: '', flagC: '#7A7A70' },
+      { name: 'Janji Rover Half-zip', rec: '12 RUNS · RETIRED MAR 2026', flag: 'SAME NAME · RETIRED', flagC: '#C21A6B' },
+      { name: 'Uniqlo quarter-zip', rec: '3 RUNS · NO VERDICT YET', flag: '', flagC: '#7A7A70' },
+    ];
+
+    const emails = [
+      { screen: 'Email verify', subject: 'Confirm your email for dialed.run', body: 'Tap below to confirm this is your address. Then your runs can go on the feed.', button: 'Confirm email', foot: 'The link works once, for 24 hours. Didn\'t sign up? Ignore this and nothing happens.' },
+      { screen: 'Email existing account', subject: 'You already have a dialed.run account', body: 'Someone, probably you, tried to create an account with this address. It already has one.', button: 'Log in', foot: 'Forgot the password? Reset it from the log-in page. Didn\'t try to sign up? Ignore this; nothing changed.' },
+    ];
+
+    const landings = [
+      { screen: 'Link expired', kicker: 'LINK EXPIRED', kc: '#C21A6B', head: 'That link has run out', body: 'Links work for 24 hours. Log in and we\'ll send a fresh one.', action: 'Log in to resend' },
+      { screen: 'Link used', kicker: 'ALREADY CONFIRMED', kc: '#00776A', head: 'Your email is confirmed', body: 'That link was already used, and the address is confirmed. Nothing to do.', action: 'Open dialed.run' },
+      { screen: 'Link success', kicker: 'CONFIRMED', kc: '#00776A', head: 'Email confirmed', body: 'Your runs can go on the feed now. Anything you shared while waiting is posted.', action: 'Open the feed' },
+    ];
+
+    const cityStates = [
+      { label: 'HINT · EMPTY', screen: 'City field empty', value: 'City and state, e.g. Portland, OR', fg: '#7A7A70', border: '1px solid #B9B8AE', found: false, missing: false },
+      { label: 'RESOLVED · CONFIRM', screen: 'City field resolved', value: 'Portland', fg: '#0B0B0E', border: '1px solid #B9B8AE', found: true, missing: false },
+      { label: 'CAN\'T RESOLVE · FIELD MESSAGE', screen: 'City field not found', value: 'Portlnd, OR', fg: '#0B0B0E', border: '2px solid #0B0B0E', found: false, missing: true },
+    ];
+
+    const fieldStates = [
+      { k: 'IDLE', border: '1px solid #B9B8AE', outline: 'none', err: false, note: '1px border.' },
+      { k: 'FOCUS', border: '1px solid #B9B8AE', outline: '2px solid #0B0B0E', err: false, note: 'The ring covers the border. One 2px ink line, and nothing outside the field.' },
+      { k: 'ERROR', border: '2px solid #0B0B0E', outline: 'none', err: true, note: '2px ink border plus the hi-viz band.' },
+      { k: 'ERROR + FOCUS', border: '2px solid #0B0B0E', outline: '2px solid #0B0B0E', err: true, note: 'The line looks the same as focus. The band stays until input, and the band is the difference. It\'s never colour alone.' },
+    ];
+
+    const policyToc = ['1. Who we are', '2. What we collect', '3. Weather and location', '4. What other runners see', '5. Who we share with', '6. Keeping and deleting', '7. Your rights'].map((t, i) => ({ t, c: i === 1 ? '#0B0B0E' : '#4E4E44', w: i === 1 ? 700 : 400 }));
+
+    const Y = '#00E0C6', N = '#FF2D8A', A = '#F5FF3D';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('YES') || v === 'CONFIRM' ? Y : v.startsWith('NO') ? N : A });
+    const rulingGroups = [
+      { id: 'g5', title: 'CARRIED · 5, 6, 8', rows: [
+        R('5 · Swatch on garment detail', 'ROUND 22', 'The build is right. The square shows only when an exact shade is known, and a named colour alone gets no square. §AH rule 08 is amended to say "no swatch unless the shade is exact".'),
+        R('6 · Flag on a stranger\'s entry', 'YES · DROPPED', 'The [TOO MUCH] flag is gone from "D Someone else\'s entry" on Round 22 Coverage. The kit row now shows the name alone. The contract wins.'),
+        R('8a · Photo hint "JPG, PNG or WebP"', 'CONFIRM', 'The hint says what the server accepts. Every "HEIC" on Round 22\'s photo-well frames is changed.'),
+        R('8b · STILL MARKED', 'CONFIRM', 'This is §4a\'s "the state still true" rule applied as written.'),
+      ]},
+      { id: 'g9', title: 'CARRIED · 9 · PLACEHOLDERS', rows: [
+        R('E2-lite "No weather yet"', 'CONFIRM', 'The copy names the resolved place: "No weather for Portland, OR yet. It shows after the first reading."'),
+        R('E2-lite / search "Didn\'t load"', 'CONFIRM', 'This is the §4a band sized to the block, with "Try again". No illustration.'),
+        R('City field error copy', 'REDRAWN', 'Superseded by #12.'),
+        R('Bell accessible names', 'CONFIRM', '"Notifications" and "Notifications, 3 new". The count is in digits.'),
+        R('Consensus bar colours', 'CONFIRM', 'As built. Any bar colour also needs a label in words (rule 10).'),
+        R('"Find runners" on Feed heading', 'CONFIRM', 'A text link, right-aligned on the heading line. It is not a bar icon; search already has one.'),
+        R('"Show retired" switch', 'CONFIRM', 'A native checkbox with role="switch", labelled "Show retired (4)". The count is omitted at 0.'),
+        R('Kickers: Not retired · Not deleted · Photo kept · Still retired', 'CONFIRM', 'All four follow §4a.'),
+        R('Add tile icon', 'CONFIRM', 'The add icon, with the accessible name "Add garment".'),
+        R('Phone way back in identity block', 'CONFIRM', 'Correct: the ink header is frame chrome. First line: "← Closet".'),
+        R('Date order', 'SAT AUG 29', 'US order, following the product\'s locale. Mono labels: "SAT AUG 29". Prose: "Sat, Aug 29". Use Intl with month before day. "Sat 29 Aug" is wrong for en-US.'),
+        R('A2 filter from the route', 'CONFIRM', 'The chip comes from the run\'s own conditions, which are known at A1. The suggestion comes later, and it filters nothing.'),
+      ]},
+      { id: 'g17', title: 'NEW · 15, 17, 18', rows: [
+        R('15 · Call threshold 15', 'YES', 'K redrawn below: 15 cells, "Log 15 verdicts and the Call starts."'),
+        R('17 · Breached password', 'CONFIRM', '"That password has turned up in a data breach. Pick another." It never says "your password was breached", because it wasn\'t theirs. If the check can\'t be reached, fail open and let the password through.'),
+        R('18a · W3 "You blurred 2 spots"', 'YES · DIGITS', 'Counts are always digits, including 1: "You blurred 1 spot."'),
+        R('18b · Password minimum 10', 'YES', 'The hint is "At least 10 characters." The refusal is "Use at least 10 characters." Au1\'s log-in form shows no length hint.'),
+        R('18c · G → Settings', 'HEADER, ALWAYS', 'A settings icon button (44×44, named "Settings") at the right of G\'s identity line, in every state. Day one keeps its inline "Settings" link as well. The established G has the icon only.'),
+      ]},
+    ];
+
+    const sw = (name, on) => ({ name, isSwitch: true, isText: false, on: String(on), track: on ? '#FF2D8A' : '#FFFFFF', knob: on ? '#F4F3EF' : '#0B0B0E', justify: on ? 'flex-end' : 'flex-start' });
+    const tx = (name, text) => ({ name, isSwitch: false, isText: true, text });
+    const notifKinds = [
+      { title: 'Run reminders', sub: 'When a run lands on Strava. Only while Strava is connected.', channels: [sw('Push', true), sw('Email', true)] },
+      { title: 'Useful on your runs', sub: 'When a runner finds your run useful.', channels: [sw('Push', true), tx('Email', 'IN THE APP ONLY')] },
+      { title: 'Account and security', sub: 'Confirming your email, password and email changes.', channels: [tx('Email', 'ALWAYS SENT')] },
+    ];
+    const nv = (t, c, active, cc) => ({ t, c, bg: active ? '#16161B' : 'transparent', bl: active ? '3px solid #F5FF3D' : '0', pl: active ? '22px' : '25px', w: active ? 600 : 400, cc: cc || '#8B8B93' });
+    const deskNav = [nv('Today', ''), nv('Review', '4', false, '#F5FF3D'), nv('Duplicates', '23'), nv('Gave up', '3', false, '#F5FF3D'), nv('Access', '7', true, '#F5FF3D'), nv('Runners', '')];
+    const requests = [
+      { email: 'sam@example.com', age: '3D', note: 'Winter runner in Duluth. Maya said to ask.', noteC: '#DEDDD6' },
+      { email: 'j.okafor@example.com', age: '2D', note: 'No note.', noteC: '#8B8B93' },
+      { email: 'lena.r@example.com', age: '5H', note: 'Ultra training, always overdressed at the start.', noteC: '#DEDDD6' },
+    ];
+    const codes = [
+      { code: 'DIAL-7K3P', codeC: '#8B8B93', label: 'maya@example.com (request)', by: '@maya_runs', uses: '1/1', usesC: '#8B8B93', actions: 'Used' },
+      { code: 'DIAL-TR8K', codeC: '#F4F3EF', label: 'Tuesday track group', by: '@dee_k, @paulo, @n8', uses: '3/8', usesC: '#F4F3EF', actions: 'Copy link · Revoke' },
+      { code: 'DIAL-QM4W', codeC: '#F4F3EF', label: 'Sister', by: 'Not used yet', uses: '0/1', usesC: '#F4F3EF', actions: 'Copy link · Revoke' },
+      { code: 'DIAL-H2XN', codeC: '#8B8B93', label: 'Old Slack link', by: 'Revoked Sep 20 · @ria', uses: '1/20', usesC: '#8B8B93', actions: 'Revoked' },
+    ];
+    const stravaFrames = [
+      { label: 'T1 · CONNECT STRAVA · LIGHT', screen: 'T1 Strava official button', bg: '#F4F3EF', fg: '#0B0B0E', muted: '#4E4E44', kicker: 'SETTINGS › STRAVA', head: 'Get a nudge after every run', skip: 'Not now' },
+      { label: 'O3 · STRAVA STEP · DARK', screen: 'O3 Strava official button', bg: '#0B0B0E', fg: '#F4F3EF', muted: '#8B8B93', kicker: 'STEP 3 OF 4 · OPTIONAL', head: 'Run with Strava?', skip: 'Skip' },
+    ];
+    const icons = [
+      { screen: 'App icon 512', size: '160px', radius: '36px', font: '64px', letter: 'd', label: 'APP · 512 (SHOWN 160)\nMASKABLE: FULL-BLEED TILE' },
+      { screen: 'Apple touch 180', size: '90px', radius: '20px', font: '36px', letter: 'd', label: 'APPLE-TOUCH 180\n(SHOWN 90)' },
+      { screen: 'Favicon 32', size: '32px', radius: '6px', font: '15px', letter: 'd', label: 'FAVICON 32' },
+      { screen: 'Favicon 16', size: '16px', radius: '3px', font: '11px', letter: '', label: 'FAVICON 16\nBRACKETS ONLY' },
+    ];
+    const meter = Array.from({ length: 15 }, (_, i) => ({ bg: i < 4 ? '#0B0B0E' : 'transparent' }));
+
+    return { toc, handleRows, bands, skies, delRows, closetNear, emails, landings, cityStates, fieldStates, policyToc, rulingGroups, meter, notifKinds, deskNav, requests, codes, stravaFrames, icons };
+  }
+}
+</script>
+</body>
+</html>
