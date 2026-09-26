@@ -1,18 +1,29 @@
 import type { JSX } from "react";
 import { useState } from "react";
 
-import type { Units } from "../../../lib/contracts";
+import type { ManualSky, Units } from "../../../lib/contracts";
+import { manualSkies } from "../../../lib/contracts";
 import { bandLabel } from "../../../lib/temperature";
 import {
+  ChoiceList,
   ControlFailureBand,
+  FormErrorSummary,
+  FormFailureBand,
   FormStatus,
   inFlight,
   Mono,
   PendingLabel,
   Sheet,
+  SubmitButton,
   useControlAction,
+  useFormSubmit,
 } from "../../../ui";
-import { SET_CONDITION_BANDS } from "../run-conditions";
+import {
+  BAND_OPTIONS,
+  SET_CONDITION_BANDS,
+  conditionsPickSchema,
+  SKY_WORDS,
+} from "../run-conditions";
 
 /**
  * The server functions, handed in rather than imported, in their own shape
@@ -20,7 +31,7 @@ import { SET_CONDITION_BANDS } from "../run-conditions";
  */
 export interface ConditionsActions {
   setConditions: (input: {
-    data: { runId: string; bandFloorC: number };
+    data: { runId: string; bandFloorC: number; sky: ManualSky };
   }) => Promise<boolean>;
   retryWeather: (input: { data: { runId: string } }) => Promise<boolean>;
 }
@@ -38,11 +49,11 @@ const STILL_TRUE = "No conditions";
  * fix isn't in the form."*
  *
  * **Set conditions picks, never types** (round 22: *"the runner picks from
- * what R2b offers and never types a number"*). What it offers is the app's
- * 5 °C bands in the runner's own unit, and a pick is stored as the band's
- * middle with `source='manual'`. **Try again** asks the provider once more.
- * Both wait behind their in-flight label and fail as a control does, with
- * the band saying what is still true.
+ * what R2b offers and never types a number"*): the band and the sky, the
+ * two picks round 26 draws. The band is stored as its middle with
+ * `source='manual'`, the sky beside it. **Try again** asks the provider
+ * once more, and fails as a control does, with the band saying what is
+ * still true.
  */
 export function SetConditionsSheet({
   runId,
@@ -63,68 +74,42 @@ export function SetConditionsSheet({
   actions: ConditionsActions;
 }>): JSX.Element {
   const [isPicking, setIsPicking] = useState(false);
-  const [chosen, setChosen] = useState<number | undefined>();
-  const pick = useControlAction({
-    kicker: STILL_TRUE,
-    action: async (bandFloorC: number) =>
-      actions.setConditions({ data: { runId, bandFloorC } }),
-    onSuccess: onDone,
-  });
   const retry = useControlAction({
     kicker: STILL_TRUE,
     action: async () => actions.retryWeather({ data: { runId } }),
     onSuccess: onDone,
   });
-  // The one band speaks for whichever control failed — its failure, its
-  // Try again and its ref together, so the band can never retry one
-  // control while holding the other's button.
-  const failed = pick.failure === undefined ? retry : pick;
 
   return (
-    <Sheet open={open} onClose={onClose} label="No weather saved">
-      <div className="flex flex-col gap-3">
-        <FormStatus>{pick.status || retry.status}</FormStatus>
-        <Mono step="xs" className="text-muted">
-          No history for that time
-        </Mono>
-        <div
-          data-slot="weather-unavailable"
-          className="flex flex-col items-start gap-3 border border-ink p-4"
-        >
-          <h2 className="m-0">
-            <Mono step="sm">No weather saved</Mono>
-          </h2>
-          <p className="m-0 text-body">
-            We have no record for that hour. Set the conditions yourself and the
-            run still counts.
-          </p>
-          {isPicking ? (
-            <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-              <legend className="mb-2 p-0 text-label">
-                <Mono step="sm">Conditions</Mono>
-              </legend>
-              <div className="flex flex-wrap gap-2">
-                {SET_CONDITION_BANDS.map((floor) => (
-                  <button
-                    key={floor}
-                    type="button"
-                    {...inFlight(pick.pending)}
-                    onClick={() => {
-                      setChosen(floor);
-                      void pick.run(floor);
-                    }}
-                    className="target rounded-pill border border-hairline px-3 text-body"
-                  >
-                    <PendingLabel
-                      label={bandLabel(floor, units.temp)}
-                      pendingLabel="Setting"
-                      pending={pick.pending && chosen === floor}
-                    />
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          ) : (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      label={isPicking ? "Set conditions" : "No weather saved"}
+    >
+      {isPicking ? (
+        <SetConditionsForm
+          runId={runId}
+          units={units}
+          actions={actions}
+          onDone={onDone}
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          <FormStatus>{retry.status}</FormStatus>
+          <Mono step="xs" className="text-muted">
+            No history for that time
+          </Mono>
+          <div
+            data-slot="weather-unavailable"
+            className="flex flex-col items-start gap-3 border border-ink p-4"
+          >
+            <h2 className="m-0">
+              <Mono step="sm">No weather saved</Mono>
+            </h2>
+            <p className="m-0 text-body">
+              We have no record for that hour. Set the conditions yourself and
+              the run still counts.
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -150,14 +135,116 @@ export function SetConditionsSheet({
                 />
               </button>
             </div>
-          )}
+          </div>
+          <ControlFailureBand
+            failure={retry.failure}
+            onRetry={retry.retry}
+            retryRef={retry.retryRef}
+          />
         </div>
-        <ControlFailureBand
-          failure={failed.failure}
-          onRetry={failed.retry}
-          retryRef={failed.retryRef}
+      )}
+    </Sheet>
+  );
+}
+
+/**
+ * R2b's two picks (round 26, item 2): **How warm**, the twelve 5 °C bands
+ * in the runner's unit, three to a row, coldest top-left; and **Sky**.
+ * Nothing is preselected — *"a guess we make would look like a reading we
+ * took"* — and both are required, each refusal on its own group. The
+ * button says the pick once there is one: "Set 41–50° and rain".
+ *
+ * A form, so it is the Form Contract's: `useFormSubmit`, the schema's
+ * sentences, `SubmitButton`, `FormFailureBand`.
+ */
+function SetConditionsForm({
+  runId,
+  units,
+  actions,
+  onDone,
+}: Readonly<{
+  runId: string;
+  units: Units;
+  actions: ConditionsActions;
+  onDone: () => Promise<void>;
+}>): JSX.Element {
+  const [band, setBand] = useState("");
+  const [sky, setSky] = useState<ManualSky | "">("");
+  const form = useFormSubmit({
+    schema: conditionsPickSchema,
+    action: async (values) =>
+      actions.setConditions({ data: { runId, ...values } }),
+    successMessage: "Conditions set.",
+    labels: { bandFloorC: "How warm", sky: "Sky" },
+    onSuccess: onDone,
+  });
+  const bandLabels = Object.fromEntries(
+    SET_CONDITION_BANDS.map((floor) => [
+      String(floor),
+      bandLabel(floor, units.temp),
+    ]),
+  );
+  const label =
+    band === "" || sky === ""
+      ? "Set conditions"
+      : `Set ${bandLabel(Number(band), units.temp)} and ${SKY_WORDS[sky].toLowerCase()}`;
+
+  return (
+    <form
+      ref={form.formRef}
+      noValidate
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.submit({ bandFloorC: band, sky });
+      }}
+    >
+      <FormStatus>{form.status}</FormStatus>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
+      <p className="m-0 text-small text-label">
+        Roughly is fine. This stays on your run and never counts toward anyone
+        else&rsquo;s.
+      </p>
+      {/* Three to a row, coldest top-left (round 26, item 2): the primitive
+          wraps its chips, and this is the grid they wrap into. */}
+      <div className="[&_fieldset>div]:grid [&_fieldset>div]:grid-cols-3">
+        <ChoiceList
+          name="bandFloorC"
+          legend={`How warm · °${units.temp.toUpperCase()}`}
+          layout="chips"
+          options={BAND_OPTIONS}
+          optionLabels={bandLabels}
+          value={band}
+          field={form.field}
+          onChange={setBand}
+          error={form.fieldErrors.bandFloorC}
         />
       </div>
-    </Sheet>
+      <ChoiceList
+        name="sky"
+        legend="Sky"
+        layout="chips"
+        options={manualSkies}
+        optionLabels={SKY_WORDS}
+        value={sky}
+        field={form.field}
+        onChange={setSky}
+        error={form.fieldErrors.sky}
+      />
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        label={label}
+        pendingLabel="Setting"
+        pending={form.pending}
+      />
+    </form>
   );
 }

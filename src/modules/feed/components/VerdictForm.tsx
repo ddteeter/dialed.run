@@ -4,9 +4,10 @@ import { useState } from "react";
 import { entryTags, verdictScale } from "../../../lib/contracts";
 import type { Units, VerdictValue } from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
-import { distanceNumber } from "../../../lib/measures";
-import { bandLabel, formatTemp } from "../../../lib/temperature";
+import { distanceNumber, formatDuration } from "../../../lib/measures";
+import { bandLabel, formatTemp, precipClassOf } from "../../../lib/temperature";
 import {
+  DeskSplit,
   FieldMessage,
   FlowStep,
   FormErrorSummary,
@@ -16,7 +17,9 @@ import {
   Mono,
   SubmitButton,
   useFormSubmit,
+  RailCard,
   verdictHue,
+  WeatherAttribution,
 } from "../../../ui";
 
 /**
@@ -348,23 +351,24 @@ export function VerdictForm({
 
   return (
     <FlowStep step={LOG_FLOW.verdict}>
-      <form
-        ref={form.formRef}
-        noValidate
-        className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.submit(payload());
-        }}
-      >
-        <RunHeader entry={entry} units={units} />
-        <FormStatus>{form.status}</FormStatus>
-        <FormErrorSummary
-          rows={form.summaryRows}
-          onFocusField={form.focusField}
-          summaryRef={form.summaryRef}
-        />
-        {/* **One row at every width — in the 390 panel too; never a
+      <DeskSplit rail={<VerdictRail entry={entry} units={units} />}>
+        <form
+          ref={form.formRef}
+          noValidate
+          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 wide:mx-0 wide:max-w-column"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void form.submit(payload());
+          }}
+        >
+          <RunHeader entry={entry} units={units} />
+          <FormStatus>{form.status}</FormStatus>
+          <FormErrorSummary
+            rows={form.summaryRows}
+            onFocusField={form.focusField}
+            summaryRef={form.summaryRef}
+          />
+          {/* **One row at every width — in the 390 panel too; never a
             stack, never wider than the panel** (design round 17). It was
             `flex flex-col`, which put five full-width buttons in a tall
             column and, at desk, a tall column beside a screen of empty
@@ -379,151 +383,196 @@ export function VerdictForm({
             of its own: the board asks "Did it work?" once, in the ink
             header, and a second copy on the paper beneath would be the
             question twice. */}
-        <fieldset
-          aria-labelledby={QUESTION_ID}
-          className="m-0 flex flex-col gap-2 border-0 p-0"
-        >
-          <div
-            // The name design's board gives this region
-            // (`data-part="verdict-row"`), so a conformance run can diff
-            // the two against each other rather than the whole screen —
-            // and so a failure reports as "A3 verdict row". `data-slot` is
-            // this repo's existing spelling of the same idea; `top-bar`
-            // and `tab-bar` already match design's names for free.
-            data-slot="verdict-row"
-            className="grid grid-cols-5 gap-1"
+          <fieldset
+            aria-labelledby={QUESTION_ID}
+            className="m-0 flex flex-col gap-2 border-0 p-0 wide:max-w-panel"
           >
-            {verdictScale.map((choice) => {
-              const isChosen = verdict === choice.value;
-              return (
-                <button
-                  key={choice.value}
-                  type="button"
-                  // The chosen one was announced to nobody. Visually it is
-                  // an ink inversion plus a pair of brackets, and the
-                  // brackets are `aria-hidden` (they are a move, not a
-                  // word) — so a reader heard five identical buttons and
-                  // no indication of which was picked. Rule 01 is "remove
-                  // every colour and the meaning survives", and here it
-                  // did not.
-                  //
-                  // `aria-pressed`, not a `radiogroup`: the contract asks
-                  // for five radios with arrow-key navigation, which is a
-                  // behaviour change this lane may not make. A
-                  // single-select toggle group is honest about what the
-                  // control does today and announces the state; the
-                  // radiogroup is D-84.
-                  aria-pressed={isChosen}
-                  // Read-only once logged, and still focusable: rule 07
-                  // bans `disabled`, and a receipt is for reading.
-                  aria-disabled={isLocked || undefined}
-                  onClick={() => {
-                    if (!isLocked) setVerdict(choice.value);
-                  }}
-                  // `target` at the site rather than inside
-                  // `VERDICT_BASE`: the 44px hit area is this button's,
-                  // and `targets-and-focus` resolves a double-quoted
-                  // constant but not a template literal — which both of
-                  // these now are, since they share a base.
-                  className={`target ${isChosen ? verdictChosen(choice.value) : VERDICT_RESTING}`}
-                >
-                  {isChosen ? (
-                    <span
-                      aria-hidden="true"
-                      className={`bracket-close-start ${BRACKET_BASE} left-1`}
-                    >
-                      [
-                    </span>
-                  ) : undefined}
-                  {choice.label}
-                  {isChosen ? (
-                    <span
-                      aria-hidden="true"
-                      className={`bracket-close-end ${BRACKET_BASE} right-1`}
-                    >
-                      ]
-                    </span>
-                  ) : undefined}
-                </button>
-              );
-            })}
-          </div>
-          <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
-        </fieldset>
+            <div
+              // The name design's board gives this region
+              // (`data-part="verdict-row"`), so a conformance run can diff
+              // the two against each other rather than the whole screen —
+              // and so a failure reports as "A3 verdict row". `data-slot` is
+              // this repo's existing spelling of the same idea; `top-bar`
+              // and `tab-bar` already match design's names for free.
+              data-slot="verdict-row"
+              className="grid grid-cols-5 gap-1"
+            >
+              {verdictScale.map((choice) => {
+                const isChosen = verdict === choice.value;
+                return (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    // The chosen one was announced to nobody. Visually it is
+                    // an ink inversion plus a pair of brackets, and the
+                    // brackets are `aria-hidden` (they are a move, not a
+                    // word) — so a reader heard five identical buttons and
+                    // no indication of which was picked. Rule 01 is "remove
+                    // every colour and the meaning survives", and here it
+                    // did not.
+                    //
+                    // `aria-pressed`, not a `radiogroup`: the contract asks
+                    // for five radios with arrow-key navigation, which is a
+                    // behaviour change this lane may not make. A
+                    // single-select toggle group is honest about what the
+                    // control does today and announces the state; the
+                    // radiogroup is D-84.
+                    aria-pressed={isChosen}
+                    // Read-only once logged, and still focusable: rule 07
+                    // bans `disabled`, and a receipt is for reading.
+                    aria-disabled={isLocked || undefined}
+                    onClick={() => {
+                      if (!isLocked) setVerdict(choice.value);
+                    }}
+                    // `target` at the site rather than inside
+                    // `VERDICT_BASE`: the 44px hit area is this button's,
+                    // and `targets-and-focus` resolves a double-quoted
+                    // constant but not a template literal — which both of
+                    // these now are, since they share a base.
+                    className={`target ${isChosen ? verdictChosen(choice.value) : VERDICT_RESTING}`}
+                  >
+                    {isChosen ? (
+                      <span
+                        aria-hidden="true"
+                        className={`bracket-close-start ${BRACKET_BASE} left-1`}
+                      >
+                        [
+                      </span>
+                    ) : undefined}
+                    {choice.label}
+                    {isChosen ? (
+                      <span
+                        aria-hidden="true"
+                        className={`bracket-close-end ${BRACKET_BASE} right-1`}
+                      >
+                        ]
+                      </span>
+                    ) : undefined}
+                  </button>
+                );
+              })}
+            </div>
+            <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
+          </fieldset>
 
-        {history === undefined || bandFloor === undefined ? undefined : (
-          <BandHistory
-            counts={history.counts}
-            bandFloor={bandFloor}
-            units={units}
-          />
-        )}
+          {history === undefined || bandFloor === undefined ? undefined : (
+            <BandHistory
+              counts={history.counts}
+              bandFloor={bandFloor}
+              units={units}
+            />
+          )}
 
-        {/* **Chips, never a `<select>`** (design round 16), and since
+          {/* **Chips, never a `<select>`** (design round 16), and since
             round 20 generated rather than listed: five, chosen from this
             runner's history in the band, with everything else one tap away
             in A3b. */}
-        <VerdictChips
-          chips={chips}
-          chosenFlags={chosenFlags}
-          chosenTags={tags}
-          readOnly={isLocked}
-          onToggle={toggleChip}
-          onMore={() => {
-            setSheetOpen(true);
-          }}
-        />
-        <SpecificsSheet
-          open={sheetOpen}
-          onClose={() => {
-            setSheetOpen(false);
-          }}
-          verdict={verdict}
-          items={entry.items}
-          answer={{ flagFor, onFlag: setFlag, tags, onTag: toggleTag }}
-          field={form.field}
-        />
+          <VerdictChips
+            chips={chips}
+            chosenFlags={chosenFlags}
+            chosenTags={tags}
+            readOnly={isLocked}
+            onToggle={toggleChip}
+            onMore={() => {
+              setSheetOpen(true);
+            }}
+          />
+          <SpecificsSheet
+            open={sheetOpen}
+            onClose={() => {
+              setSheetOpen(false);
+            }}
+            verdict={verdict}
+            items={entry.items}
+            answer={{ flagFor, onFlag: setFlag, tags, onTag: toggleTag }}
+            field={form.field}
+          />
 
-        {isLocked ? (
-          <NotedReceipt sentence={noted.sentence} />
-        ) : (
-          <>
-            {/* A3's share-toggle as round 19 draws it: "Share to feed", with
+          {isLocked ? (
+            <NotedReceipt sentence={noted.sentence} />
+          ) : (
+            <>
+              {/* A3's share-toggle as round 19 draws it: "Share to feed", with
               what sharing means on the line beneath. The line is outside the
               label and linked with `aria-describedby`, so the checkbox's
               accessible name stays the three words and the sentence is read
               as its description. It was "Share this — the verdict label
               shows on the post", one line inside the label. */}
-            <div className="flex flex-col gap-1">
-              <label className="target flex items-center gap-2 text-body">
-                <input
-                  type="checkbox"
-                  checked={isPublic}
-                  aria-describedby={SHARE_HINT_ID}
-                  onChange={(event) => {
-                    setIsPublic(event.target.checked);
-                  }}
-                />
-                Share to feed
-              </label>
-              <span id={SHARE_HINT_ID} className="text-small text-muted">
-                Shared runs show your kit, conditions, and your verdict.
-              </span>
-            </div>
+              <div className="flex flex-col gap-1">
+                <label className="target flex items-center gap-2 text-body">
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    aria-describedby={SHARE_HINT_ID}
+                    onChange={(event) => {
+                      setIsPublic(event.target.checked);
+                    }}
+                  />
+                  Share to feed
+                </label>
+                <span id={SHARE_HINT_ID} className="text-small text-muted">
+                  Shared runs show your kit, conditions, and your verdict.
+                </span>
+              </div>
 
-            <FormFailureBand
-              failure={form.failure}
-              onRetry={form.retry}
-              retryRef={form.retryRef}
-            />
-            <SubmitButton
-              label="Log it"
-              pendingLabel="Logging"
-              pending={form.pending}
-            />
+              <FormFailureBand
+                failure={form.failure}
+                onRetry={form.retry}
+                retryRef={form.retryRef}
+              />
+              <SubmitButton
+                label="Log it"
+                pendingLabel="Logging"
+                pending={form.pending}
+              />
+            </>
+          )}
+        </form>
+      </DeskSplit>
+    </FlowStep>
+  );
+}
+
+/**
+ * A3's rail at the desk (round 25): the run being judged and the kit worn
+ * on it, read-only. *"The rail shows the kit being judged."*
+ *
+ * The board also draws each piece's record in the band and the runner's
+ * last runs there. Neither is loaded on this screen yet, so they wait for
+ * a read of their own rather than a guess here.
+ */
+function VerdictRail({
+  entry,
+  units,
+}: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
+  const zone = entry.conditions?.timeZone;
+  const { conditions } = entry;
+  return (
+    <>
+      <RailCard
+        title={`This run · ${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`}
+      >
+        <Mono step="sm">
+          {`${distanceNumber(entry.distanceM, units.distance)} ${units.distance} · ${formatDuration(entry.durationS)}`}
+        </Mono>
+        {conditions === undefined ? undefined : (
+          <>
+            <Mono step="sm" className="text-dialed-text">
+              {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)} · feels ${formatTemp(conditions.feelsLikeC, units.temp)}`}
+            </Mono>
+            <WeatherAttribution />
           </>
         )}
-      </form>
-    </FlowStep>
+      </RailCard>
+      <RailCard title="The kit you’re judging">
+        <ul className="m-0 flex list-none flex-col gap-1 p-0">
+          {entry.items.map((item) => (
+            <li key={item.itemId} className="text-body font-semibold">
+              {item.name}
+            </li>
+          ))}
+        </ul>
+      </RailCard>
+    </>
   );
 }

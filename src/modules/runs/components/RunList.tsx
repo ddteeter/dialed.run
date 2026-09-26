@@ -7,7 +7,8 @@ import { dayLabel } from "../../../lib/dates";
 import { distanceNumber } from "../../../lib/measures";
 import { formatTemp, precipClassOf } from "../../../lib/temperature";
 import { Bracketed, Mono } from "../../../ui";
-import type { RunSummary } from "../service";
+import { setBandLabel, SKY_WORDS } from "../run-conditions";
+import type { RunConditions, RunSummary } from "../service";
 import { FetchingWeather } from "./ConditionsBlock";
 import { SetConditionsSheet } from "./SetConditionsSheet";
 import type { ConditionsActions } from "./SetConditionsSheet";
@@ -70,6 +71,7 @@ export function RunList({
             </RunLink>
             <RunBadge
               run={run}
+              units={units}
               onSet={() => {
                 setSettingFor(run.id);
               }}
@@ -138,12 +140,17 @@ function MetaLine({
 }: Readonly<{ run: RunSummary; units: Units }>): JSX.Element {
   const { conditions } = run;
   if (conditions !== undefined) {
+    // A set band's numbers are the badge's (round 26, item 2); the line
+    // only says who set them, and never shows the stored middle.
+    if (conditions.isSetByYou) {
+      return (
+        <Mono step="sm" className="text-label">
+          Set by you
+        </Mono>
+      );
+    }
     const temp = `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()}`;
-    return conditions.isSetByYou ? (
-      <Mono step="sm" className="text-label">
-        {`${temp} · set by you`}
-      </Mono>
-    ) : (
+    return (
       <Mono step="sm" className="text-dialed-text">
         {`${temp} ${precipClassOf(conditions.precipMm)}`}
       </Mono>
@@ -157,6 +164,21 @@ function MetaLine({
   );
 }
 
+/**
+ * The badge of a run whose conditions the runner set: `SET · 41–50° ·
+ * RAIN` (round 26, item 2) — the range and the sky, never the stored
+ * middle. A band set before the sheet asked for a sky has none to show.
+ */
+function setBadge(
+  conditions: Pick<RunConditions, "tempC" | "sky">,
+  units: Units,
+): string {
+  const band = `Set · ${setBandLabel(conditions.tempC, units.temp)}`;
+  return conditions.sky === undefined
+    ? band
+    : `${band} · ${SKY_WORDS[conditions.sky]}`;
+}
+
 const FACT_BADGE =
   "shrink-0 rounded-pill border border-hairline px-3 py-1 text-label";
 
@@ -165,8 +187,13 @@ The row's badge: a fact, the one control, or nothing while it breathes.
 */
 function RunBadge({
   run,
+  units,
   onSet,
-}: Readonly<{ run: RunSummary; onSet: () => void }>): JSX.Element | undefined {
+}: Readonly<{
+  run: RunSummary;
+  units: Units;
+  onSet: () => void;
+}>): JSX.Element | undefined {
   if (run.indoor) {
     return (
       <Mono step="xs" className={FACT_BADGE}>
@@ -177,7 +204,9 @@ function RunBadge({
   if (run.conditions !== undefined) {
     return (
       <Mono step="xs" className={FACT_BADGE}>
-        {run.conditions.isSetByYou ? "Set" : "Conditions"}
+        {run.conditions.isSetByYou
+          ? setBadge(run.conditions, units)
+          : "Conditions"}
       </Mono>
     );
   }

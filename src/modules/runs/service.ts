@@ -6,8 +6,9 @@
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
+import { roundCoordinate } from "../../lib/coords";
 import { chunked, readInChunks } from "../../lib/chunked";
-import type { RunDraft } from "../../lib/contracts";
+import type { ManualSky, RunDraft } from "../../lib/contracts";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import type { Ulid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
@@ -32,6 +33,24 @@ export function initialWeatherStatus(
   if (draft.indoor) return "none";
   if (draft.lat !== undefined && draft.lng !== undefined) return "pending";
   return "failed";
+}
+
+/**
+ * Where a run is stored as starting (STR-14): nowhere for an indoor run,
+ * and otherwise its point rounded to the precision the weather works at —
+ * before it is stored, which is also before it is sent, because the
+ * provider is asked about the stored point. See `lib/coords.ts`.
+ */
+export function storedStart(draft: {
+  indoor: boolean;
+  lat?: number | undefined;
+  lng?: number | undefined;
+}): { lat: number | undefined; lng: number | undefined } {
+  if (draft.indoor) return { lat: undefined, lng: undefined };
+  return {
+    lat: draft.lat === undefined ? undefined : roundCoordinate(draft.lat),
+    lng: draft.lng === undefined ? undefined : roundCoordinate(draft.lng),
+  };
 }
 
 /**
@@ -113,8 +132,7 @@ export async function createManualRun(
     startedAt: draft.startedAt,
     durationS: draft.durationS,
     distanceM: draft.distanceM,
-    lat: withHome.indoor ? undefined : lat,
-    lng: withHome.indoor ? undefined : lng,
+    ...storedStart(withHome),
     indoor: draft.indoor,
     effort: draft.effort,
     title: draft.title,
@@ -157,6 +175,11 @@ export interface RunConditions {
   condition: string;
   timeZone: string | undefined;
   isSetByYou: boolean;
+  /**
+   * The sky the runner picked in R2b, when they set the conditions and
+   * the sheet asked (round 26, item 2). Never on a real reading.
+   */
+  sky: ManualSky | undefined;
 }
 
 /**
@@ -177,6 +200,7 @@ function asRunConditions(
     condition: reading.condition,
     timeZone: reading.timeZone,
     isSetByYou,
+    sky: reading.sky,
   };
 }
 
@@ -369,8 +393,13 @@ export async function getRunSummary(
  * re-drives (law 8c).
  */
 export interface WeatherWrites {
-  attach: (runId: Ulid) => Promise<unknown>;
-  record: (runId: Ulid, tempC: number) => Promise<void>;
+  /**
+   * What the attempt came to — `attachObservation`'s outcome: "attached"
+   * or "manual" when the run's conditions are settled, anything else when
+   * they are not.
+   */
+  attach: (runId: Ulid) => Promise<string>;
+  record: (runId: Ulid, tempC: number, sky: ManualSky) => Promise<void>;
 }
 
 /**
@@ -433,10 +462,14 @@ export async function didSetRunConditions(
   weather: Pick<WeatherWrites, "record">,
   userId: string,
   runId: string,
-  bandFloorC: number,
+  pick: { bandFloorC: number; sky: ManualSky },
 ): Promise<boolean> {
   return didWriteEligibleRun(db, userId, runId, () =>
-    weather.record(ulidSchema.parse(runId), bandMiddleC(bandFloorC)),
+    weather.record(
+      ulidSchema.parse(runId),
+      bandMiddleC(pick.bandFloorC),
+      pick.sky,
+    ),
   );
 }
 
@@ -447,27 +480,46 @@ export async function didSetRunConditions(
 const RETIME_LIMIT_S = 86_400;
 
 /**
- * A1's one correction (round 20): the run started at another time. The
- * start becomes `startedAt`, and a run with a place to look the weather up
- * at has it asked for again at the new hour — the old hour's reading was
- * for a run that did not happen then. Weather itself is never edited.
+ * What A1's correction did: the run moved; the weather for the new time
+ * could not be had, so nothing moved; or the request was refused (not this
+ * runner's run, or another day).
+ */
+export type RetimeOutcome = "moved" | "no-weather" | "refused";
+
+/**
+ * A1's one correction (round 20; round 26, item 1): the run started at
+ * another time. The start becomes `startedAt`, and a run with a place to
+ * look the weather up at has it asked for again at the new hour — the old
+ * hour's reading was for a run that did not happen then. Weather itself is
+ * never edited.
+ *
+ * **A run never carries a time whose weather we lack** (round 26). If the
+ * provider cannot answer for the new hour, the start and the status go
+ * back to what they were — the old hour's observation is still in the
+ * cache, so the old conditions come back with them — and the answer says
+ * so, for the runner to try again.
+ *
+ * The revert is a second write, and the two cannot be one batch: the
+ * attach between them is another database (law 8c). If the worker dies in
+ * between, the run is left `pending` at the new time, which the hourly
+ * weather retry re-drives — the reconciliation marker doing its job.
  *
  * **Absolute, so a retry is harmless** (law 8b). It used to take a shift,
  * and a retry after a lost response applied it twice. A start that is
- * already where it was asked to be is the first call having landed: true,
- * and nothing written or fetched again.
+ * already where it was asked to be is the first call having landed:
+ * "moved", and nothing written or fetched again.
  */
-export async function didRetimeRun(
+export async function retimeRun(
   db: CoreDb,
   weather: Pick<WeatherWrites, "attach">,
   userId: string,
   runId: string,
   startedAt: number,
-): Promise<boolean> {
+): Promise<RetimeOutcome> {
   const run = await getRun(db, userId, runId);
-  if (run === undefined) return false;
-  if (Math.abs(startedAt - run.startedAt) > RETIME_LIMIT_S) return false;
-  if (startedAt === run.startedAt) return true;
+  if (run === undefined) return "refused";
+  if (Math.abs(startedAt - run.startedAt) > RETIME_LIMIT_S) return "refused";
+  if (startedAt === run.startedAt) return "moved";
   const isLocated = run.lat !== null && run.lng !== null;
   // One write: the new start and, where there is weather to ask for, the
   // marker that says it is owed.
@@ -478,6 +530,12 @@ export async function didRetimeRun(
       ...(isLocated && { weatherStatus: "pending" as const }),
     })
     .where(eq(runs.id, runId));
-  if (isLocated) await weather.attach(ulidSchema.parse(runId));
-  return true;
+  if (!isLocated) return "moved";
+  const attached = await weather.attach(ulidSchema.parse(runId));
+  if (attached === "attached" || attached === "manual") return "moved";
+  await db
+    .update(runs)
+    .set({ startedAt: run.startedAt, weatherStatus: run.weatherStatus })
+    .where(eq(runs.id, runId));
+  return "no-weather";
 }

@@ -28,12 +28,18 @@ import { createNotification, notificationInsert } from "../notifications";
 import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
+  type DeauthorizeJob,
   type ImportJob,
   type ReminderJob,
   type RevokeJob,
 } from "./queue-messages";
-import type { StravaApi } from "./strava/api";
-import { findDuplicateRun, initialWeatherStatus } from "./service";
+import type { StoredToken, StravaApi } from "./strava/api";
+import { deauthorizeAthlete } from "./strava/deauthorize";
+import {
+  clearMatchingReminder,
+  hasMatchingUpload,
+} from "./strava/reminder-match";
+import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 
 export interface ConsumerDeps {
   db: CoreDb;
@@ -53,7 +59,7 @@ export interface ConsumerDeps {
   Present when Strava credentials are configured; the revoke job is a
   no-op without them.
   */
-  stravaApi?: Pick<StravaApi, "deauthorize"> | undefined;
+  stravaApi?: Pick<StravaApi, "revoke"> | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -165,8 +171,7 @@ async function processImportJob(
     startedAt: draft.startedAt,
     durationS: draft.durationS,
     distanceM: draft.distanceM,
-    lat: draft.indoor ? undefined : draft.lat,
-    lng: draft.indoor ? undefined : draft.lng,
+    ...storedStart(draft),
     indoor: draft.indoor,
     title: draft.title,
     weatherStatus,
@@ -182,10 +187,20 @@ async function processImportJob(
     }
   }
 
-  await deps.db
-    .update(imports)
-    .set({ status: "done", runId })
-    .where(eq(imports.id, importRow.id));
+  // The import is done, and the Strava reminder this file answers — if it
+  // had one — is answered (round 25). One batch: both record the same
+  // fact, that this run is now in the log.
+  await deps.db.batch([
+    deps.db
+      .update(imports)
+      .set({ status: "done", runId })
+      .where(eq(imports.id, importRow.id)),
+    clearMatchingReminder(
+      deps.db,
+      importRow.userId,
+      draft.startedAt + draft.durationS,
+    ),
+  ]);
 
   await createNotification(deps.db, {
     userId: importRow.userId,
@@ -194,6 +209,14 @@ async function processImportJob(
     body: "Add your kit for the run you just imported.",
   });
 }
+
+/**
+ * The S1 row a run landing on Strava leaves (round 25, "Strava reminds.
+ * You upload."). Timed by when the run landed, which is the row's own
+ * time; it names nothing about the run, because we know nothing about it.
+ */
+const STRAVA_REMINDER_BODY =
+  "New run on Strava · Add it here: upload the file, then what you wore";
 
 /**
  * The work the webhook used to do before it could reply. Doing it here
@@ -228,31 +251,51 @@ async function processReminderJob(
     })
     .onConflictDoNothing();
 
-  // An athlete nobody has connected: record the event so it is not
+  // An athlete nobody has connected, or a run whose file is already in the
+  // log (round 25: one reminder per run): record the event so it is not
   // reconsidered, and stop.
-  if (connected === undefined) {
+  if (
+    connected === undefined ||
+    (await hasMatchingUpload(deps.db, connected.userId, job.eventTime))
+  ) {
     await claim;
     return;
   }
 
   await deps.db.batch([
     claim,
-    // D-33: zero activity data in the body — deep link is /runs/new, not a
-    // pre-created run.
+    // D-33: zero activity data in the body — no distance, no time, no
+    // name. Round 25's words: Strava tells us a run happened, we remind,
+    // the runner adds the file.
     notificationInsert(deps.db, {
       userId: connected.userId,
       kind: "strava_reminder",
       subjectId: job.objectId,
-      body: "New run on Strava — log your kit?",
+      body: STRAVA_REMINDER_BODY,
     }),
   ]);
 }
 
 /**
+ * The token a revocation is made with: the refresh token (STR-2), which
+ * does not expire, or — for a row written before that column existed —
+ * the access token it copied, which is the best there is.
+ */
+function revocationToken(row: {
+  accessToken: string;
+  refreshToken: string | null;
+}): StoredToken {
+  return row.refreshToken === null
+    ? { token: row.accessToken, kind: "access_token" }
+    : { token: row.refreshToken, kind: "refresh_token" };
+}
+
+/**
  * Revoke a Strava grant the user has already been disconnected from.
  *
- * Idempotent by nature: revoking an already-revoked token is a no-op
- * upstream, and there is no local state left to reconcile. A failure here
+ * Idempotent by nature: Strava answers 200 to a revoke "whether or not the
+ * token was found", so a grant already dead settles the row exactly as a
+ * live one does, and there is no local state left to reconcile. A failure here
  * throws so the queue retries; exhausting retries puts it in the DLQ,
  * which is where a grant we could not revoke should end up.
  */
@@ -280,7 +323,7 @@ async function processRevokeJob(
     .limit(1);
   if (pending === undefined) return; // already revoked
 
-  await deps.stravaApi.deauthorize(pending.accessToken);
+  await deps.stravaApi.revoke(revocationToken(pending));
   // Only after Strava confirms. A failure above throws, the queue retries,
   // and the row stays — which is the whole point of writing it down.
   await deps.db
@@ -290,9 +333,13 @@ async function processRevokeJob(
 
 async function processJob(
   deps: ConsumerDeps,
-  job: ImportJob | ReminderJob | RevokeJob,
+  job: ImportJob | ReminderJob | RevokeJob | DeauthorizeJob,
 ): Promise<void> {
   switch (job.type) {
+    case "strava_deauthorize": {
+      await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+      return;
+    }
     case "import": {
       await processImportJob(deps, job);
       return;

@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import type { Units } from "../../../lib/contracts";
@@ -18,10 +18,12 @@ import {
 } from "../../../lib/measures";
 import { formatTemp, precipClassOf } from "../../../lib/temperature";
 import {
+  ControlFailureBand,
   FormFailureBand,
   FormField,
   FormStatus,
   Mono,
+  PendingLabel,
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
@@ -33,7 +35,7 @@ import { ConditionsRow } from "./ConditionsBlock";
  */
 export type Retime = (input: {
   data: { runId: string; startedAt: number };
-}) => Promise<boolean>;
+}) => Promise<"moved" | "no-weather" | "refused">;
 
 /**
  * The time correction's one field. The sentence is the schema's, as the
@@ -51,6 +53,11 @@ const retimeSchema = z.object({
  * a run is navigation, not the log verb"* (round 22). One treatment for
  * both of its destinations.
  */
+const PRIMARY_ACTION =
+  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink desk:col-start-1 desk:row-start-2 desk:self-start desk:justify-self-start";
+
+const LOOKS_RIGHT = "Looks right — what did you wear?";
+
 const OPEN_THAT_RUN =
   "target flex items-center justify-center rounded-card bg-ink px-6 py-4 font-display text-body uppercase text-ground no-underline";
 
@@ -113,63 +120,99 @@ function Facts({ children }: Readonly<{ children: ReactNode[] }>): JSX.Element {
 }
 
 /**
- * A1's one correction control (round 20): *"the run time on the parsed
- * card: tapping it opens a time picker and re-fetches conditions. Weather
- * itself is never editable."* The time is read on `zone`'s clock, and what
- * travels is the new start itself — absolute, so a retry after a lost
- * response cannot move the run twice.
- *
- * **Undesigned beyond that sentence**, so composed from the form
- * primitives and nothing else: one `FormField`, the Form Contract's
- * failure band, `SubmitButton`.
+ * What the run's conditions were before the correction, for the WAS line —
+ * "41°F damp · feels 36°", or that there were none.
  */
-function TimeCorrection({
-  run,
-  zone,
-  retime,
-  onDone,
+function conditionsWords(run: RunSummary, units: Units): string {
+  const { conditions } = run;
+  if (conditions === undefined) return "no weather";
+  const unit = units.temp.toUpperCase();
+  return `${formatTemp(conditions.tempC, units.temp)}${unit} ${precipClassOf(conditions.precipMm)} · feels ${formatTemp(conditions.feelsLikeC, units.temp)}`;
+}
+
+/**
+ * The conditions block while the weather for a corrected start is being
+ * asked for (round 26, item 1): *"WEATHER FOR {t} · [ Getting it ] · WAS
+ * {old} · AT {t0}"*. At the desk it is in the rail, where the block is.
+ */
+function WeatherFor({
+  time,
+  was,
+  at,
+}: Readonly<{ time: string; was: string; at: string }>): JSX.Element {
+  return (
+    <div
+      data-slot="conditions"
+      data-state="fetching"
+      data-ground="ink"
+      className="flex flex-col gap-2 rounded-card bg-ground p-4 text-ink"
+    >
+      <Mono step="xs" className="text-muted">
+        {`Weather for ${time}`}
+      </Mono>
+      <Mono step="sm">
+        <PendingLabel label="" pendingLabel="Getting it" pending />
+      </Mono>
+      <Mono step="xs" className="text-quiet">
+        {`Was ${was} · at ${at}`}
+      </Mono>
+    </div>
+  );
+}
+
+/**
+ * Focus the time field as the row opens (round 26: *"Pressing it replaces
+ * the time on the stats line with the row, and focus moves to the
+ * field"*). A ref callback at module scope: its identity never changes, so
+ * React calls it once as the input mounts and once, with null, as it goes.
+ */
+function focusOnMount(input: HTMLInputElement | null): void {
+  input?.focus();
+}
+
+/**
+ * A1's START TIME row (round 26, item 1), inside the parsed card: the
+ * hint, a time field, and **Get weather** — *"Refetch is our word, and the
+ * runner's word is weather."* Focus moves to the field when it opens.
+ */
+function StartTimeRow({
+  form,
+  time,
+  fileSaid,
+  onTime,
 }: Readonly<{
-  run: RunSummary;
-  zone: string | undefined;
-  retime: Retime;
-  onDone: () => void;
+  form: ReturnType<typeof useRetimeForm>;
+  time: string;
+  fileSaid: string;
+  onTime: (time: string) => void;
 }>): JSX.Element {
-  const [time, setTime] = useState(timeOfDay(run.startedAt, zone));
-  const form = useFormSubmit({
-    schema: retimeSchema,
-    action: async (values) =>
-      retime({
-        data: {
-          runId: run.id,
-          startedAt: startAtTimeOfDay(run.startedAt, zone, values.time),
-        },
-      }),
-    successMessage: "Time changed. Fetching the weather for it.",
-    // No `labels`: they name a field in the error summary, and one field
-    // has no summary — its message sits under it.
-    onSuccess: onDone,
-  });
   return (
     <form
       ref={form.formRef}
       noValidate
+      data-slot="start-time"
       className="flex flex-col gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         void form.submit({ time });
       }}
     >
-      <FormStatus>{form.status}</FormStatus>
       {/* `FormField` with its own input, as manual entry's start does:
           `TextField` takes text types only, and a time is picked. */}
-      <FormField name="time" label="Started" error={form.fieldErrors.time}>
+      <FormField
+        name="time"
+        label="Start time"
+        hint={`The file said ${fileSaid}. Change it if your watch's clock was off.`}
+        error={form.fieldErrors.time}
+      >
         <input
           {...form.field("time")}
+          ref={focusOnMount}
           id="time"
           type="time"
           value={time}
           onChange={(event) => {
-            setTime(event.target.value);
+            onTime(event.target.value);
           }}
           className="w-full border-none bg-transparent"
         />
@@ -180,8 +223,8 @@ function TimeCorrection({
         retryRef={form.retryRef}
       />
       <SubmitButton
-        label="Refetch"
-        pendingLabel="Refetching"
+        label="Get weather"
+        pendingLabel="Getting"
         pending={form.pending}
       />
     </form>
@@ -189,9 +232,69 @@ function TimeCorrection({
 }
 
 /**
+ * The correction's form, with what a moved start and a start with no
+ * weather each leave behind. Its own hook so the card can read `pending`
+ * — the conditions block and the primary action both wait on it.
+ */
+function useRetimeForm({
+  run,
+  zone,
+  retime,
+  onMoved,
+  onNoWeather,
+}: Readonly<{
+  run: RunSummary;
+  zone: string | undefined;
+  retime: Retime;
+  onMoved: (startedAt: number) => void;
+  onNoWeather: (time: string) => void;
+}>) {
+  const form = useFormSubmit({
+    schema: retimeSchema,
+    action: async (values) => {
+      const startedAt = startAtTimeOfDay(run.startedAt, zone, values.time);
+      const outcome = await retime({ data: { runId: run.id, startedAt } });
+      // Refused is the server saying no to a run this card should not be
+      // able to ask about — another day, or not this runner's. A failure
+      // like any other: nothing changed.
+      if (outcome === "refused") throw new Error(outcome);
+      return { outcome, startedAt };
+    },
+    // The sentence depends on the answer, so `onSuccess` says it.
+    successMessage: "",
+    onSuccess: ({ outcome, startedAt }) => {
+      const asked = clockLabel(startedAt, zone);
+      if (outcome === "moved") {
+        form.announce(`Start time changed to ${asked}.`);
+        onMoved(startedAt);
+        return;
+      }
+      form.announce(
+        `Still ${clockLabel(run.startedAt, zone)}. Couldn't get weather for ${asked}. Try again?`,
+      );
+      onNoWeather(asked);
+    },
+  });
+  return form;
+}
+
+/**
  * A1 done: the parsed card and its conditions, in place (Product Screens
  * A1). *"The parsed card and conditions block appear together the moment
  * the file lands — one screen, no wizard step for weather."*
+ *
+ * **The start time is the one correction** (round 26, item 1). The time
+ * on the stats line is a button, "Change start time, 6:04 AM"; it opens
+ * the START TIME row in its place. While the weather for the new time is
+ * fetched the conditions block says so, with what it was. On success the
+ * row closes and the line reads "{t} · CHANGED"; on failure a band under
+ * the block says `STILL {t0}`, and the server has put the time and the
+ * conditions back. The date never changes. The primary action, pressed
+ * mid-fetch, waits in brackets and then goes — never disabled.
+ *
+ * **At the desk the conditions block is the rail** (round 25): the card
+ * and the primary action in the primary column, the block beside them,
+ * read-only. Below 1040 it is where the phone has it, between the two.
  */
 // fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract
 export function ParsedCard({
@@ -212,20 +315,48 @@ export function ParsedCard({
   onRetimed: () => void;
   onReplace: () => void;
 }>): JSX.Element {
-  const [isRetiming, setIsRetiming] = useState(false);
   // The run's own zone, from its observation (D-96). With none — a
   // treadmill, no GPS, weather that never came — the runner's own clock,
   // which is the one they read the start from; never UTC, which would put
   // a Chicago evening run at the next morning. The card is drawn only after
   // a drop, in the browser, so the device's zone cannot split hydration.
   const zone = run.conditions?.timeZone ?? deviceTimeZone();
+  const navigate = useNavigate();
+  const [isRetiming, setIsRetiming] = useState(false);
+  const [time, setTime] = useState(timeOfDay(run.startedAt, zone));
+  const [movedTo, setMovedTo] = useState<number | undefined>();
+  const [noWeatherFor, setNoWeatherFor] = useState<string | undefined>();
+  const [isWaitingToGo, setIsWaitingToGo] = useState(false);
+  const form = useRetimeForm({
+    run,
+    zone,
+    retime,
+    onMoved: (startedAt) => {
+      setMovedTo(startedAt);
+      setNoWeatherFor(undefined);
+      setIsRetiming(false);
+      onRetimed();
+    },
+    onNoWeather: setNoWeatherFor,
+  });
+  const clock = clockLabel(movedTo ?? run.startedAt, zone);
+
+  // The primary action pressed mid-fetch goes once the fetch has settled,
+  // whichever way it went: the run is right either way — the new time with
+  // its weather, or the old time with the old.
+  useEffect(() => {
+    if (isWaitingToGo && !form.pending) {
+      void navigate({ to: "/feed/attach/$runId", params: { runId: run.id } });
+    }
+  }, [isWaitingToGo, form.pending, navigate, run.id]);
 
   return (
-    <>
+    <div className="flex flex-col gap-3 desk:grid desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6">
+      <FormStatus>{form.status}</FormStatus>
       <div
         data-slot="parsed-card"
         data-state="parsed"
-        className="overflow-hidden rounded-card border border-hairline bg-panel"
+        className="overflow-hidden rounded-card border border-hairline bg-panel desk:col-start-1 desk:row-start-1"
       >
         <FileStrip label={`Parsed · ${filename}`} onReplace={onReplace} />
         <div className="flex flex-col gap-2 p-4">
@@ -234,52 +365,99 @@ export function ParsedCard({
             {[
               formatPace(run.durationS, run.distanceM, units.distance),
               dayLabel(run.startedAt, zone),
-              <button
-                key="time"
-                type="button"
-                aria-expanded={isRetiming}
-                aria-label={`Started ${clockLabel(run.startedAt, zone)} — change the time`}
-                onClick={() => {
-                  setIsRetiming(!isRetiming);
-                }}
-                className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
-              >
-                {clockLabel(run.startedAt, zone)}
-              </button>,
+              ...(isRetiming
+                ? []
+                : [
+                    <button
+                      key="time"
+                      type="button"
+                      aria-label={`Change start time, ${clock}`}
+                      onClick={() => {
+                        setIsRetiming(true);
+                      }}
+                      className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
+                    >
+                      {movedTo === undefined ? clock : `${clock} · Changed`}
+                    </button>,
+                  ]),
             ]}
           </Facts>
           {isRetiming ? (
-            <TimeCorrection
-              run={run}
-              zone={zone}
-              retime={retime}
-              onDone={() => {
-                setIsRetiming(false);
-                onRetimed();
-              }}
+            <StartTimeRow
+              form={form}
+              time={time}
+              fileSaid={clockLabel(run.startedAt, zone)}
+              onTime={setTime}
             />
           ) : undefined}
         </div>
       </div>
-      <ConditionsRow
-        run={run}
-        units={units}
-        note={
-          <p className="m-0 text-small text-quiet">
-            Never typed by hand. Wrong time? Tap it on the run card and
-            we&rsquo;ll refetch.
-          </p>
-        }
-      />
-      <Link
-        to="/feed/attach/$runId"
-        params={{ runId: run.id }}
-        data-slot="primary-action"
-        className="target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink no-underline"
+      <div
+        data-part="rail"
+        className="flex flex-col gap-3 desk:col-start-2 desk:row-start-1 desk:row-span-2"
       >
-        Looks right — what did you wear?
-      </Link>
-    </>
+        {form.pending ? (
+          <WeatherFor
+            time={clockLabel(startAtTimeOfDay(run.startedAt, zone, time), zone)}
+            was={conditionsWords(run, units)}
+            at={clockLabel(run.startedAt, zone)}
+          />
+        ) : (
+          <ConditionsRow
+            run={run}
+            units={units}
+            note={
+              <p className="m-0 text-small text-quiet">
+                Never typed by hand. Wrong time? Change it on the run card and
+                we&rsquo;ll refetch.
+              </p>
+            }
+          />
+        )}
+        <ControlFailureBand
+          failure={
+            noWeatherFor === undefined
+              ? undefined
+              : {
+                  kicker: `Still ${clockLabel(run.startedAt, zone)}`,
+                  message: `Couldn't get weather for ${noWeatherFor}. Try again?`,
+                }
+          }
+          onRetry={() => {
+            void form.submit({ time });
+          }}
+        />
+      </div>
+      {/* While the weather is fetched the primary action is a button that
+          holds the runner's press, and a link again once it has settled —
+          so a press mid-fetch waits in brackets and then goes, and is
+          never disabled (round 26, item 1). */}
+      {form.pending ? (
+        <button
+          type="button"
+          data-slot="primary-action"
+          onClick={() => {
+            setIsWaitingToGo(true);
+          }}
+          className={`border-none ${PRIMARY_ACTION}`}
+        >
+          <PendingLabel
+            label={LOOKS_RIGHT}
+            pendingLabel={LOOKS_RIGHT}
+            pending={isWaitingToGo}
+          />
+        </button>
+      ) : (
+        <Link
+          to="/feed/attach/$runId"
+          params={{ runId: run.id }}
+          data-slot="primary-action"
+          className={`no-underline ${PRIMARY_ACTION}`}
+        >
+          {LOOKS_RIGHT}
+        </Link>
+      )}
+    </div>
   );
 }
 

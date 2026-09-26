@@ -190,6 +190,9 @@ describe("which type an edge resolves to", () => {
       ["/feed", "/feed/search"],
       ["/runs", "/runs/r1"],
       ["/runs/import/i1", "/runs/r1"],
+      // The retired import URL (it lands on A1) is still typed as the push
+      // it was, so an old link does not arrive untyped.
+      ["/runs", "/runs/import/i1"],
       ["/feed", "/notifications"],
       ["/closet", "/notifications"],
       ["/feed/me", "/runs"],

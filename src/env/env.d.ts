@@ -17,6 +17,12 @@ declare namespace Cloudflare {
     STRAVA_CLIENT_ID?: string;
     STRAVA_CLIENT_SECRET?: string;
     STRAVA_WEBHOOK_VERIFY_TOKEN?: string;
+    /** Our Strava push subscription's id (task 127, STR-4), as a string —
+     * a var, not a secret; set in the deployment sweep. Every webhook
+     * event whose `subscription_id` differs is dropped before the queue,
+     * and absent, every event is (fail closed). See
+     * `modules/runs/strava/webhook.ts`. */
+    STRAVA_SUBSCRIPTION_ID?: string;
     /** Firecrawl key (107) — the proxy fetch for shops that refuse a
      * Worker. Absent: a refusal is recorded as a failed fetch and nothing
      * else happens (law 5). See `modules/enrichment/firecrawl.ts`. */

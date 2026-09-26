@@ -68,7 +68,7 @@ describe("R: a run before its kit", () => {
     await renderWithRouter(detail(runSummary()));
 
     const strip = region("run-strip");
-    expect(strip).toHaveTextContent("Sat 29 Aug · 6:04 AM · File");
+    expect(strip).toHaveTextContent("Sat Aug 29 · 6:04 AM · File");
     expect(within(strip).getByText("6.2 mi")).toBeVisible();
     expect(within(strip).getByText("8:20 /mi")).toBeVisible();
   });
@@ -79,7 +79,7 @@ describe("R: a run before its kit", () => {
     );
 
     expect(region("run-strip")).toHaveTextContent(
-      "Sat 29 Aug · 11:04 AM · By hand",
+      "Sat Aug 29 · 11:04 AM · By hand",
     );
   });
 
@@ -135,7 +135,10 @@ describe("R: the conditions row", () => {
     const block = region("conditions");
     expect(block).toHaveAttribute("data-state", "set");
     expect(block).toHaveTextContent("Conditions · set by you");
-    expect(block).toHaveTextContent("55°F");
+    // The range and the sky that were picked, never the stored middle
+    // (round 26, item 2).
+    expect(block).toHaveTextContent("50–59°Rain");
+    expect(block).not.toHaveTextContent("55°");
     expect(block).not.toHaveTextContent("Feels");
     expect(within(block).queryByRole("link")).toBeNull();
   });
@@ -214,7 +217,7 @@ describe("R2b: no weather saved", () => {
     ).toBeVisible();
   });
 
-  it("offers bands to pick — never a number to type — in the runner's unit", async () => {
+  it("offers two picks — never a number to type — in the runner's unit, nothing preselected", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
       detail(runSummary(UNAVAILABLE), {}, { temp: "c", distance: "km" }),
@@ -225,18 +228,80 @@ describe("R2b: no weather saved", () => {
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
 
-    const bands = within(sheet).getByRole("group", { name: "Conditions" });
-    const buttons = within(bands).getAllByRole("button");
-    expect(buttons).toHaveLength(12);
-    expect(buttons[0]).toHaveAccessibleName("-20–-15°");
-    expect(buttons.at(-1)).toHaveAccessibleName("35–40°");
-    expect(sheet.querySelector("input")).toBeNull();
+    expect(sheet).toHaveAccessibleName("Set conditions");
+    expect(
+      within(sheet).getByText(
+        "Roughly is fine. This stays on your run and never counts toward anyone else’s.",
+      ),
+    ).toBeVisible();
+    const warm = within(sheet).getByRole("group", { name: "How warm · °C" });
+    const bands = within(warm).getAllByRole("radio");
+    expect(bands).toHaveLength(12);
+    expect(bands[0]).toHaveAccessibleName("-20–-15°");
+    expect(bands.at(-1)).toHaveAccessibleName("35–40°");
+    const sky = within(sheet).getByRole("group", { name: "Sky" });
+    const skies = within(sky).getAllByRole("radio");
+    expect(skies).toHaveLength(4);
+    for (const [index, word] of ["Dry", "Damp", "Rain", "Snow"].entries()) {
+      expect(skies[index]).toHaveAccessibleName(word);
+    }
+    // "A guess we make would look like a reading we took."
+    expect(within(sheet).queryByRole("radio", { checked: true })).toBeNull();
+    expect(sheet.querySelector("input:not([type='radio'])")).toBeNull();
+    expect(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    ).toBeVisible();
     expect(
       within(sheet).queryByRole("button", { name: "Try again" }),
     ).toBeNull();
   });
 
-  it("sets the band picked, then reloads the run and closes", async () => {
+  it("labels the bands in whole Fahrenheit for a Fahrenheit runner", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(detail(runSummary(UNAVAILABLE)));
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    );
+
+    const warm = within(sheet).getByRole("group", { name: "How warm · °F" });
+    const bands = within(warm).getAllByRole("radio");
+    expect(bands[0]).toHaveAccessibleName("-4–5°");
+    expect(bands.at(-1)).toHaveAccessibleName("95–104°");
+  });
+
+  it("refuses a missing pick with the board's words, on the group it is missing from", async () => {
+    const user = userEvent.setup();
+    const setConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
+    await renderWithRouter(detail(runSummary(UNAVAILABLE), { setConditions }));
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    );
+
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    );
+
+    expect(
+      await within(sheet).findByText("Pick how warm it was."),
+    ).toBeVisible();
+    expect(within(sheet).getByText("Pick the sky.")).toBeVisible();
+    expect(setConditions).not.toHaveBeenCalled();
+
+    await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    );
+
+    await waitFor(() => {
+      expect(within(sheet).queryByText("Pick how warm it was.")).toBeNull();
+    });
+    expect(within(sheet).getByText("Pick the sky.")).toBeVisible();
+    expect(setConditions).not.toHaveBeenCalled();
+  });
+
+  it("says the pick on the button, sets both, then reloads the run and closes", async () => {
     const user = userEvent.setup();
     const setConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
     const { router } = await renderWithRouter(
@@ -248,11 +313,19 @@ describe("R2b: no weather saved", () => {
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
 
-    await user.click(within(sheet).getByRole("button", { name: "50–59°" }));
+    await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
+    // One pick is not yet a pick to name.
+    expect(
+      within(sheet).getByRole("button", { name: "Set conditions" }),
+    ).toBeVisible();
+    await user.click(within(sheet).getByRole("radio", { name: "Rain" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Set 50–59° and rain" }),
+    );
 
     await waitFor(() => {
       expect(setConditions).toHaveBeenCalledWith({
-        data: { runId: RUN_ID, bandFloorC: 10 },
+        data: { runId: RUN_ID, bandFloorC: 10, sky: "rain" },
       });
     });
     await waitFor(() => {
@@ -261,7 +334,7 @@ describe("R2b: no weather saved", () => {
     expect(invalidate).toHaveBeenCalled();
   });
 
-  it("waits behind the band it is setting, and says what is still true if it fails", async () => {
+  it("waits while it sets, and says nothing was saved if it fails", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<boolean>();
     const setConditions = vi
@@ -273,31 +346,31 @@ describe("R2b: no weather saved", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
+    await user.click(within(sheet).getByRole("radio", { name: "32–41°" }));
+    await user.click(within(sheet).getByRole("radio", { name: "Snow" }));
 
-    const band = within(sheet).getByRole("button", { name: "50–59°" });
-    await user.click(band);
-    await waitFor(() => {
-      expectBusy(band);
+    const submit = within(sheet).getByRole("button", {
+      name: "Set 32–41° and snow",
     });
-    expect(band).toHaveAccessibleName("Setting");
-    // Every band waits: a second pick mid-flight is not a second write.
-    const other = within(sheet).getByRole("button", { name: "59–68°" });
-    expectBusy(other);
-    await user.click(other);
+    await user.click(submit);
+    await waitFor(() => {
+      expectBusy(submit);
+    });
+    expect(submit).toHaveAccessibleName("Setting");
+    // A second press mid-flight is not a second write.
+    await user.click(submit);
     expect(setConditions).toHaveBeenCalledTimes(1);
 
     pending.reject(new Error("D1 unavailable"));
-    expect(await within(sheet).findByText("No conditions")).toBeVisible();
-    expect(within(sheet).getByText("Our end failed.")).toBeVisible();
+    expect(await within(sheet).findByText("Nothing saved")).toBeVisible();
 
-    // The band's Try again repeats the pick that failed — the same band —
-    // and never asks the weather instead.
+    // Try again resubmits exactly the picks that failed.
     await user.click(within(sheet).getByRole("button", { name: "Try again" }));
     await waitFor(() => {
       expect(setConditions).toHaveBeenCalledTimes(2);
     });
     expect(setConditions).toHaveBeenLastCalledWith({
-      data: { runId: RUN_ID, bandFloorC: 10 },
+      data: { runId: RUN_ID, bandFloorC: 0, sky: "snow" },
     });
   });
 

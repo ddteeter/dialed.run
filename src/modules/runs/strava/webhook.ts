@@ -9,11 +9,16 @@
  */
 import { z } from "zod";
 
-import type { ReminderJob } from "../queue-messages";
+import type { DeauthorizeJob, ReminderJob } from "../queue-messages";
 
 export interface ReminderQueueProducer {
-  send(message: ReminderJob): Promise<unknown>;
+  send(message: ReminderJob | DeauthorizeJob): Promise<unknown>;
 }
+
+/**
+ * `updates.authorized` as a deauthorization carries it (see below).
+ */
+const deauthorizedSchema = z.union([z.literal("false"), z.literal(false)]);
 
 const webhookEventSchema = z.object({
   object_type: z.enum(["activity", "athlete"]),
@@ -22,7 +27,26 @@ const webhookEventSchema = z.object({
   owner_id: z.number(),
   subscription_id: z.number(),
   event_time: z.number(),
+  // Only `authorized` is read, and only from an athlete event (STR-3).
+  // Strava's docs write it as the string "false" and their example as the
+  // boolean, so both are accepted. For an activity event `updates` holds
+  // the title, type and privacy — activity data — and a zod object strips
+  // every key it does not name, so none of that survives the parse.
+  updates: z.object({ authorized: deauthorizedSchema.optional() }).optional(),
 });
+
+type WebhookEvent = z.infer<typeof webhookEventSchema>;
+
+/**
+ * A runner revoking dialed.run from Strava's side: an athlete event whose
+ * `updates.authorized` is false. Strava's API Policy §7.4 gives us thirty
+ * days to delete what we hold; the consumer does it at once.
+ */
+function isDeauthorization(event: WebhookEvent): boolean {
+  return (
+    event.object_type === "athlete" && event.updates?.authorized !== undefined
+  );
+}
 
 /**
 GET subscription validation: Strava requires the exact `hub.challenge`
@@ -51,11 +75,20 @@ export function verifyStravaChallenge(
 POST event handler. Always resolves (never throws) so the route can
 respond 200 within 2s regardless of payload shape or dedupe outcome —
 Strava disables webhooks that don't get a fast 200.
+
+**Only our own subscription's events are accepted** (STR-4, finding 0.10).
+The endpoint is public and Strava signs nothing, so `subscription_id` is
+the one thing that says an event is ours; anyone else could otherwise post
+forged activities for any athlete id and fill the queue with reminders.
+It is compared before the queue is touched, and a deployment with no
+`STRAVA_SUBSCRIPTION_ID` accepts nothing — fail closed, as an unset verify
+token already refuses the handshake.
 */
 export async function handleStravaWebhookEvent(
   queue: ReminderQueueProducer,
   captureException: (error: unknown, context: Record<string, string>) => void,
   body: unknown,
+  subscriptionId: string | undefined,
 ): Promise<void> {
   const parsed = webhookEventSchema.safeParse(body);
   if (!parsed.success) {
@@ -65,6 +98,18 @@ export async function handleStravaWebhookEvent(
     return;
   }
   const event = parsed.data;
+  // Not reported: a forged event is noise, and reporting it would let
+  // anyone fill Sentry as easily as they could have filled the queue.
+  if (String(event.subscription_id) !== subscriptionId) return;
+
+  if (isDeauthorization(event)) {
+    await queue.send({
+      type: "strava_deauthorize",
+      athleteId: String(event.owner_id),
+      eventTime: event.event_time,
+    });
+    return;
+  }
   if (event.object_type !== "activity" || event.aspect_type !== "create") {
     return; // only a new activity is a "log your kit?" moment
   }

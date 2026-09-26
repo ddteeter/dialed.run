@@ -10,7 +10,7 @@ import {
   DUPLICATE_WINDOW_S,
   countRuns,
   createManualRun,
-  didRetimeRun,
+  retimeRun,
   didRetryRunWeather,
   didSetRunConditions,
   findDuplicateRun,
@@ -403,18 +403,18 @@ async function ownerOf(runId: string): Promise<string | undefined> {
 /**
 The weather module's writes, recorded rather than performed.
 */
-function fakeWeather() {
+function fakeWeather(outcome = "attached") {
   const attached: Ulid[] = [];
-  const recorded: { runId: Ulid; tempC: number }[] = [];
+  const recorded: { runId: Ulid; tempC: number; sky: string }[] = [];
   return {
     attached,
     recorded,
     attach: (runId: Ulid) => {
       attached.push(runId);
-      return Promise.resolve();
+      return Promise.resolve(outcome);
     },
-    record: (runId: Ulid, tempC: number) => {
-      recorded.push({ runId, tempC });
+    record: (runId: Ulid, tempC: number, sky: string) => {
+      recorded.push({ runId, tempC, sky });
       return Promise.resolve();
     },
   };
@@ -454,6 +454,7 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
         condition: "clear",
         timeZone: "America/Chicago",
         isSetByYou: false,
+        sky: undefined,
       },
       entryId: undefined,
       hasVerdict: false,
@@ -465,12 +466,13 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
   it("marks a band chosen in R2b as set by you, in the list as on the run", async () => {
     const userId = newUlid();
     const runId = await aRun(userId, { startedAt: START + 7200 });
-    await recordManualObservation(runId as Ulid, 12.5);
+    await recordManualObservation(runId as Ulid, 12.5, "damp");
 
     const [listed] = await listRunSummaries(coreDb(), userId);
     expect(listed?.weatherStatus).toBe("manual");
     expect(listed?.conditions?.tempC).toBe(12.5);
     expect(listed?.conditions?.isSetByYou).toBe(true);
+    expect(listed?.conditions?.sky).toBe("damp");
     const summary = await getRunSummary(coreDb(), userId, runId);
     expect(summary?.conditions?.isSetByYou).toBe(true);
   });
@@ -631,9 +633,14 @@ describe("didSetRunConditions: R2b's pick", () => {
     const weather = fakeWeather();
 
     expect(
-      await didSetRunConditions(coreDb(), weather, userId, runId, 10),
+      await didSetRunConditions(coreDb(), weather, userId, runId, {
+        bandFloorC: 10,
+        sky: "rain",
+      }),
     ).toBe(true);
-    expect(weather.recorded).toStrictEqual([{ runId, tempC: 12.5 }]);
+    expect(weather.recorded).toStrictEqual([
+      { runId, tempC: 12.5, sky: "rain" },
+    ]);
   });
 
   it("refuses a run whose weather arrived, one with no place, and someone else's", async () => {
@@ -645,7 +652,10 @@ describe("didSetRunConditions: R2b's pick", () => {
 
     for (const runId of [attached, nowhere, theirs]) {
       expect(
-        await didSetRunConditions(coreDb(), weather, userId, runId, 10),
+        await didSetRunConditions(coreDb(), weather, userId, runId, {
+          bandFloorC: 10,
+          sky: "rain",
+        }),
       ).toBe(false);
     }
     expect(weather.recorded).toHaveLength(0);
@@ -660,6 +670,7 @@ describe("didRetryRunWeather: R2b's Try again", () => {
     const weather = {
       attach: async (asked: Ulid) => {
         statusWhenAsked.push(await statusOf(asked));
+        return "pending";
       },
     };
 
@@ -689,15 +700,15 @@ describe("didRetryRunWeather: R2b's Try again", () => {
   });
 });
 
-describe("didRetimeRun: A1's time correction", () => {
+describe("retimeRun: A1's time correction", () => {
   it("moves the start and asks for the weather at the new hour", async () => {
     const userId = newUlid();
     const runId = await aRun(userId, { weatherStatus: "attached" });
     const weather = fakeWeather();
 
     expect(
-      await didRetimeRun(coreDb(), weather, userId, runId, START - 5400),
-    ).toBe(true);
+      await retimeRun(coreDb(), weather, userId, runId, START - 5400),
+    ).toBe("moved");
 
     const run = await getRun(coreDb(), userId, runId);
     expect(run?.startedAt).toBe(START - 5400);
@@ -714,9 +725,9 @@ describe("didRetimeRun: A1's time correction", () => {
     });
     const weather = fakeWeather();
 
-    expect(
-      await didRetimeRun(coreDb(), weather, userId, runId, START + 600),
-    ).toBe(true);
+    expect(await retimeRun(coreDb(), weather, userId, runId, START + 600)).toBe(
+      "moved",
+    );
 
     const run = await getRun(coreDb(), userId, runId);
     expect(run?.startedAt).toBe(START + 600);
@@ -737,8 +748,8 @@ describe("didRetimeRun: A1's time correction", () => {
     });
     const weather = fakeWeather();
 
-    await didRetimeRun(coreDb(), weather, userId, halfway, START + 60);
-    await didRetimeRun(coreDb(), weather, userId, otherHalf, START + 120);
+    await retimeRun(coreDb(), weather, userId, halfway, START + 60);
+    await retimeRun(coreDb(), weather, userId, otherHalf, START + 120);
 
     expect(weather.attached).toHaveLength(0);
     expect(await statusOf(halfway)).toBe("failed");
@@ -751,8 +762,8 @@ describe("didRetimeRun: A1's time correction", () => {
     const weather = fakeWeather();
 
     expect(
-      await didRetimeRun(coreDb(), weather, newUlid(), runId, START + 600),
-    ).toBe(false);
+      await retimeRun(coreDb(), weather, newUlid(), runId, START + 600),
+    ).toBe("refused");
     const run = await getRun(coreDb(), owner, runId);
     expect(run?.startedAt).toBe(START);
   });
@@ -768,17 +779,17 @@ describe("didRetimeRun: A1's time correction", () => {
     const weather = fakeWeather();
 
     expect(
-      await didRetimeRun(coreDb(), weather, userId, back, START - 86_401),
-    ).toBe(false);
+      await retimeRun(coreDb(), weather, userId, back, START - 86_401),
+    ).toBe("refused");
     expect(
-      await didRetimeRun(
+      await retimeRun(
         coreDb(),
         weather,
         userId,
         forward,
         START + 3600 + 86_401,
       ),
-    ).toBe(false);
+    ).toBe("refused");
     expect(await getRun(coreDb(), userId, back)).toMatchObject({
       startedAt: START,
       weatherStatus: "attached",
@@ -786,30 +797,30 @@ describe("didRetimeRun: A1's time correction", () => {
     expect(weather.attached).toHaveLength(0);
 
     expect(
-      await didRetimeRun(coreDb(), weather, userId, back, START - 86_400),
-    ).toBe(true);
+      await retimeRun(coreDb(), weather, userId, back, START - 86_400),
+    ).toBe("moved");
     expect(
-      await didRetimeRun(
+      await retimeRun(
         coreDb(),
         weather,
         userId,
         forward,
         START + 3600 + 86_400,
       ),
-    ).toBe(true);
+    ).toBe("moved");
     const moved = await getRun(coreDb(), userId, forward);
     expect(moved?.startedAt).toBe(START + 3600 + 86_400);
   });
 
   it("treats a retry of the same start as the first call having landed", async () => {
     // The start travels absolute, so a retry after a lost response asks
-    // for where the run already is: true, and nothing moves or refetches.
+    // for where the run already is: moved, and nothing moves or refetches.
     const userId = newUlid();
     const runId = await aRun(userId, { weatherStatus: "attached" });
     const weather = fakeWeather();
 
-    expect(await didRetimeRun(coreDb(), weather, userId, runId, START)).toBe(
-      true,
+    expect(await retimeRun(coreDb(), weather, userId, runId, START)).toBe(
+      "moved",
     );
 
     expect(await getRun(coreDb(), userId, runId)).toMatchObject({
@@ -817,5 +828,41 @@ describe("didRetimeRun: A1's time correction", () => {
       weatherStatus: "attached",
     });
     expect(weather.attached).toHaveLength(0);
+  });
+
+  it("puts the time and the conditions back when the new hour has no weather", async () => {
+    // Round 26, item 1: a run never carries a time whose weather we lack.
+    const userId = newUlid();
+    const runId = await aRun(userId, { weatherStatus: "attached" });
+    const weather = fakeWeather("pending");
+
+    expect(
+      await retimeRun(coreDb(), weather, userId, runId, START + 1800),
+    ).toBe("no-weather");
+
+    expect(weather.attached).toStrictEqual([runId]);
+    expect(await getRun(coreDb(), userId, runId)).toMatchObject({
+      startedAt: START,
+      weatherStatus: "attached",
+    });
+  });
+
+  it("keeps the new time when the run's own band settles it", async () => {
+    // A band the runner set is the run's conditions whatever the hour.
+    const userId = newUlid();
+    const runId = await aRun(userId, { weatherStatus: "manual" });
+
+    expect(
+      await retimeRun(
+        coreDb(),
+        fakeWeather("manual"),
+        userId,
+        runId,
+        START + 1800,
+      ),
+    ).toBe("moved");
+    expect(await getRun(coreDb(), userId, runId)).toMatchObject({
+      startedAt: START + 1800,
+    });
   });
 });

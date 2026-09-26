@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import type { ReminderJob } from "../../src/modules/runs/queue-messages";
+import type {
+  DeauthorizeJob,
+  ReminderJob,
+} from "../../src/modules/runs/queue-messages";
 import {
   handleStravaWebhookEvent,
   verifyStravaChallenge,
 } from "../../src/modules/runs/strava/webhook";
 
 function fakeQueue() {
-  const sent: ReminderJob[] = [];
+  const sent: (ReminderJob | DeauthorizeJob)[] = [];
   return {
     sent,
-    send: (message: ReminderJob) => {
+    send: (message: ReminderJob | DeauthorizeJob) => {
       sent.push(message);
       return Promise.resolve();
     },
@@ -43,6 +46,141 @@ function activityCreateEvent(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+/**
+ * Our subscription, as `STRAVA_SUBSCRIPTION_ID` holds it — a string,
+ * where the event carries a number.
+ */
+const OUR_SUBSCRIPTION = "1";
+
+/**
+ * A delivery to this deployment's subscription.
+ */
+async function deliver(
+  queue: ReturnType<typeof fakeQueue>,
+  captureException: ReturnType<typeof fakeCaptureException>["captureException"],
+  body: unknown,
+): Promise<void> {
+  await handleStravaWebhookEvent(
+    queue,
+    captureException,
+    body,
+    OUR_SUBSCRIPTION,
+  );
+}
+
+function deauthorizationEvent(authorized: unknown = "false") {
+  return {
+    aspect_type: "update",
+    object_type: "athlete",
+    updates: { authorized },
+    owner_id: 134_815,
+    subscription_id: 1,
+    event_time: 1_516_126_040,
+    object_id: 134_815,
+  };
+}
+
+describe("the webhook authenticates by subscription (STR-4)", () => {
+  it("drops a forged event before the queue, and says nothing", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await handleStravaWebhookEvent(
+      queue,
+      capture.captureException,
+      activityCreateEvent({ subscription_id: 2 }),
+      OUR_SUBSCRIPTION,
+    );
+    await handleStravaWebhookEvent(
+      queue,
+      capture.captureException,
+      deauthorizationEvent(),
+      "999",
+    );
+
+    expect(queue.sent).toStrictEqual([]);
+    expect(capture.errors).toStrictEqual([]);
+  });
+
+  it("accepts nothing when no subscription is configured (fail closed)", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await handleStravaWebhookEvent(
+      queue,
+      capture.captureException,
+      activityCreateEvent(),
+      undefined,
+    );
+
+    expect(queue.sent).toStrictEqual([]);
+  });
+});
+
+describe("athlete deauthorization (STR-3)", () => {
+  it.each([
+    ["the string Strava's docs describe", "false"],
+    ["the boolean Strava's example sends", false],
+  ])("enqueues a deauthorization for %s", async (_label, authorized) => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await deliver(
+      queue,
+      capture.captureException,
+      deauthorizationEvent(authorized),
+    );
+
+    expect(queue.sent).toStrictEqual([
+      {
+        type: "strava_deauthorize",
+        athleteId: "134815",
+        eventTime: 1_516_126_040,
+      },
+    ]);
+    expect(capture.errors).toStrictEqual([]);
+  });
+
+  it("treats an athlete event without authorized=false as nothing", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await deliver(queue, capture.captureException, {
+      ...deauthorizationEvent(),
+      updates: {},
+    });
+
+    expect(queue.sent).toStrictEqual([]);
+  });
+
+  it("refuses an authorized value that is not false", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await deliver(
+      queue,
+      capture.captureException,
+      deauthorizationEvent("true"),
+    );
+
+    expect(queue.sent).toStrictEqual([]);
+    expect(capture.errors).toHaveLength(1);
+  });
+
+  it("does not treat an activity carrying authorized=false as a deauthorization", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await deliver(
+      queue,
+      capture.captureException,
+      activityCreateEvent({ updates: { authorized: "false" } }),
+    );
+
+    expect(queue.sent[0]?.type).toBe("strava_reminder");
+  });
+});
 
 function challengeParams(entries: Record<string, string>): URLSearchParams {
   return new URLSearchParams(entries);
@@ -100,7 +238,7 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     const capture = fakeCaptureException();
     const event = activityCreateEvent();
 
-    await handleStravaWebhookEvent(queue, capture.captureException, event);
+    await deliver(queue, capture.captureException, event);
 
     expect(queue.sent).toEqual([
       {
@@ -117,7 +255,7 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
-    await handleStravaWebhookEvent(
+    await deliver(
       queue,
       capture.captureException,
       activityCreateEvent({ owner_id: 999_999 }),
@@ -135,7 +273,7 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     const capture = fakeCaptureException();
 
     await expect(
-      handleStravaWebhookEvent(queue, capture.captureException, {
+      deliver(queue, capture.captureException, {
         garbage: true,
       }),
     ).resolves.toBeUndefined();
@@ -163,7 +301,7 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
-    await handleStravaWebhookEvent(
+    await deliver(
       queue,
       capture.captureException,
       activityCreateEvent(overrides),
@@ -177,11 +315,7 @@ describe("handleStravaWebhookEvent (POST — always resolves, D-33)", () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
-    await handleStravaWebhookEvent(
-      queue,
-      capture.captureException,
-      activityCreateEvent(),
-    );
+    await deliver(queue, capture.captureException, activityCreateEvent());
 
     expect(new Set(Object.keys(queue.sent[0] ?? {}))).toEqual(
       new Set(["type", "athleteId", "objectId", "aspectType", "eventTime"]),

@@ -1,42 +1,31 @@
-import { screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { StravaCallbackResult } from "../../src/modules/runs/components/StravaCallbackResult";
 import { renderWithRouter } from "./run-fixtures";
 
 /**
  * The landing after Strava sends the runner back — a receipt in the panel
- * (round 22, item 23), in its three shapes.
+ * (round 22, item 23), in its shapes: connected, not connected, and full
+ * (task 127, STR-6).
  */
-const location = { assign: vi.fn() };
-vi.stubGlobal("location", location);
-
-afterEach(() => {
-  location.assign.mockClear();
-});
-
-const STRAVA = "https://www.strava.com/oauth/authorize?state=02";
-
 function landing(
-  result: { ok: true } | { ok: false; reason: string },
-  overrides: {
-    configured?: boolean;
-    getAuthorizeUrl?: () => Promise<string | undefined>;
-  } = {},
+  result: { ok: true } | { ok: false; reason: string; full: boolean },
+  isConfigured = true,
 ) {
-  return (
-    <StravaCallbackResult
-      result={result}
-      configured={overrides.configured ?? true}
-      getAuthorizeUrl={
-        overrides.getAuthorizeUrl ?? (() => Promise.resolve(STRAVA))
-      }
-    />
-  );
+  return <StravaCallbackResult result={result} configured={isConfigured} />;
 }
 
-const REFUSED = { ok: false as const, reason: "The user declined." };
+const REFUSED = {
+  ok: false as const,
+  reason: "The user declined.",
+  full: false,
+};
+const FULL = {
+  ok: false as const,
+  reason: "Strava is full for now.",
+  full: true,
+};
 
 describe("StravaCallbackResult", () => {
   it("says it is connected and what that means, and continues to the connection", async () => {
@@ -60,7 +49,7 @@ describe("StravaCallbackResult", () => {
       "href",
       "/runs/strava",
     );
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
   });
 
   it("says nothing changed when it did not connect, with both ways on", async () => {
@@ -71,55 +60,45 @@ describe("StravaCallbackResult", () => {
     ).toBeVisible();
     // The reason is the server's diagnostic, not the runner's sentence.
     expect(screen.queryByText("The user declined.")).toBeNull();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+    // Try again is another trip through the connect redirect.
+    expect(screen.getByRole("link", { name: "Try again" })).toHaveAttribute(
+      "href",
+      "/runs/strava-connect",
+    );
     expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
       "href",
       "/runs",
     );
+    expect(document.querySelector("[data-state='full']")).toBeNull();
   });
 
-  it("tries again by going back to Strava", async () => {
-    const user = userEvent.setup();
-    await renderWithRouter(landing(REFUSED));
+  it("tells the eleventh runner Strava is full, and offers no Try again", async () => {
+    await renderWithRouter(landing(FULL));
 
-    await user.click(screen.getByRole("button", { name: "Try again" }));
-
-    await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(STRAVA);
-    });
-  });
-
-  it("says not connected under the button when trying again fails", async () => {
-    const user = userEvent.setup();
-    const getAuthorizeUrl = vi
-      .fn<() => Promise<string | undefined>>()
-      .mockRejectedValueOnce(new Error("down"))
-      .mockResolvedValueOnce(STRAVA);
-    await renderWithRouter(landing(REFUSED, { getAuthorizeUrl }));
-
-    await user.click(screen.getByRole("button", { name: "Try again" }));
-
-    expect(await screen.findByText("Not connected")).toBeVisible();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Not connected. Our end failed.",
-    );
-    const band = document.querySelector<HTMLElement>(
-      "[data-part='failure-band']",
-    );
-    if (band === null) throw new Error("no failure band");
-    await user.click(within(band).getByRole("button", { name: "Try again" }));
-    await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(STRAVA);
-    });
+    const receipt = document.querySelector("[data-slot='receipt']");
+    expect(receipt).toHaveAttribute("data-state", "full");
+    expect(
+      [...(receipt?.children ?? [])].map((line) => line.textContent),
+    ).toEqual([
+      "Strava is full",
+      "Strava lets a new app connect only a few runners while it is reviewed, and dialed.run is at that limit. Nothing changed.",
+      "You can still add every run by uploading its file.",
+    ]);
+    // Trying again would only be refused again.
+    expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
+    expect(
+      screen.queryByText("Strava isn’t connected. Nothing changed."),
+    ).toBeNull();
+    expect(screen.getByRole("link", { name: "Not now" })).toBeVisible();
   });
 
   it("offers no Try again where Strava is not configured — never a dead control", async () => {
-    await renderWithRouter(landing(REFUSED, { configured: false }));
+    await renderWithRouter(landing(REFUSED, false));
 
     expect(
       screen.getByText("Strava isn’t connected. Nothing changed."),
     ).toBeVisible();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
     expect(screen.getByRole("link", { name: "Not now" })).toBeVisible();
   });
 });

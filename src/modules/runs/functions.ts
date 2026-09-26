@@ -13,15 +13,9 @@
  * enforces it.
  */
 import { createServerFn } from "@tanstack/react-start";
-import {
-  deleteCookie,
-  getCookie,
-  getRequestUrl,
-  setCookie,
-} from "@tanstack/react-start/server";
+import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 
 import { requireUserId } from "../auth";
-import { newUlid } from "../../lib/ids";
 import { attachObservation, recordManualObservation } from "../weather";
 import { coreDb } from "./core-db";
 import { getImportOutcome, startImport } from "./imports";
@@ -37,21 +31,19 @@ import {
 import {
   countRuns,
   createManualRun,
-  didRetimeRun,
+  retimeRun,
   didRetryRunWeather,
   didSetRunConditions,
   getRunSummary,
   listRunSummaries,
 } from "./service";
 import { env } from "../../env";
-import { createStravaApi } from "./strava/api";
-import { stravaConfigFromEnv } from "./strava/api-from-env";
+import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
 import {
-  completeStravaConnect,
+  connectFromCallback,
   disconnectStrava,
-  getStravaConnection,
-  stravaAuthorizeUrl,
-  stravaCallbackOutcome,
+  STRAVA_STATE_COOKIE,
+  stravaStatusOf,
 } from "./strava/oauth";
 
 /**
@@ -107,13 +99,7 @@ export const setRunConditionsFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => conditionsBandInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return didSetRunConditions(
-      coreDb(),
-      weather,
-      userId,
-      data.runId,
-      data.bandFloorC,
-    );
+    return didSetRunConditions(coreDb(), weather, userId, data.runId, data);
   });
 
 export const retryRunWeatherFn = createServerFn({ method: "POST" })
@@ -127,7 +113,7 @@ export const retimeRunFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => retimeRunInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return didRetimeRun(coreDb(), weather, userId, data.runId, data.startedAt);
+    return retimeRun(coreDb(), weather, userId, data.runId, data.startedAt);
   });
 // ---- Strava connect/disconnect (102 §6) ------------------------------
 //
@@ -135,43 +121,19 @@ export const retimeRunFn = createServerFn({ method: "POST" })
 // returns undefined until a human sets STRAVA_CLIENT_ID/SECRET via
 // `wrangler secret`, and every function below degrades cleanly when it does.
 
-const STRAVA_STATE_COOKIE = "strava_oauth_state";
-
 export const getStravaStatusFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    const connection = await getStravaConnection(coreDb(), userId);
     return {
       configured: stravaConfigFromEnv() !== undefined,
-      status: connection?.status,
+      ...(await stravaStatusOf(coreDb(), userId)),
       runCount: await countRuns(coreDb(), userId),
     };
   },
 );
 
-/**
-Undefined when Strava isn't configured — the route hides the connect CTA.
-*/
-export const getStravaAuthorizeUrlFn = createServerFn({
-  method: "GET",
-}).handler(async () => {
-  await requireUserId();
-  const config = stravaConfigFromEnv();
-  // CSRF guard: a short-lived state nonce, round-tripped via an httpOnly
-  // cookie and checked against the callback's `state` query param by
-  // `stravaCallbackOutcome`.
-  const state = newUlid();
-  setCookie(STRAVA_STATE_COOKIE, state, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 600,
-  });
-  const redirectUri = `${getRequestUrl().origin}/runs/strava-callback`;
-  return config === undefined
-    ? undefined
-    : stravaAuthorizeUrl(config.clientId, redirectUri, state);
-});
+// The connect button's nonce and redirect are `routes/runs/strava-connect`,
+// a server route, because the official button is a link (STR-7).
 
 export const completeStravaConnectFn = createServerFn({ method: "POST" })
   .validator(stravaCallbackInput)
@@ -179,21 +141,10 @@ export const completeStravaConnectFn = createServerFn({ method: "POST" })
     const userId = await requireUserId();
     const expectedState = getCookie(STRAVA_STATE_COOKIE);
     deleteCookie(STRAVA_STATE_COOKIE);
-    const outcome = stravaCallbackOutcome({ ...data, expectedState });
-    const config = stravaConfigFromEnv();
-    const refusal = {
-      ok: false as const,
-      reason: outcome.ok ? "Strava isn't configured yet." : outcome.reason,
-    };
-    await (config === undefined || !outcome.ok
-      ? Promise.resolve()
-      : completeStravaConnect(
-          coreDb(),
-          createStravaApi(config),
-          userId,
-          outcome.code,
-        ));
-    return config !== undefined && outcome.ok ? { ok: true as const } : refusal;
+    return connectFromCallback(coreDb(), stravaApiFromEnv(), userId, {
+      ...data,
+      expectedState,
+    });
   });
 
 export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(

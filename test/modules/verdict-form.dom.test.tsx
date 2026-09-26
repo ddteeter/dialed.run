@@ -1513,7 +1513,7 @@ describe("VerdictForm: the run header (round 21)", () => {
     const header = screen.getByRole("banner");
     expect(header).toHaveAttribute("data-slot", "header");
     expect(header).toHaveAttribute("data-ground", "ink");
-    expect(within(header).getByText("Sat 29 Aug · 6:04 AM")).toBeVisible();
+    expect(within(header).getByText("Sat Aug 29 · 6:04 AM")).toBeVisible();
     expect(within(header).getByText("6.2 at 41°")).toBeVisible();
   });
 
@@ -1526,7 +1526,7 @@ describe("VerdictForm: the run header (round 21)", () => {
 
     const header = screen.getByRole("banner");
     expect(within(header).getByText("6.2 mi")).toBeVisible();
-    expect(within(header).getByText("Sat 29 Aug · 11:04 AM")).toBeVisible();
+    expect(within(header).getByText("Sat Aug 29 · 11:04 AM")).toBeVisible();
   });
 
   it("reads the runner's own units", async () => {
@@ -1538,6 +1538,56 @@ describe("VerdictForm: the run header (round 21)", () => {
     );
 
     expect(screen.getByText("10.0 at 5°")).toBeVisible();
+  });
+
+  it("sets the run and the kit being judged in the desk's rail, read-only", async () => {
+    // Round 25: A3 at the desk is DS1's two columns, the rail holding
+    // "the kit being judged" and the run — never an input.
+    await renderWithRouter(
+      form({
+        entry: {
+          startedAt: SAT_MORNING,
+          distanceM: 9978,
+          durationS: 3098,
+          conditions,
+          items: [item("a", "Tracksmith Harrier"), item("b", "Bandit split")],
+        },
+      }),
+    );
+
+    const rail = document.querySelector<HTMLElement>("[data-part='rail']");
+    if (rail === null) throw new Error("no rail");
+    // The desk's alone: the phone never had these cards.
+    expect(rail).toHaveClass("hidden", "desk:flex");
+    expect(
+      within(rail).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 6:04 AM",
+      }),
+    ).toBeInTheDocument();
+    expect(rail).toHaveTextContent("6.2 mi · 51:38");
+    expect(within(rail).getByText("41°F damp · feels 36°")).toHaveClass(
+      "text-dialed-text",
+    );
+    expect(
+      within(rail).getByRole("heading", { name: "The kit you’re judging" }),
+    ).toBeInTheDocument();
+    expect(
+      within(rail)
+        .getAllByRole("listitem")
+        .map((row) => row.textContent),
+    ).toStrictEqual(["Tracksmith Harrier", "Bandit split"]);
+    expect(rail.querySelector("input, button, [role='radio']")).toBeNull();
+  });
+
+  it("names no conditions in the rail for a run with none", async () => {
+    await renderWithRouter(
+      form({ entry: { startedAt: SAT_MORNING, distanceM: 9978 } }),
+    );
+
+    const rail = document.querySelector<HTMLElement>("[data-part='rail']");
+    expect(rail).toHaveTextContent("6.2 mi");
+    expect(rail).not.toHaveTextContent("feels");
+    expect(rail?.querySelector("a")).toBeNull();
   });
 
   it("asks the question once, as the heading, and the row is named by it", async () => {

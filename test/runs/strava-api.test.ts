@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createStravaApi,
-  isTerminalStravaError,
   stravaConfigFrom,
   StravaApiError,
 } from "../../src/modules/runs/strava/api";
@@ -11,13 +10,10 @@ import { stravaApiFromEnv } from "../../src/modules/runs/strava/api-from-env";
 /**
  * The Strava HTTP seam, which nothing exercised — credentials do not exist
  * yet, so `oauth.ts` is tested against a hand-rolled fake and this file
- * was never called. Fifty-eight mutants with no coverage, in the one place
- * that decides whether a failure means "reconnect your account" or "try
- * again later".
- *
- * That distinction is the whole point of `isTerminal`. Getting it wrong in
- * one direction tells a runner their connection is broken when Strava was
- * merely down; in the other it retries a revoked grant forever.
+ * was never called. What matters most here now is what a refusal keeps:
+ * the status and Strava's own message are what tell the eleventh athlete
+ * the app is full (STR-6), and the revoke is what makes a disconnect true
+ * on Strava's side (STR-5).
  */
 
 const CONFIG = { clientId: "id", clientSecret: "secret" } as const;
@@ -104,43 +100,53 @@ describe("exchangeCode", () => {
     expect(form.get("client_secret")).toBe("secret");
   });
 
-  it("treats a rejected grant as terminal", async () => {
-    // 400 and 401 on a token exchange are what a revoked grant looks like:
-    // the connection is gone and retrying will not bring it back.
-    for (const status of [400, 401]) {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        jsonResponse({ message: "no" }, status),
-      );
+  it("keeps the status and Strava's own message when it refuses", async () => {
+    // What STR-6 keys on: the eleventh athlete's exchange is a 403 whose
+    // message names the limit. Both halves have to survive the throw.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ message: "Limit of connected athletes exceeded" }, 403),
+    );
 
-      const error = await rejectionFrom(
-        createStravaApi(CONFIG).exchangeCode("code"),
-      );
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).exchangeCode("code"),
+    );
 
-      expect(isTerminalStravaError(error), String(status)).toBe(true);
-      expect(messageOf(error)).toContain(String(status));
-    }
+    expect(error).toBeInstanceOf(StravaApiError);
+    expect(error).toMatchObject({
+      name: "StravaApiError",
+      status: 403,
+      refusal: "Limit of connected athletes exceeded",
+    });
+    expect(messageOf(error)).toBe("Strava responded 403");
   });
 
-  it("treats anything else as transient", async () => {
-    // A 500 or a 429 is Strava having a bad day. Telling the runner to
-    // reconnect would be wrong and would lose their connection for them.
-    for (const status of [429, 500, 503]) {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        jsonResponse({ message: "later" }, status),
-      );
+  it("keeps the status of a refusal whose body is not JSON, with no message", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html>Bad gateway</html>", { status: 502 }),
+    );
 
-      const error = await rejectionFrom(
-        createStravaApi(CONFIG).exchangeCode("code"),
-      );
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).exchangeCode("code"),
+    );
 
-      expect(error).toBeInstanceOf(StravaApiError);
-      expect(isTerminalStravaError(error), String(status)).toBe(false);
-    }
+    expect(error).toMatchObject({ status: 502, refusal: undefined });
   });
 
-  it("treats a shape it cannot parse as transient, not as a revoked grant", async () => {
-    // A response we cannot read is a bug or a Strava change. Neither is
-    // the user's connection being gone.
+  it("keeps no message from a JSON refusal that carries none", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ errors: [] }, 400),
+    );
+
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).exchangeCode("code"),
+    );
+
+    expect(error).toMatchObject({ status: 400, refusal: undefined });
+  });
+
+  it("names a shape it cannot parse as ours, with no status", async () => {
+    // A response we cannot read is a bug or a Strava change, and Strava
+    // did not refuse anything.
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse({ access_token: "access" }),
     );
@@ -150,16 +156,31 @@ describe("exchangeCode", () => {
     );
 
     expect(error).toBeInstanceOf(StravaApiError);
-    expect(isTerminalStravaError(error)).toBe(false);
-    expect(messageOf(error)).toMatch(/Malformed/);
+    expect(error).toMatchObject({ status: undefined, refusal: undefined });
+    expect(messageOf(error)).toBe("Malformed token-exchange response.");
+  });
+
+  it("refuses a success whose body is not JSON", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not json", { status: 200 }),
+    );
+
+    const error = await rejectionFrom(
+      createStravaApi(CONFIG).exchangeCode("code"),
+    );
+
+    expect(error).toBeInstanceOf(SyntaxError);
   });
 
   it("refuses a response missing any token it needs", async () => {
     const partials = [
       { ...EXCHANGE_BODY, access_token: "" },
+      { ...EXCHANGE_BODY, refresh_token: "" },
       { ...EXCHANGE_BODY, refresh_token: undefined },
       { ...EXCHANGE_BODY, expires_at: -1 },
+      { ...EXCHANGE_BODY, expires_at: 1.5 },
       { ...EXCHANGE_BODY, athlete: undefined },
+      { ...EXCHANGE_BODY, athlete: { id: 1.5 } },
     ];
 
     for (const body of partials) {
@@ -171,116 +192,62 @@ describe("exchangeCode", () => {
   });
 });
 
-describe("refreshToken", () => {
-  it("posts the refresh grant and reads the new tokens back", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      jsonResponse({
-        access_token: "new-access",
-        refresh_token: "new-refresh",
-        expires_at: 1_768_499_999,
-      }),
-    );
-
-    const tokens = await createStravaApi(CONFIG).refreshToken("old-refresh");
-
-    expect(tokens).toStrictEqual({
-      accessToken: "new-access",
-      refreshToken: "new-refresh",
-      expiresAt: 1_768_499_999,
-    });
-    const form = formOf(fetchSpy.mock.calls[0]?.[1]);
-    expect(form.get("grant_type")).toBe("refresh_token");
-    expect(form.get("refresh_token")).toBe("old-refresh");
-  });
-
-  it("treats a rejected refresh as terminal", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      jsonResponse({ message: "no" }, 401),
-    );
-
-    const error = await rejectionFrom(
-      createStravaApi(CONFIG).refreshToken("old"),
-    );
-
-    expect(isTerminalStravaError(error)).toBe(true);
-  });
-
-  it("treats a malformed refresh response as transient, and says so", async () => {
-    // A `StravaApiError`, not whatever a missing field throws: the caller
-    // counts these as transient failures, and a TypeError from reading an
-    // absent property is not something it can classify.
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({}));
-
-    const error = await rejectionFrom(
-      createStravaApi(CONFIG).refreshToken("old"),
-    );
-
-    expect(error).toBeInstanceOf(StravaApiError);
-    expect(isTerminalStravaError(error)).toBe(false);
-    expect(messageOf(error)).toMatch(/Malformed/);
-  });
-});
-
-describe("deauthorize", () => {
-  it("posts the token to the revoke endpoint, escaped", async () => {
+describe("revoke (STR-5: POST /oauth/revoke)", () => {
+  it("posts the token and its kind, authenticated as the app", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response("", { status: 200 }));
+      .mockResolvedValue(new Response(undefined, { status: 200 }));
 
-    await createStravaApi(CONFIG).deauthorize("tok en/+&");
+    await createStravaApi(CONFIG).revoke({
+      token: "tok en/+&",
+      kind: "refresh_token",
+    });
 
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
-    const asUrl = urlOf(url);
-    expect(asUrl.origin + asUrl.pathname).toBe(
-      "https://www.strava.com/oauth/deauthorize",
-    );
-    expect(asUrl.searchParams.get("access_token")).toBe("tok en/+&");
+    expect(urlOf(url).href).toBe("https://www.strava.com/oauth/revoke");
     expect(init?.method).toBe("POST");
     expect(init?.signal).toBeInstanceOf(AbortSignal);
-  });
-
-  it("never reports a revoke failure as terminal", async () => {
-    // Best-effort by design: the local row is already gone and the outbox
-    // re-dispatches, so "the grant is dead" is not a conclusion to draw
-    // from a failed revoke.
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("", { status: 401 }),
+    // HTTP Basic with client_id:client_secret — "aWQ6c2VjcmV0" is
+    // base64("id:secret").
+    expect(init?.headers).toStrictEqual({
+      "content-type": "application/x-www-form-urlencoded",
+      authorization: "Basic aWQ6c2VjcmV0",
+    });
+    const form = formOf(init);
+    // In the body, where a token belongs — never the query string, which
+    // is where `/oauth/deauthorize` took it and where it ends up in logs.
+    expect(form.get("token")).toBe("tok en/+&");
+    expect(form.get("token_type_hint")).toBe("refresh_token");
+    expect(form.toString()).toBe(
+      "token=tok+en%2F%2B%26&token_type_hint=refresh_token",
     );
-
-    const error = await rejectionFrom(
-      createStravaApi(CONFIG).deauthorize("token"),
-    );
-
-    expect(error).toBeInstanceOf(StravaApiError);
-    expect(isTerminalStravaError(error)).toBe(false);
-    expect(messageOf(error)).toContain("401");
+    expect(urlOf(url).search).toBe("");
   });
 
   it("says nothing on success", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(undefined, { status: 204 }),
+      new Response(undefined, { status: 200 }),
     );
 
     await expect(
-      createStravaApi(CONFIG).deauthorize("token"),
+      createStravaApi(CONFIG).revoke({ token: "t", kind: "access_token" }),
     ).resolves.toBeUndefined();
   });
-});
 
-describe("isTerminalStravaError", () => {
-  it("is false for anything that is not a Strava error", () => {
-    // A TypeError from fetch is the most transient failure there is.
-    expect(isTerminalStravaError(new TypeError("network"))).toBe(false);
-    expect(isTerminalStravaError(undefined)).toBe(false);
-    expect(isTerminalStravaError("revoked")).toBe(false);
-  });
+  it("throws on a refusal, so the queue retries it", async () => {
+    // 503 is Strava's "internal error during revocation — safe to retry";
+    // 401 is our client credentials being wrong, which the DLQ surfaces.
+    for (const status of [401, 503]) {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        // No body at all, so no content-type: the refusal is still read.
+        new Response(undefined, { status }),
+      );
 
-  it("reads the flag the error was built with", () => {
-    expect(isTerminalStravaError(new StravaApiError("gone", true))).toBe(true);
-    expect(isTerminalStravaError(new StravaApiError("later", false))).toBe(
-      false,
-    );
-    expect(new StravaApiError("gone", true).name).toBe("StravaApiError");
+      const error = await rejectionFrom(
+        createStravaApi(CONFIG).revoke({ token: "t", kind: "access_token" }),
+      );
+      expect(error).toMatchObject({ status, refusal: undefined });
+    }
   });
 });
 

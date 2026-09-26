@@ -159,6 +159,13 @@ export function UploadForm(props: Readonly<UploadFormProps>): JSX.Element {
   );
 }
 
+/**
+ * Before a file has become a run, the well is the whole screen: at the
+ * desk it sits in the primary column's measure, and the rail is empty
+ * (round 25: *"With no file yet, the rail is empty"*).
+ */
+const BEFORE_THE_RUN = "flex flex-col gap-3 desk:max-w-column";
+
 function UploadFlow({
   upload,
   getOutcome,
@@ -257,7 +264,7 @@ function UploadFlow({
   }
 
   return (
-    <>
+    <div className={BEFORE_THE_RUN}>
       <DropZone
         filename={sending?.file.name ?? ""}
         pending={sending !== undefined}
@@ -274,7 +281,7 @@ function UploadFlow({
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -361,7 +368,7 @@ function ImportWatch({
   // stalls like it.
   const isWaiting = data === undefined || isReading(data.status);
   return (
-    <>
+    <div className={BEFORE_THE_RUN}>
       <DropZone
         filename={file.name}
         pending={isWaiting && !isStalled}
@@ -376,6 +383,6 @@ function ImportWatch({
         failure={isWaiting && isStalled ? STALLED : undefined}
         onRetry={onResend}
       />
-    </>
+    </div>
   );
 }

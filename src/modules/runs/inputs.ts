@@ -9,7 +9,7 @@
  */
 import { z } from "zod";
 
-import { runDraftSchema } from "../../lib/contracts";
+import { manualSkySchema, runDraftSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { SET_CONDITION_BANDS } from "./run-conditions";
 import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
@@ -38,6 +38,8 @@ export const conditionsBandInput = z.object({
     .refine((floor) => SET_CONDITION_BANDS.includes(floor), {
       message: "Pick one of the bands.",
     }),
+  // Round 26, item 2: the sky is required, as the band is.
+  sky: manualSkySchema,
 });
 
 /**

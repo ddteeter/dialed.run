@@ -1,0 +1,1 @@
+ALTER TABLE `manual_conditions` ADD `sky` text;

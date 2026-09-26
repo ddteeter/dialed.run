@@ -27,7 +27,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     runTitle: "Evening run",
     distanceM: 5 * 1609.34,
     durationS: 2600,
-    // Tue 12 Aug 2025, 06:30 UTC.
+    // Tue Aug 12 2025, 06:30 UTC.
     startedAt: Date.UTC(2025, 7, 12, 6, 30) / 1000,
     indoor: false,
     verdict: undefined,
@@ -166,7 +166,7 @@ describe("EntryDetail: the run strip", () => {
     await renderFeedScreen(detail());
 
     const strip = part("run-strip");
-    expect(strip).toHaveTextContent("Tue 12 Aug · 6:30 AM5.0mi8:40 /mi");
+    expect(strip).toHaveTextContent("Tue Aug 12 · 6:30 AM5.0mi8:40 /mi");
     expect(screen.getByText("5.0mi")).toHaveClass("font-mono", "text-mono-lg");
     expect(screen.getByText("8:40 /mi")).toHaveClass("font-mono", "text-quiet");
   });
@@ -200,7 +200,7 @@ describe("EntryDetail: the run strip", () => {
     );
 
     expect(screen.getByText("46° · Wind")).toHaveClass("text-dialed-text");
-    expect(screen.getByText("Tue 12 Aug · 1:30 AM")).toBeVisible();
+    expect(screen.getByText("Tue Aug 12 · 1:30 AM")).toBeVisible();
   });
 
   it("says Indoor when the run was, and nothing when it just has no weather", async () => {

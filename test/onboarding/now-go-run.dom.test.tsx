@@ -108,10 +108,11 @@ describe("NowGoRun", () => {
     // asking for the grant on trust.
     await renderScreen();
 
-    expect(screen.getByRole("link", { name: "Connect" })).toHaveAttribute(
-      "href",
-      "/runs/strava",
-    );
+    // Strava's official button in the slot (round 26, item 21), which
+    // leaves straight for Strava's consent screen.
+    expect(
+      screen.getByRole("link", { name: "Connect with Strava" }),
+    ).toHaveAttribute("href", "/runs/strava-connect");
     expect(
       screen.getByText("We read that a run happened. Nothing else."),
     ).toBeVisible();

@@ -9,7 +9,7 @@ import {
   formatWind,
 } from "../../../lib/measures";
 import type { Units } from "../../../lib/contracts";
-import { dayLabel } from "../../../lib/dates";
+import { dayLabel, proseDayLabel } from "../../../lib/dates";
 import { formatTemp } from "../../../lib/temperature";
 import {
   Bracketed,
@@ -172,7 +172,7 @@ function OutfitCell({
       ) : (
         <>
           <span className="text-small text-quiet">
-            Same as {dayLabel(suggestion.wornAt)}?
+            Same as {proseDayLabel(suggestion.wornAt)}?
           </span>
           <button
             type="button"
@@ -419,7 +419,7 @@ export function VerdictBacklog({
           </h1>
           {current === undefined ? undefined : (
             <Mono step="sm" className="text-muted">
-              {rows.length} runs · oldest first
+              {rows.length} runs · no verdict yet
             </Mono>
           )}
         </div>

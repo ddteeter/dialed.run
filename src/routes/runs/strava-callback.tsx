@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { StravaCallbackResult } from "../../modules/runs/components/StravaCallbackResult";
 import {
   completeStravaConnectFn,
-  getStravaAuthorizeUrlFn,
   getStravaStatusFn,
 } from "../../modules/runs/functions";
 import { stravaCallbackSearch } from "../../modules/runs/inputs";
@@ -26,11 +25,5 @@ export const Route = createFileRoute("/runs/strava-callback")({
 
 function StravaCallbackPage() {
   const { result, configured } = Route.useLoaderData();
-  return (
-    <StravaCallbackResult
-      result={result}
-      configured={configured}
-      getAuthorizeUrl={getStravaAuthorizeUrlFn}
-    />
-  );
+  return <StravaCallbackResult result={result} configured={configured} />;
 }

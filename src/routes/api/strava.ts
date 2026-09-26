@@ -37,6 +37,7 @@ export const Route = createFileRoute("/api/strava")({
           env.IMPORTS_QUEUE,
           captureException,
           body,
+          env.STRAVA_SUBSCRIPTION_ID,
         );
         return new Response(undefined, { status: 200 });
       },
