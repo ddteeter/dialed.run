@@ -150,7 +150,11 @@ test.describe("with the location granted", () => {
           "u",
         ),
       );
-      expect(body.slice(1)).toEqual(folded(drawnBody).slice(1));
+      // Visual Crossing's credit closes the body (FEED-8): the licence asks
+      // for it near the data, and round 22 predates the audit that found it
+      // missing. Everything above it is still the board's.
+      expect(body.at(-1)).toBe("WEATHER BY VISUAL CROSSING");
+      expect(body.slice(1, -1)).toEqual(folded(drawnBody).slice(1));
       // Teal means matched, so an empty answer sits on the paper.
       expect(await fillOf(page, built)).toBe("transparent");
     } finally {
@@ -248,16 +252,14 @@ test.describe("with the location refused", () => {
     const cells = folded(await cellsOf(page, built));
     // Eyebrow, headline and lead are copy, word for word.
     expect(cells.slice(0, 3)).toEqual(folded(drawn.slice(0, 3)));
-    // The field is O1's "City"; the board's "Portland, OR" is a
-    // placeholder a runner never sees typed. The hint under it asks for
-    // the state too (PR #102 review): placeholder copy pending design, so
-    // the board does not draw it.
-    expect(cells[3]).toBe("CITY CITY AND STATE, E.G. PORTLAND, OR");
+    // The field is round 26's city field (#12), which supersedes round
+    // 22's field-and-primary: `feed-city.conformance.spec.ts` holds it to
+    // that board. Here it is one cell where round 22 drew two.
+    expect(cells[3]).toMatch(/^YOUR CITY .* FIND/u);
     expect(drawn[3]).toMatch(/^CITY /u);
-    // The primary says what the board's does, and the line under it too.
-    expect(cells.at(-1)).toBe(drawn.at(-1));
-    expect(cells).toContain(`USE THIS CITY [ SAVING ]`);
     expect(drawn).toContain("USE THIS CITY");
+    // The line under it is still round 22's.
+    expect(cells.at(-1)).toBe(drawn.at(-1));
     // Not a failure: no band, nothing yellow.
     await expect(
       page.locator(`${built} [data-part="failure-band"]`),

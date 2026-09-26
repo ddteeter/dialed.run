@@ -1,4 +1,4 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { Column } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -329,4 +329,51 @@ export function folded(cells: readonly string[]): string[] {
  */
 export function holdForever(): Promise<void> {
   return Promise.withResolvers<undefined>().promise;
+}
+
+/**
+ * Answers Find (round 26 #12) in the browser, for the specs and demos that
+ * type a city. E2e runs with no Visual Crossing key, so a real lookup
+ * would always come back as the `NOT FOUND YET` band; this stands in for
+ * the provider, and nothing past Find is faked — Use this still saves
+ * through the real server function.
+ *
+ * A server function's URL ends in its id, base64url-encoded with the
+ * function's name inside, the same reading `a2-attach`'s `isPrefill`
+ * makes. A plain JSON body, not the serialized framing, is read as it stands:
+ * the client unwraps its `result`, as it does a real server function's.
+ */
+export async function answerFind(
+  page: Page,
+  answer:
+    | { kind: "found"; address: string; lat: number; lng: number }
+    | { kind: "not-found" }
+    | { kind: "unavailable" },
+): Promise<void> {
+  await page.route("**/_serverFn/**", async (route) => {
+    const url = route.request().url();
+    const segment = new URL(url).pathname.split("/").pop() ?? "";
+    const decoded = Buffer.from(segment, "base64url").toString("utf8");
+    if (!`${url} ${decoded}`.includes("lookUpCity")) {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ result: answer, context: {} }),
+    });
+  });
+}
+
+/**
+ * Forgets the runner's place, so Your conditions asks for a city again —
+ * what a spec that saves one leaves behind for the next.
+ */
+export async function forgetPlace(userId: string): Promise<void> {
+  await withLocalDb(({ core }) =>
+    core
+      .update(userProfiles)
+      .set({ cityLabel: sql`NULL`, lat: sql`NULL`, lng: sql`NULL` })
+      .where(eq(userProfiles.userId, userId)),
+  );
 }

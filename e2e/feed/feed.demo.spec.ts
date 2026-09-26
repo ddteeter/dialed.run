@@ -1,8 +1,10 @@
 /**
  * Covers: E1 (following feed, the v1 card, its empty state), E2-lite
- * (zero follows lands on Your conditions), runner search, D (post detail —
- * the strip, the note, the kit), H (someone else's profile), D-11 (useful
- * reactions) — one journey, one video.
+ * (zero follows lands on Your conditions; the typed city's Find and Use
+ * this, round 26 #12), runner search, D (post detail — the strip, the
+ * note, the kit), H (someone else's profile), D-11 (useful reactions), the
+ * bell counting a run of any age that still owes a verdict (S2), G's
+ * settings button — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -33,6 +35,11 @@ import { expect, scene, test } from "../support/demo";
 test.use({ storageState: storageStateFor("feed") });
 import { withLocalDb } from "../support/local-db";
 import { nowSeconds } from "../../src/lib/now";
+import {
+  answerFind,
+  feedUserId,
+  forgetPlace,
+} from "../conformance/feed-support";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -44,7 +51,11 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
 
 test("follow a runner, browse their feed, open a verdict, and mark it useful", async ({
   page,
-}) => {
+}, testInfo) => {
+  // ~40 paced actions at the demo project's slowMo outrun Playwright's 30s
+  // default, and a timeout kills the cleanup in `finally` with it. Same
+  // bump as the onboarding and closet demos.
+  testInfo.setTimeout(150_000);
   const suffix = String(Date.now());
   const otherUserId = newUlid();
   const otherDisplayName = `Demo Trailrunner ${suffix}`;
@@ -56,6 +67,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   const observationId = newUlid();
   const midObservationId = newUlid();
   const endObservationId = newUlid();
+  const oldRunId = newUlid();
 
   // Three hours back, so a two-hour run is entirely in the past.
   const startedAt = nowSeconds() - 3 * 3600;
@@ -203,6 +215,24 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     ]);
   });
 
+  // A run of the viewer's own from a month ago that never got a verdict:
+  // the bell counts it, at any age (FEED-3).
+  const viewerId = await feedUserId();
+  await forgetPlace(viewerId);
+  await withLocalDb(({ core }) =>
+    core.insert(runs).values({
+      id: oldRunId,
+      userId: viewerId,
+      source: "manual",
+      startedAt: nowSeconds() - 30 * 24 * 3600,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      title: "A run from last month",
+      weatherStatus: "none",
+    }),
+  );
+
   try {
     // A runner who follows nobody lands on Your conditions (round 22):
     // the one social surface that works on day one. Nothing here grants
@@ -215,6 +245,34 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       page.getByRole("button", { name: "Your conditions" }),
     ).toHaveAttribute("aria-current", "page");
     await expect(page.getByText("Where do you run?")).toBeVisible();
+
+    // The bell's number is every run still owed a verdict, however old —
+    // a month-old run counts (FEED-3), and the name says it in digits.
+    await scene(page, "The bell counts a month-old run still owed a verdict");
+    await expect(
+      page
+        .getByRole("link", { name: /^Notifications, (\d+|9\+) new$/u })
+        .first(),
+    ).toBeVisible();
+
+    // Round 26 #12: the typed city is found before it is used. Find shows
+    // the one place the provider found; nothing is saved until Use this.
+    await scene(page, "Type a city, Find, then Use this");
+    await answerFind(page, {
+      kind: "found",
+      address: "Portland, OR, United States",
+      lat: 45.52,
+      lng: -122.68,
+    });
+    await page.getByLabel("Your city").fill("Portland");
+    await page.getByRole("button", { name: "Find" }).click();
+    await expect(page.getByText("Not it? Add more to the name.")).toBeVisible();
+    await page.getByRole("button", { name: "Use this" }).click();
+    await expect(page.locator('[data-part="resolved-place"]')).toHaveText(
+      "Weather for Portland, OR, United States",
+      { ignoreCase: true },
+    );
+    await page.unrouteAll({ behavior: "ignoreErrors" });
 
     // Following is a tab away, and its empty state is drawn (E1).
     await scene(page, "E1 · nobody yet, and one way to find someone");
@@ -239,6 +297,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
 
     await scene(page, "H · only their public entries");
     await expect(page.getByText("Portland, OR")).toBeVisible();
+    // Not for search engines until the owner decides (FEED-1).
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      "noindex",
+    );
     await expect(page.getByText(publicCaption)).toBeVisible();
     // Their private entry never appears here either — the profile query
     // only ever selects isPublic entries.
@@ -269,6 +332,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(card.locator('[data-part="run-strip"]')).toContainText(
       "43–57° · light rain",
     );
+    // Visual Crossing's reading, credited beside it (FEED-8).
+    await expect(
+      card.getByRole("link", { name: "Weather by Visual Crossing" }),
+    ).toBeVisible();
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
     await expect(page.getByText(privateCaption)).toHaveCount(0);
@@ -285,6 +352,15 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       page.locator('[data-part="run-strip"] [data-part="verdict-badge"]'),
     ).toHaveText("Dialed");
     await expect(page.getByText("43–57° · light rain")).toBeVisible();
+    await expect(
+      page
+        .locator('[data-part="run-strip"]')
+        .getByRole("link", { name: "Weather by Visual Crossing" }),
+    ).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      "noindex",
+    );
     await expect(page.getByText("Janji Rover Half-Zip")).toBeVisible();
 
     // Mark it useful — the reaction verb is "useful", never "like" — and
@@ -295,6 +371,15 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await useful.click();
     await expect(useful).toHaveAttribute("aria-pressed", "true");
     await expect(useful).toContainText("1");
+
+    // G: the settings icon button at the right of the identity line, in
+    // every state (round 26 #18).
+    await scene(page, "G · Settings is an icon button on the identity line");
+    await bar(page).getByRole("link", { name: "You" }).click();
+    await hydrated(page);
+    await expect(
+      page.locator('[data-part="settings-button"]'),
+    ).toHaveAccessibleName("Settings");
 
     // ---- The shell, at both widths (task 115) --------------------------
     //
@@ -336,7 +421,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(launcher(page)).toHaveText("+ Add");
     await page.setViewportSize(DESK);
   } finally {
+    await forgetPlace(viewerId);
     await withLocalDb(async ({ core, weather }) => {
+      await core.delete(runs).where(eq(runs.id, oldRunId));
       await core
         .delete(outfitEntryItems)
         .where(eq(outfitEntryItems.entryId, publicEntryId));
