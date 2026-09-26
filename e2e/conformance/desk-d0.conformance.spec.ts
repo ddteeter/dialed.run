@@ -3,14 +3,8 @@
  * shell" frame: the rail's destinations in order, and Today's three
  * numbers in the digest's order, each with the words the board gives it.
  *
- * **Not collected by CI yet, for the same reason as
- * `e2e/desk/operator.demo.ts`:** the operator exists only with
- * `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's `.dev.vars`, and
- * CI writes that file without it until the owner applies the line in
- * `docs/proposals/125-ci-migrate-before-deploy.md` (D-72). `.skip` is
- * forbidden, so it waits under a name Playwright does not match; renaming
- * it to `desk-d0.conformance.spec.ts` is the whole switch. It passes
- * locally with that line.
+ * The operator exists only with `ADMIN_USER_IDS=e2e-desk-operator` in the
+ * dev server's `.dev.vars`, which CI's e2e job writes (D-72, PR #114).
  *
  * What it does not compare, on purpose: the board's own values (4, 23, 3,
  * "OLDEST · 19H") are the drawing's data, not the app's; "@mara · OPERATOR

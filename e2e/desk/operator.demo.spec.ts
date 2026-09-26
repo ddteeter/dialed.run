@@ -1,15 +1,9 @@
 /**
  * Covers: D0 (the Desk's shell) and Today — one journey, one video.
  *
- * **Not collected by CI yet, deliberately.** Playwright runs
- * `*.demo.spec.ts`; this is `operator.demo.ts` because the journey needs
- * `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's `.dev.vars`, and
- * CI writes that file without it until the owner applies the one line in
- * `docs/proposals/125-ci-migrate-before-deploy.md` (register D-72). A demo
- * cannot skip itself (`.skip` is forbidden), so it waits under a name the
- * runner does not match. When the line lands, rename this file to
- * `operator.demo.spec.ts` and nothing else changes. Until then it is
- * recorded locally, with the same line in a local `.dev.vars`.
+ * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
+ * `.dev.vars`, which CI's e2e job writes (register D-72, PR #114). Locally,
+ * put the same line in yours.
  *
  * Exactly one test() per demo spec.
  */
