@@ -28,20 +28,11 @@ function fakeBatch(queue: string): MessageBatch {
 
 describe("ops (000 §10)", () => {
   it("health reports ok against live local bindings", async () => {
-    // The test bindings carry no vars, and a deployment without its
-    // origin is not healthy (OPS-4), so this one is supplied.
-    const { env } = await import("../../src/env");
-    const original: unknown = env.BETTER_AUTH_URL;
-    Reflect.set(env, "BETTER_AUTH_URL", "https://dialed.test");
-    try {
-      const report = await checkHealth();
-      expect(report.checks.coreDb).toBe("ok");
-      expect(report.checks.weatherDb).toBe("ok");
-      expect(report.checks.media).toBe("ok");
-      expect(report.ok).toBe(true);
-    } finally {
-      Reflect.set(env, "BETTER_AUTH_URL", original);
-    }
+    const report = await checkHealth();
+    expect(report.checks.coreDb).toBe("ok");
+    expect(report.checks.weatherDb).toBe("ok");
+    expect(report.checks.media).toBe("ok");
+    expect(report.ok).toBe(true);
   });
 
   it("digest cron writes its heartbeat and is re-runnable", async () => {
