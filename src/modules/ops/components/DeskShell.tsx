@@ -16,10 +16,27 @@ import type { DeskToday } from "../desk";
  */
 
 /**
-Every destination the rail names, in D0's order plus round 26's D7.
-*/
-export type DeskPage =
-  "today" | "review" | "duplicates" | "gave-up" | "runners" | "access";
+ * Every destination the rail names, in D0's order plus round 26's D7.
+ */
+const DESK_PAGES = [
+  "today",
+  "review",
+  "duplicates",
+  "gave-up",
+  "runners",
+  "access",
+] as const;
+
+export type DeskPage = (typeof DESK_PAGES)[number];
+
+const LABEL: Readonly<Record<DeskPage, string>> = {
+  today: "Today",
+  review: "Review",
+  duplicates: "Duplicates",
+  "gave-up": "Gave up",
+  runners: "Runners",
+  access: "Access",
+};
 
 /**
  * Where each built destination lives. A page not in here is not built
@@ -33,15 +50,6 @@ const BUILT: Readonly<Partial<Record<DeskPage, "/desk" | "/safety/review">>> = {
   today: "/desk",
   review: "/safety/review",
 };
-
-const RAIL: readonly { readonly page: DeskPage; readonly label: string }[] = [
-  { page: "today", label: "Today" },
-  { page: "review", label: "Review" },
-  { page: "duplicates", label: "Duplicates" },
-  { page: "gave-up", label: "Gave up" },
-  { page: "runners", label: "Runners" },
-  { page: "access", label: "Access" },
-];
 
 /**
 A count that needs a person is hi-viz; at zero it is not shown at all.
@@ -132,13 +140,13 @@ export function DeskShell({
           </Mono>
         </div>
         <ul className="flex flex-col gap-3">
-          {RAIL.map((entry) => (
+          {DESK_PAGES.map((page) => (
             <RailEntry
-              key={entry.page}
-              page={entry.page}
-              label={entry.label}
+              key={page}
+              page={page}
+              label={LABEL[page]}
               current={current}
-              count={counts[entry.page]}
+              count={counts[page]}
             />
           ))}
         </ul>

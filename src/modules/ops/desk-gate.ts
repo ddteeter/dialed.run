@@ -16,5 +16,5 @@ import { NotFoundError } from "../../lib/errors";
  * do.
  */
 export function operatorOrNotFound(access: { readonly operator: boolean }) {
-  if (!access.operator) throw new NotFoundError("no desk here");
+  if (!access.operator) throw new NotFoundError();
 }
