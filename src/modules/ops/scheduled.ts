@@ -12,9 +12,14 @@ import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
-import { cronNameFor } from "./crons";
+import { cronNameFor, type CronName } from "./crons";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
-import { captureException } from "./sentry";
+import {
+  captureException,
+  sentryCronReporter,
+  type CronReporter,
+  type SentryReport,
+} from "./sentry";
 import {
   classifierFromEnv,
   pendingReviewCount,
@@ -39,74 +44,107 @@ export interface ScheduledOutcome {
 
 /**
  * Cron entry (000 §10). Every cron writes its heartbeat row first (the
- * digest flags stale ones — law: crons must be safely re-runnable).
+ * digest flags stale ones — law: crons must be safely re-runnable), then
+ * checks in with Sentry Crons around the work (OPS-3): `in_progress`, then
+ * `ok` or `error`. The row says when a cron last ran to anyone reading the
+ * database; the check-in says so to someone who is not, and is the only one
+ * of the two that can notice a cron that stopped firing altogether.
+ *
+ * `reporter` is a parameter so a test can read the check-ins and digest
+ * events a firing produced. Production passes nothing and gets Sentry.
  */
 export async function handleScheduled(
   controller: ScheduledController,
+  reporter: CronReporter = sentryCronReporter,
 ): Promise<ScheduledOutcome> {
   const db = drizzle(env.DIALED_CORE);
-  const cronName = cronNameFor(controller.cron) ?? "unknown";
+  const cronName = cronNameFor(controller.cron);
   await db
     .insert(cronCheckpoints)
-    .values({ cronName, lastRunAt: nowSeconds() })
+    .values({ cronName: cronName ?? "unknown", lastRunAt: nowSeconds() })
     .onConflictDoUpdate({
       target: cronCheckpoints.cronName,
       set: { lastRunAt: nowSeconds() },
     });
 
+  if (cronName === undefined) {
+    // Config/code skew that the bindings-conformance test should have
+    // caught in CI before it could reach a real schedule. No check-in: a
+    // monitor named for a schedule nobody registered would be a second
+    // thing to forget.
+    captureException(new Error("unrecognized cron fired"), {
+      cron: controller.cron,
+    });
+    return { cronName: "unknown", anomalies: [] };
+  }
+
+  const checkIn = reporter.checkIn({
+    slug: cronName,
+    schedule: controller.cron,
+  });
+  try {
+    const anomalies = await runCron(cronName, reporter);
+    checkIn.finish("ok");
+    return { cronName, anomalies };
+  } catch (error) {
+    checkIn.finish("error");
+    throw error;
+  }
+}
+
+async function runCron(
+  cronName: CronName,
+  reporter: CronReporter,
+): Promise<readonly string[]> {
   switch (cronName) {
     case "daily-digest": {
-      return { cronName, anomalies: await runDailyDigest() };
+      return runDailyDigest(reporter);
     }
     case "weather-retry": {
       // docs/tasks/103-weather.md requirement 4/5: the hourly
       // pending-observation retry, claim-then-work at the module level.
       await retryPendingWeather();
-      return { cronName, anomalies: [] };
+      return [];
     }
     case "enrichment-retry": {
       const anomalies: string[] = [];
       await redispatchStalledEnrichments(anomalies);
-      return { cronName, anomalies };
+      return anomalies;
     }
     case "screening-retry": {
-      // Task 106 §1: re-drive photos still marked `pending` (law 8c).
-      // `pending` is the durable marker, so this is reconciliation and the
-      // path needs no queue.
-      const anomalies: string[] = [];
-      await retryPendingScreenings(classifierFromEnv(), anomalies);
-      // Two more reconciliations share this firing, both raised on PR #73
-      // and both the same shape as the screening retry: a durable marker
-      // exists, so something has to re-read it.
-      //
-      // The hide that `fileReport` does in a third statement, if the
-      // worker died before reaching it — the reports are written, the
-      // entry is still visible, and nothing else would ever notice.
-      const reconciled = await reconcileUnhiddenReports();
-      if (reconciled.hidden > 0) {
-        anomalies.push(
-          `${String(reconciled.hidden)} reported subjects were over the threshold and had not been hidden`,
-        );
-      }
-      // And review claims whose reviewer never came back, which otherwise
-      // hold a subject out of the queue permanently.
-      const released = await releaseStaleClaims();
-      if (released.released > 0) {
-        anomalies.push(
-          `${String(released.released)} review claims went stale and were returned to the queue`,
-        );
-      }
-      return { cronName, anomalies };
-    }
-    default: {
-      // Config/code skew that the bindings-conformance test should have
-      // caught in CI before it could reach a real schedule.
-      captureException(new Error("unrecognized cron fired"), {
-        cron: controller.cron,
-      });
-      return { cronName, anomalies: [] };
+      return runScreeningRetry();
     }
   }
+}
+
+async function runScreeningRetry(): Promise<string[]> {
+  // Task 106 §1: re-drive photos still marked `pending` (law 8c).
+  // `pending` is the durable marker, so this is reconciliation and the
+  // path needs no queue.
+  const anomalies: string[] = [];
+  await retryPendingScreenings(classifierFromEnv(), anomalies);
+  // Two more reconciliations share this firing, both raised on PR #73
+  // and both the same shape as the screening retry: a durable marker
+  // exists, so something has to re-read it.
+  //
+  // The hide that `fileReport` does in a third statement, if the
+  // worker died before reaching it — the reports are written, the
+  // entry is still visible, and nothing else would ever notice.
+  const reconciled = await reconcileUnhiddenReports();
+  if (reconciled.hidden > 0) {
+    anomalies.push(
+      `${String(reconciled.hidden)} reported subjects were over the threshold and had not been hidden`,
+    );
+  }
+  // And review claims whose reviewer never came back, which otherwise
+  // hold a subject out of the queue permanently.
+  const released = await releaseStaleClaims();
+  if (released.released > 0) {
+    anomalies.push(
+      `${String(released.released)} review claims went stale and were returned to the queue`,
+    );
+  }
+  return anomalies;
 }
 
 /**
@@ -328,11 +366,15 @@ function failedAndOwed(): SQL | undefined {
  * failure mode is a queue nobody opened rather than a queue that grew.
  * One waiting report is worth saying out loud; zero says nothing, so the
  * digest stays quiet on the ordinary day.
+ *
+ * The number is safety's `pendingReviewCount`, which the Desk's Today
+ * reads too, so the digest and Today cannot disagree (Operator Screens
+ * D5) — and the digest does not pay for Today's other reads to get it.
  */
 async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
-  const depth = await pendingReviewCount();
-  if (depth === 0) return;
-  anomalies.push(`${String(depth)} item(s) awaiting moderation review`);
+  const waiting = await pendingReviewCount();
+  if (waiting === 0) return;
+  anomalies.push(`${String(waiting)} item(s) awaiting moderation review`);
 }
 
 /**
@@ -408,32 +450,85 @@ async function redispatchStalledEnrichments(
 }
 
 /**
- * Exception-based alerting skeleton: checks run, thresholds compare, and
- * ONLY anomalies get surfaced. Notification transport (email) lands with
- * lane 102's notification plumbing; until then anomalies go to Sentry.
+ * What the digest checks, one kind per line of the report.
+ *
+ * **The kind is what Sentry groups by** (OPS-2, audit finding 0.5). Every
+ * digest used to be one `Error("daily digest anomalies")`, so every day
+ * folded into the first day's issue, and Sentry's default alert — new
+ * issues only — never fired again. Each kind now sends its own event,
+ * fingerprinted by kind *and day*, so a new day is a new issue, and tagged
+ * so an alert rule can match every digest event by tag whatever it groups
+ * into. The rule itself is a deployment step (deployment plan §5).
  */
-async function runDailyDigest(): Promise<string[]> {
-  const anomalies: string[] = [];
-  await checkWeatherBacklog(anomalies);
-  await checkExtractionYield(anomalies);
-  await checkAbandonedEnrichments(anomalies);
-  await redispatchStrandedRevocations(anomalies);
-  // The generic outbox rides the same firing as the Strava one: drain
-  // first, so the backlog check below counts only what is still owed.
+export const digestKinds = [
+  "weather-backlog",
+  "extraction-yield",
+  "abandoned-enrichment",
+  "strava-revocation",
+  "outbox",
+  "stalled-import",
+  "review-queue",
+] as const;
+
+export type DigestKind = (typeof digestKinds)[number];
+
+/**
+ * The event for one kind on one day. The day is the digest's UTC date,
+ * which is the unit a person reads it in: one issue per kind per morning.
+ */
+export function digestReport(
+  kind: DigestKind,
+  lines: readonly string[],
+  day: string,
+): SentryReport {
+  return {
+    context: { kind, anomalies: lines.join("; ") },
+    tags: { digest: "daily", digest_kind: kind },
+    fingerprint: ["daily-digest", kind, day],
+  };
+}
+
+/**
+ * Exception-based alerting: checks run, thresholds compare, and ONLY
+ * anomalies get surfaced — one Sentry event per kind that found any.
+ */
+async function runDailyDigest(reporter: CronReporter): Promise<string[]> {
   const db = drizzle(env.DIALED_CORE);
-  await drainOutbox(db, anomalies);
-  await checkOutboxBacklog(db, anomalies);
-  await redispatchStalledImports(anomalies);
-  await checkReviewQueueDepth(anomalies);
+  // The generic outbox rides the same firing as the Strava one: drain
+  // first, so the backlog check counts only what is still owed.
+  // Keyed by kind and walked in `digestKinds` order, so the table cannot
+  // name a kind the list does not, nor leave one out: the compiler holds
+  // the keys to the union, and a missing entry is a call to `undefined`.
+  const checks: Readonly<
+    Record<DigestKind, (anomalies: string[]) => Promise<void>>
+  > = {
+    "weather-backlog": checkWeatherBacklog,
+    "extraction-yield": checkExtractionYield,
+    "abandoned-enrichment": checkAbandonedEnrichments,
+    "strava-revocation": redispatchStrandedRevocations,
+    outbox: async (anomalies) => {
+      await drainOutbox(db, anomalies);
+      await checkOutboxBacklog(db, anomalies);
+    },
+    "stalled-import": redispatchStalledImports,
+    "review-queue": checkReviewQueueDepth,
+  };
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)
   // - stale cron_checkpoints rows
-  if (anomalies.length > 0) {
-    captureException(new Error("daily digest anomalies"), {
-      anomalies: anomalies.join("; "),
-    });
+  const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+  const everything: string[] = [];
+  for (const kind of digestKinds) {
+    const lines: string[] = [];
+    await checks[kind](lines);
+    if (lines.length === 0) continue;
+    reporter.report(
+      new Error(`daily digest: ${kind}`),
+      digestReport(kind, lines, day),
+    );
+    everything.push(...lines);
   }
-  return anomalies;
+  return everything;
 }
 
 /**

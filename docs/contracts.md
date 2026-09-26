@@ -334,7 +334,7 @@ notifications(user_id, read)
 ```
 weather_observations: id, run_id (nullable), lat_r, lng_r, hour_bucket,
   temp_c, feels_like_c, humidity, wind_kph, precip_mm, condition,
-  source ('visualcrossing' | 'manual'), fetched_at
+  source ('visualcrossing' | 'manual' — 'manual' being dropped, see below), fetched_at
 UNIQUE(lat_r, lng_r, hour_bucket)   -- the cache key: lat/lng rounded to 2dp
 
 manual_conditions: run_id (PK), temp_c, set_at   -- R2b's band, one run's own
@@ -343,10 +343,13 @@ manual_conditions: run_id (PK), temp_c, set_at   -- R2b's band, one run's own
 `weather_observations` is a shared cache and holds real observations only.
 A band a runner sets in R2b belongs to that run and lives in
 `manual_conditions`, keyed by the run — never in a cache cell, where it would
-answer for every other runner at that place and hour (PR #103, B1). Legacy
-`source='manual'` cache rows written before that table are skipped by every
-reader and upgraded in place by the next real fetch. A band reads back tagged
-`source='manual'` and is excluded from consensus aggregates and future
+answer for every other runner at that place and hour (PR #103, B1). No
+`source='manual'` cache row has ever been deployed, and nothing writes one:
+the cache's readers no longer step around them (task 125, OPS-14), and the
+owner has approved dropping `'manual'` from the column's enum (2026-09-26),
+which lands once feed's two `ne(source, 'manual')` filters are gone (task
+129). A band reads back tagged `source='manual'` — a label on the reading,
+not a cache row — and is excluded from consensus aggregates and future
 training queries. Every stored value is metric; display
 units convert at render from user prefs.
 

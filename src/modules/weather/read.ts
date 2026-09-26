@@ -4,7 +4,7 @@
  * touches `dialed-weather` (docs/architecture.md), so any other module
  * needs a read path through here.
  */
-import { and, eq, ne, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
@@ -52,8 +52,7 @@ export async function manualReadingsForRuns(
 
 /**
  * Consensus batch read (104's "your conditions" block): real observations
- * only — a band is never in the cache, and a legacy manual row still there
- * is excluded from every aggregate the module exposes (contracts.md). Bounded
+ * only — a band is never in the cache (contracts.md). Bounded
  * by the caller's own scan window (104's packet requires the EXPLAIN +
  * row-scan cap on its side); this only matches the exact cache cells the
  * given runs land in.
@@ -93,14 +92,14 @@ export async function observationsForRuns(
   // Equivalent mutant: skipping this return changes no answer — the loop
   // at the bottom is keyed off `keyed`, so an empty one yields an empty
   // map either way. What it saves is a query that would otherwise scan
-  // every non-manual observation.
+  // every observation.
   // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement
   if (keyed.length === 0) {
     return result;
   }
 
   // Equivalent mutant: emptying this callback widens the scan to every
-  // non-manual row and cannot change the result, which is looked up by
+  // row and cannot change the result, which is looked up by
   // cell key afterwards. It is a query-cost guard, and cost is the one
   // thing no assertion here can see.
   // Stryker disable next-line ArrowFunction
@@ -115,9 +114,7 @@ export async function observationsForRuns(
   const rows = await drizzle(env.DIALED_WEATHER)
     .select()
     .from(weatherObservations)
-    .where(
-      and(or(...cellConditions), ne(weatherObservations.source, "manual")),
-    );
+    .where(or(...cellConditions));
 
   const bySourceKey = new Map(
     rows.map((row) => [keyString(row.latR, row.lngR, row.hourBucket), row]),
