@@ -13,6 +13,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { accountEmail, storageStateFor } from "../support/accounts";
 import {
   alignmentsOf,
+  colorRole,
   cellsOf,
   fillsOf,
   openBoard,
@@ -20,6 +21,15 @@ import {
   signatureOf,
 } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
+import type { Seeded } from "./logging-fixtures";
+import {
+  hydrated,
+  seedEntry,
+  seedItem,
+  seedRun,
+  unseed,
+  userIdOf,
+} from "./logging-fixtures";
 
 /**
  * A3's verdict row, built against drawn.
@@ -80,10 +90,13 @@ test("A3's verdict row and chips are composed as the board draws them", async ({
   // many, where MORE sits, and what a chosen one wears.
   const drawnChips = await cellsOf(page, part(A3, "flag-chips"));
   const drawnChipFills = await fillsOf(page, part(A3, "flag-chips"));
-  expect(drawnChips, "the board has no A3 flag-chips region").not.toHaveLength(0);
+  expect(drawnChips, "the board has no A3 flag-chips region").not.toHaveLength(
+    0,
+  );
   const chosen = drawnFills.findIndex((fill) => fill !== "transparent");
   const chosenLabel = drawnCells[chosen];
-  if (chosenLabel === undefined) throw new Error("the board draws no chosen cell");
+  if (chosenLabel === undefined)
+    throw new Error("the board draws no chosen cell");
 
   // ---- What we built --------------------------------------------------
   const itemId = newUlid();
@@ -214,4 +227,132 @@ test("A3's verdict row and chips are composed as the board draws them", async ({
       await core.delete(wardrobeItems).where(eq(wardrobeItems.id, itemId));
     });
   }
+});
+
+/**
+ * Round 21's three frames for A3 (Round 21 Rulings): before a verdict,
+ * A3b, and Noted when nothing moved. Seeded through the logging lane's
+ * fixtures, so the run is the boards' own — 6.2 miles — and, for the
+ * nothing-moved receipt, a run with no weather at all.
+ */
+test.describe("A3 · round 21", () => {
+  const RULINGS = "Round 21 Rulings.dc.html";
+  let seeded: Seeded;
+  let entryId: string;
+
+  test.beforeEach(async () => {
+    seeded = {
+      userId: await userIdOf("verdict"),
+      runIds: [],
+      itemIds: [],
+      entryIds: [],
+    };
+    const runId = await seedRun(seeded, {
+      observed: false,
+      weatherStatus: "failed",
+    });
+    const itemId = await seedItem(seeded, "Half-zip", "top");
+    entryId = await seedEntry(seeded, runId, [itemId]);
+  });
+
+  test.afterEach(async () => {
+    await unseed(seeded);
+  });
+
+  test("before a verdict: five tags and MORE, none chosen", async ({
+    page,
+    baseURL,
+  }) => {
+    if (baseURL === undefined) throw new Error("no baseURL");
+    const label = "A3 Before verdict";
+    await openBoard(page, RULINGS, baseURL);
+    const drawnChips = await cellsOf(page, part(label, "flag-chips"));
+    const drawnFills = await fillsOf(page, part(label, "flag-chips"));
+    expect(
+      drawnChips,
+      "the board has no chips before a verdict",
+    ).not.toHaveLength(0);
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`/feed/verdict/${entryId}`);
+    await hydrated(page);
+
+    const chips = await cellsOf(page, '[data-slot="flag-chips"]');
+    expect(chips).toHaveLength(drawnChips.length);
+    expect(chips.at(-1)).toBe(drawnChips.at(-1));
+    expect(await fillsOf(page, '[data-slot="flag-chips"]')).toEqual(drawnFills);
+  });
+
+  test("A3b: titled with the verdict it qualifies, all nine tags", async ({
+    page,
+    baseURL,
+  }) => {
+    if (baseURL === undefined) throw new Error("no baseURL");
+    await openBoard(page, RULINGS, baseURL);
+    const drawnSheet = await signatureOf(
+      page,
+      part("A3b Anything specific", "sheet"),
+    );
+    expect(drawnSheet, "the board has no A3b sheet").not.toHaveLength(0);
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`/feed/verdict/${entryId}`);
+    await hydrated(page);
+    // The board's sheet opened on "A bit warm".
+    await page.getByRole("button", { name: "A bit warm" }).click();
+    await page.getByRole("button", { name: "More ›" }).click();
+    const sheet = page.getByRole("dialog", { name: "Anything specific?" });
+    await expect(sheet).toBeVisible();
+
+    const built = await signatureOf(page, "dialog[open]");
+    // Its first two rows: the question, and the verdict it qualifies.
+    expect(built.slice(0, 2)).toEqual(drawnSheet.slice(0, 2));
+    // And the nine tags, whatever the kit.
+    await expect(sheet.locator("[aria-pressed]")).toHaveCount(9);
+  });
+
+  test("Noted, nothing moved: the receipt, the chips read-only, no MORE", async ({
+    page,
+    baseURL,
+  }) => {
+    if (baseURL === undefined) throw new Error("no baseURL");
+    const label = "A3 Noted, nothing moved";
+    await openBoard(page, RULINGS, baseURL);
+    const drawnHeader = await signatureOf(page, part(label, "header"));
+    const drawnChips = await cellsOf(page, part(label, "flag-chips"));
+    const drawnNoted = await signatureOf(page, part(label, "noted"));
+    const drawnNotedFill = await page.$eval(
+      part(label, "noted"),
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    expect(
+      drawnNoted,
+      "the board has no nothing-moved receipt",
+    ).not.toHaveLength(0);
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`/feed/verdict/${entryId}`);
+    await hydrated(page);
+    await page.getByRole("button", { name: "Dialed" }).click();
+    await page.getByRole("button", { name: "Log it" }).click();
+
+    const noted = page.locator('[data-slot="noted"]');
+    await expect(noted).toBeVisible({ timeout: 15_000 });
+    expect(await signatureOf(page, '[data-slot="noted"]')).toEqual(drawnNoted);
+    const fill = await noted.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    expect(colorRole(fill)).toBe(colorRole(drawnNotedFill));
+
+    // The header names the unit, with no temperature to be "at".
+    const header = await signatureOf(page, '[data-slot="header"]');
+    expect(header).toHaveLength(drawnHeader.length);
+    expect(header[1]).toEqual(drawnHeader[1]);
+
+    // The chips stay — five, no MORE — and nothing navigated.
+    const chips = await cellsOf(page, '[data-slot="flag-chips"]');
+    expect(chips).toHaveLength(drawnChips.length);
+    await expect(page.getByRole("button", { name: "More ›" })).toHaveCount(0);
+    expect(new URL(page.url()).pathname).toBe(`/feed/verdict/${entryId}`);
+  });
 });

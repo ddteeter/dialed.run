@@ -11,6 +11,7 @@ import {
 import {
   makeEntry,
   makeItem,
+  makeManualBand,
   makeObservation,
   makeRun,
   makeUser,
@@ -33,11 +34,24 @@ describe("your conditions consensus (E2-lite)", () => {
     const lat = 11;
     const lng = 11;
     const author = await makeUser();
-    await makeObservation({ lat, lng, startedAt: NOW, tempC: 8, feelsLikeC: 6, precipMm: 0 });
+    await makeObservation({
+      lat,
+      lng,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 6,
+      precipMm: 0,
+    });
     for (let index = 0; index < 150; index += 1) {
       const item = await makeItem({ userId: author, category: "top" });
       const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
-      await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW - index, itemIds: [item] });
+      await makeEntry({
+        userId: author,
+        runId,
+        isPublic: true,
+        createdAt: NOW - index,
+        itemIds: [item],
+      });
     }
 
     const result = await yourConditionsConsensus(
@@ -140,6 +154,23 @@ describe("your conditions consensus (E2-lite)", () => {
       precipMm: 0,
       source: "manual",
     });
+
+    const result = await yourConditionsConsensus(
+      pointConditions({ tempC: 8, feelsLikeC: 8 }),
+      NOW,
+    );
+    expect(result.total).toBe(0);
+  });
+
+  it("excludes a run's own band from the aggregate (B1)", async () => {
+    // R2b's band is the run's conditions on its own screens, and nowhere
+    // an aggregate reads — it is one runner's pick, not the weather.
+    const lat = 41;
+    const lng = 41;
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author, lat, lng, startedAt: NOW });
+    await makeEntry({ userId: author, runId, isPublic: true, createdAt: NOW });
+    await makeManualBand(runId, 8);
 
     const result = await yourConditionsConsensus(
       pointConditions({ tempC: 8, feelsLikeC: 8 }),

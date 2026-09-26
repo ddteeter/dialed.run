@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { dayLabel, dayTimeLabel, isTimeZone } from "../../src/lib/dates";
+import {
+  clockLabel,
+  dayLabel,
+  dayTimeLabel,
+  isTimeZone,
+  deviceTimeZone,
+  startAtTimeOfDay,
+  timeOfDay,
+} from "../../src/lib/dates";
 
 /**
  * The bug these two exist to prevent is a hydration mismatch, which no
@@ -124,5 +132,84 @@ describe("isTimeZone", () => {
     expect(isTimeZone("")).toBe(false);
     expect(isTimeZone(undefined)).toBe(false);
     expect(isTimeZone(-5)).toBe(false);
+  });
+});
+
+describe("clockLabel", () => {
+  it("draws the board's twelve-hour clock, in capitals", () => {
+    // The minutes keep their leading zero where the hour does not, and
+    // half past midnight is twelve, not zero.
+    expect(clockLabel(LATE_ON_THE_21ST)).toBe("11:30 PM");
+    expect(clockLabel(EARLY_ON_THE_22ND)).toBe("12:30 AM");
+    const sixOhFour = Math.floor(Date.UTC(2026, 7, 29, 6, 4) / 1000);
+    expect(clockLabel(sixOhFour)).toBe("6:04 AM");
+  });
+
+  it("reads the time where the run happened", () => {
+    // Chicago is five hours behind UTC in September.
+    expect(clockLabel(LATE_ON_THE_21ST, "America/Chicago")).toBe("6:30 PM");
+  });
+
+  it("falls back to UTC for a zone Intl will not take", () => {
+    expect(clockLabel(LATE_ON_THE_21ST, "Not/AZone")).toBe("11:30 PM");
+  });
+});
+
+describe("timeOfDay", () => {
+  it("writes the clock as a time input does, padded and 24-hour", () => {
+    expect(timeOfDay(LATE_ON_THE_21ST)).toBe("23:30");
+    expect(timeOfDay(EARLY_ON_THE_22ND)).toBe("00:30");
+    expect(timeOfDay(LATE_ON_THE_21ST, "America/Chicago")).toBe("18:30");
+  });
+});
+
+describe("startAtTimeOfDay", () => {
+  it("is the start that reads the picked time on the run's own clock", () => {
+    // 18:30 in Chicago, moved to 06:04 the same day: back 12h 26m.
+    expect(startAtTimeOfDay(LATE_ON_THE_21ST, "America/Chicago", "06:04")).toBe(
+      LATE_ON_THE_21ST - (12 * 60 + 26) * 60,
+    );
+    // And forward, read in UTC when the run has no zone.
+    expect(startAtTimeOfDay(EARLY_ON_THE_22ND, undefined, "01:45")).toBe(
+      EARLY_ON_THE_22ND + 75 * 60,
+    );
+  });
+
+  it("leaves a run at the time it already has", () => {
+    expect(startAtTimeOfDay(LATE_ON_THE_21ST, undefined, "23:30")).toBe(
+      LATE_ON_THE_21ST,
+    );
+  });
+
+  it("gives the same start however often it is asked — a retry is not a second move", () => {
+    const once = startAtTimeOfDay(LATE_ON_THE_21ST, "America/Chicago", "07:00");
+    expect(startAtTimeOfDay(once, "America/Chicago", "07:00")).toBe(once);
+  });
+});
+
+/**
+The zone this device's clock is made to read in, for one test.
+*/
+function deviceReads(timeZone: string): void {
+  const resolved = new Intl.DateTimeFormat().resolvedOptions();
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    ...resolved,
+    timeZone,
+  });
+}
+
+describe("deviceTimeZone", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is the zone this device's clock reads in", () => {
+    deviceReads("America/Chicago");
+    expect(deviceTimeZone()).toBe("America/Chicago");
+  });
+
+  it("is none when the device names a zone Intl would not take back", () => {
+    deviceReads("Nowhere/Special");
+    expect(deviceTimeZone()).toBeUndefined();
   });
 });

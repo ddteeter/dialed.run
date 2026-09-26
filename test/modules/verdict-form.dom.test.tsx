@@ -5,15 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import {
-  act,
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -21,7 +13,6 @@ import { describe, expect, it, vi } from "vitest";
 import { entryTags, verdictScale } from "../../src/lib/contracts";
 import type { BandSignals } from "../../src/modules/feed/band-signals";
 import type { Units } from "../../src/lib/contracts";
-import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
 import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
@@ -145,7 +136,6 @@ async function openSpecifics(
 
 const nothing = () => Promise.resolve();
 const noStat = () => Promise.resolve({ worn: 1, total: 1 });
-const noUpload = () => Promise.resolve({ key: "k" });
 
 /**
  * Rejects with `reason` exactly as given, never wrapped in an Error.
@@ -177,15 +167,9 @@ function form(
     submitVerdict?: (input: {
       data: Record<string, unknown>;
     }) => Promise<unknown>;
-    uploadPhoto?: (input: { data: FormData }) => Promise<{ key: string }>;
     itemBandWearStat?: (input: {
       data: { itemId: string; bandFloorC: number };
     }) => Promise<{ worn: number; total: number }>;
-    renderPhotoStep?: (
-      file: File,
-      onReady: (ready: File) => void,
-      announce: (sentence: string) => void,
-    ) => ReactNode;
   } = {},
 ) {
   return (
@@ -203,11 +187,7 @@ function form(
       }
       units={overrides.units ?? { temp: "f", distance: "mi" }}
       submitVerdict={overrides.submitVerdict ?? nothing}
-      uploadPhoto={overrides.uploadPhoto ?? noUpload}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
-      {...(overrides.renderPhotoStep !== undefined && {
-        renderPhotoStep: overrides.renderPhotoStep,
-      })}
     />
   );
 }
@@ -1134,244 +1114,6 @@ describe("VerdictForm: tags and sharing", () => {
   });
 });
 
-function fileInput(): HTMLInputElement {
-  const input = document.querySelector("input[type='file']");
-  if (!(input instanceof HTMLInputElement)) throw new Error("no file input");
-  return input;
-}
-
-function jpeg(name = "a.jpg"): File {
-  return new File(["x"], name, { type: "image/jpeg" });
-}
-
-describe("VerdictForm: photos", () => {
-  it("shows the photos the entry already has", async () => {
-    const { container } = await renderWithRouter(
-      form({ entry: { photoKeys: ["entries/01USER/01ENTRY/a"] } }),
-    );
-    const image = container.querySelector("img");
-    expect(image).toHaveAttribute(
-      "src",
-      "/feed/photo/entries/01USER/01ENTRY/a",
-    );
-  });
-
-  it("shows no grid at all when there are none", async () => {
-    // Not an empty grid: a four-column grid with nothing in it is a gap
-    // above the Add a photo link.
-    const { container } = await renderWithRouter(form());
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(container.querySelectorAll(".grid-cols-4")).toHaveLength(0);
-  });
-
-  it("shows the grid as soon as there is one photo", async () => {
-    const { container } = await renderWithRouter(
-      form({ entry: { photoKeys: ["a"] } }),
-    );
-    expect(container.querySelectorAll(".grid-cols-4")).toHaveLength(1);
-  });
-
-  it("uploads a photo as multipart, with its own idempotency key", async () => {
-    // One key per file, not per submission: each photo is its own create.
-    const user = userEvent.setup();
-    const uploadPhoto = vi.fn<
-      (input: { data: FormData }) => Promise<{ key: string }>
-    >(() => Promise.resolve({ key: "new-key" }));
-    await renderWithRouter(form({ uploadPhoto }));
-
-    await user.upload(fileInput(), jpeg());
-
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(1);
-    });
-    const sent = uploadPhoto.mock.calls[0]?.[0]?.data;
-    expect(sent?.get("entryId")).toBe("01JENTRY000000000000000000");
-    expect(sent?.get("photo")).toBeInstanceOf(File);
-    expect(typeof sent?.get("idempotencyKey")).toBe("string");
-  });
-
-  it("adds the uploaded photo to the grid", async () => {
-    const user = userEvent.setup();
-    const { container } = await renderWithRouter(
-      form({ uploadPhoto: () => Promise.resolve({ key: "new-key" }) }),
-    );
-
-    await user.upload(fileInput(), jpeg());
-
-    await waitFor(() => {
-      expect(container.querySelectorAll("img")).toHaveLength(1);
-    });
-    expect(container.querySelector("img")).toHaveAttribute(
-      "src",
-      "/feed/photo/new-key",
-    );
-  });
-
-  it("uploads several at once, each with its own key", async () => {
-    const user = userEvent.setup();
-    const keys: unknown[] = [];
-    const uploadPhoto = vi.fn((input: { data: FormData }) => {
-      keys.push(input.data.get("idempotencyKey"));
-      return Promise.resolve({ key: `k${String(keys.length)}` });
-    });
-    await renderWithRouter(form({ uploadPhoto }));
-
-    await user.upload(fileInput(), [jpeg("a.jpg"), jpeg("b.jpg")]);
-
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(2);
-    });
-    expect(keys[0]).not.toBe(keys[1]);
-  });
-
-  it("refuses a type the server would refuse", async () => {
-    // `applyAccept: false` so the file reaches the handler: the `accept`
-    // attribute is a hint the browser may honour, and the check in the
-    // handler is the one that has to hold.
-    const user = userEvent.setup({ applyAccept: false });
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    await renderWithRouter(form({ uploadPhoto }));
-
-    await user.upload(
-      fileInput(),
-      new File(["x"], "a.gif", { type: "image/gif" }),
-    );
-
-    expect(
-      await screen.findByText("Photos must be JPEG, PNG, or WebP."),
-    ).toBeVisible();
-    expect(uploadPhoto).not.toHaveBeenCalled();
-  });
-
-  it("keeps going past a refused file to the ones that are fine", async () => {
-    // `continue`, not `break`: one bad file in a multi-select should not
-    // silently drop the rest.
-    const user = userEvent.setup({ applyAccept: false });
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    await renderWithRouter(form({ uploadPhoto }));
-
-    await user.upload(fileInput(), [
-      new File(["x"], "a.gif", { type: "image/gif" }),
-      jpeg("b.jpg"),
-    ]);
-
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("stops at the cap, and says why", async () => {
-    const user = userEvent.setup();
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    await renderWithRouter(
-      form({
-        entry: {
-          photoKeys: Array.from({ length: maxPhotosPerEntry - 1 }, (_, i) =>
-            String(i),
-          ),
-        },
-        uploadPhoto,
-      }),
-    );
-
-    await user.upload(fileInput(), [jpeg("a.jpg"), jpeg("b.jpg")]);
-
-    // At the cap the Add-a-photo control is gone — and the sentence
-    // explaining why has to outlive it, which is the whole point of the
-    // field rendering when there is an error but no control.
-    await waitFor(() => {
-      expect(screen.queryByLabelText("Add a photo")).toBeNull();
-    });
-    expect(
-      await screen.findByText(
-        `Up to ${String(maxPhotosPerEntry)} photos per entry.`,
-      ),
-    ).toBeVisible();
-    // The first went up; the second hit the cap.
-    expect(uploadPhoto).toHaveBeenCalledTimes(1);
-  });
-
-  it("hides the picker entirely once the entry is full", async () => {
-    const { container } = await renderWithRouter(
-      form({
-        entry: {
-          photoKeys: Array.from({ length: maxPhotosPerEntry }, (_, i) =>
-            String(i),
-          ),
-        },
-      }),
-    );
-    expect(container.querySelectorAll("input[type='file']")).toHaveLength(0);
-  });
-
-  it("says so when an upload fails", async () => {
-    const user = userEvent.setup();
-    await renderWithRouter(
-      form({ uploadPhoto: () => Promise.reject(new Error("R2 unavailable")) }),
-    );
-
-    await user.upload(fileInput(), jpeg());
-
-    expect(
-      await screen.findByText("Couldn't upload that photo. Try again."),
-    ).toBeVisible();
-  });
-
-  it("says it is uploading while it works, and stops after", async () => {
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ key: string }>();
-    await renderWithRouter(form({ uploadPhoto: () => pending.promise }));
-
-    await user.upload(fileInput(), jpeg());
-
-    expect(await screen.findByText("Uploading…")).toBeVisible();
-    pending.resolve({ key: "k" });
-    await waitFor(() => {
-      expect(screen.getByText("Add a photo")).toBeVisible();
-    });
-  });
-
-  it("does nothing when the picker is dismissed", async () => {
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    await renderWithRouter(form({ uploadPhoto }));
-
-    fileInput().dispatchEvent(new Event("change", { bubbles: true }));
-
-    expect(uploadPhoto).not.toHaveBeenCalled();
-  });
-
-  it("says nothing at rest", async () => {
-    const { container } = await renderWithRouter(form());
-    expect(container.querySelectorAll("p.text-pink")).toHaveLength(0);
-  });
-
-  it("clears the last photo message when a new one is picked", async () => {
-    const user = userEvent.setup({ applyAccept: false });
-    const pending = Promise.withResolvers<{ key: string }>();
-    const uploadPhoto = vi
-      .fn<() => Promise<{ key: string }>>()
-      .mockReturnValueOnce(pending.promise);
-    await renderWithRouter(form({ uploadPhoto }));
-
-    await user.upload(
-      fileInput(),
-      new File(["x"], "a.gif", { type: "image/gif" }),
-    );
-    expect(
-      await screen.findByText("Photos must be JPEG, PNG, or WebP."),
-    ).toBeVisible();
-
-    await user.upload(fileInput(), jpeg("b.jpg"));
-
-    await waitFor(() => {
-      expect(
-        screen.queryByText("Photos must be JPEG, PNG, or WebP."),
-      ).toBeNull();
-    });
-    pending.resolve({ key: "k" });
-  });
-});
-
 describe("VerdictForm: the history line beneath the row (D-97)", () => {
   it("shows this runner's history in the band, which the route already loads", async () => {
     // The verdict route has fetched `verdictBandCounts` on every visit and
@@ -1434,7 +1176,45 @@ describe("VerdictForm: what happens after saving", () => {
     });
   });
 
-  it("goes straight to the entry when there is no band to count in", async () => {
+  it("locks and lands Noted when the save worked but the count did not come back", async () => {
+    // The stat is read after the verdict has landed. A throw from it used
+    // to reach the form as the submission's own failure — "Nothing saved",
+    // the form unlocked — about a verdict that was saved.
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn(() => Promise.resolve({ ok: true }));
+    await renderWithRouter(
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        bandFloor: 5,
+        submitVerdict,
+        itemBandWearStat: () => Promise.reject(new Error("D1 hiccup")),
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    const receipt = await waitFor(() => {
+      const found = document.querySelector("[data-slot='noted']");
+      if (found === null) throw new Error("no receipt yet");
+      return found;
+    });
+    expect(receipt).toHaveTextContent(/^Noted$/u);
+    // No empty sentence standing in for the missing one.
+    expect(receipt.querySelector("p")).toBeNull();
+    expect(screen.queryByText(/Nothing saved/u)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(submitVerdict).toHaveBeenCalledTimes(1);
+  });
+
+  it("lands a receipt naming the missing weather when there is no band, and stays", async () => {
+    // Round 21, ask 3: "Draw a receipt … A3 never navigates; jumping
+    // straight to the entry breaks that on exactly the runs where the
+    // runner most wonders if it worked." It used to go to the entry.
     const user = userEvent.setup();
     const itemBandWearStat = vi.fn(() =>
       Promise.resolve({ worn: 1, total: 1 }),
@@ -1449,26 +1229,48 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe(
-        "/feed/entry/01JENTRY000000000000000000",
-      );
-    });
+    const sentence = await screen.findByText(
+      "Logged. No weather came with this run, so no band record moved.",
+    );
+    expect(sentence.closest("[role='status']")).toHaveTextContent(/^Noted/);
+    expect(router.state.location.pathname).toBe("/");
+    // No band, no record to read — the stat is never asked for.
     expect(itemBandWearStat).not.toHaveBeenCalled();
   });
 
-  it("goes straight there when the entry has no items either", async () => {
+  it("names the missing kit when there is a band but nothing was worn", async () => {
     const user = userEvent.setup();
-    const { router } = await renderWithRouter(form({ bandFloor: 5 }));
+    const itemBandWearStat = vi.fn(() =>
+      Promise.resolve({ worn: 1, total: 1 }),
+    );
+    const { router } = await renderWithRouter(
+      form({ bandFloor: 5, itemBandWearStat }),
+    );
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe(
-        "/feed/entry/01JENTRY000000000000000000",
-      );
-    });
+    expect(
+      await screen.findByText(
+        "Logged. No kit on this run, so no garment record moved.",
+      ),
+    ).toBeVisible();
+    expect(router.state.location.pathname).toBe("/");
+    expect(itemBandWearStat).not.toHaveBeenCalled();
+  });
+
+  it("names the weather first when both are missing — the wider gap", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    expect(
+      await screen.findByText(
+        "Logged. No weather came with this run, so no band record moved.",
+      ),
+    ).toBeVisible();
   });
 
   it("lands the receipt in the submit's place, with the answer still on screen", async () => {
@@ -1554,12 +1356,36 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(tag);
     expect(tag).toHaveAttribute("aria-pressed", "false");
 
-    // A3b does not open over a receipt: everything chosen is already a
-    // pressed chip, and there is nothing left to change.
-    const more = screen.getByRole("button", { name: "More ›" });
-    expect(more).toHaveAttribute("aria-disabled", "true");
-    await user.click(more);
+    // MORE › leaves with share and submit (round 21, ask 1a): "an inert
+    // control that still looks tappable is a lie". Not read-only — gone.
+    expect(screen.queryByRole("button", { name: "More ›" })).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps a chosen chip inked once noted, and takes its ✕ away", async () => {
+    // Round 21: "the chips stay, read-only (chosen still inked, no ✕)".
+    // The ✕ offers to un-choose, and a receipt makes no offers.
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        entry: { items: [item("01JTEMA0000000000000000000", "Houdini")] },
+        bandFloor: 5,
+        itemBandWearStat: () => Promise.resolve({ worn: 3, total: 5 }),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "chafed" }));
+    expect(
+      screen.getByRole("button", { name: "chafed" }).querySelector("svg"),
+    ).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await screen.findByText(/Houdini is now 3 of 5/);
+
+    const chafed = screen.getByRole("button", { name: "chafed" });
+    expect(chafed).toHaveAttribute("aria-pressed", "true");
+    expect(chafed).toHaveClass("bg-ink", "text-ground");
+    expect(chafed.querySelector("svg")).toBeNull();
   });
 
   it("says so when the save fails, and leaves the form standing", async () => {
@@ -1608,78 +1434,6 @@ describe("VerdictForm: what happens after saving", () => {
 });
 
 describe("VerdictForm: the details that go missing silently", () => {
-  it("offers the control at rest and withdraws it at the cap", async () => {
-    // Three things at once, because they are one decision: the field
-    // renders when there is a control *or* a message, the control itself
-    // renders only below the cap, and the resting label is the words a
-    // person taps. At the cap with nothing wrong there is no control and
-    // nothing to say, so the whole field goes — anything else leaves an
-    // "Add a photo" heading over empty space.
-    await renderWithRouter(form());
-    expect(screen.getByText("Add a photo")).toBeVisible();
-
-    cleanup();
-
-    await renderWithRouter(
-      form({
-        entry: {
-          photoKeys: Array.from({ length: maxPhotosPerEntry }, (_, i) =>
-            String(i),
-          ),
-        },
-      }),
-    );
-    expect(screen.queryByText("Add a photo")).toBeNull();
-  });
-
-  it("says it is busy on the control, and starts one upload at a time", async () => {
-    // Both halves of what the `disabled` attribute used to do, done the
-    // way §5 requires: the input stays focusable and announces that work
-    // is under way, and the re-entry guard lives in the handler. A second
-    // selection mid-upload would race the cap count, which is counted
-    // locally precisely because state does not settle between iterations.
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ key: string }>();
-    const uploadPhoto = vi.fn(() => pending.promise);
-    await renderWithRouter(form({ uploadPhoto }));
-
-    const input = fileInput();
-    expect(input).not.toHaveAttribute("aria-busy");
-
-    await user.upload(input, [jpeg("a.jpg")]);
-
-    await waitFor(() => {
-      expect(fileInput()).toHaveAttribute("aria-busy", "true");
-    });
-    // Still focusable, which a `disabled` input would not be.
-    expect(fileInput()).toBeEnabled();
-
-    await user.upload(fileInput(), [jpeg("b.jpg")]);
-    expect(uploadPhoto).toHaveBeenCalledTimes(1);
-
-    pending.resolve({ key: "k" });
-    await waitFor(() => {
-      expect(fileInput()).not.toHaveAttribute("aria-busy");
-    });
-  });
-
-  it("says it is uploading while it uploads", async () => {
-    // The label swaps for the duration, and nothing else on the screen
-    // says work is under way — a photo that takes a moment would otherwise
-    // look like a tap that did not register.
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ key: string }>();
-    await renderWithRouter(form({ uploadPhoto: () => pending.promise }));
-
-    await user.upload(fileInput(), [jpeg("a.jpg")]);
-
-    expect(await screen.findByText("Uploading…")).toBeVisible();
-    pending.resolve({ key: "k" });
-    await waitFor(() => {
-      expect(screen.queryByText("Uploading…")).toBeNull();
-    });
-  });
-
   it("submits through its own handler, never the browser's", async () => {
     // `event.preventDefault()`. Without it the browser navigates on submit
     // and the whole hook — validation, announcement, band — is skipped,
@@ -1702,10 +1456,9 @@ describe("VerdictForm: the details that go missing silently", () => {
     expect(prevented).toBe(true);
   });
 
-  it("announces the save before either exit destroys the region", async () => {
-    // Both success paths take the live region with them — one navigates,
-    // the other replaces the form with the noted screen — so the sentence
-    // cannot be read after the fact. It is observable in exactly one
+  it("announces the save before the receipt lands", async () => {
+    // Noted takes the submit's place, so the sentence has to be said
+    // while the form still stands. It is observable in exactly one
     // window: `onSuccess` has set the status and is awaiting the band
     // stat, so the form is still mounted with the region filled. Holding
     // that promise open is what makes the window big enough to assert in.
@@ -1734,217 +1487,129 @@ describe("VerdictForm: the details that go missing silently", () => {
   });
 });
 
-/**
- * A step that records what it was handed and lets the test decide when the
- * blurred bytes come back — which is the whole contract: the picked file
- * waits, and something else says what gets uploaded.
- */
-function recordingStep() {
-  const seen: File[] = [];
-  let release: ((ready: File) => void) | undefined;
-  // Captured, never called during render. `announce` writes the form's
-  // state, and a child that writes its parent's state while rendering is
-  // an infinite loop — which is exactly why `PhotoBlur` announces from an
-  // effect, and why a fixture that does otherwise proves nothing about it.
-  let say: ((sentence: string) => void) | undefined;
-  const render = (
-    file: File,
-    onReady: (ready: File) => void,
-    announce: (sentence: string) => void,
-  ) => {
-    seen.push(file);
-    release = onReady;
-    say = announce;
-    return <p>step for {file.name}</p>;
+describe("VerdictForm: the run header (round 21)", () => {
+  // 2026-08-29 11:04 UTC — 6:04 AM in Chicago, the board's own morning.
+  const SAT_MORNING = Math.floor(Date.UTC(2026, 7, 29, 11, 4) / 1000);
+  const conditions = {
+    tempC: 5,
+    feelsLikeC: 2,
+    precipMm: 1,
+    condition: "light rain",
+    windKph: 14,
+    source: "visualcrossing" as const,
+    timeZone: "America/Chicago",
+    span: { minTempC: 5, maxTempC: 5, minFeelsLikeC: 2, maxFeelsLikeC: 2 },
   };
-  return {
-    seen,
-    render,
-    hand: (ready: File) => release?.(ready),
-    announce: (sentence: string) => {
-      say?.(sentence);
-    },
-  };
-}
 
-describe("the photo step W3 hangs off", () => {
-  it("has one status region on the screen, and lends it to the step", async () => {
-    // Rule 08: *"one `role=\"status\"` region per screen"*. This screen
-    // used to have two — the form's, and a second `aria-live` paragraph
-    // inside `PhotoBlur` for W3's three sentences — and two regions
-    // firing at once means one of them is lost.
-    //
-    // The count is the assertion that matters: a step that opened its own
-    // region would still announce, and still be wrong.
-    const user = userEvent.setup();
-    const step = recordingStep();
-    const { container } = await renderWithRouter(
-      form({
-        uploadPhoto: vi.fn(() => Promise.resolve({ key: "k" })),
-        renderPhotoStep: step.render,
-      }),
-    );
-
-    await user.upload(fileInput(), jpeg());
-
-    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
-
-    act(() => {
-      step.announce("We blurred one face.");
-    });
-
-    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
-    await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "We blurred one face.",
-      );
-    });
-  });
-
-  it("holds the picked file instead of uploading it", async () => {
-    const user = userEvent.setup();
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    const step = recordingStep();
-    await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
-
-    await user.upload(fileInput(), jpeg());
-
-    // **The whole promise of W3.** If the picked file uploads while the
-    // blur step is on screen, the original frame has already left the
-    // device and the step is decoration.
-    expect(uploadPhoto).not.toHaveBeenCalled();
-    expect(step.seen.map((file) => file.name)).toEqual(["a.jpg"]);
-    expect(screen.getByText("step for a.jpg")).toBeVisible();
-  });
-
-  it("uploads the bytes the step hands back, not the ones picked", async () => {
-    const user = userEvent.setup();
-    const uploaded: string[] = [];
-    const uploadPhoto = vi.fn((input: { data: FormData }) => {
-      const part = input.data.get("photo");
-      uploaded.push(part instanceof File ? part.name : "not a file");
-      return Promise.resolve({ key: "k" });
-    });
-    const step = recordingStep();
-    await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
-    await user.upload(fileInput(), jpeg());
-
-    step.hand(
-      new File([new Uint8Array([9])], "blurred.jpg", { type: "image/jpeg" }),
-    );
-
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(1);
-    });
-    expect(uploaded).toEqual(["blurred.jpg"]);
-  });
-
-  it("says it is uploading, then puts the step away", async () => {
-    const user = userEvent.setup();
-    const inFlight = Promise.withResolvers<{ key: string }>();
-    const step = recordingStep();
+  it("dates the run where it happened, and says how far at what", async () => {
+    // "SAT AUG 29 · 6:04 AM / 6.2 AT 41°" — the zone is the observation's
+    // (D-96), so a Chicago morning is not read as UTC's 11 AM.
     await renderWithRouter(
       form({
-        uploadPhoto: () => inFlight.promise,
-        renderPhotoStep: step.render,
+        entry: { startedAt: SAT_MORNING, distanceM: 9978, conditions },
       }),
     );
-    await user.upload(fileInput(), jpeg());
 
-    step.hand(jpeg("blurred.jpg"));
-
-    expect(await screen.findByText("Uploading…")).toBeVisible();
-    inFlight.resolve({ key: "k" });
-    // The step goes when its answer has been taken. Left up, it reads as
-    // a photo still waiting to be blurred — over one already uploaded.
-    await waitFor(() => {
-      expect(screen.queryByText(/^step for/)).not.toBeInTheDocument();
-    });
-    // And the form stops saying it is working. "Uploading…" that never
-    // clears is the same screen as an upload that never finished.
-    await waitFor(() => {
-      expect(screen.getByText("Add a photo")).toBeVisible();
-    });
+    const header = screen.getByRole("banner");
+    expect(header).toHaveAttribute("data-slot", "header");
+    expect(header).toHaveAttribute("data-ground", "ink");
+    expect(within(header).getByText("Sat 29 Aug · 6:04 AM")).toBeVisible();
+    expect(within(header).getByText("6.2 at 41°")).toBeVisible();
   });
 
-  it("reports a failure after the step the same way as one before it", async () => {
-    const user = userEvent.setup();
-    const step = recordingStep();
+  it("names the unit instead of a temperature when the run has none", async () => {
+    // The nothing-moved frame: "6.2 MI". No conditions, no "at", and the
+    // date falls back to UTC.
+    await renderWithRouter(
+      form({ entry: { startedAt: SAT_MORNING, distanceM: 9978 } }),
+    );
+
+    const header = screen.getByRole("banner");
+    expect(within(header).getByText("6.2 mi")).toBeVisible();
+    expect(within(header).getByText("Sat 29 Aug · 11:04 AM")).toBeVisible();
+  });
+
+  it("reads the runner's own units", async () => {
     await renderWithRouter(
       form({
-        uploadPhoto: () => Promise.reject(new Error("R2 unavailable")),
-        renderPhotoStep: step.render,
+        entry: { distanceM: 9978, conditions },
+        units: { temp: "c", distance: "km" },
       }),
     );
-    await user.upload(fileInput(), jpeg());
 
-    step.hand(jpeg("blurred.jpg"));
-
-    // The blur step does not get its own error vocabulary: a failed
-    // upload is a failed upload, and the runner's next move is the same.
-    expect(
-      await screen.findByText("Couldn't upload that photo. Try again."),
-    ).toBeVisible();
+    expect(screen.getByText("10.0 at 5°")).toBeVisible();
   });
 
-  it("lets a second photo through after the first has landed", async () => {
+  it("asks the question once, as the heading, and the row is named by it", async () => {
+    await renderWithRouter(form());
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Did it work?");
+    expect(within(screen.getByRole("banner")).getByRole("heading")).toBe(
+      heading,
+    );
+    expect(screen.getAllByText("Did it work?")).toHaveLength(1);
+    expect(screen.getByRole("group", { name: "Did it work?" })).toBeVisible();
+  });
+
+  it("marks the row when a save is refused for want of a verdict", async () => {
+    // The sentence lives under the row, where the fix is, on the field
+    // message the Form Contract draws.
     const user = userEvent.setup();
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    const step = recordingStep();
-    await renderWithRouter(form({ uploadPhoto, renderPhotoStep: step.render }));
+    await renderWithRouter(form());
 
-    await user.upload(fileInput(), jpeg("one.jpg"));
-    step.hand(jpeg("one-blurred.jpg"));
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(1);
-    });
+    await user.click(screen.getByRole("button", { name: "Log it" }));
 
-    await user.upload(fileInput(), jpeg("two.jpg"));
-    step.hand(jpeg("two-blurred.jpg"));
-
-    // The in-flight guard has to be released by the step's path too, or
-    // the first photo is the only one a runner can ever add.
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it("uploads straight away when no step is supplied", async () => {
-    const user = userEvent.setup();
-    const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
-    await renderWithRouter(form({ uploadPhoto }));
-
-    await user.upload(fileInput(), jpeg());
-
-    // The garment path and anything else that has no blur step: the slot
-    // is optional and its absence must not swallow the upload.
-    await waitFor(() => {
-      expect(uploadPhoto).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("shows no step until a file has been picked", async () => {
-    const step = recordingStep();
-    await renderWithRouter(form({ renderPhotoStep: step.render }));
-
-    // Rendering it unconditionally would call the slot with nothing to
-    // show — which is how a blur screen appears over a form nobody has
-    // given a photo to.
-    expect(step.seen).toEqual([]);
-    expect(screen.queryByText(/^step for/)).not.toBeInTheDocument();
+    const group = screen.getByRole("group", { name: "Did it work?" });
+    expect(group.querySelector("#verdict-message")).not.toBeNull();
   });
 });
 
-/**
- * The log flow's three screens are three routes, so the move that carries
- * "which way you are travelling" has to be on each of them — and a screen
- * that quietly loses its wrapper animates nothing, with nothing to say so.
- *
- * The wrapper is what is asserted, not a particular class. Round 12 made
- * the *arrival* a third state: entering the flow from the bar is the
- * router's `rise`, so `FlowStep` deliberately adds no class there, and a
- * screen rendered on its own — as here — is always entering.
- */
+describe("VerdictChips and A3b: the 32px chip (round 21)", () => {
+  it("draws every chip and MORE at 32, with the seam that makes the hit area 44", async () => {
+    // "Chips draw at 32px; a ::before at inset: -6px 0 makes the target
+    // 44." `target` would pad the box to 44, which is the height the
+    // ruling takes away; the seam is `ui/a11y.css`'s.
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    const chips = document.querySelector("[data-slot='flag-chips']");
+    expect(chips).toHaveClass("gap-x-[7px]", "gap-y-3");
+    const cells = [...(chips?.children ?? [])];
+    expect(cells).toHaveLength(6);
+    for (const chip of cells) {
+      expect(chip).toHaveClass("target-seam", "h-8");
+      expect(chip).not.toHaveClass("target");
+    }
+
+    await user.click(screen.getByRole("button", { name: "chafed" }));
+    expect(screen.getByRole("button", { name: "chafed" })).toHaveClass(
+      "target-seam",
+      "h-8",
+    );
+  });
+
+  it("says in A3b which verdict the specifics qualify", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    let sheet = await openSpecifics(user);
+    expect(within(sheet).getByText("Optional")).toBeVisible();
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+    sheet = await openSpecifics(user);
+    expect(within(sheet).getByText("A bit warm · optional")).toBeVisible();
+    // A3b's tags are the same 32px chips, in the same seam-gapped row.
+    const tag = within(sheet).getByRole("button", { name: "chafed" });
+    expect(tag).toHaveClass("target-seam", "h-8");
+    expect(tag.parentElement).toHaveClass("gap-x-[7px]", "gap-y-3");
+  });
+});
+
 describe("VerdictForm: the log flow", () => {
   it("is step three of the log flow, and enters from an edge", async () => {
     await renderWithRouter(form());

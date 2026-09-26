@@ -4,19 +4,23 @@
  * tasks/103-weather.md): a cache hit never calls the provider, and two
  * points/times that round to the same key share one row.
  *
- * A `source='manual'` row can occupy a cache slot before real data exists
- * (lane 102's fallback UI, D-24). A later real fetch upgrades it in place;
- * a manual write never clobbers an existing real row — the upsert's
- * `setWhere` encodes both directions.
+ * **The cache holds real observations only** (review blocker B1). A band a
+ * runner sets by hand (R2b, D-24) is theirs, for one run, and lives in
+ * `manual_conditions` keyed by that run. Before that table existed the band
+ * was written here, as a `source='manual'` row in the shared cell, where it
+ * answered for every other runner there that hour. Those legacy rows are
+ * still in the table: `findObservationRow` does not see them, and a real
+ * fetch upgrades one in place (the upsert's `setWhere`).
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { weatherObservations } from "../../db/schema-weather";
+import { manualConditions, weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
 import type { WeatherObservation } from "../../lib/contracts";
+import { readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 
@@ -62,32 +66,32 @@ export function matchesKey(key: CacheKey) {
   );
 }
 
+/**
+ * The real observation at this cell, if one has been fetched. A legacy
+ * manual row there is somebody's band, not the weather, so it reads as a
+ * miss: the run asking fetches, and the write upgrades the row.
+ */
 export async function findObservationRow(
   key: CacheKey,
 ): Promise<ObservationRow | undefined> {
   const rows = await weatherDb()
     .select()
     .from(weatherObservations)
-    .where(matchesKey(key))
+    .where(and(matchesKey(key), ne(weatherObservations.source, "manual")))
     .limit(1);
   return rows[0];
 }
 
 /**
- * Write-through after a successful provider fetch. Upgrades a squatting
- * manual row in place; never clobbers an existing real row (a concurrent
- * fetch for the same cell already won). Returns the row now at that key —
- * always real once this resolves without throwing.
- */
-/**
- * The upsert both writers share.
+ * Write-through after a successful provider fetch. Upgrades a legacy
+ * manual row squatting the cell in place; never clobbers an existing real
+ * row (a concurrent fetch for the same cell already won). Returns the row
+ * now at that key — always real once this resolves without throwing.
  *
  * `setWhere` is the load-bearing part: an existing row is only overwritten
- * when it is `source='manual'`, so a real observation never loses to a
- * later manual one and a manual one is always replaced by real data. It
- * was written out twice, and so was the conflict target — which is the
- * UNIQUE key restated a third time and the thing that silently stops
- * upserting if the index ever changes.
+ * when it is `source='manual'`, so a real observation never loses and a
+ * legacy band is always replaced by real data. The conflict target is the
+ * UNIQUE key, and silently stops upserting if the index ever changes.
  */
 async function upsertObservation(
   key: CacheKey,
@@ -163,32 +167,42 @@ export async function upsertRealObservation(
 }
 
 /**
- * Manual fallback write (D-24). Never overwrites an already-real row — if
- * one exists at this key, the run should link to that instead (the caller
- * re-reads the row and reflects its actual source).
+ * A run's band (R2b, D-24), on the run and nowhere else. Upserted: a
+ * retried save lands the same row, and a runner who picks again before the
+ * status moved (the one write that can be retried here) gets their latest
+ * pick.
  */
-export async function upsertManualObservation(
-  key: CacheKey,
-  tempC: number,
+export async function upsertManualBand(
   runId: Ulid,
-): Promise<ObservationRow> {
-  const fetchedAt = nowSeconds();
-  const values = {
-    id: newUlid(),
-    runId,
-    latR: key.latR,
-    lngR: key.lngR,
-    hourBucket: key.hourBucket,
-    tempC,
-    feelsLikeC: tempC,
+  tempC: number,
+): Promise<void> {
+  const stampedAt = nowSeconds();
+  await weatherDb()
+    .insert(manualConditions)
+    .values({ runId, tempC, setAt: stampedAt })
+    .onConflictDoUpdate({
+      target: manualConditions.runId,
+      set: { tempC, setAt: stampedAt },
+    });
+}
+
+export type ManualBandRow = typeof manualConditions.$inferSelect;
+
+/**
+ * A band as a reading. Only the temperature was chosen; the rest are
+ * neutral sentinels, because a band is excluded from every aggregate —
+ * but `condition` is read straight onto the screen, and an empty string
+ * there renders as a blank chip.
+ */
+export function bandObservation(band: ManualBandRow): WeatherObservation {
+  return {
+    tempC: band.tempC,
+    feelsLikeC: band.tempC,
     humidity: 0,
     windKph: 0,
     precipMm: 0,
     condition: "manual",
-    source: "manual" as const,
-    fetchedAt,
   };
-  return upsertObservation(key, values);
 }
 
 export function toWeatherObservation(row: ObservationRow): WeatherObservation {
@@ -232,4 +246,26 @@ export function runHourKeys(
   return Array.from({ length: hours }, (_unused, index) =>
     cacheKeyFor(lat, lng, new Date((startedAt + index * 3600) * 1000)),
   );
+}
+
+/**
+ * Every band set for these runs, by run id. A primary-key read, in chunks
+ * under D1's parameter cap.
+ */
+export async function manualBandsFor(
+  runIds: readonly string[],
+): Promise<ManualBandRow[]> {
+  return readInChunks(runIds, (chunk) =>
+    weatherDb()
+      .select()
+      .from(manualConditions)
+      .where(inArray(manualConditions.runId, chunk)),
+  );
+}
+
+export async function findManualBand(
+  runId: Ulid,
+): Promise<ManualBandRow | undefined> {
+  const [band] = await manualBandsFor([runId]);
+  return band;
 }

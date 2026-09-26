@@ -83,7 +83,11 @@ export const tcxSource: RunSource = {
     const doc = parseXmlDocument(bytes, "tcx");
 
     const lap = findLap(doc);
-    if (lap === undefined) throw new RunParseError("tcx: no Lap element found");
+    if (lap === undefined) {
+      throw new RunParseError("tcx: no Lap element found", {
+        problem: "no-track",
+      });
+    }
 
     const startedAtDate = readDate(lap["@_StartTime"]);
     const durationS = readNumber(lap.TotalTimeSeconds);
@@ -103,6 +107,7 @@ export const tcxSource: RunSource = {
     if (!hasRequiredTotals)
       throw new RunParseError(
         "tcx: lap missing positive TotalTimeSeconds/DistanceMeters",
+        { problem: "no-track" },
       );
 
     const position = firstPosition(lap);

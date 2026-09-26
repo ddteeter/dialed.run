@@ -1,19 +1,19 @@
 /**
  * Covers: A3 (log the verdict), A3b (anything specific) — choosing a
  * verdict, flagging a kit item from the generated chips and a tag from A3b,
- * and attaching a photo, seeing it on the entry, and re-opening the
- * verdict to find all three still there — and DS2, the verdict backlog,
- * which is the same act done from a table instead of six sheets. One
- * journey, one video.
+ * Noted landing in the submit's place with the chips kept read-only and
+ * MORE gone (round 21), seeing the verdict on the entry, and re-opening
+ * the verdict to find the flag still there — and DS2, the verdict
+ * backlog, which is the same act done from a table instead of six sheets.
+ * One journey, one video.
+ *
+ * The photo is not here any more: round 20 moved the outfit photo from A3
+ * to A2, and its beat moved with it, to `e2e/run-logging/`.
  *
  * Why this exists separately from feed.demo.spec.ts: that one is the
  * *reader's* journey (follow, browse, open, mark useful) and its Covers
  * header claims A3 only as a display. Nothing demonstrated the writer's
- * half, which is where the photo upload lives.
- *
- * The upload is the point. It moved from base64-over-JSON to multipart
- * FormData, and the only honest way to know that works is to watch a real
- * file go up and come back as a rendered image.
+ * half.
  */
 import { eq, inArray } from "drizzle-orm";
 
@@ -43,18 +43,7 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
     .waitFor({ state: "attached" });
 }
 
-/**
- * A real 1x1 PNG. Small enough to keep the recording quick, and a genuine
- * decodable image rather than random bytes with an image/png label — the
- * upload path stores what it is given, so a fake would still "work" and
- * would prove less.
- */
-const PNG_1X1 = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-test("log a verdict on your own run: pick it, flag an item, attach a photo", async ({
+test("log a verdict on your own run: pick it, flag an item, read the receipt", async ({
   page,
 }, testInfo) => {
   // Paced runs (npm run demo) need headroom; at full speed this is quick.
@@ -67,11 +56,15 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   const runId = newUlid();
   const entryId = newUlid();
   const observationId = newUlid();
-  // An earlier run in the same band, the Houdini on it and called cold —
-  // the history A3's chips are generated from. Without one the kit has no
-  // record here, and the chip rule suggests no garment at all.
-  const priorRunId = newUlid();
-  const priorEntryId = newUlid();
+  // Two earlier runs in the same band, the Houdini on both and called
+  // cold — the history A3's chips are generated from. Round 21: a garment
+  // needs two runs in the band to have a record at all, so with one the
+  // chip rule suggests no garment.
+  const priors = [7, 14].map((daysAgo) => ({
+    runId: newUlid(),
+    entryId: newUlid(),
+    daysAgo,
+  }));
 
   // Coordinates distinct from feed.demo's. Observations are cached by
   // rounded lat/lng/hour, so sharing them would mean one spec's seed
@@ -85,7 +78,7 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // signed up — the verdict screen is owner-only, so the rows have to
   // belong to this user rather than a fixture one.
   const startedAt = nowSeconds() - 3600;
-  const priorStartedAt = startedAt - 7 * 86_400;
+  const priorStart = (daysAgo: number): number => startedAt - daysAgo * 86_400;
   await withLocalDb(async ({ core }) => {
     const [row] = await core
       .select({ id: user.id })
@@ -125,42 +118,46 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });
 
-    await core.insert(runs).values({
-      id: priorRunId,
-      userId: row.id,
-      title: "Last week's loop",
-      startedAt: priorStartedAt,
-      durationS: 2700,
-      distanceM: 8000,
-      source: "manual",
-      indoor: false,
-      weatherStatus: "attached",
-      lat: latR,
-      lng: lngR,
-    });
-    await core.insert(outfitEntries).values({
-      id: priorEntryId,
-      userId: row.id,
-      runId: priorRunId,
-      verdict: -1,
-      isPublic: false,
-      createdAt: priorStartedAt,
-    });
-    await core
-      .insert(outfitEntryItems)
-      .values({ entryId: priorEntryId, itemId });
+    for (const prior of priors) {
+      await core.insert(runs).values({
+        id: prior.runId,
+        userId: row.id,
+        title: "An earlier loop",
+        startedAt: priorStart(prior.daysAgo),
+        durationS: 2700,
+        distanceM: 8000,
+        source: "manual",
+        indoor: false,
+        weatherStatus: "attached",
+        lat: latR,
+        lng: lngR,
+      });
+      await core.insert(outfitEntries).values({
+        id: prior.entryId,
+        userId: row.id,
+        runId: prior.runId,
+        verdict: -1,
+        isPublic: false,
+        createdAt: priorStart(prior.daysAgo),
+      });
+      await core
+        .insert(outfitEntryItems)
+        .values({ entryId: prior.entryId, itemId });
+    }
   });
 
   // Seed the conditions this entry was logged in. Without an observation
   // the screen has no temperature band, and saving takes a different
   // branch — so this is seeded deliberately rather than left to chance.
   //
-  // Both runs, each at its own hour: the earlier one has to land in the
-  // same band for its verdict to count as history here.
+  // Every run, each at its own hour: the earlier ones have to land in the
+  // same band for their verdicts to count as history here.
   await withLocalDb(async ({ weather }) => {
     for (const [id, run, at] of [
       [observationId, runId, startedAt],
-      [newUlid(), priorRunId, priorStartedAt],
+      ...priors.map(
+        (prior) => [newUlid(), prior.runId, priorStart(prior.daysAgo)] as const,
+      ),
     ] as const) {
       await weather
         .insert(weatherObservations)
@@ -189,7 +186,12 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
             weatherObservations.lngR,
             weatherObservations.hourBucket,
           ],
-          set: { runId: run, tempC: 6, feelsLikeC: 4, source: "visualcrossing" },
+          set: {
+            runId: run,
+            tempC: 6,
+            feelsLikeC: 4,
+            source: "visualcrossing",
+          },
         });
     }
   });
@@ -222,7 +224,9 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // enough"; tags fill the row to five. Per-item signal is a flag, never a
   // second verdict (CLAUDE.md).
   await scene(page, "Five chips, generated from your history in this band");
-  const houdini = page.getByRole("button", { name: "Houdini Jacket not enough" });
+  const houdini = page.getByRole("button", {
+    name: "Houdini Jacket not enough",
+  });
   await houdini.click();
   await expect(houdini).toHaveAttribute("aria-pressed", "true");
 
@@ -237,21 +241,6 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await expect(
     page.getByRole("button", { name: "hands cold" }),
   ).toHaveAttribute("aria-pressed", "true");
-
-  // The upload under test: a real file, streamed as multipart.
-  await scene(page, "A real photo, streamed as multipart and stored in R2");
-  await page.setInputFiles('input[type="file"]', {
-    name: "kit.png",
-    mimeType: "image/png",
-    buffer: PNG_1X1,
-  });
-
-  // It came back as a stored key and renders through the owner-scoped
-  // photo route — proof the round trip worked, not just that the POST
-  // returned.
-  await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({
-    timeout: 15_000,
-  });
 
   await scene(page, "Saving reports the wear rate in this temperature band");
   await page.getByRole("button", { name: "Log it" }).click();
@@ -270,11 +259,24 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   await expect(
     page.getByRole("button", { name: "A bit cold" }),
   ).toHaveAttribute("aria-pressed", "true");
+  // Round 21: MORE leaves with share and submit, and a chosen chip keeps
+  // its ink and loses its close glyph — a receipt makes no offers.
+  await scene(page, "The chips stay, read-only; MORE is gone");
+  await expect(page.getByRole("button", { name: "More ›" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Houdini Jacket not enough" }),
+  ).toHaveAttribute("aria-disabled", "true");
 
   // And the verdict is on the entry.
   await scene(page, "And the verdict is on the entry");
   await page.goto(`/feed/entry/${entryId}`);
-  await expect(page.getByText("[A bit cold]")).toBeVisible({ timeout: 15_000 });
+  // D's badge, by the part lane 123's D names it. The `.or()` is main's
+  // bracketed badge until that lands, and goes when it does.
+  const badge = page
+    .locator('[data-part="verdict-badge"]')
+    .or(page.getByText("[A bit cold]"));
+  await expect(badge).toBeVisible({ timeout: 15_000 });
+  await expect(badge).toHaveText(/^\[?A bit cold\]?$/u);
 
   // Re-opening it shows what was saved, which is not what it used to do.
   //
@@ -282,15 +284,12 @@ test("log a verdict on your own run: pick it, flag an item, attach a photo", asy
   // `entry.items[].flag`, so coming back here showed every piece as
   // unflagged — and saving again wrote that emptiness over the flag the
   // runner had set. Nothing said so; the screen just quietly disagreed
-  // with the database. The verdict and the photo come back too.
+  // with the database.
   await page.goto(`/feed/verdict/${entryId}`);
   await hydrated(page);
   await expect(
     page.getByRole("button", { name: "Houdini Jacket not enough" }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('img[src^="/feed/photo/"]')).toBeVisible({
-    timeout: 15_000,
-  });
 
   // ---- DS2 · the same act, from a table ------------------------------
   //

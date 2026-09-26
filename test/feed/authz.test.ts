@@ -1,4 +1,9 @@
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
+
+import { outfitEntries, wardrobeItems } from "../../src/db/schema-core";
+import { env } from "../../src/env";
 
 import {
   attachKit,
@@ -40,6 +45,33 @@ describe("authorization", () => {
     await expect(
       attachKit({ userId: owner, runId, itemIds: [strangersItem] }),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("refuses a retired garment on a new kit, and makes no entry", async () => {
+    // The picker hides retired pieces; a kit that names one anyway (a
+    // stale suggestion, a replayed request) is refused by the server.
+    const owner = await makeUser();
+    const runId = await makeRun({ userId: owner });
+    const current = await makeItem({ userId: owner });
+    const retired = await makeItem({ userId: owner });
+    await drizzle(env.DIALED_CORE)
+      .update(wardrobeItems)
+      .set({ retired: true })
+      .where(eq(wardrobeItems.id, retired));
+
+    await expect(
+      attachKit({ userId: owner, runId, itemIds: [current, retired] }),
+    ).rejects.toThrow("a retired garment cannot join a new kit");
+    const entries = await drizzle(env.DIALED_CORE)
+      .select({ id: outfitEntries.id })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.runId, runId));
+    expect(entries).toHaveLength(0);
+
+    // The same kit without it attaches.
+    await expect(
+      attachKit({ userId: owner, runId, itemIds: [current] }),
+    ).resolves.toEqual(expect.any(String));
   });
 
   it("hides a private entry's detail from everyone but its owner", async () => {

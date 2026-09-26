@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { RunDraft } from "../../src/lib/contracts";
 import { gpxSource } from "../../src/modules/runs/parsers/gpx";
 import {
+  NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
@@ -56,9 +57,19 @@ async function failureFrom(
   throw new Error("expected the parse to fail");
 }
 
+/**
+ * The runner's sentence a failure earns (round 22): a file that read and
+ * held no track says so; anything else could not be read.
+ */
+function sentenceFor(reason: string): string {
+  return /fewer than 2 track points|non-positive duration/u.test(reason)
+    ? NO_TRACK_MESSAGE
+    : PARSE_FAILURE_MESSAGE;
+}
+
 async function reasonFor(text: string): Promise<string> {
   const failure = await failureFrom(() => parse(text));
-  expect(failure.message).toBe(PARSE_FAILURE_MESSAGE);
+  expect(failure.message).toBe(sentenceFor(failure.reason));
   return failure.reason;
 }
 

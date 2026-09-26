@@ -2,14 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
 import {
+  bandObservation,
   cacheKeyFor,
+  findManualBand,
   findObservationRow,
   hourBucketFor,
+  manualBandsFor,
   roundCoord,
   toWeatherObservation,
-  upsertManualObservation,
+  upsertManualBand,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
+import { makeObservation } from "../feed/helpers";
 
 import { nowSeconds } from "../../src/lib/now";
 const OBSERVATION = {
@@ -57,28 +61,83 @@ describe("weather cache (103)", () => {
     expect(row).toBeDefined();
   });
 
-  it("a real fetch upgrades a manual row occupying the same cell", async () => {
+  it("does not find a legacy band in the cell: it is not the weather (B1)", async () => {
     const at = new Date("2026-03-01T09:00:00Z");
-    const key = cacheKeyFor(40.1, -80.2, at);
-    await upsertManualObservation(key, 10, newUlid());
-    let row = await findObservationRow(key);
-    expect(row?.source).toBe("manual");
+    await plantLegacyBand(40.1, -80.2, at);
+
+    expect(
+      await findObservationRow(cacheKeyFor(40.1, -80.2, at)),
+    ).toBeUndefined();
+  });
+
+  it("a real fetch upgrades a legacy band occupying the same cell", async () => {
+    const at = new Date("2026-03-02T09:00:00Z");
+    const key = cacheKeyFor(40.2, -80.3, at);
+    await plantLegacyBand(40.2, -80.3, at);
 
     await upsertRealObservation(key, OBSERVATION, newUlid());
-    row = await findObservationRow(key);
+    const row = await findObservationRow(key);
     expect(row?.source).toBe("visualcrossing");
     expect(row?.tempC).toBe(5);
   });
 
-  it("a manual write never clobbers an existing real row", async () => {
+  it("a real row is never overwritten by a later fetch", async () => {
     const at = new Date("2026-04-01T09:00:00Z");
     const key = cacheKeyFor(41.1, -81.2, at);
     await upsertRealObservation(key, OBSERVATION, newUlid());
 
-    await upsertManualObservation(key, 99, newUlid());
+    await upsertRealObservation(key, { ...OBSERVATION, tempC: 99 }, newUlid());
     const row = await findObservationRow(key);
-    expect(row?.source).toBe("visualcrossing");
     expect(row?.tempC).toBe(5);
+  });
+});
+
+/**
+A band written the way it was before `manual_conditions`: into the cell.
+*/
+async function plantLegacyBand(lat: number, lng: number, at: Date) {
+  await makeObservation({
+    lat,
+    lng,
+    startedAt: at.getTime() / 1000,
+    tempC: 30,
+    feelsLikeC: 30,
+    source: "manual",
+  });
+}
+
+describe("a run's band (R2b, B1)", () => {
+  it("is found by its run, and by no other", async () => {
+    const runId = newUlid();
+    await upsertManualBand(runId, 12.5);
+
+    expect(await findManualBand(runId)).toMatchObject({ runId, tempC: 12.5 });
+    expect(await findManualBand(newUlid())).toBeUndefined();
+  });
+
+  it("takes the latest pick when set again", async () => {
+    const runId = newUlid();
+    await upsertManualBand(runId, 2.5);
+    await upsertManualBand(runId, 7.5);
+
+    expect(await manualBandsFor([runId])).toStrictEqual([
+      expect.objectContaining({ runId, tempC: 7.5 }),
+    ]);
+  });
+
+  it("reads only the runs asked about", async () => {
+    const asked = newUlid();
+    const other = newUlid();
+    await upsertManualBand(asked, 1);
+    await upsertManualBand(other, 2);
+
+    const bands = await manualBandsFor([asked]);
+    expect(bands.map((band) => band.runId)).toStrictEqual([asked]);
+  });
+
+  it("reads nothing for no runs", async () => {
+    await upsertManualBand(newUlid(), 1);
+    expect(await manualBandsFor([])).toStrictEqual([]);
   });
 });
 
@@ -101,34 +160,31 @@ describe("what a stored observation records about itself", () => {
     expect(row?.fetchedAt).toBeLessThanOrEqual(now + 5);
   });
 
-  it("stamps a manual row the same way", async () => {
+  it("stamps a band's set_at the same way", async () => {
     const now = nowSeconds();
-    const key = cacheKeyFor(38.6, -85.6, new Date("2026-05-01T09:00:00Z"));
+    const runId = newUlid();
 
-    await upsertManualObservation(key, 12, newUlid());
+    await upsertManualBand(runId, 12);
 
-    const row = await findObservationRow(key);
-    expect(row?.fetchedAt).toBeGreaterThanOrEqual(now - 5);
-    expect(row?.fetchedAt).toBeLessThanOrEqual(now + 5);
+    const band = await findManualBand(runId);
+    expect(band?.setAt).toBeGreaterThanOrEqual(now - 5);
+    expect(band?.setAt).toBeLessThanOrEqual(now + 5);
   });
 
-  it("fills a manual row's unmeasured fields with neutral sentinels", async () => {
-    // Manual rows carry a temperature a human typed and nothing else.
-    // They are excluded from every aggregate, so the remaining columns are
+  it("fills a band's unmeasured fields with neutral sentinels", () => {
+    // A band carries a temperature a runner picked and nothing else. It is
+    // excluded from every aggregate, so the remaining fields are
     // placeholders — but `condition` is read straight onto the screen, and
     // an empty string there renders as a blank chip.
-    const key = cacheKeyFor(38.7, -85.7, new Date("2026-05-01T09:00:00Z"));
-    await upsertManualObservation(key, -8, newUlid());
-
-    const row = await findObservationRow(key);
-    expect(row).toMatchObject({
+    expect(
+      bandObservation({ runId: newUlid(), tempC: -8, setAt: 0 }),
+    ).toStrictEqual({
       tempC: -8,
       feelsLikeC: -8,
       humidity: 0,
       windKph: 0,
       precipMm: 0,
       condition: "manual",
-      source: "manual",
     });
   });
 });
@@ -151,24 +207,17 @@ describe("the observation's zone (D-96)", () => {
     });
   });
 
-  it("stores no zone when the fetch that upgrades a manual row names none", async () => {
-    // The only rows an upsert overwrites are manual ones (`setWhere`), and
-    // those never carry a zone — so a fetch without one leaves the column
-    // empty rather than inventing or keeping anything.
-    const key = cacheKeyFor(41.89, -87.64, new Date("2026-04-02T11:00:00Z"));
-    await upsertManualObservation(key, 5, newUlid());
+  it("stores no zone when the fetch that upgrades a legacy band names none", async () => {
+    // The only rows an upsert overwrites are legacy bands (`setWhere`),
+    // and those never carry a zone — so a fetch without one leaves the
+    // column empty rather than inventing or keeping anything.
+    const at = new Date("2026-04-02T11:00:00Z");
+    const key = cacheKeyFor(41.89, -87.64, at);
+    await plantLegacyBand(41.89, -87.64, at);
     await upsertRealObservation(key, OBSERVATION, newUlid());
 
     const row = await findObservationRow(key);
     expect(row?.timeZone).toBeNull();
-    expect(row && toWeatherObservation(row)).not.toHaveProperty("timeZone");
-  });
-
-  it("leaves a manual observation without a zone", async () => {
-    const key = cacheKeyFor(41.9, -87.65, new Date("2026-04-03T11:00:00Z"));
-    await upsertManualObservation(key, 5, newUlid());
-
-    const row = await findObservationRow(key);
     expect(row && toWeatherObservation(row)).not.toHaveProperty("timeZone");
   });
 

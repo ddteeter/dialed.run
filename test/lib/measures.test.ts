@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  distanceNumber,
   formatDistance,
+  formatPace,
   formatDuration,
   formatWind,
   formatTempRange,
@@ -12,6 +14,29 @@ import { formatTemp } from "../../src/lib/temperature";
  * Both were local helpers inside route files, so neither had a test — and
  * a distance formatter that is wrong is wrong on every entry at once.
  */
+
+describe("distanceNumber", () => {
+  it("is the number alone, at one decimal, in either unit", () => {
+    expect(distanceNumber(9978, "mi")).toBe("6.2");
+    expect(distanceNumber(9978, "km")).toBe("10.0");
+    expect(distanceNumber(0, "km")).toBe("0.0");
+  });
+});
+
+describe("formatPace", () => {
+  it("writes time per unit the way the boards do", () => {
+    // A1's card: 9,978 m (6.2 mi) in 51:38 is 499.7 s a mile, which
+    // rounds to 8:20.
+    expect(formatPace(3098, 9978, "mi")).toBe("8:20 /mi");
+    // The same run per kilometre: 5:10.
+    expect(formatPace(3098, 9978, "km")).toBe("5:10 /km");
+  });
+
+  it("rounds to the second and carries into hours", () => {
+    expect(formatPace(3601, 1000, "km")).toBe("1:00:01 /km");
+    expect(formatPace(299.6, 1000, "km")).toBe("5:00 /km");
+  });
+});
 
 describe("formatDistance", () => {
   it("converts metres to miles at one decimal", () => {
