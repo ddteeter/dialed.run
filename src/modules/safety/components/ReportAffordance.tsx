@@ -73,7 +73,6 @@ export function ReportAffordance({
           reader might take for part of the entry. */}
       <button
         type="button"
-        data-part="report"
         className="target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4"
         onClick={() => {
           setGeneration((previous) => previous !== true);

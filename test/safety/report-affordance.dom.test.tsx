@@ -213,7 +213,6 @@ describe("the foot link (round 22, items 10, 12 and 21)", () => {
   it("reads Report this entry under an entry, as a small underlined link", () => {
     renderAffordance();
     const link = screen.getByRole("button", { name: "Report this entry" });
-    expect(link).toHaveAttribute("data-part", "report");
     expect(link).toHaveClass("text-small", "text-label", "underline");
   });
 
