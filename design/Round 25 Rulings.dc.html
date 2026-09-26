@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 25 &nbsp;/&nbsp; three asks from the build lanes</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1080px; text-transform: uppercase;">One form, room beside it. Say what we actually do.</h1>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <a href="#r1" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">1 · Log a run at the desk</a>
+        <a href="#r2" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">2 · Strava copy</a>
+        <a href="#r3" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">3 · Same conditions</a>
+      </div>
+    </div>
+
+    <!-- 1 -->
+    <div id="r1" data-board="Desktop Contract · DS3" style="display: flex; flex-direction: column; gap: 28px;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">1 · Log a run is a desk page</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 780px; line-height: 1.45;">The owner is right, and I won't argue the panel. The panel was a rule about <em>inputs</em> that got drawn as a rule about <em>width</em>. At ≥1040, Log a run leaves the panel for DS1's two columns. The form goes in the primary column: same fields, same order, same validation. The rail shows the context that makes each step quicker. <strong style="color: #F4F3EF;">The rail never holds an input.</strong></span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">THE SPLIT</span><p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;">Primary column: every input and the primary action, max 620, in phone order. Rail: read-only cards only. A phone card that holds no input (A1's conditions block) may move to the rail. An input never does. The harness checks this: no <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">input, button, [role=radio]</span> inside <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">data-part="rail"</span>.</p></div>
+        <div style="background: #0B0B0E; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">A2b AT THE DESK</span><p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;">The category sheet takes over the primary column, with ✕ back to A2. The rail stays. That's the phone's sheet made into a push inside the column, not a modal. Its filters stay in A2b; they don't move to the rail.</p></div>
+        <div style="background: #0B0B0E; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">WHAT DOESN'T WIDEN</span><p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;">A3's verdict row stays at 390 max (round 17). The primary action sizes to its label and aligns left in the column. A full-width pink pill 620 wide is a banner. Nothing shrinks, and the steps and their motion are unchanged (motion: Log flow step).</p></div>
+        <div style="background: #0B0B0E; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">BAR AND GROUND</span><p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;">The ink bar is unchanged and full-bleed. No nav link is underlined, because Log a run isn't a tab. The pill carries <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">aria-current="page"</span> with no new look, and pressing it moves focus to the step's first input. The content sits in the 1180 measure directly on <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">--ground</span>, like DS2, with no frame, radius or card around the form. The ground now holds two columns, so there is no empty ground left to explain. Back and Escape still exit, and the Form Contract's leave rule applies.</p></div>
+        <div style="background: #0B0B0E; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">720–1039</span><p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;">This width uses the reflow, not the panel. It has one 620 column in phone order, and A1's conditions block goes back to its phone position. The rail's history cards don't show here: the phone never had them, and at this width the header's mono sub-line carries the run.</p></div>
+        <div style="background: #0B0B0E; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">F FOLLOWS · AUTH AND ONBOARDING DON'T</span><p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">F: yes.</strong> It uses the same split, with F's fields in the primary column. The rail shows "Already in your closet": the nearest pieces in that category, so you catch a duplicate before you add it. I'll draw it in round 26; it stays in the panel until then. <strong style="color: #F4F3EF;">Auth and onboarding: panel.</strong> A new runner has no history, so a rail there would be an empty hole. Auth is one decision under the landing bar. When there's nothing true to put beside a form, a centred column is the finished state.</p></div>
+      </div>
+
+      <sc-for list="{{ frames }}" as="f" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+          <div style="overflow-x: auto; max-width: 100%;">
+            <div data-screen-label="{{ f.screen }}" data-state="desk" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; width: 1180px; min-width: 1040px;">
+              <div data-part="top-bar" style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 32px;">
+                <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span><span>dialed</span><span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span>
+                <div data-part="bar-nav" style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px; color: #B9B8AE;">
+                  <span style="display: flex; align-items: center; padding: 0 12px;">Feed</span>
+                  <span style="display: flex; align-items: center; padding: 0 12px;">Closet</span>
+                  <span style="display: flex; align-items: center; padding: 0 12px;">Call</span>
+                  <span style="display: flex; align-items: center; padding: 0 12px;">You</span>
+                </div>
+                <div data-part="bar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+                  <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l5 5"></path></svg></span>
+                  <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F4F3EF" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"></path></svg></span>
+                  <span aria-current="page" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 0 16px; height: 36px; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Log a run</span>
+                </div>
+              </div>
+
+              <div data-part="columns" style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; min-height: 640px;">
+                <div data-part="primary" style="display: flex; flex-direction: column; gap: 18px; max-width: 620px; min-width: 0;">
+                  <div data-part="title" style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 14px; color: #4E4E44;">← Back</span>
+                    <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em; line-height: 1.05;">{{ f.title }}</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00776A;">{{ f.sub }}</span>
+                  </div>
+
+                  <sc-if value="{{ f.isA1 }}" hint-placeholder-val="{{ true }}">
+                    <div data-part="parsed-card" style="border: 1px solid #DCDBD2; border-radius: 16px; overflow: hidden; background: #FFFFFF;">
+                      <div style="padding: 12px 16px; display: flex; align-items: center; background: #EDECE3; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #4E4E44;"><span>PARSED · MORNING_RUN_0829.GPX</span><span style="color: #C21A6B; font-weight: 600; margin-left: auto; margin-right: 10px;">REPLACE</span><span style="color: #00776A;">✓</span></div>
+                      <div style="height: 240px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px); display: flex; align-items: flex-end; padding: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; background: #F4F3EF; padding: 4px 7px; border-radius: 3px;">ROUTE MAP</span></div>
+                      <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1;">6.2 MI · 51:38</span>
+                        <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.04em; color: #4E4E44;"><span>8:19 /MI</span><span style="color: #DCDBD2;">|</span><span>SAT AUG 29</span><span style="color: #DCDBD2;">|</span><span style="color: #C21A6B; font-weight: 600; text-decoration: underline; text-underline-offset: 2px;">6:04 AM</span></div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                      <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">Looks right — what did you wear?</span>
+                      <span style="font-size: 13px; color: #7A7A70;">No file? <span style="color: #C21A6B; font-weight: 600;">Enter the run by hand</span> instead.</span>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ f.isA2 }}" hint-placeholder-val="{{ false }}">
+                    <div data-part="most-likely" style="background: #F5FF3D; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">MOST LIKELY · FROM 43° DAMP, AUG 14</span>
+                      <div style="display: flex; flex-wrap: wrap; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;">
+                        <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">TRACKSMITH HARRIER</span>
+                        <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">BANDIT 5" SPLIT</span>
+                        <span style="border: 1px solid #0B0B0E; padding: 5px 9px; border-radius: 100px;">THIN GLOVES <span style="color: #6E6E64;">[GENERIC]</span></span>
+                      </div>
+                      <div style="display: flex; gap: 8px;">
+                        <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 22px; font-size: 15px; font-weight: 700;">That's it</span>
+                        <span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 12px 18px; font-size: 15px; font-weight: 600;">Change</span>
+                      </div>
+                    </div>
+                    <div data-part="closet-picker" style="display: flex; flex-direction: column; gap: 12px;">
+                      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR PICK FROM THE CLOSET</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600;">SEARCH</span></div>
+                      <div style="display: flex; align-items: center; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; background: #00E0C6; padding: 6px 10px; border-radius: 100px;">41° DAMP ✕</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">SHOWING 11 OF 47</span></div>
+                      <sc-for list="{{ kitRows }}" as="k" hint-placeholder-count="2">
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">{{ k.label }} &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
+                          <div style="display: flex; gap: 8px; overflow: hidden;">
+                            <sc-for list="{{ k.thumbs }}" as="t" hint-placeholder-count="7">
+                              <div style="flex: 0 0 72px; height: 72px; border-radius: 10px; border: {{ t.border }}; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-for>
+                      <div style="display: flex; gap: 8px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">
+                        <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ HANDS 2</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ HEAD 1</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ SHOES 6</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ EXTRAS 5</span>
+                      </div>
+                    </div>
+                    <div data-part="outfit-photo" style="display: flex; flex-direction: column; gap: 8px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OUTFIT PHOTO · OPTIONAL</span>
+                      <div style="height: 80px; border-radius: 10px; border: 1px dashed #B9B8AE; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #6E6E64;">Drop a photo, or browse</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                      <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">Next — did it work?</span>
+                      <span style="font-size: 13px; color: #7A7A70;">Not now — <span style="color: #C21A6B; font-weight: 600;">leave it in the queue</span>.</span>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ f.isA3 }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                      <div data-part="verdict-row" role="radiogroup" style="display: flex; gap: 6px; max-width: 390px;">
+                        <sc-for list="{{ verdictCells }}" as="c" hint-placeholder-count="5">
+                          <div style="flex: {{ c.flex }}; background: {{ c.bg }}; border: 1px solid {{ c.border }}; border-radius: 12px; padding: 16px 5px; text-align: center; white-space: pre-line; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.03em; line-height: 1.3; font-weight: {{ c.weight }};">{{ c.word }}</div>
+                        </sc-for>
+                      </div>
+                      <span style="font-size: 13px; color: #7A7A70;">Your history in this band: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">[38–46°] · 2 cold · 7 dialed · 1 warm</span></span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">ANYTHING SPECIFIC? · OPTIONAL</span>
+                      <div data-part="flag-chips" style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;">
+                        <span style="background: #0B0B0E; color: #F4F3EF; padding: 8px 12px; border-radius: 100px;">GLOVES TOO MUCH ✕</span>
+                        <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">SLEEVES DAMP</span>
+                        <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">COLD FIRST MILE</span>
+                        <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">CHAFED</span>
+                        <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">PERFECT WARMUP</span>
+                        <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #C21A6B; font-weight: 600;">MORE ›</span>
+                      </div>
+                    </div>
+                    <div data-part="share-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2;">
+                      <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">Share to feed</span><span style="font-size: 12px; color: #7A7A70;">Shared runs show your kit, conditions, and your verdict.</span></div>
+                      <div style="width: 48px; height: 28px; border-radius: 100px; background: #FF2D8A; display: flex; justify-content: flex-end; padding: 3px;"><div style="width: 22px; height: 22px; border-radius: 100px; background: #F4F3EF;"></div></div>
+                    </div>
+                    <span data-part="submit" style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px 30px; font-size: 16px; font-weight: 700;">Log it</span>
+                  </sc-if>
+                </div>
+
+                <div data-part="rail" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+                  <sc-if value="{{ f.isA1 }}" hint-placeholder-val="{{ true }}">
+                    <div data-part="conditions" style="border-radius: 16px; overflow: hidden; background: #0B0B0E; color: #F4F3EF;">
+                      <div style="padding: 12px 16px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;"><span>CONDITIONS · AUTO-ATTACHED</span><span style="color: #8B8B93;">GPS + TIME</span></div>
+                      <div style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+                        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.035em; line-height: 1;">41°F <span style="color: #00E0C6;">DAMP</span></span>
+                        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.7; letter-spacing: 0.04em; color: #8B8B93;">FEELS 36° · 88% HUM · SE 9MPH<br />LIGHT RAIN, FIRST 12 MIN · DEWPOINT 38°</div>
+                        <span style="font-size: 12px; line-height: 1.45; color: #8B8B93;">Never typed by hand. Wrong time? Change it on the run card and we'll refetch.</span>
+                        <a href="https://www.visualcrossing.com/" style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #8B8B93; text-decoration: underline; text-underline-offset: 2px; align-self: flex-start;">WEATHER · VISUAL CROSSING</a>
+                      </div>
+                    </div>
+                    <div data-part="band-record" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOU IN 38–46° DAMP</span>
+                      <span style="font-size: 15px; line-height: 1.5;">Ten runs here before this one. Dialed in seven, and every time you wore the half-zip.</span>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ f.notA1 }}" hint-placeholder-val="{{ false }}">
+                    <div data-part="this-run" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THIS RUN · SAT AUG 29 · 6:04 AM</span>
+                      <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">6.2 MI · 51:38</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #00776A;">41°F DAMP · FEELS 36° · SE 9MPH</span>
+                      <a href="https://www.visualcrossing.com/" style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70; text-decoration: underline; text-underline-offset: 2px; align-self: flex-start;">WEATHER · VISUAL CROSSING</a>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ f.isA3 }}" hint-placeholder-val="{{ false }}">
+                    <div data-part="kit-record" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THE KIT YOU'RE JUDGING</span>
+                      <sc-for list="{{ kit }}" as="p" hint-placeholder-count="3">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px;"><span style="font-weight: 600;">{{ p.name }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">{{ p.rec }}</span></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ f.notA1 }}" hint-placeholder-val="{{ false }}">
+                    <div data-part="band-history" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ f.histHead }}</span>
+                      <sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
+                        <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid #EDECE3;">
+                          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 14px; font-weight: 600;">{{ h.day }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">{{ h.cond }}</span><span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; padding: 4px 8px; background: {{ h.bg }}; color: {{ h.fg }};">{{ h.word }}</span></div>
+                          <div style="display: flex; flex-wrap: wrap; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em;">
+                            <sc-for list="{{ h.pieces }}" as="p" hint-placeholder-count="3"><span style="border: 1px solid #0B0B0E; padding: 4px 8px; border-radius: 100px;">{{ p }}</span></sc-for>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 1180px;">{{ f.note }}</p>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- 2 -->
+    <div id="r2" data-board="Remaining Screens · T3 + S1" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">2 · Strava reminds. You upload.</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 780px; line-height: 1.45;">Every line says the same three things: Strava tells us a run happened, we remind you, and you add the file. We never name a distance, a route or a pace from Strava. The webhook doesn't give us those, and showing them would claim an import we don't do.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 16px;">
+
+        <div data-part="strava-receipt" style="display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">CONNECTED RECEIPT</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00776A;">CONNECTED</span>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.02em;">Strava connected.</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">After each run, we'll remind you to add it here. You upload the file (GPX, TCX or FIT) from your watch or a Strava export, then add what you wore.</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">We don't copy runs from Strava.</p>
+          </div>
+        </div>
+
+        <div data-part="strava-disconnect" style="display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">T3b · KEPT / STOPS</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 17px; letter-spacing: -0.02em;">Disconnect Strava?</span>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.4;">
+              <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00776A; flex: 0 0 auto;">KEPT</span><span>All 186 runs, their outfits and verdicts</span></div>
+              <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #00776A; flex: 0 0 auto;">KEPT</span><span>Adding runs: upload any run's file here, as always</span></div>
+              <div style="display: flex; gap: 9px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #C21A6B; flex: 0 0 auto;">STOPS</span><span>The reminder after each run</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div data-part="strava-reminder" style="display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">THE REMINDER · PUSH AND S1 ROW</span>
+          <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">DIALED.RUN · NOW</span>
+              <span style="font-size: 15px; font-weight: 700;">New run on Strava</span>
+              <span style="font-size: 14px; line-height: 1.4;">Add it here: upload the file, then what you wore.</span>
+            </div>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 15px; line-height: 1.4;">A run landed on Strava at 6:58 AM. Upload its file to log the kit.</span>
+              <span style="font-size: 14px; font-weight: 700; color: #C21A6B;">Add it ›</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 16px 18px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The time is when the run landed on Strava, not when it started.</strong> That's the only time the webhook carries, so the row says "landed". "Add it ›" opens A1 in its before-file state. One reminder per run: it doesn't repeat, and it clears when a file with a matching start time is uploaded.</div>
+        <div style="background: #0B0B0E; padding: 16px 18px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">T3a follows.</strong> Status becomes "CONNECTED · LAST RUN SEEN 6:58 AM". SYNC NOW is replaced by DISCONNECT. The "Import new runs automatically" toggle goes: the connection <em>is</em> the reminder, and turning it off is disconnecting. Applied to both Remaining Screens boards.</div>
+        <div style="background: #0B0B0E; padding: 16px 18px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">More of the same promise.</strong> T2's import-progress screen is retired: there is nothing to import, so connecting returns straight to T3a with the receipt. DS2's header now reads "6 RUNS · NO VERDICT YET". The backlog holds uploaded runs that were left in the queue. A2's note ("exactly as an imported run does") and T2's "NO BACKLOG GUILT" card get the same correction when those boards are next opened.</div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div id="r3" data-board="Remaining Screens · E2-lite + Round 22 Coverage" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">3 · In these conditions</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 780px; line-height: 1.45;">Only two things are matched, so the copy names only two: feels-like and precipitation. Wind comes out of the eyebrow because nothing matches on it. No line names a place. "Wherever they were" says outright that location is ignored, so a runner in Omaha isn't left wondering why Sydney counts.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 16px;">
+        <sc-for list="{{ e2 }}" as="e" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">{{ e.label }}</span>
+            <div data-part="match-block" data-state="{{ e.state }}" style="background: {{ e.bg }}; color: #0B0B0E; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; border: 1px solid {{ e.border }};">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">{{ e.eyebrow }}</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 27px; letter-spacing: -0.035em; line-height: 1.05; white-space: pre-line;">{{ e.head }}</span>
+              <span style="font-size: 14px; line-height: 1.4;">{{ e.line }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 16px 18px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Template.</strong> Eyebrow: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">SAME CONDITIONS · FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}</span>. Line: "In {feels}° and {precip}, {window}, wherever they were." {feels} is the viewer's feels-like; the eyebrow says FEELS once, so the sentence doesn't repeat it. Precip words: dry, damp, rain, snow. All four read naturally after "44° and".</div>
+        <div style="background: #0B0B0E; padding: 16px 18px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Elsewhere.</strong> E1's compact line becomes "18 runners logged 44° and damp in the last 3 days." N's privacy card becomes "…the anonymous '18 runners logged this in 44° and damp' block…". Round 22's empty-state card drops "near you". All applied.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const hue = {
+      cold: { bg: '#FF2D8A', fg: '#0B0B0E' },
+      dialed: { bg: '#00E0C6', fg: '#0B0B0E' },
+      warm: { bg: '#4E4E44', fg: '#F4F3EF' },
+    };
+    const H = (day, cond, word, h, pieces) => ({ day, cond, word, pieces, ...hue[h] });
+    const history = [
+      H('Aug 14', '43° DAMP', 'DIALED', 'dialed', ['HARRIER', 'BANDIT SPLIT', 'THIN GLOVES']),
+      H('Aug 3', '40° RAIN', 'A BIT COLD', 'cold', ['GREEN L/S CREW', 'BANDIT SPLIT']),
+      H('Jul 22', '45° DAMP', 'DIALED', 'dialed', ['HARRIER', 'BANDIT SPLIT']),
+    ];
+    const T = (sel) => ({ border: sel ? '2px solid #FF2D8A' : '1px solid #DCDBD2' });
+    const kitRows = [
+      { label: 'TOP · 4 OF 14 MATCH', thumbs: [T(1), T(0), T(0), T(0), T(0), T(0), T(0)] },
+      { label: 'BOTTOM · 3 OF 9 MATCH', thumbs: [T(1), T(0), T(0), T(0), T(0), T(0), T(0)] },
+    ];
+    const off = { bg: 'transparent', border: '#DCDBD2', weight: 400, flex: 1 };
+    const verdictCells = [
+      { word: 'WAY\nCOLD', ...off }, { word: 'A BIT\nCOLD', ...off },
+      { word: 'DIALED', bg: '#00E0C6', border: '#00E0C6', weight: 700, flex: 1.25 },
+      { word: 'A BIT\nWARM', ...off }, { word: 'WAY\nWARM', ...off },
+    ];
+    const kit = [
+      { name: 'Tracksmith Harrier', rec: '8/9 DIALED · 38–46°' },
+      { name: 'Bandit 5" Split', rec: '9/12 DIALED · 38–46°' },
+      { name: 'Thin gloves', rec: '2/4 DIALED · 38–46°' },
+    ];
+    const F = (id, o) => ({ isA1: id === 'A1', isA2: id === 'A2', isA3: id === 'A3', notA1: id !== 'A1', ...o });
+    const frames = [
+      F('A1', { label: 'A1 · DESK ≥1040 · PARSED', screen: 'A1 Upload desk', title: 'Add a run', sub: 'STEP 1 · THE RUN', note: 'Before a file lands, the primary column is the drop zone and the rail shows only "You in this band" once conditions are known. With no file yet, the rail is empty, and the empty rail is correct. The route map takes the width (240 tall), because the phone never had room to show it. The conditions block moves to the rail because it holds no input. The only correction control, the run time, stays on the parsed card in the primary column.' }),
+      F('A2', { label: 'A2 · DESK ≥1040 · KIT', screen: 'A2 Attach kit desk', title: 'What did you wear?', sub: '6.2 MI · 41°F DAMP · 3 PIECES', histHead: 'LAST 3 IN 38–46° DAMP', note: 'This is the evidence behind MOST LIKELY: the last three runs in the band, with their kit and verdict. It is read-only. Tapping a row does nothing, so "That\'s it" stays the one way to take a suggestion. Picker rows show seven thumbnails where the phone showed four, and that is the only change inside the form. A2b takes over the primary column.' }),
+      F('A3', { label: 'A3 · DESK ≥1040 · VERDICT', screen: 'A3 Verdict desk', title: 'Did it work?', sub: 'SAT AUG 29 · 6:04 AM · 6.2 AT 41°', histHead: 'BEFORE, IN 38–46° DAMP', note: 'The ink header becomes the title line (DS0 bend 4). The verdict row stays at 390 max. The rail shows the kit being judged, with each piece\'s record in the band, above the same band history as A2. The chips suggest a per-garment flag, and the rail shows the record that suggestion comes from. After Log it, Noted replaces the submit in the primary column, and the rail\'s counts update in place with no motion.' }),
+    ];
+    const e2 = [
+      { label: 'RESULT · 3 DAYS', state: 'result', bg: '#00E0C6', border: '#00E0C6', eyebrow: 'SAME CONDITIONS · FEELS [41–47°] · DAMP · 3 DAYS', head: '18 RUNNERS\nLOGGED THIS', line: 'In 44° and damp, in the last three days, wherever they were.' },
+      { label: 'WIDENED · 14 DAYS', state: 'widened', bg: '#00E0C6', border: '#00E0C6', eyebrow: 'SAME CONDITIONS · FEELS [41–47°] · DAMP · 14 DAYS', head: '6 RUNNERS\nLOGGED THIS', line: 'In 44° and damp, wherever they were. Too few in three days, so this looks back two weeks.' },
+      { label: 'EMPTY · UNDER FIVE', state: 'empty', bg: '#F4F3EF', border: '#DCDBD2', eyebrow: 'SAME CONDITIONS · FEELS [41–47°] · DAMP', head: 'TOO FEW\nTO SHOW', line: 'Fewer than five runners logged 44° and damp in two weeks, which is too few to show without showing who.' },
+    ];
+    return { frames, history, kitRows, verdictCells, kit, e2 };
+  }
+}
+</script>
+</body>
+</html>
