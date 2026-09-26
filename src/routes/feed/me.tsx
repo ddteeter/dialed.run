@@ -4,20 +4,26 @@ import { getSession } from "../../modules/auth/functions";
 import { OwnProfile } from "../../modules/feed/components/OwnProfile";
 import { ownProfileQuery } from "../../modules/feed/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
-import { Layout } from "../../ui";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/me")({
   beforeLoad: async () => {
     requireSignedIn(await getSession());
   },
-  loader: async () => ({ profile: await ownProfileQuery() }),
+  loader: async () => ({
+    profile: await ownProfileQuery(),
+    bell: await bellStateFn(),
+  }),
   component: OwnProfilePage,
 });
 
 function OwnProfilePage() {
+  const { profile, bell } = Route.useLoaderData();
+
   return (
-    <Layout>
-      <OwnProfile profile={Route.useLoaderData().profile} />
-    </Layout>
+    <BelledLayout {...bell}>
+      <OwnProfile profile={profile} />
+    </BelledLayout>
   );
 }

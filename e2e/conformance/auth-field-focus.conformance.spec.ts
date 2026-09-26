@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { hydrated } from "./auth-parts";
+import { hydrated } from "../support/conformance";
 
 /**
  * A focused field draws one ring, on its box — Accessibility Contract §06,

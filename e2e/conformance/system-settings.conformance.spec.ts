@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
-import { openBoard, screen } from "../support/conformance";
-import { hydrated, partsIn, wordsOf } from "./auth-parts";
+import { hydrated, openBoard, screen } from "../support/conformance";
+import { partsIn, wordsOf } from "./auth-parts";
 
 /**
  * The settings index against U1 (`design/Remaining Screens.dc.html`), as

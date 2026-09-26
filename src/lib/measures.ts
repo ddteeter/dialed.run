@@ -39,20 +39,6 @@ export function distanceNumber(distanceM: number, unit: DistanceUnit): string {
 }
 
 /**
- * Pace — time per mile or kilometre — as A1's parsed card and R's run
- * strip write it: "8:19 /mi". The time is `formatDuration`'s, so a slow
- * hour-long mile reads "1:02:10 /mi" rather than "62:10".
- */
-export function formatPace(
-  durationS: number,
-  distanceM: number,
-  unit: DistanceUnit,
-): string {
-  const perUnitS = Math.round((durationS * metresPer(unit)) / distanceM);
-  return `${formatDuration(perUnitS)} /${unit}`;
-}
-
-/**
  * Wind speed in the runner's own units — `6mph` or `9km/h`.
  *
  * Styled like `formatDistance` beside it (`8.1mi`, no space), and keyed on
@@ -88,6 +74,26 @@ export function formatDuration(durationS: number): string {
   return hours === 0
     ? `${String(minutes)}:${seconds}`
     : `${String(hours)}:${minutes.toString().padStart(2, "0")}:${seconds}`;
+}
+
+/**
+ * Pace — time per mile or kilometre — in the runner's own unit: `8:40 /mi`,
+ * `5:23 /km`, as A1's parsed card and D's run strip draw it (round 22). The
+ * time is `formatDuration`'s rather than a second copy of it, so a slow
+ * hour-long mile reads "1:02:10 /mi" and not "62:10 /mi" — see
+ * `formatDuration`'s own note on why that bug mattered.
+ *
+ * Nothing when the run has no distance: a treadmill session logged by
+ * time alone has no pace, and `Infinity:NaN /mi` is not one.
+ */
+export function formatPace(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): string | undefined {
+  if (distanceM <= 0) return undefined;
+  const perUnitS = Math.round((durationS * metresPer(unit)) / distanceM);
+  return `${formatDuration(perUnitS)} /${unit}`;
 }
 
 /**

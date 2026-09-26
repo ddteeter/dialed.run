@@ -400,3 +400,38 @@ A named region inside a screen — design's `data-part`, our `data-slot`.
 export function part(label: string, name: string): string {
   return `${screen(label)} [data-part="${name}"]`;
 }
+
+/**
+ * One element's computed colour at a given CSS property, as its T1 role —
+ * the shape `fillOf` and `auth-parts.ts`'s `borderOf` share once which
+ * property differs.
+ */
+export async function colorRoleOf(
+  page: Page,
+  selector: string,
+  property: "backgroundColor" | "borderTopColor",
+): Promise<string> {
+  const computed = await page.$eval(
+    selector,
+    (element, prop) => getComputedStyle(element)[prop],
+    property,
+  );
+  return colorRole(computed);
+}
+
+/**
+ * One element's own fill, as its T1 role.
+ */
+export async function fillOf(page: Page, selector: string): Promise<string> {
+  return colorRoleOf(page, selector, "backgroundColor");
+}
+
+/**
+ * Waits for React to attach. A spec that drives controlled inputs needs
+ * it: a fill that lands before hydration is silently reset.
+ */
+export async function hydrated(page: Page): Promise<void> {
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+}

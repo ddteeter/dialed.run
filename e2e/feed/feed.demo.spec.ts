@@ -1,7 +1,8 @@
 /**
- * Covers: E1 (following feed), D (post detail — verdict, conditions,
- * per-item kit), H (someone else's profile), A3 (the verdict display),
- * D-11 (useful reactions) — one journey, one video.
+ * Covers: E1 (following feed, the v1 card, its empty state), E2-lite
+ * (zero follows lands on Your conditions), runner search, D (post detail —
+ * the strip, the note, the kit), H (someone else's profile), D-11 (useful
+ * reactions) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -203,56 +204,97 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   });
 
   try {
-    await scene(page, "E1 · a feed with nobody followed yet");
+    // A runner who follows nobody lands on Your conditions (round 22):
+    // the one social surface that works on day one. Nothing here grants
+    // the browser's location, so the tab asks for a city instead — and
+    // never sends the runner to their settings to find it.
+    await scene(page, "E2-lite · zero follows lands on Your conditions");
     await page.goto("/feed");
     await hydrated(page);
+    await expect(
+      page.getByRole("button", { name: "Your conditions" }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(page.getByText("Where do you run?")).toBeVisible();
 
-    // Browse the feed (E1) with zero follows — the documented empty state.
+    // Following is a tab away, and its empty state is drawn (E1).
+    await scene(page, "E1 · nobody yet, and one way to find someone");
+    await page.getByRole("button", { name: "Following" }).click();
     await expect(
       page.getByText("Nobody you follow has posted yet."),
     ).toBeVisible();
+    await expect(
+      page.getByText("Follow runners you already know by their username."),
+    ).toBeVisible();
 
-    // Find the other runner and open their profile (H).
-    await page
-      .getByRole("link", { name: "Search for runners to follow" })
-      .click();
-    await scene(page, "Find a runner, and see only their public entries");
+    // Find the other runner — a row with a Follow pill inline — and open
+    // their profile (H).
+    await page.getByRole("link", { name: "Find a runner" }).click();
+    await scene(page, "Search · name and a Follow pill, no city");
     await page.getByPlaceholder("Search by name").fill(otherDisplayName);
-    await page.getByRole("link", { name: otherDisplayName }).click();
+    const row = page
+      .getByRole("listitem")
+      .filter({ hasText: otherDisplayName });
+    await expect(row.getByRole("button", { name: "Follow" })).toBeVisible();
+    await row.getByRole("link", { name: otherDisplayName }).click();
+
+    await scene(page, "H · only their public entries");
     await expect(page.getByText("Portland, OR")).toBeVisible();
     await expect(page.getByText(publicCaption)).toBeVisible();
     // Their private entry never appears here either — the profile query
     // only ever selects isPublic entries.
     await expect(page.getByText(privateCaption)).toHaveCount(0);
 
-    // Follow them.
+    // Follow them: the label waits for the server, then flips.
     await scene(page, "Following is what puts them in the feed");
     await page.getByRole("button", { name: "Follow" }).click();
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
-    // Back to the feed — their public entry now shows up...
+    // Back to the feed — now it opens on Following, and their public
+    // entry is a v1 card: author and badge, caption, strip, Useful.
+    await scene(page, "E1 · the v1 card: author and badge, caption, strip");
     await bar(page).getByRole("link", { name: "Feed" }).click();
-    await expect(page.getByText(publicCaption)).toBeVisible();
+    await hydrated(page);
+    await expect(
+      page.getByRole("button", { name: "Following" }),
+    ).toHaveAttribute("aria-current", "page");
+    const card = page.locator('[data-part="post"]').filter({
+      hasText: publicCaption,
+    });
+    await expect(card).toBeVisible();
+    await expect(card.locator('[data-part="verdict-badge"]')).toHaveText(
+      "Dialed",
+    );
+    // The strip: distance, then the range the run covered and the
+    // weather it started in. 6C -> 43F and 14C -> 57F (D-5).
+    await expect(card.locator('[data-part="run-strip"]')).toContainText(
+      "43–57° · light rain",
+    );
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
     await expect(page.getByText(privateCaption)).toHaveCount(0);
 
-    // Open the entry detail (D): verdict, conditions, per-item kit.
-    await scene(page, "D · the verdict, the conditions, and the kit");
-    await page.getByText(publicCaption).click();
-    await expect(page.getByText("[Dialed]")).toBeVisible();
-    // The range the run actually covered, not the hour it started in.
-    // 6C -> 43F and 14C -> 57F (D-5).
-    await expect(page.getByText("43–57°")).toBeVisible();
-    await expect(page.getByText("light rain")).toBeVisible();
-    await expect(page.getByText("Rover Half-Zip")).toBeVisible();
-
-    // Mark it useful — the reaction verb is "useful", never "like".
-    await scene(page, "Useful, never liked — the lexicon is a code rule");
-    await page.getByRole("button", { name: /^Useful/u }).click();
+    // Open the entry detail (D): the strip with its badge, the note, the
+    // kit as a list.
+    await scene(page, "D · the strip, the note, the kit, then Useful");
+    await card.getByText(publicCaption).click();
+    await hydrated(page);
     await expect(
-      page.getByRole("button", { name: "Useful [1]" }),
+      page.getByRole("heading", { name: otherDisplayName }),
     ).toBeVisible();
+    await expect(
+      page.locator('[data-part="run-strip"] [data-part="verdict-badge"]'),
+    ).toHaveText("Dialed");
+    await expect(page.getByText("43–57° · light rain")).toBeVisible();
+    await expect(page.getByText("Janji Rover Half-Zip")).toBeVisible();
+
+    // Mark it useful — the reaction verb is "useful", never "like" — and
+    // the count moves only once the server has said so.
+    await scene(page, "Useful, never liked — and never optimistic");
+    const useful = page.getByRole("button", { name: /Useful/u });
+    await expect(useful).toHaveAttribute("aria-pressed", "false");
+    await useful.click();
+    await expect(useful).toHaveAttribute("aria-pressed", "true");
+    await expect(useful).toContainText("1");
 
     // ---- The shell, at both widths (task 115) --------------------------
     //
@@ -268,10 +310,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(topBar).toBeVisible();
     // The wordmark is "the one place the logo appears in the product", and
     // it links to Feed.
-    await expect(topBar.getByRole("link", { name: "dialed.run home" })).toHaveAttribute(
-      "href",
-      "/feed",
-    );
+    await expect(
+      topBar.getByRole("link", { name: "dialed.run home" }),
+    ).toHaveAttribute("href", "/feed");
     // Four text links in the phone bar's order, plus the pill that says
     // the verb this seat has room for (round 15).
     await expect(bar(page).getByRole("link")).toHaveText([

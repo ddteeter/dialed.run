@@ -8,7 +8,7 @@ import { newUlid } from "../src/lib/ids";
 import { createItem } from "../src/modules/closet/service";
 import { attachKit } from "../src/modules/feed/entries";
 import { follow } from "../src/modules/feed/follows";
-import { toggleUsefulReaction } from "../src/modules/feed/reactions";
+import { setUsefulReaction } from "../src/modules/feed/reactions";
 import {
   createOrGetBrand,
   createOrGetProduct,
@@ -173,27 +173,39 @@ describe("natural keys: no column needed, property pinned", () => {
   });
 });
 
-describe("a toggle is not a create, and must not be made idempotent", () => {
-  it("reacting twice removes the reaction", async () => {
-    // `toggleUsefulReaction` is deliberately *not* idempotent: two clicks
-    // mean on-then-off, which is the whole point of a toggle. The UNIQUE
-    // pair stops a duplicate row; it does not and should not stop the
-    // second call from meaning something different.
-    //
-    // Pinned because "make every write idempotent" applied blindly here
-    // would break the feature.
+describe("Useful is a set, so a repeated request leaves the same state", () => {
+  // It was a toggle, pinned here as deliberately not idempotent. That made
+  // the failure band's Try again dangerous: when a mark landed and only
+  // its answer was lost, the retry took the mark back (law 8b; PR #102
+  // review). The press now carries the state it wants.
+  it("marking twice is marked once", async () => {
     const [author, viewer] = [await makeUser(), await makeUser()];
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId });
 
-    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({
+    await setUsefulReaction(entryId, viewer, true);
+
+    expect(await setUsefulReaction(entryId, viewer, true)).toStrictEqual({
       useful: true,
+      count: 1,
     });
-    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({
+  });
+
+  it("unmarking twice is unmarked, and unmarking what was never marked is harmless", async () => {
+    const [author, viewer] = [await makeUser(), await makeUser()];
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId });
+
+    expect(await setUsefulReaction(entryId, viewer, false)).toStrictEqual({
       useful: false,
+      count: 0,
     });
-    expect(await toggleUsefulReaction(entryId, viewer)).toEqual({
-      useful: true,
+    await setUsefulReaction(entryId, viewer, true);
+    await setUsefulReaction(entryId, viewer, false);
+
+    expect(await setUsefulReaction(entryId, viewer, false)).toStrictEqual({
+      useful: false,
+      count: 0,
     });
   });
 });

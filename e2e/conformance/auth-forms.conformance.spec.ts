@@ -3,8 +3,8 @@ import type { Page, Route } from "@playwright/test";
 
 import { CARRIED_EMAIL_KEY } from "../../src/modules/auth/carried-email";
 import { accountEmail } from "../support/accounts";
-import { openBoard } from "../support/conformance";
-import { fillOf, hydrated, partsExcept, partsIn, wordsOf } from "./auth-parts";
+import { fillOf, hydrated, openBoard } from "../support/conformance";
+import { partsExcept, partsIn, wordsOf } from "./auth-parts";
 
 /**
  * Au1–Au7 and Au2 at 1040, built against `design/Auth.dc.html` (round 22).

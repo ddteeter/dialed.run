@@ -1,34 +1,80 @@
 import { Link } from "@tanstack/react-router";
 
-import { Bracketed, Icon } from "../../../ui";
+import { Icon, Mono } from "../../../ui";
 
 /**
-Minimal MVP bell (102 §7): unread count only, no live updates — the count
-is as fresh as the page's own load (server-first per CLAUDE.md). Mounted
-into ui/Layout's notification-bell slot.
+ * The most the number says before it stops counting (round 22, item 13):
+ * *"Caps at 9+."* Past nine the exact figure is not what a runner acts on.
+ */
+const NUMBER_CAP = 9;
 
-The glyph is the pack's `bell`, not an emoji: an emoji renders in whatever
-font the platform picks, which is the one thing an icon system exists to
-stop. It also never animates — S2 in `design/Remaining Screens.dc.html` is
-explicit that "the bell never rings, shakes or bounces. It changes state
-and stops."
+type BellMark = "number" | "dot" | "quiet";
 
-S2 also asks for a bare dot when there is something unread but nothing to
-do, and a number only when that number is a to-do list. We only count
-unread here, so the number is all we can honestly render; the dot state
-arrives with the notification kinds that are not actionable.
-*/
+/**
+ * Which of S2a's three states the bell is in. The number wins over the dot
+ * when both apply (round 22, item 13).
+ */
+function markOf(unreadCount: number, verdictsWaiting: number): BellMark {
+  if (verdictsWaiting > 0) return "number";
+  return unreadCount > 0 ? "dot" : "quiet";
+}
+
+/**
+ * S2a's three states, as round 22 assigned them (item 13):
+ *
+ * - **A number** when runs are waiting for a verdict — *"It's a number
+ *   because each one is a thing to do."*
+ * - **A dot** for anything else unread — follows, useful, system notes.
+ * - **Nothing** otherwise, and the glyph steps back to `--muted`.
+ *
+ * The count is as fresh as the page's own load (server-first per
+ * CLAUDE.md). The glyph is the pack's `bell`, never an emoji, and it never
+ * animates: *"the bell never rings, shakes or bounces. It changes state and
+ * stops."*
+ *
+ * `verdictsWaiting` is optional because a route that has not moved to
+ * `bellStateFn` yet only knows its unread count — it gets the dot, which is
+ * what an unread count honestly is.
+ */
 export function NotificationBell({
   unreadCount,
-}: Readonly<{ unreadCount: number }>) {
+  verdictsWaiting = 0,
+}: Readonly<{ unreadCount: number; verdictsWaiting?: number | undefined }>) {
+  const mark = markOf(unreadCount, verdictsWaiting);
+  const number =
+    verdictsWaiting > NUMBER_CAP
+      ? `${String(NUMBER_CAP)}+`
+      : String(verdictsWaiting);
+  // The mark is drawn, so the name has to say it: a sighted runner reads
+  // "3" or a dot, and a screen reader would otherwise hear "Notifications"
+  // whatever the state.
+  const name: Readonly<Record<BellMark, string>> = {
+    number: `Notifications, ${number} waiting for a verdict`,
+    dot: "Notifications, unread",
+    quiet: "Notifications",
+  };
+
   return (
     <Link
       to="/notifications"
-      aria-label="Notifications"
-      className="target flex items-center gap-1 no-underline"
+      aria-label={name[mark]}
+      data-state={mark}
+      className={`target flex items-start no-underline ${
+        mark === "quiet" ? "text-muted" : "text-ink"
+      }`}
     >
       <Icon name="bell" size={20} />
-      {unreadCount > 0 && <Bracketed>{unreadCount}</Bracketed>}
+      {mark === "number" ? (
+        <Mono
+          step="xs"
+          className="-ml-1.5 rounded-pill bg-action px-1 font-semibold text-ink"
+        >
+          {number}
+        </Mono>
+      ) : undefined}
+      {mark === "dot" ? (
+        <span className="-ml-1.5 block size-2 rounded-pill bg-action" />
+      ) : undefined}
     </Link>
   );
 }

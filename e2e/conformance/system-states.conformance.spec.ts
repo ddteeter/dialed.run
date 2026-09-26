@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
-import { openBoard, screen } from "../support/conformance";
-import { hydrated, partsExcept, partsIn, wordsOf } from "./auth-parts";
+import { hydrated, openBoard, screen } from "../support/conformance";
+import { partsExcept, partsIn, wordsOf } from "./auth-parts";
 
 /**
  * Round 22's system states (`design/Round 22 Coverage.dc.html`, section

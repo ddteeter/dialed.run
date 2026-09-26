@@ -504,3 +504,160 @@ describe("visual crossing climate normals (105)", () => {
     );
   });
 });
+
+describe("visual crossing resolves a typed place (E2-lite's city)", () => {
+  const PLACE_BODY = {
+    latitude: 45.5152,
+    longitude: -122.6784,
+    resolvedAddress: "Portland, OR, United States",
+    days: [{ datetime: "2031-09-16" }],
+  };
+
+  it("answers City, State with where the endpoint found it, and its name for the place", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch(PLACE_BODY),
+    );
+    expect(await provider.resolvePlace("Portland, OR")).toStrictEqual({
+      lat: 45.5152,
+      lng: -122.6784,
+      address: "Portland, OR, United States",
+    });
+  });
+
+  it("trims the endpoint's name for the place, and takes one up to 200 characters", async () => {
+    for (const [resolvedAddress, address] of [
+      ["  Portland, OR, United States \n", "Portland, OR, United States"],
+      ["x".repeat(200), "x".repeat(200)],
+    ]) {
+      const provider = createVisualCrossingProvider(
+        "test-key",
+        jsonFetch({ ...PLACE_BODY, resolvedAddress }),
+      );
+      const place = await provider.resolvePlace("Portland");
+      expect(place?.address).toBe(address);
+    }
+  });
+
+  it("refuses a body with no name for the place, or a runaway one", async () => {
+    for (const body of [
+      { latitude: 45.5152, longitude: -122.6784 },
+      { ...PLACE_BODY, resolvedAddress: "" },
+      { ...PLACE_BODY, resolvedAddress: " ".repeat(3) },
+      { ...PLACE_BODY, resolvedAddress: 7 },
+      { ...PLACE_BODY, resolvedAddress: "x".repeat(201) },
+    ]) {
+      const provider = createVisualCrossingProvider(
+        "test-key",
+        jsonFetch(body),
+      );
+      const error = await rejectionFrom(provider.resolvePlace("Portland"));
+      expect(error.message).toBe(
+        "Visual Crossing place response failed validation",
+      );
+    }
+  });
+
+  it("asks one daily read for today, by the label, encoded for the path", async () => {
+    const fetchImpl = jsonFetch(PLACE_BODY);
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      fetchImpl,
+      () => new Date("2031-09-16T12:00:00Z"),
+    );
+    await provider.resolvePlace("Omaha, NE/US");
+
+    const urls = requestedUrls(fetchImpl);
+    expect(urls).toHaveLength(1);
+    expect(urls[0]?.pathname.split("/").slice(-2)).toStrictEqual([
+      "Omaha%2C%20NE%2FUS",
+      "2031-09-16",
+    ]);
+    expect(urls[0]?.searchParams.get("include")).toBe("days");
+    expect(urls[0]?.searchParams.get("key")).toBe("test-key");
+  });
+
+  it("sends the request under a timeout", async () => {
+    const fetchImpl = jsonFetch(PLACE_BODY);
+    await createVisualCrossingProvider("test-key", fetchImpl).resolvePlace(
+      "Portland",
+    );
+    const init = vi.mocked(fetchImpl).mock.calls[0]?.[1];
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("reads a 400 as no such place — an answer, not an outage", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({ message: "Invalid location parameter value." }, 400),
+    );
+    expect(await provider.resolvePlace("Atlantis")).toBeUndefined();
+  });
+
+  it("is unavailable, not unknown, on any other status", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      jsonFetch({}, 401),
+    );
+    const error = await rejectionFrom(provider.resolvePlace("Portland"));
+    expect(error.message).toBe("Visual Crossing place responded 401");
+  });
+
+  it("refuses a body without coordinates, or with impossible ones", async () => {
+    for (const body of [
+      { days: [] },
+      { longitude: -122.6784, resolvedAddress: "Portland, OR, United States" },
+      { latitude: 45.5152, resolvedAddress: "Portland, OR, United States" },
+      { ...PLACE_BODY, latitude: 91 },
+      { ...PLACE_BODY, latitude: -91 },
+      { ...PLACE_BODY, longitude: 181 },
+      { ...PLACE_BODY, longitude: -181 },
+    ]) {
+      const provider = createVisualCrossingProvider(
+        "test-key",
+        jsonFetch(body),
+      );
+      const error = await rejectionFrom(provider.resolvePlace("Portland"));
+      expect(error.message).toBe(
+        "Visual Crossing place response failed validation",
+      );
+    }
+  });
+
+  it("takes the edges of the world as places", async () => {
+    for (const [latitude, longitude] of [
+      [-90, 180],
+      [90, -180],
+    ]) {
+      const provider = createVisualCrossingProvider(
+        "test-key",
+        jsonFetch({ latitude, longitude, resolvedAddress: "An edge" }),
+      );
+      expect(await provider.resolvePlace("An edge")).toStrictEqual({
+        lat: latitude,
+        lng: longitude,
+        address: "An edge",
+      });
+    }
+  });
+
+  it("wraps a transport failure, naming the place read", async () => {
+    const boom = new Error("connect ECONNREFUSED");
+    const provider = createVisualCrossingProvider("test-key", () =>
+      Promise.reject(boom),
+    );
+    const error = await rejectionFrom(provider.resolvePlace("Portland"));
+    expect(error.message).toBe("Visual Crossing place request failed");
+    expect(error.cause).toBe(boom);
+  });
+
+  it("says the key is missing, without asking", async () => {
+    for (const apiKey of [undefined, ""]) {
+      const fetchImpl = jsonFetch(PLACE_BODY);
+      const provider = createVisualCrossingProvider(apiKey, fetchImpl);
+      const error = await rejectionFrom(provider.resolvePlace("Portland"));
+      expect(error.message).toBe("VISUAL_CROSSING_API_KEY is not configured");
+      expect(fetchImpl).not.toHaveBeenCalled();
+    }
+  });
+});

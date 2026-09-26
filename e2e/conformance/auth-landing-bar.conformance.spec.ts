@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
-import { openBoard, screen } from "../support/conformance";
-import { borderOf, fillOf, hydrated, partsIn, wordsOf } from "./auth-parts";
+import { fillOf, hydrated, openBoard, screen } from "../support/conformance";
+import { borderOf, partsIn, wordsOf } from "./auth-parts";
 
 /**
  * `/`'s landing bar at 720 and 1040, signed out and signed in, built

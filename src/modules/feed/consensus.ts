@@ -1,10 +1,37 @@
 /**
  * "Your conditions" (E2-lite, D-10/D-16): consensus block only, no stranger
- * cards. Bounded scan (docs/architecture.md): ≤200 core rows via the
- * `entries_public_created` covering index + ≤200 weather cache-key seeks.
+ * cards. Every public entry in the window, via the `entries_public_created`
+ * index, then the weather cache cells of their runs.
  * `source='manual'` observations are excluded from the aggregate.
+ *
+ * **No LIMIT on the window, deliberately.** The match is decided against
+ * weather in DIALED_WEATHER, which SQL here cannot join to, so the filter
+ * runs in code — and a `LIMIT 200` ahead of it answered "the matches among
+ * the newest 200", hiding every runner in the viewer's conditions behind a
+ * busy afternoon somewhere else (PR #102 review). The read is bounded by
+ * the window instead. Reading weather first would bound it by the band,
+ * but the cache has no index to find cells by hour and feels-like, and
+ * nothing maps a cell back to runs; that is an index decision for the
+ * owner, recorded in PR #102's Register.
+ *
+ * Round 22 set the rules this module now keeps:
+ *
+ * - **Five runners or no aggregate.** A privacy floor, confirmed by the
+ *   owner: at four, a block of "what they wore" is too easy to read one
+ *   person out of. It counts **runners**, not entries — five posts by one
+ *   runner are one runner.
+ * - **Three days, widened once to fourteen**, and the screen says so.
+ *   Still under five is "not enough runs yet".
+ * - **The temperature band never widens.** Only the window does; a wider
+ *   band would answer a different question ("what do people wear
+ *   somewhere near this temperature").
+ * - **A row under two runners is dropped**, for the floor's own reason.
+ *
+ * The viewer's own entries are left out: "what other runners wore" is the
+ * question, and counting the viewer as one of the five would leave four
+ * strangers behind a floor meant to be five.
  */
-import { and, desc, gte, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -16,24 +43,51 @@ import {
 import { env } from "../../env";
 import { readInChunks } from "../../lib/chunked";
 import { precipClassOf } from "../../lib/temperature";
+import type { PrecipClass } from "../../lib/temperature";
 import type { Conditions } from "./conditions";
-import { conditionsAt, observationsForEntries } from "./conditions";
+import { observationsForEntries, conditionsAt } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import type { UiGroup } from "./groups";
-import { uiGroupFor } from "./groups";
+import { uiGroupFor, uiGroups } from "./groups";
 import { publiclyVisibleEntry } from "../safety";
 
-const SCAN_LIMIT = 200;
-const WINDOW_H = [72, 24 * 7] as const; // widen once before declaring empty
-const FEELS_LIKE_DELTA_C = [3, 5] as const;
+const DAY_S = 24 * 3600;
+
+/**
+The two windows, in days: the first look, and the one widening.
+*/
+export const WINDOW_DAYS = [3, 14] as const;
+export type WindowDays = (typeof WINDOW_DAYS)[number];
+
+/**
+The band either side of the viewer's feels-like. It never widens.
+*/
+export const BAND_HALF_WIDTH_C = 3;
+
+/**
+Round 22's privacy floor: below this many runners, no aggregate at all.
+*/
+export const MIN_RUNNERS = 5;
+
+/**
+A garment group worn by fewer runners than this is not shown.
+*/
+export const MIN_GROUP_RUNNERS = 2;
 
 export function recentPublicEntriesStatement(
   database: DrizzleD1Database,
   sinceEpochSeconds: number,
-  limit = SCAN_LIMIT,
+  viewerId?: string,
 ) {
+  // Only the four columns the tally reads: the window is unbounded by
+  // count now, so every column left out is paid for on every row of it.
   return database
-    .select()
+    .select({
+      id: outfitEntries.id,
+      runId: outfitEntries.runId,
+      userId: outfitEntries.userId,
+      verdict: outfitEntries.verdict,
+    })
     .from(outfitEntries)
     .where(
       // publiclyVisibleEntry(), not a bare isPublic: a removed or
@@ -43,23 +97,47 @@ export function recentPublicEntriesStatement(
       and(
         publiclyVisibleEntry(),
         gte(outfitEntries.createdAt, sinceEpochSeconds),
+        viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
       ),
-    )
-    .orderBy(desc(outfitEntries.createdAt))
-    .limit(limit);
+    );
 }
 
-export interface ConsensusResult {
-  /**
-  Number of qualifying entries the group counts are "out of".
-  */
-  total: number;
-  groups: Partial<Record<UiGroup, number>>;
-  /**
-  True when the 72h/±3°C window was empty and had to be widened.
-  */
-  widened: boolean;
+/**
+What the block says it matched (round 25): the band in the eyebrow,
+`FEELS [41–47°] · DAMP`, and the viewer's own feels-like in the line,
+"In 44° and damp".
+*/
+export interface ConsensusBand {
+  feelsC: number;
+  minC: number;
+  maxC: number;
+  precip: PrecipClass;
 }
+
+export interface ConsensusGroup {
+  group: UiGroup;
+  runners: number;
+}
+
+/**
+ * The block, or why there is none.
+ *
+ * `windowDays` is always there, because the eyebrow's window slot always
+ * is: *"it read LAST 3 DAYS unwidened — the slot is always there"*.
+ */
+export type ConsensusResult =
+  | {
+      status: "matched";
+      runners: number;
+      groups: readonly ConsensusGroup[];
+      windowDays: WindowDays;
+      band: ConsensusBand;
+    }
+  | {
+      status: "too-few";
+      windowDays: WindowDays;
+      band: ConsensusBand;
+    };
 
 /**
  * The two sides are deliberately asymmetric. The **entry** is compared at
@@ -68,93 +146,86 @@ export interface ConsensusResult {
  * a live reading with no verdict to be worst relative to, so it stays the
  * point it is. "What did people wear when it felt like it does to me now."
  */
-function isWithinConsensusWindow(
+function isWithinConsensusBand(
   observation: Conditions,
   verdict: number | null,
   viewer: Conditions,
-  deltaC: number,
 ): boolean {
   if (observation.source === "manual") return false;
   if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm))
     return false;
   return (
     Math.abs(judgedFeelsLikeC(observation, verdict) - viewer.feelsLikeC) <=
-    deltaC
+    BAND_HALF_WIDTH_C
   );
 }
 
-async function qualifyingEntryIdsInWindow(
-  database: DrizzleD1Database,
+/**
+ * Who matched in a window, and which groups each of them wore.
+ *
+ * Runners, not entries: one runner's several matching posts are one voice.
+ * A runner counts once in a group if any of their matching entries has a
+ * garment in it.
+ */
+export interface MatchTally {
+  runners: number;
+  groups: Partial<Record<UiGroup, number>>;
+}
+
+export async function matchTally(
   viewer: Conditions,
   sinceEpochSeconds: number,
-  deltaC: number,
-): Promise<string[]> {
+  viewerId?: string,
+): Promise<MatchTally> {
+  const database = drizzle(env.DIALED_CORE);
   const entries = await recentPublicEntriesStatement(
     database,
     sinceEpochSeconds,
+    viewerId,
   );
   // Equivalent mutant: no entries means no observations and nothing to
   // filter, so the empty list comes out either way. The return saves the
   // cross-database walk.
   // Stryker disable next-line ConditionalExpression
-  if (entries.length === 0) return [];
+  if (entries.length === 0) return { runners: 0, groups: {} };
+  // In code rather than SQL: the observations live in DIALED_WEATHER, a
+  // separate database D1 cannot join to (CLAUDE.md, D1 discipline).
   const observations = await observationsForEntries(database, entries);
-  return entries
-    .filter((entry) => {
-      const observation = observations.get(entry.runId);
-      // Both halves matter: an entry whose conditions were never resolved
-      // cannot be compared to the viewer's, and reading one anyway is a
-      // crash on the consensus block rather than a miscount.
-      return (
-        observation !== undefined &&
-        isWithinConsensusWindow(observation, entry.verdict, viewer, deltaC)
-      );
-    })
-    .map((entry) => entry.id);
-}
-
-export async function yourConditionsConsensus(
-  viewer: Conditions,
-  nowEpochSeconds: number,
-): Promise<ConsensusResult> {
-  const database = drizzle(env.DIALED_CORE);
-
-  for (const [pass, windowHours] of WINDOW_H.entries()) {
-    const since = nowEpochSeconds - windowHours * 3600;
-    // The two fallbacks are unreachable: `pass` indexes `WINDOW_H`, and
-    // the two arrays are the same length by construction. They are here
-    // because an index signature cannot promise that.
-    // Stryker disable next-line LogicalOperator,UnaryOperator
-    const deltaC = FEELS_LIKE_DELTA_C[pass] ?? FEELS_LIKE_DELTA_C.at(-1) ?? 3;
-    const qualifyingEntryIds = await qualifyingEntryIdsInWindow(
-      database,
-      viewer,
-      since,
-      deltaC,
+  const matching = entries.filter((entry) => {
+    const observation = observations.get(entry.runId);
+    // Both halves matter: an entry whose conditions were never resolved
+    // cannot be compared to the viewer's, and reading one anyway is a
+    // crash on the consensus block rather than a miscount.
+    return (
+      observation !== undefined &&
+      isWithinConsensusBand(observation, entry.verdict, viewer)
     );
-    // Widen before declaring empty. There was an `isLastPass` check here
-    // as well, so the final pass returned its own empty result rather than
-    // falling through; mutation testing showed the two paths produce the
-    // same value, which is what a redundant branch looks like. Falling
-    // through says it once.
-    if (qualifyingEntryIds.length === 0) continue;
-    const groups = await aggregateGroups(database, qualifyingEntryIds);
-    return { total: qualifyingEntryIds.length, groups, widened: pass > 0 };
-  }
-  // Every window has been tried, so an empty answer is a widened one.
-  return { total: 0, groups: {}, widened: true };
+  });
+  return {
+    runners: new Set(matching.map((entry) => entry.userId)).size,
+    groups: await groupsByRunner(
+      database,
+      matching.map((entry) => entry.id),
+    ),
+  };
 }
 
-async function aggregateGroups(
+async function groupsByRunner(
   database: DrizzleD1Database,
   entryIds: readonly string[],
 ): Promise<Partial<Record<UiGroup, number>>> {
-  // Both reads in chunks: up to 200 entries and every garment worn on
-  // them, each past D1's 100-parameter cap for one statement.
+  // Both reads in chunks: every matching entry in the window and every
+  // garment worn on them, each past D1's 100-parameter cap for one
+  // statement. The join
+  // brings each garment row its runner, so no row has to look one up.
   const itemRows = await readInChunks(entryIds, (chunk) =>
     database
-      .select()
+      .select({
+        itemId: outfitEntryItems.itemId,
+        userId: outfitEntries.userId,
+      })
       .from(outfitEntryItems)
+      .innerJoin(outfitEntries, eq(outfitEntries.id, outfitEntryItems.entryId))
       .where(inArray(outfitEntryItems.entryId, chunk)),
   );
   const itemIds = [...new Set(itemRows.map((r) => r.itemId))];
@@ -172,8 +243,9 @@ async function aggregateGroups(
     garments.map((g) => [g.id, uiGroupFor(g.category, g.layer)]),
   );
 
-  // one entry counts at most once per group, even with multiple items in it
-  const perEntryGroups = new Map<string, Set<UiGroup>>();
+  // One runner counts at most once per group, however many entries or
+  // items put them there.
+  const runnersByGroup = new Map<UiGroup, Set<string>>();
   for (const row of itemRows) {
     const group = groupByItemId.get(row.itemId);
     // Equivalent mutant: `itemIds` is built from these very rows, so every
@@ -182,17 +254,57 @@ async function aggregateGroups(
     // `undefined` key into the counts.
     // Stryker disable next-line ConditionalExpression
     if (!group) continue;
-    const set = perEntryGroups.get(row.entryId) ?? new Set<UiGroup>();
-    set.add(group);
-    perEntryGroups.set(row.entryId, set);
+    const runners = runnersByGroup.get(group) ?? new Set<string>();
+    runners.add(row.userId);
+    runnersByGroup.set(group, runners);
   }
-  const counts: Partial<Record<UiGroup, number>> = {};
-  for (const groups of perEntryGroups.values()) {
-    for (const group of groups) {
-      counts[group] = (counts[group] ?? 0) + 1;
+  return Object.fromEntries(
+    [...runnersByGroup].map(([group, runners]) => [group, runners.size]),
+  );
+}
+
+/**
+ * The groups worth a row: two runners or more, most-worn first, and the
+ * closet's own group order between equals.
+ */
+export function shownGroups(
+  groups: Partial<Record<UiGroup, number>>,
+): ConsensusGroup[] {
+  return uiGroups
+    .map((group) => ({ group, runners: groups[group] ?? 0 }))
+    .filter((row) => row.runners >= MIN_GROUP_RUNNERS)
+    .toSorted((a, b) => b.runners - a.runners);
+}
+
+export async function yourConditionsConsensus(
+  viewer: Conditions,
+  nowEpochSeconds: number,
+  viewerId?: string,
+): Promise<ConsensusResult> {
+  const band: ConsensusBand = {
+    feelsC: viewer.feelsLikeC,
+    minC: viewer.feelsLikeC - BAND_HALF_WIDTH_C,
+    maxC: viewer.feelsLikeC + BAND_HALF_WIDTH_C,
+    precip: precipClassOf(viewer.precipMm),
+  };
+  for (const windowDays of WINDOW_DAYS) {
+    const tally = await matchTally(
+      viewer,
+      nowEpochSeconds - windowDays * DAY_S,
+      viewerId,
+    );
+    if (tally.runners >= MIN_RUNNERS) {
+      return {
+        status: "matched",
+        runners: tally.runners,
+        groups: shownGroups(tally.groups),
+        windowDays,
+        band,
+      };
     }
   }
-  return counts;
+  // Every window has been tried, so the answer is the widest one's.
+  return { status: "too-few", windowDays: 14, band };
 }
 
 /**
@@ -200,17 +312,16 @@ async function aggregateGroups(
  * resolved.
  *
  * Law 5: the weather lane owns fetching a fresh observation, so a viewer
- * whose conditions are unknown sees no consensus block rather than an
- * error or an empty one — an empty block claims nobody ran in these
- * conditions, which is a different statement from "we do not know what
- * they are".
+ * whose conditions are unknown gets no block rather than an error or an
+ * empty one — an empty block claims nobody ran in these conditions, which
+ * is a different statement from "we do not know what they are".
  */
 export async function consensusAt(
   lat: number,
   lng: number,
   nowEpochSeconds: number,
+  viewerId?: string,
 ): Promise<ConsensusResult | undefined> {
   const viewer = await conditionsAt(lat, lng, nowEpochSeconds);
-  if (viewer === undefined) return undefined;
-  return yourConditionsConsensus(viewer, nowEpochSeconds);
+  return viewer && yourConditionsConsensus(viewer, nowEpochSeconds, viewerId);
 }

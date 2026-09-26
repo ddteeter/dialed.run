@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { colorRole, signatureOf } from "../support/conformance";
+import { colorRoleOf, signatureOf } from "../support/conformance";
 
 /**
  * Region-level comparison for the round-22 frames (Auth, the landing bar,
@@ -62,33 +62,8 @@ export async function wordsOf(
 }
 
 /**
-The T1 role a region's fill resolves to.
-*/
-export async function fillOf(page: Page, selector: string): Promise<string> {
-  const computed = await page.$eval(
-    selector,
-    (element) => getComputedStyle(element).backgroundColor,
-  );
-  return colorRole(computed);
-}
-
-/**
 The T1 role a region's top border resolves to.
 */
 export async function borderOf(page: Page, selector: string): Promise<string> {
-  const computed = await page.$eval(
-    selector,
-    (element) => getComputedStyle(element).borderTopColor,
-  );
-  return colorRole(computed);
-}
-
-/**
- * Waits for React to attach. Every spec here drives controlled inputs,
- * and a fill that lands before hydration is silently reset.
- */
-export async function hydrated(page: Page): Promise<void> {
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
+  return colorRoleOf(page, selector, "borderTopColor");
 }
