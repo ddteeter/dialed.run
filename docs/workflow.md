@@ -146,30 +146,45 @@ When a lane's design doc requests a schema change:
 - Two lanes need the same new shared utility → it goes in `lib/` (or `ui/`)
   via a micro-task on main, not copy-paste in both lanes.
 
-## Launch-gate checklist (before public sign-ups)
+## Launch: development, then deployment
 
-1. Run task 106 (trust & safety floor) as a sequential lane on main.
-2. Enable Cloudflare's CSAM scanning tool in the dashboard (free; zone
-   setting, not code).
-3. Confirm observability config: tracing OFF (billable), logs at full sample
-   (`head_sampling_rate: 1` is fine at launch volume).
-4. Send `docs/design-deltas.md` items back through Claude Design if not
-   already done — undesigned surfaces shipped on placeholder layouts should
-   be reconciled before strangers see them.
-5. **Motion Doctrine sweep**: v1 lanes predate the doctrine and adopt it
-   opportunistically — before launch, audit every surface in
-   `design/motion.js`'s per-surface map against the shipped UI: each mapped
-   surface animates per the map (tokens only), everything else is still,
-   the NEVER list holds, and reduced-motion collapses to 90ms opacity
-   (never zero). Verify by watching the demo videos — they record full
-   motion by design.
-6. **Publish a privacy policy** and link it from the signed-out shell and
-   both auth forms (D-105, owner 2026-09-25). The Strava API Agreement has
-   us warrant compliance with privacy law (§5.1, §11.1), and strangers
-   hand us an email, photos and a Strava grant. The text is a human
-   decision; the page and links are a small lane.
+The launch gate is no longer a list in this file. The production-readiness
+audit (`docs/reconciliation/2026-09-25-production-readiness-audit.md`)
+replaced it with two plans, and the owner separated them (decision D-37):
 
-Dogfooding with invited runners is fine before the gate; strangers are not.
+1. **`docs/launch/development-plan.md`**: everything that is code, in five
+   parallel lanes (tasks 125–129; shared rules in
+   `docs/tasks/125-129-launch-development.md`). All of it lands first.
+2. **`docs/launch/deployment-plan.md`**: everything that is a dashboard, an
+   account, a legal registration or a config edit, run as its own sweep
+   afterwards. Its §11 holds the **rollout gates**: the owner alone, then
+   invited friends, then the public (decision D-38).
+
+Keep the launch list in those two files only. A third copy here would drift
+from them, which is what this section used to do.
+
+Fan-out for the five lanes:
+
+```bash
+git worktree add ../dialed-125 -b lane/125-ops-platform
+git worktree add ../dialed-127 -b lane/127-strava-logging
+git worktree add ../dialed-128 -b lane/128-content-safety
+# after PR #104 merges:
+git worktree add ../dialed-126 -b lane/126-accounts
+# after PR #102 merges:
+git worktree add ../dialed-129 -b lane/129-feed
+```
+
+Where the old checklist's items went:
+
+| old item                                            | now                                                                                                   |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1. Run task 106                                     | Done; the audit found its ban mechanics unfinished, which is 128 · SAF-4                              |
+| 2. Enable the CSAM scanning tool                    | Deployment plan §8. It only sees public photos once 128 · SAF-7 serves them cacheable (decision D-46) |
+| 3. Observability config (tracing off, logs sampled) | Deployment plan §1                                                                                    |
+| 4. Design-deltas round trip before strangers        | The development plan's design dependencies, and the D-45 copy pass as a stage-2 gate                  |
+| 5. Motion Doctrine sweep                            | Closed by task 114 (design-deltas item 12)                                                            |
+| 6. Publish a privacy policy (D-105)                 | 126 · ACC-13 (page and links); deployment plan §9 (the text; PR #109 drafted it)                      |
 
 ## After v1
 

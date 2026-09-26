@@ -294,7 +294,8 @@ explicitly says the migration is yours — or the owner has said yes.
   fallback exists only when no observation is resolvable; it is stored with
   `source='manual'` and excluded from consensus aggregates and (later) training.
 - **Strava activity data is never stored, displayed, or used.** The webhook's
-  only effect is a notification row.
+  only effect is a notification row and, if the runner allows it, a reminder
+  email.
 - **Sharing**: entries are public by default with a per-entry toggle and a
   per-user default preference. Private entries never appear in feeds or
   consensus aggregates.
