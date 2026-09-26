@@ -9,7 +9,6 @@ import {
   desc,
   eq,
   getTableColumns,
-  gte,
   isNull,
   ne,
   notInArray,
@@ -19,6 +18,7 @@ import {
 
 import { notifications, outfitEntries, runs } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
+import { BELL_NUMBER_CAP } from "./bell-cap";
 import type { NotificationsDb } from "./db";
 import { nowSeconds } from "../../lib/now";
 
@@ -102,15 +102,8 @@ export async function createNotification(
  * nothing (PR #102 review). The predicate is mark-all's own, in SQL, so
  * the two cannot disagree.
  */
-export async function listNotifications(
-  db: NotificationsDb,
-  userId: string,
-  nowEpochSeconds: number,
-) {
-  const markable = and(
-    eq(notifications.read, false),
-    notOwed(db, userId, nowEpochSeconds),
-  );
+export async function listNotifications(db: NotificationsDb, userId: string) {
+  const markable = and(eq(notifications.read, false), notOwed(db, userId));
   return db
     .select({
       ...getTableColumns(notifications),
@@ -146,39 +139,26 @@ function onlyCount(rows: readonly { n: number }[]): number {
 }
 
 /**
- * How far back a run still counts as waiting for its verdict — round 22's
- * bell ruling: *"Runs with a kit or not, without a verdict, from the last
- * 14 days."* Older than that and the run is history, not a to-do.
- */
-export const VERDICT_WAIT_WINDOW_S = 14 * 24 * 3600;
-
-/**
- * The runs this runner still owes a verdict: started inside the window,
- * and either with no outfit entry or with one whose verdict is empty.
+ * The runs this runner still owes a verdict, as a subquery for Mark all
+ * read: no outfit entry, or one whose verdict is empty, **at any age**.
+ *
+ * This is `runsAwaitingVerdict`'s set (modules/runs owns the definition,
+ * round 22 item 18) written as SQL a `notInArray` can hold, because that
+ * function answers rows and a statement cannot be built from a Promise.
+ * It cannot import it either: runs imports this module, so the reverse is
+ * a cycle. `test/notifications.test.ts` pins the two to the same set.
  *
  * One LEFT JOIN answers both halves — a run with no entry joins to NULLs,
- * so `verdict IS NULL` is true of it and of an entry nobody judged, which
- * is exactly "with a kit or not". Index-backed on both sides:
- * `runs_user_started` bounds the scan by user and start, and the UNIQUE
- * `entries_run` is the probe.
+ * so `verdict IS NULL` is true of it and of an entry nobody judged.
+ * Index-backed on both sides: `runs_user_started` leads with the user, and
+ * the UNIQUE `entries_run` is the probe.
  */
-function waitingRuns(db: NotificationsDb, userId: string, since: number) {
+function owedRuns(db: NotificationsDb, userId: string) {
   return db
     .select({ id: runs.id })
     .from(runs)
     .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
-    .where(waiting(userId, since));
-}
-
-/**
-The waiting set's condition, for the count and the list alike.
-*/
-function waiting(userId: string, since: number) {
-  return and(
-    eq(runs.userId, userId),
-    gte(runs.startedAt, since),
-    isNull(outfitEntries.verdict),
-  );
+    .where(and(eq(runs.userId, userId), isNull(outfitEntries.verdict)));
 }
 
 /**
@@ -191,31 +171,40 @@ function unreadOf(userId: string) {
 /**
  * What the bell shows (round 22, item 13): a **number** when there are
  * runs waiting for a verdict, because each one is a thing to do, and
- * otherwise a **dot** for anything unread. Both counts in one batch.
+ * otherwise a **dot** for anything unread.
  */
 export interface BellState {
   unreadCount: number;
   verdictsWaiting: number;
 }
 
+/**
+ * Reads the runs awaiting a verdict, oldest first, at most `limit` of them
+ * — `runsAwaitingVerdict` from modules/runs, bound to this runner by the
+ * server function. Handed in rather than imported, because runs imports
+ * this module and the reverse would be a cycle.
+ */
+export type AwaitingVerdict = (limit: number) => Promise<readonly unknown[]>;
+
+/**
+ * The bell's two counts. **Its number is the one awaiting set, at any
+ * age** (owner, 2026-09-24: DS2's backlog and the bell are the same set),
+ * so a run from last month that never got its verdict still counts.
+ *
+ * The number stops at `9+`, so the set is read one past the cap and no
+ * further: ten rows say "more than nine" as well as ten thousand would,
+ * and D1 bills the rows it reads.
+ */
 export async function bellState(
   db: NotificationsDb,
   userId: string,
-  nowEpochSeconds: number,
+  awaiting: AwaitingVerdict,
 ): Promise<BellState> {
-  const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
-  const [unread, owed] = await db.batch([
-    db.select({ n: count() }).from(notifications).where(unreadOf(userId)),
-    db
-      .select({ n: count() })
-      .from(runs)
-      .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
-      .where(waiting(userId, since)),
+  const [unreadCount, owed] = await Promise.all([
+    unreadNotificationCount(db, userId),
+    awaiting(BELL_NUMBER_CAP + 1),
   ]);
-  return {
-    unreadCount: onlyCount(unread),
-    verdictsWaiting: onlyCount(owed),
-  };
+  return { unreadCount, verdictsWaiting: owed.length };
 }
 
 /**
@@ -228,23 +217,21 @@ export async function bellState(
 export async function markAllNotificationsRead(
   db: NotificationsDb,
   userId: string,
-  nowEpochSeconds: number,
 ): Promise<void> {
   await db
     .update(notifications)
     .set({ read: true })
-    .where(and(unreadOf(userId), notOwed(db, userId, nowEpochSeconds)));
+    .where(and(unreadOf(userId), notOwed(db, userId)));
 }
 
 /**
  * A notification that is not a verdict still owed: any kind but a kit
- * reminder, or a kit reminder whose run has its verdict (or has left the
- * window). What Mark all read may clear, and what the list calls markable.
+ * reminder, or a kit reminder whose run has its verdict. What Mark all
+ * read may clear, and what the list calls markable.
  */
-function notOwed(db: NotificationsDb, userId: string, nowEpochSeconds: number) {
-  const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
+function notOwed(db: NotificationsDb, userId: string) {
   return or(
     ne(notifications.kind, "kit_reminder"),
-    notInArray(notifications.subjectId, waitingRuns(db, userId, since)),
+    notInArray(notifications.subjectId, owedRuns(db, userId)),
   );
 }

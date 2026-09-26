@@ -17,7 +17,7 @@ export {
   listNotifications,
   markAllNotificationsRead,
   unreadNotificationCount,
-  VERDICT_WAIT_WINDOW_S,
+  type AwaitingVerdict,
   type BellState,
   type NotificationKind,
 } from "./service";
