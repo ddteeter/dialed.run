@@ -31,3 +31,14 @@ export type {
   BacklogSuggestion,
 } from "./backlog";
 export type { Conditions } from "./conditions-shape";
+
+// Task 128 · SAF-3: the delete primitives account deletion (126 · ACC-9)
+// and run deletion call, rather than writing a second delete.
+export {
+  deleteEntryPhoto,
+  deleteRun,
+  deleteRuns,
+  retractEntries,
+  retractEntry,
+  type Scope,
+} from "./retract";

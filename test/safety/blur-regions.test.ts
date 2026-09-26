@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  afterCell,
   afterTap,
+  BLUR_CELLS,
   BLUR_OFF_LINE,
+  cellRegion,
+  isCellBlurred,
   blurSummary,
   type BlurRegion,
   clamped,
@@ -167,30 +171,19 @@ describe("the sentence above the photo", () => {
 
   it("reports what it blurred and invites a correction", () => {
     expect(blurSummary({ detector: "ran", detected: 1, tapped: 0 })).toBe(
-      "We blurred one face. Missed something? Tap it to blur it too.",
+      "We blurred 1 face. Missed something? Tap it to blur it too.",
     );
   });
 
   it.each([
-    [2, "two faces"],
-    [3, "three faces"],
-    [4, "four faces"],
-    [5, "five faces"],
-  ])("writes %i as a word, because this is prose", (detected, expected) => {
-    // Words for small numbers: bracket-notation mono is for values the
-    // system measured, and a count inside a sentence is not one.
+    [1, "1 face."],
+    [2, "2 faces"],
+    [5, "5 faces"],
+    [6, "6 faces"],
+  ])("writes %i in digits, always (round 26 #18)", (detected, expected) => {
     expect(blurSummary({ detector: "ran", detected, tapped: 0 })).toContain(
-      expected,
+      `We blurred ${expected}`,
     );
-  });
-
-  it("falls back to digits past the words it has", () => {
-    // Six faces in an outfit photo is not a case worth writing a word
-    // for, but it must still read as a sentence rather than as
-    // "undefined faces".
-    const summary = blurSummary({ detector: "ran", detected: 6, tapped: 0 });
-    expect(summary).toContain("6 faces");
-    expect(summary).not.toContain("undefined");
   });
 
   it("never claims a clean sweep it did not make", () => {
@@ -225,16 +218,16 @@ describe("the sentence above the photo", () => {
     // "We blurred" is a claim about detection; a runner's own tap is not,
     // and crediting the model for it would overstate what it found.
     expect(blurSummary({ detector: "ran", detected: 1, tapped: 1 })).toBe(
-      "We blurred one face. You blurred 1 more spot. Tap one to undo.",
+      "We blurred 1 face. You blurred 1 more spot. Tap one to undo.",
     );
     expect(blurSummary({ detector: "ran", detected: 2, tapped: 3 })).toBe(
-      "We blurred two faces. You blurred 3 more spots. Tap one to undo.",
+      "We blurred 2 faces. You blurred 3 more spots. Tap one to undo.",
     );
   });
 
   it("says each resting outcome in its own words", () => {
     expect(blurSummary({ detector: "ran", detected: 1, tapped: 0 })).toBe(
-      "We blurred one face. Missed something? Tap it to blur it too.",
+      "We blurred 1 face. Missed something? Tap it to blur it too.",
     );
     expect(blurSummary({ detector: "ran", detected: 0, tapped: 0 })).toBe(
       "No face found. Posting as-is.",
@@ -329,5 +322,88 @@ describe("the detector's answer as regions", () => {
 
   it("gives back nothing when the detector ran and found none", () => {
     expect(detectedRegions({ status: "ran", faces: [] })).toEqual([]);
+  });
+});
+
+describe("the keyboard's cells (D-84(b))", () => {
+  it("names nine cells by position, in reading order", () => {
+    expect(BLUR_CELLS).toStrictEqual([
+      "top-left",
+      "top",
+      "top-right",
+      "left",
+      "middle",
+      "right",
+      "bottom-left",
+      "bottom",
+      "bottom-right",
+    ]);
+  });
+
+  it("gives each cell a third of the photo each way", () => {
+    expect(cellRegion(0, 300, 600)).toStrictEqual({
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 200,
+    });
+    expect(cellRegion(5, 300, 600)).toStrictEqual({
+      x: 200,
+      y: 200,
+      width: 100,
+      height: 200,
+    });
+    expect(cellRegion(7, 300, 600)).toStrictEqual({
+      x: 100,
+      y: 400,
+      width: 100,
+      height: 200,
+    });
+  });
+
+  it("blurs a whole cell as the runner's own, and undoes it pressed again", () => {
+    const once = afterCell([], 4, 300, 300);
+    expect(once).toStrictEqual([
+      { x: 100, y: 100, width: 100, height: 100, source: "tapped" },
+    ]);
+    expect(isCellBlurred(once, 4, 300, 300)).toBe(true);
+    expect(isCellBlurred(once, 3, 300, 300)).toBe(false);
+    expect(afterCell(once, 4, 300, 300)).toStrictEqual([]);
+  });
+
+  it("leaves detected faces and taps alone when a cell is undone", () => {
+    const face: BlurRegion = {
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      source: "detected",
+    };
+    const tap: BlurRegion = {
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      source: "tapped",
+    };
+    // A detected box the size of the cell is not the runner's cell.
+    expect(isCellBlurred([face], 4, 300, 300)).toBe(false);
+    const pressed = afterCell([face, tap], 4, 300, 300);
+    expect(pressed).toHaveLength(3);
+    expect(afterCell(pressed, 4, 300, 300)).toStrictEqual([face, tap]);
+  });
+
+  it("matches a cell only on all four edges", () => {
+    const cell = cellRegion(0, 300, 300);
+    for (const off of [
+      { ...cell, x: 1 },
+      { ...cell, y: 1 },
+      { ...cell, width: 99 },
+      { ...cell, height: 99 },
+    ]) {
+      expect(
+        isCellBlurred([{ ...off, source: "tapped" }], 0, 300, 300),
+      ).toBe(false);
+    }
   });
 });

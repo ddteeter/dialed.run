@@ -94,7 +94,8 @@ describe("following feed (E1)", () => {
     const followeeIds = await followeeIdsOf(viewer);
     const entriesStatement = followingFeedStatement(
       database,
-      [viewer, ...followeeIds],
+      viewer,
+      followeeIds,
       undefined,
     );
     const { sql, params } = entriesStatement.toSQL();

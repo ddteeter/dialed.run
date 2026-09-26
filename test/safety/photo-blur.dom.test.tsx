@@ -142,7 +142,7 @@ describe("with blur on", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/We blurred one face\. Missed something\?/),
+        screen.getByText(/We blurred 1 face\. Missed something\?/),
       ).toBeInTheDocument();
     });
   });
@@ -294,7 +294,7 @@ describe("tapping", () => {
 });
 
 describe("with blur turned off", () => {
-  it("uploads the original and loads no detector at all", async () => {
+  it("uploads the photo redrawn, never the original, and loads no detector", async () => {
     const user = userEvent.setup();
     const onReady = vi.fn();
     const detect = vi.fn().mockResolvedValue({ status: "ran", faces: [] });
@@ -315,9 +315,12 @@ describe("with blur turned off", () => {
 
     await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
 
+    // Redrawn through the canvas (task 128 · SAF-2): the original carries
+    // the phone's metadata, GPS included, and is never what leaves.
     await waitFor(() => {
-      expect(onReady).toHaveBeenCalledWith(PHOTO);
+      expect(onReady).toHaveBeenCalledWith(BLURRED);
     });
+    expect(onReady).not.toHaveBeenCalledWith(PHOTO);
     // Not loading the model is the entire point of remembering a refusal:
     // it is ~2.6 MB brotli and ~11.9 MB instantiated.
     expect(detect).not.toHaveBeenCalled();
@@ -807,5 +810,184 @@ describe("photoBlurStep", () => {
     if (!isValidElement(step)) throw new Error("not an element");
     expect(step.type).toBe(PhotoBlur);
     expect(step.props).toStrictEqual({ file, onReady, onAnnounce: announce });
+  });
+});
+
+describe("the keyboard path (D-84(b))", () => {
+  it("offers nine buttons named by position, once the photo has decoded", async () => {
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    const group = await screen.findByRole("group", {
+      name: "Blur part of the photo",
+    });
+    expect(
+      [...group.querySelectorAll("button")].map((b) => b.textContent),
+    ).toStrictEqual([
+      "Blur top-left",
+      "Blur top",
+      "Blur top-right",
+      "Blur left",
+      "Blur middle",
+      "Blur right",
+      "Blur bottom-left",
+      "Blur bottom",
+      "Blur bottom-right",
+    ]);
+  });
+
+  it("blurs the cell from the keyboard, says so, and undoes it", async () => {
+    const user = userEvent.setup();
+    const onReady = vi.fn();
+    const { pipeline, painted } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    const cell = await screen.findByRole("button", { name: "Blur top-left" });
+    expect(cell).toHaveAttribute("aria-pressed", "false");
+
+    cell.focus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(painted.at(-1)).toStrictEqual([
+        {
+          x: 0,
+          y: 0,
+          width: 1000 / 3,
+          height: 1000 / 3,
+          source: "tapped",
+        },
+      ]);
+    });
+    expect(cell).toHaveAttribute("aria-pressed", "true");
+    // Digits, always (round 26 #18).
+    expect(
+      screen.getByText("You blurred 1 spot. Tap one to undo."),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(painted.at(-1)).toStrictEqual([]);
+    });
+    expect(cell).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("is not there with blur off", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Faces won't be blurred. Anyone in this photo can be recognised.",
+        ),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: "Blur top" })).toBeNull();
+  });
+});
+
+describe("with blur off from the start (SAF-2)", () => {
+  it("redraws the whole photo with nothing blurred, at its decoded size", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const onReady = vi.fn();
+    const paint = vi.fn();
+    const detect = vi.fn();
+    const { pipeline } = fakePipeline({ paint, detect });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    await waitFor(() => {
+      expect(onReady).toHaveBeenCalledWith(BLURRED);
+    });
+    expect(paint).toHaveBeenCalledTimes(1);
+    expect(paint.mock.calls[0]?.slice(2)).toStrictEqual([1000, 1000, []]);
+    expect(detect).not.toHaveBeenCalled();
+  });
+
+  it("hands back nothing when the canvas cannot make a file", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const onReady = vi.fn();
+    const toFile = vi.fn(() => Promise.resolve(undefined));
+    const { pipeline } = fakePipeline({ toFile });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    await waitFor(() => {
+      expect(toFile).toHaveBeenCalledTimes(1);
+    });
+    expect(onReady).not.toHaveBeenCalled();
+  });
+
+  it("does not hand over a stale photo's redraw after a newer one", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const onReady = vi.fn();
+    const { promise: held, resolve: finish } = Promise.withResolvers<File>();
+    const toFile = vi
+      .fn<BlurPipeline["toFile"]>()
+      .mockReturnValueOnce(held)
+      .mockResolvedValue(BLURRED);
+    const { pipeline } = fakePipeline({ toFile });
+    const { rerender } = render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    await waitFor(() => {
+      expect(toFile).toHaveBeenCalledTimes(1);
+    });
+    rerender(
+      <PhotoBlur
+        file={OTHER}
+        onReady={onReady}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    await waitFor(() => {
+      expect(onReady).toHaveBeenCalledWith(BLURRED);
+    });
+    const stale = new File([new Uint8Array([7])], "run.jpg");
+    await act(async () => {
+      finish(stale);
+      await held;
+    });
+    expect(onReady).not.toHaveBeenCalledWith(stale);
   });
 });

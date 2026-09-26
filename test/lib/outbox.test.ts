@@ -4,7 +4,11 @@ import { dedupeKeyFor, outboxKinds, readOutboxRow } from "../../src/lib/outbox";
 
 describe("outboxKinds", () => {
   it("is read from the union, so a new kind is drained without a second list", () => {
-    expect(outboxKinds).toStrictEqual(["photo_delete"]);
+    expect(outboxKinds).toStrictEqual([
+      "photo_delete",
+      "entry_media_delete",
+      "import_file_delete",
+    ]);
   });
 });
 
@@ -16,6 +20,27 @@ describe("dedupeKeyFor", () => {
         payload: { userId: "u1", itemId: "i1" },
       }),
     ).toBe("u1:i1");
+  });
+
+  it("makes one entry debt per entry, and one for all of a runner's", () => {
+    expect(
+      dedupeKeyFor({
+        kind: "entry_media_delete",
+        payload: { userId: "u1", entryId: "e1" },
+      }),
+    ).toBe("u1:e1");
+    expect(
+      dedupeKeyFor({ kind: "entry_media_delete", payload: { userId: "u1" } }),
+    ).toBe("u1:*");
+  });
+
+  it("makes one import debt per object", () => {
+    expect(
+      dedupeKeyFor({
+        kind: "import_file_delete",
+        payload: { userId: "u1", key: "imports/u1/i1.gpx" },
+      }),
+    ).toBe("u1:imports/u1/i1.gpx");
   });
 });
 
@@ -52,6 +77,52 @@ describe("readOutboxRow", () => {
       readOutboxRow(
         "strava_revoke",
         JSON.stringify({ userId: "u1", itemId: "i1" }),
+      ),
+    ).toStrictEqual(UNKNOWN);
+  });
+
+  it("reads an entry debt with and without its entry", () => {
+    expect(
+      readOutboxRow("entry_media_delete", JSON.stringify({ userId: "u1" })),
+    ).toStrictEqual({
+      ok: true,
+      message: { kind: "entry_media_delete", payload: { userId: "u1" } },
+    });
+    expect(
+      readOutboxRow(
+        "entry_media_delete",
+        JSON.stringify({ userId: "u1", entryId: "" }),
+      ),
+    ).toStrictEqual(UNKNOWN);
+  });
+
+  it("reads an import debt only under the runner's own prefix", () => {
+    expect(
+      readOutboxRow(
+        "import_file_delete",
+        JSON.stringify({ userId: "u1", key: "imports/u1/a.gpx" }),
+      ),
+    ).toStrictEqual({
+      ok: true,
+      message: {
+        kind: "import_file_delete",
+        payload: { userId: "u1", key: "imports/u1/a.gpx" },
+      },
+    });
+    // Another runner's object, or one outside the imports prefix, is a
+    // payload this build refuses to act on.
+    for (const key of ["imports/u2/a.gpx", "entries/u1/a", "imports/u1"]) {
+      expect(
+        readOutboxRow(
+          "import_file_delete",
+          JSON.stringify({ userId: "u1", key }),
+        ),
+      ).toStrictEqual(UNKNOWN);
+    }
+    expect(
+      readOutboxRow(
+        "import_file_delete",
+        JSON.stringify({ userId: "", key: "imports//a" }),
       ),
     ).toStrictEqual(UNKNOWN);
   });

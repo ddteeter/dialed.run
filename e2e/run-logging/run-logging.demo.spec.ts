@@ -2,8 +2,9 @@
  * Covers: A1 (upload, read in place — the parsed card, no import page),
  * A2 (the picker from the first frame, a kit required, the outfit photo
  * through W3's blur), A3 (Noted when nothing moved), R1 (manual entry going
- * on to the outfit, D-102), R (the runs list's badges) and R2b (setting
- * conditions by picking a band, never typing a number).
+ * on to the outfit, D-102), R (the runs list's badges), R2b (setting
+ * conditions by picking a band, never typing a number) and deleting a run
+ * from its own page (task 128 · SAF-3).
  *
  * Journey: open the closet -> launch the log flow from the bar -> drop a
  * GPX file and watch it read in place -> A2: try Next with nothing chosen,
@@ -206,6 +207,19 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     await page.goto(`/runs/import/${newUlid()}`);
     await hydrated(page);
     await expect(page).toHaveURL(/\/runs\/new$/u);
+
+    // ---- Delete a run (task 128 · SAF-3) --------------------------------
+    await scene(page, "A run you'd rather not keep — delete it from its page");
+    await page.goto(`/runs/${staleRunId}`);
+    await hydrated(page);
+    await page.getByRole("button", { name: "Delete this run" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Delete this run?" }),
+    ).toBeVisible();
+    await scene(page, "The sheet says what goes with it — then it's gone");
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(page).toHaveURL(/\/runs$/u);
+    await expect(page.locator(`a[href="/runs/${staleRunId}"]`)).toHaveCount(0);
   } finally {
     await unseed(seeded);
   }

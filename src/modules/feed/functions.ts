@@ -40,6 +40,7 @@ import { followingFeed } from "./feed";
 import { conditionsHome, saveConditionsCity } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
+import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
 import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
@@ -142,7 +143,10 @@ export const recordVerdictPromptedAction = createServerFn({ method: "POST" })
 export const entryDetailQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
-    const viewerId = await optionalUserId();
+    // A session, not an optional one (task 128, SAF-14): D requires
+    // sign-in, so its data does too. A crawler's link preview reads head
+    // meta through FEED-14's own path, never this.
+    const viewerId = await requireUserId();
     return entryDetailForViewer(data.entryId, viewerId);
   });
 
@@ -239,7 +243,11 @@ export const ownProfileQuery = createServerFn({ method: "GET" }).handler(
 
 export const otherProfileQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => userIdInput.parse(input))
-  .handler(async ({ data }) => otherProfile(data.userId));
+  .handler(async ({ data }) => {
+    // H requires sign-in, so its data does too (task 128, SAF-14).
+    await requireUserId();
+    return otherProfile(data.userId);
+  });
 
 // ---- Username search ------------------------------------------------------------
 
@@ -279,4 +287,20 @@ export const uploadPhotoAction = createServerFn({ method: "POST" })
       idempotencyKey: data.idempotencyKey,
     });
     return { key };
+  });
+
+// ---- Taking it back (task 128 · SAF-3) ---------------------------------------
+
+export const retractEntryAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => entryIdInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    await retractEntry(drizzle(env.DIALED_CORE), userId, data.entryId);
+  });
+
+export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => photoIdInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    await deleteEntryPhoto(drizzle(env.DIALED_CORE), userId, data.photoId);
   });

@@ -77,7 +77,9 @@ export default defineConfig(async () => {
       // auth failures (the awaited path still rejects/responds correctly —
       // covered by test/auth.test.ts). Ignore ONLY that shape. It sits at
       // the root because vitest resolves unhandled errors against the root
-      // config, not the project that raised them.
+      // config, not the project that raised them. The second code is the
+      // ban gate's refusal (task 128, `safety/ban-gate.ts`), which reaches
+      // the same dispatch the same way.
       onUnhandledError(error: unknown): boolean | undefined {
         if (
           typeof error === "object" &&
@@ -86,7 +88,8 @@ export default defineConfig(async () => {
           typeof error.body === "object" &&
           error.body !== null &&
           "code" in error.body &&
-          error.body.code === "INVALID_EMAIL_OR_PASSWORD"
+          (error.body.code === "INVALID_EMAIL_OR_PASSWORD" ||
+            error.body.code === "ACCOUNT_CLOSED")
         ) {
           return false;
         }

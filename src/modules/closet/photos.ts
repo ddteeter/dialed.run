@@ -15,7 +15,11 @@ import { wardrobeItems } from "../../db/schema-core";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import { isAllowedPhotoType, maxPhotoBytes } from "../../lib/photo-constraints";
 import { env } from "../../env";
-import { fitWithin, withReleased } from "../../lib/photo-pipeline";
+import {
+  fitWithin,
+  photoRefusal,
+  withReleased,
+} from "../../lib/photo-pipeline";
 import { photoKeyFor } from "../../lib/garment-photo-key";
 import { ownedBy } from "../../lib/owned";
 import { getOwnedItem } from "./service";
@@ -38,33 +42,18 @@ const SIZE_TARGETS: Record<PhotoSize, number> = {
   full: 1600,
 };
 
+/**
+ * The re-encoded original's JPEG quality: high enough that nothing a
+ * runner would notice is lost, since it is the one copy at full size.
+ */
+const ORIGINAL_QUALITY = 90;
+
 export function isPhotoSize(value: string): value is PhotoSize {
   const sizes: readonly string[] = photoSizes;
   return sizes.includes(value);
 }
 
 export class PhotoValidationError extends Error {}
-
-/**
- * Exhaustive over AllowedPhotoType, so adding a type to lib is a compile
- * error here rather than a runtime throw on the first upload of it.
- */
-export function extensionFor(contentType: string): string {
-  if (!isAllowedPhotoType(contentType)) {
-    throw new PhotoValidationError("Photo must be JPEG, PNG, or WEBP.");
-  }
-  switch (contentType) {
-    case "image/jpeg": {
-      return "jpg";
-    }
-    case "image/png": {
-      return "png";
-    }
-    case "image/webp": {
-      return "webp";
-    }
-  }
-}
 
 export function validatePhoto(contentType: string, byteLength: number): void {
   if (!isAllowedPhotoType(contentType)) {
@@ -99,6 +88,10 @@ export async function uploadItemPhoto(
   report: typeof captureException = captureException,
 ): Promise<PhotoUploadResult> {
   validatePhoto(contentType, bytes.byteLength);
+  // Read from the header, before anything decodes it (SAF-2, D-3): a
+  // 10 MB file can decode to ~96 MB, and the isolate has 128.
+  const refusal = photoRefusal(bytes);
+  if (refusal !== undefined) throw new PhotoValidationError(refusal);
   await getOwnedItem(db, userId, itemId);
 
   // Lazily imported on purpose: this package ships a WASM module, and a
@@ -113,33 +106,39 @@ export async function uploadItemPhoto(
   // route caches it as immutable — so a replaced photo must live at a new
   // address, or every browser that saw the old one keeps showing it.
   const keyPrefix = `${photoKeyFor(userId, itemId)}/${newUlid()}`;
-  const ext = extensionFor(contentType);
 
-  // Original first (requirement 8): even if decode/resize below throws, the
-  // source bytes are already durable in R2.
-  await env.MEDIA.put(`${keyPrefix}/original.${ext}`, bytes, {
-    httpMetadata: { contentType },
-  });
-
-  await withReleased(PhotonImage.new_from_byteslice(bytes), async (input) => {
-    const width = input.get_width();
-    const height = input.get_height();
-    for (const size of photoSizes) {
-      const dims = fitWithin(width, height, SIZE_TARGETS[size]);
-      await withReleased(
-        resize(input, dims.width, dims.height, SamplingFilter.Lanczos3),
-        async (resized) => {
-          await env.MEDIA.put(
-            `${keyPrefix}/${size}.webp`,
-            resized.get_bytes_webp(),
-            {
-              httpMetadata: { contentType: "image/webp" },
-            },
-          );
-        },
-      );
-    }
-  });
+  // Nothing the runner sent is stored as sent (task 128 · SAF-1). The
+  // original is decoded and re-encoded like every size, so no metadata —
+  // the GPS a phone writes into every frame — survives into storage. That
+  // puts the decode before the first write, which is why a photo that will
+  // not decode now stores nothing at all rather than a raw original.
+  const original = await withReleased(
+    PhotonImage.new_from_byteslice(bytes),
+    async (input) => {
+      const reencoded = input.get_bytes_jpeg(ORIGINAL_QUALITY);
+      await env.MEDIA.put(`${keyPrefix}/original.jpg`, reencoded, {
+        httpMetadata: { contentType: "image/jpeg" },
+      });
+      const width = input.get_width();
+      const height = input.get_height();
+      for (const size of photoSizes) {
+        const dims = fitWithin(width, height, SIZE_TARGETS[size]);
+        await withReleased(
+          resize(input, dims.width, dims.height, SamplingFilter.Lanczos3),
+          async (resized) => {
+            await env.MEDIA.put(
+              `${keyPrefix}/${size}.webp`,
+              resized.get_bytes_webp(),
+              {
+                httpMetadata: { contentType: "image/webp" },
+              },
+            );
+          },
+        );
+      }
+      return reencoded;
+    },
+  );
 
   // The replaced photo leaves storage — it may be the unblurred frame the
   // runner replaced it to get rid of, under whichever original extension
@@ -168,7 +167,12 @@ export async function uploadItemPhoto(
   // artefact, and screening something the runner never uploaded would
   // make a verdict hard to explain.
   await screenPhoto(
-    { scope: "garment", photoId: itemId, bytes, contentType },
+    {
+      scope: "garment",
+      photoId: itemId,
+      bytes: original,
+      contentType: "image/jpeg",
+    },
     classify ?? classifierFromEnv(),
   );
 

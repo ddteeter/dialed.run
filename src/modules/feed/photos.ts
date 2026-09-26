@@ -5,7 +5,7 @@
  * this branch yet). Originals only for now; derived sizes follow 101's
  * photon-wasm benchmark rather than duplicating a wasm pipeline here.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
@@ -13,17 +13,14 @@ import { env } from "../../env";
 import { firstColumnWhere } from "../../lib/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
+import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
 import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
-import {
-  isAdmin,
-  isEntryPubliclyVisible,
-  isPhotoPubliclyVisible,
-} from "../safety";
+import { isAdmin, publicPhotoStatus, publiclyVisibleEntry } from "../safety";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
@@ -69,6 +66,12 @@ export async function uploadPhoto(
   if (input.bytes.byteLength > MAX_PHOTO_BYTES) {
     throw new InvalidPhotoError("photo too large");
   }
+  // Read from the header, before anything decodes it (task 128 · SAF-2,
+  // register D-3): a 10 MB file can decode to ~96 MB, and the isolate has
+  // 128.
+  const uploaded = new Uint8Array(input.bytes);
+  const refusal = photoRefusal(uploaded);
+  if (refusal !== undefined) throw new InvalidPhotoError(refusal);
 
   const database = db();
   const [entry] = await database
@@ -122,8 +125,9 @@ export async function uploadPhoto(
   // between two calls and the cost is storage, not correctness.
   const photoId = newUlid();
   const key = photoKeyFor(input.userId, input.entryId, photoId);
-  await env.MEDIA.put(key, input.bytes, {
-    httpMetadata: { contentType: input.contentType },
+  const stored = await reencoded(uploaded);
+  await env.MEDIA.put(key, stored, {
+    httpMetadata: { contentType: "image/jpeg" },
   });
   await database.insert(entryPhotos).values({
     id: photoId,
@@ -144,8 +148,8 @@ export async function uploadPhoto(
     {
       scope: "entry",
       photoId,
-      bytes: new Uint8Array(input.bytes),
-      contentType: input.contentType,
+      bytes: stored,
+      contentType: "image/jpeg",
     },
     classify ?? classifierFromEnv(),
   );
@@ -154,46 +158,81 @@ export async function uploadPhoto(
 }
 
 /**
- * Visibility check for the GET route: a photo is servable to `viewerId`
- * only if its entry is public or owned by the viewer — same rule as entry
- * detail (law: private entries never appear anywhere but the owner's own
- * views).
+ * The photo as it is stored: decoded and encoded again as a JPEG (task 128
+ * · SAF-1, audit 0.8). Nothing the runner's device wrote survives — the
+ * EXIF block a phone puts in every frame carries where it was taken, and
+ * on a public entry that was the runner's front door. With W3's blur on
+ * the browser has already redrawn the photo; this is what makes it true
+ * with blur off, from an old client, or from anything that is not our
+ * client at all.
+ *
+ * Screening classifies these bytes, not the upload's: they are the ones a
+ * stranger will be served.
+ */
+async function reencoded(bytes: Uint8Array): Promise<Uint8Array> {
+  // Lazily, as the closet does: a static import would instantiate the WASM
+  // at worker startup, for every request, photo or not.
+  const { PhotonImage } = await import("@cf-wasm/photon/workerd");
+  return withReleased(PhotonImage.new_from_byteslice(bytes), (image) =>
+    Promise.resolve(image.get_bytes_jpeg(ENTRY_PHOTO_QUALITY)),
+  );
+}
+
+/**
+ * The stored JPEG's quality — the canvas step uploads at 0.92, and one
+ * more generation at 88 is invisible at the sizes an entry shows.
+ */
+const ENTRY_PHOTO_QUALITY = 88;
+
+/**
+ * Visibility check for the GET route: whether `viewerId` may fetch this
+ * photo.
+ *
+ * The owner may, whatever is pending against the photo or its entry —
+ * fail open for the owner, closed for everyone else. Anyone else needs
+ * both halves: the entry passes the one visibility rule **as this viewer
+ * sees it** (task 128: a banned author, a blocked pair or an entry the
+ * viewer reported all refuse), and the photo passed screening. A photo the
+ * classifier flagged on a public entry was once served with HTTP 200,
+ * because nothing read the column `screenPhoto` writes.
+ *
+ * **Signed out is refused** (SAF-14, D-109): the pages that show these
+ * photos require a session, so the bytes do too.
+ *
+ * One read, joined, and found by primary key: the photo's id is the key's
+ * last segment (`photoKeyFor`), and `entry_photos` has no index on
+ * `photo_key` — looking it up by key alone scanned the table on every
+ * image a feed page drew. The key is still compared, so a well-formed id
+ * under somebody else's prefix finds nothing.
  */
 export async function isPhotoVisible(
   photoKey: string,
   viewerId: string | undefined,
 ): Promise<boolean> {
-  const database = db();
-  const [photo] = await database
-    .select({
-      entryId: entryPhotos.entryId,
-      screenStatus: entryPhotos.screenStatus,
-    })
-    .from(entryPhotos)
-    .where(eq(entryPhotos.photoKey, photoKey))
-    .limit(1);
-  if (!photo) return false;
-  const [entry] = await database
-    .select({
-      userId: outfitEntries.userId,
-      isPublic: outfitEntries.isPublic,
-      moderationStatus: outfitEntries.moderationStatus,
-    })
-    .from(outfitEntries)
-    .where(eq(outfitEntries.id, photo.entryId))
-    .limit(1);
-  if (!entry) return false;
-  // The owner keeps seeing their own photo whatever is pending against
-  // it — fail open for the owner, closed for the public.
-  //
-  // **Both halves, and the photo half used to be missing.** The entry
-  // being public is not enough: a photo the classifier flagged carries
-  // `hidden_pending_review` and was still served with HTTP 200, because
-  // nothing read the column `screenPhoto` writes.
-  return (
-    (isEntryPubliclyVisible(entry) && isPhotoPubliclyVisible(photo)) ||
-    entry.userId === viewerId
+  if (viewerId === undefined) return false;
+  const thisPhoto = and(
+    eq(entryPhotos.id, photoIdOf(photoKey)),
+    eq(entryPhotos.photoKey, photoKey),
   );
+  const shownToOthers = and(
+    publiclyVisibleEntry(viewerId),
+    eq(entryPhotos.screenStatus, publicPhotoStatus),
+  );
+  const allowed = or(eq(outfitEntries.userId, viewerId), shownToOthers);
+  const rows = await db()
+    .select({ id: entryPhotos.id })
+    .from(entryPhotos)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(and(thisPhoto, allowed))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+The photo's id, which `photoKeyFor` puts last in its key.
+*/
+function photoIdOf(photoKey: string): string {
+  return photoKey.slice(photoKey.lastIndexOf("/") + 1);
 }
 
 export async function getPhotoObject(

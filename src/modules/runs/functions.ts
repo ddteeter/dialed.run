@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-start/server";
 
 import { requireUserId } from "../auth";
+import { deleteRun } from "../feed";
 import { newUlid } from "../../lib/ids";
 import { attachObservation, recordManualObservation } from "../weather";
 import { coreDb } from "./core-db";
@@ -208,3 +209,13 @@ export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
     );
   },
 );
+
+/**
+Task 128 · SAF-3: the run, its entry, its photos and its upload.
+*/
+export const deleteRunFn = createServerFn({ method: "POST" })
+  .validator(runIdInput)
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    await deleteRun(coreDb(), userId, data.runId);
+  });

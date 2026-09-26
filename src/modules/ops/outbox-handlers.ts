@@ -6,11 +6,13 @@
  * that half-finished, or finished and failed to delete its row, is simply
  * run again.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { wardrobeItems } from "../../db/schema-core";
+import { entryPhotos, wardrobeItems } from "../../db/schema-core";
 import { env } from "../../env";
+import { readInChunks } from "../../lib/chunked";
+import { entryPhotoIdOf, entryPhotoPrefix } from "../../lib/entry-photo-key";
 import { photoKeyFor } from "../../lib/garment-photo-key";
 import type { OutboxKind, OutboxMessage } from "../../lib/outbox";
 
@@ -114,6 +116,101 @@ export async function reconcileItemPhotos(
   }
 }
 
+/**
+ * Which of these keys an `entry_photos` row still names. Found by the
+ * photo id each key ends in — a primary-key lookup, since the table has no
+ * index on `photo_key` — then compared on the whole key, so an object that
+ * merely shares an id with a live row under another prefix is not kept.
+ */
+async function liveEntryPhotoKeys(
+  db: Db,
+  keys: readonly string[],
+): Promise<Set<string>> {
+  const rows = await readInChunks(
+    keys.map((key) => entryPhotoIdOf(key)),
+    (chunk) =>
+      db
+        .select({ photoKey: entryPhotos.photoKey })
+        .from(entryPhotos)
+        .where(inArray(entryPhotos.id, chunk)),
+  );
+  return new Set(rows.map((row) => row.photoKey));
+}
+
+/**
+ * Bring an entry's R2 prefix — or, with no entry, all of a runner's — into
+ * line with the `entry_photos` rows (task 128 · SAF-3): delete every object
+ * no row names. One operation for an entry deleted (no rows), a photo
+ * deleted (the rest still named) and account deletion (the whole prefix).
+ *
+ * Listed rather than named, for `reconcileItemPhotos`'s reason: the rows
+ * that named the objects went in the same batch that owed this. The rows
+ * are read after each page is listed, so an upload that finished while
+ * this listed is kept; one still between its put and its row write is
+ * not, and the runner uploads it again — the same accepted race as the
+ * garment path, and only reachable on an entry being deleted.
+ */
+export async function reconcileEntryPhotos(
+  db: Db,
+  userId: string,
+  entryId: string | undefined,
+  pageSize = 1000,
+): Promise<void> {
+  const options: R2ListOptions = {
+    prefix: entryPhotoPrefix(userId, entryId),
+    limit: pageSize,
+  };
+  for (;;) {
+    const page = await env.MEDIA.list(options);
+    const keys = page.objects.map((object) => object.key);
+    const live = await liveEntryPhotoKeys(db, keys);
+    await env.MEDIA.delete(keys.filter((key) => !live.has(key)));
+    if (!page.truncated) return;
+    options.cursor = page.cursor;
+  }
+}
+
+/**
+ * A message's handler with its payload already applied.
+ *
+ * `handlers[message.kind].run(db, message.payload)` stopped typechecking
+ * the day a second kind existed: TypeScript does not correlate the key it
+ * indexes by with the payload it passes, so it demands a payload that is
+ * every kind's at once. The switch narrows both together, and the
+ * `never` default makes a new kind a compile error here too.
+ */
+export function boundHandler(
+  handlers: OutboxHandlers,
+  message: OutboxMessage,
+): {
+  run: (db: Db) => Promise<void>;
+  context: () => Record<string, string>;
+} {
+  switch (message.kind) {
+    case "photo_delete": {
+      const handler = handlers.photo_delete;
+      return {
+        run: (db) => handler.run(db, message.payload),
+        context: () => handler.context(message.payload),
+      };
+    }
+    case "entry_media_delete": {
+      const handler = handlers.entry_media_delete;
+      return {
+        run: (db) => handler.run(db, message.payload),
+        context: () => handler.context(message.payload),
+      };
+    }
+    case "import_file_delete": {
+      const handler = handlers.import_file_delete;
+      return {
+        run: (db) => handler.run(db, message.payload),
+        context: () => handler.context(message.payload),
+      };
+    }
+  }
+}
+
 export const outboxHandlers: OutboxHandlers = {
   photo_delete: {
     run: (db, payload) =>
@@ -122,5 +219,21 @@ export const outboxHandlers: OutboxHandlers = {
       userId: payload.userId,
       itemId: payload.itemId,
     }),
+  },
+  entry_media_delete: {
+    run: (db, payload) =>
+      reconcileEntryPhotos(db, payload.userId, payload.entryId),
+    context: (payload) => ({
+      userId: payload.userId,
+      entryId: payload.entryId ?? "*",
+    }),
+  },
+  // Deleting a missing key is not an error in R2, so a repeat is a no-op.
+  import_file_delete: {
+    run: async (_db, payload) => {
+      await env.IMPORTS.delete(payload.key);
+    },
+    // The key names the runner and the upload's id; it carries no content.
+    context: (payload) => ({ userId: payload.userId, key: payload.key }),
   },
 };

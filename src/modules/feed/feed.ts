@@ -42,15 +42,21 @@ function feedCursorPredicate(cursor: FeedCursor) {
   );
 }
 
+/**
+ * The viewer and who they follow, through the one visibility rule — told
+ * who is looking, so a blocked pair and what the viewer reported drop out
+ * in SQL, ahead of the `LIMIT` (task 128, SAF-12/13).
+ */
 export function followingFeedStatement(
   database: DrizzleD1Database,
-  userIds: readonly string[],
+  viewerId: string,
+  followeeIds: readonly string[],
   cursor: FeedCursor | undefined,
   limit = PAGE_SIZE,
 ) {
   const scope = and(
-    inArray(outfitEntries.userId, [...userIds]),
-    publiclyVisibleEntry(),
+    inArray(outfitEntries.userId, [viewerId, ...followeeIds]),
+    publiclyVisibleEntry(viewerId),
     cursor ? feedCursorPredicate(cursor) : undefined,
   );
   return database
@@ -245,10 +251,10 @@ export async function followingFeed(
 ): Promise<FeedPage> {
   const database = drizzle(env.DIALED_CORE);
   const followeeIds = await followeeIdsOf(viewerId);
-  const userIds = [viewerId, ...followeeIds];
   const rows = await followingFeedStatement(
     database,
-    userIds,
+    viewerId,
+    followeeIds,
     cursor,
     limit + 1,
   );

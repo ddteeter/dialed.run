@@ -11,6 +11,8 @@
  * It is also honest about what the default implementation needs: a real
  * browser. Nothing here runs on the Worker.
  */
+import { fitWithin, photoLongEdge } from "../../../lib/photo-pipeline";
+
 import { detectFaces } from "./detect";
 import { blurredFile, paintBlurred } from "./paint";
 
@@ -39,9 +41,20 @@ export interface BlurPipeline {
 }
 
 export const browserPipeline: BlurPipeline = {
+  // Scaled on the way in (task 128 · SAF-2, decision D-45): the long edge
+  // is capped at `photoLongEdge`, so the canvas, the detector and the
+  // upload all work at the size the photo will be stored at, and a 48 MP
+  // frame costs neither the bandwidth nor the server's pixel budget.
   load: async (file) => {
-    const image = await createImageBitmap(file);
-    return { image, width: image.width, height: image.height };
+    const source = await createImageBitmap(file);
+    const size = fitWithin(source.width, source.height, photoLongEdge);
+    const image = await createImageBitmap(source, {
+      resizeWidth: size.width,
+      resizeHeight: size.height,
+      resizeQuality: "high",
+    });
+    source.close();
+    return { image, ...size };
   },
   detect: detectFaces,
   paint: paintBlurred,

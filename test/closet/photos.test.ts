@@ -20,7 +20,6 @@ import {
 import { outbox, wardrobeItems } from "../../src/db/schema-core";
 import { maxPhotoBytes } from "../../src/lib/photo-constraints";
 import {
-  extensionFor,
   getItemPhotoObject,
   isPhotoSize,
   photoSizes,
@@ -205,22 +204,6 @@ describe("validatePhoto says which rule was broken", () => {
     expect(() => {
       validatePhoto("image/jpeg", maxPhotoBytes);
     }).not.toThrow();
-  });
-});
-
-describe("extensionFor", () => {
-  it("gives each allowed type its own extension", () => {
-    // The original is stored under this extension and served back with the
-    // content type it was uploaded with; two types sharing an extension
-    // means the second upload overwrites the first.
-    expect(extensionFor("image/jpeg")).toBe("jpg");
-    expect(extensionFor("image/png")).toBe("png");
-    expect(extensionFor("image/webp")).toBe("webp");
-  });
-
-  it("refuses a type the pipeline cannot store, saying which are allowed", () => {
-    expect(() => extensionFor("image/gif")).toThrow(PhotoValidationError);
-    expect(() => extensionFor("image/gif")).toThrow(/JPEG, PNG, or WEBP/);
   });
 });
 
@@ -791,7 +774,8 @@ describe("replacing a photo", () => {
 
   it("clears the replaced original whatever type it arrived as", async () => {
     // The old version holds a JPEG original (and, planted, every other
-    // extension); the new upload is a PNG. Nothing of the old one stays.
+    // extension); the new upload is a PNG. Nothing of the old one stays,
+    // and the new original is re-encoded as a JPEG (task 128 · SAF-1).
     const userId = newUlid();
     const { item, photoKey } = await garmentWithPhoto(userId);
 
@@ -805,7 +789,7 @@ describe("replacing a photo", () => {
 
     expect(await storedKeys(`${photoKey}/`)).toStrictEqual([]);
     expect(await storedKeys(`${replaced.photoKey}/`)).toContain(
-      `${replaced.photoKey}/original.png`,
+      `${replaced.photoKey}/original.jpg`,
     );
   });
 

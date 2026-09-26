@@ -75,3 +75,44 @@ describe("what the pipeline is wired to", () => {
     expect(file?.size).toBeGreaterThan(0);
   });
 });
+
+/**
+A picked photo of this size, drawn rather than read off disk.
+*/
+async function sizedFile(width: number, height: number): Promise<File> {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ink = canvas.getContext("2d");
+  if (!ink) throw new Error("no 2d context");
+  ink.fillStyle = "#654321";
+  ink.fillRect(0, 0, width, height);
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/png");
+  });
+  if (!blob) throw new Error("the canvas produced no bytes");
+  return new File([blob], "big.png", { type: "image/png" });
+}
+
+describe("the long edge (task 128 · SAF-2)", () => {
+  it("scales a large photo down to a 2048px long edge before anything else", async () => {
+    const loaded = await browserPipeline.load(await sizedFile(4096, 3072));
+    expect(loaded.width).toBe(2048);
+    expect(loaded.height).toBe(1536);
+    // The bitmap itself is the scaled one, not only the numbers.
+    expect(loaded.image.width).toBe(2048);
+    expect(loaded.image.height).toBe(1536);
+  });
+
+  it("scales a tall photo by its height", async () => {
+    const loaded = await browserPipeline.load(await sizedFile(1000, 4000));
+    expect(loaded.width).toBe(512);
+    expect(loaded.height).toBe(2048);
+  });
+
+  it("never scales a small photo up", async () => {
+    const loaded = await browserPipeline.load(await sizedFile(300, 200));
+    expect(loaded.image.width).toBe(300);
+    expect(loaded.image.height).toBe(200);
+  });
+});
