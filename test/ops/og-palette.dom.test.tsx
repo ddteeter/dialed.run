@@ -12,10 +12,9 @@ import { OG_PALETTE } from "../../src/modules/ops/og/palette";
  * `?raw` CSS import is claimed by the CSS pipeline first.
  */
 
-const tokens = readFileSync(
-  new URL("../../src/ui/tokens.css", import.meta.url),
-  "utf8",
-);
+// From the repo root, where vitest runs: `import.meta.url` is not a file
+// URL in every run of the ui project.
+const tokens = readFileSync("src/ui/tokens.css", "utf8");
 
 function valueOf(css: string, token: string): string | undefined {
   return new RegExp(String.raw`${token}:\s*(#[0-9a-f]{6})`, "iu")
