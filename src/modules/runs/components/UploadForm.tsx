@@ -4,7 +4,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { newUlid } from "../../../lib/ids";
@@ -140,7 +140,14 @@ export function UploadForm(props: Readonly<UploadFormProps>): JSX.Element {
   // TanStack Query scoped to this one polling fragment — a loader cannot
   // serve a status that changes on the server after the page renders
   // (CLAUDE.md client-state rule).
-  const [client] = useState(() => new QueryClient());
+  // `gcTime: Infinity` schedules no garbage-collection timer. The default
+  // leaves a five-minute one behind on every unmount, holding a cache that
+  // nothing can reach once this client goes — and in the `ui` project,
+  // firing into a torn-down window (see test/dom-setup.ts).
+  const [client] = useState(
+    () =>
+      new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } }),
+  );
   return (
     <QueryClientProvider client={client}>
       <FlowStep step={LOG_FLOW.intake}>
@@ -168,6 +175,22 @@ function UploadFlow({
   // than a flag, so a timer left over from an import the runner has moved
   // on from marks nothing: it names an import no longer on screen.
   const [stalledId, setStalledId] = useState<string | undefined>();
+  // A timer, not a clock read at render time: an import whose row stops
+  // changing produces no new data and no re-render, so a stall worked out
+  // while rendering could never fire — the one case it exists for. Keyed
+  // on the watched object rather than its id, so a retry under the same
+  // import gets twenty seconds of its own. Cleared when the runner moves
+  // on or the form goes: it used to be left to fire, harmlessly in a
+  // browser, but into a torn-down window in the `ui` tests.
+  useEffect(() => {
+    if (watching === undefined) return;
+    const timer = globalThis.setTimeout(() => {
+      setStalledId(watching.importId);
+    }, STALL_AFTER_MS);
+    return () => {
+      globalThis.clearTimeout(timer);
+    };
+  }, [watching]);
 
   async function send(attempt: Attempt): Promise<void> {
     // The guard the `disabled` attribute used to be: the well stays
@@ -187,15 +210,6 @@ function UploadFlow({
       form.set("idempotencyKey", attempt.key);
       const { importId } = await upload({ data: form });
       setWatching({ importId, attempt });
-      // A timer, not a clock read at render time: an import whose row
-      // stops changing produces no new data and no re-render, so a stall
-      // worked out while rendering could never fire — the one case it
-      // exists for. Started where the import begins rather than in an
-      // effect, and never cleared: it names its import, so once the
-      // runner has moved on it marks nothing.
-      globalThis.setTimeout(() => {
-        setStalledId(importId);
-      }, STALL_AFTER_MS);
     } catch (error: unknown) {
       setFailed({ failure: classifyFailure(error), attempt });
     } finally {
