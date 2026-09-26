@@ -1,29 +1,32 @@
 /**
  * The Desk's Today (Operator Screens D0) and the question that gates it.
  *
- * **Today and the digest read the same numbers from the same query**
- * (D5: "/desk renders the same three numbers from the same query, so Today
- * and the digest cannot disagree"). `runDailyDigest` calls `todayCounts`
- * for its review-queue line rather than asking the queue a second way.
+ * **Today and the digest read "waiting" from the same function** (D5:
+ * "/desk renders the same three numbers from the same query, so Today and
+ * the digest cannot disagree"): safety's `pendingReviewCount`, the one
+ * definition of it. The digest needs only that number, so it calls that
+ * alone rather than all of Today.
  */
-import { count, inArray, isNotNull, sql } from "drizzle-orm";
+import { count, eq, isNotNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { reviewQueue, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { nowSeconds } from "../../lib/now";
-import { adminUserIds } from "../safety";
+import { adminUserIds, pendingReviewCount } from "../safety";
 
 /**
 Today's three numbers, and the two facts printed under them.
 */
 export interface TodayCounts {
   /**
-  Review rows nobody has decided: pending, or claimed and not finished.
-  */
+   * Review rows waiting for a decision, as safety counts them: `pending`.
+   * A claimed row (`reviewing`) is someone's in-hand work, and a claim
+   * nobody finishes returns to `pending` within the lease.
+   */
   readonly waiting: number;
   /**
-  When the oldest of those arrived (epoch seconds), or null at zero.
+  When the oldest of those arrived (epoch seconds); absent at zero.
   */
   readonly oldestWaitingAt: number | undefined;
   /**
@@ -37,7 +40,7 @@ export interface TodayCounts {
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
 
 /**
- * Today's counts, in one round trip.
+ * Today's counts: "waiting" from safety, the rest in one round trip.
  *
  * Grouped rather than one aggregate row: a grouped read answers with a row
  * per group that exists — at most two here — so "nothing waiting" is an
@@ -53,6 +56,7 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
 export async function todayCounts(): Promise<TodayCounts> {
   const db = drizzle(env.DIALED_CORE);
   const weekAgo = nowSeconds() - WEEK_SECONDS;
+  const waiting = await pendingReviewCount();
   const [review, bans] = await db.batch([
     db
       .select({
@@ -61,7 +65,7 @@ export async function todayCounts(): Promise<TodayCounts> {
         oldest: sql<number>`min(${reviewQueue.createdAt})`,
       })
       .from(reviewQueue)
-      .where(inArray(reviewQueue.status, ["pending", "reviewing"]))
+      .where(eq(reviewQueue.status, "pending"))
       .groupBy(reviewQueue.source),
     db
       .select({
@@ -73,7 +77,7 @@ export async function todayCounts(): Promise<TodayCounts> {
       .groupBy(sql`1`),
   ]);
   return {
-    waiting: sumOf(review),
+    waiting,
     oldestWaitingAt:
       review.length === 0
         ? undefined

@@ -15,7 +15,7 @@
  */
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { count, inArray } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 
 import { reviewQueue, userProfiles } from "../../src/db/schema-core";
 import { expect, scene, test } from "../support/demo";
@@ -34,7 +34,7 @@ test("an operator opens the Desk and reads Today", async ({ page }) => {
     const [row] = await core
       .select({ rows: count() })
       .from(reviewQueue)
-      .where(inArray(reviewQueue.status, ["pending", "reviewing"]));
+      .where(eq(reviewQueue.status, "pending"));
     const now = nowSeconds();
     await core.insert(reviewQueue).values([
       {

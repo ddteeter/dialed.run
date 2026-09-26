@@ -57,11 +57,12 @@ describe("todayCounts", () => {
     });
   });
 
-  it("counts every undecided row, claimed or not, and dates the oldest", async () => {
+  it("counts what is pending, and dates the oldest of it", async () => {
     const now = nowSeconds();
     await queueRow({ createdAt: now - 19 * 3600 });
-    await queueRow({ status: "reviewing", createdAt: now - 2 * 3600 });
     await queueRow({ source: "classifier", createdAt: now - 5 * 3600 });
+    // In someone's hands, and older than both: not waiting, not the oldest.
+    await queueRow({ status: "reviewing", createdAt: now - 30 * 3600 });
     await queueRow({ status: "approved", createdAt: now - 40 * 3600 });
     await queueRow({ status: "removed", createdAt: now - 41 * 3600 });
 
@@ -69,8 +70,16 @@ describe("todayCounts", () => {
 
     // Decided rows stay in the table for the record, and older than any
     // waiting one here, so counting them would move both numbers.
-    expect(counts.waiting).toBe(3);
+    expect(counts.waiting).toBe(2);
     expect(counts.oldestWaitingAt).toBe(now - 19 * 3600);
+  });
+
+  it("does not count a claimed photo as the screener's", async () => {
+    await queueRow({ source: "classifier", status: "reviewing" });
+
+    const counts = await todayCounts();
+
+    expect(counts.screenerUnfinished).toBe(0);
   });
 
   it("dates the oldest across both sources, whichever holds it", async () => {
@@ -130,6 +139,7 @@ describe("todayCounts", () => {
 describe("the digest reads Today's own number (D5)", () => {
   it("reports the same waiting count the Desk shows", async () => {
     await queueRow();
+    await queueRow({ source: "classifier" });
     await queueRow({ status: "reviewing" });
 
     const { waiting } = await todayCounts();

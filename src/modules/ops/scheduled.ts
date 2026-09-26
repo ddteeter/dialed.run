@@ -13,7 +13,6 @@ import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/keyed-read";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
-import { todayCounts } from "./desk";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import {
   captureException,
@@ -23,6 +22,7 @@ import {
 } from "./sentry";
 import {
   classifierFromEnv,
+  pendingReviewCount,
   reconcileUnhiddenReports,
   releaseStaleClaims,
   retryPendingScreenings,
@@ -367,11 +367,12 @@ function failedAndOwed(): SQL | undefined {
  * One waiting report is worth saying out loud; zero says nothing, so the
  * digest stays quiet on the ordinary day.
  *
- * The number is the Desk's own (`todayCounts`), so the digest and Today
- * cannot disagree about it (Operator Screens D5).
+ * The number is safety's `pendingReviewCount`, which the Desk's Today
+ * reads too, so the digest and Today cannot disagree (Operator Screens
+ * D5) — and the digest does not pay for Today's other reads to get it.
  */
 async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
-  const { waiting } = await todayCounts();
+  const waiting = await pendingReviewCount();
   if (waiting === 0) return;
   anomalies.push(`${String(waiting)} item(s) awaiting moderation review`);
 }

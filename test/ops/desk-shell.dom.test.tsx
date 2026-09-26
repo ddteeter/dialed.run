@@ -69,7 +69,7 @@ describe("DeskShell", () => {
       </DeskShell>,
     );
 
-    expect(within(rail()).getByText("Desk")).toHaveClass("text-hi-viz");
+    expect(within(rail()).getByText("Desk")).toHaveClass("text-hiviz-text");
     expect(within(rail()).getByText("Operator")).toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("DeskShell", () => {
     const review = within(rail()).getByRole("link", { name: "Review" });
     const today = within(rail()).getByRole("link", { name: "Today" });
     expect(review).toHaveAttribute("aria-current", "page");
-    expect(review).toHaveClass("text-hi-viz");
+    expect(review).toHaveClass("text-hiviz-text");
     expect(today).not.toHaveAttribute("aria-current");
     expect(today).toHaveClass("text-ink");
   });
@@ -136,7 +136,7 @@ describe("DeskShell", () => {
     );
 
     const review = within(rail()).getByRole("link", { name: "Review 4" });
-    expect(within(review).getByText("4")).toHaveClass("text-hi-viz");
+    expect(within(review).getByText("4")).toHaveClass("text-hiviz-text");
   });
 
   it("shows no count at zero, and none on a destination that has none", async () => {
@@ -199,7 +199,7 @@ describe("Today", () => {
 
     const [waiting, screener, bans] = screen.getAllByRole("listitem");
     expect(within(waiting ?? document.body).getByText("2")).toHaveClass(
-      "text-hi-viz",
+      "text-hiviz-text",
     );
     expect(within(screener ?? document.body).getByText("0")).toHaveClass(
       "text-ink",

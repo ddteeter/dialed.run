@@ -40,7 +40,7 @@ function Stat({
   children: ReactNode;
   note: ReactNode;
 }>) {
-  const tone = needsPerson && count > 0 ? "text-hi-viz" : "text-ink";
+  const tone = needsPerson && count > 0 ? "text-hiviz-text" : "text-ink";
   return (
     <li className="flex flex-col gap-1">
       <span className="flex items-baseline gap-3">

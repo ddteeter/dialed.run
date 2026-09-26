@@ -57,7 +57,7 @@ A count that needs a person is hi-viz; at zero it is not shown at all.
 function RailCount({ count }: Readonly<{ count: number | undefined }>) {
   if (count === undefined || count === 0) return;
   return (
-    <Mono step="sm" className="text-hi-viz">
+    <Mono step="sm" className="text-hiviz-text">
       {count}
     </Mono>
   );
@@ -75,7 +75,7 @@ function RailEntry({
   count: number | undefined;
 }>) {
   const isActive = page === current;
-  const tone = isActive ? "text-hi-viz" : "text-ink";
+  const tone = isActive ? "text-hiviz-text" : "text-ink";
   const content = (
     <>
       <span>{label}</span>
@@ -131,7 +131,7 @@ export function DeskShell({
         <div className="flex flex-col gap-2">
           <span className="flex items-baseline gap-3 text-heading">
             <Wordmark />
-            <Mono step="sm" className="text-hi-viz">
+            <Mono step="sm" className="text-hiviz-text">
               Desk
             </Mono>
           </span>
