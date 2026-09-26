@@ -11,7 +11,8 @@ import {
   unfollowAction,
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
-import { Layout } from "../../ui";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/u/$userId")({
   beforeLoad: async () => {
@@ -23,15 +24,16 @@ export const Route = createFileRoute("/feed/u/$userId")({
     ),
     isFollowing: await followStatusQuery({ data: { userId: params.userId } }),
     viewerId: requireSignedIn(await getSession()).user.id,
+    bell: await bellStateFn(),
   }),
   component: OtherProfilePage,
 });
 
 function OtherProfilePage() {
-  const { profile, isFollowing, viewerId } = Route.useLoaderData();
+  const { profile, isFollowing, viewerId, bell } = Route.useLoaderData();
 
   return (
-    <Layout>
+    <BelledLayout {...bell}>
       <OtherProfile
         profile={profile}
         isFollowing={isFollowing}
@@ -51,6 +53,6 @@ function OtherProfilePage() {
           />
         }
       />
-    </Layout>
+    </BelledLayout>
   );
 }

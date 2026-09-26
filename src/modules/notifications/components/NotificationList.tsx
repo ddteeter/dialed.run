@@ -1,13 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
 
 import { dayTimeLabel } from "../../../lib/dates";
-import type { FormFailure } from "../../../ui";
 import {
-  FormFailureBand,
+  ControlFailureBand,
   FormStatus,
+  inFlight,
   Mono,
-  classifyFailure,
+  PendingLabel,
+  useControlAction,
 } from "../../../ui";
 import type { listNotifications } from "../service";
 
@@ -27,85 +27,116 @@ export interface NotificationListProps {
   markAllRead: () => Promise<unknown>;
 }
 
+/**
+ * Screen M, redrawn to S2c in round 22 (item 13).
+ *
+ * - **Unread is a white row and a pink dot**; read is the paper, its text
+ *   in `--quiet`, the dot's width kept as indent. M's hi-viz wash is gone:
+ *   *"yellow is the product's failure fill and nothing else."*
+ * - **Mark all read** is a text button beside the heading, on
+ *   `useControlAction` (round 23, item 9): while it works its label
+ *   breathes `[ Marking ]` and the rows stay as they are; on success the
+ *   screen reloads and they all go at once; on failure nothing changes and
+ *   the band says `Nothing marked`. It only exists while something is
+ *   unread — there is nothing for it to do otherwise.
+ * - **Empty is S2b**, confirmed verbatim.
+ *
+ * `data-part` names are round 22's, so the conformance harness can find
+ * the same regions on the board and here.
+ */
 export function NotificationList({
   notifications,
   markAllRead,
 }: Readonly<NotificationListProps>) {
   const navigate = useNavigate();
-  const [isMarking, setIsMarking] = useState(false);
-  const [failure, setFailure] = useState<FormFailure | undefined>();
-  const [status, setStatus] = useState("");
-  const inFlight = useRef(false);
-  const retryRef = useRef<HTMLButtonElement>(null);
-
-  /**
-   * D-43: this was `try { … } finally { … }` with no `catch`, so a D1
-   * failure re-threw out of a `void`-ed call. The button re-enabled, the
-   * user was told nothing, and nothing reached Sentry (laws 5 and 7) — the
-   * failure was an unhandled rejection and looked, on screen, exactly like
-   * a click that had not registered.
-   *
-   * The register named the answer: the failure band the forms contract
-   * already defines. `classifyFailure` is the same one a submit uses, so
-   * this cannot drift into a second sentence for the same condition.
-   */
-  async function onMarkAllRead() {
-    // The double-action guard lives here rather than on a `disabled`
-    // attribute — §5, and the reason is the same one the contract gives:
-    // a disabled button drops focus and stops announcing.
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setIsMarking(true);
-    setFailure(undefined);
-    try {
-      await markAllRead();
-      await navigate({ to: "/notifications" });
-    } catch (error: unknown) {
-      const classified = classifyFailure(error);
-      setFailure(classified);
-      setStatus(`Nothing saved. ${classified.message}`);
-    } finally {
-      setIsMarking(false);
-      inFlight.current = false;
-    }
-  }
+  const marking = useControlAction({
+    action: markAllRead,
+    kicker: "Nothing marked",
+    // Back to the same screen, so the loader re-runs and the rows come
+    // back as the server now has them rather than as this guesses.
+    onSuccess: () => navigate({ to: "/notifications" }),
+  });
+  // Offered only when it would clear something: an unread verdict
+  // reminder whose run still owes one is not markable (the server leaves
+  // it unread), and a button that changes nothing is a broken button.
+  const hasMarkable = notifications.some(
+    (notification) => notification.markable,
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      <FormStatus>{status}</FormStatus>
-      <button
-        type="button"
-        aria-disabled={isMarking || undefined}
-        aria-busy={isMarking || undefined}
-        onClick={() => {
-          void onMarkAllRead();
-        }}
-        className="target self-start rounded-pill border border-hairline px-3 py-2 text-body font-semibold"
-      >
-        Mark all read
-      </button>
-      <FormFailureBand
-        failure={failure}
-        onRetry={() => {
-          void onMarkAllRead();
-        }}
-        retryRef={retryRef}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="m-0 font-display text-display uppercase">
+          Notifications
+        </h1>
+        {hasMarkable ? (
+          <button
+            type="button"
+            data-part="mark-all"
+            data-state={marking.pending ? "pending" : "rest"}
+            {...inFlight(marking.pending)}
+            onClick={() => {
+              void marking.run();
+            }}
+            className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink"
+          >
+            <PendingLabel
+              label="Mark all read"
+              pendingLabel="Marking"
+              pending={marking.pending}
+            />
+          </button>
+        ) : undefined}
+      </div>
+      <ControlFailureBand
+        failure={marking.failure}
+        onRetry={marking.retry}
+        retryRef={marking.retryRef}
       />
+      <FormStatus>{marking.status}</FormStatus>
       {notifications.length === 0 ? (
-        <p className="text-quiet">Nothing yet.</p>
+        <div
+          data-part="notification-list"
+          data-state="empty"
+          className="flex flex-col gap-3 py-8"
+        >
+          <p className="m-0 font-display text-title uppercase">
+            <span className="text-action">[</span> Quiet{" "}
+            <span className="text-action">]</span>
+          </p>
+          <p className="m-0 text-lead">
+            Log a run and we&rsquo;ll ask you one question about it.
+            That&rsquo;s most of what lands here.
+          </p>
+        </div>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        <ul
+          data-part="notification-list"
+          className="-mx-6 m-0 flex list-none flex-col p-0"
+        >
           {notifications.map((notification) => (
             <li
               key={notification.id}
-              className={`rounded-card border border-hairline px-4 py-3 ${
-                notification.read ? "bg-panel" : "bg-unread"
+              data-part="notification-row"
+              data-state={notification.read ? "read" : "unread"}
+              className={`flex items-start gap-3 border-b border-hairline px-6 py-3 ${
+                notification.read ? "text-quiet" : "bg-panel text-ink"
               }`}
             >
-              <p className="m-0 text-ink">{notification.body}</p>
-              <Mono className="text-muted">
-                {dayTimeLabel(notification.createdAt)}
-              </Mono>
+              {/* The dot's width is kept on a read row as indent, so the
+                  text column does not jump when a row is read. */}
+              <span
+                aria-hidden="true"
+                className={`mt-2 block size-2 shrink-0 rounded-pill ${
+                  notification.read ? "" : "bg-action"
+                }`}
+              />
+              <div className="flex flex-col gap-1">
+                <p className="m-0 text-body">{notification.body}</p>
+                <Mono step="xs" className="text-muted">
+                  {dayTimeLabel(notification.createdAt)}
+                </Mono>
+              </div>
             </li>
           ))}
         </ul>

@@ -3,9 +3,21 @@
  * UNIQUE(user_id, kind, subject_id) + INSERT OR IGNORE, so every creator
  * is safely re-runnable (resilience law 1).
  */
-import { and, count, desc, eq } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
-import { notifications } from "../../db/schema-core";
+import { notifications, outfitEntries, runs } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import type { NotificationsDb } from "./db";
 import { nowSeconds } from "../../lib/now";
@@ -82,9 +94,28 @@ export async function createNotification(
   await notificationInsert(db, draft);
 }
 
-export async function listNotifications(db: NotificationsDb, userId: string) {
+/**
+ * The runner's notifications, newest first, each saying whether Mark all
+ * read would clear it: unread, and not a verdict still owed. The screen
+ * offers the button only when some row is `markable`, so a runner whose
+ * one unread row is an owed reminder is not handed a button that does
+ * nothing (PR #102 review). The predicate is mark-all's own, in SQL, so
+ * the two cannot disagree.
+ */
+export async function listNotifications(
+  db: NotificationsDb,
+  userId: string,
+  nowEpochSeconds: number,
+) {
+  const markable = and(
+    eq(notifications.read, false),
+    notOwed(db, userId, nowEpochSeconds),
+  );
   return db
-    .select()
+    .select({
+      ...getTableColumns(notifications),
+      markable: sql<number>`coalesce(${markable}, 0)`.mapWith(Boolean),
+    })
     .from(notifications)
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
@@ -98,9 +129,14 @@ export async function unreadNotificationCount(
   const rows = await db
     .select({ n: count() })
     .from(notifications)
-    .where(
-      and(eq(notifications.userId, userId), eq(notifications.read, false)),
-    );
+    .where(unreadOf(userId));
+  return onlyCount(rows);
+}
+
+/**
+ * The one row a `count()` answers with.
+ */
+function onlyCount(rows: readonly { n: number }[]): number {
   // Unreachable fallback: `count()` always answers with exactly one row.
   // It is here because `noUncheckedIndexedAccess` types `rows[0]` as
   // possibly undefined, which is the compiler being right about arrays in
@@ -109,14 +145,106 @@ export async function unreadNotificationCount(
   return rows[0]?.n ?? 0;
 }
 
+/**
+ * How far back a run still counts as waiting for its verdict — round 22's
+ * bell ruling: *"Runs with a kit or not, without a verdict, from the last
+ * 14 days."* Older than that and the run is history, not a to-do.
+ */
+export const VERDICT_WAIT_WINDOW_S = 14 * 24 * 3600;
+
+/**
+ * The runs this runner still owes a verdict: started inside the window,
+ * and either with no outfit entry or with one whose verdict is empty.
+ *
+ * One LEFT JOIN answers both halves — a run with no entry joins to NULLs,
+ * so `verdict IS NULL` is true of it and of an entry nobody judged, which
+ * is exactly "with a kit or not". Index-backed on both sides:
+ * `runs_user_started` bounds the scan by user and start, and the UNIQUE
+ * `entries_run` is the probe.
+ */
+function waitingRuns(db: NotificationsDb, userId: string, since: number) {
+  return db
+    .select({ id: runs.id })
+    .from(runs)
+    .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
+    .where(waiting(userId, since));
+}
+
+/**
+The waiting set's condition, for the count and the list alike.
+*/
+function waiting(userId: string, since: number) {
+  return and(
+    eq(runs.userId, userId),
+    gte(runs.startedAt, since),
+    isNull(outfitEntries.verdict),
+  );
+}
+
+/**
+This runner's unread rows — what the dot counts and what mark-all clears.
+*/
+function unreadOf(userId: string) {
+  return and(eq(notifications.userId, userId), eq(notifications.read, false));
+}
+
+/**
+ * What the bell shows (round 22, item 13): a **number** when there are
+ * runs waiting for a verdict, because each one is a thing to do, and
+ * otherwise a **dot** for anything unread. Both counts in one batch.
+ */
+export interface BellState {
+  unreadCount: number;
+  verdictsWaiting: number;
+}
+
+export async function bellState(
+  db: NotificationsDb,
+  userId: string,
+  nowEpochSeconds: number,
+): Promise<BellState> {
+  const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
+  const [unread, owed] = await db.batch([
+    db.select({ n: count() }).from(notifications).where(unreadOf(userId)),
+    db
+      .select({ n: count() })
+      .from(runs)
+      .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
+      .where(waiting(userId, since)),
+  ]);
+  return {
+    unreadCount: onlyCount(unread),
+    verdictsWaiting: onlyCount(owed),
+  };
+}
+
+/**
+ * Marks everything read **except a verdict still owed.** Round 22: *"Verdict
+ * rows stay unread until the verdict is logged — marking can't clear a
+ * to-do."* A `kit_reminder`'s subject is its run, so the reminders left
+ * unread are exactly those whose run is still in the waiting set; once the
+ * verdict lands, the next mark-all takes them with the rest.
+ */
 export async function markAllNotificationsRead(
   db: NotificationsDb,
   userId: string,
+  nowEpochSeconds: number,
 ): Promise<void> {
   await db
     .update(notifications)
     .set({ read: true })
-    .where(
-      and(eq(notifications.userId, userId), eq(notifications.read, false)),
-    );
+    .where(and(unreadOf(userId), notOwed(db, userId, nowEpochSeconds)));
+}
+
+/**
+ * A notification that is not a verdict still owed: any kind but a kit
+ * reminder, or a kit reminder whose run has its verdict (or has left the
+ * window). What Mark all read may clear, and what the list calls markable.
+ */
+function notOwed(db: NotificationsDb, userId: string, nowEpochSeconds: number) {
+  const since = nowEpochSeconds - VERDICT_WAIT_WINDOW_S;
+  return or(
+    ne(notifications.kind, "kit_reminder"),
+    notInArray(notifications.subjectId, waitingRuns(db, userId, since)),
+  );
 }

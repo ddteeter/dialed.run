@@ -10,6 +10,7 @@ import {
   bandSignalsInput,
   coordinatesInput,
   entryIdInput,
+  usefulInput,
   feedInput,
   itemBandStatInput,
   pickerGroupsInput,
@@ -172,6 +173,20 @@ describe("the id inputs", () => {
     expect(entryIdInput.safeParse({ entryId: "12" }).success).toBe(false);
     expect(userIdInput.safeParse({ userId: newUlid() }).success).toBe(true);
     expect(userIdInput.safeParse({ userId: "12" }).success).toBe(false);
+  });
+});
+
+describe("usefulInput", () => {
+  it("carries the state the viewer wants, and needs it", () => {
+    const entryId = newUlid();
+    expect(usefulInput.parse({ entryId, useful: false })).toStrictEqual({
+      entryId,
+      useful: false,
+    });
+    expect(usefulInput.safeParse({ entryId }).success).toBe(false);
+    expect(usefulInput.safeParse({ entryId: "12", useful: true }).success).toBe(
+      false,
+    );
   });
 });
 

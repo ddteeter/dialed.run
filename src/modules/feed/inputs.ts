@@ -44,6 +44,33 @@ export const coordinatesInput = z.object({
   lng: longitudeSchema,
 });
 
+/**
+ * And for a runner who will not share one: E2-lite's location-denied
+ * recovery, the city typed instead. O1's bounds, and a sentence that names
+ * the fix.
+ */
+export const conditionsCityInput = z.object({
+  cityLabel: z
+    .string()
+    .trim()
+    .min(1, { message: "Type the city you run in." })
+    .max(120),
+});
+
+/**
+ * The typed city once the weather provider has looked for it: a place, or
+ * the field's own message when there is none. Keyed on `cityLabel` so the
+ * issue lands on the city field (owner's ruling: a city nobody can find is
+ * a field message, not a failure band) through the same path a schema
+ * issue always takes to a form.
+ */
+export const resolvedCity = z.object({
+  cityLabel: z.object(
+    { lat: latitudeSchema, lng: longitudeSchema, address: z.string() },
+    { error: "We couldn't find that city. Add the state or country." },
+  ),
+});
+
 export const itemFlagInput = z.object({
   itemId: ulidSchema,
   flag: itemFlagSchema.optional(),
@@ -110,6 +137,12 @@ export const itemBandStatInput = z.object({
 });
 
 export const entryIdInput = z.object({ entryId: ulidSchema });
+
+/**
+ * Useful, as the state the viewer wants — never "flip it" (law 8b): a
+ * repeat of the same request leaves the same state.
+ */
+export const usefulInput = entryIdInput.extend({ useful: z.boolean() });
 
 export const userIdInput = z.object({ userId: ulidSchema });
 

@@ -562,9 +562,10 @@ export const verdictScale = [
 export type VerdictValue = (typeof verdictScale)[number]["value"];
 
 /**
-User-facing wording for a stored verdict; `undefined` if out of range.
+User-facing wording for a stored verdict; `undefined` if out of range or
+if there is no verdict to word.
 */
-export function verdictLabel(value: number): string | undefined {
+export function verdictLabel(value: number | undefined): string | undefined {
   return verdictScale.find((entry) => entry.value === value)?.label;
 }
 export const itemFlagSchema = z.enum(["too_much", "not_enough"]);
@@ -673,6 +674,23 @@ export interface WeatherProvider {
   Forecast at a future time+place (for the call, post-MVP).
   */
   forecast(lat: number, lng: number, at: Date): Promise<WeatherObservation>;
+  /**
+  Where a typed place is, or nothing when the provider cannot find it —
+  E2-lite's typed city, after the runner refused their location.
+  */
+  resolvePlace(label: string): Promise<ResolvedPlace | undefined>;
+}
+
+/**
+ * Where the provider found a typed place, and what it calls it. `address`
+ * is the provider's name for the place ("Portland, OR, United States"),
+ * not the runner's text: a bare "Portland" has more than one answer, and
+ * this is the one that was picked (PR #102 review).
+ */
+export interface ResolvedPlace {
+  lat: number;
+  lng: number;
+  address: string;
 }
 
 // ---- Onboarding / profile -------------------------------------------------

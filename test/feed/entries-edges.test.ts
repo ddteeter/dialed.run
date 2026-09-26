@@ -22,7 +22,7 @@ import {
   submitVerdict,
   verdictBandCounts,
 } from "../../src/modules/feed/entries";
-import { toggleUsefulReaction } from "../../src/modules/feed/reactions";
+import { setUsefulReaction } from "../../src/modules/feed/reactions";
 import {
   makeEntry,
   makeItem,
@@ -584,7 +584,13 @@ describe("band statistics", () => {
     const userId = await makeUser();
     const worn = await makeItem({ userId, name: "Worn" });
     // One place and hour: one observation serves every run.
-    await makeObservation({ lat: 67.11, lng: -93.27, startedAt: NOW, tempC: 5, feelsLikeC: 3 });
+    await makeObservation({
+      lat: 67.11,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 3,
+    });
     for (let index = 0; index < 150; index += 1) {
       const runId = await makeRun({ userId, lat: 67.11, lng: -93.27 });
       await makeEntry({
@@ -725,7 +731,7 @@ describe("entryDetailForViewer", () => {
     const reactor = await makeUser();
     const runId = await makeRun({ userId: owner });
     const entryId = await attachKit({ userId: owner, runId, itemIds: [] });
-    await toggleUsefulReaction(entryId, reactor);
+    await setUsefulReaction(entryId, reactor, true);
 
     const asReactor = await entryDetailForViewer(entryId, reactor);
     const asOwner = await entryDetailForViewer(entryId, owner);

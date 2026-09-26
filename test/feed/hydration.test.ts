@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import {
   entryPhotos,
   entryTags,
+  follows,
   outfitEntries,
   reactions,
   runs,
@@ -160,6 +161,60 @@ describe("a feed card carries its own entry's detail", () => {
     expect(page.items[1]?.usefulCount).toBe(0);
   });
 
+  it("knows which entries the viewer has marked useful, and only theirs", async () => {
+    // Round 22 put Useful on the card, so the card has to start in the
+    // right state: marked by this viewer, not by anyone at all.
+    const viewer = await makeUser();
+    const other = await makeUser();
+    const marked = await publicEntry({ userId: viewer, lat: 43.21 });
+    const byOther = await publicEntry({
+      userId: viewer,
+      lat: 43.22,
+      createdAt: NOW - DAY,
+    });
+    await db()
+      .insert(reactions)
+      .values([
+        { entryId: marked.entryId, userId: viewer, createdAt: NOW },
+        { entryId: byOther.entryId, userId: other, createdAt: NOW },
+      ]);
+
+    const page = await followingFeed(viewer);
+
+    expect(page.items.map((item) => item.viewerHasReacted)).toStrictEqual([
+      true,
+      false,
+    ]);
+    expect(page.items[1]?.usefulCount).toBe(1);
+  });
+
+  it("says whether the run was indoors, for the strip", async () => {
+    const userId = await makeUser();
+    const { runId } = await publicEntry({ userId, lat: 43.31 });
+    await db().update(runs).set({ indoor: true }).where(eq(runs.id, runId));
+
+    const page = await followingFeed(userId);
+
+    expect(page.items[0]?.indoor).toBe(true);
+  });
+
+  it("counts who the viewer follows, for the tab it opens on", async () => {
+    const viewer = await makeUser();
+    const followed = await makeUser();
+    const alsoFollowed = await makeUser();
+    await db()
+      .insert(follows)
+      .values([
+        { followerId: viewer, followeeId: followed, createdAt: NOW },
+        { followerId: viewer, followeeId: alsoFollowed, createdAt: NOW },
+        { followerId: followed, followeeId: viewer, createdAt: NOW },
+      ]);
+
+    const page = await followingFeed(viewer);
+
+    expect(page.followeeCount).toBe(2);
+  });
+
   it("carries the run's own title, distance and duration", async () => {
     const userId = await makeUser();
     const { entryId, runId } = await publicEntry({ userId, lat: 44.11 });
@@ -234,6 +289,7 @@ describe("a feed card copes with what is missing", () => {
       distanceM: 0,
       durationS: 0,
       startedAt: NOW,
+      indoor: false,
     });
     expect(page.items[0]?.conditions).toBeUndefined();
   });
@@ -280,7 +336,11 @@ describe("a feed card copes with what is missing", () => {
 
   it("answers an empty feed without asking for detail about nothing", async () => {
     const page = await followingFeed(await makeUser());
-    expect(page).toStrictEqual({ items: [], nextCursor: undefined });
+    expect(page).toStrictEqual({
+      items: [],
+      followeeCount: 0,
+      nextCursor: undefined,
+    });
   });
 });
 
