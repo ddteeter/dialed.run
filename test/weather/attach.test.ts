@@ -3,7 +3,10 @@ import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runs } from "../../src/db/schema-core";
-import { weatherObservations } from "../../src/db/schema-weather";
+import {
+  manualConditions,
+  weatherObservations,
+} from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import {
@@ -13,9 +16,10 @@ import {
 } from "../../src/modules/weather";
 import {
   cacheKeyFor,
-  upsertManualObservation,
+  upsertManualBand,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
+import { makeObservation } from "../feed/helpers";
 import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
 
 const OBSERVATION_HOUR_EPOCH = 1_768_485_600; // 07:00 fixture hour
@@ -136,7 +140,7 @@ describe("attachObservation (103)", () => {
       newUlid(),
     );
     const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
-    await attachObservation(runId);
+    expect(await attachObservation(runId)).toBe("attached");
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(await statusOf(runId)).toBe("attached");
   });
@@ -236,7 +240,7 @@ describe("attachObservation samples every hour a run spans", () => {
 });
 
 describe("recordManualObservation (103, D-24)", () => {
-  it("writes a manual row, links it, and never overwrites a resolved run", async () => {
+  it("writes the band against the run, links it, and never overwrites a resolved run", async () => {
     const runId = await insertRun({ lat: 54.5, lng: 16.5 });
     await recordManualObservation(runId, -3);
     expect(await statusOf(runId)).toBe("manual");
@@ -246,10 +250,14 @@ describe("recordManualObservation (103, D-24)", () => {
     // is "manual" either way, so a second write would land unnoticed.
     await recordManualObservation(runId, 40);
     expect(await statusOf(runId)).toBe("manual");
-    const stored = await observationsAt(54.5);
-    expect(
-      stored.get(Math.floor(OBSERVATION_HOUR_EPOCH / 3600))?.tempC,
-    ).toBeCloseTo(-3, 5);
+    expect(await bandOf(runId)).toBeCloseTo(-3, 5);
+  });
+
+  it("never writes the band into the shared cache cell (B1)", async () => {
+    const runId = await insertRun({ lat: 54.6, lng: 16.6 });
+    await recordManualObservation(runId, -3);
+    const stored = await observationsAt(54.6);
+    expect(stored.size).toBe(0);
   });
 
   it("throws rather than crashing silently when the run has no location", async () => {
@@ -322,16 +330,11 @@ describe("attachObservation reports what it did", () => {
     );
   });
 
-  it("reports `manual` when the cached row for the hour was typed by a human", async () => {
+  it("reports `manual` for a run whose own band is already set", async () => {
+    // The band landed and the status write after it did not: the run is
+    // re-driven, and settles on its band rather than fetching over it.
     const runId = await insertRun({ lat: 57.5, lng: 19.5 });
-    // A different run already recorded a manual temp for this hour and
-    // place. The distinction that matters is resolved-vs-typed, so this
-    // run inherits `manual` — not `attached`.
-    await upsertManualObservation(
-      cacheKeyFor(57.5, 19.5, new Date(OBSERVATION_HOUR_EPOCH * 1000)),
-      -7,
-      newUlid(),
-    );
+    await upsertManualBand(runId, -7);
     const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
 
     expect(await attachObservation(runId)).toBe("manual");
@@ -339,6 +342,71 @@ describe("attachObservation reports what it did", () => {
     expect(await statusOf(runId)).toBe("manual");
   });
 });
+
+/**
+ * Review blocker B1. A band is one runner's pick for one run; the cache
+ * cell answers for everyone who ran at that place and hour. When the band
+ * lived in the cell, the next runner there got it as a cache hit: their
+ * run went `manual` on someone else's guess, dropped out of consensus, and
+ * never fetched the real weather.
+ */
+describe("a band set for one run is never another run's weather (B1)", () => {
+  const lat = 57.61;
+  const lng = 19.61;
+
+  it("a second runner in the same place and hour fetches a real observation", async () => {
+    const first = await insertRun({ lat, lng, weatherStatus: "failed" });
+    await recordManualObservation(first, -7);
+    const second = await insertRun({ lat, lng });
+    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+
+    expect(await attachObservation(second)).toBe("attached");
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(await statusOf(second)).toBe("attached");
+    const stored = await observationsAt(lat);
+    const cell = stored.get(Math.floor(OBSERVATION_HOUR_EPOCH / 3600));
+    expect(cell?.tempC).toBeCloseTo(-4.8, 5);
+    expect(cell?.runId).toBe(second);
+    // And the first runner's band is still theirs, untouched.
+    expect(await statusOf(first)).toBe("manual");
+    expect(await bandOf(first)).toBe(-7);
+  });
+
+  it("treats a legacy band still in the cache as a miss, and upgrades it", async () => {
+    // Rows written before `manual_conditions` existed are still in the
+    // cache. They are somebody's band, not the weather.
+    const legacyLat = 57.71;
+    await makeObservation({
+      lat: legacyLat,
+      lng,
+      startedAt: OBSERVATION_HOUR_EPOCH,
+      tempC: 30,
+      feelsLikeC: 30,
+      source: "manual",
+    });
+    const runId = await insertRun({ lat: legacyLat, lng });
+    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+
+    expect(await attachObservation(runId)).toBe("attached");
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const stored = await observationsAt(legacyLat);
+    const cell = stored.get(Math.floor(OBSERVATION_HOUR_EPOCH / 3600));
+    expect(cell?.tempC).toBeCloseTo(-4.8, 5);
+  });
+});
+
+/**
+The band stored against this run, if any.
+*/
+async function bandOf(runId: Ulid): Promise<number | undefined> {
+  const [row] = await drizzle(env.DIALED_WEATHER)
+    .select()
+    .from(manualConditions)
+    .where(eq(manualConditions.runId, runId));
+  return row?.tempC;
+}
 
 /**
 Every observation row stored for this rounded latitude, by hour bucket.
@@ -463,6 +531,7 @@ describe("recordManualObservation refuses what it cannot key", () => {
     await recordManualObservation(runId, -20);
 
     expect(await statusOf(runId)).toBe("attached");
+    expect(await bandOf(runId)).toBeUndefined();
     const stored = await observationsAt(lat);
     expect(
       stored.get(Math.floor(OBSERVATION_HOUR_EPOCH / 3600))?.tempC,
@@ -515,6 +584,7 @@ describe("a run whose conditions are already settled is left alone", () => {
     expect(await statusOf(runId)).toBe("attached");
     const stored = await observationsAt(49.55);
     expect(stored.size).toBe(0);
+    expect(await bandOf(runId)).toBeUndefined();
   });
 
   it("counts a run that resolves to a typed temperature as attached", async () => {
@@ -522,12 +592,8 @@ describe("a run whose conditions are already settled is left alone", () => {
     // run leaves the pending queue either way.
     const lat = 49.65;
     const lng = -79.65;
-    await upsertManualObservation(
-      cacheKeyFor(lat, lng, new Date(OBSERVATION_HOUR_EPOCH * 1000)),
-      -14,
-      newUlid(),
-    );
     const runId = await insertRun({ lat, lng, weatherStatus: "pending" });
+    await upsertManualBand(runId, -14);
     mockFetchJson(visualCrossingObservationFixture);
 
     const result = await retryPendingWeather();

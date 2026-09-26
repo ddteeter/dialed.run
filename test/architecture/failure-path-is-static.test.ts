@@ -65,7 +65,9 @@ function moveIn(source: string): string | undefined {
  */
 const FAILURE_SURFACES = [
   "src/ui/form.tsx",
-  "src/modules/runs/components/ImportStatus.tsx",
+  // A1 reports its failures in place since round 22 retired the import
+  // status page.
+  "src/modules/runs/components/UploadForm.tsx",
   "src/modules/runs/components/StravaCallbackResult.tsx",
   "src/modules/notifications/components/NotificationList.tsx",
 ];

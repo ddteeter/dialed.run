@@ -29,9 +29,7 @@ describe("the backlog's keys", () => {
     // Five keys and not DS2's four (owner, 2026-09-21): a verdict saved
     // here "counts exactly like a verdict from the phone", so it gets the
     // phone's whole scale rather than a coarsened three.
-    expect(
-      verdictKeys.map((slot) => [slot.key, slot.value]),
-    ).toStrictEqual([
+    expect(verdictKeys.map((slot) => [slot.key, slot.value])).toStrictEqual([
       ["1", -2],
       ["2", -1],
       ["3", 0],

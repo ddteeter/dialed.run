@@ -124,3 +124,78 @@ export function dayTimeLabel(epochSeconds: number, timeZone?: string): string {
   });
   return `${dayLabel(epochSeconds, timeZone)}, ${time}`;
 }
+
+/**
+ * The time of day on the board's clock — "6:04 AM".
+ *
+ * A3's header and A1's parsed card both draw a twelve-hour time beside the
+ * day ("SAT AUG 29 · 6:04 AM"), where a notification's `dayTimeLabel`
+ * draws 24-hour. Upper-cased here rather than left to the mono step's CSS,
+ * because `en-GB` writes "am" and a screen reader should hear the letters
+ * the eye sees.
+ *
+ * `timeZone` is the run's own (D-96); omitted or invalid, it is UTC.
+ */
+export function clockLabel(epochSeconds: number, timeZone?: string): string {
+  return part(epochSeconds, timeZone, {
+    hour: "numeric",
+    minute: "2-digit",
+    hourCycle: "h12",
+  }).toUpperCase();
+}
+
+/**
+ * The time of day as a time input writes it — "06:04", 24-hour — so A1's
+ * time correction can start from the run's own clock.
+ */
+export function timeOfDay(epochSeconds: number, timeZone?: string): string {
+  return part(epochSeconds, timeZone, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+function minutesOf(hhmm: string): number {
+  const [hours = 0, minutes = 0] = hhmm.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * The start that reads `hhmm` on the same clock — the one the runner was
+ * looking at, in the zone they were looking at it in.
+ *
+ * An absolute epoch, not a shift, so sending it twice is sending the same
+ * fact twice: a retry after a lost response moves the run to the time
+ * picked, where a shift would have moved it by that much again. The
+ * arithmetic is still a difference between two times on one clock, so it
+ * needs no zone rules to be right. The day does not change — a run that
+ * started on another day is another run.
+ */
+export function startAtTimeOfDay(
+  epochSeconds: number,
+  timeZone: string | undefined,
+  hhmm: string,
+): number {
+  return (
+    epochSeconds +
+    (minutesOf(hhmm) - minutesOf(timeOfDay(epochSeconds, timeZone))) * 60
+  );
+}
+
+/**
+ * The zone this device's clock reads in, or none if `Intl` names one it
+ * would not accept back.
+ *
+ * **Only for what renders after a runner's own action**, never for first
+ * paint: workerd answers UTC and the browser answers the runner's zone, so
+ * text built from this on the server would not match the client's
+ * (see the note at the top of this file). A1's parsed card is drawn only
+ * once a file has been dropped, in the browser, which is why it may use it
+ * for a run with no zone of its own — the runner's clock, rather than UTC,
+ * is the one they read the start time from.
+ */
+export function deviceTimeZone(): string | undefined {
+  const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return isTimeZone(zone) ? zone : undefined;
+}

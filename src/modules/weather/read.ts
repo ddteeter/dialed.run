@@ -12,7 +12,12 @@ import { weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
 import type { WeatherObservation } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
-import { cacheKeyFor, toWeatherObservation } from "./store";
+import {
+  bandObservation,
+  cacheKeyFor,
+  manualBandsFor,
+  toWeatherObservation,
+} from "./store";
 
 /** A resolved observation plus whether it came from a real fetch or a
  * user-typed fallback — 104 shows manual readings differently. */
@@ -25,43 +30,30 @@ function keyString(latR: number, lngR: number, hourBucket: number): string {
 }
 
 /**
- * Run-detail read: whatever is cached at this run's key, manual included.
+ * The bands runners set for these runs (R2b), as readings, by run id.
+ *
+ * A band is its run's conditions and nobody else's (B1): it is read by run
+ * id, never by cache cell, so another runner at the same place and hour
+ * never sees it. Tagged `manual`, which is what every aggregate excludes.
+ * A run with no band is simply absent — its conditions, if any, are the
+ * real observation at its cell.
  */
-export async function observationForRun(
-  runId: Ulid,
-): Promise<WeatherReading | undefined> {
-  const [run] = await drizzle(env.DIALED_CORE)
-    .select()
-    .from(runs)
-    .where(eq(runs.id, runId))
-    .limit(1);
-  if (!run) {
-    return undefined;
-  }
-  if (run.lat === null || run.lng === null) {
-    return undefined;
-  }
-  const key = cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000));
-  const [row] = await drizzle(env.DIALED_WEATHER)
-    .select()
-    .from(weatherObservations)
-    .where(
-      and(
-        eq(weatherObservations.latR, key.latR),
-        eq(weatherObservations.lngR, key.lngR),
-        eq(weatherObservations.hourBucket, key.hourBucket),
-      ),
-    )
-    .limit(1);
-  if (!row) {
-    return undefined;
-  }
-  return { ...toWeatherObservation(row), source: row.source };
+export async function manualReadingsForRuns(
+  runIds: readonly string[],
+): Promise<Map<string, WeatherReading>> {
+  const bands = await manualBandsFor(runIds);
+  return new Map(
+    bands.map((band) => [
+      band.runId,
+      { ...bandObservation(band), source: "manual" as const },
+    ]),
+  );
 }
 
 /**
- * Consensus batch read (104's "your conditions" block): manual rows are
- * excluded from every aggregate the module exposes (contracts.md). Bounded
+ * Consensus batch read (104's "your conditions" block): real observations
+ * only — a band is never in the cache, and a legacy manual row still there
+ * is excluded from every aggregate the module exposes (contracts.md). Bounded
  * by the caller's own scan window (104's packet requires the EXPLAIN +
  * row-scan cap on its side); this only matches the exact cache cells the
  * given runs land in.

@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { fitSource, toDate } from "../../src/modules/runs/parsers/fit";
 import {
+  NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
@@ -151,6 +152,9 @@ describe("fit: every way it refuses", () => {
   it("says when the file carries no session", async () => {
     const failure = await failureFrom(fitFileWithoutSession());
     expect(failure.reason).toContain("missing startTime/elapsed/distance");
+    // A file that read and held no run: round 22's "no track" sentence,
+    // not "couldn't read".
+    expect(failure.message).toBe(NO_TRACK_MESSAGE);
   });
 
   it.each([
