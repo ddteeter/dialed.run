@@ -1,122 +1,109 @@
-import { RETRY_SAVE } from "../../../lib/copy";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
+import type { JSX } from "react";
 import { useState } from "react";
 
-import { Bracketed, inFlight, Mono, PendingLabel } from "../../../ui";
-import type { RunRow } from "../service";
+import type { Units } from "../../../lib/contracts";
+import { clockLabel, dayLabel } from "../../../lib/dates";
+import { distanceNumber, formatPace } from "../../../lib/measures";
+import { Mono } from "../../../ui";
+import type { RunSummary } from "../service";
+import { ConditionsRow } from "./ConditionsBlock";
+import { SetConditionsSheet } from "./SetConditionsSheet";
+import type { ConditionsActions } from "./SetConditionsSheet";
 
 /**
- * The manual-temp action, handed in rather than imported.
- *
- * `../functions` pulls TanStack Start's virtual server entry, and a file
- * that reaches it cannot be imported by any test — in either vitest
- * project, because the constraint is the import graph and not the runtime.
- * So the route wires it and this renders. The prop's shape is the server
- * function's own, so the route passes it with no wrapper.
+ * Where a run came from, as the run strip names it — R1 calls hand entry
+ * "BY HAND".
  */
+const SOURCE_WORDS: Readonly<Record<RunSummary["source"], string>> = {
+  file: "File",
+  manual: "By hand",
+};
+
 export interface RunDetailProps {
-  run: RunRow;
-  recordManualTemp: (input: {
-    data: { runId: string; tempC: number };
-  }) => Promise<unknown>;
+  run: RunSummary;
+  units: Units;
+  actions: ConditionsActions;
 }
 
-function ManualTempFallback({
-  runId,
-  recordManualTemp,
-}: Readonly<Omit<RunDetailProps, "run"> & { runId: string }>) {
+/**
+ * A run before its kit (round 22, "R Run before kit") — the only thing
+ * such a run is waiting for is what the runner wore, so that is the
+ * primary, in the log verb's pink, into A2 → A3. A run with an entry never
+ * reaches here: the route sends it on to its verdict or its post.
+ *
+ * **No inputs on this screen.** The manual-temperature form is gone, for
+ * one row: weather that arrived is A1's ink block, read-only; weather that
+ * never came is "No conditions · Set ›", which opens R2b.
+ */
+export function RunDetail({
+  run,
+  units,
+  actions,
+}: Readonly<RunDetailProps>): JSX.Element {
   const router = useRouter();
-  const [tempC, setTempC] = useState("10");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | undefined>();
-
-  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    // The guard the `disabled` attribute used to be. `aria-disabled` keeps
-    // the button focusable and announcing (rule 07), so the second press
-    // still arrives and has to die here rather than at the markup.
-    if (isSubmitting) return;
-    setError(undefined);
-    setIsSubmitting(true);
-    try {
-      await recordManualTemp({
-        data: { runId, tempC: Number(tempC) },
-      });
-      await router.invalidate();
-    } catch {
-      setError(RETRY_SAVE);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <form
-      className="flex flex-col gap-3 rounded-card border border-hairline bg-panel p-4"
-      onSubmit={(event) => {
-        void submit(event);
-      }}
-    >
-      <Bracketed className="text-cold-text">Unavailable</Bracketed>
-      <p className="m-0 text-small text-quiet">
-        We couldn&rsquo;t resolve conditions automatically. You can type a
-        temperature — it won&rsquo;t train the model.
-      </p>
-      <label className="target flex items-center gap-2 text-body font-semibold">
-        Temp (°C)
-        <input
-          type="number"
-          value={tempC}
-          onChange={(event) => {
-            setTempC(event.target.value);
-          }}
-          className="w-24 rounded-field border border-hairline px-3 py-2 font-normal"
-        />
-      </label>
-      {error === undefined ? undefined : (
-        <p className="text-small font-semibold text-cold-text">{error}</p>
-      )}
-      {/* `aria-disabled`, never `disabled` (rule 07) — and no dimming,
-          because rule 02 bans opacity as a meaning channel. What says the
-          work is happening is the label, per design's round-13 table. The
-          guard is in `submit` below, where a second press has to die. */}
-      <button
-        type="submit"
-        {...inFlight(isSubmitting)}
-        className="target self-start rounded-pill bg-ink px-4 py-2 font-semibold text-ground"
-      >
-        <PendingLabel
-          label="Save temperature"
-          pendingLabel="Saving"
-          pending={isSubmitting}
-        />
-      </button>
-    </form>
-  );
-}
-
-export function RunDetail({ run, recordManualTemp }: Readonly<RunDetailProps>) {
-  const isIndoor = run.indoor;
-  const requiresManualTemp =
-    !isIndoor &&
-    (run.weatherStatus === "failed" || run.weatherStatus === "pending");
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const zone = run.conditions?.timeZone;
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-display text-title uppercase">{run.title}</h1>
-      <Mono step="md" className="text-quiet">
-        {(run.distanceM / 1000).toFixed(2)} KM ·{" "}
-        {Math.round(run.durationS / 60)} MIN
-      </Mono>
-      {isIndoor && <Bracketed className="text-quiet">Indoor</Bracketed>}
-      {requiresManualTemp && (
-        <ManualTempFallback
-          runId={run.id}
-          recordManualTemp={recordManualTemp}
-        />
-      )}
-      {/* CTA slot repointed by lane 104 to attach-the-kit (A2). */}
-      <div data-slot="attach-kit-cta" />
+      <div
+        data-slot="run-strip"
+        className="flex flex-col gap-2 border-b border-hairline pb-4"
+      >
+        <Mono step="xs" className="text-muted">
+          {`${dayLabel(run.startedAt, zone)} · ${clockLabel(run.startedAt, zone)} · ${SOURCE_WORDS[run.source]}`}
+        </Mono>
+        <p className="m-0 flex items-baseline gap-3">
+          <span className="font-display text-display uppercase">
+            {`${distanceNumber(run.distanceM, units.distance)} ${units.distance}`}
+          </span>
+          <Mono step="sm" className="text-label">
+            {formatPace(run.durationS, run.distanceM, units.distance)}
+          </Mono>
+        </p>
+      </div>
+
+      <ConditionsRow
+        run={run}
+        units={units}
+        onSet={() => {
+          setIsSheetOpen(true);
+        }}
+      />
+
+      <div data-slot="kit" data-state="empty" className="flex flex-col gap-1">
+        <Mono step="xs" className="text-muted">
+          Kit
+        </Mono>
+        <p className="m-0 text-body">
+          No kit yet. Without one, this run can&rsquo;t teach your closet
+          anything.
+        </p>
+      </div>
+
+      <Link
+        to="/feed/attach/$runId"
+        params={{ runId: run.id }}
+        data-slot="primary-action"
+        className="target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink no-underline"
+      >
+        What did you wear?
+      </Link>
+
+      <SetConditionsSheet
+        runId={run.id}
+        units={units}
+        open={isSheetOpen}
+        onClose={() => {
+          setIsSheetOpen(false);
+        }}
+        onDone={async () => {
+          setIsSheetOpen(false);
+          await router.invalidate();
+        }}
+        actions={actions}
+      />
     </div>
   );
 }

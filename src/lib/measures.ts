@@ -16,9 +16,26 @@ const METRES_PER_MILE = 1609.34;
 const METRES_PER_KM = 1000;
 
 export function formatDistance(distanceM: number, unit: DistanceUnit): string {
-  return unit === "km"
-    ? `${(distanceM / METRES_PER_KM).toFixed(1)}km`
-    : `${(distanceM / METRES_PER_MILE).toFixed(1)}mi`;
+  return `${distanceNumber(distanceM, unit)}${unit}`;
+}
+
+/**
+ * Metres in one of the runner's distance units.
+ */
+function metresPer(unit: DistanceUnit): number {
+  return unit === "km" ? METRES_PER_KM : METRES_PER_MILE;
+}
+
+/**
+ * The distance alone, at one decimal, in the runner's unit — "6.2".
+ *
+ * For the lines that set the number apart from its unit: A3's header
+ * reads "6.2 AT 41°" and A2's "6.2 MI · 41°F DAMP", where the unit is a
+ * word of its own or not there at all. `formatDistance` is this with the
+ * unit glued on, so the two cannot round differently.
+ */
+export function distanceNumber(distanceM: number, unit: DistanceUnit): string {
+  return (distanceM / metresPer(unit)).toFixed(1);
 }
 
 /**
@@ -60,8 +77,11 @@ export function formatDuration(durationS: number): string {
 }
 
 /**
- * Pace in the runner's own unit — `8:40 /mi`, `5:23 /km` — as D's run
- * strip draws it (round 22).
+ * Pace — time per mile or kilometre — in the runner's own unit: `8:40 /mi`,
+ * `5:23 /km`, as A1's parsed card and D's run strip draw it (round 22). The
+ * time is `formatDuration`'s rather than a second copy of it, so a slow
+ * hour-long mile reads "1:02:10 /mi" and not "62:10 /mi" — see
+ * `formatDuration`'s own note on why that bug mattered.
  *
  * Nothing when the run has no distance: a treadmill session logged by
  * time alone has no pace, and `Infinity:NaN /mi` is not one.
@@ -72,10 +92,8 @@ export function formatPace(
   unit: DistanceUnit,
 ): string | undefined {
   if (distanceM <= 0) return undefined;
-  const metres = unit === "km" ? METRES_PER_KM : METRES_PER_MILE;
-  const perUnit = Math.round((durationS * metres) / distanceM);
-  const seconds = (perUnit % 60).toString().padStart(2, "0");
-  return `${String(Math.floor(perUnit / 60))}:${seconds} /${unit}`;
+  const perUnitS = Math.round((durationS * metresPer(unit)) / distanceM);
+  return `${formatDuration(perUnitS)} /${unit}`;
 }
 
 /**

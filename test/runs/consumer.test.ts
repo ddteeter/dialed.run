@@ -450,7 +450,7 @@ describe("the import consumer's quieter paths", () => {
       .from(imports)
       .where(eq(imports.id, importId));
     expect(after?.status).toBe("failed");
-    expect(after?.failureReason).toMatch(/didn't parse/);
+    expect(after?.failureReason).toMatch(/couldn't read this file/);
   });
 
   it("fails an import whose key names a format it cannot read", async () => {
@@ -475,7 +475,7 @@ describe("the import consumer's quieter paths", () => {
       .from(imports)
       .where(eq(imports.id, importId));
     expect(after?.status).toBe("failed");
-    expect(after?.failureReason).toMatch(/didn't parse/);
+    expect(after?.failureReason).toMatch(/couldn't read this file/);
   });
 
   it("leaves an already-failed import alone on redelivery", async () => {
@@ -698,7 +698,7 @@ describe("what the consumer tells the runner", () => {
       .where(eq(notifications.userId, userId));
     expect(notification?.kind).toBe("import_failed");
     expect(notification?.body).toMatch(/didn't work/);
-    expect(notification?.body).toMatch(/didn't parse/);
+    expect(notification?.body).toMatch(/has no track in it/);
   });
 
   it("asks for the kit on a run Strava says they logged, and says nothing about it", async () => {

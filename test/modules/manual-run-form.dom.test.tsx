@@ -29,7 +29,7 @@ async function renderWithRouter(element: ReactElement) {
   });
   const runRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/runs/$runId",
+    path: "/feed/attach/$runId",
     component: () => <p>The run</p>,
   });
   const router = createRouter({
@@ -76,7 +76,9 @@ describe("ManualRunForm: what it sends", () => {
     const distance = screen.getByLabelText("Distance (km)");
     await user.clear(distance);
     await user.type(distance, "7.5");
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -98,7 +100,9 @@ describe("ManualRunForm: what it sends", () => {
     const minutes = screen.getByLabelText("Minutes");
     await user.clear(minutes);
     await user.type(minutes, "30.51");
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -112,7 +116,9 @@ describe("ManualRunForm: what it sends", () => {
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
     await fillValid(user);
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -131,7 +137,9 @@ describe("ManualRunForm: what it sends", () => {
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
     await fillValid(user);
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -147,7 +155,9 @@ describe("ManualRunForm: what it sends", () => {
 
     await fillValid(user);
     await user.click(screen.getByLabelText(/Indoor/));
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -165,7 +175,9 @@ describe("ManualRunForm: effort is optional", () => {
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
     await fillValid(user);
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -181,7 +193,9 @@ describe("ManualRunForm: effort is optional", () => {
 
     await fillValid(user);
     await user.selectOptions(screen.getByLabelText(/Effort/), "workout");
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -200,7 +214,9 @@ describe("ManualRunForm: effort is optional", () => {
     const effort = screen.getByLabelText(/Effort/);
     await user.selectOptions(effort, "race");
     await user.selectOptions(effort, "");
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(submitRun).toHaveBeenCalledTimes(1);
@@ -222,17 +238,19 @@ describe("ManualRunForm: effort is optional", () => {
 });
 
 describe("ManualRunForm: after it lands", () => {
-  it("takes them to the run it just created", async () => {
+  it("takes them on to picking the outfit for the run it just created (R1, D-102)", async () => {
     const user = userEvent.setup();
     const router = await renderWithRouter(
       <ManualRunForm submitRun={() => Promise.resolve({ id: "01NEWRUN" })} />,
     );
 
     await fillValid(user);
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/runs/01NEWRUN");
+      expect(router.state.location.pathname).toBe("/feed/attach/01NEWRUN");
     });
   });
 
@@ -249,7 +267,9 @@ describe("ManualRunForm: after it lands", () => {
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
     await fillValid(user);
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
     await screen.findByRole("button", { name: /try again/i });
 
     // A retry of the *same* submission keeps the key.
@@ -269,7 +289,9 @@ describe("ManualRunForm: what it refuses", () => {
     const submitRun = fakeSubmit();
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       /Nothing saved/,
@@ -289,7 +311,9 @@ describe("ManualRunForm: what it refuses", () => {
     const minutes = screen.getByLabelText("Minutes");
     await user.clear(minutes);
     await user.type(minutes, "0");
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     await waitFor(() => {
       expect(minutes).toHaveAttribute("aria-invalid", "true");
@@ -331,7 +355,9 @@ describe("ManualRunForm: what it refuses", () => {
     };
     document.addEventListener("submit", watch);
     try {
-      await user.click(screen.getByRole("button", { name: "Log run" }));
+      await user.click(
+        screen.getByRole("button", { name: "Next · pick the outfit" }),
+      );
     } finally {
       document.removeEventListener("submit", watch);
     }
@@ -348,7 +374,9 @@ describe("ManualRunForm: what it refuses", () => {
     const minutes = screen.getByLabelText("Minutes");
     await user.clear(minutes);
     await user.type(minutes, "0");
-    await user.click(screen.getByRole("button", { name: "Log run" }));
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       /Nothing saved/,
@@ -363,7 +391,9 @@ describe("ManualRunForm: what it refuses", () => {
       <ManualRunForm submitRun={() => Promise.resolve({ id: "01RUN" })} />,
     );
     expect(
-      screen.getByRole("button", { name: "Log run" }).closest("form"),
+      screen
+        .getByRole("button", { name: "Next · pick the outfit" })
+        .closest("form"),
     ).toHaveAttribute("novalidate");
   });
 });

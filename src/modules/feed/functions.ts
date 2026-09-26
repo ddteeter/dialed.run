@@ -17,15 +17,14 @@ import {
   entryIdInput,
   feedInput,
   itemBandStatInput,
-  pickerGroupsInput,
   saveBacklogRowInput,
   searchInput,
   submitVerdictInput,
   usefulInput,
   userIdInput,
 } from "./inputs";
+import { attachContext, attachRunInput, prefillForRun } from "./attach-context";
 import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
-import { conditionsAt } from "./conditions";
 import { consensusAt } from "./consensus";
 import {
   attachKit,
@@ -40,9 +39,7 @@ import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
 import { conditionsHome, saveConditionsCity } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
-import { pickerGroups } from "./picker";
 import { photoUploadFrom, uploadPhoto } from "./photos";
-import { prefillAt } from "./prefill";
 import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
@@ -62,19 +59,21 @@ export const attachKitAction = createServerFn({ method: "POST" })
     return { entryId };
   });
 
-export const pickerGroupsQuery = createServerFn({ method: "GET" })
-  .validator((input: unknown) => pickerGroupsInput.parse(input))
+// A2 reads the run's own conditions, never the device's (round 22), so the
+// picker and the suggestion are keyed by the run rather than by a position
+// — see `./attach-context`.
+export const attachContextQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => attachRunInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const conditions = await conditionsAt(data.lat, data.lng, nowSeconds());
-    return pickerGroups(userId, conditions);
+    return attachContext(userId, data.runId);
   });
 
-export const prefillQuery = createServerFn({ method: "GET" })
-  .validator((input: unknown) => coordinatesInput.parse(input))
+export const prefillForRunQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => attachRunInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return prefillAt(userId, data.lat, data.lng, nowSeconds());
+    return prefillForRun(userId, data.runId);
   });
 
 // ---- The verdict (A3) -------------------------------------------------------

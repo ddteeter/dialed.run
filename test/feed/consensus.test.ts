@@ -17,6 +17,7 @@ import {
 import {
   makeEntry,
   makeItem,
+  makeManualBand,
   makeObservation,
   makeRun,
   makeUser,
@@ -116,6 +117,23 @@ describe("matchTally: who matched", () => {
     await runner({ feelsLikeC: 7 + 3 });
     await runner({ feelsLikeC: 7 + 4 });
     expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+  });
+
+  it("leaves out a run whose only conditions are its own band (B1)", async () => {
+    // R2b's band is the run's conditions on its own screens, and nowhere
+    // an aggregate reads — it is one runner's pick, not the weather.
+    const author = await makeUser();
+    const itemIds = [await makeItem({ userId: author, category: "top" })];
+    const runId = await makeRun({
+      userId: author,
+      lat: 88,
+      lng: 88,
+      startedAt: NOW - HOUR,
+    });
+    await makeEntry({ userId: author, runId, createdAt: NOW - HOUR, itemIds });
+    await makeManualBand(runId, 7);
+
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(0);
   });
 
   it("leaves out a different precip class, a manual observation, and an unresolved one", async () => {

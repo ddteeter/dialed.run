@@ -15,8 +15,9 @@ import { weatherProvider } from "./provider";
 import {
   runHourKeys,
   cacheKeyFor,
+  findManualBand,
   findObservationRow,
-  upsertManualObservation,
+  upsertManualBand,
   upsertRealObservation,
   type CacheKey,
 } from "./store";
@@ -90,6 +91,15 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     return "skipped-no-location";
   }
 
+  // The run's own band, if its runner set one, is its conditions — the
+  // same answer every reader gives. Checked here as well so a run with a
+  // band that is re-driven (a retime, a status write that was lost after
+  // the band landed) settles as `manual` rather than fetching over it.
+  if ((await findManualBand(runId)) !== undefined) {
+    await setStatus(runId, "manual");
+    return "manual";
+  }
+
   const keys = runHourKeys(run.lat, run.lng, run.startedAt, run.durationS);
   const [key] = keys;
   // Unreachable: `runHourKeys` always yields at least the starting hour.
@@ -97,15 +107,11 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
   // gives `CacheKey | undefined` whatever the runtime does.
   // Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral
   if (key === undefined) return "skipped-no-location";
-  const cached = await findObservationRow(key);
-  if (cached) {
-    // The distinction that matters is resolved-vs-typed-by-a-human, not
-    // which vendor resolved it. Comparing to the provider name meant a
-    // second provider's observations would silently be classed as manual
-    // and dropped from consensus aggregates.
-    const status = cached.source === "manual" ? "manual" : "attached";
-    await setStatus(runId, status);
-    return status;
+  // Real observations only: another runner's band in this cell is not
+  // this run's weather (B1), so it reads as a miss and this run fetches.
+  if ((await findObservationRow(key)) !== undefined) {
+    await setStatus(runId, "attached");
+    return "attached";
   }
 
   const provider = weatherProvider();
@@ -188,12 +194,11 @@ export async function attachObservation(runId: Ulid): Promise<AttachOutcome> {
 }
 
 /**
- * Public API: the manual-temp fallback (D-24, lane 102's UI). Only
- * temperature is user-entered; the other required columns are filled with
- * neutral sentinels since manual rows are excluded from every aggregate the
- * module exposes (docs/designs/103-weather.md open questions). If a real
- * observation already occupies this run's cache cell, that wins and the run
- * links to it instead of the manual guess.
+ * Public API: R2b's band (D-24). The band is written against the run in
+ * `manual_conditions`, never into the shared cache cell — a cell answers
+ * for everyone who ran there that hour, and a band answers for one run
+ * (B1). If a real observation already occupies this run's cache cell, that
+ * wins and the run links to it instead of the guess.
  */
 export async function recordManualObservation(
   runId: Ulid,
@@ -216,13 +221,18 @@ export async function recordManualObservation(
     );
   }
   const key = cacheKeyFor(run.lat, run.lng, new Date(run.startedAt * 1000));
-  // Two databases: the observation goes to DIALED_WEATHER, the status to
-  // DIALED_CORE, and batch() does not span them (law 8c). No outbox needed
-  // — `runs.weather_status` is the reconciliation marker, so a failure
-  // between these leaves the run `pending` and the hourly retry cron
-  // re-drives it, finds this cached observation, and sets the status then.
-  const row = await upsertManualObservation(key, tempC, runId);
-  await setStatus(runId, row.source === "manual" ? "manual" : "attached");
+  if ((await findObservationRow(key)) !== undefined) {
+    await setStatus(runId, "attached");
+    return;
+  }
+  // Two databases: the band goes to DIALED_WEATHER, the status to
+  // DIALED_CORE, and batch() does not span them (law 8c). No outbox: a
+  // failure between the two throws to the runner, whose run is still the
+  // `failed` one R2b is offered for, so saving again lands the same row and
+  // then the status. And `resolveAndAttach` reads the band first, so any
+  // re-drive of the run settles it as `manual` too.
+  await upsertManualBand(runId, tempC);
+  await setStatus(runId, "manual");
 }
 
 interface RetryCronResult {

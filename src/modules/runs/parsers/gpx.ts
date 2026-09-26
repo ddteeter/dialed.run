@@ -101,7 +101,9 @@ export const gpxSource: RunSource = {
 
     const points = extractTrackPoints(doc);
     if (points.length < 2)
-      throw new RunParseError("gpx: fewer than 2 track points with time");
+      throw new RunParseError("gpx: fewer than 2 track points with time", {
+        problem: "no-track",
+      });
 
     const first = points[0];
     const last = points.at(-1);
@@ -121,7 +123,9 @@ export const gpxSource: RunSource = {
     );
     const distanceM = totalDistanceMeters(points);
     if (durationS <= 0 || distanceM <= 0)
-      throw new RunParseError("gpx: non-positive duration or distance");
+      throw new RunParseError("gpx: non-positive duration or distance", {
+        problem: "no-track",
+      });
 
     const parsed = runDraftSchema.safeParse({
       startedAt: Math.floor(first.time.getTime() / 1000),

@@ -228,16 +228,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/runs/parsers/index.ts|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Unreachable fallback: a match of this pattern always has group 1. The optional chain is here because the compiler types `match?.[1]` as possibly undefined.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/parsers/index.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutant: the guard and the subsequent isImportExtension check are the same fact said twice \u2014 if extension is defined, isImportExtension either returns it or undefined, and the ternary branch decides based on that.",
-      "count": 1
-    },
-    {
       "key": "src/modules/runs/parsers/shared.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant on the null check alone: `typeof null` is \"object\", so dropping it lets null through \u2014 but every caller then reads a property off it and throws, and no XML document this parser accepts produces a bare null where an element is expected. The check is what makes the guard a guard rather than a typeof.",
       "count": 1
@@ -273,48 +263,8 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/components/AttachKit.tsx|mutation-suppress|// Stryker disable ArrayDeclaration",
-      "reason": "Equivalent mutant, proof at the site: stryker's replacement for an empty dependency array is a constant array, which is exactly as stable as `[]`, so the geolocation effect still runs once. Block-scoped rather than next-line because the directive has to sit above `useEffect` while the array is at its close.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/components/AttachKit.tsx|mutation-suppress|// Stryker restore ArrayDeclaration",
-      "reason": "Closes the block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: `flags` is seeded from every entry item, so the lookup always finds one and the `??` fallback is unreachable. It is `noUncheckedIndexedAccess`'s requirement rather than the runtime's, and it is hoisted to a named function because a directive does not attach inside a JSX expression container.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line ArrayDeclaration,ConditionalExpression",
-      "reason": "Equivalent mutants, proof at the site: a `change` from a file input always carries a `FileList`, so the `[]` fallback and the guard reading it are the compiler's rather than the runtime's.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutant, proof at the site: an empty file list does nothing observable \u2014 the loop has no iterations, and React batches the `uploading` flag on and off inside one commit, so no render ever shows it. The guard says what it means rather than changing anything. (Was count 2; the second was the `verdict === undefined` early return, which went away when the schema took over refusing a verdict-less submission \u2014 the button used to be `disabled`, which \u00a75 bans.)",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable BlockStatement,ArrayDeclaration,CallExpression",
-      "reason": "Equivalent mutants, proof at the site: React 18 no longer warns on a state update after unmount, so dropping the `clearTimeout` leaves a stray timer that nothing can observe; and stryker's replacement dependency array is a constant, so the effect still runs once. The cleanup stays because a timer outliving its component is a leak whether or not a test can see it.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker restore BlockStatement,ArrayDeclaration,CallExpression",
-      "reason": "Closes the block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable next-line ArrayDeclaration,StringLiteral",
-      "reason": "Equivalent mutants, proof at the site: this component builds its own `QueryClient`, so nothing else shares the cache and no two query keys can collide. The key's shape is for readability in devtools.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/components/ImportStatus.tsx|mutation-suppress|// Stryker disable next-line LogicalOperator,ConditionalExpression",
-      "reason": "Equivalent mutants, proof at the site: react-query surfaces an `undefined` result as an error rather than as data, so a missing row arrives through `isError` and the absent-data operand is never the reachable one. It stays because `data` is typed `ImportRow | undefined` and this is what narrows it.",
       "count": 1
     },
     {
@@ -325,11 +275,6 @@
     {
       "key": "src/modules/runs/components/ManualRunForm.tsx|mutation-suppress|// Stryker disable next-line CallExpression",
       "reason": "Equivalent mutant, proof at the site: rotating the idempotency key matters for a second run typed into the same mounted form, and the navigation immediately after means there never is one. It stays because the navigation is the caller's to change.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/runs/components/UploadForm.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
-      "reason": "Equivalent mutant, proof at the site: a `change` from a file input always carries a `FileList` \u2014 empty when the picker was dismissed \u2014 so the optional chain never short-circuits. The `?.` is the compiler's, because the DOM types `files` as nullable for inputs that are not files at all.",
       "count": 1
     },
     {
@@ -570,6 +515,16 @@
     {
       "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
       "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/Feed.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract",
+      "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
+      "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     }
   ]

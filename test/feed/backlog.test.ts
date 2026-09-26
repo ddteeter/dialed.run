@@ -81,19 +81,23 @@ describe("which runs are in the backlog", () => {
     ]);
   });
 
-  it("drops a run the moment it has an entry, verdict or not", async () => {
-    // "A row per imported run with **no outfit**." An entry without a
-    // verdict is not this table's problem — the run's own verdict prompt
-    // is what picks that up, and a row here would offer to attach a kit
-    // to a run that already has one.
+  it("drops a run the moment it has a verdict, and keeps a kit without one", async () => {
+    // The owner's ruling: DS2 and the bell count one set, runs awaiting a
+    // verdict — no entry, or an entry whose verdict is null. A kit with no
+    // verdict is still waiting; a judged run is done.
     const userId = await makeUser();
-    const attached = await runAt(userId, NOW - 2 * DAY, 3);
+    const judged = await runAt(userId, NOW - 3 * DAY, 3);
+    const kitOnly = await runAt(userId, NOW - 2 * DAY, 4);
     const bare = await runAt(userId, NOW - DAY, 5);
-    await makeEntry({ userId, runId: attached });
+    await makeEntry({ userId, runId: judged, verdict: 0 });
+    await makeEntry({ userId, runId: kitOnly });
 
     const { rows } = await verdictBacklog(userId);
 
-    expect(rows.map((backlogRow) => backlogRow.runId)).toStrictEqual([bare]);
+    expect(rows.map((backlogRow) => backlogRow.runId)).toStrictEqual([
+      kitOnly,
+      bare,
+    ]);
   });
 
   it("shows nobody else's runs", async () => {
@@ -139,15 +143,17 @@ describe("how many are waiting", () => {
     expect(await unjudgedRunCount(userId)).toBe(2);
   });
 
-  it("stops counting a run the moment it has an outfit", async () => {
+  it("stops counting a run the moment it has a verdict", async () => {
     // The same rule the table follows, so the link cannot promise a row
     // the table will not show.
     const userId = await makeUser();
-    const attached = await runAt(userId, NOW - 2 * DAY, 3);
+    const judged = await runAt(userId, NOW - 3 * DAY, 3);
+    const kitOnly = await runAt(userId, NOW - 2 * DAY, 4);
     await runAt(userId, NOW - DAY, 5);
-    await makeEntry({ userId, runId: attached });
+    await makeEntry({ userId, runId: judged, verdict: -1 });
+    await makeEntry({ userId, runId: kitOnly });
 
-    expect(await unjudgedRunCount(userId)).toBe(1);
+    expect(await unjudgedRunCount(userId)).toBe(2);
   });
 });
 
@@ -162,6 +168,7 @@ describe("what the outfit cell is offered", () => {
     await makeEntry({
       userId,
       runId: nearRun,
+      verdict: 0,
       itemIds: [halfZip],
       createdAt: NOW - 10 * DAY,
     });
@@ -169,6 +176,7 @@ describe("what the outfit cell is offered", () => {
     await makeEntry({
       userId,
       runId: farRun,
+      verdict: 0,
       itemIds: [tee],
       createdAt: NOW - 9 * DAY,
     });
@@ -196,6 +204,7 @@ describe("what the outfit cell is offered", () => {
     await makeEntry({
       userId,
       runId: priorRun,
+      verdict: 0,
       itemIds: [kept, gone],
       createdAt: NOW - 10 * DAY,
     });
@@ -220,7 +229,12 @@ describe("what the outfit cell is offered", () => {
     // anything, and "same as that" offers nothing.
     const userId = await makeUser();
     const priorRun = await runAt(userId, NOW - 10 * DAY, 4);
-    await makeEntry({ userId, runId: priorRun, createdAt: NOW - 10 * DAY });
+    await makeEntry({
+      userId,
+      runId: priorRun,
+      verdict: 0,
+      createdAt: NOW - 10 * DAY,
+    });
 
     await runAt(userId, NOW - DAY, 3);
     const { rows } = await verdictBacklog(userId);
@@ -236,6 +250,7 @@ describe("what the outfit cell is offered", () => {
     await makeEntry({
       userId,
       runId: priorRun,
+      verdict: 0,
       itemIds: [halfZip],
       createdAt: NOW - 10 * DAY,
     });
@@ -246,6 +261,96 @@ describe("what the outfit cell is offered", () => {
 
     expect(rows[0]?.conditions).toBeUndefined();
     expect(rows[0]?.suggestion).toBeUndefined();
+  });
+});
+
+describe("a run that already has a kit", () => {
+  it("carries the kit it has, with its names, and is offered no other", async () => {
+    // A kit with no verdict is in the backlog (the owner's ruling), and
+    // `attachKit` never replaces a kit — so the row must show the one the
+    // verdict will be saved against, not a suggestion that would be
+    // silently dropped.
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId, name: "Janji half-zip" });
+    const tee = await makeItem({ userId, name: "Tracksmith tee" });
+    // A near prior entry that *would* be suggested to a bare run here.
+    const nearRun = await runAt(userId, NOW - 10 * DAY, 4);
+    await makeEntry({
+      userId,
+      runId: nearRun,
+      verdict: 0,
+      itemIds: [tee],
+      createdAt: NOW - 10 * DAY,
+    });
+    const kitted = await runAt(userId, NOW - DAY, 3);
+    const entryId = await makeEntry({
+      userId,
+      runId: kitted,
+      itemIds: [halfZip],
+    });
+
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kit).toStrictEqual({
+      entryId,
+      itemIds: [halfZip],
+      itemNames: ["Janji half-zip"],
+    });
+    expect(rows[0]?.suggestion).toBeUndefined();
+  });
+
+  it("carries an entry saved with nothing on it as an empty kit", async () => {
+    const userId = await makeUser();
+    const kitted = await runAt(userId, NOW - DAY, 3);
+    const entryId = await makeEntry({ userId, runId: kitted });
+
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows[0]?.kit).toStrictEqual({ entryId, itemIds: [], itemNames: [] });
+  });
+
+  it("has no kit on a run with no entry", async () => {
+    const userId = await makeUser();
+    await runAt(userId, NOW - DAY, 3);
+
+    const { rows } = await verdictBacklog(userId);
+
+    expect(rows[0]?.kit).toBeUndefined();
+  });
+
+  it("stores the verdict against the kit the row showed", async () => {
+    const userId = await makeUser();
+    const halfZip = await makeItem({ userId, name: "Janji half-zip" });
+    const kitted = await runAt(userId, NOW - DAY, 3);
+    const entryId = await makeEntry({
+      userId,
+      runId: kitted,
+      itemIds: [halfZip],
+    });
+    const backlog = await verdictBacklog(userId);
+    const [shown] = backlog.rows;
+
+    const saved = await saveBacklogRow({
+      userId,
+      runId: kitted,
+      itemIds: [...(shown?.kit?.itemIds ?? [])],
+      verdict: 1,
+    });
+
+    expect(saved.entryId).toBe(entryId);
+    const stored = await coreDb()
+      .select({ itemId: outfitEntryItems.itemId })
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, entryId));
+    expect(stored.map((item) => item.itemId)).toStrictEqual(
+      shown?.kit?.itemIds,
+    );
+    const [entry] = await coreDb()
+      .select({ verdict: outfitEntries.verdict })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(entry?.verdict).toBe(1);
   });
 });
 

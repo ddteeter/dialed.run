@@ -8,15 +8,14 @@
 
 import { and, eq } from "drizzle-orm";
 
-import { imports } from "../../db/schema-core";
+import { imports, runs } from "../../db/schema-core";
 import { firstColumnWhere } from "../../lib/keyed-read";
-import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
+import { ImportUploadError, checkUpload } from "./upload-limits";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
-import { IMPORT_EXTENSIONS, importExtensionOf } from "./parsers";
-import type { ImportExtension } from "./parsers";
 import type { ImportJob } from "./queue-messages";
-import { selectOwnedRow } from "../../lib/owned";
+import { summaryOfRun } from "./service";
+import type { RunSummary } from "./service";
 import { nowSeconds } from "../../lib/now";
 
 /**
@@ -39,16 +38,6 @@ export interface StartImportInput {
   idempotencyKey?: string | undefined;
 }
 
-function extensionFromFilename(filename: string): ImportExtension {
-  const extension = importExtensionOf(filename);
-  if (extension === undefined) {
-    throw new ImportUploadError(
-      `Unsupported file type. Upload a ${IMPORT_EXTENSIONS.join(", ")} file.`,
-    );
-  }
-  return extension;
-}
-
 /**
 Validates size/type, writes the raw bytes to R2, records the `imports` row,
 and enqueues the parse job. Never throws on a parseable-later problem — only
@@ -60,13 +49,14 @@ export async function startImport(
   queue: ImportsQueueProducer,
   input: StartImportInput,
 ): Promise<{ importId: string }> {
-  if (input.bytes.byteLength === 0) {
-    throw new ImportUploadError("That file is empty.");
-  }
-  if (input.bytes.byteLength > MAX_IMPORT_BYTES) {
-    throw new ImportUploadError("That file is larger than 25 MB.");
-  }
-  const extension = extensionFromFilename(input.filename);
+  // The well refuses the same file by the same rule before sending it;
+  // this is the guarantee behind that courtesy.
+  const check = checkUpload({
+    name: input.filename,
+    size: input.bytes.byteLength,
+  });
+  if (!check.ok) throw new ImportUploadError(check.problem);
+  const { extension } = check;
 
   // Three systems in sequence — R2, the row, the queue — and nothing spans
   // them (law 8c). The reconciliation is `imports.status`: a row stuck
@@ -109,10 +99,38 @@ export async function startImport(
   return { importId };
 }
 
-export async function getImportStatus(
+/**
+ * Where an import has got to, and the run at the end of it.
+ *
+ * **A1's one poll** (round 22: *"Every upload outcome renders in A1, in
+ * place"*). The status and the run come back together so the card that
+ * lands is the run's own — its distance, its time in its own zone, and its
+ * conditions from the observation, "not a re-fetch". A duplicate's run is
+ * the one already logged, entry and all, which is what its receipt opens.
+ */
+export interface ImportOutcome {
+  status: ImportRow["status"];
+  failureReason: string | null;
+  run: RunSummary | undefined;
+}
+
+export async function getImportOutcome(
   db: CoreDb,
   userId: string,
   importId: string,
-): Promise<ImportRow | undefined> {
-  return selectOwnedRow(db, imports, { id: importId, userId });
+): Promise<ImportOutcome | undefined> {
+  // The run comes with the import, in one read: joined on the runner too,
+  // so an import can only ever carry its own runner's run.
+  const [row] = await db
+    .select({ upload: imports, run: runs })
+    .from(imports)
+    .leftJoin(runs, and(eq(runs.id, imports.runId), eq(runs.userId, userId)))
+    .where(and(eq(imports.id, importId), eq(imports.userId, userId)))
+    .limit(1);
+  if (row === undefined) return undefined;
+  return {
+    status: row.upload.status,
+    failureReason: row.upload.failureReason,
+    run: row.run === null ? undefined : await summaryOfRun(db, userId, row.run),
+  };
 }

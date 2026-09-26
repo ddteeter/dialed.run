@@ -14,6 +14,7 @@ import { follow, followerCount } from "../../src/modules/feed/follows";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   makeEntry,
+  makeManualBand,
   makeObservation,
   makeRun,
   makeUser,
@@ -219,6 +220,104 @@ describe("observationsForRuns", () => {
 
     expect(observations.get(early)?.tempC).toBe(2);
     expect(observations.has(late)).toBe(false);
+  });
+});
+
+/**
+ * Review blocker B1: a band a runner set in R2b is that run's conditions
+ * and nobody else's. It is read by run, never by cell — so another run in
+ * the same place and hour never sees it — and it wins over the cell for
+ * its own run, which is what A2's context, A3's band and DS2 all read.
+ */
+describe("a run's own band (B1)", () => {
+  it("is its run's conditions, tagged manual, as one point", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId, lat: 47.11, lng: -93.27 });
+    await makeManualBand(runId, 12.5);
+
+    const observations = await observationsForRuns([
+      { id: runId, lat: 47.11, lng: -93.27, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(runId)).toStrictEqual({
+      ...pointConditions({
+        tempC: 12.5,
+        feelsLikeC: 12.5,
+        condition: "manual",
+        windKph: 0,
+      }),
+      source: "manual",
+    });
+  });
+
+  it("wins over a real reading someone else's run fetched into the cell", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId, lat: 47.22, lng: -93.27 });
+    await makeManualBand(runId, 12.5);
+    await makeObservation({
+      lat: 47.22,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 3,
+      feelsLikeC: 1,
+    });
+
+    const observations = await observationsForRuns([
+      { id: runId, lat: 47.22, lng: -93.27, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(runId)?.tempC).toBe(12.5);
+    expect(observations.get(runId)?.source).toBe("manual");
+  });
+
+  it("is never another run's, in the same place and hour", async () => {
+    const theirs = await makeRun({
+      userId: await makeUser(),
+      lat: 47.33,
+      lng: -93.27,
+    });
+    await makeManualBand(theirs, 12.5);
+    const mine = await makeRun({
+      userId: await makeUser(),
+      lat: 47.33,
+      lng: -93.27,
+    });
+    await makeObservation({
+      lat: 47.33,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 3,
+      feelsLikeC: 1,
+    });
+
+    const observations = await observationsForRuns([
+      { id: mine, lat: 47.33, lng: -93.27, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(mine)?.tempC).toBe(3);
+    expect(observations.get(mine)?.source).toBe("visualcrossing");
+  });
+
+  it("skips a legacy band still in the cache cell: it is somebody's, not the weather", async () => {
+    const runId = await makeRun({
+      userId: await makeUser(),
+      lat: 47.44,
+      lng: -93.27,
+    });
+    await makeObservation({
+      lat: 47.44,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 30,
+      feelsLikeC: 30,
+      source: "manual",
+    });
+
+    const observations = await observationsForRuns([
+      { id: runId, lat: 47.44, lng: -93.27, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.has(runId)).toBe(false);
   });
 });
 

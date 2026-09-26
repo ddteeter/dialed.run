@@ -166,6 +166,7 @@ export function Feed(props: Readonly<FeedProps>) {
   );
 }
 
+// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract
 function FollowingTab({
   items,
   followeeCount,

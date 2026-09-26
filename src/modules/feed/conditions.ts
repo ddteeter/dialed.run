@@ -29,7 +29,12 @@ type ObservationRow = typeof weatherObservations.$inferSelect;
 import { env } from "../../env";
 // The cache key and its predicate come from the module that owns the table
 // (docs/architecture.md: only modules/weather touches dialed-weather).
-import { cacheKeyFor, matchesKey, runHourKeys } from "../weather";
+import {
+  cacheKeyFor,
+  manualReadingsForRuns,
+  matchesKey,
+  runHourKeys,
+} from "../weather";
 
 /** The core D1 handle. Callers hold their own — consensus takes one as
  * an argument so the cron can pass a non-request binding. */
@@ -106,9 +111,15 @@ export async function observationsForEntries(
 }
 
 /**
- * Resolve observations for a batch of runs via cache-key index seeks.
- * Manual-source rows are kept here; callers that aggregate (consensus,
- * coverage) must exclude them — per-run display may show them.
+ * Resolve observations for a batch of runs via cache-key index seeks, plus
+ * each run's own band.
+ *
+ * **A band belongs to its run only** (B1). It is read by run id, never by
+ * cell, and it wins over the cell for that run — it is what the runner
+ * chose for it. A legacy `source='manual'` row still in the cache is
+ * somebody's band, not the weather, so the cell read skips it. Bands come
+ * back tagged `manual`; callers that aggregate (consensus, coverage) must
+ * exclude them — per-run display may show them.
  */
 export async function observationsForRuns(
   batch: readonly Locatable[],
@@ -149,22 +160,40 @@ export async function observationsForRuns(
     // so a superset changes what is *scanned* and not what is *returned*.
     // Scanned rows are what D1 bills, which is why the predicate stays.
     //
-    // Block form, not `next-line`: the read is one statement spanning five
-    // lines, so a `next-line` directive above `.where(` attaches to the
-    // statement's first line and silently does nothing.
+    // Block form, not `next-line`, kept from when the predicate was built
+    // inside the read — one statement over several lines, where a
+    // `next-line` directive attaches to the first line and silently does
+    // nothing.
     // Stryker disable ArrowFunction
+    const cells = chunk.map(({ key }) => matchesKey(key));
+    // Stryker restore ArrowFunction
+    // Real observations only: a legacy manual row is somebody's band.
     const found = await db
       .select()
       .from(weatherObservations)
-      .where(or(...chunk.map(({ key }) => matchesKey(key))));
-    // Stryker restore ArrowFunction
+      .where(and(ne(weatherObservations.source, "manual"), or(...cells)));
     for (const row of found) {
       byCell.set(cellKey(row.latR, row.lngR, row.hourBucket), row);
     }
   }
 
   const result = new Map<string, Conditions>();
+  const bands = await manualReadingsForRuns(batch.map((run) => run.id));
   for (const { runId, keys } of spans) {
+    const band = bands.get(runId);
+    if (band !== undefined) {
+      // A band is one pick for the whole run: its span is that one point.
+      result.set(runId, {
+        tempC: band.tempC,
+        feelsLikeC: band.feelsLikeC,
+        precipMm: band.precipMm,
+        condition: band.condition,
+        windKph: band.windKph,
+        source: band.source,
+        span: pointSpan(band.tempC, band.feelsLikeC),
+      });
+      continue;
+    }
     // Aligned with `keys`, so index 0 is the *starting* hour whether or
     // not it resolved. Taking "the first row found" instead would let a
     // run whose start never resolved answer with its second hour, under a

@@ -22,21 +22,26 @@ import {
 
 import { requireUserId } from "../auth";
 import { newUlid } from "../../lib/ids";
+import { attachObservation, recordManualObservation } from "../weather";
 import { coreDb } from "./core-db";
-import { getImportStatus, startImport } from "./imports";
+import { getImportOutcome, startImport } from "./imports";
 import {
   importIdInput,
   importUploadFrom,
   manualRunInput,
-  manualTempInput,
+  retimeRunInput,
   runIdInput,
+  conditionsBandInput,
   stravaCallbackInput,
 } from "./inputs";
 import {
+  countRuns,
   createManualRun,
-  didRecordManualTemp,
-  getRun,
-  listRuns,
+  didRetimeRun,
+  didRetryRunWeather,
+  didSetRunConditions,
+  getRunSummary,
+  listRunSummaries,
 } from "./service";
 import { env } from "../../env";
 import { createStravaApi } from "./strava/api";
@@ -48,6 +53,14 @@ import {
   stravaAuthorizeUrl,
   stravaCallbackOutcome,
 } from "./strava/oauth";
+
+/**
+The weather module's two writes, as the run rules take them.
+*/
+const weather = {
+  attach: attachObservation,
+  record: recordManualObservation,
+};
 
 export const submitManualRun = createServerFn({ method: "POST" })
   .validator((data: unknown) => manualRunInput.parse(data))
@@ -65,37 +78,57 @@ export const startFileImport = createServerFn({ method: "POST" })
       userId,
       filename: data.file.name,
       bytes: await data.file.arrayBuffer(),
+      idempotencyKey: data.idempotencyKey,
     });
   });
 
-export const getImportStatusFn = createServerFn({ method: "GET" })
+export const getImportOutcomeFn = createServerFn({ method: "GET" })
   .validator(importIdInput)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return getImportStatus(coreDb(), userId, data.importId);
+    return getImportOutcome(coreDb(), userId, data.importId);
   });
 
-export const getRunFn = createServerFn({ method: "GET" })
+export const getRunSummaryFn = createServerFn({ method: "GET" })
   .validator(runIdInput)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return getRun(coreDb(), userId, data.runId);
+    return getRunSummary(coreDb(), userId, data.runId);
   });
 
-export const listRunsFn = createServerFn({ method: "GET" }).handler(
+export const listRunSummariesFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    return listRuns(coreDb(), userId);
+    return listRunSummaries(coreDb(), userId);
   },
 );
 
-export const recordManualTempFn = createServerFn({ method: "POST" })
-  .validator(manualTempInput)
+export const setRunConditionsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => conditionsBandInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return didRecordManualTemp(coreDb(), userId, data.runId, data.tempC);
+    return didSetRunConditions(
+      coreDb(),
+      weather,
+      userId,
+      data.runId,
+      data.bandFloorC,
+    );
   });
 
+export const retryRunWeatherFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => runIdInput.parse(data))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return didRetryRunWeather(coreDb(), weather, userId, data.runId);
+  });
+
+export const retimeRunFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => retimeRunInput.parse(data))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return didRetimeRun(coreDb(), weather, userId, data.runId, data.startedAt);
+  });
 // ---- Strava connect/disconnect (102 §6) ------------------------------
 //
 // Credentials don't exist yet (CLAUDE.md law 5): `stravaConfigFromEnv()`
@@ -111,6 +144,7 @@ export const getStravaStatusFn = createServerFn({ method: "GET" }).handler(
     return {
       configured: stravaConfigFromEnv() !== undefined,
       status: connection?.status,
+      runCount: await countRuns(coreDb(), userId),
     };
   },
 );

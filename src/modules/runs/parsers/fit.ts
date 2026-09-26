@@ -69,6 +69,7 @@ export const fitSource: RunSource = {
     ) {
       throw new RunParseError(
         "fit: session message missing startTime/elapsed/distance",
+        { problem: "no-track" },
       );
     }
 
