@@ -57,10 +57,10 @@ describe("the index (U1/N)", () => {
       />,
     );
 
-    // Round 26 #7: "Settings › Username changes it later." The handle is
-    // shown as it is everywhere, "@" included.
-    expect(row(/^Username/u)).toHaveAttribute("href", "/account/username");
-    expect(row(/^Username/u)).toHaveTextContent("@maya_runs");
+    // U1's Account row, holding the handle for now (round 26 #7: "Settings
+    // › Username changes it later"), "@" included as everywhere.
+    expect(row(/^Account/u)).toHaveAttribute("href", "/account/username");
+    expect(row(/^Account/u)).toHaveTextContent("@maya_runs");
     expect(row(/^How you run/u)).toHaveAttribute(
       "href",
       "/onboarding/calibrate",
@@ -82,9 +82,7 @@ describe("the index (U1/N)", () => {
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
     expect(row(/^Connections/u)).toHaveAttribute("href", "/runs/strava");
     // A row with nowhere to go is absent, not dead.
-    expect(
-      screen.queryByText(/Export|Delete|Notifications|Account/u),
-    ).toBeNull();
+    expect(screen.queryByText(/Export|Delete|Notifications/u)).toBeNull();
   });
 
   it("groups the rows under U1's headings, in U1's order", async () => {
@@ -130,7 +128,7 @@ describe("the index (U1/N)", () => {
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
     // An account that has not reached O0 has no handle to show.
-    expect(row(/^Username/u)).toHaveTextContent(/^UsernameNot picked›$/u);
+    expect(row(/^Account/u)).toHaveTextContent(/^AccountNot picked›$/u);
   });
 
   it("asks the unanswered calibration as the ruling words it", async () => {
