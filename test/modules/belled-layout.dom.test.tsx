@@ -15,10 +15,10 @@ import { BelledLayout } from "../../src/modules/notifications/components/BelledL
  * each wrote out by hand.
  *
  * `Layout` renders the node in two seats since task 115 (the top bar at
- * width, the per-screen header below it), so the assertions here read the
- * first of the pair. Which one is displayed is a width question and
- * therefore Playwright's; what this file is about is that the count the
- * route loaded reaches the bell at all.
+ * width, the per-screen header below it), so the assertions here read
+ * both. Which one is displayed is a width question and therefore
+ * Playwright's; what this file is about is that what the route loaded
+ * reaches the bell at all.
  */
 
 /**
@@ -34,25 +34,39 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
-describe("BelledLayout", () => {
-  it("puts the bell in the layout's slot, carrying the count it was given", async () => {
-    await renderWithRouter(<BelledLayout unreadCount={3}>page</BelledLayout>);
+function bells(): HTMLElement[] {
+  return screen.getAllByRole("link", { name: /^Notifications/u });
+}
 
-    // The count reaches the bell rather than being dropped on the way:
-    // bracket notation, per docs/product.md §Brand. `textContent` because
-    // `Bracketed` renders the brackets as their own text nodes.
-    const bells = screen.getAllByRole("link", { name: "Notifications" });
-    expect(bells).toHaveLength(2);
-    for (const bell of bells) expect(bell.textContent).toContain("[3]");
+describe("BelledLayout", () => {
+  it("carries the waiting count to the bell in both seats", async () => {
+    await renderWithRouter(
+      <BelledLayout unreadCount={1} verdictsWaiting={3}>
+        page
+      </BelledLayout>,
+    );
+
+    expect(bells()).toHaveLength(2);
+    for (const bell of bells()) expect(bell).toHaveTextContent(/^3$/u);
   });
 
-  it("still renders the bell when there is nothing unread", async () => {
-    // The bell is the link to /notifications whether or not it has a
-    // number on it — a route with a zero count must not lose its way back.
+  it("gives a route that only knows its unread count the dot", async () => {
+    // The routes still loading `unreadNotificationCountFn` keep working.
+    await renderWithRouter(<BelledLayout unreadCount={3}>page</BelledLayout>);
+
+    for (const bell of bells()) {
+      expect(bell).toHaveAttribute("data-state", "dot");
+    }
+  });
+
+  it("still renders the bell when there is nothing new", async () => {
+    // The bell is the link to /notifications whatever it shows — a route
+    // with nothing new must not lose its way back.
     await renderWithRouter(<BelledLayout unreadCount={0}>page</BelledLayout>);
 
-    const bells = screen.getAllByRole("link", { name: "Notifications" });
-    for (const bell of bells) expect(bell.textContent).not.toContain("[0]");
+    for (const bell of bells()) {
+      expect(bell).toHaveAttribute("href", "/notifications");
+    }
   });
 
   it("renders the page it wraps", async () => {

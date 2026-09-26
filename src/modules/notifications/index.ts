@@ -11,10 +11,13 @@
  * Moved before those kinds exist, which is the cheap moment to do it.
  */
 export {
+  bellState,
   createNotification,
   notificationInsert,
   listNotifications,
   markAllNotificationsRead,
   unreadNotificationCount,
+  VERDICT_WAIT_WINDOW_S,
+  type BellState,
   type NotificationKind,
 } from "./service";

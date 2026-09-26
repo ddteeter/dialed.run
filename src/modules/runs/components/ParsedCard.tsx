@@ -193,6 +193,7 @@ function TimeCorrection({
  * A1). *"The parsed card and conditions block appear together the moment
  * the file lands — one screen, no wizard step for weather."*
  */
+// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract
 export function ParsedCard({
   filename,
   run,

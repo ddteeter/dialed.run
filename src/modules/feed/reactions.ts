@@ -3,12 +3,13 @@
  * the packet is explicit that the count query is cheap and correct at
  * MVP scale.
  */
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/keyed-read";
+import { countOf, countWhere } from "./count-where";
 import { isEntryPubliclyVisible } from "../safety";
 import { nowSeconds } from "../../lib/now";
 
@@ -41,30 +42,55 @@ async function assertVisible(entryId: string, viewerId: string): Promise<void> {
 }
 
 /**
- * Toggles the viewer's "useful" reaction; returns the resulting state.
+ * What an entry's Useful now is, as the server has it after a write.
  */
-export async function toggleUsefulReaction(
+export interface UsefulState {
+  useful: boolean;
+  count: number;
+}
+
+/**
+ * Sets the viewer's "useful" reaction to the state they asked for, and
+ * answers with the state the server now holds.
+ *
+ * **A set, never a toggle** (law 8b: user writes are at-least-once). A
+ * toggle reads "flip whatever is there", so a press whose response was
+ * lost, retried from the failure band, flips it back — and a stale card in
+ * another tab flips it the wrong way. Asking for the state instead makes a
+ * repeat harmless: marking twice is marked, unmarking twice is unmarked
+ * (`INSERT … ON CONFLICT DO NOTHING` against the UNIQUE pair, a `DELETE`
+ * of nothing).
+ *
+ * The write and the reads that report on it go in one batch, so the count
+ * and the viewer's own mark are the ones that write left behind rather than
+ * a read racing another reactor's. The caller shows these, never ±1.
+ */
+export async function setUsefulReaction(
   entryId: string,
   userId: string,
-): Promise<{ useful: boolean }> {
+  isUseful: boolean,
+): Promise<UsefulState> {
   await assertVisible(entryId, userId);
-  const isAlready = await hasReacted(entryId, userId);
-  if (isAlready) {
-    await db()
-      .delete(reactions)
-      .where(and(eq(reactions.entryId, entryId), eq(reactions.userId, userId)));
-    return { useful: false };
-  }
-  await db()
-    .insert(reactions)
-    .values({
-      entryId,
-      userId,
-      kind: "useful",
-      createdAt: nowSeconds(),
-    })
-    .onConflictDoNothing();
-  return { useful: true };
+  const database = db();
+  const mine = and(
+    eq(reactions.entryId, entryId),
+    eq(reactions.userId, userId),
+  );
+  const write = isUseful
+    ? database
+        .insert(reactions)
+        .values({ entryId, userId, kind: "useful", createdAt: nowSeconds() })
+        .onConflictDoNothing()
+    : database.delete(reactions).where(mine);
+  const [, all, own] = await database.batch([
+    write,
+    database
+      .select({ n: count() })
+      .from(reactions)
+      .where(eq(reactions.entryId, entryId)),
+    database.select({ n: count() }).from(reactions).where(mine),
+  ]);
+  return { useful: countOf(own) > 0, count: countOf(all) };
 }
 
 export async function hasReacted(
@@ -80,11 +106,5 @@ export async function hasReacted(
 }
 
 export async function usefulCount(entryId: string): Promise<number> {
-  const reactors = await columnWhere(
-    db(),
-    reactions,
-    reactions.userId,
-    eq(reactions.entryId, entryId),
-  );
-  return reactors.length;
+  return countWhere(db(), reactions, eq(reactions.entryId, entryId));
 }

@@ -2,261 +2,289 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-import { verdictLabel } from "../../../lib/contracts";
+import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
-import {
-  formatDistance,
-  formatDuration,
-  formatTempRange,
-} from "../../../lib/measures";
-import {
-  Bracketed,
-  ControlFailureBand,
-  Digits,
-  FormStatus,
-  inFlight,
-  Mono,
-  PendingLabel,
-  useControlAction,
-} from "../../../ui";
+import { formatDistance, formatPace } from "../../../lib/measures";
+import { FormStatus, Icon, Mono } from "../../../ui";
+import { tagLabel } from "../chips";
+import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
-import { ListSection } from "../../../ui";
+import { runWhenLabel } from "../posted";
+import { stripConditions } from "../strip";
+import { ConditionsCell } from "./ConditionsCell";
+import { ReportFoot } from "./ReportFoot";
+import { UsefulButton } from "./UsefulButton";
+import type { SetUsefulFn } from "./useful-reaction";
+import { VerdictBadge } from "./VerdictBadge";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
 /**
- * One entry, in full (screen D).
- *
- * Almost every block here is conditional on the entry having that thing —
- * a caption, photos, a kit, tags, conditions — and an entry with none of
- * them is a perfectly ordinary entry rather than a broken one. That is
- * eight decisions, and until this moved out of the route none of them
- * could be reached by a test.
+ * A per-item flag as D marks it at the row's end (round 22):
+ * `[TOO MUCH]` / `[NOT ENOUGH]`; Fine shows nothing.
  */
-/**
- * "The kit · 3 pieces", as board D heads the list (round 19). It was
- * "Kit", with no count. One piece is "piece": the board only ever draws
- * three, and "1 pieces" is the kind of slip a count invites.
- */
-function kitTitle(count: number): string {
-  return `The kit · ${String(count)} ${count === 1 ? "piece" : "pieces"}`;
-}
+const FLAG_MARK: Readonly<Record<"too_much" | "not_enough", string>> = {
+  too_much: "[Too much]",
+  not_enough: "[Not enough]",
+};
 
-export function EntryDetail({
-  entry,
-  shouldPromptVerdict,
-  recordPrompted,
-  toggleUseful,
-  units,
-  reportAffordance,
-}: Readonly<{
+/**
+ * One entry, in full — screen D, as round 22 draws it "when it isn't
+ * full" ("D Sparse own entry", "D Someone else's entry").
+ *
+ * **Order:** photo pager, run strip, note, kit, tags, Useful, Report. The
+ * run strip is the one part every entry has; everything else is present
+ * or absent, never a placeholder.
+ *
+ * - **The owner's verdict prompt takes the badge's place** — directly under
+ *   the strip where the badge would be read, square, `--dialed-tint` on a
+ *   teal hairline, an ink button opening A3. Owner only, never on a shared
+ *   post, and not a banner above the page.
+ * - **Photos are a pager**, one at a time with a `1 / 2` counter; the grid
+ *   is gone.
+ * - **Report is a quiet foot link**, never in the header, whose slot is
+ *   for back.
+ */
+export interface EntryDetailProps {
   entry: Entry;
+  /**
+  Who is looking — the heading is "Your run" for the author, their name for
+  anyone else.
+  */
+  viewerId: string | undefined;
   /**
   The viewer's own units — every number on this screen is theirs.
   */
   units: Units;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
-  toggleUseful: (input: {
-    data: { entryId: string };
-  }) => Promise<{ useful: boolean }>;
+  setUseful: SetUsefulFn;
   /**
-   * W1's report control, composed by the route.
-   *
-   * A node rather than a callback, because this module may not import
-   * `modules/safety` — dependency-cruiser forbids a cross-module deep
-   * import and the safety barrel reaches D1, which a component in the
-   * client bundle cannot. So this screen renders whatever it is handed
-   * and does not know what a report is.
-   *
-   * **Asked on PR #73: is this a problem, and should the rules bend?**
-   * No, on the evidence. A callback would not help — the thing feed must
-   * not import is not the *function*, it is the sheet, its reason list and
-   * its copy, all of which live in `modules/safety/components` and all of
-   * which a callback would still have to render from here. The node IS
-   * the seam, and it is the one the architecture already prescribes:
-   * routes wire, components take props. The rule is also load-bearing
-   * rather than tidy — the safety barrel reaches D1, and a component
-   * importing it puts the drizzle schema in the client bundle, which is
-   * invisible to tsc, eslint, dependency-cruiser and the test suite alike
-   * (CLAUDE.md §Architecture records two live instances, one of which did
-   * not even fail the build).
-   *
-   * What would be worth changing is not the rule but its discoverability:
-   * this is the first cross-lane composition seam in the app, and the next
-   * lane that needs one will re-derive it from scratch. Written up in
-   * `docs/architecture.md` §"Composing across modules" for that reason.
+   * W1's report control, composed by the route — a node rather than a
+   * callback, because this module may not import `modules/safety`: its
+   * barrel reaches D1, and a component importing it puts the drizzle
+   * schema in the client bundle (docs/architecture.md, "Composing across
+   * modules"). Lane 124 owns the control; this screen owns where it sits.
    */
   reportAffordance?: ReactNode;
-}>) {
-  // `entry.id` rather than an `entryId` prop beside it. The component
-  // took both, which is two sources for one fact — and the kind a route
-  // can silently disagree with itself about, since one came from the URL
-  // params and the other from the loader.
+}
+
+export function EntryDetail(props: Readonly<EntryDetailProps>) {
+  const {
+    entry,
+    viewerId,
+    shouldPromptVerdict,
+    recordPrompted,
+    setUseful,
+    units,
+    reportAffordance,
+  } = props;
+  // `entry.id` rather than an `entryId` prop beside it: two sources for one
+  // fact is how a route comes to disagree with itself.
   const entryId = entry.id;
-  const [useful, setUseful] = useState({
-    count: entry.usefulCount,
-    reacted: entry.viewerHasReacted,
-  });
-  // Round 23, item 9: Useful waits for the server behind `[ Noting ]` and
-  // the count changes on success only. It was never optimistic, but its
-  // failure was silent — a `finally` with no `catch`, so a dropped
-  // connection looked exactly like a press that had not registered.
-  const markUseful = useControlAction({
-    action: async () => {
-      const result = await toggleUseful({ data: { entryId } });
-      setUseful((previous) => ({
-        count: result.useful ? previous.count + 1 : previous.count - 1,
-        reacted: result.useful,
-      }));
-    },
-    // The state still true when the press fails is the one it tried to
-    // leave (§4a names "Not marked" for Useful; un-marking fails the other
-    // way round).
-    kicker: useful.reacted ? "Still marked" : "Not marked",
-  });
+  const [status, setStatus] = useState("");
   // "Prompt once on next open, then never again" (packet A3): the prompt
-  // showing at all — not the user acting on it — spends the one-time
-  // budget.
+  // showing at all — not the runner acting on it — spends the budget.
   useEffect(() => {
     if (shouldPromptVerdict) void recordPrompted({ data: { entryId } });
   }, [shouldPromptVerdict, entryId, recordPrompted]);
 
+  const isOwn = viewerId === entry.userId;
 
   return (
-    <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-6 px-5 pt-6">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-4 px-5 pt-6 wide:mx-0">
+      <FormStatus>{status}</FormStatus>
+      <div className="flex items-center gap-3">
+        <Link
+          to="/feed"
+          aria-label="Back to feed"
+          className="target inline-flex items-center justify-center text-ink"
+        >
+          <Icon name="back" size={20} />
+        </Link>
+        <h1 className="m-0 font-display text-heading">
+          {isOwn ? "Your run" : (entry.authorDisplayName ?? "A runner")}
+        </h1>
+      </div>
+
+      <PhotoPager photoKeys={entry.photoKeys} />
+
+      <RunStrip entry={entry} units={units} showBadge={!shouldPromptVerdict} />
+
       {shouldPromptVerdict ? (
         <Link
+          data-part="verdict-prompt"
           to="/feed/verdict/$entryId"
           params={{ entryId }}
-          className="target flex items-center justify-between rounded-card border border-teal bg-dialed-tint px-4 py-3 text-body font-semibold text-ink no-underline"
+          className="target flex flex-col items-start gap-3 rounded-none border border-teal bg-dialed-tint p-4 text-ink no-underline"
         >
-          You didn&rsquo;t log a verdict for this run. Add one?
+          <span className="text-body font-semibold">
+            You didn&rsquo;t log a verdict for this run. Add one?
+          </span>
+          <span className="rounded-pill bg-ink px-5 py-3 text-body font-bold text-ground">
+            Did it work?
+          </span>
         </Link>
       ) : undefined}
 
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-title uppercase">{entry.runTitle}</h1>
-        {entry.verdict === undefined ? undefined : (
-          <Bracketed className="text-dialed-text">
-            {verdictLabel(entry.verdict) ?? "Dialed"}
-          </Bracketed>
-        )}
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Mono step="md" className="text-quiet">
-          {formatDistance(entry.distanceM, units.distance)} ·{" "}
-          {formatDuration(entry.durationS)}
-        </Mono>
-        {entry.conditions === undefined ? undefined : (
-          <Mono step="md" className="text-dialed-text">
-            {formatTempRange(
-              entry.conditions.span.minTempC,
-              entry.conditions.span.maxTempC,
-              units.temp,
-            )}{" "}
-            {entry.conditions.condition}
-          </Mono>
-        )}
-      </div>
-
-      <p className="m-0 text-small text-quiet">
-        {entry.authorDisplayName ?? "A runner"}
-      </p>
-
-      {reportAffordance}
-
-      {entry.photoKeys.length === 0 ? undefined : (
-        <div className="grid grid-cols-2 gap-2">
-          {entry.photoKeys.map((key) => (
-            <img
-              key={key}
-              src={`/feed/photo/${key}`}
-              alt=""
-              className="aspect-square w-full rounded-field object-cover"
-            />
-          ))}
-        </div>
-      )}
-
       {entry.caption === undefined ? undefined : (
-        <p className="m-0 text-body">{entry.caption}</p>
+        <p data-part="note" className="m-0 text-body">
+          {entry.caption}
+        </p>
       )}
 
-      <ListSection title={kitTitle(entry.items.length)} items={entry.items}>
-        {(item) => (
+      <Kit items={entry.items} />
+
+      <Tags tags={tagsOf(entry.tags)} />
+
+      {/* Not on your own run (round 22, "D Sparse own entry"): Useful is
+          what other runners say about it. So is Report. */}
+      {isOwn ? undefined : (
+        <UsefulButton
+          entryId={entryId}
+          usefulCount={entry.usefulCount}
+          viewerHasReacted={entry.viewerHasReacted}
+          setUseful={setUseful}
+          onStatus={setStatus}
+        />
+      )}
+
+      <ReportFoot>{isOwn ? undefined : reportAffordance}</ReportFoot>
+    </div>
+  );
+}
+
+/**
+ * The entry's tags in A3's words, read-only. A stored string is one of
+ * A3's tags only once it parses as one; anything else is dropped rather
+ * than shown as a word nobody chose.
+ */
+function tagsOf(stored: readonly string[]): EntryTag[] {
+  return stored.flatMap((tag) => {
+    const parsed = entryTagSchema.safeParse(tag);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+/**
+ * The photos, one at a time: a scroll-snapping row a thumb swipes, each
+ * photo carrying its own `1 / 2`. Absent with no photos.
+ */
+function PhotoPager({ photoKeys }: Readonly<{ photoKeys: readonly string[] }>) {
+  if (photoKeys.length === 0) return;
+  return (
+    <ul
+      data-part="photo"
+      className="m-0 flex list-none snap-x snap-mandatory gap-2 overflow-x-auto p-0"
+    >
+      {photoKeys.map((key, index) => (
+        <li key={key} className="relative w-full shrink-0 snap-start">
+          <img
+            src={`/feed/photo/${key}`}
+            alt=""
+            className="aspect-4/3 w-full rounded-card object-cover"
+          />
+          <span className="absolute bottom-3 left-3 rounded-tight bg-ground px-2 py-1 text-label">
+            <Mono step="xs">
+              {String(index + 1)} / {String(photoKeys.length)}
+            </Mono>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The run itself — when, how far, how fast, the verdict, the conditions.
+ * The one part every entry has. With no conditions the line is absent
+ * (or `Indoor`); with no verdict the badge is.
+ */
+function RunStrip({
+  entry,
+  units,
+  showBadge,
+}: Readonly<{ entry: Entry; units: Units; showBadge: boolean }>) {
+  const conditions = stripConditions(entry.conditions, entry.indoor, units);
+  const pace = formatPace(entry.durationS, entry.distanceM, units.distance);
+  return (
+    <div
+      data-part="run-strip"
+      className="flex flex-col gap-2 border-b border-hairline pb-4"
+    >
+      <Mono step="xs" className="text-muted">
+        {runWhenLabel(entry.startedAt, entry.conditions?.timeZone)}
+      </Mono>
+      <div className="flex flex-wrap items-baseline gap-3">
+        <Mono step="lg">{formatDistance(entry.distanceM, units.distance)}</Mono>
+        {pace === undefined ? undefined : (
+          <Mono className="text-quiet">{pace}</Mono>
+        )}
+        {showBadge ? <VerdictBadge verdict={entry.verdict} /> : undefined}
+      </div>
+      {conditions === undefined ? undefined : (
+        <ConditionsCell cell={conditions} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The tags on the bar-track fill (`--tint`), so they read as words rather
+ * than as something to tap. Absent with none.
+ */
+function Tags({ tags }: Readonly<{ tags: readonly EntryTag[] }>) {
+  if (tags.length === 0) return;
+  return (
+    <ul data-part="tags" className="m-0 flex list-none flex-wrap gap-2 p-0">
+      {tags.map((tag) => (
+        <li key={tag} className="rounded-pill bg-tint px-2 py-1 text-quiet">
+          <Mono step="xs">{tagLabel(tag)}</Mono>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The kit as a list, not chips, so a flag can sit at the row's end.
+ * Absent when nothing was worn.
+ */
+function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
+  if (items.length === 0) return;
+  return (
+    <div data-part="kit" className="flex flex-col gap-2">
+      <Mono step="xs" className="text-muted">
+        Kit
+      </Mono>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {items.map((item) => (
           <li
             key={item.itemId}
-            className="flex items-center justify-between text-body"
+            className="flex items-center justify-between gap-3 text-body"
           >
-            <span>
-              {item.brand === undefined ? "" : `${item.brand} `}
-              {item.name}
-            </span>
+            {/* No brand is what generic means here: a piece nobody has
+                named — the tap-list's "L/S crew" — which D marks
+                `[GENERIC]` (round 22), as the closet's own label does
+                (`garmentLabel`: brand and name, unless there is no brand). */}
+            {item.brand === undefined ? (
+              <span className="flex items-baseline gap-2">
+                {item.name}
+                <Mono step="xs" className="text-label">
+                  [Generic]
+                </Mono>
+              </span>
+            ) : (
+              <span>{`${item.brand} ${item.name}`}</span>
+            )}
             {item.flag === undefined ? undefined : (
-              <Bracketed className="text-muted">
-                {item.flag.replaceAll("_", " ")}
-              </Bracketed>
+              <Mono step="xs" className="font-semibold text-ink">
+                {FLAG_MARK[item.flag]}
+              </Mono>
             )}
           </li>
-        )}
-      </ListSection>
-
-      {entry.tags.length === 0 ? undefined : (
-        <div className="flex flex-wrap gap-2">
-          {entry.tags.map((tag) => (
-            <Bracketed key={tag} className="text-muted">
-              {tag.replaceAll("_", " ")}
-            </Bracketed>
-          ))}
-        </div>
-      )}
-
-      <button
-        type="button"
-        {...inFlight(markUseful.pending)}
-        onClick={() => {
-          void markUseful.run();
-        }}
-        className={
-          useful.reacted
-            ? "target self-start rounded-pill bg-teal px-4 py-2 text-body font-semibold text-ink"
-            : "target self-start rounded-pill border border-hairline px-4 py-2 text-body font-semibold"
-        }
-      >
-        {/* The count travels with the label rather than sitting beside it,
-            so the whole thing swaps for `[ Noting ]` — a rolling counter
-            next to a pending verb would be two states at once. */}
-        <PendingLabel
-          pending={markUseful.pending}
-          pendingLabel="Noting"
-          label={
-            <>
-              Useful{" "}
-              <Mono className="ml-1">
-                [<Digits value={useful.count} />]
-              </Mono>
-            </>
-          }
-        />
-      </button>
-      {/* Directly under the control that failed, full content width —
-          never beside the pill, which is too narrow for a sentence and a
-          button (§4a). */}
-      <ControlFailureBand
-        failure={markUseful.failure}
-        onRetry={markUseful.retry}
-        retryRef={markUseful.retryRef}
-      />
-      <FormStatus>{markUseful.status}</FormStatus>
-
-      <Link
-        to="/feed"
-        className="target inline-flex items-center text-body font-semibold text-cold-text"
-      >
-        Back to feed
-      </Link>
+        ))}
+      </ul>
     </div>
   );
 }

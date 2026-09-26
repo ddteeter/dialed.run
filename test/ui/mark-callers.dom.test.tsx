@@ -79,6 +79,8 @@ function ownProfile(coverage: readonly CoverageBand[]): OwnProfileData {
     followerCount: 0,
     followingCount: 0,
     entryCount: 0,
+    // Past day one, so G draws its band record rather than its next step.
+    runCount: 1,
     coverage: [...coverage],
     mostWornItems: [],
     recentEntries: [],

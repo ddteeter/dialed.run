@@ -12,6 +12,7 @@ import {
   attachKitInput,
   bandCountsInput,
   bandSignalsInput,
+  conditionsCityInput,
   coordinatesInput,
   entryIdInput,
   feedInput,
@@ -19,6 +20,7 @@ import {
   saveBacklogRowInput,
   searchInput,
   submitVerdictInput,
+  usefulInput,
   userIdInput,
 } from "./inputs";
 import { attachContext, attachRunInput, prefillForRun } from "./attach-context";
@@ -35,13 +37,15 @@ import {
 } from "./entries";
 import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
+import { conditionsHome, saveConditionsCity } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { otherProfile, ownProfile } from "./profiles";
 import { unitsFor } from "./units";
-import { toggleUsefulReaction } from "./reactions";
-import { searchByDisplayName } from "./search";
+import { setUsefulReaction } from "./reactions";
+import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
+import { resolvePlace } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -144,11 +148,11 @@ export const entryDetailQuery = createServerFn({ method: "GET" })
 
 // ---- Useful reactions (D-11) -------------------------------------------------
 
-export const toggleUsefulAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => entryIdInput.parse(input))
+export const setUsefulAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => usefulInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return toggleUsefulReaction(data.entryId, userId);
+    return setUsefulReaction(data.entryId, userId, data.useful);
   });
 
 // ---- Follows ------------------------------------------------------------------
@@ -188,8 +192,27 @@ export const followingFeedQuery = createServerFn({ method: "GET" })
 export const yourConditionsQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => coordinatesInput.parse(input))
   .handler(async ({ data }) => {
-    await requireUserId();
-    return consensusAt(data.lat, data.lng, nowSeconds());
+    const userId = await requireUserId();
+    return consensusAt(data.lat, data.lng, nowSeconds(), userId);
+  });
+
+/**
+ * Where the tab looks without asking: the profile's saved location, and
+ * the city label if one was typed (round 22, E2-lite).
+ */
+export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
+  async () => conditionsHome(await requireUserId()),
+);
+
+/**
+ * Location denied: the typed city is found by the weather provider and
+ * saved as the profile's place, and the tab never asks again.
+ */
+export const saveConditionsCityAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => conditionsCityInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return saveConditionsCity(userId, data.cityLabel, resolvePlace);
   });
 
 // ---- Units (D-6) --------------------------------------------------------------
@@ -223,8 +246,8 @@ export const otherProfileQuery = createServerFn({ method: "GET" })
 export const searchQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => searchInput.parse(input))
   .handler(async ({ data }) => {
-    await requireUserId();
-    return searchByDisplayName(data.prefix);
+    const userId = await requireUserId();
+    return searchRunners(userId, data.prefix);
   });
 
 // ---- Photos -----------------------------------------------------------------

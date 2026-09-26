@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { observationsForRuns } from "../../src/modules/feed/conditions";
-import { yourConditionsConsensus } from "../../src/modules/feed/consensus";
+import { matchTally } from "../../src/modules/feed/consensus";
 import { ownProfile } from "../../src/modules/feed/profiles";
 import {
   NOW,
@@ -278,12 +278,12 @@ describe("consensus matches an entry at the hour its runner judged by", () => {
       verdict: 2,
     });
 
-    const result = await yourConditionsConsensus(
+    const result = await matchTally(
       pointConditions({ tempC: 14, feelsLikeC: 13 }),
-      NOW,
+      NOW - 72 * 3600,
     );
 
-    expect(result.total).toBe(1);
+    expect(result.runners).toBe(1);
     expect(result.groups.tops).toBe(1);
   });
 
@@ -331,11 +331,11 @@ describe("consensus matches an entry at the hour its runner judged by", () => {
       verdict: 2,
     });
 
-    const result = await yourConditionsConsensus(
+    const result = await matchTally(
       pointConditions({ tempC: 2, feelsLikeC: 2 }),
-      NOW,
+      NOW - 72 * 3600,
     );
 
-    expect(result.total).toBe(0);
+    expect(result.runners).toBe(0);
   });
 });

@@ -163,11 +163,6 @@
       "count": 2
     },
     {
-      "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line LogicalOperator,UnaryOperator",
-      "reason": "Unreachable fallbacks: `pass` indexes `WINDOW_H`, and `WINDOW_H` and `FEELS_LIKE_DELTA_C` are the same length by construction. They are here because an index signature cannot promise that.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Five equivalent guards, each with its proof at the site: with no items the ownership read matches nothing; the batch's first two statements always exist; the SQL already filters `isNotNull(verdict)`, so the type guard and the empty-list return cannot change an answer; and no entries means no observations. Every one saves a query or narrows a type the runtime has already settled.",
       "count": 5
@@ -524,6 +519,16 @@
     },
     {
       "key": "src/modules/feed/components/KitPicker.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches closet/components/GarmentForm.tsx only by destructuring one prop per line; one picks a kit, the other edits a garment, and they share nothing to extract",
+      "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/components/Feed.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract",
+      "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     }

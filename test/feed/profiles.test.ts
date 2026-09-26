@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 
@@ -167,10 +167,22 @@ describe("ownProfile: most worn", () => {
     // than a hundred runs had no profile at all.
     const userId = await makeUser();
     const shell = await makeItem({ userId, name: "Shell" });
-    await makeObservation({ lat: 47.11, lng: -93.27, startedAt: NOW, tempC: 5, feelsLikeC: 3 });
+    await makeObservation({
+      lat: 47.11,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 5,
+      feelsLikeC: 3,
+    });
     for (let index = 0; index < 150; index += 1) {
       const runId = await makeRun({ userId, lat: 47.11, lng: -93.27 });
-      await makeEntry({ userId, runId, verdict: 0, itemIds: [shell], createdAt: NOW + index });
+      await makeEntry({
+        userId,
+        runId,
+        verdict: 0,
+        itemIds: [shell],
+        createdAt: NOW + index,
+      });
     }
 
     const profile = await ownProfile(userId);
@@ -246,6 +258,55 @@ describe("ownProfile: the social counts", () => {
 
     expect(profile.followerCount).toBe(1);
     expect(profile.followingCount).toBe(1);
+  });
+
+  it("counts every run logged, with an entry or without, and only this runner's", async () => {
+    // G's first count (round 22). A run nobody has dressed yet is still a
+    // run — counting entries would call a runner with a backlog new.
+    const me = await makeUser();
+    await makeRun({ userId: me });
+    const dressed = await makeRun({ userId: me });
+    await makeEntry({ userId: me, runId: dressed });
+    await makeRun({ userId: await makeUser() });
+
+    const profile = await ownProfile(me);
+
+    expect(profile.runCount).toBe(2);
+    expect(profile.entryCount).toBe(1);
+  });
+
+  it("counts no runs on day one", async () => {
+    const profile = await ownProfile(await makeUser());
+    expect(profile.runCount).toBe(0);
+  });
+
+  it("counts runs and follows in SQL, never reading the rows it counts", async () => {
+    // PR #102 review: the run count read every run id to take `.length`,
+    // and the follow counts did the same with every follower id — a
+    // runner with a few thousand runs shipped all of them on each view.
+    const me = await makeUser();
+    await makeRun({ userId: me });
+    await follow(await makeUser(), me);
+    const prepare = vi.spyOn(env.DIALED_CORE, "prepare");
+
+    const profile = await ownProfile(me);
+
+    const statements = prepare.mock.calls.map(([sql]) => sql);
+    prepare.mockRestore();
+    expect(profile.runCount).toBe(1);
+    expect(profile.followerCount).toBe(1);
+    expect(statements).toContain(
+      'select count(*) from "runs" where "runs"."user_id" = ?',
+    );
+    expect(statements).toContain(
+      'select count(*) from "follows" where "follows"."followee_id" = ?',
+    );
+    expect(statements).toContain(
+      'select count(*) from "follows" where "follows"."follower_id" = ?',
+    );
+    expect(statements.join("\n")).not.toMatch(
+      /select "(?:id|follower_id|followee_id)" from "(?:runs|follows)"/u,
+    );
   });
 });
 

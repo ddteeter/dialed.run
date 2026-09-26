@@ -1,6 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
 
-import { user } from "../../src/db/schema-auth";
 import {
   brands,
   outfitEntries,
@@ -11,22 +10,14 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { accountEmail } from "../support/accounts";
 import { withLocalDb } from "../support/local-db";
+import { userIdOf } from "./logging-fixtures";
 
 /**
 The closet demo account's user id — every closet conformance spec uses it.
 */
 export async function closetUserId(): Promise<string> {
-  return withLocalDb(async ({ core }) => {
-    const [row] = await core
-      .select({ id: user.id })
-      .from(user)
-      .where(eq(user.email, accountEmail("closet")))
-      .limit(1);
-    if (!row) throw new Error("no closet account — demo-setup did not run");
-    return row.id;
-  });
+  return userIdOf("closet");
 }
 
 /**

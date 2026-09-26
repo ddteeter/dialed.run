@@ -36,6 +36,29 @@ describe("formatPace", () => {
     expect(formatPace(3601, 1000, "km")).toBe("1:00:01 /km");
     expect(formatPace(299.6, 1000, "km")).toBe("5:00 /km");
   });
+
+  it("is minutes and seconds per mile, padded, with its unit", () => {
+    // 5 mi in 43:20 is 8:40 a mile — D's own example.
+    expect(formatPace(2600, 5 * 1609.34, "mi")).toBe("8:40 /mi");
+    expect(formatPace(3605, 5 * 1609.34, "mi")).toBe("12:01 /mi");
+  });
+
+  it("is per kilometre for a runner who counts them", () => {
+    expect(formatPace(1615, 5000, "km")).toBe("5:23 /km");
+  });
+
+  it("rounds to the nearest second", () => {
+    expect(formatPace(1000, 3000, "km")).toBe("5:33 /km");
+    expect(formatPace(1001, 3000, "km")).toBe("5:34 /km");
+  });
+
+  it("has no pace for a run with no distance, and one for any distance at all", () => {
+    expect(formatPace(1800, 0, "mi")).toBeUndefined();
+    // 1 metre in 1800s extrapolates to an absurd but real per-km pace —
+    // `formatDuration`'s own hour-carrying rule applies here too, since
+    // pace reuses it rather than a second copy of "seconds to a clock".
+    expect(formatPace(1800, 1, "km")).toBe("500:00:00 /km");
+  });
 });
 
 describe("formatDistance", () => {
