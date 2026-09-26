@@ -1,7 +1,8 @@
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  SCRIPT_TIMEOUT_MS,
   TURNSTILE_SCRIPT_SRC,
   Turnstile,
   type TurnstileApi,
@@ -188,5 +189,91 @@ describe("Turnstile", () => {
 
     expect(fake.rendered).toHaveLength(0);
     expect(fake.removed).toHaveLength(0);
+  });
+
+  it("tells the visitor when the script fails to load", () => {
+    const onToken = vi.fn();
+    render(<Turnstile siteKey="key" onToken={onToken} />);
+
+    act(() => {
+      scriptTags()[0]?.dispatchEvent(new Event("error"));
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The check that keeps out bots didn't load. Reload the page to try again.",
+    );
+    expect(onToken).toHaveBeenCalledWith(undefined);
+  });
+
+  it("tells the visitor when the script never arrives, and not before", () => {
+    vi.useFakeTimers();
+    try {
+      const fake = fakeTurnstile();
+      render(<Turnstile siteKey="key" onToken={ignore} />);
+
+      act(() => {
+        vi.advanceTimersByTime(SCRIPT_TIMEOUT_MS - 1);
+      });
+      expect(screen.queryByRole("alert")).toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+
+      // A script that turns up after the visitor was told stays unused.
+      vi.stubGlobal("turnstile", fake.api);
+      act(() => {
+        scriptTags()[0]?.dispatchEvent(new Event("load"));
+      });
+      expect(fake.rendered).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not time out once the script has loaded", () => {
+    vi.useFakeTimers();
+    try {
+      const fake = fakeTurnstile();
+      render(<Turnstile siteKey="key" onToken={ignore} />);
+      vi.stubGlobal("turnstile", fake.api);
+      act(() => {
+        scriptTags()[0]?.dispatchEvent(new Event("load"));
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(SCRIPT_TIMEOUT_MS);
+      });
+
+      expect(fake.rendered).toHaveLength(1);
+      expect(screen.queryByRole("alert")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells the visitor when the widget itself errors", () => {
+    const fake = fakeTurnstile();
+    vi.stubGlobal("turnstile", fake.api);
+    render(<Turnstile siteKey="key" onToken={ignore} />);
+
+    act(() => {
+      fake.rendered[0]?.options["error-callback"]();
+    });
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+
+  it("says nothing while all is well", () => {
+    const fake = fakeTurnstile();
+    vi.stubGlobal("turnstile", fake.api);
+    render(<Turnstile siteKey="key" onToken={ignore} />);
+
+    act(() => {
+      fake.rendered[0]?.options["expired-callback"]();
+    });
+
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

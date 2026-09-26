@@ -39,6 +39,18 @@ const MAX_TOKEN_LENGTH = 2048;
 const siteverifySchema = z.object({
   success: z.boolean(),
   "error-codes": z.array(z.string()).default([]),
+  /**
+   * The site the challenge was solved on. A token is proof for one site,
+   * and a valid token solved somewhere else is not proof for this one.
+   */
+  hostname: z.string().optional(),
+  /**
+   * Set by Cloudflare when the secret is its always-pass test key, whose
+   * answers always name `example.com`. Local dev and CI run on those keys.
+   */
+  metadata: z
+    .object({ result_with_testing_key: z.boolean().optional() })
+    .optional(),
 });
 
 /**
@@ -50,7 +62,8 @@ export type TurnstileRefusal =
   | "upstream-status"
   | "malformed-answer"
   | "missing-token"
-  | "rejected";
+  | "rejected"
+  | "wrong-hostname";
 
 export type TurnstileVerdict =
   | { readonly ok: true }
@@ -71,13 +84,23 @@ function refuse(
 }
 
 /**
+ * What a server function knows about the attempt: the token, the
+ * visitor's address when it has one, and the hostname the request came in
+ * on, which the challenge must have been solved on too.
+ */
+export interface TurnstileAttempt {
+  readonly token: string | undefined;
+  readonly remoteIp: string | undefined;
+  readonly hostname: string;
+}
+
+/**
  * The decision, with the secret and the fetch handed in, so a test can
  * reach every branch without a binding or the network.
  */
 export async function verifyTurnstile(
   secret: string | undefined,
-  token: string | undefined,
-  remoteIp: string | undefined,
+  { token, remoteIp, hostname }: TurnstileAttempt,
   fetchImpl: typeof fetch = fetch,
 ): Promise<TurnstileVerdict> {
   if (secret === undefined || secret === "") return refuse("missing-secret");
@@ -103,9 +126,13 @@ export async function verifyTurnstile(
   if (!response.ok) return refuse("upstream-status");
   const parsed = siteverifySchema.safeParse(payload);
   if (!parsed.success) return refuse("malformed-answer");
-  return parsed.data.success
-    ? { ok: true }
-    : refuse("rejected", parsed.data["error-codes"]);
+  const answer = parsed.data;
+  if (!answer.success) return refuse("rejected", answer["error-codes"]);
+  const isTestKey = answer.metadata?.result_with_testing_key === true;
+  if (!isTestKey && answer.hostname !== hostname) {
+    return refuse("wrong-hostname");
+  }
+  return { ok: true };
 }
 
 /**
@@ -125,14 +152,9 @@ const OUR_FAULT: ReadonlySet<TurnstileRefusal> = new Set([
  * secret in the report (law 7) — the reason is enough to act on.
  */
 export async function verifyTurnstileToken(
-  token: string | undefined,
-  remoteIp: string | undefined,
+  attempt: TurnstileAttempt,
 ): Promise<TurnstileVerdict> {
-  const verdict = await verifyTurnstile(
-    env.TURNSTILE_SECRET_KEY,
-    token,
-    remoteIp,
-  );
+  const verdict = await verifyTurnstile(env.TURNSTILE_SECRET_KEY, attempt);
   reportIfOurs(verdict);
   return verdict;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Cloudflare Turnstile's widget (OPS-5, audit §3.6), the client half of
@@ -46,11 +46,23 @@ declare global {
 }
 
 /**
+ * How long the script gets before the visitor is told it did not come.
+ * Cloudflare's own widget answers in well under a second; this is for a
+ * blocked or unreachable origin, which otherwise looks like a form that
+ * refuses for no reason.
+ */
+export const SCRIPT_TIMEOUT_MS = 10_000;
+
+/**
  * Turnstile's API once its script has run: at once if it already has,
  * otherwise after the one script tag every widget on the page shares.
- * Returns what stops the wait.
+ * `failed` is called instead when the script errors or has not arrived in
+ * time, and nothing else is called after it. Returns what stops the wait.
  */
-function whenLoaded(ready: (api: TurnstileApi) => void): () => void {
+function whenLoaded(
+  ready: (api: TurnstileApi) => void,
+  failed: () => void,
+): () => void {
   const loaded = globalThis.turnstile;
   if (loaded !== undefined) {
     ready(loaded);
@@ -59,13 +71,29 @@ function whenLoaded(ready: (api: TurnstileApi) => void): () => void {
   const script =
     document.querySelector<HTMLScriptElement>(`#${SCRIPT_ID}`) ??
     appendScript();
+  let isSettled = false;
+  const settle = (outcome: () => void) => {
+    if (isSettled) return;
+    isSettled = true;
+    outcome();
+  };
   const onLoad = () => {
     const api = globalThis.turnstile;
-    if (api !== undefined) ready(api);
+    settle(() => {
+      if (api === undefined) failed();
+      else ready(api);
+    });
   };
+  const onError = () => {
+    settle(failed);
+  };
+  const timer = setTimeout(onError, SCRIPT_TIMEOUT_MS);
   script.addEventListener("load", onLoad);
+  script.addEventListener("error", onError);
   return () => {
+    clearTimeout(timer);
     script.removeEventListener("load", onLoad);
+    script.removeEventListener("error", onError);
   };
 }
 
@@ -122,6 +150,7 @@ function TurnstileWidget({
   useEffect(() => {
     latest.current = onToken;
   }, [onToken]);
+  const [hasFailed, setHasFailed] = useState(false);
 
   // A callback ref with a cleanup (React 19): it runs with the element on
   // mount and its cleanup on unmount, so there is no "not mounted yet"
@@ -132,6 +161,10 @@ function TurnstileWidget({
       const clear = () => {
         latest.current(undefined);
       };
+      const fail = () => {
+        clear();
+        setHasFailed(true);
+      };
       const stopWaiting = whenLoaded((api) => {
         const id = api.render(element, {
           sitekey: siteKey,
@@ -141,10 +174,10 @@ function TurnstileWidget({
             latest.current(token);
           },
           "expired-callback": clear,
-          "error-callback": clear,
+          "error-callback": fail,
         });
         rendered = { api, id };
-      });
+      }, fail);
       return () => {
         stopWaiting();
         rendered?.api.remove(rendered.id);
@@ -153,5 +186,22 @@ function TurnstileWidget({
     [siteKey, action],
   );
 
-  return <div ref={mount} data-part="turnstile" />;
+  return (
+    <div ref={mount} data-part="turnstile">
+      {hasFailed && <TurnstileFailed />}
+    </div>
+  );
+}
+
+/**
+ * What the visitor reads when the check could not run: without it, the
+ * form's refusal would look like a bug. Undesigned (placeholder protocol:
+ * existing type step, no colour, no glyph); a design delta.
+ */
+function TurnstileFailed() {
+  return (
+    <p role="alert" className="text-small">
+      The check that keeps out bots didn't load. Reload the page to try again.
+    </p>
+  );
 }

@@ -7,6 +7,7 @@ export { captureException } from "./sentry";
 export {
   turnstileSiteKey,
   verifyTurnstileToken,
+  type TurnstileAttempt,
   type TurnstileRefusal,
   type TurnstileVerdict,
 } from "./turnstile";

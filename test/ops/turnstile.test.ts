@@ -6,6 +6,7 @@ import {
   turnstileSiteKey,
   verifyTurnstile,
   verifyTurnstileToken,
+  type TurnstileAttempt,
   type TurnstileVerdict,
 } from "../../src/modules/ops/turnstile";
 
@@ -17,9 +18,25 @@ import {
 
 const SECRET = "0x-test-secret";
 
-function answering(body: unknown, status = 200) {
+const HOST = "dialed.test";
+
+/**
+An attempt on this app's own host.
+*/
+function attempt(
+  token: string | undefined,
+  remoteIp: string | undefined,
+): TurnstileAttempt {
+  return { token, remoteIp, hostname: HOST };
+}
+
+/**
+ * Siteverify answering with this body — naming this app's host, as a real
+ * answer for a token solved here does, unless the body names another.
+ */
+function answering(body: Record<string, unknown>, status = 200) {
   return vi.fn<typeof fetch>(() =>
-    Promise.resolve(Response.json(body, { status })),
+    Promise.resolve(Response.json({ hostname: HOST, ...body }, { status })),
   );
 }
 
@@ -43,8 +60,7 @@ describe("verifyTurnstile", () => {
 
     const verdict = await verifyTurnstile(
       SECRET,
-      "tok",
-      "203.0.113.9",
+      attempt("tok", "203.0.113.9"),
       fetchImpl,
     );
 
@@ -54,7 +70,7 @@ describe("verifyTurnstile", () => {
   it("asks siteverify once, by POST, with the secret, the token and the visitor's address", async () => {
     const fetchImpl = answering({ success: true });
 
-    await verifyTurnstile(SECRET, "tok", "203.0.113.9", fetchImpl);
+    await verifyTurnstile(SECRET, attempt("tok", "203.0.113.9"), fetchImpl);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
@@ -73,7 +89,7 @@ describe("verifyTurnstile", () => {
   it("sends no address when it has none", async () => {
     const fetchImpl = answering({ success: true });
 
-    await verifyTurnstile(SECRET, "tok", undefined, fetchImpl);
+    await verifyTurnstile(SECRET, attempt("tok", undefined), fetchImpl);
 
     expect(sentFields(fetchImpl).has("remoteip")).toBe(false);
   });
@@ -85,7 +101,11 @@ describe("verifyTurnstile", () => {
   ])("refuses a %s token without asking anyone", async (_label, token) => {
     const fetchImpl = answering({ success: true });
 
-    const verdict = await verifyTurnstile(SECRET, token, undefined, fetchImpl);
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt(token, undefined),
+      fetchImpl,
+    );
 
     expect(verdict).toStrictEqual({
       ok: false,
@@ -100,8 +120,7 @@ describe("verifyTurnstile", () => {
 
     const verdict = await verifyTurnstile(
       SECRET,
-      "x".repeat(2048),
-      undefined,
+      attempt("x".repeat(2048), undefined),
       fetchImpl,
     );
 
@@ -116,8 +135,7 @@ describe("verifyTurnstile", () => {
 
     const verdict = await verifyTurnstile(
       SECRET,
-      "forged",
-      undefined,
+      attempt("forged", undefined),
       fetchImpl,
     );
 
@@ -136,8 +154,7 @@ describe("verifyTurnstile", () => {
 
     const verdict = await verifyTurnstile(
       SECRET,
-      "stale",
-      undefined,
+      attempt("stale", undefined),
       fetchImpl,
     );
 
@@ -151,8 +168,7 @@ describe("verifyTurnstile", () => {
   it("refuses a rejection that names no reason, rather than failing to parse it", async () => {
     const verdict = await verifyTurnstile(
       SECRET,
-      "tok",
-      undefined,
+      attempt("tok", undefined),
       answering({ success: false }),
     );
 
@@ -165,8 +181,7 @@ describe("verifyTurnstile", () => {
 
       const verdict = await verifyTurnstile(
         secret,
-        "tok",
-        undefined,
+        attempt("tok", undefined),
         fetchImpl,
       );
 
@@ -192,7 +207,11 @@ describe("verifyTurnstile", () => {
     });
     vi.useFakeTimers();
     try {
-      const pending = verifyTurnstile(SECRET, "tok", undefined, fetchImpl);
+      const pending = verifyTurnstile(
+        SECRET,
+        attempt("tok", undefined),
+        fetchImpl,
+      );
       await vi.advanceTimersByTimeAsync(10_000);
 
       await expect(pending).resolves.toStrictEqual({
@@ -206,16 +225,20 @@ describe("verifyTurnstile", () => {
   });
 
   it("refuses when siteverify cannot be reached at all", async () => {
-    const verdict = await verifyTurnstile(SECRET, "tok", undefined, () =>
-      Promise.reject(new TypeError("fetch failed")),
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      () => Promise.reject(new TypeError("fetch failed")),
     );
 
     expect(verdict).toMatchObject({ ok: false, reason: "unreachable" });
   });
 
   it("refuses an answer that is not JSON", async () => {
-    const verdict = await verifyTurnstile(SECRET, "tok", undefined, () =>
-      Promise.resolve(new Response("<html>gateway</html>")),
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      () => Promise.resolve(new Response("<html>gateway</html>")),
     );
 
     expect(verdict).toMatchObject({ ok: false, reason: "unreachable" });
@@ -226,23 +249,77 @@ describe("verifyTurnstile", () => {
     // happens to say `success`.
     const failing = await verifyTurnstile(
       SECRET,
-      "tok",
-      undefined,
+      attempt("tok", undefined),
       answering({ success: true }, 500),
     );
-    const notJson = await verifyTurnstile(SECRET, "tok", undefined, () =>
-      Promise.resolve(new Response("bad gateway", { status: 502 })),
+    const notJson = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      () => Promise.resolve(new Response("bad gateway", { status: 502 })),
     );
 
     expect(failing).toMatchObject({ ok: false, reason: "upstream-status" });
     expect(notJson).toMatchObject({ ok: false, reason: "upstream-status" });
   });
 
+  it("refuses a good token solved on another site", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      answering({ success: true, hostname: "phish.example" }),
+    );
+
+    expect(verdict).toStrictEqual({
+      ok: false,
+      reason: "wrong-hostname",
+      codes: [],
+    });
+  });
+
+  it("refuses an answer that names no site at all", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      answering({ success: true, hostname: undefined }),
+    );
+
+    expect(verdict).toMatchObject({ ok: false, reason: "wrong-hostname" });
+  });
+
+  it("accepts Cloudflare's test key, whose answers always name example.com", async () => {
+    // What siteverify answers for the always-pass test secret, verified
+    // 2026-09-26. Local dev and CI run on it.
+    const verdict = await verifyTurnstile(
+      "1x0000000000000000000000000000000AA",
+      attempt("XXXX.DUMMY.TOKEN.XXXX", undefined),
+      answering({
+        success: true,
+        hostname: "example.com",
+        metadata: { result_with_testing_key: true },
+      }),
+    );
+
+    expect(verdict).toStrictEqual({ ok: true });
+  });
+
+  it("does not wave through another site because metadata is present", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      answering({
+        success: true,
+        hostname: "phish.example",
+        metadata: { result_with_testing_key: false },
+      }),
+    );
+
+    expect(verdict).toMatchObject({ ok: false, reason: "wrong-hostname" });
+  });
+
   it("refuses an answer of the wrong shape", async () => {
     const verdict = await verifyTurnstile(
       SECRET,
-      "tok",
-      undefined,
+      attempt("tok", undefined),
       answering({ success: "yes" }),
     );
 
@@ -295,9 +372,9 @@ describe("against the deployed configuration", () => {
     Reflect.set(env, "TURNSTILE_SECRET_KEY", "deployed-secret");
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(Response.json({ success: true }));
+      .mockResolvedValue(Response.json({ success: true, hostname: HOST }));
 
-    const verdict = await verifyTurnstileToken("tok", undefined);
+    const verdict = await verifyTurnstileToken(attempt("tok", undefined));
 
     expect(verdict).toStrictEqual({ ok: true });
     const body = fetchSpy.mock.calls[0]?.[1]?.body;
@@ -314,7 +391,7 @@ describe("against the deployed configuration", () => {
        */
     });
 
-    const verdict = await verifyTurnstileToken("tok", undefined);
+    const verdict = await verifyTurnstileToken(attempt("tok", undefined));
 
     expect(verdict).toMatchObject({ ok: false, reason: "missing-secret" });
     expect(logged).toHaveBeenCalledWith(
