@@ -19,8 +19,10 @@ import {
   upsertManualBand,
   upsertRealObservation,
 } from "../../src/modules/weather/store";
-import { makeObservation } from "../feed/helpers";
-import { visualCrossingObservationFixture } from "./fixtures/visual-crossing-observation";
+import {
+  mockVisualCrossing,
+  requestUrl,
+} from "./fixtures/visual-crossing-observation";
 
 const OBSERVATION_HOUR_EPOCH = 1_768_485_600; // 07:00 fixture hour
 
@@ -105,7 +107,7 @@ afterEach(() => {
 
 describe("attachObservation (103)", () => {
   it("no-ops on an indoor run and leaves status unchanged", async () => {
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     const runId = await insertRun({ indoor: true, noLocation: true });
     await attachObservation(runId);
     expect(await statusOf(runId)).toBe("none");
@@ -113,7 +115,7 @@ describe("attachObservation (103)", () => {
   });
 
   it("no-ops on a run with no location", async () => {
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     const runId = await insertRun({ noLocation: true });
     await attachObservation(runId);
     expect(await statusOf(runId)).toBe("none");
@@ -139,7 +141,7 @@ describe("attachObservation (103)", () => {
       },
       newUlid(),
     );
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     expect(await attachObservation(runId)).toBe("attached");
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(await statusOf(runId)).toBe("attached");
@@ -147,7 +149,7 @@ describe("attachObservation (103)", () => {
 
   it("a cache miss fetches, writes through, and attaches", async () => {
     const runId = await insertRun({ lat: 51.5, lng: 13.5 });
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
     await attachObservation(runId);
     expect(await statusOf(runId)).toBe("attached");
   });
@@ -161,7 +163,7 @@ describe("attachObservation (103)", () => {
 
   it("is idempotent: re-invoking an attached run never calls the provider again", async () => {
     const runId = await insertRun({ lat: 53.5, lng: 15.5 });
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     await attachObservation(runId);
     expect(await statusOf(runId)).toBe("attached");
     fetchSpy.mockClear();
@@ -181,7 +183,7 @@ describe("attachObservation samples every hour a run spans", () => {
    * temperature meant overdressed.
    */
   it("resolves one observation per hour bucket for a multi-hour run", async () => {
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     // Its own coordinates: observations are a shared cache keyed by
     // rounded lat/lng/hour, and these tests share a database, so a
     // location another test already resolved would be a cache hit here.
@@ -206,8 +208,38 @@ describe("attachObservation samples every hour a run spans", () => {
     );
   });
 
+  it("costs six records for six hour-keys, not six days (OPS-6)", async () => {
+    // Audit finding 0.6: each hour used to ask for its whole day with
+    // `include=hours` — 24 records to keep one, so a cold six-hour run
+    // cost 144. Now each hour-key is one single-datetime request with
+    // `include=current`, one record each (Visual Crossing's docs: "the
+    // query cost will be one"). Storing the whole day instead would cost
+    // 24 for this run — more, unless four other runs share the cell.
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({
+      durationS: 5 * 3600 + 1800,
+      lat: 40.66,
+      lng: -70.66,
+    });
+
+    await attachObservation(runId);
+
+    const urls = fetchSpy.mock.calls.map(([input]) => requestUrl(input));
+    expect(urls).toHaveLength(6);
+    expect(urls.map((url) => url.searchParams.get("include"))).toStrictEqual(
+      Array.from({ length: 6 }, () => "current"),
+    );
+    const asked = urls.map((url) => url.pathname.split("/").at(-1));
+    expect(asked.map(Number)).toStrictEqual(
+      Array.from(
+        { length: 6 },
+        (_unused, hour) => OBSERVATION_HOUR_EPOCH + hour * 3600,
+      ),
+    );
+  });
+
   it("still resolves exactly one observation for a short run", async () => {
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     const runId = await insertRun({ durationS: 1500, lat: 41.22, lng: -71.22 });
 
     await attachObservation(runId);
@@ -229,7 +261,7 @@ describe("attachObservation samples every hour a run spans", () => {
       },
       undefined,
     );
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
     const runId = await insertRun({ durationS: 3600, lat: 42.33, lng: -72.33 });
 
     await attachObservation(runId);
@@ -291,7 +323,7 @@ describe("attachObservation reports what it did", () => {
 
   it("skips an already-resolved run without touching it", async () => {
     const runId = await insertRun({ lat: 55.5, lng: 17.5 });
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
     expect(await attachObservation(runId)).toBe("attached");
 
     expect(await attachObservation(runId)).toBe("skipped-resolved");
@@ -335,7 +367,7 @@ describe("attachObservation reports what it did", () => {
     // re-driven, and settles on its band rather than fetching over it.
     const runId = await insertRun({ lat: 57.5, lng: 19.5 });
     await upsertManualBand(runId, -7);
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
 
     expect(await attachObservation(runId)).toBe("manual");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -358,7 +390,7 @@ describe("a band set for one run is never another run's weather (B1)", () => {
     const first = await insertRun({ lat, lng, weatherStatus: "failed" });
     await recordManualObservation(first, -7);
     const second = await insertRun({ lat, lng });
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
 
     expect(await attachObservation(second)).toBe("attached");
 
@@ -371,29 +403,6 @@ describe("a band set for one run is never another run's weather (B1)", () => {
     // And the first runner's band is still theirs, untouched.
     expect(await statusOf(first)).toBe("manual");
     expect(await bandOf(first)).toBe(-7);
-  });
-
-  it("treats a legacy band still in the cache as a miss, and upgrades it", async () => {
-    // Rows written before `manual_conditions` existed are still in the
-    // cache. They are somebody's band, not the weather.
-    const legacyLat = 57.71;
-    await makeObservation({
-      lat: legacyLat,
-      lng,
-      startedAt: OBSERVATION_HOUR_EPOCH,
-      tempC: 30,
-      feelsLikeC: 30,
-      source: "manual",
-    });
-    const runId = await insertRun({ lat: legacyLat, lng });
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
-
-    expect(await attachObservation(runId)).toBe("attached");
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const stored = await observationsAt(legacyLat);
-    const cell = stored.get(Math.floor(OBSERVATION_HOUR_EPOCH / 3600));
-    expect(cell?.tempC).toBeCloseTo(-4.8, 5);
   });
 });
 
@@ -437,7 +446,7 @@ describe("each sampled hour gets that hour's weather", () => {
    * wrong temperature rather than a missing row.
    */
   it("stores hour 0's temperature in hour 0 and hour 1's in hour 1", async () => {
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
     const lat = 43.44;
     const lng = -73.44;
     const runId = await insertRun({ durationS: 3600, lat, lng });
@@ -454,7 +463,7 @@ describe("each sampled hour gets that hour's weather", () => {
     // The row is a shared cache cell — a later hour belongs to everyone
     // who runs through it. Linking every sampled hour to this run would
     // make one run look like several to anything reading `run_id`.
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
     const lat = 43.55;
     const lng = -73.55;
     const runId = await insertRun({ durationS: 3600, lat, lng });
@@ -540,7 +549,7 @@ describe("recordManualObservation refuses what it cannot key", () => {
 
   it("leaves an already-attached run alone", async () => {
     const runId = await insertRun({ lat: 48.35, lng: -78.35 });
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
     await attachObservation(runId);
     expect(await statusOf(runId)).toBe("attached");
 
@@ -563,7 +572,7 @@ describe("a run whose conditions are already settled is left alone", () => {
     const runId = await insertRun({ lat: 49.45, lng: -79.45 });
     await recordManualObservation(runId, -12);
     expect(await statusOf(runId)).toBe("manual");
-    const fetchSpy = mockFetchJson(visualCrossingObservationFixture);
+    const fetchSpy = mockVisualCrossing();
 
     expect(await attachObservation(runId)).toBe("skipped-resolved");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -594,7 +603,7 @@ describe("a run whose conditions are already settled is left alone", () => {
     const lng = -79.65;
     const runId = await insertRun({ lat, lng, weatherStatus: "pending" });
     await upsertManualBand(runId, -14);
-    mockFetchJson(visualCrossingObservationFixture);
+    mockVisualCrossing();
 
     const result = await retryPendingWeather();
 

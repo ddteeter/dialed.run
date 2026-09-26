@@ -1,0 +1,7 @@
+# Profiles, entries and their photos stay out of search until the owner
+# decides whether runners' names and kit belong in an index (development
+# plan, open decision 1). The pages carry a matching noindex (task 129).
+User-agent: *
+Disallow: /feed/u/
+Disallow: /feed/entry/
+Disallow: /feed/photo/

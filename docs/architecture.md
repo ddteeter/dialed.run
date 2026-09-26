@@ -35,7 +35,10 @@ flowchart LR
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
     W -->|same fetch, when the shop\nrefuses a Worker: 11 of 14 do| PROXY[Firecrawl scrape API\nresidential egress, 1 credit/page]
     PROXY --> SHOP
-    W -->|LLM extraction rung\nadapter, D-32| LLM[GPT-5.6 Luna\n(presumptive; eval decides)]
+    W -->|LLM extraction rung\nadapter, D-32| LLM[OpenAI\nproduct extraction]
+    W -->|photo screening| MOD[OpenAI\nomni-moderation-latest]
+    W -->|siteverify, fail closed| TS[Cloudflare Turnstile]
+    W -->|exceptions, digest events,\ncron check-ins| SENTRY[Sentry]
 
     STRAVA[Strava webhook] -->|activity event\nreminder only| W
     W -->|historical + forecast| WX[Weather provider\nVisual Crossing behind adapter]
@@ -287,7 +290,10 @@ minutes.
 `created_at DESC`, cursor-paginated (created_at + id). Covering indexes:
 `follows(follower_id, followee_id)` and
 `outfit_entries(user_id, created_at DESC)`. No feed table, no write
-amplification. Photos render from R2 via cached public bucket URLs.
+amplification. Photos are not public bucket URLs: every photo is served by the Worker
+(`routes/feed/photo.$.tsx`), which checks visibility and screening before it
+reads R2. Task 128 (SAF-7) moves public-entry photos to short-lived signed
+URLs, cacheable for their TTL (decision D-46).
 
 **Your conditions (E2-lite)** — the consensus block only in v1: recent public
 entries (last 72h, `outfit_entries(is_public, created_at DESC)` index) whose
@@ -353,12 +359,14 @@ exception, the human never polls dashboards.
 flowchart LR
     Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
-    CRON2[Daily digest cron] -->|only if anomalies| ADMIN[Admin email/notification:\nDLQ depth, weather_pending backlog,\nfailed-import rate, cron staleness,\nexhausted outbox rows]
+    CRON2[Daily digest cron] -->|only if anomalies:\none event per kind| SENTRY
+    CRON2 -.->|OPS-11, after 126's email| ADMIN[Admin digest email]
+    CRONS[Every cron] -->|check-in: in_progress, ok / error| CRONMON[Sentry Crons]
     REQ[Request: D1 change +\noutbox row, one batch] -->|fast path| R2[(R2)]
     REQ -->|fast path failed| OB[(outbox table)]
     CRON2 -->|drain: claim, work, back off| OB
-    W[Worker] -->|exceptions| SENTRY[Sentry free tier]
-    PING[External uptime ping] --> HEALTH["/health: D1 SELECT 1,\nR2 head, build info"]
+    W[Worker] -->|exceptions, kept alive by waitUntil| SENTRY[Sentry]
+    PING[External uptime ping] --> HEALTH["/api/health: D1 SELECT 1\non both, R2 head"]
 ```
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
@@ -374,25 +382,61 @@ flowchart LR
   they pass five attempts or carry a kind the running build cannot read.
   The first kind is `photo_delete` (Remove, Replace and Delete on a
   garment); `strava_revocations` predates it and keeps its own table.
-- **Alerting is exception-based**: the daily digest cron emails/notifies
-  **only when** thresholds trip (DLQ > 0, weather_pending > N for > 24h, any
-  cron that hasn't checkpointed on schedule). A quiet inbox means healthy.
-- **Uptime**: free external ping (e.g. UptimeRobot) against `/health`.
+- **Alerting is exception-based**: the daily digest raises Sentry events
+  **only when** thresholds trip, one per anomaly kind, fingerprinted by kind
+  and day and tagged `digest_kind`, so every day's anomalies are a new issue
+  an alert rule can fire on (OPS-2; the rule itself is a deployment step).
+  Every Sentry send is registered with `waitUntil`, so it outlives the
+  invocation that made it — fetch, queue or cron (OPS-1). **Email is not
+  built yet**: the digest by email (Operator Screens D5) is OPS-11, and it
+  waits on task 126's email module. The Desk's Today (`/desk`) renders the
+  same counts from the same query.
+- **A cron that stops firing is noticed**: each of the four crons opens and
+  closes a Sentry Crons check-in, and the monitor config rides on the
+  opening one, so a monitor creates itself (OPS-3). The digest cannot be its
+  own dead-man switch — a digest that never runs reports nothing.
+- **Uptime**: free external ping (e.g. UptimeRobot) against `/api/health`,
+  which reports each binding by name. It carries no build info: that would
+  need the `version_metadata` binding, which nobody has added.
 - **Backups**: D1 Time Travel gives 30-day point-in-time restore with zero
-  setup — the recovery story is "restore to timestamp", documented in
-  workflow.md. R2 originals are the photo source of truth; derived sizes are
+  setup — the recovery story is "restore to timestamp", and the two
+  databases restore independently; the steps are `docs/deployment.md` §9.
+  R2 originals are the photo source of truth; derived sizes are
   regenerable.
-- **Deploys**: CI applies migrations (expand→contract only) before deploy;
-  Wrangler gradual deployments + one-command rollback. A bad deploy is a
-  rollback, not an incident.
-- **Abuse without moderators**: Turnstile on signup, Cloudflare WAF rate
-  limits on auth + upload endpoints, hard size/type caps on all uploads.
-  These are free and remove the whole class of 3am problems.
+- **Deploys**: **CI does not apply migrations yet.** The deploy job builds
+  and runs `wrangler deploy`, and needs only the unit job. The fix —
+  migrations before deploy, deploy after e2e — is written as an exact diff
+  for the owner in `docs/proposals/125-ci-migrate-before-deploy.md`, because
+  `.github/workflows/` is human-managed. `wrangler rollback` rolls code back
+  and never a migration, which is why migrations stay expand→contract.
+- **Abuse without moderators**, built and not:
+  - **Built**: Turnstile's verification (`ops/turnstile.ts`, fail closed) and
+    widget (`ui/Turnstile.tsx`), which task 126 places on sign-up and request
+    access; hard size and type caps on every upload.
+  - **Not built yet**: invite-only sign-up (decision D-39, task 126);
+    Better Auth's own rate limiter, explicitly on with
+    database storage so the count is shared across isolates (OPS-4). Until
+    then it is off in production, because it keys on `NODE_ENV`.
+  - **Not built, and not code**: WAF and rate-limiting rules at the zone,
+    which need the custom domain (deployment plan). A Workers Rate Limiting
+    binding would be a `wrangler.jsonc` change, which is the owner's.
+- **Security headers** on every response the Worker generates, set in
+  `server.ts` around the framework's fetch, and on the static assets through
+  `public/_headers`, since the assets layer answers those without running
+  the Worker (OPS-8). A request that throws gets the platform's error page
+  without them. A report-only CSP reporting to Sentry (the static copy has
+  no report-uri, which comes from a secret),
+  `frame-ancestors 'none'`, HSTS, Referrer-Policy, Permissions-Policy and
+  nosniff. The CSP allows inline script until a nonce is threaded through
+  `router.tsx`.
+- **The Desk** (`/desk`, decision D-35): the operator's surface, behind the
+  admin gate as not-found for anyone else. Task 125 built the shell and
+  Today; 126 adds Access (D7), 128 the ban panel and Runners.
 
 ## Launch gate vs post-MVP
 
 **Launch gate** (must merge before public sign-ups): Task 106 trust & safety
-floor — photo screening via Workers AI, report→hide→review, link hygiene,
+floor — photo screening via OpenAI's `omni-moderation-latest`, report→hide→review, link hygiene,
 ban mechanics — plus the dashboard-side CSAM scanning tool and a
 published privacy policy (D-105). MVP lanes
 101–105 + 107 can land and be dogfooded privately without it.

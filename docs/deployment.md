@@ -27,12 +27,20 @@ Both `database_id` values in `wrangler.jsonc` are placeholder zeros
 (`00000000-…-0001`/`-0002`). Replace them with the real ids from the output.
 A deploy against the placeholders fails at bind time.
 
-Then apply migrations, core first:
+Then apply migrations, core first. **`--remote` is not optional**: Wrangler 4
+applies D1 migrations to the _local_ database unless told otherwise
+(`wrangler d1 migrations apply --help` lists `--local` and `--remote`, and
+the package's own local scripts pass `--local` explicitly). Without it the
+command succeeds, prints the migrations it applied, and the production
+database stays empty.
 
 ```sh
-wrangler d1 migrations apply dialed-core
-wrangler d1 migrations apply dialed-weather
+wrangler d1 migrations apply dialed-core --remote
+wrangler d1 migrations apply dialed-weather --remote
 ```
+
+Once `docs/proposals/125-ci-migrate-before-deploy.md` is applied, CI runs
+exactly these two before every deploy and this step is only for the first.
 
 **Squashing to one baseline is optional, and the reason to do it is
 readability, not correctness.** The eleven core migrations are what four
@@ -101,34 +109,62 @@ Declared in `wrangler.jsonc` and created by the deploy itself — nothing to do
 by hand. Listed here because they were absent entirely until recently, so both
 the daily digest and the weather retry silently never ran.
 
-| Schedule     | Handler                  |
-| ------------ | ------------------------ |
-| `0 12 * * *` | daily digest             |
-| `0 * * * *`  | weather retry (lane 103) |
+| Schedule     | Handler                                                   |
+| ------------ | --------------------------------------------------------- |
+| `0 12 * * *` | daily digest (also drains the outbox and re-dispatches)   |
+| `0 * * * *`  | weather retry (lane 103)                                  |
+| `30 * * * *` | enrichment retry (lane 107)                               |
+| `15 * * * *` | screening retry, report reconciliation, stale-claim sweep |
 
 `test/bindings-conformance.test.ts` fails CI if this list and
-`src/modules/ops/crons.ts` disagree. After deploying, confirm both appear
-under Workers → dialed → Settings → Triggers.
+`src/modules/ops/crons.ts` disagree. After deploying, confirm all four
+appear under Workers → dialed → Settings → Triggers.
+
+**Each cron checks in with Sentry Crons** (OPS-3): `in_progress` when it
+starts, `ok` or `error` when it ends. The monitors create themselves on
+their first firing — the schedule rides on the first check-in — so there is
+nothing to set up in Sentry beyond the DSN. One monitor is free on every
+Sentry plan; the other three are $0.78 a month each. A monitor that misses
+its window raises an issue, which is the only thing that notices a cron
+that has stopped firing altogether.
 
 ## 5. Secrets
 
 `wrangler secret put <NAME>` for each. None of these belong in
 `wrangler.jsonc` — it is committed.
 
-| Secret                        | Required   | Without it                                                                              |
-| ----------------------------- | ---------- | --------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`          | **yes**    | Auth cannot sign sessions. Use ≥32 random chars (`openssl rand -base64 32`)             |
-| `VISUAL_CROSSING_API_KEY`     | **yes**    | No weather resolves; every run falls back to manual temp                                |
-| `STRAVA_CLIENT_ID`            | for Strava | The connect screen renders a "not configured" state                                     |
-| `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                |
-| `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6  |
-| `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator |
-| `GOOGLE_CLIENT_ID`            | optional   | Google sign-in button 500s — set **both** or neither                                    |
-| `GOOGLE_CLIENT_SECRET`        | optional   | As above                                                                                |
+| Secret                        | Required   | Without it                                                                                                                                                    |
+| ----------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`          | **yes**    | Auth cannot sign sessions. Use ≥32 random chars (`openssl rand -base64 32`)                                                                                   |
+| `VISUAL_CROSSING_API_KEY`     | **yes**    | No weather resolves; every run falls back to manual temp                                                                                                      |
+| `STRAVA_CLIENT_ID`            | for Strava | The connect screen renders a "not configured" state                                                                                                           |
+| `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                                                                                      |
+| `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6                                                                        |
+| `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator                                                                       |
+| `GOOGLE_CLIENT_ID`            | optional   | Google sign-in button 500s — set **both** or neither                                                                                                          |
+| `GOOGLE_CLIENT_SECRET`        | optional   | As above                                                                                                                                                      |
+| `OPENAI_API_KEY`              | **yes**    | Photo screening cannot run, so every photo stays `pending` — **no entry photo is ever publicly visible** — and product extraction stops at the declared rungs |
+| `ADMIN_USER_IDS`              | **yes**    | Comma-separated user ids. Unset means nobody is an admin: the Desk and the review queue answer not-found to everyone, the owner included                      |
+| `FIRECRAWL_API_KEY`           | optional   | A shop that refuses a Worker (11 of 14 sampled) is a failed fetch, and its product gets no composition                                                        |
+| `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                      |
 
-Better Auth also warns if it cannot derive a base URL. Set `BETTER_AUTH_URL`
-to the deployed origin once the domain is known, or callbacks and redirects
-can resolve against the wrong host.
+**Vars, not secrets** — printed into the page or read as configuration.
+These go in a `vars` block in `wrangler.jsonc`, which is human-managed, so
+the owner makes the edit:
+
+| Var                  | Value                  | Without it                                                                                                               |
+| -------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_URL`    | `https://<the domain>` | Callbacks resolve against the wrong host, and cookies may lose the `__Secure-` prefix. `/api/health` names it when unset |
+| `TURNSTILE_SITE_KEY` | the widget's site key  | The widget renders nothing, and verification refuses                                                                     |
+
+`NODE_ENV=production` was the old answer to Better Auth's rate limiter and
+secure cookies (audit finding 0.7). OPS-4 sets both explicitly in
+`createAuth`, so once it lands nothing reads `NODE_ENV`; until then, add it
+to the same `vars` block.
+
+Locally and in CI, Cloudflare's documented test keys stand in for
+Turnstile: site key `1x00000000000000000000AA` and secret
+`1x0000000000000000000000000000000AA` always pass.
 
 ## 6. Strava webhook subscription
 
@@ -153,7 +189,10 @@ needs its own Strava app, not a second subscription.
 ## 7. GitHub
 
 - **Secret `CLOUDFLARE_API_TOKEN`** — the deploy job needs it. Scope: Edit
-  Cloudflare Workers, plus D1 and R2 read/write on this account.
+  Cloudflare Workers, plus D1 and R2 read/write on this account. Once the
+  CI proposal lands it also applies migrations, which needs D1 edit.
+- **Secret `CLOUDFLARE_ACCOUNT_ID`** — `ci.yml`'s deploy step passes it to
+  Wrangler alongside the token. Workers → Overview shows it.
 - **Variable `DEPLOY_ENABLED=true`** — `ci.yml`'s deploy job is gated on it
   and skips otherwise. It is deliberately opt-in so the first deploy is a
   decision rather than a side effect of a merge. The job is also gated on
@@ -168,7 +207,68 @@ needs its own Strava app, not a second subscription.
 
 - `GET /api/health` — reports per-binding status; expect every check `ok`.
   A failure here names the binding, which is faster than reading a stack.
-- Confirm both cron triggers are listed under Settings → Triggers.
+- Confirm all four cron triggers are listed under Settings → Triggers.
 - Confirm the four queues show a consumer attached.
-- Send a test error to Sentry and confirm it arrives, before relying on it
-  to tell you about anything.
+- **Prove Sentry delivers, from a fetch and from a cron**, before relying on
+  it to tell you about anything. The two paths end their invocation
+  differently, and the audit's finding 0.4 was that a report which does not
+  outlive its invocation can be cancelled in flight; OPS-1 hands every send
+  to `waitUntil`, and this is where that is checked against the real thing.
+  - **Fetch**: `curl -X POST https://<host>/api/strava -d 'not json'`. The
+    webhook reports "invalid strava webhook payload" and still answers 200.
+  - **Cron**: the first hourly firing after the deploy opens and closes a
+    Sentry Crons check-in; seeing `weather-retry` go green under Crons is a
+    send from the cron path. For an _error_ from a cron, run the Worker
+    locally with the production DSN in `.dev.vars` and fire a schedule it
+    does not know: `npx wrangler dev --test-scheduled`, then
+    `curl "http://localhost:8787/__scheduled?cron=*/7+*+*+*+*"`. The cron
+    reports "unrecognized cron fired".
+- **The Sentry alert rule** (deployment plan §5): an issue alert on
+  "an event is seen" filtered to the tag `digest = daily`. The digest sends
+  one event per anomaly kind, tagged `digest_kind`, and fingerprints it by
+  kind and day, so each day's anomalies arrive as a new issue as well.
+
+## 9. Restoring a database (D1 Time Travel)
+
+D1 keeps 30 days of point-in-time history on the Paid plan, with no setup.
+A restore is **destructive and in place**: it overwrites the live database.
+
+```sh
+# Where the database is now — note the bookmark, so the restore itself
+# can be undone.
+wrangler d1 time-travel info dialed-core
+
+# Restore to a moment (unix seconds or RFC 3339) or to a bookmark.
+wrangler d1 time-travel restore dialed-core --timestamp=2026-10-01T09:00:00Z
+wrangler d1 time-travel restore dialed-core --bookmark=<bookmark>
+```
+
+**The two databases restore independently, and nothing makes them agree.**
+There is no cross-database transaction to rewind to, so decide per
+incident:
+
+- **Core only** (a bad write, a bad delete, a bad migration in core) is
+  safe on its own. The weather cache is keyed by place and hour, not by
+  run, so it stays valid; a band a runner set after the restore point is
+  left in `manual_conditions` pointing at a run that no longer exists,
+  which nothing reads.
+- **Weather only** loses cache rows and bands newer than the restore
+  point while core still says `weather_status = 'attached'` or `'manual'`
+  for the runs that used them. The retry cron only re-drives `pending`, so
+  those runs would show no conditions for good. **Restore weather to the
+  same moment as core**, or not at all; a cache row is cheap to fetch
+  again, and core's statuses are what decide whether it is.
+- **Both, to the same timestamp**, is the default when in doubt.
+
+**`wrangler rollback` does not roll back migrations.** It points traffic at
+the previous Worker version and leaves both databases exactly as they are.
+That is survivable only because migrations are expand→contract (resilience
+law 8): the previous version still runs against the expanded schema. When
+the migration itself did damage, restore the database to before it and
+then roll the code back. The restore also rewinds `d1_migrations`, so the
+same migration applies again on the next `migrations apply` — fix or
+remove it before the next deploy.
+
+R2 has no point-in-time history: `MEDIA` is the source of truth for photos,
+and a deleted object is gone. Task 126's account-deletion tombstone delays
+the purge; nothing else protects R2 yet (a soon-after item).

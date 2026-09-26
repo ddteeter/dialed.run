@@ -38,5 +38,18 @@ declare namespace Cloudflare {
      * re-drives it once the key exists (law 5). See
      * `modules/safety/classifier/`. */
     OPENAI_API_KEY?: string;
+    /** Turnstile's server secret (125, OPS-5). Absent: every verification
+     * refuses — the check fails closed, and `ops/turnstile.ts` reports the
+     * misconfiguration to Sentry. Locally and in CI, Cloudflare's
+     * always-pass test secret stands in. */
+    TURNSTILE_SECRET_KEY?: string;
+    /** Turnstile's public site key (125, OPS-5), handed to the widget by a
+     * loader. A var, not a secret: it is printed into the page. */
+    TURNSTILE_SITE_KEY?: string;
+    /** The app's public origin, `https://…` in production (125, OPS-4).
+     * Better Auth builds its callbacks from it, and its scheme decides the
+     * `__Secure-` cookie prefix. A var in wrangler.jsonc, set by the
+     * owner; `/api/health` names it when absent. */
+    BETTER_AUTH_URL?: string;
   }
 }
