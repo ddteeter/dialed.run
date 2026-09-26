@@ -108,6 +108,17 @@ describe("signUp", () => {
     });
   });
 
+  it("lands a breached password on Password (NIST SP 800-63B §3.1.1.2)", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "PASSWORD_BREACHED", status: 400 },
+    });
+    const thrown = await caught(signUp(account));
+    expect(thrown).toMatchObject({
+      issues: [{ path: ["password"], message: AUTH_COPY.passwordBreached }],
+    });
+  });
+
   it("does not read a wrong-password code as a taken email", async () => {
     client.signUp.mockResolvedValue({
       data: undefined,
@@ -125,9 +136,7 @@ describe("googleConsentUrl", () => {
       data: { url: "https://accounts.example/consent", redirect: false },
       error: undefined,
     });
-    await expect(
-      googleConsentUrl("/closet", "/auth/signup"),
-    ).resolves.toBe(
+    await expect(googleConsentUrl("/closet", "/auth/signup")).resolves.toBe(
       "https://accounts.example/consent",
     );
     expect(client.social).toHaveBeenCalledWith({
@@ -140,8 +149,13 @@ describe("googleConsentUrl", () => {
   });
 
   it("fails with the status when Better Auth refuses", async () => {
-    client.social.mockResolvedValue({ data: undefined, error: { status: 503 } });
-    await expect(googleConsentUrl("/", "/auth/login")).rejects.toMatchObject({ status: 503 });
+    client.social.mockResolvedValue({
+      data: undefined,
+      error: { status: 503 },
+    });
+    await expect(googleConsentUrl("/", "/auth/login")).rejects.toMatchObject({
+      status: 503,
+    });
   });
 
   it("fails rather than going nowhere when no URL comes back", async () => {
@@ -157,13 +171,19 @@ describe("googleConsentUrl", () => {
 
 describe("signOut", () => {
   it("resolves when the session is gone", async () => {
-    client.signOut.mockResolvedValue({ data: { success: true }, error: undefined });
+    client.signOut.mockResolvedValue({
+      data: { success: true },
+      error: undefined,
+    });
     await expect(signOut()).resolves.toBeUndefined();
     expect(client.signOut).toHaveBeenCalledTimes(1);
   });
 
   it("rejects with the status when Better Auth refuses, so Sign out can say Still signed in", async () => {
-    client.signOut.mockResolvedValue({ data: undefined, error: { status: 500 } });
+    client.signOut.mockResolvedValue({
+      data: undefined,
+      error: { status: 500 },
+    });
     const error = await caught(signOut());
     expect(error).toBeInstanceOf(AuthRejected);
     expect(error).toMatchObject({ status: 500 });

@@ -40,9 +40,7 @@ async function compare(
   expect(await wordsOf(page, BAR)).toEqual(words);
   expect(await fillOf(page, BAR)).toBe(barFill);
   expect(await fillOf(page, `${BAR} [data-part='bar-actions']`)).toBe(fill);
-  expect(await borderOf(page, `${BAR} [data-part='bar-actions']`)).toBe(
-    border,
-  );
+  expect(await borderOf(page, `${BAR} [data-part='bar-actions']`)).toBe(border);
   // "No nav, search, bell or 'Log a run'", and never the tab bar.
   await expect(page.locator("[data-slot='top-bar']")).toHaveCount(0);
   await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);

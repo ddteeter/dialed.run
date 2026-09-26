@@ -18,6 +18,12 @@ export const AUTH_COPY = {
    */
   wrongPassword: "That password doesn't match this email.",
   /**
+   * The breach screen's refusal, on Password (NIST SP 800-63B §3.1.1.2).
+   * Placeholder copy until design words it (design-deltas).
+   */
+  passwordBreached:
+    "That password has turned up in a data breach. Pick another.",
+  /**
   Au3's one exception, on Email, at Create account.
   */
   emailTaken: "There's already an account with this email. Log in?",

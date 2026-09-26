@@ -8,7 +8,6 @@ import type { JSX } from "react";
 
 import {
   FailureBand,
-  Mono,
   PendingLabel,
   inFlight,
   useControlAction,
@@ -129,18 +128,30 @@ export function useGoogleSignIn({
 }
 
 /**
- * The "G" the board draws in a ring — its own lockup of the letter, not
- * Google's logo, so it is composed from the type system rather than
- * imported as a glyph the icon pack does not hold.
+ * Google's own full-colour "G" — **a sanctioned one-off brand exception**
+ * (owner, PR #104), and the only mark in the product that is not ours.
+ *
+ * Google's Sign in with Google branding guidelines are explicit: "Don't
+ * create your own icon for the button", "Don't use monochrome versions of
+ * the Google 'G'", and it "must be the standard color version". The ring-
+ * and-letter mark the Auth board drew broke all three. So this is Google's
+ * official asset, unaltered (`public/brand/google-g.png`, from
+ * developers.google.com/identity/branding-guidelines' sign-in assets),
+ * with its own fixed colours: it lives on this one button, outside the
+ * icon manifest and outside T1, and nothing else may borrow it.
+ * Design is asked to redraw the button around it (design-deltas item 29).
+ *
+ * Decoration: the button's words are its name.
  */
 function GoogleMark(): JSX.Element {
   return (
-    <span
-      aria-hidden="true"
-      className="grid size-5 place-items-center rounded-pill border border-ink"
-    >
-      <Mono step="xs">G</Mono>
-    </span>
+    <img
+      src="/brand/google-g.png"
+      alt=""
+      width={20}
+      height={20}
+      className="block size-5 shrink-0"
+    />
   );
 }
 

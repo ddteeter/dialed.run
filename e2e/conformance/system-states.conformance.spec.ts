@@ -63,7 +63,10 @@ test("X2 loader failed: the band, Didn't load, in the shell", async ({
   const label = "X Loader failed";
   await openBoard(page, BOARD, baseURL);
   const order = await boardOrder(page, label);
-  const band = await wordsOf(page, `${screen(label)} [data-part='failure-band']`);
+  const band = await wordsOf(
+    page,
+    `${screen(label)} [data-part='failure-band']`,
+  );
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/feed");
@@ -72,7 +75,10 @@ test("X2 loader failed: the band, Didn't load, in the shell", async ({
   await page.route("**/_serverFn/**", (route) =>
     route.fulfill({ status: 500, body: "{}" }),
   );
-  await page.locator("[data-slot='tab-bar']").getByRole("link", { name: "Closet" }).click();
+  await page
+    .locator("[data-slot='tab-bar']")
+    .getByRole("link", { name: "Closet" })
+    .click();
   await expect(page.locator("[data-part='system-state']")).toBeVisible({
     timeout: 15_000,
   });
@@ -101,12 +107,17 @@ test("X3 slow route: the old screen stays, the destination's label breathes", as
     });
     await route.continue();
   });
-  await page.locator("[data-slot='tab-bar']").getByRole("link", { name: "Closet" }).click();
+  await page
+    .locator("[data-slot='tab-bar']")
+    .getByRole("link", { name: "Closet" })
+    .click();
 
   const bar = page.locator("[data-part='tab-bar']");
   await expect(bar.locator(".breathe")).toHaveCount(2, { timeout: 1500 });
   expect(await wordsOf(page, "[data-part='tab-bar']")).toEqual(tabs);
   // No skeleton, no dimming: the feed is still what is on screen.
   expect(before).toContain("/feed");
-  await expect(page.getByRole("status").filter({ hasText: "Loading Closet." })).toHaveCount(1);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Loading Closet." }),
+  ).toHaveCount(1);
 });

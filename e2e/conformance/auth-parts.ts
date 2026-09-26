@@ -28,7 +28,8 @@ export async function partsIn(
     elements
       .filter((element) => {
         if (element.closest("[data-annotation]") !== null) return false;
-        if ((element as HTMLElement).dataset.part === "status-bar") return false;
+        if ((element as HTMLElement).dataset.part === "status-bar")
+          return false;
         return element.getClientRects().length > 0;
       })
       .map((element) => (element as HTMLElement).dataset.part ?? ""),

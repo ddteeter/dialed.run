@@ -1,4 +1,5 @@
 import { AUTH_COPY, AuthRejected } from "./auth-copy";
+import { BREACHED_CODE } from "./breached-password";
 import { authClient } from "./client";
 
 /**
@@ -58,30 +59,44 @@ const UNKNOWN_CREDENTIALS = "INVALID_EMAIL_OR_PASSWORD";
 const EMAIL_TAKEN = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
 
 /**
- * The one refusal each form lands on a field, keyed by form: everything
- * else Better Auth says is the band's.
+ * The refusals each form lands on a field, by Better Auth's code:
+ * everything else it says is the band's.
+ *
+ * Sign-up has two — a taken email (Au3's one exception) and a password
+ * the breach screen found (`breached-password.ts`, NIST SP 800-63B
+ * §3.1.1.2). Log-in has one, and it is on Password whichever half was
+ * wrong.
  */
-const FIELD_REFUSALS = {
-  signIn: {
-    code: UNKNOWN_CREDENTIALS,
-    field: "password",
-    message: AUTH_COPY.wrongPassword,
-  },
-  signUp: { code: EMAIL_TAKEN, field: "email", message: AUTH_COPY.emailTaken },
-} as const;
+type FieldRefusals = ReadonlyMap<
+  string,
+  { readonly field: string; readonly message: string }
+>;
+
+const SIGN_IN_REFUSALS: FieldRefusals = new Map([
+  [
+    UNKNOWN_CREDENTIALS,
+    { field: "password", message: AUTH_COPY.wrongPassword },
+  ],
+]);
+
+const SIGN_UP_REFUSALS: FieldRefusals = new Map([
+  [EMAIL_TAKEN, { field: "email", message: AUTH_COPY.emailTaken }],
+  [BREACHED_CODE, { field: "password", message: AUTH_COPY.passwordBreached }],
+]);
 
 /**
  * Better Auth's `{ error }` answer, thrown as the failure the form draws:
- * the form's one field refusal on its field, anything else for the band.
+ * a known refusal on its field, anything else for the band.
  */
 function throwIfRefused(
   error: ClientError | null | undefined,
-  refusal: (typeof FIELD_REFUSALS)[keyof typeof FIELD_REFUSALS],
+  refusals: FieldRefusals,
 ): void {
   if (!error) return;
-  throw error.code === refusal.code
-    ? new AuthFieldError(refusal.field, refusal.message)
-    : new AuthRejected(error.status);
+  const refusal = refusals.get(error.code ?? "");
+  throw refusal === undefined
+    ? new AuthRejected(error.status)
+    : new AuthFieldError(refusal.field, refusal.message);
 }
 
 interface SignInValues {
@@ -95,12 +110,12 @@ interface SignUpValues extends SignInValues {
 
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
-  throwIfRefused(error, FIELD_REFUSALS.signIn);
+  throwIfRefused(error, SIGN_IN_REFUSALS);
 }
 
 export async function signUp(values: SignUpValues): Promise<void> {
   const { error } = await authClient.signUp.email(values);
-  throwIfRefused(error, FIELD_REFUSALS.signUp);
+  throwIfRefused(error, SIGN_UP_REFUSALS);
 }
 
 /**

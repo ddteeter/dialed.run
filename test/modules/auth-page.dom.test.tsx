@@ -347,11 +347,15 @@ describe("Au4 · form failure", () => {
 describe("Au5 · Google in flight", () => {
   it("breathes, stays a live control, and goes to Google with the answer", async () => {
     const { user, leave } = await logIn();
-    // At rest the board's ringed "G" leads the label — composed from the
-    // type system, hidden from the accessible name.
-    const mark = part("google")?.querySelector("[aria-hidden='true']");
-    expect(mark).toHaveTextContent(/^G$/u);
-    expect(mark).toHaveClass("rounded-pill", "border-ink");
+    // At rest Google's own full-colour "G" leads the label — the official
+    // asset, as Google's branding guidelines require (PR #104) — and it is
+    // decoration: the words are the button's name.
+    const mark = part("google")?.querySelector("img");
+    expect(mark).toHaveAttribute("src", "/brand/google-g.png");
+    expect(mark).toHaveAttribute("alt", "");
+    expect(mark).toHaveAttribute("width", "20");
+    expect(mark).toHaveAttribute("height", "20");
+    expect(mark).toHaveClass("size-5");
     const answer = Promise.withResolvers<unknown>();
     client.social.mockReturnValue(answer.promise);
     await user.click(

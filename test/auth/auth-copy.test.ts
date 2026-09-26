@@ -14,7 +14,9 @@ import {
  */
 describe("authFailureMessage", () => {
   it("has nothing to say when nothing failed", () => {
-    expect(authFailureMessage(undefined, new AuthRejected(429))).toBeUndefined();
+    expect(
+      authFailureMessage(undefined, new AuthRejected(429)),
+    ).toBeUndefined();
   });
 
   it("says the connection dropped, whatever else is known", () => {
@@ -52,7 +54,11 @@ describe("authStatus", () => {
 
   it("leaves any other sentence as it is", () => {
     expect(
-      authStatus({ status: "Signed in.", bandMessage: undefined, googleFailed: false }),
+      authStatus({
+        status: "Signed in.",
+        bandMessage: undefined,
+        googleFailed: false,
+      }),
     ).toBe("Signed in.");
     // Only an opener is replaced, never the words mid-sentence.
     expect(
@@ -77,7 +83,9 @@ describe("authStatus", () => {
   it("says Google's when only Google failed", () => {
     expect(
       authStatus({ status: "", bandMessage: undefined, googleFailed: true }),
-    ).toBe("Not signed in. Google didn't answer. Try again, or use your email.");
+    ).toBe(
+      "Not signed in. Google didn't answer. Try again, or use your email.",
+    );
   });
 
   it("keeps the rejection's status on the error it throws", () => {

@@ -6,9 +6,20 @@ import { env } from "../../src/env";
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../src/lib/contracts";
 import { createAuth } from "../../src/modules/auth/create-auth";
 
+/**
+A breach screen that finds nothing, so these cases are about auth itself.
+*/
+const CLEAN_SCREEN = {
+  verdict: () => Promise.resolve("clean" as const),
+  report: () => {
+    // nothing to report: this screen always answers
+  },
+};
+
 const auth = createAuth({
   db: drizzle(env.DIALED_CORE),
   secret: "test-secret-not-for-production",
+  passwordScreen: CLEAN_SCREEN,
 });
 
 const credentials = {
@@ -84,6 +95,7 @@ describe("auth (better-auth on real D1)", () => {
     const authWithGoogle = createAuth({
       db: drizzle(env.DIALED_CORE),
       secret: "test-secret-not-for-production",
+      passwordScreen: CLEAN_SCREEN,
       google: {
         clientId: "test-client-id.apps.googleusercontent.com",
         clientSecret: "test-client-secret",

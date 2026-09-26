@@ -5,10 +5,17 @@
 import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
+import { AUTH_COPY } from "./auth-copy";
+import {
+  BREACHED_CODE,
+  newPasswordIn,
+  type BreachVerdict,
+} from "./breached-password";
 
 export interface AuthConfig {
   db: ReturnType<typeof drizzle>;
@@ -20,6 +27,44 @@ export interface AuthConfig {
   /** Framework cookie plugin — injected so this file never imports
    *  TanStack Start internals (which the vitest workers pool can't load). */
   plugins?: BetterAuthPlugin[] | undefined;
+  /**
+   * Breach screening for a new password (NIST SP 800-63B §3.1.1.2), and
+   * where a screen that could not answer is reported. Required, so no
+   * construction of the auth instance can quietly skip it; the instance
+   * wires the real range-API check and Sentry, tests a stub.
+   */
+  passwordScreen: {
+    verdict: (password: string) => Promise<BreachVerdict>;
+    report: (error: unknown, context: Record<string, string>) => void;
+  };
+}
+
+/**
+ * The before-hook that screens a new password on sign-up and on a
+ * password change.
+ *
+ * **Fails open** (law 5): a screen that times out or errors lets the
+ * request through and reports it — sign-up is the primary action and the
+ * screen is secondary. Only a positive match refuses, as a 400 carrying
+ * `BREACHED_CODE`, which the form lands on the Password field.
+ */
+export function passwordScreenHook(screen: AuthConfig["passwordScreen"]) {
+  return createAuthMiddleware(async (ctx) => {
+    const password = newPasswordIn(ctx.path, ctx.body);
+    if (password === undefined) return;
+    const verdict = await screen.verdict(password);
+    if (verdict === "breached") {
+      throw new APIError("BAD_REQUEST", {
+        code: BREACHED_CODE,
+        message: AUTH_COPY.passwordBreached,
+      });
+    }
+    if (verdict === "unknown") {
+      screen.report(new Error("password breach screen did not answer"), {
+        path: ctx.path,
+      });
+    }
+  });
 }
 
 /**
@@ -48,6 +93,7 @@ export function createAuth({
   baseUrl,
   google,
   plugins,
+  passwordScreen,
 }: AuthConfig) {
   return betterAuth({
     secret,
@@ -72,6 +118,7 @@ export function createAuth({
       minPasswordLength: PASSWORD_MIN_LENGTH,
     },
     ...(google !== undefined && { socialProviders: { google } }),
+    hooks: { before: passwordScreenHook(passwordScreen) },
     plugins: plugins ?? [],
   });
 }

@@ -25,6 +25,8 @@ import { fillOf, hydrated, partsExcept, partsIn, wordsOf } from "./auth-parts";
  * - Au1's Name field stays until the username task (owner, 2026-09-24).
  * - "Forgot it?" is drawn on Au2–Au4 and Au7; there is no reset flow to
  *   send it to, so it is absent rather than a dead link.
+ * - The Google button's "G" is Google's official image, not the board's
+ *   typed letter in a ring (owner, PR #104; design-deltas item 29).
  */
 
 const BOARD = "Auth.dc.html";
@@ -66,9 +68,18 @@ async function drawn(
   expect(order, `the board has no ${label} frame`).not.toHaveLength(0);
   const words = new Map<string, readonly string[]>();
   for (const part of parts) {
+    const drawnWords = await wordsOf(
+      page,
+      `${screen(label)} [data-part='${part}']`,
+    );
+    // The board's Google button leads with a typed "G" in a ring; the
+    // build carries Google's official image instead (owner, PR #104), so
+    // that letter is not text in the build and is set aside here.
     words.set(
       part,
-      await wordsOf(page, `${screen(label)} [data-part='${part}']`),
+      part === "google" && drawnWords[0] === "G"
+        ? drawnWords.slice(1)
+        : drawnWords,
     );
   }
   return { order, words };
