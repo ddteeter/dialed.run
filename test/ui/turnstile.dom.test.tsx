@@ -167,7 +167,7 @@ describe("Turnstile", () => {
     expect(fake.rendered).toHaveLength(2);
   });
 
-  it("renders nothing if the script loads without defining Turnstile", () => {
+  it("says so if the script loads without defining Turnstile", () => {
     const fake = fakeTurnstile();
     render(<Turnstile siteKey="key" onToken={ignore} />);
 
@@ -176,6 +176,7 @@ describe("Turnstile", () => {
     });
 
     expect(fake.rendered).toHaveLength(0);
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
   it("stops waiting for the script when it unmounts first", () => {
@@ -189,6 +190,24 @@ describe("Turnstile", () => {
 
     expect(fake.rendered).toHaveLength(0);
     expect(fake.removed).toHaveLength(0);
+  });
+
+  it("hears nothing from the script after it unmounts: no late error, no timeout", () => {
+    vi.useFakeTimers();
+    try {
+      const onToken = vi.fn();
+      const { unmount } = render(<Turnstile siteKey="key" onToken={onToken} />);
+      const [script] = scriptTags();
+
+      unmount();
+      script?.dispatchEvent(new Event("error"));
+      vi.advanceTimersByTime(SCRIPT_TIMEOUT_MS);
+
+      // A failure clears the token; nothing is left listening to clear it.
+      expect(onToken).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("tells the visitor when the script fails to load", () => {
