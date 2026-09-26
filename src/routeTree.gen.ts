@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -18,6 +19,7 @@ import { Route as CallIndexRouteImport } from './routes/call/index'
 import { Route as ClosetIndexRouteImport } from './routes/closet/index'
 import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
+import { Route as DeskIndexRouteImport } from './routes/desk/index'
 import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
@@ -50,6 +52,11 @@ import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeskRouteRoute = DeskRouteRouteImport.update({
+  id: '/desk',
+  path: '/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -91,6 +98,11 @@ const ClosetNewRoute = ClosetNewRouteImport.update({
   id: '/closet/new',
   path: '/closet/new',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DeskIndexRoute = DeskIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DeskRouteRoute,
 } as any)
 const FeedIndexRoute = FeedIndexRouteImport.update({
   id: '/feed/',
@@ -235,6 +247,7 @@ const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/desk': typeof DeskRouteRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -258,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
+  '/desk/': typeof DeskIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -297,6 +311,7 @@ export interface FileRoutesByTo {
   '/safety/review': typeof SafetyReviewRoute
   '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
+  '/desk': typeof DeskIndexRoute
   '/feed': typeof FeedIndexRoute
   '/notifications': typeof NotificationsIndexRoute
   '/runs': typeof RunsIndexRoute
@@ -314,6 +329,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/desk': typeof DeskRouteRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -337,6 +353,7 @@ export interface FileRoutesById {
   '/safety/review': typeof SafetyReviewRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
+  '/desk/': typeof DeskIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -355,6 +372,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/desk'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -378,6 +396,7 @@ export interface FileRouteTypes {
     | '/safety/review'
     | '/call/'
     | '/closet/'
+    | '/desk/'
     | '/feed/'
     | '/notifications/'
     | '/runs/'
@@ -417,6 +436,7 @@ export interface FileRouteTypes {
     | '/safety/review'
     | '/call'
     | '/closet'
+    | '/desk'
     | '/feed'
     | '/notifications'
     | '/runs'
@@ -433,6 +453,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/desk'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -456,6 +477,7 @@ export interface FileRouteTypes {
     | '/safety/review'
     | '/call/'
     | '/closet/'
+    | '/desk/'
     | '/feed/'
     | '/notifications/'
     | '/runs/'
@@ -473,6 +495,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DeskRouteRoute: typeof DeskRouteRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   ApiStravaRoute: typeof ApiStravaRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -518,6 +541,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desk': {
+      id: '/desk'
+      path: '/desk'
+      fullPath: '/desk'
+      preLoaderRoute: typeof DeskRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -575,6 +605,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/closet/new'
       preLoaderRoute: typeof ClosetNewRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/desk/': {
+      id: '/desk/'
+      path: '/'
+      fullPath: '/desk/'
+      preLoaderRoute: typeof DeskIndexRouteImport
+      parentRoute: typeof DeskRouteRoute
     }
     '/feed/': {
       id: '/feed/'
@@ -775,8 +812,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DeskRouteRouteChildren {
+  DeskIndexRoute: typeof DeskIndexRoute
+}
+
+const DeskRouteRouteChildren: DeskRouteRouteChildren = {
+  DeskIndexRoute: DeskIndexRoute,
+}
+
+const DeskRouteRouteWithChildren = DeskRouteRoute._addFileChildren(
+  DeskRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DeskRouteRoute: DeskRouteRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   ApiStravaRoute: ApiStravaRoute,
   AuthLoginRoute: AuthLoginRoute,

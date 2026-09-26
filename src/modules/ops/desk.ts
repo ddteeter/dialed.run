@@ -100,3 +100,17 @@ export function isOperator(userId: string | undefined): boolean {
   // asked the same way as a signed-in one rather than special-cased.
   return new Set<string | undefined>(adminUserIds()).has(userId);
 }
+
+/**
+What the Desk's shell and Today render: the counts, as of when.
+*/
+export interface DeskToday {
+  readonly counts: TodayCounts;
+  /** Epoch seconds the counts were read at, so an age renders the same
+   * on the server and after hydration. */
+  readonly asOf: number;
+}
+
+export async function deskToday(): Promise<DeskToday> {
+  return { counts: await todayCounts(), asOf: nowSeconds() };
+}

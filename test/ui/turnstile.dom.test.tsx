@@ -120,6 +120,19 @@ describe("Turnstile", () => {
     expect(second).toHaveBeenCalledWith("tok");
   });
 
+  it("renders a fresh widget when the site key changes, removing the old one", () => {
+    const fake = fakeTurnstile();
+    vi.stubGlobal("turnstile", fake.api);
+    const { rerender } = render(<Turnstile siteKey="key-1" onToken={ignore} />);
+
+    rerender(<Turnstile siteKey="key-2" onToken={ignore} />);
+
+    expect(fake.removed).toStrictEqual(["widget-1"]);
+    expect(fake.rendered.map((widget) => widget.options.sitekey)).toStrictEqual(
+      ["key-1", "key-2"],
+    );
+  });
+
   it("removes the widget it rendered when it unmounts", () => {
     const fake = fakeTurnstile();
     vi.stubGlobal("turnstile", fake.api);

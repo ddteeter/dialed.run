@@ -6,7 +6,9 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
-import { isOperator, todayCounts } from "../../src/modules/ops/desk";
+import { NotFoundError } from "../../src/lib/errors";
+import { deskToday, isOperator, todayCounts } from "../../src/modules/ops/desk";
+import { operatorOrNotFound } from "../../src/modules/ops/desk-gate";
 
 /**
  * The Desk's Today (Operator Screens D0): three numbers, read by the page
@@ -165,5 +167,39 @@ describe("isOperator", () => {
     Reflect.set(env, "ADMIN_USER_IDS", "op-1");
 
     expect(isOperator(undefined)).toBe(false);
+  });
+});
+
+describe("deskToday", () => {
+  it("carries the counts and the moment they were read", async () => {
+    await queueRow();
+    const before = nowSeconds();
+
+    const today = await deskToday();
+
+    expect(today.counts.waiting).toBe(1);
+    expect(today.asOf).toBeGreaterThanOrEqual(before);
+    expect(today.asOf).toBeLessThanOrEqual(nowSeconds());
+  });
+});
+
+describe("operatorOrNotFound", () => {
+  it("lets an operator through", () => {
+    expect(() => {
+      operatorOrNotFound({ operator: true });
+    }).not.toThrow();
+  });
+
+  it("answers anyone else with the router's not-found, never a refusal", () => {
+    let thrown: unknown;
+    try {
+      operatorOrNotFound({ operator: false });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(NotFoundError);
+    // What TanStack's router duck-types on to render a 404.
+    expect(thrown).toHaveProperty("isNotFound", true);
   });
 });
