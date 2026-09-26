@@ -65,17 +65,37 @@ The named cache the cards live in, apart from anything else cached.
 const CARD_CACHE = "og-cards";
 
 /**
+ * The key a card is cached under: its origin and path, and nothing else.
+ * The query string is dropped, and so are the method and every header, so
+ * `/og/default?1`, `?2`, … are one card rendered once — keyed on the raw
+ * URL, each was a fresh render, and a render is the most CPU this Worker
+ * spends on anything a stranger can ask for.
+ */
+export function cardCacheKey(request: Request): Request {
+  const url = new URL(request.url);
+  return new Request(`${url.origin}${url.pathname}`);
+}
+
+/**
  * The card for this request from the Worker's cache, rendering and storing
- * it on a miss. The Cache API, explicitly: a workers.dev host gets nothing
- * cached from response headers alone.
+ * it on a miss.
+ *
+ * The Cache API, explicitly, and a best effort. Cloudflare's docs say
+ * Workers on a custom domain "have access to functional cache operations",
+ * and that workers.dev hosts key on the query string by default (which the
+ * key above removes); they do not promise the cache works on workers.dev,
+ * where this app runs until the domain exists. So the TTLs are a ceiling on
+ * work, not a guarantee of it: a miss renders, which is correct, only
+ * slower.
  */
 export async function cachedCard(
   request: Request,
   ttlSeconds: number,
   render: () => Promise<Response>,
 ): Promise<Response> {
+  const key = cardCacheKey(request);
   const cache = await caches.open(CARD_CACHE);
-  const hit = await cache.match(request);
+  const hit = await cache.match(key);
   if (hit !== undefined) return hit;
   const rendered = await render();
   const response = new Response(rendered.body, rendered);
@@ -83,6 +103,6 @@ export async function cachedCard(
     "Cache-Control",
     `public, max-age=${String(ttlSeconds)}`,
   );
-  await cache.put(request, response.clone());
+  await cache.put(key, response.clone());
   return response;
 }

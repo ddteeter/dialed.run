@@ -14,6 +14,7 @@ import {
 } from "../../src/modules/ops/og/respond";
 import {
   cachedCard,
+  cardCacheKey,
   renderCard,
   renderCardSvg,
 } from "../../src/modules/ops/og/render";
@@ -157,12 +158,41 @@ describe("caching", () => {
     expect(render).toHaveBeenCalledTimes(1);
     // In the cards' own named cache, apart from anything else cached.
     const cards = await caches.open("og-cards");
-    const stored = await cards.match(request);
+    const stored = await cards.match(cardCacheKey(request));
     expect(await stored?.text()).toBe("card");
     expect(await first.text()).toBe("card");
     expect(await second.text()).toBe("card");
     expect(first.headers.get("Cache-Control")).toBe("public, max-age=120");
     expect(second.headers.get("Content-Type")).toBe("image/png");
+  });
+
+  it("renders once for any query string, and for any header", async () => {
+    // Keyed on the raw URL, `?1`, `?2`, … were each a fresh render: an
+    // unbounded supply of CPU for anyone who can type a digit.
+    const path = freshUrl();
+    const render = vi.fn(() => Promise.resolve(new Response("card")));
+
+    await cachedCard(new Request(`${path}?1`), 120, render);
+    await cachedCard(
+      new Request(`${path}?2`, { headers: { "Accept-Language": "fr" } }),
+      120,
+      render,
+    );
+    const third = await cachedCard(new Request(path), 120, render);
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(await third.text()).toBe("card");
+  });
+
+  it("keys a card on its origin and path alone", () => {
+    const key = cardCacheKey(
+      new Request("https://dialed.test/og/default?x=1#frag", {
+        headers: { Cookie: "a=b" },
+      }),
+    );
+
+    expect(key.url).toBe("https://dialed.test/og/default");
+    expect(key.headers.has("Cookie")).toBe(false);
   });
 
   it("serves the default card for an hour", async () => {
