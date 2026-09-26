@@ -16,8 +16,9 @@ Turnstile.
 - `src/modules/ops/**`, `src/modules/weather/**`
 - `src/server.ts`, `src/env/**`
 - `src/routes/__root.tsx` (head tags), `src/routes/api/health.ts`
-- New `src/routes/legal/**`; the legal links in `src/ui/SignedOutLayout.tsx`
-  and the landing bar (additions only to those two)
+- New `src/routes/og/**` (the share-card renderer, OPS-16)
+- `src/ui/form.tsx` and `src/ui/a11y.css`, **for the focus ring only**
+  (OPS-15)
 - `src/routes/desk/route.tsx` (the D0 shell) and `src/routes/desk/index.tsx`
   (Today). Other lanes add sibling files under `desk/`; the directory is
   split by file, not owned whole.
@@ -75,7 +76,7 @@ day, not six.
 **OPS-7 · The Desk shell and Today [F]** (decision D-35; Operator Screens
 D0). `/desk` behind the existing admin check, its own shell (always dark,
 hi-viz accent, desktop-first, never linked from the runner app), with the
-rail entries for the pages other lanes add. Today shows the digest's
+rail entries for the pages other lanes add (126's D7 Access, 128's ban panel and Runners; round 26 #20). Today shows the digest's
 counts. This is the minimum task 110 needs to stand on; Review, Duplicates
 and Runners stay 110's or the other lanes'. Tests: a non-admin gets 404,
 not 403; Today's counts come from the digest's own query.
@@ -86,17 +87,18 @@ frame and script origin), `frame-ancestors 'none'`, Referrer-Policy,
 Permissions-Policy, HSTS. Set around `startFetch` in `server.ts`. Tests:
 every HTML response carries them; the photo routes do not break (e2e).
 
-**OPS-9 · Favicon, manifest, robots, OG [P]** (§6). `public/favicon.ico` so
-it stops rendering a 404 through the Worker; a web manifest; `robots.txt`
+**OPS-9 · Icons, manifest, robots [P]** (§6; round 26 #22, now drawn). "[d]":
+pink brackets and a paper d on an ink tile, brackets only at 16. `favicon.svg`,
+`favicon.ico` 16/32 (so `/favicon.ico` stops rendering a 404 through the
+Worker), apple-touch 180, manifest 192/512 plus a 512 maskable, `theme_color`
+`#0B0B0E`; `robots.txt`
 disallowing profiles and entries while the owner has not decided on
 indexing (development plan, open decision 1 — 129 adds the matching meta);
-`description` and OG tags in `__root.tsx`, with per-route overrides left to
-the owning lane. The icon and the OG card are design asks: placeholders.
+`description` and default OG tags in `__root.tsx` (pointing at OPS-16's
+default card), with per-route overrides left to the owning lane.
 
-**OPS-10 · Legal pages [F]** (D-105, §1.1, §1.2). `/legal/privacy`,
-`/legal/terms`, `/legal/copyright`, linked from the signed-out shell and
-the landing bar. **The text is the owner's**; ask for it, and do not write
-policy prose yourself. Design ask: the layout.
+**OPS-10 · moved to 126 (ACC-13).** The owner assigned the privacy page to
+126 (decision D-52), and the terms and copyright pages went with it.
 
 **OPS-11 · The digest by email [P]** (§3.5; Operator Screens D5). Today, sent
 to the owner through 126's email interface when anomalies trip. Lands after
@@ -112,12 +114,35 @@ that covers two databases restored independently and says that
 `ci.yml` the owner applies: migrations before deploy, deploy `needs: e2e`,
 and D-72's `ADMIN_USER_IDS` line. You do not edit `.github/workflows/`.
 
-**OPS-13 · Stale claims [F]** (§8). In `docs/architecture.md`: "photo
-screening via Workers AI" (it is OpenAI); "CI applies migrations" (not
+**OPS-13 · `docs/architecture.md` corrected [F]** (§8; D-111, found by PR
+#109). Photo screening is OpenAI `omni-moderation-latest`, not Workers AI;
+product extraction is OpenAI plus Firecrawl; photos are not served from
+"public bucket URLs" (the Worker serves them, and after 128's SAF-7 through
+signed URLs); Turnstile has no code until OPS-5; "CI applies migrations" (not
 until the proposal lands); "Turnstile… WAF rate limits… These are free" (say
 what is built and what is a zone rule); "Admin email/notification" (true
 after OPS-11); `/health` "build info" (drop it, or ask for the
 `version_metadata` binding — it is a binding).
+
+**OPS-15 · The FormField focus ring [P]** (round 26 #16; decision D-48).
+Outline 2px ink at offset −1px, on the field border, so a focused field
+shows one line; error is the 2px border plus the band, and the band is what
+tells error from focus. **FormFields only**: every other control keeps
+Accessibility Contract §06's offset 2px. You own `ui/form.tsx` and
+`a11y.css` for this change and nothing else in them. Tests: the focused
+field's computed outline offset; a button's is unchanged.
+
+**OPS-16 · OG share cards [P]** (round 26 #22; decision D-51). Render in the
+Worker: the default card ("What to wear for the run you're about to do.",
+titled "dialed.run") and the per-entry card, 1200×630 — wordmark, date,
+conditions, verdict chip (hue plus word), distance/feels/wind, kit and
+@handle; **never the photo**, note, route or flags. A private, deleted,
+banned or unverified entry gets the default. **First, measure the library**
+(workers-og, satori + resvg, or similar): bundle size, WASM size, cold-start
+and CPU per render, against the Worker's limits; put the numbers in your
+design doc and ask if they are large. Cache the rendered card. The entry
+data comes through feed's index; 129 adds the page meta (FEED-14). Tests:
+each excluded state gets the default; the card never contains the photo.
 
 **OPS-14 · Legacy manual weather rows [P]** (§7). `store.ts` still expects
 `source='manual'` rows in `weather_observations`. Remove what reads them.
@@ -132,7 +157,8 @@ backup story beyond 126's tombstone, a client bundle size budget.
 ## Tests
 
 Worker tests for OPS-1 to OPS-6 and OPS-14; ui tests for the Turnstile
-widget and the Desk shell; an e2e check of the headers and the legal links.
+widget, the Desk shell and the focus ring; worker tests for OPS-16's card
+selection; an e2e check of the headers.
 The mutation ratchet stays at 100% on `modules/ops`, `modules/weather` and
 every `.tsx` you touch.
 
@@ -141,4 +167,4 @@ every `.tsx` you touch.
 - **New `e2e/desk/`**: an admin opens `/desk`, sees Today; a non-admin gets
   not-found. Needs D-72's line in CI; until the owner applies it, record
   locally with `.dev.vars` and say so in the PR.
-- The signed-out shell demo (`Covers:` Au/landing) gains the legal links.
+- The auth demo shows the FormField focus ring (OPS-15).

@@ -27,7 +27,7 @@ row is always written "decision D-NN". The two registers share a prefix.
 1. `CLAUDE.md`, then this file, then your packet.
 2. The audit sections your packet cites. They carry the evidence (file and
    line) and the sources; the packets do not repeat them.
-3. `docs/decisions.md` D-35 and D-37 to D-47.
+3. `docs/decisions.md` D-35 and D-37 to D-52, and `docs/design-deltas.md` "Answered in round 26" (the development plan maps every item to a lane).
 4. `docs/architecture.md` and `docs/contracts.md`, as always.
 
 ## Ownership
@@ -35,15 +35,15 @@ row is always written "decision D-NN". The two registers share a prefix.
 Every path belongs to exactly one lane. Your packet lists yours in full;
 this is the map, so you can see whose a file is before you need it.
 
-| lane | owns (summary — the packet is authoritative)                                                                                                                                                                                                                                                                                                                     |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 125  | `modules/ops`, `modules/weather`, `src/server.ts`, `src/env`, `routes/api/health.ts`, `routes/__root.tsx`, `routes/legal/**`, `routes/desk/route.tsx` + `desk/index.tsx`, new `ui/Turnstile.tsx`, `public/` (except `mediapipe/`, `fonts/` and 127's `strava/`), `modules/auth/instance.ts`, `docs/deployment.md`, `docs/architecture.md`                        |
-| 126  | `modules/auth` (except `instance.ts`), `routes/auth/**`, `routes/index.tsx`, new `modules/email`, new `modules/account`, `routes/account/**`, `routes/onboarding/settings/**`, `routes/onboarding/name.tsx`, `modules/onboarding/naming.ts` and the settings components, `routes/desk/invites*` + `desk/requests*`                                               |
-| 127  | `modules/runs/**` (except `delete-run.ts`), `routes/runs/**` (except the delete wiring), `routes/api/strava.ts`, `public/strava/`, and 121's feed files (`AttachKit`, `VerdictForm`, `VerdictChips`, `SpecificsSheet`, `NotedReceipt`, `BandHistory`, `chips.ts`, `band-signals.ts`, `routes/feed/attach.$runId.tsx`, `routes/feed/verdict.$entryId.tsx`)        |
-| 128  | `modules/safety/**`, `routes/safety/**`, `modules/feed/photos.ts`, `routes/feed/photo.$.tsx`, `modules/closet/photos.ts`, `routes/closet/photo.$itemId.$size.ts`, `lib/photo-pipeline.ts`, `lib/photo-constraints.ts`, new `modules/feed/retract.ts` + its components, new `modules/runs/delete-run.ts` + its component, `routes/desk/review*` + `desk/runners*` |
-| 129  | `modules/feed/**` and `routes/feed/**` except the files above, `modules/notifications/**`, `routes/notifications/**`, `modules/onboarding/profile.ts` + the place/calibration files                                                                                                                                                                              |
+| lane | owns (summary — the packet is authoritative)                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 125  | `modules/ops`, `modules/weather`, `src/server.ts`, `src/env`, `routes/api/health.ts`, `routes/__root.tsx`, `routes/desk/route.tsx` + `desk/index.tsx`, new `ui/Turnstile.tsx`, the OG card renderer (new route under `routes/og/`), `ui/form.tsx` and `a11y.css` for the focus ring only (OPS-15), `public/` (except `mediapipe/`, `fonts/` and 127's `strava/`), `modules/auth/instance.ts`, `docs/deployment.md`, `docs/architecture.md` |
+| 126  | `modules/auth` (except `instance.ts`), `routes/auth/**`, `routes/index.tsx`, new `modules/email`, new `modules/account`, `routes/account/**`, `routes/onboarding/settings/**`, `routes/onboarding/name.tsx` (O0), `modules/onboarding/naming.ts` and the settings components, `routes/call/**` and `CallLadder`, the legal pages (`routes/privacy.tsx`, `terms.tsx`, `copyright.tsx`), `routes/join.tsx`, `routes/desk/access*` (D7)       |
+| 127  | `modules/runs/**` (except `delete-run.ts`), `routes/runs/**` (except the delete wiring), `routes/api/strava.ts`, `public/strava/`, O3's Strava slot (additions only), and 121's feed files (`AttachKit`, `VerdictForm`, `VerdictChips`, `SpecificsSheet`, `NotedReceipt`, `BandHistory`, `chips.ts`, `band-signals.ts`, `routes/feed/attach.$runId.tsx`, `routes/feed/verdict.$entryId.tsx`)                                               |
+| 128  | `modules/safety/**`, `routes/safety/**`, `modules/feed/photos.ts`, `routes/feed/photo.$.tsx`, `modules/closet/**` and `routes/closet/**` (the closet has no other lane), `lib/photo-pipeline.ts`, `lib/photo-constraints.ts`, new `modules/feed/retract.ts` + its components, new `modules/runs/delete-run.ts` + its component, `routes/desk/review*` + `desk/runners*`                                                                    |
+| 129  | `modules/feed/**` and `routes/feed/**` except the files above, `modules/notifications/**`, `routes/notifications/**`, `modules/onboarding/profile.ts` + the place/calibration files (O1's city step)                                                                                                                                                                                                                                       |
 
-The rest of `modules/onboarding`, `modules/closet`, `routes/closet`, `modules/products` and `modules/enrichment` has no owner in this sweep. Ask before touching any of it.
+The rest of `modules/onboarding`, `modules/products` and `modules/enrichment` has no owner in this sweep. Ask before touching any of it.
 
 **Shared files, additions only.** These are touched by more than one lane.
 Add; never reorder, reformat or remove another lane's lines:
@@ -57,8 +57,12 @@ Add; never reorder, reformat or remove another lane's lines:
 - `test/bindings-conformance.test.ts` — 125 owns it; 126 adds `send_email`.
 - `src/lib/contracts.ts`, `src/lib/nav-types.ts` (+ its test),
   `src/ui/index.ts`, `stryker.conf.json`'s route negations.
-- `src/ui/SignedOutLayout.tsx` and the landing bar — 125 adds the legal
-  links; nothing else changes in them.
+- `src/ui/SignedOutLayout.tsx` and the landing bar — 126 adds the legal
+  links (ACC-13); nothing else changes in them.
+- `src/modules/feed/functions.ts` — 129 owns it; 128 adds the session
+  checks on `entryDetailQuery` and `otherProfileQuery` (SAF-14).
+- `src/lib/dates.ts` — 127 builds the US-order formatter (STR-13); every
+  lane uses it.
 - `src/modules/onboarding/functions.ts` — 126 (settings, naming) and 129
   (O1's resolver, the city writer).
 - `src/modules/auth/create-auth.ts` — 126 owns it; 125 adds the `baseURL`,
@@ -75,11 +79,11 @@ Add; never reorder, reformat or remove another lane's lines:
 lane decision (`FileWell`, `useControlAction`, `ControlFailureBand`,
 `FormFailureBand`, `PhotoStep`). If your screen needs something they cannot
 do, stop and say so in your PR. A new component in `ui/` (125's Turnstile
-widget, say) is fine; a change to an existing one is not.
+widget, say) is fine; a change to an existing one is not. One exception: 125 changes `ui/form.tsx` and `a11y.css` for the FormField focus ring (OPS-15, decision D-48).
 
 ## Cross-lane sequencing
 
-Six seams, each with one direction:
+Seven seams, each with one direction:
 
 1. **Usernames (126 · ACC-1) cross every lane.** It is the one sanctioned
    edit outside an owner's list: **rename-only** changes to every
@@ -100,10 +104,15 @@ Six seams, each with one direction:
    writing a second delete.
 5. **Strava revoke (127 · STR-1/2) comes before account deletion**, which
    calls it.
-6. **One visibility rule.** 128 extends safety's `publiclyVisibleEntry()`
-   to hide banned authors, and 126 extends it for accounts pending deletion;
-   129 applies the same predicate to search and profiles (FEED-7). Nobody
-   writes a second one.
+6. **One visibility rule, and it knows the viewer.** 128 extends safety's
+   `publiclyVisibleEntry()` to hide banned authors, blocked pairs and what
+   the viewer reported (SAF-4, SAF-12, SAF-13), and 126 extends it for
+   accounts pending deletion; 129 applies the same predicate to search and
+   profiles (FEED-7). Nobody writes a second one.
+7. **Verification (126 · ACC-3) gates other lanes' controls.** 126 exports
+   "is this runner verified" and the "Confirm your email first" sheet; 129
+   wires Useful and the nag band (FEED-11), 128 wires report. Unverified
+   entries save private (decision D-50), so no feed read changes.
 
 Put what you need from another lane in your PR body under **"Needs from
 other lanes"**. Do not make the change yourself.
@@ -128,15 +137,17 @@ gap. The rule is instead **generate last, renumber on collision**:
    `.sql` and its snapshot, rebuild `_journal.json`, relink `prevId`) and
    re-run the chain test. The owner merges migration PRs one at a time.
 
-| lane | database | migration                              | kind                                                     |
-| ---- | -------- | -------------------------------------- | -------------------------------------------------------- |
-| 125  | core     | `add_auth_rate_limit`                  | additive (Better Auth's `rateLimit` table)               |
-| 126  | core     | `replace_display_name_with_username`   | **destructive, authorised** (decision D-41) — ACC-1 only |
-| 126  | core     | `add_invite_codes_and_access_requests` | additive                                                 |
-| 126  | core     | `add_notification_preferences`         | additive                                                 |
-| 126  | core     | `add_account_deletions`                | additive                                                 |
-| 127  | core     | `add_strava_revocation_refresh_token`  | additive (if STR-2's design needs it)                    |
-| 128  | core     | `add_moderation_actions`               | additive (takedown and quarantine audit)                 |
+| lane | database | migration                              | kind                                                                              |
+| ---- | -------- | -------------------------------------- | --------------------------------------------------------------------------------- |
+| 125  | core     | `add_auth_rate_limit`                  | additive (Better Auth's `rateLimit` table)                                        |
+| 126  | core     | `replace_display_name_with_username`   | **destructive, authorised** (decision D-41) — ACC-1 only                          |
+| 126  | core     | `add_invite_codes_and_access_requests` | additive                                                                          |
+| 126  | core     | `add_notification_preferences`         | additive                                                                          |
+| 126  | core     | `add_account_deletions`                | additive                                                                          |
+| 126  | core     | `add_username_history`                 | additive (old handles, for "changed their name"; may fold into ACC-1's migration) |
+| 127  | core     | `add_strava_revocation_refresh_token`  | additive (if STR-2's design needs it)                                             |
+| 127  | weather  | `add_manual_conditions_sky`            | additive nullable column (STR-12; the weather journal, not core)                  |
+| 128  | core     | `add_moderation_actions`               | additive (takedown and quarantine audit)                                          |
 
 129 expects none. A lane that finds it needs one not listed asks first.
 
@@ -150,7 +161,7 @@ bracket-notation text only; no new glyph, colour, font or motion.
 
 Where a drawing does exist, it is the truth for composition: Operator
 Screens D0–D6 (the Desk, the ban panel, the banned notice, the digest
-email), Auth Au1–Au7, Remaining Screens T1/U1/U2/S1, Round 25's rulings.
+email), Auth Au1–Au7 (renumbered by round 26: its Au2 is sign-up, Au4 "Check your email", Au5 request access), Remaining Screens T1/U1/U2/S1, Round 25's and Round 26's rulings. Where an owner decision differs from a round-26 board (decisions D-48 to D-52), the decision wins.
 
 **Do not edit `docs/deferred.md` or `docs/design-deltas.md`.** Five lanes
 editing those tables conflict on every merge. Put deferrals under

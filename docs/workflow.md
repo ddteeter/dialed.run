@@ -184,7 +184,7 @@ Where the old checklist's items went:
 | 3. Observability config (tracing off, logs sampled) | Deployment plan §1                                                                                    |
 | 4. Design-deltas round trip before strangers        | The development plan's design dependencies, and the D-45 copy pass as a stage-2 gate                  |
 | 5. Motion Doctrine sweep                            | Closed by task 114 (design-deltas item 12)                                                            |
-| 6. Publish a privacy policy (D-105)                 | 125 · OPS-10 (page and links); deployment plan §9 (the text)                                          |
+| 6. Publish a privacy policy (D-105)                 | 126 · ACC-13 (page and links); deployment plan §9 (the text; PR #109 drafted it)                      |
 
 ## After v1
 

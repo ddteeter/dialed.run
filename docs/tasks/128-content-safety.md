@@ -8,24 +8,31 @@ A phone photo on a public entry can publish the runner's home coordinates
 (finding 0.8). Nobody can delete what they posted, and a moderator's Remove
 hides bytes without deleting them (0.9). A banned runner signs straight
 back in and their posts stay in every feed (0.3). The CSAM tool, once
-switched on, would scan none of our photos (§1.10). This lane makes what
-people upload safe to publish and possible to take back.
+switched on, would scan none of our photos (§1.10). And the privacy policy's
+drafter found three more (PR #109): blocks hide nothing, a reporter's own
+hide is not applied, and two signed-in pages' data answers signed-out
+requests. This lane makes what people upload safe to publish and possible
+to take back, and makes the safety controls do what they say.
+
+**It also owns the closet for this sweep.** Round 26 carries four closet
+items and the plan had no closet lane; the photo work already put this lane
+in `modules/closet`.
 
 ## You own
 
 - `src/modules/safety/**`, `src/routes/safety/**`
 - `src/modules/feed/photos.ts`, `src/routes/feed/photo.$.tsx`
-- `src/modules/closet/photos.ts`, `src/routes/closet/photo.$itemId.$size.ts`,
-  and the photo block of `closet/components/GarmentDetail.tsx` (additions only;
-  the rest of that component has no owner)
+- `src/modules/closet/**`, `src/routes/closet/**`
 - `src/lib/photo-pipeline.ts`, `src/lib/photo-constraints.ts`
 - New `src/modules/feed/retract.ts` and its components (entry and entry
   photo delete); new `src/modules/runs/delete-run.ts` and its component.
   Wiring them into `routes/feed/entry.$entryId.tsx` and
   `routes/runs/$runId.tsx` is additions only.
 - `src/routes/desk/review*.tsx`, `src/routes/desk/runners*.tsx`
-- `e2e/safety/`, `e2e/closet/` (the photo beats only), `test/safety/**`,
-  `test/closet/photos*`, `test/feed/photos*`
+- In `src/modules/feed/functions.ts` (129's), additions only: the session
+  checks on `entryDetailQuery` and `otherProfileQuery` (SAF-14)
+- `e2e/safety/`, `e2e/closet/`, `e2e/conformance/closet-*`, `test/safety/**`,
+  `test/closet/**`, `test/feed/photos*`
 
 ## Work
 
@@ -118,14 +125,67 @@ photo is being checked, on garment detail. Design ask.
 
 **SAF-11 · D-84(b) [P].** W3's tap-to-blur gets a keyboard path: focusable
 controls named by position ("Blur top-left"), per the Accessibility
-Contract. Design ask for what they look like.
+Contract. Design ask for what they look like. And W3's counts are digits,
+always, "You blurred 1 spot." included (round 26 #18).
+
+**SAF-12 · Blocks are enforced [F]** (D-107, PR #109). `hiddenCounterpartIds`
+and `isBlocked` are exported from safety and imported by nothing, so a block
+hides nothing: W2 promises what the code does not do. Make the one
+visibility rule viewer-aware, so a blocked pair's entries leave each other's
+feeds, entry detail, Your conditions' strangers and notifications, in SQL
+(not a post-query filter, which breaks `LIMIT`). 129 applies the same rule
+to search and profiles (FEED-7). Tests: after a block, neither runner sees
+the other's entry anywhere; unblocking restores it; the consensus counts are
+unchanged (blocks do not touch counts, per `docs/contracts.md`).
+
+**SAF-13 · A reporter's own hide [F]** (D-108, PR #109). W1 promises
+"hidden from your feed straight away", and `reportedSubjectIdsFor` has no
+callers. The same viewer-aware rule hides what the viewer reported, from
+the viewer only. Test: the reporter stops seeing it at once; nobody else
+does until the threshold.
+
+**SAF-14 · Signed-out requests refused [F]** (D-109, PR #109).
+`entryDetailQuery` (`optionalUserId`), `otherProfileQuery` (no auth check)
+and the entry photo route answer signed-out requests though their pages
+require sign-in. Require a session on both queries (additions to feed's
+`functions.ts`); the photo route takes a session **or**, after SAF-7, a
+valid signature. **Leave room for 129's FEED-14**: a crawler fetching a
+public entry's link preview is signed out, and gets the head meta only
+(open decision 7), never the data. Tests: each refuses a signed-out request;
+a signed-in one is unchanged.
+
+**SAF-15 · The report sheet names the handle [P]** (round 26 #7).
+"Report 's entry?", after ACC-1. Report also waits for verification: open
+126's "Confirm your email first" sheet for an unverified runner (seam 7).
+
+**SAF-16 · Closet: delete a garment that has runs [P]** (round 26 #3). The
+drawn sheet: "Delete the {piece}? Retire it instead.", the GOES/STAYS rows,
+"This can't be undone.", pink **Retire it**, hairline **Delete it and its
+record**, Cancel, no second confirm; success lands on C with "{piece}
+deleted."; failure is `Not deleted`. PR #101 built the delete itself.
+
+**SAF-17 · Closet: F, garment saved and photo refused [P]** (round 26 #4).
+The form fields go and the action becomes **Done** (to Y). Under the well,
+`PHOTO NOT ADDED` · "Garment saved, photo didn't. Try again?" plus the
+reason. **Try again only for a network failure**, re-sending the same file;
+a size or type refusal offers only "Pick another".
+
+**SAF-18 · Closet: F at the desk [P]** (round 26 #10). DS1's split; the rail
+holds one card, "Already in your closet · {CATEGORY} · {TYPE}": same category
+and type, newest first, up to five, retired pieces marked `RETIRED`, a
+brand+name match marked `SAME NAME`, read-only and unlinked; "No half-zips
+yet." when empty; no card before a category is picked.
+
+**SAF-19 · Closet confirms [P]** (round 26 #9). "Show retired (4)", with no
+count at 0; the phone's way back reads "← Closet".
 
 ## Tests
 
 Worker tests for every server path above; ui tests for every new control's
 states; the browser project for SAF-2's downscale. Mutation stays at 100%
-on `modules/safety`, `modules/feed/photos.ts`, `modules/closet/photos.ts`,
-`src/lib`, and every `.tsx` you touch.
+on `modules/safety`, `modules/closet`, `modules/feed/photos.ts`, `src/lib`,
+and every `.tsx` you touch. Conformance specs for round 26's closet frames
+("Y Delete with runs", "F Photo failed", "F Add garment desk").
 
 ## Demos
 
@@ -133,3 +193,6 @@ on `modules/safety`, `modules/feed/photos.ts`, `modules/closet/photos.ts`,
   moderator Remove.
 - `e2e/feed/` (the photo beats): delete an entry photo, delete an entry.
 - `e2e/run-logging/`: delete a run.
+- `e2e/safety/`: a block that now hides; a report that hides for the
+  reporter.
+- `e2e/closet/`: delete with runs; photo refused after save; F at desk.
