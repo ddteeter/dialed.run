@@ -36,19 +36,20 @@ build on PRs that are not merged yet; those are sequenced, not guessed at.
   card (outside its link), D's strip, and Your conditions' result states.
 - **FEED-13** — E2-lite "No weather for {place} yet. It shows after the
   first reading."; a word on each consensus bar; G's `settings` icon button.
-- **Manual source** — feed's two `ne(source, "manual")` filters go now; the
-  enum drop itself waits on #112 (weather's own filter is removed there).
+- **Manual source** — feed's two `ne(source, "manual")` filters go, and
+  with #112 merged `'manual'` leaves the column's enum (TS only, no SQL).
 
 ## Contract touches
 
-- Schema changes needed: **none now**. After #112: `weather_observations.
-  source` loses `'manual'` (owner-approved; TS enum only, no SQL change).
+- Schema changes needed: `weather_observations.source` loses `'manual'`
+  (owner-approved; TS enum only, no migration).
 - New route files: none. Bindings/queues/crons: **none**.
 - Screens: E1, E2-lite, D, G, H, S2 bell, O1 city step, round 26 #9/#12/#18.
 
 ## Sequenced (not in this PR)
 
-FEED-14 (needs #112's card, 128's SAF-14 gate, 126's handles), FEED-6/7
+FEED-14 is descoped (owner, 2026-09-26: entries are for signed-in runners
+only, and every link previews as the generic card). FEED-6/7
 (128's predicate, 126's deletion state), FEED-10 (126's usernames), FEED-11
 (126's verification), US date order (#113's formatter), coordinate rounding
 in `savePlace` (#113's `roundCoordinate`), the enum drop (#112).
