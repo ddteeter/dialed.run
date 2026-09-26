@@ -2,7 +2,17 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import { ReportSheet, type ReportSubject } from "./ReportSheet";
-import { Mono } from "../../../ui";
+
+/**
+ * The foot link's words, from the round-22 frames: D's *"Report this
+ * entry"* and H's *"Report or block @rk_miles"* — a profile is the one
+ * subject W1 offers the block on, so its link says so.
+ */
+function reportLabel(subject: ReportSubject): string {
+  return subject.type === "profile"
+    ? `Report or block ${subject.label}`
+    : "Report this entry";
+}
 
 /**
  * The "Report" control and the sheet it opens, as one thing a route can
@@ -34,6 +44,13 @@ export function ReportAffordance({
   fileReport: Parameters<typeof ReportSheet>[0]["fileReport"];
 }>): JSX.Element | undefined {
   const [isOpen, setIsOpen] = useState(false);
+  // Flips on every opening, and keys the sheet by it: every report starts
+  // from an empty sheet, so ✕ really is "discard" (round 22, item 21)
+  // rather than "hide what you had chosen until next time". A flip is
+  // enough — the key only has to differ from the last opening's. A count
+  // could run either way unobserved, and a flip with a starting value
+  // could start from either; this one starts unset.
+  const [generation, setGeneration] = useState<boolean>();
 
   // Signed out, or looking at your own: no report control. Reporting your
   // own entry does nothing, and offering it reads as a bug — while a
@@ -51,16 +68,21 @@ export function ReportAffordance({
 
   return (
     <>
+      {/* A text link at the foot of D and H (round 22, items 10, 12 and
+          21): small, --label, underlined — never a button-shaped thing a
+          reader might take for part of the entry. */}
       <button
         type="button"
-        className="target text-quiet"
+        className="target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4"
         onClick={() => {
+          setGeneration((previous) => previous !== true);
           setIsOpen(true);
         }}
       >
-        <Mono step="xs">Report</Mono>
+        {reportLabel(subject)}
       </button>
       <ReportSheet
+        key={String(generation)}
         open={isOpen}
         // One closer for both. `ReportSheet` calls `onFiled` and then
         // `onClose` on success, and this component has nothing to do with

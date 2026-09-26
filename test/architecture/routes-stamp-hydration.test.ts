@@ -11,8 +11,9 @@ import {
  * Every screen must stamp `html[data-hydrated="true"]`, and this is the
  * only thing that can say so.
  *
- * `useHydrated` writes that attribute and exactly two components call it:
- * `Layout` and `Page`. Every e2e spec waits on it before driving a
+ * `useHydrated` writes that attribute and exactly three components call
+ * it: `Layout`, `SignedOutLayout` (the auth pages and the landing page,
+ * round 22) and `Page`. Every e2e spec waits on it before driving a
  * controlled input, because hydration resets component state and a fill
  * that lands first is silently discarded.
  *
@@ -55,7 +56,7 @@ const RENDERS_A_SCREEN = /(?:^|[\s,{])component:/u;
 /**
  * `<Layout` or `<Page`, and not `<PageHeader`.
  */
-const WEARS_A_SHELL = /<(?:Layout|Page)[\s/>]/u;
+const WEARS_A_SHELL = /<(?:Layout|SignedOutLayout|Page)[\s/>]/u;
 
 /**
  * Every `<Capitalised` element name the source uses.
@@ -163,5 +164,6 @@ describe("every screen stamps the hydration signal", () => {
     expect(WEARS_A_SHELL.test('<div className="mx-auto flex">')).toBe(false);
     expect(WEARS_A_SHELL.test("<PageHeader title={x} />")).toBe(false);
     expect(WEARS_A_SHELL.test('<Page width="narrow">')).toBe(true);
+    expect(WEARS_A_SHELL.test('<SignedOutLayout action="none">')).toBe(true);
   });
 });

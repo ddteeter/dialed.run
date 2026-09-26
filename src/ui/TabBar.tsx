@@ -7,8 +7,9 @@ import {
 import { useEffect, type JSX } from "react";
 
 import { isLogFlowPath } from "../lib/nav-types";
+import { PendingLabel } from "./form";
 import { Mono } from "./Mono";
-import { TABS, bar, tabToLight } from "./tabs";
+import { TABS, bar, tabToLight, useSlowRoute } from "./tabs";
 
 /**
  * One tab.
@@ -29,6 +30,7 @@ function Tab({
   label,
   active,
   held,
+  waiting,
 }: Readonly<{
   to: NonNullable<LinkProps["to"]>;
   label: string;
@@ -38,6 +40,11 @@ function Tab({
    * runner is on it.
    */
   held: boolean;
+  /**
+   * This tab's screen has been loading for over 300ms (round 22, X3): the
+   * label gains breathing brackets while the old screen stays up.
+   */
+  waiting: boolean;
 }>): JSX.Element {
   return (
     <li className="text-center">
@@ -56,7 +63,16 @@ function Tab({
         aria-current={held ? "true" : undefined}
         className={active ? ACTIVE_LABEL_CLASS : RESTING_LABEL_CLASS}
       >
-        <Mono step="sm">{label}</Mono>
+        <Mono step="sm">
+          {/* Only while waiting, so a resting tab's text is its label and
+              nothing else. The equal-width grid means there is no width
+              to hold; `PendingLabel` is here for the brackets. */}
+          {waiting ? (
+            <PendingLabel label={label} pendingLabel={label} pending />
+          ) : (
+            label
+          )}
+        </Mono>
       </Link>
     </li>
   );
@@ -149,6 +165,7 @@ export function TabBar() {
     select: (state) => state.location.pathname,
   });
   const active = tabToLight(pathname, bar.lastOnTab);
+  const { isSlow } = useSlowRoute();
 
   useEffect(() => {
     // Only a real tab is worth recording. Nothing here needs to ask whether
@@ -166,6 +183,7 @@ export function TabBar() {
       // decision (D-82).
       aria-label="Main"
       data-slot="tab-bar"
+      data-part="tab-bar"
       className="fixed inset-x-0 bottom-0 border-t border-hairline bg-ground px-5 pb-[env(safe-area-inset-bottom)] wide:hidden"
     >
       {/* No `py-4` any more: the padding moved into each seat, where rule
@@ -185,6 +203,7 @@ export function TabBar() {
               label={tab.label}
               active={index === active}
               held={index === active && isLogFlowPath(pathname)}
+              waiting={index === active && isSlow}
             />
           ),
         )}

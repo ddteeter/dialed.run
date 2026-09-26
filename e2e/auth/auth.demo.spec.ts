@@ -1,14 +1,10 @@
 /**
- * Covers: account creation and sign-out — one journey, one video.
+ * Covers: Au1 (create account), Au3 (wrong password), Au2 (log in), sign
+ * out from the settings index — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts (see home.spec.ts).
- *
- * No docs/product.md screen ID — auth is not in the screen inventory. When a
- * demo covers inventoried screens, list the IDs here instead; those IDs, not
- * this directory's name, are what other lanes grep to find the demo that
- * already owns a screen.
  */
 import { expect, scene, test } from "../support/demo";
 
@@ -20,39 +16,70 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
     .waitFor({ state: "attached" });
 }
 
-test("signup -> authenticated home -> sign out", async ({ page }) => {
+/**
+Not a secret: a throwaway account on the local dev database.
+*/
+const PASSPHRASE = ["a", "long", "enough", "passphrase"].join("-");
+
+test("create an account -> sign out -> a guarded page -> a wrong password -> log in and back", async ({
+  page,
+}, testInfo) => {
+  testInfo.setTimeout(150_000);
   const email = `smoke-${String(Date.now())}@example.com`;
   await page.goto("/auth/signup");
   await hydrated(page);
 
-  await scene(page, "Signup · a name, an email, a password");
+  await scene(page, "Au1 · Create account, with no tab bar");
+  await expect(
+    page.getByRole("heading", { name: "Create account" }),
+  ).toBeVisible();
+  await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
   await page.getByLabel("Name").fill("Smoke Test");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a-long-enough-password");
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByLabel("Password").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Show" }).click();
+  await expect(page.getByLabel("Password")).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Create account" }).click();
 
-  // A new account lands in onboarding now, not on `/` (D-52) — and the
-  // sign-out control lives on `/`. So the journey goes through the close
-  // screen and out of its own "Done for now" link, which is the route a
-  // real runner takes to reach the home page for the first time.
-  await scene(page, "A new account lands in onboarding, not home (D-52)");
-  await expect(page).toHaveURL(/\/onboarding\/calibrate/, { timeout: 15_000 });
+  // A new account lands in onboarding (D-52); the close screen's own link
+  // is the way a runner first leaves it.
+  await scene(page, "A new account lands in onboarding");
+  await expect(page).toHaveURL(/\/onboarding\/calibrate/u, { timeout: 15_000 });
   await page.goto("/onboarding/done");
   await page.getByRole("link", { name: "Done for now" }).click();
 
-  await scene(page, "Home knows who is signed in");
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
-  // The email is in the server-rendered HTML, so seeing it says nothing
-  // about whether React has attached yet — and "Sign out" is a bare
-  // `onClick` with no form behind it, so a click that lands before
-  // hydration is silently lost and the session simply stays. That is what
-  // CI showed three runs in a row: the link never arriving, at 5s and at
-  // 15s alike, on a runner ~18s slower than the one that last went green.
-  // The signup step above already waits on the stamp for the same reason.
+  // Sign out lives at the foot of the settings index now (U1).
+  await scene(page, "Sign out, from the foot of settings");
+  await page.goto("/onboarding/settings");
   await hydrated(page);
-  await scene(page, "Signing out returns the logged-out shell");
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible({
+  await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
+  await expect(
+    page.getByRole("link", { name: "Create account" }),
+  ).toBeVisible();
+
+  // A guarded page, signed out, goes to log-in carrying the way back.
+  await scene(page, "Signed out, the Call sends you to log in and back");
+  await page.goto("/call");
+  await expect(page).toHaveURL(/\/auth\/login\?redirect=%2Fcall$/u, {
     timeout: 15_000,
   });
+  await hydrated(page);
+
+  await scene(page, "Au3 · a wrong password is marked on Password");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(`${PASSPHRASE}-not`);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(
+    page.getByText("That password doesn't match this email."),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("status")).toHaveText(
+    "Not signed in. One field needs a fix.",
+  );
+
+  await scene(page, "Au2 · the right one logs in");
+  await page.getByLabel("Password").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Log in" }).click();
+  // Back where the runner was going, not home.
+  await expect(page).toHaveURL(/\/call$/u, { timeout: 15_000 });
 });

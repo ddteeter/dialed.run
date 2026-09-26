@@ -8,6 +8,7 @@ import {
   namingOfferQuery,
   namingSuggestionsQuery,
 } from "../../modules/onboarding/functions";
+import { skipNamingIfNothingToName } from "../../modules/onboarding/route-decisions";
 import { Page } from "../../ui";
 
 /**
@@ -17,9 +18,9 @@ import { Page } from "../../ui";
  */
 // fallow-ignore-next-line code-duplication -- two signed-in routes of one flow are the same shape by mandate: createFileRoute + requireSession + one loader call + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/onboarding/name")({
-  loader: async () => {
-    await requireSession();
-    return { offer: await namingOfferQuery() };
+  loader: async ({ location }) => {
+    await requireSession(location.href);
+    return { offer: skipNamingIfNothingToName(await namingOfferQuery()) };
   },
   component: NamePage,
 });

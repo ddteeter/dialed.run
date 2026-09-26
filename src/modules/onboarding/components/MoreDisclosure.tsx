@@ -9,11 +9,15 @@ import { Mono } from "../../../ui";
  * called them a 32-line clone, correctly.
  *
  * **The label states the real remainder**, never a number baked into a
- * design (§AA rule 03). **It does not change when it opens** —
- * `aria-expanded` carries the state, and a control whose accessible name
- * flips announces itself as a different control each press. **And it
- * renders nothing when nothing is hidden**, because a disclosure over an
- * empty set is a control that lies.
+ * design (§AA rule 03). **And it renders nothing when nothing is
+ * hidden**, because a disclosure over an empty set is a control that lies.
+ *
+ * **Open, it reads "Fewer"** (round 22, item 25): *"Expanded folds are the
+ * same rows, continued, with 'Fewer' at the end. No second style for the
+ * revealed part."* It already sits after the rows, so opening the fold
+ * puts the revealed rows above it and the control at their end.
+ * `aria-expanded` still carries the state, so the name change is the
+ * label a sighted runner reads and not the only signal.
  */
 export function MoreDisclosure({
   remaining,
@@ -32,8 +36,14 @@ export function MoreDisclosure({
       onClick={onToggle}
       className="target cursor-pointer self-start rounded-pill border border-dashed border-hairline-2 bg-transparent px-4 py-2 text-quiet"
     >
-      <Mono step="sm">Everything else · {remaining} more</Mono>
-      <span aria-hidden="true"> ▾</span>
+      {expanded ? (
+        <Mono step="sm">Fewer</Mono>
+      ) : (
+        <>
+          <Mono step="sm">Everything else · {remaining} more</Mono>
+          <span aria-hidden="true"> ▾</span>
+        </>
+      )}
     </button>
   );
 }

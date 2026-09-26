@@ -1,6 +1,8 @@
 /**
  * Covers: W1 (report an entry or a runner), W2 (blocked runners) — one
- * journey, one video.
+ * journey, one video. Round 22 (items 21–22): the foot link, W1 from an
+ * entry with no block toggle, ✕ discarding, W2's empty line, and Unblock
+ * leaving on success.
  *
  * Exactly one test() per demo spec. A second here would record a second
  * video beside the one the reviewer is meant to watch.
@@ -70,12 +72,31 @@ test("report a runner, block them, and take the block back", async ({
     });
   });
 
+  // W1 from an entry (round 22, item 21): the foot link, reasons and an
+  // optional note, and no block toggle — and ✕ throws the draft away.
+  await page.goto(`/feed/entry/${entryId}`);
+  await hydrated(page);
+  await scene(page, "W1 from an entry · a foot link, and no block toggle");
+  await page.getByRole("button", { name: "Report this entry" }).click();
+  await page.getByRole("radio", { name: "It's an ad, or it's spam" }).click();
+  await expect(page.locator("dialog[open]").getByRole("checkbox")).toHaveCount(
+    0,
+  );
+  await scene(page, "✕ closes and discards, with no confirm");
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Report this entry" }).click();
+  await expect(
+    page.getByRole("radio", { name: "It's an ad, or it's spam" }),
+  ).not.toBeChecked();
+  await page.getByRole("button", { name: "Close" }).click();
+
   await page.goto(`/feed/u/${strangerId}`);
   await hydrated(page);
 
   await scene(page, "W1 · anyone can report, and it costs them nothing");
   await expect(page.getByRole("heading", { name: strangerName })).toBeVisible();
-  await page.getByRole("button", { name: "Report" }).click();
+  await page.getByRole("button", { name: `Report or block ${strangerName}` }).click();
 
   await scene(page, "Reasons are sentences a runner would say");
   await expect(
@@ -125,5 +146,5 @@ test("report a runner, block them, and take the block back", async ({
   await scene(page, "Unblocking is immediate, with nothing to confirm");
   await page.getByRole("button", { name: "Unblock" }).click();
   await expect(page.getByText(strangerName)).toBeHidden();
-  await expect(page.getByText("Nobody. That's normal.")).toBeVisible();
+  await expect(page.getByText("You haven't blocked anyone.")).toBeVisible();
 });

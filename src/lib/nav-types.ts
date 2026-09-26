@@ -197,6 +197,8 @@ const NAV: readonly Edge[] = [
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",
+      "/onboarding/settings/$section",
+      "/safety/blocked",
       "/onboarding/done",
     ],
     type: "push",

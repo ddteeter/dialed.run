@@ -18,7 +18,6 @@ import {
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { colorRole } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
 import { userIdOf } from "./logging-fixtures";
 
@@ -317,17 +316,6 @@ export async function partsIn(
 }
 
 /**
-One element's own fill, as its T1 role.
-*/
-export async function fillOf(page: Page, selector: string): Promise<string> {
-  const computed = await page.$eval(
-    selector,
-    (element) => getComputedStyle(element).backgroundColor,
-  );
-  return colorRole(computed);
-}
-
-/**
  * The board sets straight apostrophes; the app sets typographic ones. The
  * same word either way, so the comparison folds them.
  */
@@ -341,13 +329,4 @@ export function folded(cells: readonly string[]): string[] {
  */
 export function holdForever(): Promise<void> {
   return Promise.withResolvers<undefined>().promise;
-}
-
-/**
-Waits for the app to have hydrated, after which controls can be driven.
-*/
-export async function hydrated(page: Page): Promise<void> {
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
 }

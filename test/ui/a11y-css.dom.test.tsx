@@ -50,10 +50,14 @@ function bodyAt(source: string, open: number): string {
   return "";
 }
 
+/**
+ * Searched in `rules`, not the raw file: the prose quotes the selectors it
+ * explains, and a marker found in a comment reads the wrong block.
+ */
 function blockAfter(marker: string): string {
-  const at = css.indexOf(marker);
+  const at = rules.indexOf(marker);
   if (at === -1) return "";
-  return bodyAt(css, css.indexOf("{", at));
+  return bodyAt(rules, rules.indexOf("{", at));
 }
 
 describe("06 · focus is visible and square", () => {
@@ -102,11 +106,26 @@ describe("06 · focus is visible and square", () => {
     // `outline-none`, which said "no ring" and nothing at all about where
     // the ring had gone — so removing the ancestor would have left five
     // controls with no focus indicator and nothing to notice it.
-    const fieldBox = blockAfter("@utility field-box");
-    expect(fieldBox).toContain("outline: 2px solid var(--ink)");
-    expect(fieldBox).toContain("outline: none");
-    expect(fieldBox).toMatch(/&:has\(:focus-visible\)/u);
-    expect(fieldBox).toMatch(/& :focus-visible/u);
+    const ring = blockAfter(".field-box:has(:focus-visible)");
+    const removed = blockAfter(".field-box :focus-visible");
+    expect(ring).toContain("outline: 2px solid var(--ink)");
+    expect(ring).toContain("outline-offset: 2px");
+    expect(removed.trim()).toBe("outline: none;");
+    // Adjacent, so the two halves cannot be separated in an edit.
+    expect(rules).toMatch(
+      /\.field-box:has\(:focus-visible\) \{[^}]*\}\s*\.field-box :focus-visible \{/u,
+    );
+  });
+
+  it("keeps the field rules unlayered, so they outrank the input's own ring", () => {
+    // An `@utility` lives in `@layer utilities`, and an unlayered rule
+    // (`input:focus-visible`) beats any layered one: the input kept its
+    // ring and every focused field drew two (PR #104). happy-dom resolves
+    // no layers, so this is the unit half; the browser half is
+    // `e2e/conformance/auth-field-focus`.
+    expect(rules).not.toMatch(/@utility field-box|@layer/u);
+    // Unlayered, specificity decides: (0,2,0) against (0,1,1).
+    expect(rules).toMatch(/^\.field-box :focus-visible \{/mu);
   });
 });
 

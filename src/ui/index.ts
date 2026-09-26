@@ -5,7 +5,7 @@ export { FileWell } from "./FileWell";
 export { FlowStep, LOG_FLOW } from "./FlowStep";
 export { Icon, ICONS, TAB_BAR } from "./icons";
 export { DURATION, EASING, STAGGER, TRAVEL } from "./motion";
-export { Layout } from "./Layout";
+export { Layout, SignedOutLayout } from "./Layout";
 export { ListSection } from "./ListSection";
 export { CoverageMark, VerdictMark } from "./Marks";
 export type { CoverageLevel, VerdictKind } from "./Marks";
@@ -34,6 +34,7 @@ export {
   ToggleField,
 } from "./form";
 export { TabBar } from "./TabBar";
+export { TABS, tabToLight } from "./tabs";
 export { classifyFailure, useFormSubmit } from "./use-form-submit";
 export { useControlAction } from "./use-control-action";
 export type { ControlAction } from "./use-control-action";

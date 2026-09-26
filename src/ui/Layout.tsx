@@ -1,7 +1,9 @@
+import { useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { TabBar } from "./TabBar";
-import { TopBar } from "./TopBar";
+import { TABS, bar, tabToLight, useSlowRoute } from "./tabs";
+import { LandingBar, TopBar, type LandingAction } from "./TopBar";
 import { useHydrated } from "./use-hydrated";
 
 /**
@@ -54,6 +56,56 @@ export function Layout({
         {children}
       </div>
       <TabBar />
+      <SlowRouteStatus />
+    </div>
+  );
+}
+
+/**
+ * X3's one announcement: *"Screen reader: the status region says 'Loading
+ * Closet.' once, at 300ms."*
+ *
+ * Here rather than in either bar, because both bars are mounted at once
+ * and a region in each would say it twice. The label is the lit seat's —
+ * the destination's, since the router moves the location before the
+ * screen arrives — and a destination no tab owns says nothing, which is
+ * the same "never lie about where you are" rule the indicator keeps.
+ */
+function SlowRouteStatus() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const { isSlow } = useSlowRoute();
+  const lit = tabToLight(pathname, bar.lastOnTab);
+  const label = TABS.find((_tab, index) => index === lit)?.label;
+
+  return (
+    <span role="status" className="sr-only">
+      {isSlow && label !== undefined ? `Loading ${label}.` : ""}
+    </span>
+  );
+}
+
+/**
+ * The shell a signed-out page wears: the landing bar from 720 up, nothing
+ * below it, and **never the tab bar** (round 22, Auth §2: *"Every tab is a
+ * signed-in place; showing them to someone signed out is five links to
+ * the log-in page"*). Auth, the landing page, and a signed-out 404 all
+ * wear this.
+ *
+ * Paper all the way up — *"auth is not a product screen, so it doesn't
+ * get the ink header"* — so there is no bell seat either.
+ */
+export function SignedOutLayout({
+  action,
+  children,
+}: Readonly<{ action: LandingAction; children: ReactNode }>) {
+  useHydrated();
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-ground text-ink">
+      <LandingBar action={action} />
+      <div className="mx-auto w-full max-w-page flex-1">{children}</div>
     </div>
   );
 }
