@@ -59,9 +59,11 @@ const visualCrossingHourSchema = z.object({
  * the include parameter. In this case the query cost will be one." The
  * adapter used to ask for the whole day and keep one hour of it.
  *
- * The shape is the documented one, not yet a recorded one: there is no API
- * key to probe with (see the fixture). `currentConditions` carries the same
- * element names as an hour, which is what this schema reads.
+ * Verified against the live API on 2026-09-26: Minneapolis at epoch
+ * 1768485780 (08:03 local) answered `queryCost: 1`, `timezone` at the root,
+ * and `currentConditions` for the 08:00 hour with the same element names an
+ * hour carries. (It also sends that day's summary under `days`, without its
+ * hours, inside the one record; nothing here reads it.)
  */
 const visualCrossingCurrentSchema = z.object({
   currentConditions: visualCrossingHourSchema,

@@ -1,11 +1,10 @@
 import { vi } from "vitest";
 
 /**
- * Shaped from Visual Crossing's documented Timeline API response (metric,
- * a single datetime with `include=current`) — recorded from their
- * published docs, not a live call: no API key exists yet
- * (docs/designs/103-weather.md). Re-record against a live response once
- * the secret lands.
+ * Shaped like Visual Crossing's Timeline API response for a single
+ * datetime with `include=current` (metric), checked against a live call on
+ * 2026-09-26: `queryCost: 1`, `timezone` at the root, the hour under
+ * `currentConditions`. The values are this fixture's own.
  *
  * Three hours of one Minneapolis morning, 2026-01-15. A single-datetime
  * request answers with the nearest of them as `currentConditions`.
