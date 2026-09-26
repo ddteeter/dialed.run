@@ -44,7 +44,7 @@
  * cannot quietly win. That is "never removed" enforced by the cascade
  * rather than by review, and it is why `outline-none` does not appear
  * anywhere in `src/` any more: the one legitimate case has its own rule
- * below, and `test/architecture/focus-is-never-removed.test.ts` fails on a
+ * below, and `test/architecture/targets-and-focus.test.ts` fails on a
  * new one.
  * ------------------------------------------------------------------ */
 a:focus-visible,
@@ -76,16 +76,24 @@ summary:focus-visible,
  *
  * `:has()` rather than `:focus-within`, because the second rule needs the
  * descendant selector anyway and one mechanism is better than two.
+ *
+ * **Unlayered, like the rule it overrides — and it has to be.** These were
+ * an `@utility`, which puts them in `@layer utilities`, and an unlayered
+ * rule beats a layered one whatever the specificity: so `input:focus-visible`
+ * above kept its ring, and every focused field drew a second square ring
+ * on the borderless input inside its box (PR #104). Unlayered, the cascade
+ * compares specificity, and `.field-box :focus-visible` (0,2,0) outranks
+ * `input:focus-visible` (0,1,1). happy-dom resolves no layers, so only
+ * `e2e/conformance/auth-field-focus` can see this; it reads the computed
+ * outline in a real browser.
  */
-@utility field-box {
-  &:has(:focus-visible) {
-    outline: 2px solid var(--ink);
-    outline-offset: 2px;
-  }
+.field-box:has(:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
 
-  & :focus-visible {
-    outline: none;
-  }
+.field-box :focus-visible {
+  outline: none;
 }
 
 /* ------------------------------------------------------------------
