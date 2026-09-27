@@ -131,9 +131,17 @@ export function PhotoBlur({
    * Blur off's redraw came back empty (`REDRAW_FAILED`). `attempt` is what
    * "Try again" changes: the effect depends on it, so a retry reruns the
    * redraw rather than repeating a hand-off that never happened.
+   *
+   * A fresh object rather than a counter: nothing ever reads the value,
+   * only whether it changed, and a counter made that fact a coincidence —
+   * `current + 1` and `current - 1` are equally "different from last
+   * time", so a mutant that decremented was indistinguishable from the
+   * real code and survived. A new `{}` is a different reference by
+   * construction on every call, with no operator a mutant can flip to
+   * make it otherwise.
    */
   const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
+  const [attempt, setAttempt] = useState({});
 
   /**
    * Repaints and hands the caller the bytes that should be uploaded.
@@ -295,7 +303,7 @@ export function PhotoBlur({
         failure={failure}
         onRetry={() => {
           setFailed(false);
-          setAttempt((current) => current + 1);
+          setAttempt({});
         }}
       />
 
