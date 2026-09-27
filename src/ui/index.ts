@@ -1,4 +1,5 @@
 export { Bracketed } from "./Bracketed";
+export { DeskSplit, RailCard } from "./DeskSplit";
 export { Digits } from "./Digits";
 export { FileWell } from "./FileWell";
 export { FlowStep, LOG_FLOW } from "./FlowStep";
@@ -14,6 +15,7 @@ export type { PhotoStep } from "./photo-step";
 export { ProductLink } from "./ProductLink";
 export { Sheet } from "./Sheet";
 export { Skeleton } from "./Skeleton";
+export { StravaButton } from "./StravaButton";
 export {
   ChoiceField,
   ChoiceList,

@@ -148,6 +148,41 @@
       "when": 1790467001850,
       "tag": "0020_add_auth_rate_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790398358713,
+      "tag": "0021_add_strava_revocation_refresh_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1790438958646,
+      "tag": "0022_add_run_reminder_matched_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1790438970049,
+      "tag": "0023_add_strava_connection_connected_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1790438977189,
+      "tag": "0024_add_strava_prune_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1790483610105,
+      "tag": "0025_drop_strava_access_token_and_refresh_tracking",
+      "breakpoints": true
     }
   ]
 }
