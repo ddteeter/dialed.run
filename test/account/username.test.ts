@@ -57,6 +57,33 @@ function beforeBatch(nth: number, before: () => Promise<void>): typeof db {
   });
 }
 
+/**
+ * `db`, recording the size of every `batch()` call made through it. The two
+ * read batches (`isHeldByAnother`'s own check, `holdersNow`/`holdersBefore`
+ * pairs used while building a suggestion) are always two statements; only
+ * the write `claimUsername` attempts in its `try` block is five. Asserting
+ * on that shape catches a guard whose *result* the unique index and D-56
+ * end up reproducing anyway (so the final `HandleClaim` looks right either
+ * way) but that still let a doomed write reach the database when it should
+ * never have been attempted, and a repeat claim call the database at all
+ * when it should short-circuit before ever doing so.
+ */
+function trackBatches(): { db: typeof db; sizes: () => number[] } {
+  const sizes: number[] = [];
+  const batch = (...args: Parameters<typeof db.batch>) => {
+    sizes.push(args[0].length);
+    return db.batch(...args);
+  };
+  const tracked = new Proxy(db, {
+    get(target, property, receiver): unknown {
+      return property === "batch"
+        ? batch
+        : Reflect.get(target, property, receiver);
+    },
+  });
+  return { db: tracked, sizes: () => sizes };
+}
+
 async function handleOf(userId: string): Promise<string | null | undefined> {
   const [row] = await db
     .select({ username: userProfiles.username })
@@ -111,22 +138,53 @@ describe("claimUsername", () => {
 
   it("claiming the handle you have is a success that writes nothing new", async () => {
     const userId = await runner({ username: "dee_k" });
-    expect(await claimUsername(db, userId, "dee_k")).toStrictEqual({
+    const { db: tracked, sizes } = trackBatches();
+    expect(await claimUsername(tracked, userId, "dee_k")).toStrictEqual({
       kind: "claimed",
       username: "dee_k",
     });
     expect(await historyOf(userId)).toStrictEqual([]);
+    // Not just "nothing changed" — nothing was even asked of the database.
+    // Writing the same value back would land unnoticed (SQLite is happy to
+    // set a row to the value it already holds), so the early return itself,
+    // not its downstream effect, is what a test of this line has to catch.
+    expect(sizes()).toStrictEqual([]);
   });
 
   it("refuses a handle someone holds, in any case, with one free suggestion", async () => {
     await runner({ username: "maya_runs" });
     const userId = await runner({ cityLabel: "Portland, OR" });
-    expect(await claimUsername(db, userId, "maya_runs")).toStrictEqual({
+    const { db: tracked, sizes } = trackBatches();
+    expect(await claimUsername(tracked, userId, "maya_runs")).toStrictEqual({
       kind: "taken",
       username: "maya_runs",
       suggestion: "maya_runs_portland",
     });
     expect(await handleOf(userId)).toBeNull();
+    // Every batch this claim made was a read (two statements) — the
+    // five-statement write is never reached. A handle already held live is
+    // caught by the unique index too if the write is attempted anyway, so
+    // the final "taken" answer alone can't tell a skipped write from a
+    // doomed one; the shape of what ran can.
+    expect(sizes().length).toBeGreaterThan(0);
+    expect(sizes().every((size) => size === 2)).toBe(true);
+  });
+
+  it("refuses a handle another runner gave up, before any write is tried (D-56)", async () => {
+    const previous = await runner({ username: "maya_runs" });
+    await claimUsername(db, previous, "maya_trails");
+    const userId = await runner();
+    const { db: tracked, sizes } = trackBatches();
+    expect(await claimUsername(tracked, userId, "maya_runs")).toMatchObject({
+      kind: "taken",
+      username: "maya_runs",
+    });
+    expect(await handleOf(userId)).toBeNull();
+    // The retired half of the read is what refuses this: D-56's own check
+    // inside the write would refuse it too, so only the shape of what ran —
+    // reads alone, never the five-statement write — tells the two apart.
+    expect(sizes().length).toBeGreaterThan(0);
+    expect(sizes().every((size) => size === 2)).toBe(true);
   });
 
   it("compares as the unique index does, whatever case a row was written in", async () => {
@@ -242,6 +300,20 @@ describe("claimUsername", () => {
       suggestion: undefined,
     });
     expect(await handleOf(third)).toBeNull();
+  });
+
+  it("skips a suggestion candidate that would itself be a reserved name", async () => {
+    // "joe_adminville" contains "admin" and must never be offered, even
+    // though nobody holds it — the candidate's own reserved check, not just
+    // claimUsername's top-level one, has to reject it before the suggester
+    // ever asks the database, or falls through to a digit.
+    await runner({ username: "joe" });
+    const userId = await runner({ cityLabel: "Adminville" });
+    expect(await claimUsername(db, userId, "joe")).toStrictEqual({
+      kind: "taken",
+      username: "joe",
+      suggestion: "joe2",
+    });
   });
 
   it("never lets another runner take a handle someone gave up", async () => {
