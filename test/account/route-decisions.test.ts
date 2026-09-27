@@ -8,8 +8,15 @@ import {
 
 import { takenMessage } from "../../src/modules/account/handle-copy";
 import {
+  ACCOUNT_SECTION_TITLES,
+  accountSectionOrNotFound,
+  checkEmailSearch,
+  checkEmailView,
   gateOnHandle,
   startHandleIfNeeded,
+  startOverIfNoAddress,
+  tokenSearch,
+  unsubscribeSearch,
 } from "../../src/modules/account/route-decisions";
 import type { HandleGate } from "../../src/modules/account/username";
 
@@ -142,6 +149,88 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
     const after = await gateOnce("needs-handle", true);
     expect(after.asked).toBe(1);
     expect(isRedirect(after.thrown)).toBe(true);
+  });
+});
+
+function thrownBy(run: () => void): unknown {
+  try {
+    run();
+  } catch (error: unknown) {
+    return error;
+  }
+  return undefined;
+}
+
+describe("Au4's decisions", () => {
+  it("is about the signed-in runner's own address, or else the one sign-up sent to", () => {
+    expect(
+      checkEmailView({ email: "me@example.com" }, "typed@example.com"),
+    ).toStrictEqual({ email: "me@example.com", isSignedIn: true });
+    expect(checkEmailView(undefined, "typed@example.com")).toStrictEqual({
+      email: "typed@example.com",
+      isSignedIn: false,
+    });
+  });
+
+  it("sends a visitor with neither back to sign-up", () => {
+    for (const searchEmail of [undefined, ""]) {
+      const thrown = thrownBy(() => {
+        startOverIfNoAddress(undefined, searchEmail);
+      });
+      expect(isRedirect(thrown)).toBe(true);
+      expect(thrown).toMatchObject({ options: { to: "/auth/signup" } });
+    }
+    expect(
+      thrownBy(() => {
+        startOverIfNoAddress(undefined, "typed@example.com");
+      }),
+    ).toBeUndefined();
+    expect(
+      thrownBy(() => {
+        startOverIfNoAddress({ email: "me@example.com" }, undefined);
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe("the link searches", () => {
+  it("keep a string and drop anything else, so a mangled link still lands", () => {
+    expect(checkEmailSearch.parse({ email: "a@b.c" })).toStrictEqual({
+      email: "a@b.c",
+    });
+    expect(checkEmailSearch.parse({ email: ["a", "b"] }).email).toBeUndefined();
+    expect(tokenSearch.parse({ token: "verify.u.s" })).toStrictEqual({
+      token: "verify.u.s",
+    });
+    expect(tokenSearch.parse({ token: 7 }).token).toBeUndefined();
+    expect(
+      unsubscribeSearch.parse({ u: "u1", k: "run_reminder", s: "sig", x: 1 }),
+    ).toStrictEqual({ u: "u1", k: "run_reminder", s: "sig" });
+    expect(unsubscribeSearch.parse({})).toStrictEqual({});
+  });
+});
+
+describe("the account's sections (ACC-7, ACC-8, ACC-11)", () => {
+  it("are four, each with its heading, and anything else is X1", () => {
+    for (const section of ["sign-in", "email", "password", "notifications"]) {
+      expect(accountSectionOrNotFound(section)).toBe(section);
+    }
+    expect(ACCOUNT_SECTION_TITLES).toStrictEqual({
+      "sign-in": "Account",
+      email: "Email",
+      password: "Password",
+      notifications: "Notifications",
+    });
+    let thrown: unknown;
+    try {
+      accountSectionOrNotFound("export");
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({
+      isNotFound: true,
+      message: 'no account section "export"',
+    });
   });
 });
 

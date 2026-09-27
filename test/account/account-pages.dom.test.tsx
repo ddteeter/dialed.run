@@ -1,0 +1,461 @@
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { ChangeEmail } from "../../src/modules/account/components/ChangeEmail";
+import { CheckEmail } from "../../src/modules/account/components/CheckEmail";
+import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
+import { ConfirmEmailSheet } from "../../src/modules/account/components/ConfirmEmailSheet";
+import {
+  LinkLanding,
+  landingCopy,
+} from "../../src/modules/account/components/LinkLanding";
+import {
+  ResendLink,
+  SENT_FOR_MS,
+  limitedMessage,
+} from "../../src/modules/account/components/ResendLink";
+import type {
+  ChangeResult,
+  ResendResult,
+} from "../../src/modules/account/verification";
+
+/**
+ * Round 26 #11's pages, as a runner meets them: Au4, the link landings,
+ * the three Resend states, the "Confirm your email first" sheet and the
+ * nag, and ACC-8's email change.
+ */
+
+const PLACES = [
+  "/feed",
+  "/auth/login",
+  "/auth/signup",
+  "/account/check-email",
+] as const;
+
+async function renderWithRouter(element: ReactElement) {
+  const rootRoute = createRootRoute();
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/",
+    component: () => element,
+  });
+  const others = PLACES.map((path) =>
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path,
+      component: () => <p>at {path}</p>,
+    }),
+  );
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([indexRoute, ...others]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await router.load();
+  return { router, ...render(<RouterProvider router={router} />) };
+}
+
+function resender(...answers: (ResendResult | Error)[]) {
+  return vi.fn(() => {
+    const answer = answers.shift() ?? { status: "sent" };
+    return answer instanceof Error
+      ? Promise.reject(answer)
+      : Promise.resolve(answer);
+  });
+}
+
+const status = () => screen.getByRole("status");
+const resendButton = () => screen.getByRole("button", { name: "Resend link" });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("ResendLink", () => {
+  it("sends to the address it was given, says Sent ✓ for a minute, then rests", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({
+      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+    });
+    const resend = resender({ status: "sent" });
+    render(<ResendLink email="maya@example.com" resend={resend} />);
+
+    await user.click(resendButton());
+
+    expect(resend).toHaveBeenCalledWith({
+      data: { email: "maya@example.com" },
+    });
+    const sent = await screen.findByText(
+      "A new link is on its way. The old one no longer works.",
+    );
+    expect(sent.closest("[data-state]")).toHaveAttribute("data-state", "sent");
+    expect(sent.closest("p")).toHaveTextContent(/^Sent ✓ A new link/u);
+    expect(status()).toHaveTextContent(
+      "Sent. A new link is on its way. The old one no longer works.",
+    );
+
+    // Half the minute (the fake clock also creeps with real time, so the
+    // edges are not asserted to the millisecond).
+    act(() => {
+      vi.advanceTimersByTime(SENT_FOR_MS / 2);
+    });
+    expect(screen.getByText(/^Sent ✓/u)).toBeVisible();
+    act(() => {
+      vi.advanceTimersByTime(SENT_FOR_MS / 2);
+    });
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+    expect(status()).toHaveTextContent(/^$/u);
+    expect(SENT_FOR_MS).toBe(60_000);
+  });
+
+  it("brackets the button while it sends, and never disables it", async () => {
+    const pending = Promise.withResolvers<ResendResult>();
+    const resend = vi.fn(() => pending.promise);
+    const user = userEvent.setup();
+    render(<ResendLink email="maya@example.com" resend={resend} />);
+
+    await user.click(resendButton());
+    const button = screen.getByRole("button", { name: /Resend link|Sending/u });
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).not.toHaveAttribute("disabled");
+    // A second press while one is in flight is not a second send.
+    await user.click(button);
+    expect(resend).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      pending.resolve({ status: "sent" });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(resendButton()).not.toHaveAttribute("aria-busy");
+    });
+  });
+
+  it("bands NOT SENT when the hour's links are used up, naming when the next can go", async () => {
+    const until = 1_800_000_000;
+    const resend = resender({ status: "limited", until }, { status: "sent" });
+    const user = userEvent.setup();
+    render(<ResendLink email="maya@example.com" resend={resend} />);
+
+    await user.click(resendButton());
+
+    const band = await screen.findByText(limitedMessage(until));
+    expect(band.closest("[data-part=failure-band]")).toHaveTextContent(
+      /Not sent/u,
+    );
+    expect(limitedMessage(until)).toMatch(
+      /^That's 5 links this hour\. You can send another at \d{1,2}:\d{2} [AP]M\.$/u,
+    );
+    expect(status()).toHaveTextContent(`Not sent. ${limitedMessage(until)}`);
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+
+    // The band's Try again is a resend; a sent one clears the band.
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(resend).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
+    expect(screen.queryByText(limitedMessage(until))).toBeNull();
+  });
+
+  it("bands a failed send with its cause, and Try again sends again", async () => {
+    const resend = resender(new Error("down"), { status: "sent" });
+    const user = userEvent.setup();
+    render(<ResendLink email="maya@example.com" resend={resend} />);
+
+    await user.click(resendButton());
+
+    expect(await screen.findByText("Our end failed.")).toBeVisible();
+    expect(status()).toHaveTextContent("Not sent. Our end failed.");
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
+    expect(resend).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("CheckEmail (Au4)", () => {
+  it("says where the link went and how long it lasts, whoever signed up", async () => {
+    await renderWithRouter(
+      <CheckEmail
+        email="maya@example.com"
+        isSignedIn={false}
+        resend={resender()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Check your email" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Open it on any device to confirm the address\./u),
+    ).toHaveTextContent(
+      "We sent a link to maya@example.com. Open it on any device to confirm the address.",
+    );
+    expect(
+      screen.getByText(
+        "It works once, for 24 hours. Not there? Check spam, or send it again.",
+      ),
+    ).toBeVisible();
+    expect(resendButton()).toBeVisible();
+  });
+
+  it("signed out, offers Start over and log-in — and never says 'You're signed in'", async () => {
+    await renderWithRouter(
+      <CheckEmail
+        email="maya@example.com"
+        isSignedIn={false}
+        resend={resender()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Start over" })).toHaveAttribute(
+      "href",
+      "/auth/signup",
+    );
+    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
+      "href",
+      "/auth/login",
+    );
+    expect(screen.getByText(/^Carry on without confirming\?/u)).toBeVisible();
+    expect(screen.queryByText(/signed in/u)).toBeNull();
+  });
+
+  it("signed in, says so and offers the closet, as round 26 draws it", async () => {
+    await renderWithRouter(
+      <CheckEmail email="maya@example.com" isSignedIn resend={resender()} />,
+    );
+    expect(screen.getByText(/^You're signed in\./u)).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Carry on to your closet ›" }),
+    ).toHaveAttribute("href", "/");
+    expect(screen.queryByRole("link", { name: "Start over" })).toBeNull();
+  });
+});
+
+describe("LinkLanding", () => {
+  it.each([
+    [
+      { state: "confirmed", purpose: "verify", email: "m@example.com" },
+      "Confirmed",
+      "text-dialed-text",
+      "Email confirmed",
+      "Your runs can go on the feed now.",
+      "Open the feed",
+      "/feed",
+    ],
+    [
+      { state: "confirmed", purpose: "change", email: "new@example.com" },
+      "Confirmed",
+      "text-dialed-text",
+      "Email changed",
+      "Your account's email is now new@example.com.",
+      "Open dialed.run",
+      "/",
+    ],
+    [
+      { state: "used" },
+      "Already confirmed",
+      "text-dialed-text",
+      "Your email is confirmed",
+      "That link was already used, and the address is confirmed. Nothing to do.",
+      "Open dialed.run",
+      "/",
+    ],
+    [
+      { state: "expired" },
+      "Link expired",
+      "text-cold-text",
+      "That link has run out",
+      "Links work for 24 hours. Log in and we'll send a fresh one.",
+      "Log in to resend",
+      "/auth/login?redirect=%2Faccount%2Fcheck-email",
+    ],
+  ] as const)(
+    "lands %o on its kicker, heading, sentence and way on",
+    async (landing, kicker, tone, heading, body, action, href) => {
+      await renderWithRouter(<LinkLanding landing={landing} />);
+      expect(screen.getByText(kicker)).toHaveClass(tone);
+      expect(
+        screen.getByRole("heading", { level: 1, name: heading }),
+      ).toBeVisible();
+      expect(screen.getByText(body)).toBeVisible();
+      expect(screen.getByRole("link", { name: action })).toHaveAttribute(
+        "href",
+        href,
+      );
+      expect(
+        screen.getByText(body).closest("[data-part=landing]"),
+      ).toHaveAttribute("data-state", landing.state);
+    },
+  );
+
+  it("never promises a queued share (decision D-50)", () => {
+    const copy = landingCopy({
+      state: "confirmed",
+      purpose: "verify",
+      email: "m@example.com",
+    });
+    expect(copy.body).not.toMatch(/shared while waiting/u);
+  });
+});
+
+describe("the confirm-first sheet and the nag", () => {
+  it("opens as a sheet naming the address, with Resend and Close", async () => {
+    const onClose = vi.fn();
+    const resend = resender();
+    const user = userEvent.setup();
+    render(
+      <ConfirmEmailSheet
+        open
+        onClose={onClose}
+        email="maya@example.com"
+        resend={resend}
+      />,
+    );
+    const sheet = screen.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    expect(
+      within(sheet).getByRole("heading", { name: "Confirm your email first" }),
+    ).toBeVisible();
+    expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
+      "We sent a link to maya@example.com.",
+    );
+    await user.click(
+      within(sheet).getByRole("button", { name: "Resend link" }),
+    );
+    expect(resend).toHaveBeenCalledWith({
+      data: { email: "maya@example.com" },
+    });
+    await user.click(within(sheet).getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("nags an unconfirmed runner once, and says nothing to a confirmed one or nobody", () => {
+    const resend = resender();
+    const { rerender } = render(
+      <ConfirmEmailBand
+        account={{ email: "maya@example.com", isVerified: false }}
+        resend={resend}
+      />,
+    );
+    const band = screen.getByRole("complementary", {
+      name: "Confirm your email",
+    });
+    expect(band).toHaveTextContent(/^Confirm your email to share runs\./u);
+    expect(
+      within(band).getByRole("button", { name: "Resend link" }),
+    ).toBeVisible();
+    // No dismiss: it goes once the address is confirmed.
+    expect(
+      within(band).queryByRole("button", { name: /dismiss|close/iu }),
+    ).toBeNull();
+
+    rerender(
+      <ConfirmEmailBand
+        account={{ email: "maya@example.com", isVerified: true }}
+        resend={resend}
+      />,
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
+    rerender(<ConfirmEmailBand account={undefined} resend={resend} />);
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+});
+
+function renderChange(
+  options: Readonly<{
+    isVerified?: boolean;
+    answer?: ChangeResult;
+  }> = {},
+) {
+  const request = vi.fn(() =>
+    Promise.resolve(options.answer ?? ({ status: "sent" } as const)),
+  );
+  const resend = resender();
+  render(
+    <ChangeEmail
+      current="old@example.com"
+      isVerified={options.isVerified ?? true}
+      request={request}
+      resend={resend}
+    />,
+  );
+  return { request, resend, user: userEvent.setup() };
+}
+
+const newEmailField = () => screen.getByRole("textbox", { name: "New email" });
+const sendLink = () => screen.getByRole("button", { name: "Send link" });
+
+describe("ChangeEmail (ACC-8)", () => {
+  it("sends the link to the new address and says nothing moves until it is opened", async () => {
+    const { request, user } = renderChange();
+    expect(screen.getByText(/^Now /u)).toHaveTextContent(
+      "Now old@example.com. We'll send a link to the new address, and the account moves when you open it.",
+    );
+    await user.type(newEmailField(), "new@example.com");
+    await user.click(sendLink());
+
+    expect(request).toHaveBeenCalledWith({
+      data: { email: "new@example.com" },
+    });
+    const sent = await screen.findByText(/^Sent ✓/u);
+    expect(sent.closest("p")).toHaveTextContent(
+      "Sent ✓ Open the link we sent to the new address. Your email stays old@example.com until you do.",
+    );
+  });
+
+  it("refuses a malformed address in the field, before the round trip", async () => {
+    const { request, user } = renderChange();
+    await user.type(newEmailField(), "not-an-address");
+    await user.click(sendLink());
+    expect(
+      await screen.findByText("That does not look like an email address."),
+    ).toBeVisible();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("bands the hour's limit", async () => {
+    const until = 1_800_000_000;
+    const { request, user } = renderChange({
+      answer: { status: "limited", until },
+    });
+    await user.type(newEmailField(), "new@example.com");
+    await user.click(sendLink());
+    expect(await screen.findByText(limitedMessage(until))).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it("while unconfirmed, opens the confirm-first sheet instead of sending", async () => {
+    const { request, user } = renderChange({ isVerified: false });
+    await user.type(newEmailField(), "new@example.com");
+    await user.click(sendLink());
+    expect(request).not.toHaveBeenCalled();
+    const sheet = screen.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
+      "old@example.com",
+    );
+    await user.click(within(sheet).getByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Confirm your email first" }),
+      ).toBeNull();
+    });
+  });
+
+  it("opens the sheet when the server says the address is not confirmed", async () => {
+    const { user } = renderChange({ answer: { status: "unverified" } });
+    await user.type(newEmailField(), "new@example.com");
+    await user.click(sendLink());
+    expect(
+      await screen.findByRole("dialog", { name: "Confirm your email first" }),
+    ).toBeVisible();
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+  });
+});
