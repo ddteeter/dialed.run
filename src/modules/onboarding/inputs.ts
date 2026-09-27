@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { roundCoordinate } from "../../lib/coords";
 import { ulidSchema } from "../../lib/ids";
 
 import {
@@ -9,6 +10,17 @@ import {
   tempUnitSchema,
   thermalLevelSchema,
 } from "../../lib/contracts";
+
+/**
+ * A profile's coordinates, rounded as they are parsed (task 127, STR-14;
+ * D-110): the fallback point is often home, and nothing needs more than
+ * `lib/coords`' two places. Rounding here, at the boundary both writers of
+ * the place parse through (O1's calibration and Your conditions' Use
+ * this), means `onboarding/profile.ts` stores what it is given and an
+ * absent coordinate never reaches the rounding at all.
+ */
+const profileLatitude = latitudeSchema.transform(roundCoordinate);
+const profileLongitude = longitudeSchema.transform(roundCoordinate);
 
 /**
  * What O1 collects: how warm the person runs, where they run, and which
@@ -37,8 +49,8 @@ export const calibrationInput = z.object({
     .min(1, { message: "Tell us where you run, or skip this." })
     .max(200)
     .optional(),
-  lat: latitudeSchema.optional(),
-  lng: longitudeSchema.optional(),
+  lat: profileLatitude.optional(),
+  lng: profileLongitude.optional(),
   tempUnit: tempUnitSchema.optional(),
   distanceUnit: distanceUnitSchema.optional(),
 });
@@ -59,8 +71,8 @@ export const CITY_UNCONFIRMED = "Press Find, or clear the field to skip.";
  */
 export const placeInput = z.object({
   cityLabel: z.string().trim().min(1).max(200),
-  lat: latitudeSchema,
-  lng: longitudeSchema,
+  lat: profileLatitude,
+  lng: profileLongitude,
 });
 export type Place = z.infer<typeof placeInput>;
 

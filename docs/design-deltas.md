@@ -392,6 +392,18 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     around that mark — size, spacing against the label, and the in-flight
     and failed states.
 
+30. **Two feed words round 26 asks for and does not give (task 129).**
+    - **The consensus bar's word.** Round 26 #9 puts a word on each
+      consensus bar so colour is never alone (rule 10). The build reads
+      "Most" on the leading bar and "Some" on the rest
+      (`feed/components/ConditionsTab.tsx`, `BAR_WORD`) — placeholder copy
+      composed from existing type. **The ask:** the words.
+    - **The bell with a count it does not draw.** The ruling names two
+      accessible names, "Notifications" and "Notifications, {n} new". The
+      dot carries no digits; the name uses the unread count as digits and
+      the badge stops at `9+`. **The ask:** confirm the name says the
+      number while the dot does not.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25

@@ -13,7 +13,7 @@ build on PRs that are not merged yet; those are sequenced, not guessed at.
 
 - **FEED-4** — `followingFeedStatement(db, viewerId, cursor)` scopes by
   `user_id = ? OR user_id IN (SELECT followee_id FROM follows WHERE
-  follower_id = ?)`. Two bound ids however many follows. EXPLAIN before and
+follower_id = ?)`. Two bound ids however many follows. EXPLAIN before and
   after goes in the PR; a test pins "no SCAN" on both tables at 150 follows.
 - **FEED-3** — `bellState` takes the awaiting set from `runsAwaitingVerdict`
   (passed in by `bellStateFn`: notifications → runs → notifications would be
@@ -51,8 +51,10 @@ build on PRs that are not merged yet; those are sequenced, not guessed at.
 FEED-14 is descoped (owner, 2026-09-26: entries are for signed-in runners
 only, and every link previews as the generic card). FEED-6/7
 (128's predicate, 126's deletion state), FEED-10 (126's usernames), FEED-11
-(126's verification), US date order (#113's formatter), coordinate rounding
-in `savePlace` (#113's `roundCoordinate`), the enum drop (#112).
+(126's verification). Landed once their PRs merged: US date order (#113's
+formatter, shared through `lib/dates`), coordinate rounding in `onboarding/inputs.ts`
+(#113's `roundCoordinate`, so both O1 and Your conditions store two decimal
+places), the enum drop (#112).
 
 ## Test plan
 

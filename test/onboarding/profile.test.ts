@@ -237,6 +237,26 @@ describe("placeInput", () => {
   });
 });
 
+describe("a profile's coordinates are rounded where they are parsed (STR-14, D-110)", () => {
+  const PRECISE = { ...PORTLAND, lat: 45.523456, lng: -122.676789 };
+
+  it("rounds a place from Your conditions to two decimal places", () => {
+    expect(placeInput.parse(PRECISE)).toStrictEqual(PORTLAND);
+  });
+
+  it("rounds O1's calibration the same way, and leaves absent coordinates absent", () => {
+    expect(
+      calibrationInput.parse({ thermalLevel: 0, ...PRECISE }),
+    ).toMatchObject({ lat: PORTLAND.lat, lng: PORTLAND.lng });
+    const labelOnly = calibrationInput.parse({
+      thermalLevel: 0,
+      cityLabel: PORTLAND.cityLabel,
+    });
+    expect(labelOnly).not.toHaveProperty("lat");
+    expect(labelOnly).not.toHaveProperty("lng");
+  });
+});
+
 describe("CITY_UNCONFIRMED", () => {
   it("says the two ways on, as round 26 #12 draws it", () => {
     expect(CITY_UNCONFIRMED).toBe("Press Find, or clear the field to skip.");
