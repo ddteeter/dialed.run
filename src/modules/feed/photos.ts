@@ -17,6 +17,7 @@ import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
 import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
+import { entryPhotoIdOf, entryPhotoKeyFor } from "../../lib/entry-photo-key";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
@@ -28,14 +29,6 @@ export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 function db() {
   return drizzle(env.DIALED_CORE);
-}
-
-export function photoKeyFor(
-  userId: string,
-  entryId: string,
-  photoId: string,
-): string {
-  return `entries/${userId}/${entryId}/${photoId}`;
 }
 
 export class InvalidPhotoError extends Error {}
@@ -124,7 +117,7 @@ export async function uploadPhoto(
   // expiry so orphans are permanent, but the failure needs D1 to fail
   // between two calls and the cost is storage, not correctness.
   const photoId = newUlid();
-  const key = photoKeyFor(input.userId, input.entryId, photoId);
+  const key = entryPhotoKeyFor(input.userId, input.entryId, photoId);
   const stored = await reencoded(uploaded);
   await env.MEDIA.put(key, stored, {
     httpMetadata: { contentType: "image/jpeg" },
@@ -200,7 +193,7 @@ const ENTRY_PHOTO_QUALITY = 88;
  * photos require a session, so the bytes do too.
  *
  * One read, joined, and found by primary key: the photo's id is the key's
- * last segment (`photoKeyFor`), and `entry_photos` has no index on
+ * last segment (`entryPhotoKeyFor`), and `entry_photos` has no index on
  * `photo_key` — looking it up by key alone scanned the table on every
  * image a feed page drew. The key is still compared, so a well-formed id
  * under somebody else's prefix finds nothing.
@@ -211,7 +204,7 @@ export async function isPhotoVisible(
 ): Promise<boolean> {
   if (viewerId === undefined) return false;
   const thisPhoto = and(
-    eq(entryPhotos.id, photoIdOf(photoKey)),
+    eq(entryPhotos.id, entryPhotoIdOf(photoKey)),
     eq(entryPhotos.photoKey, photoKey),
   );
   const shownToOthers = and(
@@ -226,13 +219,6 @@ export async function isPhotoVisible(
     .where(and(thisPhoto, allowed))
     .limit(1);
   return rows.length > 0;
-}
-
-/**
-The photo's id, which `photoKeyFor` puts last in its key.
-*/
-function photoIdOf(photoKey: string): string {
-  return photoKey.slice(photoKey.lastIndexOf("/") + 1);
 }
 
 export async function getPhotoObject(

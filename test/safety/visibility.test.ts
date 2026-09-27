@@ -4,16 +4,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { recentPublicEntriesStatement } from "../../src/modules/feed/consensus";
 import { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
-import {
-  isPhotoVisible,
-  photoKeyFor,
-  photoResponse,
-} from "../../src/modules/feed/photos";
+import { isPhotoVisible, photoResponse } from "../../src/modules/feed/photos";
 import { setUsefulReaction } from "../../src/modules/feed/reactions";
 import {
   banUser,
@@ -58,7 +55,7 @@ async function postedEntry(): Promise<{
   const runId = await makeRun({ userId: author });
   const entryId = await makeEntry({ userId: author, runId });
   const photoId = newUlid();
-  const photoKey = photoKeyFor(author, entryId, photoId);
+  const photoKey = entryPhotoKeyFor(author, entryId, photoId);
   await core().insert(entryPhotos).values({
     id: photoId,
     entryId,

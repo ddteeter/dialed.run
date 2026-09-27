@@ -293,8 +293,7 @@ async function hydrateEntries(
       // onto a second line and the `?.` lives there, so `next-line` was
       // pointing at the key and covering nothing.
       // Stryker disable OptionalChaining
-      authorUsername:
-        authorsById.get(entry.userId)?.username ?? undefined,
+      authorUsername: authorsById.get(entry.userId)?.username ?? undefined,
       // Stryker restore OptionalChaining
       runId: entry.runId,
       runTitle: run?.title ?? "Run",

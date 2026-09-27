@@ -4,8 +4,13 @@ import { ForbiddenError, getEntryDetail } from "../../src/modules/feed/entries";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { outfitEntries } from "../../src/db/schema-core";
+import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import {
+  entryPhotoIdOf,
+  entryPhotoKeyFor,
+  entryPhotoPrefix,
+} from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { imageDimensions } from "../../src/lib/photo-pipeline";
 import {
@@ -15,7 +20,6 @@ import {
   getPhotoObject,
   isPhotoVisible,
   photoResponse,
-  photoKeyFor,
   photoUploadFrom,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
@@ -50,6 +54,31 @@ describe("entry photos", () => {
     expect(key.startsWith(`entries/${userId}/${entryId}/`)).toBe(true);
     const detail = await getEntryDetail(entryId, userId);
     expect(detail?.photoKeys).toEqual([key]);
+  });
+
+  it("writes a key the drainer's reading of it finds the row by", async () => {
+    // The upload writes with `lib/entry-photo-key` and the outbox drainer
+    // reads with it (`ops/outbox-handlers.ts`): one spelling, so the id
+    // the reader takes from the key is the row the writer made.
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+
+    const key = await uploadPhoto({
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    });
+
+    const photoId = entryPhotoIdOf(key);
+    expect(key).toBe(entryPhotoKeyFor(userId, entryId, photoId));
+    expect(key.startsWith(entryPhotoPrefix(userId, entryId))).toBe(true);
+    const rows = await drizzle(env.DIALED_CORE)
+      .select({ entryId: entryPhotos.entryId, photoKey: entryPhotos.photoKey })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId));
+    expect(rows).toEqual([{ entryId, photoKey: key }]);
   });
 
   it("refuses to add a photo to another user's entry, and says so", async () => {
@@ -125,7 +154,10 @@ describe("entry photos", () => {
     // A made-up key under the same convention that was never actually
     // uploaded is never visible either.
     expect(
-      await isPhotoVisible(photoKeyFor(owner, entryId, "nonexistent"), owner),
+      await isPhotoVisible(
+        entryPhotoKeyFor(owner, entryId, "nonexistent"),
+        owner,
+      ),
     ).toBe(false);
   });
 });
