@@ -210,7 +210,9 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       page,
       "No weather for that hour — the time and conditions go back",
     );
-    const still = rail.locator('[data-part="failure-band"]');
+    // The band holds Try again, so it is in the primary column, not the rail.
+    const still = page.locator('[data-part="failure-band"]');
+    await expect(rail.locator('[data-part="failure-band"]')).toHaveCount(0);
     await expect(still).toContainText(`Still ${clockOf(fileStart)}`, {
       timeout: 20_000,
     });
