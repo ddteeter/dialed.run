@@ -88,7 +88,8 @@ places), the enum drop (#112).
   author row, D's heading, G, H and search. `/@{$handle}` is a top-level
   route (the URL is the ruling's); `profileAtHandle` reads `lookUpHandle`
   and answers runner / own / changed / nothing, and `orHandlePage` sends
-  own to G and nothing back to the feed. S1 ("@x found your … run useful")
+  own to G and nothing back to the feed. `/feed/u/$userId` now
+  redirects to the runner's current `/@handle`, so there is one H. S1 ("@x found your … run useful")
   is not built — there is no useful notification to style.
 - **FEED-11** stays sequenced: 126's verification has not landed.
 
