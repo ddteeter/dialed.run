@@ -35,14 +35,20 @@ export function runConditions(
     condition: "Light rain",
     timeZone: "America/Chicago",
     isSetByYou: false,
+    sky: undefined,
     ...overrides,
   };
 }
 
 /**
-A band chosen in R2b: 10–15 °C, stored at its middle, "55°F · SET BY YOU".
+A band chosen in R2b: 10–15 °C and rain, stored at its middle, read back
+as "SET · 50–59° · RAIN" — never the middle.
 */
-export const SET_BY_YOU = runConditions({ tempC: 12.5, isSetByYou: true });
+export const SET_BY_YOU = runConditions({
+  tempC: 12.5,
+  isSetByYou: true,
+  sky: "rain",
+});
 
 export function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
   return {
@@ -65,6 +71,7 @@ const PLACES = [
   "/runs",
   "/runs/new",
   "/runs/strava",
+  "/runs/strava-connect",
   "/runs/$runId",
   "/feed/attach/$runId",
   "/feed/verdict/$entryId",

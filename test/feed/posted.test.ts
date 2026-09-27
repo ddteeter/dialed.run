@@ -40,7 +40,7 @@ describe("postedLabel", () => {
   it("names the weekday inside a week, and the date past it", () => {
     expect(postedLabel(NOON - 2 * DAY, NOON)).toBe("Sun · 12:00 PM");
     expect(postedLabel(NOON - 6 * DAY, NOON)).toBe("Wed · 12:00 PM");
-    expect(postedLabel(NOON - 7 * DAY, NOON)).toBe("Tue 26 Aug · 12:00 PM");
+    expect(postedLabel(NOON - 7 * DAY, NOON)).toBe("Tue Aug 26 · 12:00 PM");
   });
 
   it("counts days and prints the time in the run's own zone", () => {

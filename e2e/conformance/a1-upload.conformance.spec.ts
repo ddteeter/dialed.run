@@ -151,7 +151,7 @@ test.describe("A1 · upload", () => {
     // Row for row: the file and REPLACE, the kicker, the headline, the
     // facts line, the sentence. The headline and the sentence are the
     // board's words; the facts line is the run's day and time, which the
-    // app writes day-first ("Sat 29 Aug") as every other screen does.
+    // app writes month first ("Sat Aug 29", round 26 item 9) everywhere.
     expect(built).toHaveLength(drawnCard.length);
     expect(built[0]).toEqual(drawnCard[0]);
     expect(built[1]).toEqual(drawnCard[1]);

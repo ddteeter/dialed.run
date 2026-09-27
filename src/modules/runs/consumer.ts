@@ -28,12 +28,19 @@ import { createNotification, notificationInsert } from "../notifications";
 import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
+  type DeauthorizeJob,
   type ImportJob,
   type ReminderJob,
   type RevokeJob,
 } from "./queue-messages";
 import type { StravaApi } from "./strava/api";
-import { findDuplicateRun, initialWeatherStatus } from "./service";
+import { deauthorizeAthlete } from "./strava/deauthorize";
+import {
+  pairRunWith,
+  pairWithReminder,
+  unpairedUploadFor,
+} from "./strava/reminder-match";
+import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 
 export interface ConsumerDeps {
   db: CoreDb;
@@ -53,7 +60,7 @@ export interface ConsumerDeps {
   Present when Strava credentials are configured; the revoke job is a
   no-op without them.
   */
-  stravaApi?: Pick<StravaApi, "deauthorize"> | undefined;
+  stravaApi?: Pick<StravaApi, "revoke"> | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -165,8 +172,7 @@ async function processImportJob(
     startedAt: draft.startedAt,
     durationS: draft.durationS,
     distanceM: draft.distanceM,
-    lat: draft.indoor ? undefined : draft.lat,
-    lng: draft.indoor ? undefined : draft.lng,
+    ...storedStart(draft),
     indoor: draft.indoor,
     title: draft.title,
     weatherStatus,
@@ -182,10 +188,23 @@ async function processImportJob(
     }
   }
 
-  await deps.db
-    .update(imports)
-    .set({ status: "done", runId })
-    .where(eq(imports.id, importRow.id));
+  // The import is done, and the Strava reminder this file answers — if it
+  // had one — is answered (round 25; one upload clears one reminder). One
+  // batch: all three record the same fact, that this run is now in the log.
+  const pairing = pairWithReminder(
+    deps.db,
+    importRow.userId,
+    runId,
+    draft.startedAt + draft.durationS,
+  );
+  await deps.db.batch([
+    deps.db
+      .update(imports)
+      .set({ status: "done", runId })
+      .where(eq(imports.id, importRow.id)),
+    pairing.pairRun,
+    pairing.markRead,
+  ]);
 
   await createNotification(deps.db, {
     userId: importRow.userId,
@@ -194,6 +213,14 @@ async function processImportJob(
     body: "Add your kit for the run you just imported.",
   });
 }
+
+/**
+ * The S1 row a run landing on Strava leaves (round 25, "Strava reminds.
+ * You upload."). Timed by when the run landed, which is the row's own
+ * time; it names nothing about the run, because we know nothing about it.
+ */
+const STRAVA_REMINDER_BODY =
+  "New run on Strava · Add it here: upload the file, then what you wore";
 
 /**
  * The work the webhook used to do before it could reply. Doing it here
@@ -235,15 +262,32 @@ async function processReminderJob(
     return;
   }
 
+  // A run whose file is already in the log (round 25: one reminder per
+  // run, one upload per reminder): pair them, write no reminder, and stop.
+  const uploaded = await unpairedUploadFor(
+    deps.db,
+    connected.userId,
+    job.eventTime,
+  );
+  if (uploaded !== undefined) {
+    await deps.db.batch([claim, pairRunWith(deps.db, uploaded, job.eventTime)]);
+    return;
+  }
+
+  // STR-9's call site: the reminder email (decision D-43; round 26 #19) is
+  // scheduled here, after the batch, once task 126 publishes `modules/email`
+  // and the runner's switch (ACC-11) — 20 minutes after the run landed,
+  // with the skip rule checked when it is due.
   await deps.db.batch([
     claim,
-    // D-33: zero activity data in the body — deep link is /runs/new, not a
-    // pre-created run.
+    // D-33: zero activity data in the body — no distance, no time, no
+    // name. Round 25's words: Strava tells us a run happened, we remind,
+    // the runner adds the file.
     notificationInsert(deps.db, {
       userId: connected.userId,
       kind: "strava_reminder",
       subjectId: job.objectId,
-      body: "New run on Strava — log your kit?",
+      body: STRAVA_REMINDER_BODY,
     }),
   ]);
 }
@@ -251,8 +295,9 @@ async function processReminderJob(
 /**
  * Revoke a Strava grant the user has already been disconnected from.
  *
- * Idempotent by nature: revoking an already-revoked token is a no-op
- * upstream, and there is no local state left to reconcile. A failure here
+ * Idempotent by nature: Strava answers 200 to a revoke "whether or not the
+ * token was found", so a grant already dead settles the row exactly as a
+ * live one does, and there is no local state left to reconcile. A failure here
  * throws so the queue retries; exhausting retries puts it in the DLQ,
  * which is where a grant we could not revoke should end up.
  */
@@ -280,7 +325,7 @@ async function processRevokeJob(
     .limit(1);
   if (pending === undefined) return; // already revoked
 
-  await deps.stravaApi.deauthorize(pending.accessToken);
+  await deps.stravaApi.revoke(pending.refreshToken);
   // Only after Strava confirms. A failure above throws, the queue retries,
   // and the row stays — which is the whole point of writing it down.
   await deps.db
@@ -290,9 +335,13 @@ async function processRevokeJob(
 
 async function processJob(
   deps: ConsumerDeps,
-  job: ImportJob | ReminderJob | RevokeJob,
+  job: ImportJob | ReminderJob | RevokeJob | DeauthorizeJob,
 ): Promise<void> {
   switch (job.type) {
+    case "strava_deauthorize": {
+      await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+      return;
+    }
     case "import": {
       await processImportJob(deps, job);
       return;
@@ -324,6 +373,11 @@ DLQ ownership (102 §8): a dead-lettered ImportJob marks the import `failed`
 with a user-facing reason and notifies the user — no import ends in
 silence. A dead-lettered ReminderJob has no user-visible entity to mark, so
 it only reports to Sentry.
+
+A dead-lettered deauthorization is different: it is a deletion Strava's
+API Policy §7.4 requires, and nothing else records that it is owed (law 6).
+So the DLQ performs it — the same idempotent delete the consumer would have
+made — rather than only reporting that it did not happen.
 */
 export async function handleImportsDlqBatch(
   batch: MessageBatch,
@@ -331,6 +385,10 @@ export async function handleImportsDlqBatch(
 ): Promise<void> {
   await deadLetterEach(batch, importsQueueMessageSchema, {
     onJob: async (job) => {
+      if (job.type === "strava_deauthorize") {
+        await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+        return;
+      }
       if (job.type !== "import") return;
       const importRow = await importById(deps.db, job.importId);
       if (

@@ -11,6 +11,7 @@ import { formatTemp, precipClassOf } from "../../../lib/temperature";
 import { toggledIn } from "../../../lib/toggled-in";
 import {
   ControlFailureBand,
+  DeskSplit,
   FileWell,
   FlowStep,
   FormStatus,
@@ -18,6 +19,7 @@ import {
   LOG_FLOW,
   Mono,
   PendingLabel,
+  RailCard,
   useControlAction,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
@@ -274,117 +276,148 @@ export function AttachKit({
 
   return (
     <FlowStep step={LOG_FLOW.attach}>
-      <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8">
-        <header
-          data-slot="header"
-          data-ground="ink"
-          className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink"
-        >
-          <h1 className="m-0 font-display text-heading">What did you wear?</h1>
-          <Mono step="xs" className="text-teal">
-            {subLine(context, units, selected.size)}
-          </Mono>
-        </header>
-        <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
-
-        <MostLikely
-          suggestion={suggestion}
-          isOpen={isCardOpen}
-          conditions={conditions}
-          units={units}
-          names={names}
-          onAccept={next}
-          onChange={(itemIds) => {
-            setSelected(new Set(itemIds));
-            setIsCardOpen(false);
-          }}
-        />
-
-        <KitList
-          groups={context.groups}
-          conditions={conditions}
-          units={units}
-          isFiltered={isFiltered}
-          onFilter={setIsFiltered}
-          isOr={suggestion !== "none"}
-          selected={selected}
-          onToggle={toggle}
-          onOpen={setSheetGroup}
-          error={kitError}
-        />
-        <KitSheet
-          group={openGroup}
-          conditions={conditions}
-          units={units}
-          selected={selected}
-          onToggle={toggle}
-          onClose={() => {
-            setSheetGroup(undefined);
-          }}
-        />
-
-        <FileWell
-          part="photo-well"
-          copy={{
-            kicker: "Outfit photo · optional",
-            label: "Add a photo",
-            wideLabel: "Drop a photo, or browse",
-            overLabel: "Let go to add it",
-            pendingLabel: "Adding",
-            hint: "Flat on the floor works best.",
-          }}
-          pending={photoStep !== undefined || isSendingPhoto}
-          accept={photoAcceptAttribute}
-          error={photoError}
-          preview={
-            photo === undefined
-              ? undefined
-              : { src: photo.url, alt: "Your outfit" }
-          }
-          onRemove={() => {
-            setPhoto(undefined);
-          }}
-          onFiles={onPhotoFiles}
-        />
-        {photoStep === undefined
-          ? undefined
-          : photoStep.step(photoStep.file, keep, setSaid)}
-
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            data-slot="primary-action"
-            {...inFlight(attach.pending)}
-            onClick={() => {
-              next([...selected]);
-            }}
-            className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
+      <DeskSplit rail={<AttachRail context={context} units={units} />}>
+        <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:mx-0 wide:max-w-column">
+          <header
+            data-slot="header"
+            data-ground="ink"
+            className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink"
           >
-            <PendingLabel
-              label="Next — did it work?"
-              pendingLabel="Attaching"
-              pending={attach.pending}
-            />
-          </button>
-          <ControlFailureBand
-            failure={attach.failure}
-            onRetry={attach.retry}
-            retryRef={attach.retryRef}
+            <h1 className="m-0 font-display text-heading">
+              What did you wear?
+            </h1>
+            <Mono step="xs" className="text-teal">
+              {subLine(context, units, selected.size)}
+            </Mono>
+          </header>
+          <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
+
+          <MostLikely
+            suggestion={suggestion}
+            isOpen={isCardOpen}
+            conditions={conditions}
+            units={units}
+            names={names}
+            onAccept={next}
+            onChange={(itemIds) => {
+              setSelected(new Set(itemIds));
+              setIsCardOpen(false);
+            }}
           />
-          <p className="m-0 text-center text-small text-muted">
-            Not now —{" "}
-            <Link
-              to="/runs"
-              data-target="inline"
-              className="font-semibold text-cold-text"
+
+          <KitList
+            groups={context.groups}
+            conditions={conditions}
+            units={units}
+            isFiltered={isFiltered}
+            onFilter={setIsFiltered}
+            isOr={suggestion !== "none"}
+            selected={selected}
+            onToggle={toggle}
+            onOpen={setSheetGroup}
+            error={kitError}
+          />
+          <KitSheet
+            group={openGroup}
+            conditions={conditions}
+            units={units}
+            selected={selected}
+            onToggle={toggle}
+            onClose={() => {
+              setSheetGroup(undefined);
+            }}
+          />
+
+          <FileWell
+            part="photo-well"
+            copy={{
+              kicker: "Outfit photo · optional",
+              label: "Add a photo",
+              wideLabel: "Drop a photo, or browse",
+              overLabel: "Let go to add it",
+              pendingLabel: "Adding",
+              hint: "Flat on the floor works best.",
+            }}
+            pending={photoStep !== undefined || isSendingPhoto}
+            accept={photoAcceptAttribute}
+            error={photoError}
+            preview={
+              photo === undefined
+                ? undefined
+                : { src: photo.url, alt: "Your outfit" }
+            }
+            onRemove={() => {
+              setPhoto(undefined);
+            }}
+            onFiles={onPhotoFiles}
+          />
+          {photoStep === undefined
+            ? undefined
+            : photoStep.step(photoStep.file, keep, setSaid)}
+
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              data-slot="primary-action"
+              {...inFlight(attach.pending)}
+              onClick={() => {
+                next([...selected]);
+              }}
+              className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
             >
-              leave it in the queue
-            </Link>
-            .
-          </p>
+              <PendingLabel
+                label="Next — did it work?"
+                pendingLabel="Attaching"
+                pending={attach.pending}
+              />
+            </button>
+            <ControlFailureBand
+              failure={attach.failure}
+              onRetry={attach.retry}
+              retryRef={attach.retryRef}
+            />
+            <p className="m-0 text-center text-small text-muted">
+              Not now —{" "}
+              <Link
+                to="/runs"
+                data-target="inline"
+                className="font-semibold text-cold-text"
+              >
+                leave it in the queue
+              </Link>
+              .
+            </p>
+          </div>
         </div>
-      </div>
+      </DeskSplit>
     </FlowStep>
+  );
+}
+
+/**
+ * A2's rail at the desk (round 25): the run the kit is for, read-only.
+ *
+ * The board's A2 rail is the evidence behind MOST LIKELY — the runner's
+ * last three runs in the band, with their kit and verdict. That history is
+ * not loaded on this screen yet, so the rail carries the run itself until
+ * it is, rather than a guess at the evidence.
+ */
+function AttachRail({
+  context,
+  units,
+}: Readonly<{ context: AttachContext; units: Units }>): JSX.Element {
+  const { conditions } = context;
+  return (
+    <RailCard title="This run">
+      <Mono step="sm">
+        {`${distanceNumber(context.distanceM, units.distance)} ${units.distance}`}
+      </Mono>
+      {conditions === undefined ? undefined : (
+        <Mono step="sm" className="text-dialed-text">
+          {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`}
+        </Mono>
+      )}
+    </RailCard>
   );
 }
 

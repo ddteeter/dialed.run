@@ -277,6 +277,37 @@ describe("AttachKit: the header", () => {
   });
 });
 
+function rail(): HTMLElement {
+  const found = document.querySelector<HTMLElement>("[data-part='rail']");
+  if (found === null) throw new Error("no rail");
+  return found;
+}
+
+describe("AttachKit: the rail at the desk (round 25)", () => {
+  it("sets the run beside the picker, read-only, at the desk only", async () => {
+    await renderWithRouter(attach());
+
+    expect(rail()).toHaveClass("hidden", "desk:flex");
+    expect(
+      within(rail()).getByRole("heading", { name: "This run" }),
+    ).toBeInTheDocument();
+    expect(rail()).toHaveTextContent("6.2 mi");
+    expect(within(rail()).getByText("41°F damp")).toHaveClass(
+      "text-dialed-text",
+    );
+    expect(rail().querySelector("input, button, [role='radio']")).toBeNull();
+  });
+
+  it("names no conditions for a run with none", async () => {
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }) }),
+    );
+
+    expect(rail()).toHaveTextContent("6.2 mi");
+    expect(rail()).not.toHaveTextContent("damp");
+  });
+});
+
 describe("AttachKit: most likely", () => {
   it("waits on the suggestion alone, with the picker already live", async () => {
     // Round 22, "A2 Waiting": only most-likely changes. The picker, the
@@ -400,7 +431,7 @@ describe("AttachKit: most likely", () => {
     );
 
     const card = await screen.findByText(
-      "Most likely · from 43° damp, Fri 14 Aug",
+      "Most likely · from 43° damp, Fri Aug 14",
     );
     const block = region("most-likely");
     expect(block).toHaveAttribute("data-state", "suggestion");

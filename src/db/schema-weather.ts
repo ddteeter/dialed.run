@@ -9,6 +9,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { manualSkies } from "../lib/contracts";
+
 export const weatherObservations = /*#__PURE__*/ sqliteTable(
   "weather_observations",
   {
@@ -53,4 +55,7 @@ export const manualConditions = /*#__PURE__*/ sqliteTable("manual_conditions", {
   runId: text("run_id").primaryKey(),
   tempC: real("temp_c").notNull(),
   setAt: integer("set_at").notNull(),
+  // R2b's sky pick (round 26, item 2; task 127, STR-12). NULL on a band
+  // set before the sheet asked for one.
+  sky: text("sky", { enum: manualSkies }),
 });

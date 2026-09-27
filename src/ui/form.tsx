@@ -426,9 +426,7 @@ export function FormFailureBand({
 }>): JSX.Element | undefined {
   return (
     <ControlFailureBand
-      failure={
-        failure && { kicker: "Nothing saved", message: failure.message }
-      }
+      failure={failure && { kicker: "Nothing saved", message: failure.message }}
       onRetry={onRetry}
       retryRef={retryRef}
     />
@@ -591,6 +589,21 @@ export function SubmitButton({
  */
 const OPTION_CHIP_CLASS =
   "target relative flex cursor-pointer items-center justify-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+
+/**
+ * How a `ChoiceList`'s options sit: wrapped chips, chips in three columns,
+ * or stacked rows (the default, which needs no box of its own).
+ */
+const OPTIONS_LAYOUT: Readonly<Record<"chips" | "chip-grid" | "rows", string>> =
+  {
+    chips: "flex flex-wrap gap-2",
+    "chip-grid": "grid grid-cols-3 gap-2",
+    rows: "contents",
+  };
+
+function optionsLayout(layout: "chips" | "chip-grid" | undefined): string {
+  return OPTIONS_LAYOUT[layout ?? "rows"];
+}
 
 const CHIP_INPUT_CLASS =
   "absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0";
@@ -786,8 +799,12 @@ export function ChoiceList<TOption extends string>({
      * one thing a future caller must not undo: *"thirteen swatches is
      * thirteen accents in one viewport"*, and hue means verdict
      * everywhere else in this app.
+     *
+     * `chip-grid` is the same chips in three columns instead of a wrap —
+     * R2b's twelve temperature bands, *"a 3-column radiogroup, coldest
+     * top-left"* (round 26, item 2), where reading order is the scale.
      */
-    layout?: "chips" | undefined;
+    layout?: "chips" | "chip-grid" | undefined;
     /**
      * `""` is "not answered", the same spelling `ChoiceField` uses for a
      * `<select>` with no choice made — an unanswered control reaches the
@@ -812,10 +829,10 @@ export function ChoiceList<TOption extends string>({
     readOnly?: boolean | undefined;
   }
 >): JSX.Element {
-  const isChips = layout === "chips";
+  const isChips = layout !== undefined;
   return (
     <FieldGroup name={name} legend={legend} hint={hint} error={error}>
-      <div className={isChips ? "flex flex-wrap gap-2" : "contents"}>
+      <div className={optionsLayout(layout)}>
         {options.map((option) => (
           <label
             key={option}

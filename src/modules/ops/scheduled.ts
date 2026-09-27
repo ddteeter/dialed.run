@@ -11,6 +11,7 @@ import {
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/keyed-read";
+import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
@@ -528,6 +529,10 @@ async function runDailyDigest(reporter: CronReporter): Promise<string[]> {
     );
     everything.push(...lines);
   }
+  // Strava's seven-day cache rule, on the activity ids we hold (task 127,
+  // STR-10). Rides this firing rather than a cron of its own; it is upkeep,
+  // not a check, so it reports nothing.
+  await pruneStravaIds(db);
   return everything;
 }
 
