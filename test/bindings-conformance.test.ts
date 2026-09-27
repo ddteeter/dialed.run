@@ -169,6 +169,12 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     // The head's og:image is absolute against the same origin, which a
     // route cannot read from the environment.
     expect(origin).toBe(PUBLIC_ORIGIN);
-    expect(vars).toHaveProperty("TURNSTILE_SITE_KEY");
+    // Exactly these: a var is configuration the code reads, and anything
+    // else here is either a secret in the wrong place or dead config.
+    expect(
+      typeof vars === "object" && vars !== null
+        ? Object.keys(vars).toSorted((a, b) => a.localeCompare(b))
+        : [],
+    ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
   });
 });

@@ -6,6 +6,7 @@
  * `user.id` and nothing else.
  */
 import {
+  index,
   integer,
   sqliteTable,
   text,
@@ -91,5 +92,10 @@ export const rateLimit = /*#__PURE__*/ sqliteTable(
     count: integer("count").notNull(),
     lastRequest: integer("last_request").notNull(),
   },
-  (t) => [uniqueIndex("rate_limit_key").on(t.key)],
+  (t) => [
+    uniqueIndex("rate_limit_key").on(t.key),
+    // Better Auth deletes rows older than its longest window with a
+    // `last_request <` sweep; without this that sweep scans the table.
+    index("rate_limit_last_request").on(t.lastRequest),
+  ],
 );

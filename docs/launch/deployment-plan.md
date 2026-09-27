@@ -30,7 +30,13 @@ them twice:
    sending domain, the CSAM tool, WAF rules, Strava's single callback
    domain and `BETTER_AUTH_URL` all need `dialed.run` in place (§3.3).
    Register Strava's webhook and Google's redirect URIs **after** it, or
-   they are redone.
+   they are redone. **It is a hard prerequisite of the first deploy**:
+   `wrangler.jsonc` sets `BETTER_AUTH_URL=https://dialed.run` (task 125,
+   OPS-4), and Better Auth then refuses every sign-in, sign-up and
+   sign-out from any other origin (403 `INVALID_ORIGIN`), workers.dev
+   included, and builds OAuth `redirect_uri`s on `dialed.run`. Attach the
+   domain before deploying, or set `BETTER_AUTH_URL` to the workers.dev
+   origin until it is attached.
 2. **Apply for Strava review early.** It has the longest lead time (weeks
    reported; §1.6), but the review looks at branding, so 127's official
    Connect button (STR-7) must be live when you apply. Apply as soon as the
@@ -62,7 +68,6 @@ is written by the named lane.
 
 | name                                                        | kind   | required       | read by / written by  | without it                                                                                                       |
 | ----------------------------------------------------------- | ------ | -------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV=production`                                       | var    | yes            | Better Auth           | 125 makes the code explicit (OPS-4), so this is belt and braces rather than load-bearing. Set it anyway.         |
 | `BETTER_AUTH_URL=https://dialed.run`                        | var    | yes            | 125 · OPS-4           | Wrong-host callbacks; no `__Secure-` cookie prefix (0.7). `/api/health` reports it.                              |
 | `STRAVA_SUBSCRIPTION_ID`                                    | var    | for Strava     | 127 · STR-4           | The webhook cannot tell our events from forged ones (0.10). Set after step 5's subscription call returns the id. |
 | `TURNSTILE_SITE_KEY`                                        | var    | yes            | 125 · OPS-5           | No widget on sign-up or request access.                                                                          |
@@ -261,6 +266,11 @@ Everything in stage 1, plus:
 - CSAM tool on; public-entry photos served cacheable and signed; the NCMEC
   procedure written and read.
 - DMCA agent registered and the contact published.
+- **Flip the landing page (and other public marketing pages) to index;
+  profiles and entries stay noindex.** The whole site ships `noindex`
+  until this gate (owner, 2026-09-26; decision D-53): the default is in
+  `modules/ops/og/site-head.ts`, and a route's own `robots` meta replaces
+  it.
 - **Decide whether to flip the invite flag** (126 · ACC-5): leaving it on
   keeps public sign-up invite-only; flipping it removes the code field and
   the request link.

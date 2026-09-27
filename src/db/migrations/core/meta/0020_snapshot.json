@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "892e2e7f-2346-47b0-86f3-b83dd5bdc983",
+  "id": "79f3be22-eb2e-49ba-9f5f-cc769389999a",
   "prevId": "1c398f7e-7022-4657-a23e-1305e4f6cbdc",
   "tables": {
     "blocks": {
@@ -1931,6 +1931,13 @@
             "key"
           ],
           "isUnique": true
+        },
+        "rate_limit_last_request": {
+          "name": "rate_limit_last_request",
+          "columns": [
+            "last_request"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},

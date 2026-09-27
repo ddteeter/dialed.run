@@ -285,8 +285,11 @@ describe("rate limiting in D1 (OPS-4)", () => {
       await instance.handler(signIn("198.51.100.7", email));
     }
 
+    const fifth = await instance.handler(signIn("198.51.100.7", email));
     const other = await instance.handler(signIn("198.51.100.8", email));
 
+    // The first address is over its limit; the second has its own count.
+    expect(fifth.status).toBe(429);
     expect(other.status).toBe(401);
   });
 

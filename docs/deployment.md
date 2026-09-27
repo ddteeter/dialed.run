@@ -159,8 +159,22 @@ which `test/bindings-conformance.test.ts` checks:
 
 **Local dev and CI override `BETTER_AUTH_URL`** in `.dev.vars`
 (`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).
-Without the override, local sign-in fails: the production value turns on
-`__Secure-` cookies, which a browser will not keep over plain http.
+Without the override, local sign-in fails on Better Auth's origin check —
+every cookie-bearing POST from `localhost` is refused 403
+`INVALID_ORIGIN`, since the configured origin is `https://dialed.run` —
+and the https posture turns the rate limiter on, which e2e's many
+sign-ups from one address would trip. (Not the `__Secure-` cookie:
+Chromium accepts that on `localhost`.) **Every existing checkout needs the
+line added to its `.dev.vars`.**
+
+**Attach `dialed.run` to the Worker before the first deploy** (the
+`routes` / `custom_domain` step), or set `BETTER_AUTH_URL` to the
+workers.dev origin until it is. `wrangler.jsonc` ships
+`BETTER_AUTH_URL=https://dialed.run`, and with it set Better Auth trusts
+only that origin: on any other host every cookie-bearing POST (sign-in,
+sign-up, sign-out) is refused 403 `INVALID_ORIGIN`, and OAuth
+`redirect_uri`s point at `dialed.run`. The CI deploy job is named "Deploy
+to workers.dev"; its target changes with the domain step.
 
 `NODE_ENV` is not needed: OPS-4 sets Better Auth's rate limiter and secure
 cookies explicitly from `BETTER_AUTH_URL`'s scheme (audit finding 0.7).

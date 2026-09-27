@@ -1,8 +1,9 @@
 # Copy to .dev.vars (gitignored). Prod values are Wrangler secrets.
 BETTER_AUTH_SECRET=generate-a-long-random-string
 # Required locally: wrangler.jsonc sets the production origin
-# (https://dialed.run), and on plain http its secure cookies never stick,
-# so sign-in silently fails. Match the port the dev server runs on.
+# (https://dialed.run). Without this override Better Auth refuses every
+# sign-in and sign-up from localhost (403 INVALID_ORIGIN), and the https
+# posture turns its rate limiter on. Match the port the dev server runs on.
 BETTER_AUTH_URL=http://localhost:3000
 # Optional locally; set in prod:
 # SENTRY_DSN=

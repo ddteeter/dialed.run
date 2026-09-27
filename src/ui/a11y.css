@@ -78,6 +78,9 @@ summary:focus-visible,
  * offset −1px lays the 2px ring over the box's 1px border, so a focused
  * field shows one line rather than a border and a ring 2px beyond it.
  * FormFields only — every other control keeps §06's offset 2px above.
+ * "FormField" means the `.field-box` visual class, wherever it is: the
+ * form primitives and RunnerSearch's search box share it, and both get the
+ * ring on the border — deliberately, since they are the same control.
  * Error is the 2px border plus the hi-viz band, so the band, not the ring,
  * is what tells an errored field from a focused one.
  *

@@ -19,6 +19,10 @@ const CLEAN_SCREEN = {
 const auth = createAuth({
   db: drizzle(env.DIALED_CORE),
   secret: "test-secret-not-for-production",
+  // Explicit, because the requests below come from http://localhost: left
+  // out, Better Auth falls back to the Worker's BETTER_AUTH_URL (an https
+  // origin in the test bindings, as in production) and refuses them 403.
+  baseUrl: "http://localhost",
   passwordScreen: CLEAN_SCREEN,
 });
 

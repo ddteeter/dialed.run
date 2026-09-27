@@ -26,6 +26,18 @@ describe("the app auth instance", () => {
     });
   });
 
+  it("is built on the deployment's origin, in its production posture (OPS-4)", () => {
+    // The test Worker's BETTER_AUTH_URL is https, as production's is. A
+    // deleted `baseUrl:` line in instance.ts is invisible to mutation
+    // testing, which only mutates what is written; this is what notices.
+    expect(auth.options.baseURL).toBe("https://dialed.test");
+    expect(auth.options.rateLimit).toMatchObject({
+      enabled: true,
+      storage: "database",
+    });
+    expect(auth.options.advanced).toMatchObject({ useSecureCookies: true });
+  });
+
   it("carries the framework cookie plugin", () => {
     // The reason this file exists at all: `create-auth.ts` stays free of
     // TanStack imports so it can be tested, and the plugin is injected

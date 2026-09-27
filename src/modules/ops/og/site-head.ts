@@ -6,6 +6,12 @@
  *
  * Imports nothing, because a route imports it and a route is in the client
  * bundle.
+ *
+ * **The `robots` default is `noindex` for the whole site** until the
+ * public launch (owner, 2026-09-26; decision D-53). A route's own
+ * `robots` meta replaces this one — TanStack de-dupes head meta by name
+ * and a child route's wins — which is how the landing page flips at the
+ * stage 2 gate and how 129's pages keep profiles and entries noindex.
  */
 
 /**
@@ -28,6 +34,8 @@ export const SITE_META = [
   // belong in search (development plan, open decision 1); robots.txt says
   // the same for profiles, entries and photos.
   { name: "robots", content: "noindex" },
+  // `--night-run`, the icon tile's ink. A meta tag cannot read a CSS
+  // variable; test/ops/theme-colour.dom.test.tsx pins this to tokens.css.
   { name: "theme-color", content: "#0B0B0E" },
   { property: "og:site_name", content: TITLE },
   { property: "og:title", content: TITLE },

@@ -5,4 +5,5 @@ CREATE TABLE `rate_limit` (
 	`last_request` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `rate_limit_key` ON `rate_limit` (`key`);
+CREATE UNIQUE INDEX `rate_limit_key` ON `rate_limit` (`key`);--> statement-breakpoint
+CREATE INDEX `rate_limit_last_request` ON `rate_limit` (`last_request`);
