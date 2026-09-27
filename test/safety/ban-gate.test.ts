@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
-import { session } from "../../src/db/schema-auth";
+import { session, user } from "../../src/db/schema-auth";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import {
   ACCOUNT_CLOSED_CODE,
@@ -143,5 +145,132 @@ describe("a banned runner signing in (SAF-4)", () => {
     await expect(
       context.internalAdapter.createSession(newUlid()),
     ).rejects.toMatchObject({ body: { message: "", closedAt: 1 } });
+  });
+});
+
+/**
+Base64url, as a JWT spells its parts — `=` only ever appears as padding.
+*/
+function base64url(value: object): string {
+  return btoa(JSON.stringify(value))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+}
+
+/**
+An id token Google would return — `getUserInfo` decodes, never verifies.
+*/
+function googleIdToken(email: string): string {
+  const now = nowSeconds();
+  const claims = {
+    iss: "https://accounts.google.com",
+    aud: "test-client",
+    sub: newUlid(),
+    email,
+    email_verified: true,
+    name: "Runner",
+    iat: now,
+    exp: now + 3600,
+  };
+  return `${base64url({ alg: "RS256", typ: "JWT" })}.${base64url(claims)}.sig`;
+}
+
+/**
+ * Google's way in, through Better Auth's real callback handler: the
+ * consent redirect is minted by `sign-in/social`, Google's token endpoint
+ * is the only thing stubbed, and the callback runs as it would in
+ * production. `handleOAuthUserInfo` ends in `createSession`, the gate
+ * throws there, and the callback turns an `APIError` carrying a code into
+ * a redirect to the error callback — not the 403 JSON the email form gets.
+ */
+describe("a banned runner signing in with Google (SAF-4)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const REASON = "Adverts for a supplement store.";
+
+  const google = createAuth({
+    db: core(),
+    secret: "test-secret-not-for-production",
+    baseUrl: "http://localhost",
+    google: { clientId: "test-client", clientSecret: "test-client-secret" },
+    passwordScreen: CLEAN_SCREEN,
+    plugins: [
+      banGate(() =>
+        Promise.resolve({ banned: true, reason: REASON, bannedAt: 1 }),
+      ),
+    ],
+  });
+
+  it("redirects to the error callback with the closed code and the reason, and sets no session", async () => {
+    const email = `${newUlid().toLowerCase()}@example.test`;
+    const started = await google.handler(
+      new Request("http://localhost/api/auth/sign-in/social", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+        },
+        body: JSON.stringify({
+          provider: "google",
+          callbackURL: "/",
+          errorCallbackURL: "/auth/login",
+        }),
+      }),
+    );
+    expect(started.status).toBe(200);
+    const consent = z.object({ url: z.string() }).parse(await started.json());
+    const state = new URL(consent.url).searchParams.get("state") ?? "";
+    const cookie = started.headers
+      .getSetCookie()
+      .map((line) => line.split(";", 1)[0])
+      .join("; ");
+
+    const tokenEndpoint = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        access_token: "google-access-token",
+        id_token: googleIdToken(email),
+        token_type: "Bearer",
+        expires_in: 3600,
+      }),
+    );
+
+    const callback = await google.handler(
+      new Request(
+        `http://localhost/api/auth/callback/google?code=granted&state=${encodeURIComponent(state)}`,
+        { headers: { cookie } },
+      ),
+    );
+
+    expect(tokenEndpoint).toHaveBeenCalled();
+    expect(callback.status).toBe(302);
+    const landing = new URL(
+      callback.headers.get("location") ?? "",
+      "http://localhost",
+    );
+    expect(landing.pathname).toBe("/auth/login");
+    expect(landing.searchParams.get("error")).toBe(ACCOUNT_CLOSED_CODE);
+    expect(landing.searchParams.get("error_description")).toBe(REASON);
+    expect(
+      callback.headers
+        .getSetCookie()
+        .some(
+          (line) =>
+            line.includes("session_token=") &&
+            !line.includes("session_token=;"),
+        ),
+    ).toBe(false);
+    const [created] = await core()
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    expect(created).toBeDefined();
+    const sessions = await core()
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, created?.id ?? ""));
+    expect(sessions).toEqual([]);
   });
 });
