@@ -291,10 +291,13 @@ export function normalizeUsername(typed: string): string {
  * is otherwise fine — so `_x` reads the first, not both. Uniqueness and the
  * reserved list are the server's (`modules/account/username.ts`), because
  * only it can know them.
+ *
+ * No `u` flag: the class is pure ASCII and the pattern has no `.`, `\p{}`
+ * or `i`, so the flag changes no match — and an inert argument is a
+ * mutant no input can kill.
  */
 const USERNAME_SHAPE = new RegExp(
   `^[a-z0-9_]{${String(USERNAME_MIN_LENGTH)},${String(USERNAME_MAX_LENGTH)}}$`,
-  "u",
 );
 
 const storedUsername = z
