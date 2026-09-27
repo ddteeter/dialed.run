@@ -56,6 +56,12 @@ describe("D4 · the notice", () => {
         /A person reads every message and answers within a week\./,
       ),
     ).toBeTruthy();
+    // The word before the link and the address itself are separate text
+    // nodes either side of the `<a>`, so a missing space between them reads
+    // fine as two `getByText` matches and wrong as continuous prose.
+    expect(link.parentElement?.textContent).toBe(
+      `If you think this is wrong, write to ${APPEAL_ADDRESS}. A person reads every message and answers within a week.`,
+    );
   });
 
   it("draws the plain lockup, with no pink brackets", () => {

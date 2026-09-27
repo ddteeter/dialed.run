@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { browserPipeline } from "../../src/modules/safety/blur/pipeline";
 
@@ -93,6 +93,21 @@ async function sizedFile(width: number, height: number): Promise<File> {
   if (!blob) throw new Error("the canvas produced no bytes");
   return new File([blob], "big.png", { type: "image/png" });
 }
+
+describe("closing the intermediate decode", () => {
+  it("closes the full-size bitmap once the resized one is made, and only that one", async () => {
+    // `load` decodes twice — once at the picked file's own size, once at
+    // the resize target — and only the first is an intermediate this
+    // module owns; leaving it open is a real leak on every photo picked.
+    const closeSpy = vi.spyOn(ImageBitmap.prototype, "close");
+
+    const loaded = await browserPipeline.load(await sizedFile(4096, 3072));
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(loaded.image.width).toBe(2048);
+    closeSpy.mockRestore();
+  });
+});
 
 describe("the long edge (task 128 · SAF-2)", () => {
   it("scales a large photo down to a 2048px long edge before anything else", async () => {

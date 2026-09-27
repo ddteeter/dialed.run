@@ -28,6 +28,10 @@ import {
   retractEntries,
   retractEntry,
 } from "../../src/modules/feed";
+// A deep import on purpose: `photoIdInput` is a trust-boundary schema, not
+// part of the feed barrel's public surface (its only other consumer is
+// `functions.ts`, which no test can import at all).
+import { photoIdInput } from "../../src/modules/feed/retract";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { fileReport, reconcileUnhiddenReports } from "../../src/modules/safety";
 
@@ -159,6 +163,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("photoIdInput", () => {
+  it("requires the one field it names, shaped as a ulid", () => {
+    const photoId = newUlid();
+    expect(photoIdInput.parse({ photoId })).toStrictEqual({ photoId });
+    expect(() => photoIdInput.parse({})).toThrow();
+    expect(() => photoIdInput.parse({ photoId: "not-a-ulid" })).toThrow();
+  });
+});
+
 describe("deleting an entry", () => {
   it("leaves no row and no object, and nothing owed", async () => {
     const userId = await makeUser();
@@ -181,6 +194,11 @@ describe("deleting an entry", () => {
 
     await expect(retractEntry(core(), stranger, entryId)).rejects.toThrow(
       NotFoundError,
+    );
+    // The message itself, not just the type — `retractOneOf`'s message is
+    // fixed per entry point, and a blank one would still be a NotFoundError.
+    await expect(retractEntry(core(), stranger, entryId)).rejects.toThrow(
+      "entry not found",
     );
     const left = await rowsFor(entryId);
     expect(left.entry).toHaveLength(1);
@@ -253,6 +271,66 @@ describe("deleting an entry", () => {
     const theirsLeft = await rowsFor(theirs.entryId);
     expect(theirsLeft.entry).toHaveLength(1);
     expect(await stored(entryPhotoPrefix(other))).toHaveLength(2);
+  });
+
+  it("deletes only the entries named, not the rest of the same runner's", async () => {
+    // A specific-ids scope must not be read as "all of this runner's" —
+    // `owned`'s `scope === "all"` decides which, and getting it backwards
+    // would delete a sibling entry nobody named.
+    const userId = await makeUser();
+    const first = await fullEntry(userId);
+    const second = await fullEntry(userId);
+
+    await retractEntries(core(), userId, [first.entryId]);
+
+    expect(await rowsFor(first.entryId)).toStrictEqual(NOTHING);
+    const secondLeft = await rowsFor(second.entryId);
+    expect(secondLeft.entry).toHaveLength(1);
+    expect(secondLeft.photos).toHaveLength(2);
+  });
+
+  it("settles a review of an entry's own photo when the whole entry goes, not just the entry's own review", async () => {
+    const userId = await makeUser();
+    const { entryId, photos } = await fullEntry(userId);
+    const [photo] = photos;
+    if (photo === undefined) throw new Error("fixture");
+    for (let n = 0; n < 3; n += 1) {
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "photo",
+        subjectId: photo.id,
+        reason: "spam",
+      });
+    }
+
+    await retractEntry(core(), userId, entryId);
+
+    const [queued] = await core()
+      .select()
+      .from(reviewQueue)
+      .where(eq(reviewQueue.subjectId, photo.id));
+    expect(queued).toMatchObject({ status: "removed", resolvedBy: userId });
+  });
+
+  it("settles a review still marked 'reviewing' — a claimed but abandoned tab — when the entry goes", async () => {
+    const userId = await makeUser();
+    const { entryId } = await fullEntry(userId);
+    await core().insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "classifier",
+      status: "reviewing",
+      createdAt: NOW,
+    });
+
+    await retractEntry(core(), userId, entryId);
+
+    const [queued] = await core()
+      .select()
+      .from(reviewQueue)
+      .where(eq(reviewQueue.subjectId, entryId));
+    expect(queued).toMatchObject({ status: "removed", resolvedBy: userId });
   });
 });
 
@@ -394,5 +472,44 @@ describe("deleting a run", () => {
       await core().select().from(runs).where(eq(runs.userId, other)),
     ).toHaveLength(1);
     expect(await env.IMPORTS.head(theirs.key)).not.toBeNull();
+  });
+
+  it("treats 'all' as every entry of the runner's, even one whose own run-id names no row of theirs", async () => {
+    // `deleteRuns`'s `entryScope` takes a shortcut for scope "all": read
+    // straight off `userId` rather than re-derive through a run-id join —
+    // deliberately, so it stays correct (and cheap, CLAUDE.md's D1 param
+    // cap) for a row whose run reference the join could not retrace. A
+    // migration artefact or a partial write could leave one; this plants
+    // it directly.
+    const userId = await makeUser();
+    await makeRun({ userId });
+    const orphanEntryId = await makeEntry({ userId, runId: newUlid() });
+
+    await deleteRuns(core(), userId, "all");
+
+    expect(await rowsFor(orphanEntryId)).toStrictEqual(NOTHING);
+  });
+
+  it("deletes only the named run's entry, not a sibling run's entry of the same runner's", async () => {
+    // The mirror of the "all" case above: with a SPECIFIC run named,
+    // `entryScope` must resolve through the run-id join rather than take
+    // the "all" shortcut, or naming one run would delete every entry this
+    // runner has, on any other run too.
+    const userId = await makeUser();
+    const named = await fullEntry(userId);
+    const sibling = await fullEntry(userId);
+
+    await deleteRuns(core(), userId, [named.runId]);
+
+    expect(await rowsFor(named.entryId)).toStrictEqual(NOTHING);
+    expect(
+      await core().select().from(runs).where(eq(runs.id, named.runId)),
+    ).toStrictEqual([]);
+    const survivor = await rowsFor(sibling.entryId);
+    expect(survivor.entry).toHaveLength(1);
+    expect(survivor.photos).toHaveLength(2);
+    expect(
+      await core().select().from(runs).where(eq(runs.id, sibling.runId)),
+    ).toHaveLength(1);
   });
 });

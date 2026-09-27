@@ -205,6 +205,88 @@ describe("imageDimensions, from hand-built headers", () => {
     expect(imageDimensions(webp("ALPH", 1, 2, 3))).toBeUndefined();
   });
 
+  it("does not read a PNG size off bytes that carry IHDR but not the PNG magic", () => {
+    // The mirror of the case below: here the right half of the guard
+    // (asciiAt(bytes, 12, 4) === "IHDR") is true, and it is the left half
+    // (asciiAt(bytes, 1, 3) === "PNG") that must actually gate the branch.
+    // Forcing the left half true on its own would fire the PNG branch off
+    // these otherwise-unrecognisable bytes and read a size out of the zero
+    // bytes standing in for a real IHDR payload — a defined {width, height}
+    // where the correct answer is undefined.
+    const notPngMagic = bytesOf(
+      0x00,
+      "XXX",
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      "IHDR",
+    );
+    expect(imageDimensions(notPngMagic)).toBeUndefined();
+  });
+
+  it("does not read a PNG size off bytes that only fail the IHDR check", () => {
+    // Real PNG magic, but the chunk after the header is not "IHDR" — so the
+    // PNG branch must not fire. If it fired anyway, these all-0xff trailing
+    // bytes would decode to a huge, very much not-undefined size, so a
+    // wrongly-forced branch is impossible to miss.
+    const notIhdr = bytesOf(
+      0x89,
+      "PNG",
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+      0,
+      0,
+      0,
+      13,
+      "IDAT",
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+    );
+    expect(imageDimensions(notIhdr)).toBeUndefined();
+  });
+
+  it("refuses a false RIFF/WEBP claim even when the trailing bytes look like a real WebP chunk", () => {
+    // Neither half of the guard is redundant: each of these fails exactly
+    // one half of "RIFF ... WEBP", and each carries a real, decodable VP8
+    // chunk right where WEBP_SIZES would look for one. If either half of
+    // the guard were skipped, or the return inside it dropped, the result
+    // would be real dimensions instead of undefined.
+    const vp8Chunk = [
+      "VP8 ",
+      0,
+      0,
+      0,
+      0, // chunk size (unread)
+      0,
+      0,
+      0,
+      0x9d,
+      0x01,
+      0x2a, // frame tag, start code
+      0x41,
+      0xc1, // width 321, scale bits set
+      0x7b,
+      0x40, // height 123, scale bits set
+    ] as const;
+    const notRiff = bytesOf("RIFX", 0, 0, 0, 0, "WEBP", ...vp8Chunk);
+    const notWebp = bytesOf("RIFF", 0, 0, 0, 0, "WEBX", ...vp8Chunk);
+    expect(imageDimensions(notRiff)).toBeUndefined();
+    expect(imageDimensions(notWebp)).toBeUndefined();
+  });
+
   it("refuses what is not an image it reads", () => {
     expect(imageDimensions(bytesOf("GIF89a", 1, 0, 1, 0))).toBeUndefined();
     expect(

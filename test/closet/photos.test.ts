@@ -38,6 +38,11 @@ import {
   OUTBOX_FAST_PATH_GRACE_S,
 } from "../../src/modules/ops/outbox";
 import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
+import {
+  imageCategories,
+  type CategoryScores,
+  type Classify,
+} from "../../src/modules/safety";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -332,6 +337,39 @@ describe("what the pipeline stores and refuses", () => {
       const object = await env.MEDIA.get(`${photoKey}/${size}.webp`);
       expect(object?.httpMetadata?.contentType, size).toBe("image/webp");
     }
+  });
+
+  it("screens the re-encoded jpeg, labelled as jpeg, whatever the upload's own type was", async () => {
+    // The original is always re-encoded to JPEG before it is stored (SAF-1),
+    // and it is that re-encoded copy — not the upload's own bytes or type —
+    // that the classifier is asked about.
+    const client = db();
+    const userId = newUlid();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Screened as jpeg",
+    });
+    const seen: string[] = [];
+    const classify: Classify = ({ contentType }) => {
+      seen.push(contentType);
+      return Promise.resolve({
+        flagged: false,
+        scores: Object.fromEntries(
+          imageCategories.map((category) => [category, 0]),
+        ) as CategoryScores,
+      });
+    };
+
+    await uploadItemPhoto(
+      client,
+      userId,
+      item.id,
+      PNG_1X1,
+      "image/png",
+      classify,
+    );
+
+    expect(seen).toStrictEqual(["image/jpeg"]);
   });
 
   it("refuses an empty file before it reaches the decoder", async () => {

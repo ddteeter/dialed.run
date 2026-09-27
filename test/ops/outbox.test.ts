@@ -26,6 +26,7 @@ import {
   settleOutbox,
 } from "../../src/modules/ops/outbox";
 import {
+  boundHandler,
   isLiveObject,
   outboxHandlers,
   reconcileEntryPhotos,
@@ -401,6 +402,31 @@ describe("drainOutbox", () => {
     expect(await rowById(id)).toMatchObject({
       attempts: 0,
       nextAttemptAt: NOW,
+    });
+  });
+});
+
+describe("boundHandler", () => {
+  it("binds each kind's own context, not another's", () => {
+    const photo = boundHandler(outboxHandlers, {
+      kind: "photo_delete",
+      payload: { userId: "u1", itemId: "i1" },
+    });
+    expect(photo.context()).toStrictEqual({ userId: "u1", itemId: "i1" });
+
+    const entry = boundHandler(outboxHandlers, {
+      kind: "entry_media_delete",
+      payload: { userId: "u1" },
+    });
+    expect(entry.context()).toStrictEqual({ userId: "u1", entryId: "*" });
+
+    const upload = boundHandler(outboxHandlers, {
+      kind: "import_file_delete",
+      payload: { userId: "u1", key: "imports/u1/a.gpx" },
+    });
+    expect(upload.context()).toStrictEqual({
+      userId: "u1",
+      key: "imports/u1/a.gpx",
     });
   });
 });

@@ -230,6 +230,32 @@ describe("entry photos: the rules, and what they say", () => {
     expect(object?.httpMetadata?.contentType).toBe("image/jpeg");
   });
 
+  it("screens the re-encoded jpeg, labelled as jpeg, whatever the upload's own type was", async () => {
+    const { userId, entryId } = await ownEntry();
+    const seen: string[] = [];
+    const classify: Classify = ({ contentType }) => {
+      seen.push(contentType);
+      return Promise.resolve({
+        flagged: false,
+        scores: Object.fromEntries(
+          imageCategories.map((category) => [category, 0]),
+        ) as CategoryScores,
+      });
+    };
+
+    await uploadPhoto(
+      {
+        userId,
+        entryId,
+        contentType: "image/webp",
+        bytes: JPEG_BYTES,
+      },
+      { classify },
+    );
+
+    expect(seen).toStrictEqual(["image/jpeg"]);
+  });
+
   it("returns the same key for a resubmitted upload, without storing it twice", async () => {
     // Law 8b: a retried submission carries the key it was minted with, and
     // a repeat must not burn one of the four slots on the same image.
@@ -505,6 +531,17 @@ describe("photoResponse: the whole cached GET, in one function", () => {
     const emptyKey = await photoResponse("", undefined);
     expect(noKey.status).toBe(404);
     expect(emptyKey.status).toBe(404);
+  });
+
+  it("says not found for no key even for a viewer who could otherwise see something", async () => {
+    // With a signed-out viewer, `isPhotoVisible` already answers false on
+    // its own guard, so a no-key request would answer 404 either way — a
+    // coincidence that would hide the `!key` guard going missing. A real,
+    // owning viewer removes that coincidence: without the guard, an absent
+    // key reaches `isPhotoVisible` and is used as a real photo id.
+    const { userId } = await ownedPhoto();
+    const noKey = await photoResponse(undefined, userId);
+    expect(noKey.status).toBe(404);
   });
 
   it("says not found when the row allows it but the object has gone", async () => {
