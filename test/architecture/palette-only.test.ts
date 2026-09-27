@@ -38,6 +38,22 @@ const sources: Record<string, string> = import.meta.glob(
 const RAW_COLOUR = /-\[(?:#[\dA-Fa-f]{3,8}\]|rgba?\(|hsla?\()/u;
 
 /**
+ * An inline style object written at the element: `style={{ … }}`. The
+ * other door past the theme — a colour here is no class at all, so the
+ * token scan below never sees it. **What it does not read**: a colour
+ * held in a named constant and passed in (the OG cards' `OG_PALETTE`,
+ * which the image renderer needs as literals), and a style whose body
+ * holds a `}` of its own, such as a template's `${…}`. Both are stated
+ * gaps, not closed ones.
+ */
+const INLINE_STYLE = /style=\{\{[^}]*\}\}/gu;
+
+/**
+ * A raw colour inside one: a hex literal, or a colour function.
+ */
+const STYLE_COLOUR = /#[\dA-Fa-f]{3,8}\b|\b(?:oklch|oklab|rgba?|hsla?)\(/u;
+
+/**
  * Where one class token ends: whitespace, or the quote around a string.
  */
 const TOKEN_BREAK = /[\s"'`]+/u;
@@ -56,10 +72,13 @@ function rawColoursIn(path: string, source: string): string[] {
   const scanned = path.endsWith("auth/google-button.tsx")
     ? code.replace(GOOGLE_BUTTON, "")
     : code;
-  return scanned
+  const inClasses = scanned
     .split(TOKEN_BREAK)
-    .filter((token) => RAW_COLOUR.test(token))
-    .map((token) => `${path}: ${token}`);
+    .filter((token) => RAW_COLOUR.test(token));
+  const inStyles = (scanned.match(INLINE_STYLE) ?? [])
+    .filter((style) => STYLE_COLOUR.test(style))
+    .map((style) => style.replaceAll(/\s+/gu, " "));
+  return [...inClasses, ...inStyles].map((found) => `${path}: ${found}`);
 }
 
 describe("every colour is a T1 role", () => {
@@ -89,6 +108,21 @@ describe("every colour is a T1 role", () => {
         'const other = "border-[#747775]";',
       ),
     ).toEqual(["src/modules/auth/google-button.tsx: border-[#747775]"]);
+  });
+
+  it("would catch one in an inline style, and leaves a colourless style alone", () => {
+    expect(
+      rawColoursIn("src/ui/X.tsx", '<i style={{ color: "#fff" }} />'),
+    ).toEqual(['src/ui/X.tsx: style={{ color: "#fff" }}']);
+    expect(
+      rawColoursIn(
+        "src/ui/X.tsx",
+        '<i style={{\n  background: "oklch(0.7 0.1 90)",\n}} />',
+      ),
+    ).toEqual(['src/ui/X.tsx: style={{ background: "oklch(0.7 0.1 90)", }}']);
+    expect(
+      rawColoursIn("src/ui/X.tsx", "<i style={{ width: `${pct}%` }} />"),
+    ).toEqual([]);
   });
 
   it("exempts the Google button's constant, and it really holds Google's colours", () => {

@@ -8,14 +8,26 @@
  * them — one covering-index read for the whole page, not one per row. The
  * viewer is never a result: following yourself is not a thing.
  */
-import { and, eq, inArray, like, ne } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { follows, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
+import { normalizeUsername } from "../../lib/contracts";
 import { columnWhere } from "../../lib/keyed-read";
 
 const RESULT_LIMIT = 20;
+
+/**
+ * `typed` as a LIKE prefix that matches only itself: `_` is in nearly
+ * every handle and is LIKE's any-one-character, so unescaped `maya_` would
+ * find `mayax`. One pass over the three, so a `\` added as an escape is
+ * never escaped again.
+ */
+function likePrefix(typed: string): string {
+  const escaped = typed.replaceAll(/[\\%_]/gu, String.raw`\$&`);
+  return `${escaped}%`;
+}
 
 export interface SearchResult {
   userId: string;
@@ -27,8 +39,10 @@ export async function searchRunners(
   viewerId: string,
   prefix: string,
 ): Promise<SearchResult[]> {
-  const trimmed = prefix.trim();
-  if (trimmed.length === 0) return [];
+  // The handle as it is stored: no "@", no spaces, lowercased — the field
+  // shows "@" before a handle, so a runner may well type one.
+  const typed = normalizeUsername(prefix);
+  if (typed.length === 0) return [];
   const database = drizzle(env.DIALED_CORE);
   const rows = await database
     .select({
@@ -38,7 +52,9 @@ export async function searchRunners(
     .from(userProfiles)
     .where(
       and(
-        like(userProfiles.username, `${trimmed}%`),
+        // ESCAPE with an ASCII character keeps SQLite's LIKE optimisation,
+        // so the prefix is still served by the NOCASE index.
+        sql`${userProfiles.username} LIKE ${likePrefix(typed)} ESCAPE '\\'`,
         ne(userProfiles.userId, viewerId),
       ),
     )

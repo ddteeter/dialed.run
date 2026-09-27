@@ -106,6 +106,10 @@ describe("zero verdicts (round 26 #15)", () => {
     const meter = cells();
     expect(meter.meter).toHaveAccessibleName("0 of 15 verdicts logged");
     expect(meter.total).toBe(15);
+    // One column per cell, read from the threshold: fifteen in a row.
+    expect(meter.meter.style.gridTemplateColumns).toBe(
+      "repeat(15, minmax(0, 1fr))",
+    );
     expect(meter.logged).toHaveLength(0);
     expect(meter.empty[0]).toHaveClass("border-accent-ink");
     expect(meter.empty[0]).not.toHaveClass("bg-accent-ink");

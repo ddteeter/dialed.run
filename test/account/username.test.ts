@@ -221,13 +221,27 @@ describe("claimUsername", () => {
     expect(await handleOf(userId)).toBeNull();
   });
 
-  it("offers a free suggestion for a reserved exact name when one exists", async () => {
-    // `support` is reserved as itself, not inside other handles.
-    const userId = await runner();
-    expect(await claimUsername(db, userId, "support")).toMatchObject({
-      kind: "taken",
-      suggestion: "support2",
+  it("offers no suggestion for a reserved exact name, even when one is free (D-57)", async () => {
+    // `support` is reserved as itself, not inside other handles, so
+    // `support2` is free — and offering it would say `support` is on the
+    // list rather than merely held.
+    const userId = await runner({ cityLabel: "Portland, OR" });
+    expect(await claimUsername(db, userId, "support2")).toMatchObject({
+      kind: "claimed",
     });
+    const other = await runner({ cityLabel: "Portland, OR" });
+    expect(await claimUsername(db, other, "support")).toStrictEqual({
+      kind: "taken",
+      username: "support",
+      suggestion: undefined,
+    });
+    const third = await runner();
+    expect(await claimUsername(db, third, "team")).toStrictEqual({
+      kind: "taken",
+      username: "team",
+      suggestion: undefined,
+    });
+    expect(await handleOf(third)).toBeNull();
   });
 
   it("never lets another runner take a handle someone gave up", async () => {
@@ -273,6 +287,81 @@ describe("claimUsername", () => {
       suggestion: "sam_runs2",
     });
     expect(await handleOf(userId)).toBeNull();
+  });
+
+  it("refuses a handle given up between its read and its write (D-56, in SQL)", async () => {
+    const userId = await runner({ username: "me_now" });
+    // A rival holds sam_runs and gives it up after our free check and
+    // before our write: the read said free, the batch must still refuse.
+    const racing = beforeBatch(2, async () => {
+      const rival = await runner({ username: "sam_runs" });
+      await claimUsername(db, rival, "sam_trails");
+    });
+    expect(await claimUsername(racing, userId, "sam_runs")).toStrictEqual({
+      kind: "taken",
+      username: "sam_runs",
+      suggestion: "sam_runs2",
+    });
+    // Nothing of the refused claim landed: the handle, and no history row
+    // for the handle it would have replaced.
+    expect(await handleOf(userId)).toBe("me_now");
+    expect(await historyOf(userId)).toStrictEqual([]);
+  });
+
+  it("refuses it for a runner with no profile row yet, leaving no handle", async () => {
+    const userId = newUlid();
+    const racing = beforeBatch(2, async () => {
+      const rival = await runner({ username: "sam_runs" });
+      await claimUsername(db, rival, "sam_trails");
+    });
+    expect(await claimUsername(racing, userId, "sam_runs")).toMatchObject({
+      kind: "taken",
+    });
+    expect(await handleOf(userId)).toBeNull();
+  });
+
+  it("answers a second submit of a change that already landed as claimed", async () => {
+    const userId = await runner({ username: "maya_runs" });
+    // The first submit lands between the second's read and its write.
+    const doubled = beforeBatch(2, async () => {
+      await claimUsername(db, userId, "maya_trails");
+    });
+    expect(await claimUsername(doubled, userId, "maya_trails")).toStrictEqual({
+      kind: "claimed",
+      username: "maya_trails",
+    });
+    expect(await handleOf(userId)).toBe("maya_trails");
+    const history = await historyOf(userId);
+    expect(history.map((row) => row.username)).toStrictEqual(["maya_runs"]);
+  });
+
+  it("retires the handle held when the write runs, not the one the read saw", async () => {
+    const userId = await runner({ username: "maya_runs" });
+    // Two different changes racing: the first lands between the second's
+    // read (which saw maya_runs) and its write.
+    const racing = beforeBatch(2, async () => {
+      await claimUsername(db, userId, "maya_trails");
+    });
+    expect(await claimUsername(racing, userId, "maya_roads")).toMatchObject({
+      kind: "claimed",
+    });
+    expect(await handleOf(userId)).toBe("maya_roads");
+    const history = await historyOf(userId);
+    expect(
+      history.map((row) => row.username).toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(["maya_runs", "maya_trails"]);
+  });
+
+  it("lets any other UNIQUE failure through, rather than calling it taken", async () => {
+    const userId = await runner();
+    const failing = beforeBatch(2, () => {
+      throw new Error(
+        "D1_ERROR: UNIQUE constraint failed: username_history.username: SQLITE_CONSTRAINT",
+      );
+    });
+    await expect(claimUsername(failing, userId, "fine_handle")).rejects.toThrow(
+      "username_history.username",
+    );
   });
 
   it("lets any other write failure through", async () => {

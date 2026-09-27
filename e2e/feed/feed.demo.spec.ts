@@ -47,7 +47,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
 }) => {
   const suffix = String(Date.now());
   const otherUserId = newUlid();
-  const otherUsername = `Demo Trailrunner ${suffix}`;
+  const otherUsername = `trail_${suffix.slice(-8)}`;
   const itemId = newUlid();
   const publicRunId = newUlid();
   const publicEntryId = newUlid();
@@ -231,9 +231,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await page.getByRole("link", { name: "Find a runner" }).click();
     await scene(page, "Search · name and a Follow pill, no city");
     await page.getByPlaceholder("Search by name").fill(otherUsername);
-    const row = page
-      .getByRole("listitem")
-      .filter({ hasText: otherUsername });
+    const row = page.getByRole("listitem").filter({ hasText: otherUsername });
     await expect(row.getByRole("button", { name: "Follow" })).toBeVisible();
     await row.getByRole("link", { name: otherUsername }).click();
 

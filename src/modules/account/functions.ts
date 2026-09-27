@@ -34,9 +34,9 @@ export const usernameQuery = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * Whether `/` should send this visitor to O0 before anything else: signed
- * in and no handle yet. A signed-out visitor never is (the landing page is
- * all they can see).
+ * Whether the root route should send this visitor to O0 before anything
+ * else: signed in and no handle yet. A signed-out visitor never is (the
+ * landing page is all they can see).
  */
 export const handleGateQuery = createServerFn({ method: "GET" }).handler(
   async () => requiresHandle(db(), await optionalUserId()),

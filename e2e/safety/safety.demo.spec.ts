@@ -37,7 +37,7 @@ test("report a runner, block them, and take the block back", async ({
 }) => {
   const suffix = String(Date.now());
   const strangerId = newUlid();
-  const strangerName = `Demo Stranger ${suffix}`;
+  const strangerName = `stranger_${suffix.slice(-8)}`;
   const runId = newUlid();
   const entryId = newUlid();
   const startedAt = nowSeconds() - 3 * 3600;
@@ -96,7 +96,9 @@ test("report a runner, block them, and take the block back", async ({
 
   await scene(page, "W1 · anyone can report, and it costs them nothing");
   await expect(page.getByRole("heading", { name: strangerName })).toBeVisible();
-  await page.getByRole("button", { name: `Report or block ${strangerName}` }).click();
+  await page
+    .getByRole("button", { name: `Report or block ${strangerName}` })
+    .click();
 
   await scene(page, "Reasons are sentences a runner would say");
   await expect(

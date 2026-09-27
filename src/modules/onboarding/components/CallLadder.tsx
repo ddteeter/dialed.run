@@ -79,6 +79,15 @@ const CELLS = Array.from(
 );
 
 /**
+ * The meter's columns, one per cell — read from the threshold, so the grid
+ * cannot disagree with `CELLS`. Inline because Tailwind only emits a class
+ * it can find written out whole, and `grid-cols-${n}` is not one.
+ */
+const METER_COLUMNS = {
+  gridTemplateColumns: `repeat(${String(CALL_VERDICT_THRESHOLD)}, minmax(0, 1fr))`,
+};
+
+/**
  * K's hi-viz block — one of *"two yellow moments only"* — as round 26 #15
  * redraws it ("K Call teaser 15", which supersedes round 22's K): the
  * count in the kicker, the one instruction, a meter of fifteen cells, and
@@ -104,7 +113,8 @@ function Countdown({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
       <div
         role="img"
         aria-label={`${counted} logged`}
-        className="grid grid-cols-15 gap-1"
+        className="grid gap-1"
+        style={METER_COLUMNS}
       >
         {CELLS.map((cell) => (
           <span

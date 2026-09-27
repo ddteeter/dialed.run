@@ -99,7 +99,7 @@ describe("PostCard: the author row", () => {
     expect(screen.getByText("2h ago · 10:00 AM")).toHaveClass("font-mono");
   });
 
-  it("says A runner for someone with no display name", async () => {
+  it("says A runner for someone with no handle", async () => {
     await card();
     expect(screen.getByText("A runner")).toBeVisible();
   });

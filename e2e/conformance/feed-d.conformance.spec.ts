@@ -128,7 +128,10 @@ test("D for someone else's entry: strip with badge, note, kit, tags, Useful, Rep
   );
 
   const rows = seeded();
-  const runner = await seedRunner(rows, `D runner ${String(Date.now())}`);
+  const runner = await seedRunner(
+    rows,
+    `d_runner_${String(Date.now()).slice(-8)}`,
+  );
   const { entryId } = await seedEntry(rows, {
     userId: runner,
     place: { lat: 62.12, lng: 13.21 },

@@ -7,7 +7,7 @@
  * form. What is here is what only the server can know: whether a handle is
  * free, and whether it is one nobody may have.
  */
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, getTableName, ne, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -209,11 +209,19 @@ export type HandleClaim =
     };
 
 /**
- * D1's answer to a write that broke a UNIQUE index — here, a second runner
- * claiming the same handle between our read and our write.
+ * D1's answer to a write that broke the handle's unique index — here, a
+ * second runner claiming the same handle between our read and our write.
+ * **Only that index**: any other UNIQUE failure is a fault, not a taken
+ * handle, and telling a runner their own handle is taken would be a lie.
+ * SQLite names the column the index is on (`user_profiles.username`, even
+ * for the NOCASE expression), read from the schema rather than restated.
  */
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Error && error.message.includes("UNIQUE constraint");
+function isHandleIndexViolation(error: unknown): boolean {
+  const column = `${getTableName(userProfiles)}.${userProfiles.username.name}`;
+  return (
+    error instanceof Error &&
+    error.message.includes(`UNIQUE constraint failed: ${column}`)
+  );
 }
 
 /**
@@ -235,24 +243,66 @@ async function profileOf(
 }
 
 /**
+ * **D-56 as SQL**: nobody but `userId` ever gave `handle` up. Every write
+ * in the claim's batch carries it, so a handle retired between the read
+ * that decided and the batch that writes is refused by the database, not
+ * by a read that is already stale.
+ */
+function notRetiredByAnother(userId: string, handle: string): SQL {
+  return sql`NOT EXISTS (SELECT 1 FROM ${usernameHistory} WHERE ${usernameHistory.username} = ${handle} AND ${usernameHistory.userId} <> ${userId})`;
+}
+
+/**
+ * Keeps the handle the runner holds *at the moment the batch runs* in the
+ * history — read by the statement, not passed in, so two changes racing
+ * each other each retire what they actually replace. Nothing when there is
+ * no handle yet, when it already is `typed` (a repeat of the same change),
+ * or when D-56 refuses `typed` — the claim below writes nothing then
+ * either.
+ */
+function retireCurrent(db: Db, userId: string, typed: string, at: number) {
+  return db
+    .insert(usernameHistory)
+    .select(
+      sql`SELECT ${userProfiles.username}, ${userProfiles.userId}, ${at} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${userProfiles.username} <> ${typed} AND ${notRetiredByAnother(userId, typed)}`,
+    );
+}
+
+/**
+ * The profile row, made bare if O0 is the first write — a row of defaults
+ * reads exactly as no row does, so making it for a claim D-56 then
+ * refuses changes nothing a runner can see.
+ */
+function ensureProfile(db: Db, userId: string) {
+  return db.insert(userProfiles).values({ userId }).onConflictDoNothing();
+}
+
+/**
  * Claims `typed` as this runner's handle — at O0, or from Settings ›
  * Username. `typed` is already parsed by `usernameSchema` (the server
  * function's validator), so it is the stored form.
  *
- * **One batch** (CLAUDE.md "default to one batch"): the handle, the old
- * handle kept in the history, and the runner's own history row for the new
- * handle removed (taking an old handle back) land together or not at all.
- * The read that decides happens before it; the unique index is what
- * settles a race the read could not see, and it reads as taken.
+ * A reserved handle reads as taken with **no suggestion** (D-57): a
+ * suggestion beside it would tell a prober which names are on the list.
+ *
+ * **One batch** (CLAUDE.md "default to one batch"): the old handle kept in
+ * the history, the new handle, and the runner's own history row for it
+ * removed (taking an old handle back) land together or not at all, and a
+ * read of the row closes it. The read that decides happens before it; the
+ * batch re-checks D-56 itself, and the unique index settles a race with a
+ * runner claiming the same handle now. Either reads as taken.
  *
  * Claiming the handle you already have is a success that writes nothing
- * new.
+ * new — including a second submit of a change that has already landed.
  */
 export async function claimUsername(
   db: Db,
   userId: string,
   typed: string,
 ): Promise<HandleClaim> {
+  if (isReservedHandle(typed)) {
+    return { kind: "taken", username: typed, suggestion: undefined };
+  }
   const profile = await profileOf(db, userId);
   if (profile?.username === typed) return { kind: "claimed", username: typed };
   const taken = async (): Promise<HandleClaim> => ({
@@ -260,44 +310,37 @@ export async function claimUsername(
     username: typed,
     suggestion: await suggestionFor(db, userId, typed, profile?.cityLabel),
   });
-  if (!(await isFreeFor(db, userId, typed))) return taken();
+  if (await isHeldByAnother(db, userId, typed)) return taken();
 
-  const previous = profile?.username ?? undefined;
-  const takeHandle = db
-    .insert(userProfiles)
-    .values({ userId, username: typed })
-    .onConflictDoUpdate({
-      target: userProfiles.userId,
-      set: { username: typed },
-    });
   const ownHistoryRow = and(
     eq(usernameHistory.username, typed),
     eq(usernameHistory.userId, userId),
   );
-  const forgetRetired = db.delete(usernameHistory).where(ownHistoryRow);
+  // The handle is set only where D-56 still allows it; a refusal writes
+  // nothing, and the read at the end of the batch is what notices.
+  const mayTake = and(
+    eq(userProfiles.userId, userId),
+    notRetiredByAnother(userId, typed),
+  );
+  const holdsTyped = and(eq(userProfiles.userId, userId), sameHandle(typed));
   try {
-    await db.batch([
-      takeHandle,
-      forgetRetired,
-      ...(previous === undefined
-        ? []
-        : [retire(db, userId, previous, nowSeconds())]),
+    const results = await db.batch([
+      retireCurrent(db, userId, typed, nowSeconds()),
+      ensureProfile(db, userId),
+      db.update(userProfiles).set({ username: typed }).where(mayTake),
+      db.delete(usernameHistory).where(ownHistoryRow),
+      holdersNow(db, holdsTyped),
     ]);
+    const held = results[4];
+    // Nothing held means D-56 refused the claim inside the batch: someone
+    // gave this handle up after the read above said it was free.
+    return held.length > 0
+      ? { kind: "claimed", username: typed }
+      : await taken();
   } catch (error: unknown) {
-    if (isUniqueViolation(error)) return taken();
+    if (isHandleIndexViolation(error)) return taken();
     throw error;
   }
-  return { kind: "claimed", username: typed };
-}
-
-/**
- * The history row for a handle given up — a statement for the caller's
- * batch. `OR IGNORE`-free on purpose: a runner's old handle cannot already
- * be in the history (claiming it back deleted the row), so a conflict is a
- * real fault and should fail the batch loudly.
- */
-function retire(db: Db, userId: string, username: string, at: number) {
-  return db.insert(usernameHistory).values({ username, userId, retiredAt: at });
 }
 
 /**
@@ -330,8 +373,8 @@ export async function lookUpHandle(
 }
 
 /**
- * This runner's handle, or `undefined` before O0. The one read `/` makes to
- * decide whether to send a runner to O0 first.
+ * This runner's handle, or `undefined` before O0. The one read the root
+ * route makes to decide whether to send a runner to O0 first.
  */
 export async function usernameOf(
   db: Db,
@@ -342,7 +385,7 @@ export async function usernameOf(
 }
 
 /**
- * Whether `/` should send this visitor to O0 before anything else: signed
+ * Whether any page should send this visitor to O0 first: signed
  * in and no handle yet. A signed-out visitor never is — the landing page
  * is the only thing they can see, and a redirect to a screen that needs a
  * session would be a loop.
