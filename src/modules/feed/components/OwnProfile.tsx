@@ -1,6 +1,12 @@
 import { Link } from "@tanstack/react-router";
 
-import { Bracketed, ListSection, Mono, VerdictMark } from "../../../ui";
+import {
+  Bracketed,
+  Icon,
+  ListSection,
+  Mono,
+  VerdictMark,
+} from "../../../ui";
 import type { VerdictKind } from "../../../ui";
 import { bandVerdict } from "../coverage";
 import type { ownProfile } from "../profiles";
@@ -49,12 +55,13 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
           <Avatar name={name} size="large" />
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-1 flex-col gap-1">
             <h1 className="m-0 font-display text-heading">{name}</h1>
             {profile.cityLabel === undefined ? undefined : (
               <Mono className="text-muted">{profile.cityLabel}</Mono>
             )}
           </div>
+          <SettingsButton />
         </div>
         <p data-part="counts" className="m-0 flex gap-5 text-muted">
           <Count value={profile.runCount} label="Runs" />
@@ -115,8 +122,6 @@ export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
               </li>
             )}
           </ListSection>
-
-          <SettingsLink />
         </>
       )}
     </div>
@@ -163,10 +168,28 @@ function DayOne() {
 }
 
 /**
- * The way to Settings, in every state of G — the board draws it on day
- * one, inside the next step, and every later G keeps it at the foot:
- * Settings is the only place to sign out (PR #104), so a runner past day
- * one without it has no way out.
+ * G's way to Settings in every state (round 26 #18): the pack's `settings`
+ * glyph, a 44×44 button named "Settings", at the right of the identity
+ * line. Settings is the only place to sign out (PR #104), so no state of G
+ * may be without it.
+ */
+function SettingsButton() {
+  return (
+    <Link
+      to="/onboarding/settings"
+      aria-label="Settings"
+      data-part="settings-button"
+      className="target inline-flex size-11 shrink-0 items-center justify-center text-ink no-underline"
+    >
+      <Icon name="settings" size={20} />
+    </Link>
+  );
+}
+
+/**
+ * Day one's inline link to Settings, inside the next step, where round 22
+ * draws it. Round 26 #18 keeps it on day one beside the icon button; the
+ * established G has the icon only.
  */
 function SettingsLink() {
   return (

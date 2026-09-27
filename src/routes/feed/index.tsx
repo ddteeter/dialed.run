@@ -14,6 +14,7 @@ import {
 import { requireSignedIn } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
+import { lookUpCityFn } from "../../modules/onboarding/functions";
 import { geolocate } from "../../modules/onboarding/geolocate";
 import { nowSeconds } from "../../lib/now";
 
@@ -52,6 +53,7 @@ function FeedPage() {
           home,
           locate: geolocate,
           conditionsFor: yourConditionsQuery,
+          lookUpCity: lookUpCityFn,
           saveCity: saveConditionsCityAction,
         }}
       />

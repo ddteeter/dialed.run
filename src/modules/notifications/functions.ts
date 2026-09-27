@@ -6,8 +6,8 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireUserId } from "../auth";
+import { runsAwaitingVerdict } from "../runs";
 import { notificationsDb } from "./db";
-import { nowSeconds } from "../../lib/now";
 import {
   bellState,
   listNotifications,
@@ -18,7 +18,7 @@ import {
 export const listNotificationsFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    return listNotifications(notificationsDb(), userId, nowSeconds());
+    return listNotifications(notificationsDb(), userId);
   },
 );
 
@@ -33,17 +33,21 @@ export const markAllNotificationsReadFn = createServerFn({
   method: "POST",
 }).handler(async () => {
   const userId = await requireUserId();
-  await markAllNotificationsRead(notificationsDb(), userId, nowSeconds());
+  await markAllNotificationsRead(notificationsDb(), userId);
 });
 
 /**
  * Everything the bell needs, for a route to spread into `BelledLayout`:
  * the unread count (the dot) and the runs waiting for a verdict (the
- * number). Round 22, item 13.
+ * number). Round 22, item 13. The waiting set is modules/runs' own
+ * `runsAwaitingVerdict` — one definition of "awaiting", owned by runs.
  */
 export const bellStateFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    return bellState(notificationsDb(), userId, nowSeconds());
+    const db = notificationsDb();
+    return bellState(db, userId, async (limit) =>
+      runsAwaitingVerdict(db, userId, limit),
+    );
   },
 );

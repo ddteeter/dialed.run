@@ -384,6 +384,17 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
       t.moderationStatus,
       t.createdAt,
     ),
+    // One runner's public entries, newest first: the Following feed's
+    // per-author seek (FEED-5 review, `feed/feed.ts`). Driving the page
+    // from the viewer's followees, each read to at most a page, is what
+    // makes the rows it scans scale with who they follow rather than with
+    // every runner on the site.
+    index("entries_user_public_created").on(
+      t.userId,
+      t.isPublic,
+      t.moderationStatus,
+      t.createdAt,
+    ),
   ],
 );
 

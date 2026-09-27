@@ -1,0 +1,86 @@
+# Design: 129 Feed (launch development)
+
+## Problem
+
+The feed lane's launch items (`docs/tasks/129-feed.md`): the following feed
+must survive a runner who follows more than 92 people (D-101), the bell must
+count every run still owed a verdict, the profile city must have one writer,
+the typed city must be found and confirmed before it is used (round 26 #12),
+and round 26's feed confirms and indexing default must land. Several items
+build on PRs that are not merged yet; those are sequenced, not guessed at.
+
+## Approach
+
+- **FEED-4** — `followingFeedStatement(db, viewerId, cursor)` scopes by
+  `user_id = ? OR user_id IN (SELECT followee_id FROM follows WHERE
+follower_id = ?)`. Two bound ids however many follows. EXPLAIN before and
+  after goes in the PR; a test pins "no SCAN" on both tables at 150 follows.
+  **Revised in review (PR #117):** that shape still seeked
+  `entries_public_created` across every runner and checked each author row
+  by row. The statement now drives from the authors — followees plus the
+  viewer as a constant row, `CROSS JOIN`ed to each author's newest `limit`
+  entries past the cursor — on a new additive index,
+  `entries_user_public_created (user_id, is_public, moderation_status,
+created_at)` (migration `0026_add_entries_user_public_created_index`).
+  The cursor predicate leads with `created_at <= ?` so each seek starts at
+  the cursor. Rows scanned: at most a page per author.
+- **FEED-3** — `bellState` takes the awaiting set from `runsAwaitingVerdict`
+  (passed in by `bellStateFn`: notifications → runs → notifications would be
+  a cycle), read with `limit = cap + 1` since the bell stops at `9+`. The
+  14-day window goes from mark-all and `markable` too. Names: "Notifications"
+  and "Notifications, {n} new".
+- **FEED-5 / FEED-12 / FEED-2** — one writer, `savePlace` in
+  `onboarding/profile.ts`, exported by a new `onboarding/index.ts`. In
+  review both callers were put on one statement: `placeWrite` is the only
+  thing that writes the three place columns; `savePlace` awaits it and
+  `saveCalibration` batches it with the thermal answer and units. O1's
+  "press Find" rule is a `superRefine` on `calibrationInput`, so the server
+  refuses an unconfirmed city too. Find is
+  one server function (`lookUpCityFn`, O1's, now wired to `resolvePlace`)
+  answering `found {address, lat, lng}` / `not-found` / `unavailable`. A
+  shared `CityFinder` (onboarding components, exported through the index)
+  draws field + Find → "Weather for {resolved}" + Use this; nothing saves
+  until Use this. Your conditions saves through `savePlace`; O1 turns it into
+  the chip and saves with the calibration. `WEATHER FOR {RESOLVED}` heads
+  Your conditions whenever a named place is in use.
+- **FEED-1** — `head` on D and H from a `route-decisions.ts` constant:
+  `<meta name="robots" content="noindex">`.
+- **FEED-8** — `WeatherAttribution` beside every conditions display: the
+  card (outside its link), D's strip, and Your conditions' result states.
+- **FEED-13** — E2-lite "No weather for {place} yet. It shows after the
+  first reading."; a word on each consensus bar; G's `settings` icon button.
+- **Manual source** — feed's two `ne(source, "manual")` filters go, and
+  with #112 merged `'manual'` leaves the column's enum (TS only, no SQL).
+
+## Contract touches
+
+- Schema changes needed: `weather_observations.source` loses `'manual'`
+  (owner-approved; TS enum only, no migration).
+- New route files: none. Bindings/queues/crons: **none**.
+- Screens: E1, E2-lite, D, G, H, S2 bell, O1 city step, round 26 #9/#12/#18.
+
+## Sequenced (not in this PR)
+
+FEED-14 is descoped (owner, 2026-09-26: entries are for signed-in runners
+only, and every link previews as the generic card). FEED-6/7
+(128's predicate, 126's deletion state), FEED-10 (126's usernames), FEED-11
+(126's verification). Landed once their PRs merged: US date order (#113's
+formatter, shared through `lib/dates`), coordinate rounding in `onboarding/inputs.ts`
+(#113's `roundCoordinate`, so both O1 and Your conditions store two decimal
+places), the enum drop (#112).
+
+## Test plan
+
+- worker: 150-follow feed page + cursor + EXPLAIN; bell counts a 30-day-old
+  run; mark-all keeps an old owed reminder; `savePlace` writes all three or
+  none, from both paths; O1 lookup returns the resolved address.
+- ui: CityFinder (Find, Enter, not found, band, Use this), O1 chip + Next
+  message, ConditionsTab header / no-weather copy / bar words / attribution,
+  PostCard + EntryDetail attribution, G settings button, bell names.
+- e2e: feed demo and E2 conformance extended; noindex on D and H.
+
+## Open questions
+
+- Bell dot state: the ruling names two states; the dot reads
+  "Notifications, {unread} new" (digits) — flagged as a design delta.
+- Bar word labels ("Most" / "Some") are placeholder copy.

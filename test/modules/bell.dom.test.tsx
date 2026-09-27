@@ -54,7 +54,7 @@ describe("NotificationBell", () => {
   it("shows a dot, not a number, for unread notifications", async () => {
     // A follow or a useful is news, not a to-do — so it is never counted.
     await renderWithRouter(<NotificationBell unreadCount={4} />);
-    expect(bell()).toHaveAccessibleName("Notifications, unread");
+    expect(bell()).toHaveAccessibleName("Notifications, 4 new");
     expect(bell()).toHaveTextContent("");
     expect(bell()).toHaveAttribute("data-state", "dot");
     expect(bell()).toHaveClass("text-ink");
@@ -68,14 +68,18 @@ describe("NotificationBell", () => {
     expect(bell()).toHaveAttribute("data-state", "dot");
   });
 
+  it("names the dot's count in digits, and caps it where the number caps", async () => {
+    await renderWithRouter(<NotificationBell unreadCount={12} />);
+    expect(bell()).toHaveAccessibleName("Notifications, 9+ new");
+  });
+
   it("counts the runs waiting for a verdict, and the number wins over the dot", async () => {
     await renderWithRouter(
       <NotificationBell unreadCount={5} verdictsWaiting={3} />,
     );
     expect(bell()).toHaveTextContent(/^3$/u);
-    expect(bell()).toHaveAccessibleName(
-      "Notifications, 3 waiting for a verdict",
-    );
+    // Round 26 #9: "Notifications" and "Notifications, 3 new".
+    expect(bell()).toHaveAccessibleName("Notifications, 3 new");
     expect(bell()).toHaveAttribute("data-state", "number");
     expect(bell()).toHaveClass("text-ink");
     // A measured count, so it is mono — and only the count: no dot too.
@@ -101,9 +105,7 @@ describe("NotificationBell", () => {
       <NotificationBell unreadCount={0} verdictsWaiting={10} />,
     );
     expect(bell()).toHaveTextContent(/^9\+$/u);
-    expect(bell()).toHaveAccessibleName(
-      "Notifications, 9+ waiting for a verdict",
-    );
+    expect(bell()).toHaveAccessibleName("Notifications, 9+ new");
   });
 
   it("draws the pack's bell glyph, never an emoji, and never animates", async () => {

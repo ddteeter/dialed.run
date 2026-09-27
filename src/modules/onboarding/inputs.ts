@@ -1,12 +1,33 @@
 import { z } from "zod";
 
+import { roundCoordinate } from "../../lib/coords";
 import { ulidSchema } from "../../lib/ids";
 
 import {
   distanceUnitSchema,
+  latitudeSchema,
+  longitudeSchema,
   tempUnitSchema,
   thermalLevelSchema,
 } from "../../lib/contracts";
+
+/**
+ * A profile's coordinates, rounded as they are parsed (task 127, STR-14;
+ * D-110): the fallback point is often home, and nothing needs more than
+ * `lib/coords`' two places. Rounding here, at the boundary both writers of
+ * the place parse through (O1's calibration and Your conditions' Use
+ * this), means `onboarding/profile.ts` stores what it is given and an
+ * absent coordinate never reaches the rounding at all.
+ */
+const profileLatitude = latitudeSchema.transform(roundCoordinate);
+const profileLongitude = longitudeSchema.transform(roundCoordinate);
+
+/**
+ * Next pressed with a city typed but never found (round 26 #12): the
+ * field message says the two ways on. `calibrationInput` carries it, so
+ * the server refuses an unconfirmed city as the form does.
+ */
+export const CITY_UNCONFIRMED = "Press Find, or clear the field to skip.";
 
 /**
  * What O1 collects: how warm the person runs, where they run, and which
@@ -21,32 +42,49 @@ import {
  * Error copy lives here rather than in the form, per the Forms & failure
  * contract: one schema, run on both sides.
  */
-export const calibrationInput = z.object({
-  thermalLevel: thermalLevelSchema,
-  /**
-   * Free text, because the fallback is someone typing where they live. It
-   * is a label for a human, never parsed into coordinates.
-   */
-  cityLabel: z
-    .string()
-    .trim()
-    .min(1, { message: "Tell us where you run, or skip this." })
-    .max(120)
-    .optional(),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
-  tempUnit: tempUnitSchema.optional(),
-  distanceUnit: distanceUnitSchema.optional(),
-});
+export const calibrationInput = z
+  .object({
+    thermalLevel: thermalLevelSchema,
+    /**
+     * The provider's name for the place the runner found and confirmed
+     * (round 26 #12) — a label for a human, never parsed into coordinates.
+     * Up to 200, because it is Visual Crossing's `resolvedAddress`, which
+     * the weather module caps there.
+     */
+    cityLabel: z
+      .string()
+      .trim()
+      .min(1, { message: "Tell us where you run, or skip this." })
+      .max(200)
+      .optional(),
+    lat: profileLatitude.optional(),
+    lng: profileLongitude.optional(),
+    tempUnit: tempUnitSchema.optional(),
+    distanceUnit: distanceUnitSchema.optional(),
+  })
+  // A label with no coordinates is only ever typed text nobody found: a
+  // found city arrives with where it is (Use this made it the chip), the
+  // browser's location arrives as coordinates alone, and a blank field is
+  // no answer. Here rather than in the form, so the server refuses it too
+  // (FEED-5 review).
+  .refine(
+    ({ cityLabel, lat, lng }) =>
+      cityLabel === undefined || (lat !== undefined && lng !== undefined),
+    { path: ["cityLabel"], message: CITY_UNCONFIRMED },
+  );
 export type Calibration = z.infer<typeof calibrationInput>;
 
 /**
- * The city field's message when the typed place cannot be found. Beside
- * the schema whose field it lands on, because it is that field's error
- * copy — it just comes from the place lookup rather than from a parse.
+ * A place the runner found and pressed Use this on: the provider's name
+ * for it and where it is (round 26 #12). What the one writer of the
+ * profile's place takes (FEED-5), from O1 and from Your conditions alike.
  */
-export const CITY_NOT_FOUND =
-  "We couldn't find that place. Check the spelling.";
+export const placeInput = z.object({
+  cityLabel: z.string().trim().min(1).max(200),
+  lat: profileLatitude,
+  lng: profileLongitude,
+});
+export type Place = z.infer<typeof placeInput>;
 
 /**
  * What the units sub-page writes: the two display units.

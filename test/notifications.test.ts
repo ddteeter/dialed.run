@@ -9,8 +9,8 @@ import {
   listNotifications,
   markAllNotificationsRead,
   unreadNotificationCount,
-  VERDICT_WAIT_WINDOW_S,
 } from "../src/modules/notifications";
+import { runsAwaitingVerdict } from "../src/modules/runs";
 import { makeEntry, makeRun, NOW } from "./feed/helpers";
 import type { NotificationKind } from "../src/modules/notifications";
 import { nowSeconds } from "../src/lib/now";
@@ -36,7 +36,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
       body: "Add your kit.",
     });
 
-    const rows = await listNotifications(db, userId, NOW);
+    const rows = await listNotifications(db, userId);
     expect(rows).toHaveLength(1);
   });
 
@@ -59,10 +59,10 @@ describe("notifications (102 §7, resilience law 1)", () => {
 
     expect(await unreadNotificationCount(db, userId)).toBe(2);
 
-    await markAllNotificationsRead(db, userId, NOW);
+    await markAllNotificationsRead(db, userId);
     expect(await unreadNotificationCount(db, userId)).toBe(0);
 
-    const rows = await listNotifications(db, userId, NOW);
+    const rows = await listNotifications(db, userId);
     expect(rows.every((row) => row.read)).toBe(true);
   });
 
@@ -84,7 +84,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
       body: "Yours.",
     });
 
-    const rows = await listNotifications(db, userId, NOW);
+    const rows = await listNotifications(db, userId);
     expect(rows.map((row) => row.body)).toEqual(["Yours."]);
   });
 });
@@ -105,7 +105,7 @@ describe("what a notification row records", () => {
       body: "Your import failed.",
     });
 
-    const [row] = await listNotifications(db, userId, NOW);
+    const [row] = await listNotifications(db, userId);
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
     // Unread is the state the bell counts; a row that arrives read is a
@@ -122,8 +122,18 @@ describe("what a notification row records", () => {
   });
 });
 
+const DAY = 24 * 3600;
+
+/**
+The production wiring (`bellStateFn`): runs' own awaiting set, bound.
+*/
+function awaitingFor(userId: string) {
+  return async (limit: number) =>
+    runsAwaitingVerdict(notificationsDb(), userId, limit);
+}
+
 describe("the bell (round 22, item 13)", () => {
-  it("counts runs from the last 14 days without a verdict, with a kit or not", async () => {
+  it("counts runs without a verdict at any age, with a kit or not", async () => {
     const db = notificationsDb();
     const userId = newUlid();
     // No entry at all: a run nobody has dressed yet is still waiting.
@@ -134,20 +144,35 @@ describe("the bell (round 22, item 13)", () => {
     // Judged — dialed is 0, which is a verdict, not an absence of one.
     const judged = await makeRun({ userId, startedAt: NOW - 3600 });
     await makeEntry({ userId, runId: judged, verdict: 0 });
-    // Exactly on the window's edge counts; a second older does not.
-    await makeRun({ userId, startedAt: NOW - VERDICT_WAIT_WINDOW_S });
-    await makeRun({ userId, startedAt: NOW - VERDICT_WAIT_WINDOW_S - 1 });
+    // Thirty days old and never judged: the fourteen-day window is gone,
+    // so it is still a thing to do (FEED-3).
+    await makeRun({ userId, startedAt: NOW - 30 * DAY });
     // Someone else's run is never this runner's to-do.
     await makeRun({ userId: newUlid(), startedAt: NOW - 60 });
 
-    expect(await bellState(db, userId, NOW)).toStrictEqual({
+    expect(await bellState(db, userId, awaitingFor(userId))).toStrictEqual({
       unreadCount: 0,
       verdictsWaiting: 3,
     });
   });
 
-  it("is fourteen days, not a round number near it", () => {
-    expect(VERDICT_WAIT_WINDOW_S).toBe(1_209_600);
+  it("reads the waiting set one past the bell's cap, and no further", async () => {
+    const db = notificationsDb();
+    const userId = newUlid();
+    for (let index = 0; index < 12; index += 1) {
+      await makeRun({ userId, startedAt: NOW - index * DAY });
+    }
+    const asked: number[] = [];
+    const awaiting = awaitingFor(userId);
+
+    const state = await bellState(db, userId, async (limit) => {
+      asked.push(limit);
+      return awaiting(limit);
+    });
+
+    // Ten is enough to say "9+", and D1 bills every row read.
+    expect(asked).toStrictEqual([10]);
+    expect(state.verdictsWaiting).toBe(10);
   });
 
   it("counts unread notifications for the dot, and only this runner's", async () => {
@@ -166,7 +191,7 @@ describe("the bell (round 22, item 13)", () => {
       body: "Not yours.",
     });
 
-    expect(await bellState(db, userId, NOW)).toStrictEqual({
+    expect(await bellState(db, userId, awaitingFor(userId))).toStrictEqual({
       unreadCount: 1,
       verdictsWaiting: 0,
     });
@@ -199,7 +224,7 @@ describe("which rows Mark all read can clear", () => {
       body: "other kind",
     });
 
-    const rows = await listNotifications(db, userId, NOW);
+    const rows = await listNotifications(db, userId);
     const markable = Object.fromEntries(
       rows.map((row) => [row.body, row.markable]),
     );
@@ -219,9 +244,9 @@ describe("which rows Mark all read can clear", () => {
       subjectId: newUlid(),
       body: "read",
     });
-    await markAllNotificationsRead(db, userId, NOW);
+    await markAllNotificationsRead(db, userId);
 
-    const [row] = await listNotifications(db, userId, NOW);
+    const [row] = await listNotifications(db, userId);
     expect(row?.markable).toBe(false);
   });
 
@@ -241,12 +266,12 @@ describe("which rows Mark all read can clear", () => {
       subjectId: newUlid(),
       body: "other",
     });
-    const before = await listNotifications(db, userId, NOW);
+    const before = await listNotifications(db, userId);
     const offered = before.filter((row) => row.markable).map((row) => row.body);
 
-    await markAllNotificationsRead(db, userId, NOW);
+    await markAllNotificationsRead(db, userId);
 
-    const after = await listNotifications(db, userId, NOW);
+    const after = await listNotifications(db, userId);
     const cleared = after
       .filter(
         (row) => row.read && before.some((b) => b.id === row.id && !b.read),
@@ -284,22 +309,19 @@ describe("mark all read never clears a verdict still owed", () => {
       body: "New run on Strava — log your kit?",
     });
 
-    await markAllNotificationsRead(db, userId, NOW);
+    await markAllNotificationsRead(db, userId);
 
-    const rows = await listNotifications(db, userId, NOW);
+    const rows = await listNotifications(db, userId);
     const unread = rows.filter((row) => !row.read).map((row) => row.body);
     expect(unread).toStrictEqual([
       "Add your kit for the run you just imported.",
     ]);
   });
 
-  it("takes a reminder whose run has left the window", async () => {
+  it("keeps a month-old reminder unread while its run still waits", async () => {
     const db = notificationsDb();
     const userId = newUlid();
-    const old = await makeRun({
-      userId,
-      startedAt: NOW - VERDICT_WAIT_WINDOW_S - 1,
-    });
+    const old = await makeRun({ userId, startedAt: NOW - 30 * DAY });
     await createNotification(db, {
       userId,
       kind: "kit_reminder",
@@ -307,9 +329,41 @@ describe("mark all read never clears a verdict still owed", () => {
       body: "Add your kit.",
     });
 
-    await markAllNotificationsRead(db, userId, NOW);
+    await markAllNotificationsRead(db, userId);
 
-    expect(await unreadNotificationCount(db, userId)).toBe(0);
+    expect(await unreadNotificationCount(db, userId)).toBe(1);
+  });
+
+  it("leaves unread exactly the reminders runs' awaiting set names", async () => {
+    // Mark all read holds the awaiting set as SQL it can put in a
+    // subquery; runs owns the definition. This pins the two together.
+    const db = notificationsDb();
+    const userId = newUlid();
+    const bare = await makeRun({ userId, startedAt: NOW - 40 * DAY });
+    const dressed = await makeRun({ userId, startedAt: NOW - 2 * DAY });
+    await makeEntry({ userId, runId: dressed, createdAt: NOW });
+    const judged = await makeRun({ userId, startedAt: NOW - DAY });
+    await makeEntry({ userId, runId: judged, verdict: 2 });
+    for (const runId of [bare, dressed, judged]) {
+      await createNotification(db, {
+        userId,
+        kind: "kit_reminder",
+        subjectId: runId,
+        body: runId,
+      });
+    }
+
+    await markAllNotificationsRead(db, userId);
+
+    // Each reminder's body is its run's id, so the two sets compare as
+    // plain strings.
+    const notificationRows = await listNotifications(db, userId);
+    const unread = new Set(
+      notificationRows.filter((row) => !row.read).map((row) => row.body),
+    );
+    const awaitingRuns = await runsAwaitingVerdict(db, userId, 100);
+    expect(unread).toStrictEqual(new Set(awaitingRuns.map((run) => run.id)));
+    expect(unread).toStrictEqual(new Set([bare, dressed]));
   });
 
   it("marks only this runner's rows", async () => {
@@ -323,7 +377,7 @@ describe("mark all read never clears a verdict still owed", () => {
       body: "Not yours.",
     });
 
-    await markAllNotificationsRead(db, userId, NOW);
+    await markAllNotificationsRead(db, userId);
 
     expect(await unreadNotificationCount(db, otherUserId)).toBe(1);
   });

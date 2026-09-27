@@ -31,6 +31,7 @@ describe("the status region on first paint", () => {
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
           conditionsFor: () => Promise.resolve(undefined),
+          lookUpCity: () => Promise.resolve({ kind: "not-found" }),
           saveCity: () =>
             Promise.resolve({ lat: 1, lng: 2, cityLabel: "Here" }),
         }}

@@ -2,23 +2,25 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
+import type { CityLookup } from "../../../lib/city-lookup";
 import type { DistanceUnit, TempUnit, Units } from "../../../lib/contracts";
 import {
   Bracketed,
   ChoiceList,
+  CityFinder,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
+  Icon,
   Mono,
   PendingLabel,
   SubmitButton,
-  TextField,
   inFlight,
   useFormSubmit,
 } from "../../../ui";
-import { CITY_NOT_FOUND, calibrationInput } from "../inputs";
+import type { FieldProps } from "../../../ui";
+import { calibrationInput } from "../inputs";
 import type { Calibration } from "../inputs";
-import type { CityLookup } from "../place";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
 
 const LABELS = {
@@ -92,8 +94,9 @@ export function CalibrateForm({
    */
   locate: () => Promise<Coordinates>;
   /**
-   * Resolves a typed city to a place, once, on submit — the provider
-   * resolves a label, it does not suggest as you type (owner, 2026-09-24).
+   * Find (round 26 #12): resolves a typed city to one place, when the
+   * runner asks — the provider resolves a label, it does not suggest as
+   * you type. Nothing is saved until Use this.
    */
   lookUpCity: LookUpCity;
   saveCalibration: (input: { data: Calibration }) => Promise<unknown>;
@@ -113,10 +116,7 @@ export function CalibrateForm({
 
   const form = useFormSubmit({
     schema: calibrationInput,
-    action: async (values) =>
-      saveCalibration({
-        data: await withPlace(values, lookUpCity, setPlace),
-      }),
+    action: async (values) => saveCalibration({ data: values }),
     onSuccess: onSaved,
     successMessage: "Calibrated.",
     labels: LABELS,
@@ -165,10 +165,12 @@ export function CalibrateForm({
         place={place}
         onPlace={setPlace}
         locate={locate}
+        lookUpCity={lookUpCity}
         formField={{
           field: form.field,
           error: form.fieldErrors.cityLabel,
           focusField: form.focusField,
+          announce: form.announce,
         }}
       />
 
@@ -198,48 +200,12 @@ export function CalibrateForm({
 type LookUpCity = (input: { data: { label: string } }) => Promise<CityLookup>;
 
 /**
- * The city field's failure, shaped the way `useFormSubmit` lands a field
- * issue — so "we couldn't find that place" is the field's yellow, not the
- * form's band: the fix is in the field.
- */
-class CityNotFound extends Error {
-  readonly issues = [{ path: ["cityLabel"], message: CITY_NOT_FOUND }];
-}
-
-/**
- * The calibration with its typed city resolved, when there is one to
- * resolve.
- *
- * Asked once, on submit, and only for a typed city: nothing typed, a place
- * already resolved, or the browser's own coordinates all go as they are. A
- * found place becomes the chip, so a retry after a failed save does not
- * ask again; a provider that cannot answer leaves the label to go alone.
- */
-async function withPlace(
-  values: Calibration,
-  lookUp: LookUpCity,
-  onFound: (place: Place) => void,
-): Promise<Calibration> {
-  if (values.cityLabel === undefined || values.lat !== undefined) {
-    return values;
-  }
-  const label = values.cityLabel;
-  const found = await lookUp({ data: { label } });
-  if (found.kind === "not-found") throw new CityNotFound();
-  if (found.kind === "unavailable") return values;
-  onFound({ label, lat: found.lat, lng: found.lng });
-  return { ...values, lat: found.lat, lng: found.lng };
-}
-
-/**
- * A typed city is an answer — resolved on submit (`withPlace`) — and a
- * blank field is no answer at all.
+ * A typed city is an answer only once found; a blank field is no answer
+ * at all.
  */
 function typedCity(typed: string): string | undefined {
   return typed.trim() === "" ? undefined : typed;
 }
-
-const HINT = "Sets your climate cohort — runners who face the same winters.";
 
 /**
  * The three pieces of `useFormSubmit` a single field needs, travelling
@@ -248,20 +214,25 @@ const HINT = "Sets your climate cohort — runners who face the same winters.";
  * set, here and on every other field in this screen.
  */
 interface FieldBinding {
-  field: Parameters<typeof TextField>[0]["field"];
+  field: (name: string) => FieldProps;
   error: string | undefined;
   /**
   The form's own "focus this field", for the denied path.
   */
   focusField: (name: string) => void;
+  /**
+  The screen's one status region, for what Find says.
+  */
+  announce: (status: string) => void;
 }
 
 /**
- * O1's location step (round 22, item 19, as the owner corrected it on
- * 2026-09-24): the city is typed and resolved on submit, and becomes the
- * chip when found. "Use my location" is a text button under it: in flight
- * it breathes; granted → chip; denied → focus to the field, line
- * "Location's off. Type your city instead." (not yellow).
+ * O1's location step (round 22, item 19; round 26 #12): the field and
+ * Find, then "Weather for {resolved}", then Use this makes the chip and
+ * the field goes. "Change city" brings the field back empty. "Use my
+ * location" is a text button under the field: in flight it breathes;
+ * granted → chip; denied → focus to the field, line "Location's off.
+ * Type your city instead." (not yellow).
  */
 function WhereYouRun({
   typed,
@@ -269,6 +240,7 @@ function WhereYouRun({
   place,
   onPlace,
   locate,
+  lookUpCity,
   formField,
 }: Readonly<{
   typed: string;
@@ -276,9 +248,10 @@ function WhereYouRun({
   place: Place | undefined;
   onPlace: (place: Place | undefined) => void;
   locate: () => Promise<Coordinates>;
+  lookUpCity: LookUpCity;
   formField: FieldBinding;
 }>): JSX.Element {
-  const { field, error, focusField } = formField;
+  const { field, error, focusField, announce } = formField;
   const [isLocating, setIsLocating] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
 
@@ -306,47 +279,30 @@ function WhereYouRun({
 
   if (place !== undefined) {
     return (
-      <div className="flex flex-col gap-2">
-        <span className="text-label">
-          <Mono step="sm">{LABELS.cityLabel}</Mono>
-        </span>
-        <div
-          data-part="city-chip"
-          className="flex items-center justify-between gap-3 rounded-field border border-ink px-4 py-3"
-        >
-          {place.label === undefined ? (
-            // Located, not named: the coordinates are a measured value,
-            // so they read as one.
-            <Bracketed>{`${place.lat.toFixed(2)}, ${place.lng.toFixed(2)}`}</Bracketed>
-          ) : (
-            <span className="text-body">{place.label}</span>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              onPlace(undefined);
-            }}
-            className="target cursor-pointer border-none bg-transparent p-0 text-ink"
-          >
-            <Mono step="xs">Change</Mono>
-          </button>
-        </div>
-        <span className="text-micro text-muted">{HINT}</span>
-      </div>
+      <CityChip
+        place={place}
+        onChange={() => {
+          onTyped("");
+          onPlace(undefined);
+        }}
+      />
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <TextField
+      <CityFinder
         name="cityLabel"
         label={LABELS.cityLabel}
         value={typed}
         onChange={onTyped}
         field={field}
         error={error}
-        hint={HINT}
-        autoComplete="address-level2"
+        lookUp={lookUpCity}
+        onUse={(found) => {
+          onPlace({ label: found.address, lat: found.lat, lng: found.lng });
+        }}
+        announce={announce}
       />
       {isDenied ? (
         // Not yellow: nothing is wrong with the form. It is a fact about
@@ -368,6 +324,52 @@ function WhereYouRun({
           pendingLabel="Use my location"
           pending={isLocating}
         />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * What is saved, as round 26's O1 draws it: the provider's name for the
+ * place, uppercased (in CSS, so the accessible name stays in normal case),
+ * on a teal chip with a way to remove it, and "Change city" under it. The
+ * browser's coordinates, when that is all there is, read as a measured
+ * value. Both ways out bring the field back empty.
+ */
+function CityChip({
+  place,
+  onChange,
+}: Readonly<{ place: Place; onChange: () => void }>): JSX.Element {
+  const name = place.label ?? "your location";
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <span className="text-label">
+        <Mono step="sm">{LABELS.cityLabel}</Mono>
+      </span>
+      <div
+        data-part="city-chip"
+        className="flex items-center gap-3 rounded-pill bg-teal px-4 py-2 text-accent-ink"
+      >
+        {place.label === undefined ? (
+          <Bracketed>{`${place.lat.toFixed(2)}, ${place.lng.toFixed(2)}`}</Bracketed>
+        ) : (
+          <Mono step="sm">{place.label}</Mono>
+        )}
+        <button
+          type="button"
+          aria-label={`Remove ${name}`}
+          onClick={onChange}
+          className="target cursor-pointer border-none bg-transparent p-0 text-accent-ink"
+        >
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onChange}
+        className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-cold-text"
+      >
+        Change city
       </button>
     </div>
   );

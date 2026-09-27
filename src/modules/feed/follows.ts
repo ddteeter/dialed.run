@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { follows } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { countWhere } from "./count-where";
 
@@ -55,19 +55,6 @@ export async function isFollowing(
     follows,
     follows.followeeId,
     and(eq(follows.followerId, followerId), eq(follows.followeeId, followeeId)),
-  );
-}
-
-/**
-Covering index `follows(follower_id, followee_id)` — index seek, not a scan.
-*/
-export async function followeeIdsOf(followerId: string): Promise<string[]> {
-  return columnWhere(
-    db(),
-    follows,
-    follows.followeeId,
-    // fallow-ignore-next-line code-duplication -- followerCount and usefulCount both delegate to columnWhere, each over its own covering index
-    eq(follows.followerId, followerId),
   );
 }
 

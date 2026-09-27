@@ -2,25 +2,26 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { Units } from "../../../lib/contracts";
+import type { CityLookup } from "../../../lib/city-lookup";
+import type { ResolvedPlace, Units } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/measures";
 import { formatTemp } from "../../../lib/temperature";
 import type { PrecipClass } from "../../../lib/temperature";
 import {
   Bracketed,
+  CityFinder,
   classifyFailure,
+  ControlFailureBand,
   FailureBand,
-  FormFailureBand,
   FormStatus,
   Mono,
-  SubmitButton,
-  TextField,
-  useFormSubmit,
+  useControlAction,
+  WeatherAttribution,
 } from "../../../ui";
+import type { Place } from "../../onboarding";
 import type { ConsensusBand, ConsensusResult } from "../consensus";
 import { uiGroupLabels } from "../groups";
-import type { ConditionsHome, SavedCity } from "../home";
-import { conditionsCityInput } from "../inputs";
+import type { ConditionsHome } from "../home";
 import { BracketHeadline } from "./BracketHeadline";
 
 interface Coords {
@@ -28,7 +29,11 @@ interface Coords {
   lng: number;
 }
 
-type SaveCity = (input: { data: { cityLabel: string } }) => Promise<SavedCity>;
+/**
+Use this: saves the found place through the one writer of the profile's.
+*/
+type SaveCity = (input: { data: Place }) => Promise<Place>;
+type LookUpCity = (input: { data: { label: string } }) => Promise<CityLookup>;
 
 /**
  * What the tab is showing.
@@ -59,6 +64,7 @@ export function ConditionsTab({
   home,
   locate,
   conditionsFor,
+  lookUpCity,
   saveCity,
   units,
 }: Readonly<{
@@ -71,9 +77,9 @@ export function ConditionsTab({
     data: Coords;
   }) => Promise<ConsensusResult | undefined>;
   /**
-  Finds the typed city and saves it as the profile's place, answering with
-  where it is and the provider's name for it.
+  Find (round 26 #12): the provider's one answer for a typed city.
   */
+  lookUpCity: LookUpCity;
   saveCity: SaveCity;
   units: Units;
 }>) {
@@ -82,10 +88,17 @@ export function ConditionsTab({
   // before the save: without it, a retry after a failed read prompted for
   // the location again and put the city form back (PR #102 review).
   const saved = useRef<Coords>(undefined);
-  // The provider's name for the city just saved, shown back so a bare
-  // "Portland" cannot silently become the wrong one (PR #102 review).
-  // State rather than the ref above: it is drawn, so setting it renders.
-  const [placeName, setPlaceName] = useState<string>();
+  // The provider's name for the place being looked at, shown as the
+  // header (round 26 #12: `WEATHER FOR {RESOLVED}`), so a bare "Portland"
+  // cannot silently be the wrong one. A saved city with its coordinates
+  // has one from the start; the browser's own location has none. State
+  // rather than the ref above: it is drawn, so setting it renders.
+  const [placeName, setPlaceName] = useState(
+    home.coords === undefined ? undefined : home.cityLabel,
+  );
+  // The screen's one status region (Accessibility Contract rule 08), here
+  // rather than in the city form, so "City saved." outlives the form.
+  const [status, setStatus] = useState("");
 
   const lookAt = useCallback(
     async (coords: Coords) => {
@@ -115,13 +128,15 @@ export function ConditionsTab({
 
   return (
     <>
+      <FormStatus>{status}</FormStatus>
       {placeName === undefined ? undefined : (
         <ResolvedPlace address={placeName} />
       )}
       <StateBlock
         state={state}
         units={units}
-        saveCity={saveCity}
+        place={placeName ?? home.cityLabel}
+        city={{ lookUpCity, saveCity, announce: setStatus }}
         onSaved={(city) => {
           saved.current = { lat: city.lat, lng: city.lng };
           setPlaceName(city.cityLabel);
@@ -136,28 +151,43 @@ export function ConditionsTab({
 }
 
 /**
- * The saved city, in the provider's words — the answer to "which
- * Portland?". Placeholder copy pending design (undesigned surface).
+ * The place being looked at, in the provider's words — the answer to
+ * "which Portland?" — as round 26 #12 draws the header: `WEATHER FOR
+ * PORTLAND, OR, UNITED STATES`, the same string O1's chip shows.
  */
 function ResolvedPlace({ address }: Readonly<{ address: string }>) {
   return (
-    <p data-part="resolved-place" className="m-0 pt-5 text-small text-muted">
-      Weather for <span className="font-semibold text-ink">{address}</span>
+    <p data-part="resolved-place" className="m-0 pt-5 text-muted">
+      <Mono step="xs">Weather for {address}</Mono>
     </p>
   );
+}
+
+/**
+What the location-denied state needs to find a city and use it.
+*/
+interface CityActions {
+  lookUpCity: LookUpCity;
+  saveCity: SaveCity;
+  announce: (status: string) => void;
 }
 
 function StateBlock({
   state,
   units,
-  saveCity,
+  place,
+  city,
   onSaved,
   onRetry,
 }: Readonly<{
   state: TabState;
   units: Units;
-  saveCity: SaveCity;
-  onSaved: (city: SavedCity) => Promise<void>;
+  /**
+  The place's name, when there is one, for "No weather for {place} yet".
+  */
+  place: string | undefined;
+  city: CityActions;
+  onSaved: (city: Place) => Promise<void>;
   onRetry: () => void;
 }>) {
   if (state === "waiting") {
@@ -174,9 +204,9 @@ function StateBlock({
     );
   }
   if (state === "denied") {
-    return <CityForm saveCity={saveCity} onSaved={onSaved} />;
+    return <CityForm {...city} onSaved={onSaved} />;
   }
-  if (state === "no-weather") return <NoWeather />;
+  if (state === "no-weather") return <NoWeather place={place} />;
   if ("failed" in state) {
     return (
       <FailureBand
@@ -243,35 +273,29 @@ function SameConditionsEyebrow({
 }
 
 function CityForm({
+  lookUpCity,
   saveCity,
+  announce,
   onSaved,
-}: Readonly<{
-  saveCity: SaveCity;
-  onSaved: (city: SavedCity) => Promise<void>;
-}>) {
-  const [cityLabel, setCityLabel] = useState("");
-  const form = useFormSubmit({
-    schema: conditionsCityInput,
-    action: (values) => saveCity({ data: values }),
-    onSuccess: onSaved,
-    successMessage: "City saved.",
+}: Readonly<CityActions & { onSaved: (city: Place) => Promise<void> }>) {
+  const [typed, setTyped] = useState("");
+  const save = useControlAction({
+    action: async (found: ResolvedPlace) => saveCity({ data: placeOf(found) }),
+    kicker: "Not saved",
+    onSuccess: async (found) => {
+      announce("City saved.");
+      await onSaved(placeOf(found));
+    },
   });
 
   // Not a failure: the runner said no, and that is allowed — so no band
   // and no yellow, just the question the location would have answered.
   return (
-    <form
-      ref={form.formRef}
-      noValidate
+    <div
       data-part="match-block"
       data-state="location-denied"
       className="flex flex-col gap-4 py-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.submit({ cityLabel });
-      }}
     >
-      <FormStatus>{form.status}</FormStatus>
       <Eyebrow>Your conditions</Eyebrow>
       <h2 className="m-0 font-display text-title uppercase">
         Where do you run?
@@ -280,31 +304,35 @@ function CityForm({
         Location is off. Type your city and we&rsquo;ll match its weather
         instead.
       </p>
-      <TextField
+      <CityFinder
         name="cityLabel"
-        label="City"
-        hint="City and state, e.g. Portland, OR"
-        value={cityLabel}
-        onChange={setCityLabel}
-        field={form.field}
-        error={form.fieldErrors.cityLabel}
-        autoComplete="address-level2"
+        label="Your city"
+        value={typed}
+        onChange={setTyped}
+        lookUp={lookUpCity}
+        onUse={(found) => {
+          void save.run(found);
+        }}
+        using={save.pending}
+        announce={announce}
       />
-      <FormFailureBand
-        failure={form.failure}
-        onRetry={form.retry}
-        retryRef={form.retryRef}
-      />
-      <SubmitButton
-        label="Use this city"
-        pendingLabel="Saving"
-        pending={form.pending}
+      <ControlFailureBand
+        failure={save.failure}
+        onRetry={save.retry}
+        retryRef={save.retryRef}
       />
       <p className="m-0 text-small text-muted">
         Saved to your settings. Change it any time under You.
       </p>
-    </form>
+    </div>
   );
+}
+
+/**
+The found place as the profile stores it: the provider's name is the label.
+*/
+function placeOf(found: ResolvedPlace): Place {
+  return { cityLabel: found.address, lat: found.lat, lng: found.lng };
 }
 
 /**
@@ -352,17 +380,31 @@ function TooFew({
           Your own record in this band is on the Call.
         </p>
         <OpenTheCall />
+        <WeatherAttribution />
       </div>
     </div>
   );
 }
 
 /**
+ * A bar's colour in words (round 26 #9: *"Any bar colour also needs a
+ * label in words"*, rule 10). Pink is more than half the runners who
+ * matched; the hairline fill is fewer. Placeholder words pending design.
+ */
+const BAR_WORD = { most: "Most", some: "Some" } as const;
+const BAR_FILL = { most: "bg-action", some: "bg-hairline-2" } as const;
+
+function barShare(runners: number, total: number): keyof typeof BAR_WORD {
+  return runners * 2 > total ? "most" : "some";
+}
+
+/**
  * No reading has come in for where the runner is — or all we have is a
  * typed city, which names a place without locating it. Law 5: say we do
- * not know, never that nobody ran.
+ * not know, never that nobody ran. Round 26 #9 names the place: "No
+ * weather for Portland, OR yet. It shows after the first reading."
  */
-function NoWeather() {
+function NoWeather({ place }: Readonly<{ place: string | undefined }>) {
   return (
     <div
       data-part="match-block"
@@ -372,8 +414,8 @@ function NoWeather() {
       <Eyebrow>Your conditions</Eyebrow>
       <p className="m-0 font-display text-title uppercase">No weather yet</p>
       <p className="m-0 text-lead">
-        No reading has come in for where you are, so there is nothing to match
-        yet.
+        No weather for {place ?? "where you are"} yet. It shows after the first
+        reading.
       </p>
       <OpenTheCall />
     </div>
@@ -414,35 +456,44 @@ function Matched({
             : `In ${conditions}, in the last three days, wherever they were.`}
         </p>
       </div>
-      {result.groups.length === 0 ? undefined : (
-        <div className="flex flex-col gap-3 py-5">
-          <Eyebrow>What they wore</Eyebrow>
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {result.groups.map((row) => (
-              <li key={row.group} className="flex items-center gap-3">
-                <span className="h-6 flex-1 rounded-tight bg-tint">
-                  <span
-                    className={`block h-full rounded-tight ${
-                      row.runners * 2 > result.runners
-                        ? "bg-action"
-                        : "bg-hairline-2"
-                    }`}
-                    style={{
-                      width: `${String(Math.round((row.runners / result.runners) * 100))}%`,
-                    }}
-                  />
-                </span>
-                <span className="flex w-32 items-baseline justify-between gap-2 text-body">
-                  {uiGroupLabels[row.group]}
-                  <Mono className="text-muted">
-                    {String(row.runners)}/{String(result.runners)}
-                  </Mono>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="flex flex-col gap-3 py-5">
+        {result.groups.length === 0 ? undefined : (
+          <>
+            <Eyebrow>What they wore</Eyebrow>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {result.groups.map((row) => {
+                const share = barShare(row.runners, result.runners);
+                return (
+                  <li
+                    key={row.group}
+                    data-share={share}
+                    className="flex items-center gap-3"
+                  >
+                    <span className="h-6 flex-1 rounded-tight bg-tint">
+                      <span
+                        className={`block h-full rounded-tight ${BAR_FILL[share]}`}
+                        style={{
+                          width: `${String(Math.round((row.runners / result.runners) * 100))}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="flex w-44 items-baseline justify-between gap-2 text-body">
+                      {uiGroupLabels[row.group]}
+                      <span className="flex items-baseline gap-2 text-muted">
+                        <Mono step="xs">{BAR_WORD[share]}</Mono>
+                        <Mono>
+                          {String(row.runners)}/{String(result.runners)}
+                        </Mono>
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+        <WeatherAttribution />
+      </div>
     </div>
   );
 }
