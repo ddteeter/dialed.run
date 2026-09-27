@@ -28,8 +28,8 @@ Questions about this policy or your data: [OWNER: contact email].
   weather.
 - Faces in your photos are blurred on your phone before upload, unless you
   turn that off.
-- From Strava we keep your connection and an activity id per reminder. Never
-  your activity data.
+- From Strava we keep your athlete id, one token used only to revoke our
+  access, and an activity id per reminder. Never your activity data.
 - No ads. No analytics. No selling or renting your data.
 - You cannot yet delete your account or export your data from the app. See
   [Your choices](#your-choices).
@@ -50,9 +50,10 @@ Questions about this policy or your data: [OWNER: contact email].
   `email` and `profile` permissions only. We also store the tokens Google
   issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
-  (7 days), the browser that signed in, and its IP address. [OWNER: the IP
-  is read from the `x-forwarded-for` header; confirm in production whether
-  Cloudflare populates it, and keep or drop "IP address" to match.]
+  (7 days), the browser that signed in, and its IP address (as Cloudflare
+  reports it). To slow down password guessing we also count sign-in and
+  sign-up attempts per IP address; those counts are kept for about a
+  minute and then deleted. [OWNER: confirm the wording; task 125 OPS-4.]
 - **Email.** [OWNER: pending. The app sends no email today. If email
   verification or password reset ships, name the provider here and what it
   receives.]
@@ -187,25 +188,25 @@ can say "hides the two of you from each other".]
 Connecting Strava is optional. It exists for one thing: a reminder to log
 your kit when you post a new run there.
 
-- **What we keep:** your Strava athlete id, the access and refresh tokens
-  Strava issues, when the token expires, and whether the connection works.
+- **What we keep:** your Strava athlete id and a refresh token, which we
+  use for one thing only: revoking our access. We do not keep the access
+  token Strava issues, or when it expires.
 - **Permission:** we ask for `activity:read`. [OWNER: confirm this is the
   minimum scope Strava requires to send new-activity events, and say so.] We
-  never use it to read an activity: our code calls Strava only to connect,
-  refresh the token and disconnect.
+  never use it to read an activity: our code calls Strava only to connect
+  and to revoke our access.
 - **When you post a run on Strava,** Strava tells us an activity id, your
   athlete id and a time. We keep the activity id, the event type and that
   time so we never remind you twice, and we create a notification that
   points at that activity id.
 - **Never:** distance, pace, route, title, photos, heart rate or any other
   activity data. We do not store, show or use it.
-- **Disconnecting** deletes the connection immediately. We keep the access
+- **Disconnecting** deletes the connection immediately. We keep the refresh
   token only in a queue of revocations until Strava confirms it has revoked
   our access, then delete it.
-- **If you revoke us from Strava's side,** we notice the next time we try to
-  refresh the token and mark the connection broken. The tokens stay stored
-  until you disconnect in [dialed.run]. [OWNER: launch gap. Strava's
-  deauthorization event is currently ignored.]
+- **If you revoke us from Strava's side,** Strava tells us, and we delete
+  the connection straight away, revoke with the refresh token in the same
+  way, and tell you that reminders have stopped.
 - Reminder notifications and the activity ids behind them are kept after you
   disconnect. [OWNER: decide whether disconnecting should delete them.]
 
@@ -243,7 +244,7 @@ to anyone.
 | ---------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Cloudflare                         | Hosts the app: servers, databases, photo and file storage, queues, logs | Everything above, stored on its platform                                                                  |
 | Google                             | "Sign in with Google", if you use it                                    | The sign-in request; returns your name, email and picture                                                 |
-| Strava                             | Run reminders, if you connect                                           | The connect, token-refresh and disconnect requests                                                        |
+| Strava                             | Run reminders, if you connect                                           | The connect and revoke requests                                                                           |
 | Visual Crossing                    | Weather                                                                 | Run start coordinates and date; the place you set during setup                                            |
 | OpenAI                             | Photo screening; reading product pages                                  | Your photos; the text and address of product pages                                                        |
 | Firecrawl                          | Fetching product pages that block us                                    | The product link                                                                                          |
@@ -273,7 +274,7 @@ the face-blur model are served from our own site.
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Imported run files                                                                              | 30 days [OWNER: confirm the bucket rule is set]                                 |
 | Session records                                                                                 | Expire after 7 days. [OWNER: expired rows are not swept today; decide a period] |
-| Strava tokens                                                                                   | Until you disconnect, then until Strava confirms revocation                     |
+| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                     |
 | Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]             |
 | Garments used in a kit                                                                          | Kept, marked retired, so old kits still make sense                              |
 | Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | [OWNER: not built. There is no deletion. Decide a period, or build deletion]    |
@@ -313,8 +314,9 @@ applies.]
 Everything travels over HTTPS. [OWNER: confirm "Always Use HTTPS" is on
 for the zone; the code does not enforce it.] Passwords are hashed. Only the account that
 owns a garment photo can load it, and a private kit returns nothing to
-anyone else. Strava and Google tokens are stored in our database so the
-connection keeps working; they are not separately encrypted by us.
+anyone else. Google tokens are stored in our database so the connection
+keeps working, and a Strava refresh token so we can revoke our access; they
+are not separately encrypted by us.
 [OWNER: confirm Cloudflare's encryption at rest for D1 and R2 before
 claiming it.]
 

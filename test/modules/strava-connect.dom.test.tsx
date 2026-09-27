@@ -1,49 +1,64 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import type { ReactElement } from "react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  StravaConnect,
-  leaveForStrava,
-} from "../../src/modules/runs/components/StravaConnect";
-import { expectAvailable, expectBusy } from "../ui/unavailable";
+import { clockLabel, dayLabel, deviceTimeZone } from "../../src/lib/dates";
+import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
+import { expectBusy } from "../ui/unavailable";
 
 /**
- * Connect, reconnect and disconnect (Remaining Screens T1, T3; round 22,
- * item 23; round 23, item 9).
+ * Connect and disconnect (Remaining Screens T1, T3; round 22, item 23;
+ * round 23, item 9; round 25; round 26, item 21).
  *
  * The leaving-the-app half is `globalThis.location`, which is stubbed here
  * rather than driven.
  */
 const location = {
-  assign: vi.fn(),
   reload: vi.fn(),
 };
 
 vi.stubGlobal("location", location);
 
 afterEach(() => {
-  location.assign.mockClear();
   location.reload.mockClear();
 });
 
 const nothing = () => Promise.resolve();
-const noUrl = () => Promise.resolve(undefined);
-const STRAVA = "https://www.strava.com/oauth/authorize?state=01";
 
-function screenFor(
-  status: "ok" | "broken" | undefined,
+/**
+ * Renders inside a router, because the official button is a `Link`.
+ */
+async function renderInRouter(element: ReactElement) {
+  const rootRoute = createRootRoute({ component: () => element });
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ["/runs/strava"] }),
+  });
+  await router.load();
+  return render(<RouterProvider router={router} />);
+}
+
+async function screenFor(
+  isConnected: boolean,
   overrides: {
-    getAuthorizeUrl?: () => Promise<string | undefined>;
     disconnect?: () => Promise<unknown>;
+    lastRunSeenAt?: number;
   } = {},
 ) {
-  return render(
+  return renderInRouter(
     <StravaConnect
       configured
-      status={status}
+      connected={isConnected}
+      lastRunSeenAt={overrides.lastRunSeenAt}
       runCount={186}
-      getAuthorizeUrl={overrides.getAuthorizeUrl ?? noUrl}
       disconnect={overrides.disconnect ?? nothing}
     />,
   );
@@ -61,115 +76,97 @@ function confirmBox(): HTMLElement {
 }
 
 describe("StravaConnect: not configured", () => {
-  it("draws nothing at all — never a dead control", () => {
-    const { container } = render(
-      <StravaConnect
-        configured={false}
-        status={undefined}
-        runCount={0}
-        getAuthorizeUrl={noUrl}
-        disconnect={nothing}
-      />,
+  it("draws nothing at all — never a dead control", async () => {
+    await renderInRouter(
+      <div data-testid="host">
+        <StravaConnect
+          configured={false}
+          connected={false}
+          lastRunSeenAt={undefined}
+          runCount={0}
+          disconnect={nothing}
+        />
+      </div>,
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId("host")).toBeEmptyDOMElement();
   });
 });
 
 describe("StravaConnect: not yet connected", () => {
-  it("fetches the authorize URL at click time and leaves for Strava", async () => {
-    // The URL carries a fresh CSRF nonce, so it is fetched when the runner
-    // asks rather than rendered into the page.
-    const user = userEvent.setup();
-    const getAuthorizeUrl = vi.fn(() => Promise.resolve(STRAVA));
-    screenFor(undefined, { getAuthorizeUrl });
+  it("offers Strava's own button, and says where approval happens", async () => {
+    await screenFor(false);
 
+    const button = screen.getByRole("link", { name: "Connect with Strava" });
+    expect(button).toHaveAttribute("href", "/runs/strava-connect");
+    expect(button).toHaveAttribute("data-part", "strava-button");
     expect(
       screen.getByText("You’ll approve this on Strava’s own screen."),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
-
-    await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(STRAVA);
-    });
-    expect(getAuthorizeUrl).toHaveBeenCalledTimes(1);
-  });
-
-  it("waits behind its in-flight label, and asks once", async () => {
-    const user = userEvent.setup();
-    const pending = Promise.withResolvers<string | undefined>();
-    const getAuthorizeUrl = vi.fn(() => pending.promise);
-    screenFor(undefined, { getAuthorizeUrl });
-
-    const button = screen.getByRole("button", { name: "Connect Strava" });
-    expectAvailable(button);
-    await user.click(button);
-    await waitFor(() => {
-      expectBusy(button);
-    });
-    expect(button).toHaveAccessibleName("Connecting");
-    await user.click(button);
-    expect(getAuthorizeUrl).toHaveBeenCalledTimes(1);
-    pending.resolve(STRAVA);
-  });
-
-  it("says not connected under the button when it fails, and tries again", async () => {
-    const user = userEvent.setup();
-    const getAuthorizeUrl = vi
-      .fn<() => Promise<string | undefined>>()
-      .mockRejectedValueOnce(new Error("upstream down"))
-      .mockResolvedValueOnce(STRAVA);
-    screenFor(undefined, { getAuthorizeUrl });
-
-    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
-
-    expect(await screen.findByText("Not connected")).toBeVisible();
-    expect(screen.getByText("Our end failed.")).toBeVisible();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Not connected. Our end failed.",
-    );
-    expect(location.assign).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Try again" }));
-    await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(STRAVA);
-    });
-  });
-
-  it("treats a server with no URL to give as a failure, not a trip", async () => {
-    const user = userEvent.setup();
-    screenFor(undefined, { getAuthorizeUrl: noUrl });
-
-    await user.click(screen.getByRole("button", { name: "Connect Strava" }));
-
-    expect(await screen.findByText("Not connected")).toBeVisible();
-    expect(location.assign).not.toHaveBeenCalled();
-  });
-
-  it("says nothing at rest", () => {
-    screenFor(undefined);
-    expect(screen.getByRole("status")).toHaveTextContent("");
-    expect(screen.queryByText("Not connected")).toBeNull();
+    // No disconnect for a connection that does not exist.
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
 
-describe("leaveForStrava", () => {
-  it("goes where the server says, and refuses to go nowhere", async () => {
-    await leaveForStrava(() => Promise.resolve(STRAVA));
-    expect(location.assign).toHaveBeenCalledWith(STRAVA);
+describe("StravaConnect: the last run seen (round 25, T3a)", () => {
+  it("adds when Strava last told us a run landed, in the runner's zone", async () => {
+    const at = Math.floor(Date.UTC(2026, 7, 29, 13, 58) / 1000);
+    await screenFor(true, { lastRunSeenAt: at });
 
-    await expect(leaveForStrava(noUrl)).rejects.toThrow(
-      "Strava gave no authorize URL.",
+    const zone = deviceTimeZone() ?? "UTC";
+    expect(
+      await screen.findByText(
+        `Connected · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`,
+      ),
+    ).toHaveClass("text-dialed-text");
+  });
+
+  it("leaves the time out of the first paint, which the server renders without the runner's zone", () => {
+    const html = renderToString(
+      <StravaConnect
+        configured
+        connected
+        lastRunSeenAt={1_788_000_000}
+        runCount={1}
+        disconnect={nothing}
+      />,
     );
+
+    expect(html).toContain("Connected");
+    expect(html).not.toContain("Last run seen");
+  });
+
+  it("reads the time in UTC when the device names no zone it would accept", async () => {
+    const resolved = new Intl.DateTimeFormat().resolvedOptions();
+    const spy = vi
+      .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+      .mockReturnValue({ ...resolved, timeZone: "Not/A_Zone" });
+    try {
+      const at = Math.floor(Date.UTC(2026, 7, 29, 23, 30) / 1000);
+      await screenFor(true, { lastRunSeenAt: at });
+
+      expect(
+        await screen.findByText(
+          "Connected · Last run seen Sat Aug 29, 11:30 PM",
+        ),
+      ).toBeVisible();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("says only connected before the first run lands", async () => {
+    await screenFor(true);
+
+    expect(screen.getByText("Connected")).toBeVisible();
+    expect(screen.queryByText(/Last run seen/u)).toBeNull();
   });
 });
 
 describe("StravaConnect: connected", () => {
-  it("says it is connected, and offers only a disconnect", () => {
-    screenFor("ok");
+  it("says it is connected, and offers only a disconnect", async () => {
+    await screenFor(true);
 
-    // Round 25's T3a status line. It would carry "· LAST RUN SEEN {time}",
-    // which nothing stores yet.
     expect(screen.getByText("Connected")).toHaveClass("text-dialed-text");
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
       "Disconnect",
@@ -179,7 +176,7 @@ describe("StravaConnect: connected", () => {
   it("confirms first, as T3b draws it: what is kept and what stops", async () => {
     const user = userEvent.setup();
     const disconnect = vi.fn(nothing);
-    screenFor("ok", { disconnect });
+    await screenFor(true, { disconnect });
 
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
 
@@ -214,7 +211,7 @@ describe("StravaConnect: connected", () => {
   it("keeps it on Keep it, changing nothing", async () => {
     const user = userEvent.setup();
     const disconnect = vi.fn(nothing);
-    screenFor("ok", { disconnect });
+    await screenFor(true, { disconnect });
 
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
     await user.click(screen.getByRole("button", { name: "Keep it" }));
@@ -228,7 +225,7 @@ describe("StravaConnect: connected", () => {
   it("disconnects on the confirm, and reloads so the screen comes from the server", async () => {
     const user = userEvent.setup();
     const disconnect = vi.fn(nothing);
-    screenFor("ok", { disconnect });
+    await screenFor(true, { disconnect });
 
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
     await user.click(
@@ -247,7 +244,7 @@ describe("StravaConnect: connected", () => {
       .fn<() => Promise<unknown>>()
       .mockRejectedValueOnce(new Error("D1 unavailable"))
       .mockResolvedValueOnce(undefined);
-    screenFor("ok", { disconnect });
+    await screenFor(true, { disconnect });
 
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
     const verb = within(confirmBox()).getByRole("button", {
@@ -271,7 +268,7 @@ describe("StravaConnect: connected", () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<unknown>();
     const disconnect = vi.fn(() => pending.promise);
-    screenFor("ok", { disconnect });
+    await screenFor(true, { disconnect });
 
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
     const verb = within(confirmBox()).getByRole("button", {
@@ -286,43 +283,5 @@ describe("StravaConnect: connected", () => {
     await user.click(verb);
     expect(disconnect).toHaveBeenCalledTimes(1);
     pending.resolve(undefined);
-  });
-});
-
-describe("StravaConnect: broken", () => {
-  it("asks them to reconnect, and still offers the way out", () => {
-    screenFor("broken");
-
-    expect(screen.getByText("Strava needs to be reconnected.")).toBeVisible();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
-      "Reconnect Strava[Reconnecting]",
-      "Disconnect",
-    ]);
-  });
-
-  it("reconnects through the same authorize flow", async () => {
-    const user = userEvent.setup();
-    screenFor("broken", { getAuthorizeUrl: () => Promise.resolve(STRAVA) });
-
-    await user.click(screen.getByRole("button", { name: "Reconnect Strava" }));
-
-    await waitFor(() => {
-      expect(location.assign).toHaveBeenCalledWith(STRAVA);
-    });
-  });
-
-  it("says not connected when the reconnect fails", async () => {
-    const user = userEvent.setup();
-    screenFor("broken", {
-      getAuthorizeUrl: () => Promise.reject(new Error("down")),
-    });
-
-    const button = screen.getByRole("button", { name: "Reconnect Strava" });
-    await user.click(button);
-
-    expect(await screen.findByText("Not connected")).toBeVisible();
-    await waitFor(() => {
-      expectAvailable(button);
-    });
   });
 });

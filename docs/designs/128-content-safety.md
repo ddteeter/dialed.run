@@ -32,7 +32,7 @@ nothing to filter there today — 129 applies the rule when they arrive.
 **SAF-14.** `entryDetailQuery` and `otherProfileQuery` take
 `requireUserId` (additions to feed's `functions.ts`); the photo route needs
 a session (PR 2 adds "or a valid signature", issued only to signed-in
-viewers). Per the owner's clarification (decision D-53), "public" means
+viewers). Per the owner's clarification (decision D-55), "public" means
 visible to signed-in runners: there is no crawler exception, and link
 previews use only the site-wide generic card.
 
@@ -84,5 +84,7 @@ header refused without decoding. ui: the retract controls. browser: the
 1. A runner deleting an entry under review: [allowed; the open review row
    is settled `removed` by the author]. Quarantined photos are out of the
    runner's reach because the quarantine copy has no row.
+   **Answered (owner, 2026-09-27; decision D-56): allowed, as built.**
+   The server's 16 MP pixel cap (SAF-2) is accepted too (decision D-57).
 2. SAF-7 purge: [TTL only — no zone token]. URLs expire on a 15-minute
    bucket, so a removed photo leaves every cache within 30 minutes.

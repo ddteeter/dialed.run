@@ -307,6 +307,12 @@ export const runs = /*#__PURE__*/ sqliteTable(
     })
       .notNull()
       .default("none"),
+    // When the Strava reminder this file run answers landed (task 127,
+    // round 25: "one upload clears one reminder"). Set when an import
+    // clears a reminder, or when a reminder arrives for a file already
+    // uploaded; a run with it set can neither clear nor suppress another.
+    // NULL for a manual run and for a file with no reminder yet.
+    reminderMatchedAt: integer("reminder_matched_at"),
   },
   (t) => [
     index("runs_user_started").on(t.userId, t.startedAt),
@@ -441,12 +447,10 @@ export const notifications = /*#__PURE__*/ sqliteTable(
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
     kind: text("kind").notNull(),
-    // Nullable: some kinds have no subject. `strava_broken` used to pass
-    // the userId, which was "this kind has no subject" in disguise.
+    // Nullable: a kind may have no subject.
     // NOTE: SQLite treats NULLs as distinct in a UNIQUE index, so the
     // notifications_dedupe key does NOT dedupe subject-less kinds — those
-    // must be guarded at the call site by only firing on a state
-    // transition. See refreshStravaToken.
+    // must be guarded at the call site.
     subjectId: text("subject_id"),
     body: text("body").notNull(),
     read: integer("read", { mode: "boolean" }).notNull().default(false),
@@ -455,6 +459,9 @@ export const notifications = /*#__PURE__*/ sqliteTable(
   (t) => [
     uniqueIndex("notifications_dedupe").on(t.userId, t.kind, t.subjectId),
     index("notifications_user_read").on(t.userId, t.read),
+    // The daily Strava prune's read (task 127, STR-10): reminders of one
+    // kind older than a cutoff. Without it the prune scans the table.
+    index("notifications_kind_created").on(t.kind, t.createdAt),
   ],
 );
 
@@ -463,21 +470,15 @@ export const stravaConnections = /*#__PURE__*/ sqliteTable(
   {
     userId: text("user_id").primaryKey(),
     athleteId: text("athlete_id").notNull(),
-    accessToken: text("access_token").notNull(),
+    // The only token kept (D-54), and only to revoke the grant: on
+    // disconnect, account deletion and deauthorization. `/oauth/revoke`
+    // takes it, and it does not expire until rotated. The access token and
+    // its expiry are never stored — nothing here reads activity data.
     refreshToken: text("refresh_token").notNull(),
-    expiresAt: integer("expires_at").notNull(),
-    status: text("status", { enum: ["ok", "broken"] })
-      .notNull()
-      .default("ok"),
-    // Consecutive refresh failures, and when the current run of them began.
-    // A single unconditional catch used to mark a connection `broken` on any
-    // failure, so one network blip told the user to reconnect a working
-    // account. Both columns are needed, not just the counter: how long three
-    // failures take is entirely a function of how often something calls the
-    // refresh, so the count alone cannot tell a 30-second outage from a real
-    // revocation. Reset to 0/NULL on success.
-    refreshFailureCount: integer("refresh_failure_count").notNull().default(0),
-    refreshFirstFailedAt: integer("refresh_first_failed_at"),
+    // When this grant was made, epoch seconds (task 127). A deauthorization
+    // event older than this is about an earlier grant, and must not delete
+    // a runner's newer connection. NULL on rows made before the column.
+    connectedAt: integer("connected_at"),
   },
   (t) => [
     // One Strava athlete maps to at most one user. Without this, two
@@ -507,10 +508,12 @@ export const stravaRevocations = /*#__PURE__*/ sqliteTable(
   "strava_revocations",
   {
     id: text("id").primaryKey(),
-    // The only thing deauthorize needs. The connection row it came from is
-    // already gone by the time this exists.
-    accessToken: text("access_token").notNull(),
     createdAt: integer("created_at").notNull(),
+    // What the drain revokes with (task 127, STR-2), copied from the
+    // connection row, which is already gone by the time this exists. A
+    // refresh token does not expire until it is rotated — which nothing
+    // does once the connection row is gone.
+    refreshToken: text("refresh_token").notNull(),
   },
 );
 
@@ -555,6 +558,8 @@ export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
   },
   (t) => [
     uniqueIndex("webhook_events_pk").on(t.objectId, t.aspectType, t.eventTime),
+    // The same prune deletes keys older than a week by event time.
+    index("webhook_events_time").on(t.eventTime),
   ],
 );
 

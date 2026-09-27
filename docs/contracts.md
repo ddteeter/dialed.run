@@ -207,6 +207,7 @@ effort       text      -- enum: easy | steady | workout | race, NULLABLE
                        -- (unused by v1 logic; accrues for the call)
 title        text
 weather_status text    -- enum: none | pending | attached | manual | failed
+reminder_matched_at int -- NULLABLE; the Strava reminder this file run answered (127)
 ```
 
 ### outfit_entries
@@ -223,7 +224,7 @@ created_at   int
 ```
 
 - **"Public" means visible to any signed-in runner, never to the open
-  web** (decision D-53). A signed-out request gets nothing about an entry
+  web** (decision D-55). A signed-out request gets nothing about an entry
   or a profile — not its data, not its photo, not entry-specific head
   meta. There is no crawler exception: link previews use the site-wide
   generic card only.
@@ -261,9 +262,15 @@ reactions:      entry_id, user_id, kind ('useful'), created_at; PK (entry_id, us
 entry_photos:   id, entry_id, photo_key, position (max 4 per entry)
 notifications:  id, user_id, kind, subject_id, body, read, created_at,
                 UNIQUE(user_id, kind, subject_id)  -- dedupe key
-strava_connections:  user_id PK, athlete_id, tokens, status ('ok'|'broken')
+strava_connections:  user_id PK, athlete_id, refresh_token,
+                     connected_at NULLABLE -- when the grant was made (127)
+                     -- refresh_token is kept ONLY to revoke the grant (D-54);
+                     -- no access token, expiry or status is stored
                      -- webhook reminder flow ONLY; no other module may import it
-processed_webhook_events: UNIQUE(object_id, aspect_type, event_time)
+processed_webhook_events: UNIQUE(object_id, aspect_type, event_time),
+                INDEX(event_time) -- pruned after 7 days (127, STR-10)
+strava_revocations: id, refresh_token, created_at
+                -- the revoke outbox (law 8c); drained with the refresh token
 cron_checkpoints: cron_name PK, last_run_at
 imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'failed'),
                 failure_reason, run_id NULLABLE, created_at
@@ -321,7 +328,7 @@ adds "or it is the viewer's own"), it also drops a blocked pair, either
 direction, and entries the viewer reported (task 128). The anonymous form
 — no viewer — is what aggregates use, so blocks and a reporter's own hide
 move no counts; a ban does. The "stranger" is always a signed-in runner
-(decision D-53). Five call sites wrote the first half by hand
+(decision D-55). Five call sites wrote the first half by hand
 before 106; a second condition would have made five copies of a rule, and
 the dangerous one is the consensus aggregate, where a missed clause hides
 nothing visibly and only skews the numbers.
@@ -348,7 +355,7 @@ weather_observations: id, run_id (nullable), lat_r, lng_r, hour_bucket,
   source ('visualcrossing' | 'manual' — 'manual' being dropped, see below), fetched_at
 UNIQUE(lat_r, lng_r, hour_bucket)   -- the cache key: lat/lng rounded to 2dp
 
-manual_conditions: run_id (PK), temp_c, set_at   -- R2b's band, one run's own
+manual_conditions: run_id (PK), temp_c, set_at, sky NULLABLE -- R2b's band and sky (dry|damp|rain|snow), one run's own
 ```
 
 `weather_observations` is a shared cache and holds real observations only.

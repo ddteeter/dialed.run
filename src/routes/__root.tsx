@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 
 import { signedInQuery } from "../modules/auth/functions";
+import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
 
 export const Route = createRootRoute({
@@ -19,8 +20,12 @@ export const Route = createRootRoute({
       {
         title: "[dialed.run]",
       },
+      // Description, preview card, icons' colour and the noindex default
+      // (OPS-9): one list, where a test can read it.
+      ...SITE_META,
     ],
     links: [
+      ...SITE_LINKS,
       /*
        * **The three latin faces, self-hosted and preloaded.**
        *

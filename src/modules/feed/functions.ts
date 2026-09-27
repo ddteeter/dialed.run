@@ -144,7 +144,7 @@ export const entryDetailQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
     // A session, not an optional one (task 128, SAF-14): "public" means
-    // visible to signed-in runners, never the open web (decision D-53), so
+    // visible to signed-in runners, never the open web (decision D-55), so
     // a signed-out request — a crawler's included — gets nothing.
     const viewerId = await requireUserId();
     return entryDetailForViewer(data.entryId, viewerId);

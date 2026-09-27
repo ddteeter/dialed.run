@@ -4,6 +4,7 @@ import type { Units } from "../../../lib/contracts";
 import { formatWind } from "../../../lib/measures";
 import { formatTemp, precipClassOf } from "../../../lib/temperature";
 import { Mono, PendingLabel, WeatherAttribution } from "../../../ui";
+import { setBandLabel, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
 
 /**
@@ -29,7 +30,15 @@ export function ConditionsBlock({
    */
   note?: ReactNode;
 }>): JSX.Element {
-  const temp = `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()}`;
+  // A set band reads as the range the runner picked and the sky they
+  // picked — never its stored middle (round 26, item 2).
+  const { sky } = conditions;
+  const temp = conditions.isSetByYou
+    ? setBandLabel(conditions.tempC, units.temp)
+    : `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()}`;
+  const precip = conditions.isSetByYou
+    ? sky && SKY_WORDS[sky]
+    : precipClassOf(conditions.precipMm);
   return (
     <div
       data-slot="conditions"
@@ -45,7 +54,7 @@ export function ConditionsBlock({
       <p className="m-0 flex items-baseline gap-2">
         <span className="font-display text-display">{temp}</span>
         <Mono step="sm" className="text-teal">
-          {precipClassOf(conditions.precipMm)}
+          {precip}
         </Mono>
       </p>
       {conditions.isSetByYou ? undefined : (

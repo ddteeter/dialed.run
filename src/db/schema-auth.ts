@@ -6,6 +6,7 @@
  * `user.id` and nothing else.
  */
 import {
+  index,
   integer,
   sqliteTable,
   text,
@@ -74,3 +75,27 @@ export const verification = /*#__PURE__*/ sqliteTable("verification", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
+
+/**
+ * Better Auth's rate-limit counters (OPS-4), one row per key (the client
+ * address and the path). In D1 rather than in memory so the count is
+ * shared by every isolate: an in-memory counter restarts with each one,
+ * which on Workers is a limit an attacker never reaches. Shape per
+ * better-auth 1.7.2's `rateLimit` model (`@better-auth/core`
+ * `get-tables.mjs`); `last_request` is epoch milliseconds.
+ */
+export const rateLimit = /*#__PURE__*/ sqliteTable(
+  "rate_limit",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull(),
+    count: integer("count").notNull(),
+    lastRequest: integer("last_request").notNull(),
+  },
+  (t) => [
+    uniqueIndex("rate_limit_key").on(t.key),
+    // Better Auth deletes rows older than its longest window with a
+    // `last_request <` sweep; without this that sweep scans the table.
+    index("rate_limit_last_request").on(t.lastRequest),
+  ],
+);
