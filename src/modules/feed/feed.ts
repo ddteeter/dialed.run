@@ -96,6 +96,10 @@ function feedCursorPredicate(cursor: FeedCursor) {
  * crossed D1's 100-parameter cap. The viewer joins the set through their
  * own `user` row — a primary-key read, and a row that exists for anyone
  * holding a session. `feed.test.ts` pins the plan.
+ *
+ * Each author's read goes through the one visibility rule told who is
+ * looking, so a blocked pair and what the viewer reported drop out in SQL,
+ * ahead of the `LIMIT` (task 128, SAF-12/13).
  */
 export function followingFeedStatement(
   database: DrizzleD1Database,
@@ -121,7 +125,7 @@ export function followingFeedStatement(
     .where(
       and(
         eq(outfitEntries.userId, authors.id),
-        publiclyVisibleEntry(),
+        publiclyVisibleEntry(viewerId),
         cursor ? feedCursorPredicate(cursor) : undefined,
       ),
     )
@@ -289,8 +293,7 @@ async function hydrateEntries(
       // onto a second line and the `?.` lives there, so `next-line` was
       // pointing at the key and covering nothing.
       // Stryker disable OptionalChaining
-      authorUsername:
-        authorsById.get(entry.userId)?.username ?? undefined,
+      authorUsername: authorsById.get(entry.userId)?.username ?? undefined,
       // Stryker restore OptionalChaining
       runId: entry.runId,
       runTitle: run?.title ?? "Run",

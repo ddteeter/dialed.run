@@ -10,7 +10,7 @@ import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
 import { hasRowWhere } from "../../lib/keyed-read";
 import { countOf, countWhere } from "./count-where";
-import { isEntryPubliclyVisible } from "../safety";
+import { entryVisibleTo } from "../safety";
 import { nowSeconds } from "../../lib/now";
 
 function db() {
@@ -24,21 +24,16 @@ class NotVisibleError extends Error {
 }
 
 async function assertVisible(entryId: string, viewerId: string): Promise<void> {
+  // Reacting to a hidden entry would leak that it exists, and would put a
+  // count on something a reviewer may be about to remove. The one rule
+  // decides, in the WHERE (task 128): a blocked pair cannot mark each
+  // other's entries, nor can a runner mark a banned author's.
   const [entry] = await db()
-    .select({
-      userId: outfitEntries.userId,
-      isPublic: outfitEntries.isPublic,
-      moderationStatus: outfitEntries.moderationStatus,
-    })
+    .select({ id: outfitEntries.id })
     .from(outfitEntries)
-    .where(eq(outfitEntries.id, entryId))
+    .where(and(eq(outfitEntries.id, entryId), entryVisibleTo(viewerId)))
     .limit(1);
   if (!entry) throw new NotVisibleError();
-  // Reacting to a hidden entry would leak that it exists, and would put a
-  // count on something a reviewer may be about to remove.
-  if (!isEntryPubliclyVisible(entry) && entry.userId !== viewerId) {
-    throw new NotVisibleError();
-  }
 }
 
 /**

@@ -14,6 +14,7 @@ export { Page } from "./Page";
 export type { PhotoStep } from "./photo-step";
 export { ProductLink } from "./ProductLink";
 export { Sheet } from "./Sheet";
+export { ConfirmLink, ConfirmSheet } from "./ConfirmSheet";
 export { Skeleton } from "./Skeleton";
 export { StravaButton } from "./StravaButton";
 export {

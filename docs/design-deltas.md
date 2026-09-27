@@ -404,6 +404,40 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the badge stops at `9+`. **The ask:** confirm the name says the
       number while the dot does not.
 
+31. **Four surfaces task 128 built without a drawing (PR #118).** Each is
+    composed from existing primitives and copy in the system; none adds a
+    glyph, colour or motion.
+    - **The delete links.** "Delete this entry", "Delete photo {n}" at the
+      foot of D (`feed/components/RetractEntry.tsx`, owner only) and
+      "Delete this run" at the foot of the run
+      (`runs/components/DeleteRun.tsx`): text links in the report link's
+      grammar. The packet's asks were "the D/E1 overflow" and "the
+      run-detail action". **The ask:** where these live, and whether an
+      overflow replaces the links.
+    - **ConfirmSheet.** `ui/ConfirmSheet.tsx` generalises round 22's
+      drawn garment retire confirm ("Y Retire confirm") to the three
+      deletes: heading as the question, the cost as the body, the verb on
+      an ink primary, **Keep it** focused, and round 23's control failure
+      band under it with the sheet left open. The three bodies — each
+      saying what goes and ending "This can't be undone." — are
+      placeholder copy. **The ask:** confirm the borrowed grammar for a
+      delete, and word the three bodies.
+    - **W3's keyboard blur cells.** Tap-to-blur's keyboard path (D-84(b),
+      the Accessibility Contract's "buttons named by position ('Blur
+      top-left')"): a 3 × 3 group of pill-grammar text buttons under the
+      canvas, one a cell, `aria-pressed` while that cell is blurred
+      (`safety/components/PhotoBlur.tsx`, `BlurCells`). **The ask:** what
+      focusable blur targets look like.
+    - **D4 · AccountClosed.** Built to Operator Screens D4
+      (`safety/components/AccountClosed.tsx`) but without the board's
+      `CASE [B-0031]` line: bans carry no case number, and inventing one
+      would be a reference nobody at the desk could look up. It is also
+      mounted nowhere yet — lane 126's sign-in form puts it on screen on
+      `ACCOUNT_CLOSED` — and a refused Google sign-in reaches that form as
+      a redirect carrying the reason but not the date D4 prints. **The
+      ask:** drop the case line or say what it names; and what D4 says
+      when it has the reason but no date.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25

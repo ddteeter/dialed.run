@@ -17,7 +17,7 @@ export interface Region {
 }
 
 /**
- * Where a region came from. The copy differs — "we blurred one face" is a
+ * Where a region came from. The copy differs — "we blurred 1 face" is a
  * claim about detection, and a runner's own tap is not — and so does what
  * happens when the detector is re-run.
  */
@@ -203,17 +203,96 @@ export const BLUR_OFF_LINE =
   "Faces won't be blurred. Anyone in this photo can be recognised.";
 
 /**
- * "one face" / "two faces" — words for small numbers, because this is a
- * sentence rather than a measurement. Bracket-notation mono is for values
- * the system measured; a count inside prose is not one.
+ * Digits, always (round 26, #18: "counts are digits, always, including
+ * 'You blurred 1 spot.'") — "We blurred 1 face.", never "one face".
  */
 function countOf(count: number, noun: string): string {
-  // Indexed from one, because every caller has already returned early on
-  // zero — "no face found" and "no spots blurred" are different sentences
-  // written elsewhere, so a "no" entry here was a slot no input reached.
-  const WORDS = ["one", "two", "three", "four", "five"];
-  const word = WORDS[count - 1] ?? String(count);
-  return `${word} ${noun}${count === 1 ? "" : "s"}`;
+  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * The keyboard path's cells, in reading order: the photo split into a
+ * 3 × 3 grid, each named by where it sits (D-84(b)).
+ */
+export const BLUR_CELLS = [
+  "top-left",
+  "top",
+  "top-right",
+  "left",
+  "middle",
+  "right",
+  "bottom-left",
+  "bottom",
+  "bottom-right",
+] as const;
+
+/**
+The rectangle cell `index` covers, in image pixels.
+*/
+export function cellRegion(
+  index: number,
+  imageWidth: number,
+  imageHeight: number,
+): Region {
+  const width = imageWidth / 3;
+  const height = imageHeight / 3;
+  return {
+    x: (index % 3) * width,
+    y: Math.floor(index / 3) * height,
+    width,
+    height,
+  };
+}
+
+/**
+The index of the runner's own region that is exactly this cell, or -1.
+*/
+function cellIndexIn(
+  regions: readonly BlurRegion[],
+  index: number,
+  imageWidth: number,
+  imageHeight: number,
+): number {
+  const cell = cellRegion(index, imageWidth, imageHeight);
+  return regions.findIndex(
+    (region) =>
+      region.source === "tapped" &&
+      region.x === cell.x &&
+      region.y === cell.y &&
+      region.width === cell.width &&
+      region.height === cell.height,
+  );
+}
+
+/**
+Whether the runner has blurred this cell from the keyboard.
+*/
+export function isCellBlurred(
+  regions: readonly BlurRegion[],
+  index: number,
+  imageWidth: number,
+  imageHeight: number,
+): boolean {
+  return cellIndexIn(regions, index, imageWidth, imageHeight) !== -1;
+}
+
+/**
+ * The keyboard's tap: blur the whole cell, or — pressed again — undo it.
+ * The runner's region, so the summary credits them ("You blurred 1
+ * spot."), exactly as a tap does.
+ */
+export function afterCell(
+  regions: readonly BlurRegion[],
+  index: number,
+  imageWidth: number,
+  imageHeight: number,
+): BlurRegion[] {
+  const hit = cellIndexIn(regions, index, imageWidth, imageHeight);
+  if (hit !== -1) return regions.filter((_region, at) => at !== hit);
+  return [
+    ...regions,
+    { ...cellRegion(index, imageWidth, imageHeight), source: "tapped" },
+  ];
 }
 
 /**

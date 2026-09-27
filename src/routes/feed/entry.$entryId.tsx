@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
+import { RetractEntry } from "../../modules/feed/components/RetractEntry";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
 import { fileReportAction } from "../../modules/safety/functions";
 import {
@@ -9,8 +10,10 @@ import {
   shouldAskForVerdict,
 } from "../../modules/feed/route-decisions";
 import {
+  deleteEntryPhotoAction,
   entryDetailQuery,
   recordVerdictPromptedAction,
+  retractEntryAction,
   setUsefulAction,
   verdictPromptQuery,
   viewerUnitsQuery,
@@ -48,6 +51,7 @@ function EntryDetailPage() {
   const { entryId } = Route.useParams();
   const { entry, shouldPromptVerdict, units, viewerId, bell } =
     Route.useLoaderData();
+  const navigate = useNavigate();
 
   return (
     <BelledLayout {...bell}>
@@ -71,6 +75,15 @@ function EntryDetailPage() {
             fileReport={fileReportAction}
           />
         }
+      />
+      <RetractEntry
+        entry={entry}
+        viewerId={viewerId}
+        retract={retractEntryAction}
+        deletePhoto={deleteEntryPhotoAction}
+        onRetracted={async () => {
+          await navigate({ to: "/feed" });
+        }}
       />
     </BelledLayout>
   );

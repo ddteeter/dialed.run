@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { captureException } from "../ops";
+import { banGate } from "../safety";
 import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
 
@@ -16,7 +17,9 @@ export const auth = createAuth({
   // its scheme decides secure cookies and rate limiting (createAuth).
   baseUrl: env.BETTER_AUTH_URL,
   google: googleCredentials(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
-  plugins: [tanstackStartCookies()],
+  // The ban gate (task 128 · SAF-4): a banned runner's session is refused
+  // wherever one is made — email, Google, any provider added later.
+  plugins: [tanstackStartCookies(), banGate()],
   passwordScreen: {
     verdict: (password) => breachVerdict(password),
     report: captureException,

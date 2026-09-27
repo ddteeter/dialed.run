@@ -248,6 +248,8 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/auth/auth-page.tsx",
       // "Not now — leave it in the queue." (Product Screens A2).
       "src/modules/feed/components/AttachKit.tsx",
+      // D4's appeal address, set in its sentence (Operator Screens D4).
+      "src/modules/safety/components/AccountClosed.tsx",
       "src/routes/runs/new.tsx",
       "src/ui/ProductLink.tsx",
       "src/ui/WeatherAttribution.tsx",

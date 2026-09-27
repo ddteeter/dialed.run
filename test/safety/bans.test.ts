@@ -6,12 +6,7 @@ import { session, user } from "../../src/db/schema-auth";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import {
-  banStateOf,
-  bannedAmong,
-  banUser,
-  unbanUser,
-} from "../../src/modules/safety";
+import { banStateOf, banUser, unbanUser } from "../../src/modules/safety";
 
 import { makeUser, NOW, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
@@ -87,7 +82,8 @@ describe("banning", () => {
     // All three effects, because any two of them looks like it works: a
     // banned account with live sessions is still posting.
     const state = await banStateOf(userId);
-    expect(state).toEqual({ banned: true, reason: "spam" });
+    expect(state.banned).toBe(true);
+    expect(state.reason).toBe("spam");
     expect(await sessionCountOf(userId)).toBe(0);
 
     // The moment itself, in seconds. The notice quotes the reason back
@@ -98,6 +94,7 @@ describe("banning", () => {
       .select({ bannedAt: userProfiles.bannedAt })
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId));
+    expect(state.bannedAt).toBe(row?.bannedAt);
     expect(row?.bannedAt).toBeGreaterThanOrEqual(now - 5);
     expect(row?.bannedAt).toBeLessThanOrEqual(now + 5);
   });
@@ -148,6 +145,7 @@ describe("unbanning", () => {
     expect(await banStateOf(userId)).toEqual({
       banned: false,
       reason: undefined,
+      bannedAt: undefined,
     });
   });
 
@@ -162,40 +160,8 @@ describe("unbanning", () => {
   });
 });
 
-describe("filtering banned authors out of a page", () => {
+describe("a runner with no profile", () => {
   beforeEach(resetAuthTables);
-
-  it("returns only the banned ones among the candidates", async () => {
-    const banned = await makeUser();
-    const fine = await makeUser();
-    const alsoBanned = await makeUser();
-    const bannedBy = await makeUser();
-    await banUser({ userId: banned, reason: "spam", bannedBy });
-    await banUser({ userId: alsoBanned, reason: "spam", bannedBy });
-
-    const result = await bannedAmong([banned, fine, alsoBanned]);
-
-    expect(result).toEqual(new Set([banned, alsoBanned]));
-  });
-
-  it("does not report someone banned who was not asked about", async () => {
-    const banned = await makeUser();
-    const fine = await makeUser();
-    await banUser({
-      userId: banned,
-      reason: "spam",
-      bannedBy: await makeUser(),
-    });
-
-    // The query is scoped to the candidates, not "everyone banned" — the
-    // banned set grows without bound and a page only cares about the
-    // authors actually on it.
-    expect(await bannedAmong([fine])).toEqual(new Set());
-  });
-
-  it("asks nothing of the database for an empty candidate list", async () => {
-    expect(await bannedAmong([])).toEqual(new Set());
-  });
 
   it("treats a user with no profile row as not banned", async () => {
     // A brand-new account has no profile until onboarding writes one.
@@ -203,6 +169,7 @@ describe("filtering banned authors out of a page", () => {
     expect(await banStateOf(newUlid())).toEqual({
       banned: false,
       reason: undefined,
+      bannedAt: undefined,
     });
   });
 });

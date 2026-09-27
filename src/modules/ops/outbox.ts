@@ -26,7 +26,11 @@ import {
   type OutboxKind,
   type OutboxMessage,
 } from "../../lib/outbox";
-import { outboxHandlers, type OutboxHandlers } from "./outbox-handlers";
+import {
+  boundHandler,
+  outboxHandlers,
+  type OutboxHandlers,
+} from "./outbox-handlers";
 import { captureException } from "./sentry";
 
 type Db = ReturnType<typeof drizzle>;
@@ -123,16 +127,16 @@ export async function settleOutbox(
   report: Report = captureException,
   handlers: OutboxHandlers = outboxHandlers,
 ): Promise<void> {
-  const handler = handlers[debt.message.kind];
+  const handler = boundHandler(handlers, debt.message);
   try {
-    await handler.run(db, debt.message.payload);
+    await handler.run(db);
     await db.delete(outbox).where(eq(outbox.id, debt.id));
   } catch (error) {
     report(error, {
       surface: "outbox-fast-path",
       kind: debt.message.kind,
       outboxId: debt.id,
-      ...handler.context(debt.message.payload),
+      ...handler.context(),
     });
   }
 }
@@ -213,15 +217,15 @@ async function didSettle(
     return false;
   }
   const { message } = read;
-  const handler = handlers[message.kind];
+  const handler = boundHandler(handlers, message);
   try {
-    await handler.run(db, message.payload);
+    await handler.run(db);
     // Its own id, as the fast path does: a row taken over by a newer
     // write since this run claimed it is that writer's to settle.
     await db.delete(outbox).where(eq(outbox.id, row.id));
     return true;
   } catch (error) {
-    report(error, { ...where, ...handler.context(message.payload) });
+    report(error, { ...where, ...handler.context() });
     return false;
   }
 }

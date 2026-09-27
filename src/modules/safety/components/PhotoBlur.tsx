@@ -1,8 +1,8 @@
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { Mono, ToggleField } from "../../../ui";
-import type { PhotoStep } from "../../../ui";
+import { ControlFailureBand, Mono, ToggleField } from "../../../ui";
+import type { ControlFailure, PhotoStep } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
   browserPipeline,
@@ -10,10 +10,13 @@ import {
   type LoadedImage,
 } from "../blur/pipeline";
 import {
+  BLUR_CELLS,
   BLUR_OFF_LINE,
+  afterCell,
   afterTap,
   blurSummary,
   detectedRegions,
+  isCellBlurred,
   toImageCoordinates,
   type BlurRegion,
 } from "../blur/regions";
@@ -48,6 +51,19 @@ import {
  * apart is exactly the pair that drifts.
  */
 const CHECKING = "Checking this photo";
+
+/**
+ * Blur off, and the canvas could not make a file from the redraw.
+ *
+ * Said rather than swallowed: with no file there is nothing to hand the
+ * uploader, and a step that simply never calls `onReady` leaves the form
+ * waiting on a photo that is not coming. The kicker names what is still
+ * true — the round 23 control-failure pattern (`ui/ControlFailureBand`).
+ */
+const REDRAW_FAILED: ControlFailure = {
+  kicker: "Photo not added",
+  message: "This photo couldn't be prepared for upload.",
+};
 
 export function PhotoBlur({
   file,
@@ -111,6 +127,21 @@ export function PhotoBlur({
    * were that shape.
    */
   const [loaded, setLoaded] = useState<LoadedImage>();
+  /**
+   * Blur off's redraw came back empty (`REDRAW_FAILED`). `attempt` is what
+   * "Try again" changes: the effect depends on it, so a retry reruns the
+   * redraw rather than repeating a hand-off that never happened.
+   *
+   * A fresh object rather than a counter: nothing ever reads the value,
+   * only whether it changed, and a counter made that fact a coincidence —
+   * `current + 1` and `current - 1` are equally "different from last
+   * time", so a mutant that decremented was indistinguishable from the
+   * real code and survived. A new `{}` is a different reference by
+   * construction on every call, with no operator a mutant can flip to
+   * make it otherwise.
+   */
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState({});
 
   /**
    * Repaints and hands the caller the bytes that should be uploaded.
@@ -145,15 +176,27 @@ export function PhotoBlur({
     const effect = new AbortController();
     const isStale = (): boolean => effect.signal.aborted;
     async function run(): Promise<void> {
-      if (!isOn) {
-        // Blur off: the original is what gets uploaded, said plainly
-        // rather than by omission. No detector is loaded — that is the
-        // whole point of remembering a refusal.
-        onReady(file);
-        return;
-      }
+      // Decoded either way (task 128 · SAF-2): the canvas step is where a
+      // photo is scaled to its long edge and where its metadata — the GPS
+      // a phone writes into every frame — is left behind, so blur off goes
+      // through it too. What it skips is the detector.
       const decoded = await pipeline.load(file);
       if (isStale()) return;
+      if (!isOn) {
+        // Blur off: the photo as it was taken, redrawn onto a canvas no
+        // one sees, and nothing looked for. No detector is loaded — that
+        // is the whole point of remembering a refusal.
+        const flat = globalThis.document.createElement("canvas");
+        pipeline.paint(flat, decoded.image, decoded.width, decoded.height, []);
+        const redrawn = await pipeline.toFile(flat, file.name);
+        if (isStale()) return;
+        // No fallback to `file` here either: the original is the frame
+        // with the metadata in it. Nothing to hand over is a failure the
+        // runner is shown, not a silence.
+        if (redrawn === undefined) setFailed(true);
+        else onReady(redrawn);
+        return;
+      }
       setLoaded(decoded);
 
       const outcome = await pipeline.detect(decoded.image);
@@ -165,7 +208,7 @@ export function PhotoBlur({
     return () => {
       effect.abort();
     };
-  }, [file, isOn, onReady, pipeline]);
+  }, [attempt, file, isOn, onReady, pipeline]);
 
   // Painting follows the regions rather than happening inside the handler
   // that changed them, so a detection and a tap take the same path.
@@ -222,6 +265,13 @@ export function PhotoBlur({
     if (summary !== undefined) onAnnounce?.(summary);
   }, [summary, onAnnounce]);
 
+  // Blur off has no summary to announce, so its failure is announced on
+  // its own — into the same one region.
+  const failure = failed && !isOn ? REDRAW_FAILED : undefined;
+  useEffect(() => {
+    if (failure !== undefined) onAnnounce?.(failure.message);
+  }, [failure, onAnnounce]);
+
   return (
     <div className="flex flex-col gap-3">
       <ToggleField
@@ -229,6 +279,7 @@ export function PhotoBlur({
         label="Blur faces"
         isOn={isOn}
         onChange={(next) => {
+          setFailed(false);
           setIsOn(next);
           setBlurPreference(next, storage);
         }}
@@ -248,6 +299,13 @@ export function PhotoBlur({
           that means, in the same place and weight — "not a warning colour;
           the sentence does the work". */}
       <p className="text-small">{isOn ? shown : BLUR_OFF_LINE}</p>
+      <ControlFailureBand
+        failure={failure}
+        onRetry={() => {
+          setFailed(false);
+          setAttempt({});
+        }}
+      />
 
       {isOn ? (
         <>
@@ -286,8 +344,64 @@ export function PhotoBlur({
           <p className="m-0 text-muted">
             <Mono step="sm">Tap to blur</Mono>
           </p>
+          {ready === undefined ? undefined : (
+            <BlurCells
+              regions={regions}
+              width={ready.width}
+              height={ready.height}
+              onToggle={(cell) => {
+                setRegions((current) =>
+                  afterCell(current, cell, ready.width, ready.height),
+                );
+              }}
+            />
+          )}
         </>
       ) : undefined}
+    </div>
+  );
+}
+
+/**
+ * Tap-to-blur's keyboard path (D-84(b), the Accessibility Contract's
+ * "buttons named by position ('Blur top-left')"): the photo in a 3 × 3
+ * grid, one button a cell, each blurring its whole cell and pressed while
+ * it does. A tap on a canvas has no keyboard equivalent; these are it.
+ *
+ * **Undrawn** — "what focusable blur targets look like" is a design ask.
+ * Until it is answered they are text buttons in the pill grammar,
+ * listed as a design delta.
+ */
+function BlurCells({
+  regions,
+  width,
+  height,
+  onToggle,
+}: Readonly<{
+  regions: readonly BlurRegion[];
+  width: number;
+  height: number;
+  onToggle: (cell: number) => void;
+}>): JSX.Element {
+  return (
+    <div
+      role="group"
+      aria-label="Blur part of the photo"
+      className="grid grid-cols-3 gap-2"
+    >
+      {BLUR_CELLS.map((name, cell) => (
+        <button
+          key={name}
+          type="button"
+          aria-pressed={isCellBlurred(regions, cell, width, height)}
+          onClick={() => {
+            onToggle(cell);
+          }}
+          className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-2 py-2 text-small text-ink aria-pressed:border-ink aria-pressed:font-semibold"
+        >
+          Blur {name}
+        </button>
+      ))}
     </div>
   );
 }

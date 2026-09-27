@@ -4,9 +4,15 @@ import { ForbiddenError, getEntryDetail } from "../../src/modules/feed/entries";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { outfitEntries } from "../../src/db/schema-core";
+import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import {
+  entryPhotoIdOf,
+  entryPhotoKeyFor,
+  entryPhotoPrefix,
+} from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
+import { imageDimensions } from "../../src/lib/photo-pipeline";
 import {
   InvalidPhotoError,
   MAX_PHOTO_BYTES,
@@ -14,7 +20,6 @@ import {
   getPhotoObject,
   isPhotoVisible,
   photoResponse,
-  photoKeyFor,
   photoUploadFrom,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
@@ -25,8 +30,11 @@ import {
 } from "../../src/modules/safety";
 
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
+import { tinyJpeg } from "./photos-fixture";
 
-const JPEG_BYTES = new Uint8Array([1, 2, 3]).buffer;
+// A real JPEG: every stored photo is decoded and re-encoded (task 128 ·
+// SAF-1), so three made-up bytes would be refused before they reached R2.
+const JPEG_BYTES = new Uint8Array(await tinyJpeg()).buffer;
 
 describe("entry photos", () => {
   beforeEach(resetTables);
@@ -46,6 +54,31 @@ describe("entry photos", () => {
     expect(key.startsWith(`entries/${userId}/${entryId}/`)).toBe(true);
     const detail = await getEntryDetail(entryId, userId);
     expect(detail?.photoKeys).toEqual([key]);
+  });
+
+  it("writes a key the drainer's reading of it finds the row by", async () => {
+    // The upload writes with `lib/entry-photo-key` and the outbox drainer
+    // reads with it (`ops/outbox-handlers.ts`): one spelling, so the id
+    // the reader takes from the key is the row the writer made.
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+
+    const key = await uploadPhoto({
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    });
+
+    const photoId = entryPhotoIdOf(key);
+    expect(key).toBe(entryPhotoKeyFor(userId, entryId, photoId));
+    expect(key.startsWith(entryPhotoPrefix(userId, entryId))).toBe(true);
+    const rows = await drizzle(env.DIALED_CORE)
+      .select({ entryId: entryPhotos.entryId, photoKey: entryPhotos.photoKey })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId));
+    expect(rows).toEqual([{ entryId, photoKey: key }]);
   });
 
   it("refuses to add a photo to another user's entry, and says so", async () => {
@@ -121,7 +154,10 @@ describe("entry photos", () => {
     // A made-up key under the same convention that was never actually
     // uploaded is never visible either.
     expect(
-      await isPhotoVisible(photoKeyFor(owner, entryId, "nonexistent"), owner),
+      await isPhotoVisible(
+        entryPhotoKeyFor(owner, entryId, "nonexistent"),
+        owner,
+      ),
     ).toBe(false);
   });
 });
@@ -172,12 +208,16 @@ describe("entry photos: the rules, and what they say", () => {
       }),
     ).rejects.toThrow(/too large/);
 
+    // A real JPEG, padded out after its end marker to exactly the cap: the
+    // bytes must decode now that every photo is re-encoded.
+    const exactlyTen = new Uint8Array(MAX_PHOTO_BYTES);
+    exactlyTen.set(new Uint8Array(JPEG_BYTES));
     await expect(
       uploadPhoto({
         userId,
         entryId,
         contentType: "image/jpeg",
-        bytes: new ArrayBuffer(MAX_PHOTO_BYTES),
+        bytes: exactlyTen.buffer,
       }),
     ).resolves.toBeTruthy();
   });
@@ -205,9 +245,10 @@ describe("entry photos: the rules, and what they say", () => {
     );
   });
 
-  it("stores the photo with the type it was uploaded as", async () => {
+  it("stores every photo as a JPEG, whatever type it was uploaded as", async () => {
     // Served straight back on the GET route; without the metadata the
     // browser is handed `application/octet-stream` and offers a download.
+    // It is always JPEG now, because it is always re-encoded (SAF-1).
     const { userId, entryId } = await ownEntry();
 
     const key = await uploadPhoto({
@@ -218,7 +259,33 @@ describe("entry photos: the rules, and what they say", () => {
     });
 
     const object = await env.MEDIA.get(key);
-    expect(object?.httpMetadata?.contentType).toBe("image/webp");
+    expect(object?.httpMetadata?.contentType).toBe("image/jpeg");
+  });
+
+  it("screens the re-encoded jpeg, labelled as jpeg, whatever the upload's own type was", async () => {
+    const { userId, entryId } = await ownEntry();
+    const seen: string[] = [];
+    const classify: Classify = ({ contentType }) => {
+      seen.push(contentType);
+      return Promise.resolve({
+        flagged: false,
+        scores: Object.fromEntries(
+          imageCategories.map((category) => [category, 0]),
+        ) as CategoryScores,
+      });
+    };
+
+    await uploadPhoto(
+      {
+        userId,
+        entryId,
+        contentType: "image/webp",
+        bytes: JPEG_BYTES,
+      },
+      { classify },
+    );
+
+    expect(seen).toStrictEqual(["image/jpeg"]);
   });
 
   it("returns the same key for a resubmitted upload, without storing it twice", async () => {
@@ -300,7 +367,11 @@ describe("entry photos: the rules, and what they say", () => {
     const object = await getPhotoObject(key);
 
     expect(object).not.toBeNull();
-    expect(await object?.arrayBuffer()).toStrictEqual(JPEG_BYTES);
+    // Re-encoded, so not the same bytes — the same picture.
+    const stored = new Uint8Array(
+      (await object?.arrayBuffer()) ?? new ArrayBuffer(0),
+    );
+    expect(imageDimensions(stored)).toStrictEqual({ width: 64, height: 48 });
   });
 
   it("hands back nothing for a key it never wrote", async () => {
@@ -454,7 +525,8 @@ describe("photoResponse: the whole cached GET, in one function", () => {
     // `private`, because the photo is only ever visible to people the
     // entry is shared with — a shared cache must not hold it.
     expect(response.headers.get("cache-control")).toBe("private, max-age=3600");
-    expect(await response.arrayBuffer()).toStrictEqual(JPEG_BYTES);
+    const served = new Uint8Array(await response.arrayBuffer());
+    expect(imageDimensions(served)).toStrictEqual({ width: 64, height: 48 });
   });
 
   it("says not found — never forbidden — for a photo the viewer may not see", async () => {
@@ -475,9 +547,13 @@ describe("photoResponse: the whole cached GET, in one function", () => {
     expect(refused.status).toBe(404);
   });
 
-  it("serves a public entry's photo to a signed-out viewer", async () => {
+  it("refuses a signed-out viewer even a public entry's photo (SAF-14)", async () => {
+    // D-109: the pages that show these photos require a session, so the
+    // bytes do too. A signed-in stranger still gets the same photo.
     const { key } = await ownedPhoto(true);
-    const served = await photoResponse(key, undefined);
+    const refused = await photoResponse(key, undefined);
+    expect(refused.status).toBe(404);
+    const served = await photoResponse(key, await makeUser());
     expect(served.status).toBe(200);
   });
 
@@ -487,6 +563,17 @@ describe("photoResponse: the whole cached GET, in one function", () => {
     const emptyKey = await photoResponse("", undefined);
     expect(noKey.status).toBe(404);
     expect(emptyKey.status).toBe(404);
+  });
+
+  it("says not found for no key even for a viewer who could otherwise see something", async () => {
+    // With a signed-out viewer, `isPhotoVisible` already answers false on
+    // its own guard, so a no-key request would answer 404 either way — a
+    // coincidence that would hide the `!key` guard going missing. A real,
+    // owning viewer removes that coincidence: without the guard, an absent
+    // key reaches `isPhotoVisible` and is used as a real photo id.
+    const { userId } = await ownedPhoto();
+    const noKey = await photoResponse(undefined, userId);
+    expect(noKey.status).toBe(404);
   });
 
   it("says not found when the row allows it but the object has gone", async () => {

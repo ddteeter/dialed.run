@@ -1,10 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { DeleteRun } from "../../modules/runs/components/DeleteRun";
 import { RunDetail } from "../../modules/runs/components/RunDetail";
 import {
+  deleteRunFn,
   getRunSummaryFn,
   retryRunWeatherFn,
   setRunConditionsFn,
@@ -26,6 +28,7 @@ export const Route = createFileRoute("/runs/$runId")({
 
 function RunDetailPage() {
   const { run, units, unreadCount } = Route.useLoaderData();
+  const navigate = useNavigate();
 
   return (
     <BelledLayout unreadCount={unreadCount}>
@@ -36,6 +39,13 @@ function RunDetailPage() {
           actions={{
             setConditions: setRunConditionsFn,
             retryWeather: retryRunWeatherFn,
+          }}
+        />
+        <DeleteRun
+          runId={run.id}
+          deleteRun={deleteRunFn}
+          onDeleted={async () => {
+            await navigate({ to: "/runs" });
           }}
         />
       </Page>
