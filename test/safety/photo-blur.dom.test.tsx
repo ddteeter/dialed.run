@@ -931,12 +931,43 @@ describe("with blur off from the start (SAF-2)", () => {
     expect(detect).not.toHaveBeenCalled();
   });
 
-  it("hands back nothing when the canvas cannot make a file", async () => {
+  it("hands back nothing when the canvas cannot make a file, and says so", async () => {
     const storage = emptyStorage();
     storage.setItem("dialed.blurFaces", "off");
     const onReady = vi.fn();
+    const announce = vi.fn();
     const toFile = vi.fn(() => Promise.resolve(undefined));
     const { pipeline } = fakePipeline({ toFile });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        onAnnounce={announce}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    expect(await screen.findByText("Photo not added")).toBeInTheDocument();
+    expect(
+      screen.getByText("This photo couldn't be prepared for upload."),
+    ).toBeInTheDocument();
+    expect(announce).toHaveBeenCalledExactlyOnceWith(
+      "This photo couldn't be prepared for upload.",
+    );
+    expect(toFile).toHaveBeenCalledTimes(1);
+    expect(onReady).not.toHaveBeenCalled();
+  });
+
+  it("redraws again on Try again, and hands the new file over", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const onReady = vi.fn();
+    const toFile = vi
+      .fn<BlurPipeline["toFile"]>()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue(BLURRED);
+    const { pipeline } = fakePipeline({ toFile });
+    const user = userEvent.setup();
     render(
       <PhotoBlur
         file={PHOTO}
@@ -945,10 +976,39 @@ describe("with blur off from the start (SAF-2)", () => {
         storage={storage}
       />,
     );
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(toFile).toHaveBeenCalledTimes(1);
+      expect(onReady).toHaveBeenCalledExactlyOnceWith(BLURRED);
     });
-    expect(onReady).not.toHaveBeenCalled();
+    expect(toFile).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Photo not added")).not.toBeInTheDocument();
+  });
+
+  it("drops a blur-off failure once blur is turned on", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const toFile = vi
+      .fn<BlurPipeline["toFile"]>()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue(BLURRED);
+    const { pipeline } = fakePipeline({ toFile });
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+    await screen.findByText("Photo not added");
+    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    expect(screen.queryByText("Photo not added")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await waitFor(() => {
+      expect(toFile).toHaveBeenCalledTimes(3);
+    });
+    expect(screen.queryByText("Photo not added")).not.toBeInTheDocument();
   });
 
   it("does not hand over a stale photo's redraw after a newer one", async () => {

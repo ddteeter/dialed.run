@@ -1,8 +1,8 @@
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { Mono, ToggleField } from "../../../ui";
-import type { PhotoStep } from "../../../ui";
+import { ControlFailureBand, Mono, ToggleField } from "../../../ui";
+import type { ControlFailure, PhotoStep } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
   browserPipeline,
@@ -51,6 +51,19 @@ import {
  * apart is exactly the pair that drifts.
  */
 const CHECKING = "Checking this photo";
+
+/**
+ * Blur off, and the canvas could not make a file from the redraw.
+ *
+ * Said rather than swallowed: with no file there is nothing to hand the
+ * uploader, and a step that simply never calls `onReady` leaves the form
+ * waiting on a photo that is not coming. The kicker names what is still
+ * true — the round 23 control-failure pattern (`ui/ControlFailureBand`).
+ */
+const REDRAW_FAILED: ControlFailure = {
+  kicker: "Photo not added",
+  message: "This photo couldn't be prepared for upload.",
+};
 
 export function PhotoBlur({
   file,
@@ -114,6 +127,13 @@ export function PhotoBlur({
    * were that shape.
    */
   const [loaded, setLoaded] = useState<LoadedImage>();
+  /**
+   * Blur off's redraw came back empty (`REDRAW_FAILED`). `attempt` is what
+   * "Try again" changes: the effect depends on it, so a retry reruns the
+   * redraw rather than repeating a hand-off that never happened.
+   */
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   /**
    * Repaints and hands the caller the bytes that should be uploaded.
@@ -161,9 +181,12 @@ export function PhotoBlur({
         const flat = globalThis.document.createElement("canvas");
         pipeline.paint(flat, decoded.image, decoded.width, decoded.height, []);
         const redrawn = await pipeline.toFile(flat, file.name);
+        if (isStale()) return;
         // No fallback to `file` here either: the original is the frame
-        // with the metadata in it.
-        if (redrawn !== undefined && !isStale()) onReady(redrawn);
+        // with the metadata in it. Nothing to hand over is a failure the
+        // runner is shown, not a silence.
+        if (redrawn === undefined) setFailed(true);
+        else onReady(redrawn);
         return;
       }
       setLoaded(decoded);
@@ -177,7 +200,7 @@ export function PhotoBlur({
     return () => {
       effect.abort();
     };
-  }, [file, isOn, onReady, pipeline]);
+  }, [attempt, file, isOn, onReady, pipeline]);
 
   // Painting follows the regions rather than happening inside the handler
   // that changed them, so a detection and a tap take the same path.
@@ -234,6 +257,13 @@ export function PhotoBlur({
     if (summary !== undefined) onAnnounce?.(summary);
   }, [summary, onAnnounce]);
 
+  // Blur off has no summary to announce, so its failure is announced on
+  // its own — into the same one region.
+  const failure = failed && !isOn ? REDRAW_FAILED : undefined;
+  useEffect(() => {
+    if (failure !== undefined) onAnnounce?.(failure.message);
+  }, [failure, onAnnounce]);
+
   return (
     <div className="flex flex-col gap-3">
       <ToggleField
@@ -241,6 +271,7 @@ export function PhotoBlur({
         label="Blur faces"
         isOn={isOn}
         onChange={(next) => {
+          setFailed(false);
           setIsOn(next);
           setBlurPreference(next, storage);
         }}
@@ -260,6 +291,13 @@ export function PhotoBlur({
           that means, in the same place and weight — "not a warning colour;
           the sentence does the work". */}
       <p className="text-small">{isOn ? shown : BLUR_OFF_LINE}</p>
+      <ControlFailureBand
+        failure={failure}
+        onRetry={() => {
+          setFailed(false);
+          setAttempt((current) => current + 1);
+        }}
+      />
 
       {isOn ? (
         <>
