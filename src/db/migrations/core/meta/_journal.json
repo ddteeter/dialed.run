@@ -145,8 +145,15 @@
     {
       "idx": 20,
       "version": "6",
-      "when": 1790447946618,
-      "tag": "0020_replace_display_name_with_username",
+      "when": 1790467001850,
+      "tag": "0020_add_auth_rate_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790467002850,
+      "tag": "0021_replace_display_name_with_username",
       "breakpoints": true
     }
   ]

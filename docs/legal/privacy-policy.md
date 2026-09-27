@@ -50,9 +50,10 @@ Questions about this policy or your data: [OWNER: contact email].
   `email` and `profile` permissions only. We also store the tokens Google
   issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
-  (7 days), the browser that signed in, and its IP address. [OWNER: the IP
-  is read from the `x-forwarded-for` header; confirm in production whether
-  Cloudflare populates it, and keep or drop "IP address" to match.]
+  (7 days), the browser that signed in, and its IP address (as Cloudflare
+  reports it). To slow down password guessing we also count sign-in and
+  sign-up attempts per IP address; those counts are kept for about a
+  minute and then deleted. [OWNER: confirm the wording; task 125 OPS-4.]
 - **Email.** [OWNER: pending. The app sends no email today. If email
   verification or password reset ships, name the provider here and what it
   receives.]

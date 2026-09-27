@@ -26,6 +26,9 @@
   "vars": {
     "VISUAL_CROSSING_API_KEY": "test-key",
     "OPENAI_API_KEY": "test-key",
+    // An https origin, as production has, so the auth singleton's wiring
+    // (base URL, rate limiting, secure cookies) is what the tests exercise.
+    "BETTER_AUTH_URL": "https://dialed.test",
   },
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "dialed-media" },

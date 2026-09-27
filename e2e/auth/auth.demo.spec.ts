@@ -35,6 +35,19 @@ test("create an account -> sign out -> a guarded page -> a wrong password -> log
     page.getByRole("heading", { name: "Create account" }),
   ).toBeVisible();
   await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
+
+  // OPS-15 (decision D-48): from the keyboard, a field's ring lies on its
+  // border — one line, not a border and a ring beyond it.
+  await page.keyboard.press("Shift");
+  await page.getByLabel("Email").focus();
+  await scene(page, "A focused field: one line, the ring on its border");
+  const ringOffset = await page
+    .getByLabel("Email")
+    .evaluate(
+      (input) =>
+        getComputedStyle(input.closest(".field-box") ?? input).outlineOffset,
+    );
+  expect(ringOffset).toBe("-1px");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Show" }).click();

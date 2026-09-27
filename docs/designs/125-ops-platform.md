@@ -137,6 +137,25 @@ Review of PR #112, applied:
   flag), and the widget tells the visitor when it cannot run.
 - D0 has a conformance spec, waiting on the same CI line as the demo.
 
+Review of PR #115 (OPS-4), recorded:
+
+- **Rate-limit storage fails closed.** A D1 error while counting fails the
+  auth request (Better Auth throws). Acceptable: sign-in cannot work
+  without D1 anyway.
+- **No `cf-connecting-ip`** means Better Auth falls back to one shared
+  per-path bucket (it logs a warning). That does not happen at
+  Cloudflare's edge, which always sets the header; it does locally, where
+  the http origin leaves the limiter off.
+- **`BETTER_AUTH_URL` makes the origin exclusive.** With it set, Better
+  Auth accepts cookie-bearing POSTs only from `https://dialed.run`, so the
+  domain must be attached before the first deploy (or the var set to the
+  workers.dev origin until then); `docs/deployment.md` §5 and the
+  deployment plan's order of operations say so.
+- **The whole site is `noindex`** until the public launch (owner,
+  2026-09-26; decision D-53); a route's own `robots` meta overrides it.
+- `rate_limit` holds client IPs for about a minute; the privacy policy
+  draft and its sources say so.
+
 ## Open questions
 
 None open; see the decision log.

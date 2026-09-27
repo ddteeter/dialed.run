@@ -14,6 +14,23 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  // Non-secret configuration (owner-approved, 2026-09-26; task 125 OPS-4).
+  // BETTER_AUTH_URL is the production origin: Better Auth builds callbacks
+  // from it, and its https scheme turns on secure cookies and rate
+  // limiting, and Better Auth trusts only this origin. So:
+  // - attach dialed.run to this Worker (routes / custom_domain) BEFORE the
+  //   first deploy, or set this to the workers.dev origin until then: on
+  //   any other host, sign-in and sign-up are refused 403 INVALID_ORIGIN
+  //   and OAuth redirect_uris point at dialed.run (docs/deployment.md §5);
+  // - local dev and CI MUST override it in .dev.vars
+  //   (BETTER_AUTH_URL=http://localhost:<port>), for the same origin check
+  //   and so the rate limiter stays off.
+  // The Turnstile site key is printed into the page; its secret is a
+  // `wrangler secret`.
+  "vars": {
+    "BETTER_AUTH_URL": "https://dialed.run",
+    "TURNSTILE_SITE_KEY": "",
+  },
   "d1_databases": [
     {
       "binding": "DIALED_CORE",

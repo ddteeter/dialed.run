@@ -2,10 +2,7 @@
  * The Desk's door, and the headers every response leaves with (OPS-7,
  * OPS-8) — the half of `e2e/desk/` that needs no operator.
  *
- * An operator's journey needs `ADMIN_USER_IDS` in the dev server's
- * environment, which CI's `.dev.vars` line does not set until the owner
- * applies `docs/proposals/125-ci-migrate-before-deploy.md` (register
- * D-72). Until then it is `operator.demo.ts`, recorded locally.
+ * The operator's journey is `operator.demo.spec.ts`.
  */
 import { expect, test } from "@playwright/test";
 
