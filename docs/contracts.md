@@ -224,7 +224,7 @@ created_at   int
 ```
 
 - **"Public" means visible to any signed-in runner, never to the open
-  web** (decision D-55). A signed-out request gets nothing about an entry
+  web** (decision D-58). A signed-out request gets nothing about an entry
   or a profile — not its data, not its photo, not entry-specific head
   meta. There is no crawler exception: link previews use the site-wide
   generic card only.
@@ -328,7 +328,7 @@ adds "or it is the viewer's own"), it also drops a blocked pair, either
 direction, and entries the viewer reported (task 128). The anonymous form
 — no viewer — is what aggregates use, so blocks and a reporter's own hide
 move no counts; a ban does. The "stranger" is always a signed-in runner
-(decision D-55). Five call sites wrote the first half by hand
+(decision D-58). Five call sites wrote the first half by hand
 before 106; a second condition would have made five copies of a rule, and
 the dangerous one is the consensus aggregate, where a missed clause hides
 nothing visibly and only skews the numbers.

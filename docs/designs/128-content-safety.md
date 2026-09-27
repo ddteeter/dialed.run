@@ -32,16 +32,22 @@ nothing to filter there today — 129 applies the rule when they arrive.
 **SAF-14.** `entryDetailQuery` and `otherProfileQuery` take
 `requireUserId` (additions to feed's `functions.ts`); the photo route needs
 a session (PR 2 adds "or a valid signature", issued only to signed-in
-viewers). Per the owner's clarification (decision D-55), "public" means
+viewers). Per the owner's clarification (decision D-58), "public" means
 visible to signed-in runners: there is no crawler exception, and link
 previews use only the site-wide generic card.
 
 **Bans (SAF-4).** A Better Auth plugin in `safety/ban-gate.ts` adds a
-`session.create.before` hook: a banned runner's session is refused with a
-403 carrying `ACCOUNT_CLOSED`, on every sign-in path (email and Google).
+`session.create.before` hook, so no sign-in path makes a session for a
+banned runner. The refusal reaches the browser in two shapes: the email
+form gets a 403 JSON body carrying `ACCOUNT_CLOSED`, the reason and
+`closedAt`; Google's callback turns the same error into a 302 to the
+error callback, `/auth/login?error=ACCOUNT_CLOSED&error_description=<reason>`
+(no date — Better Auth's redirect carries only a code and a description).
+Both are tested through the real handlers (`test/safety/ban-gate.test.ts`).
 It is wired as one more entry in `auth/instance.ts`'s `plugins` (125's file,
 an addition). Content leaves every read through the rule above. D4's notice
-is a safety component; showing it on a refused sign-in is 126's form.
+is `safety/components/AccountClosed.tsx`, exported and mounted nowhere yet:
+putting it on screen for either shape is 126's sign-in form.
 
 **Deletion (SAF-3).** `feed/retract.ts` (entry, entry photo) and
 `runs/delete-run.ts` (run → its entry → its photos, plus its import file).
@@ -56,7 +62,7 @@ primitive takes a list of ids, so 126's account deletion calls them once.
 **Photos (SAF-1/2).** Every stored photo is Photon-decoded and re-encoded
 (JPEG for entries, WebP sizes plus a re-encoded original for garments), so
 no metadata survives. Before decoding, `lib/photo-pipeline.ts` reads the
-dimensions from the JPEG/PNG/WebP header and refuses anything over 24 MP.
+dimensions from the JPEG/PNG/WebP header and refuses anything over 16 MP.
 In the browser, W3's canvas step always runs — blur off too — and caps the
 long edge at 2048px.
 
@@ -65,7 +71,8 @@ long edge at 2048px.
 - Schema: PR 2 only, `add_moderation_actions` (additive, listed in the
   shared packet). No other change; `moderation_status` already has
   `removed`.
-- Routes: `routes/safety/closed.tsx` (D4); PR 2 adds the Desk pages.
+- Routes: none in PR 1 — D4 is a component 126's sign-in form mounts, not a
+  route; PR 2 adds the Desk pages.
 - Bindings/queues/crons: **none**. Outbox kinds ride the daily drain.
 - Secret (PR 2): `PHOTO_URL_SECRET` in `env.d.ts`.
 
@@ -84,7 +91,7 @@ header refused without decoding. ui: the retract controls. browser: the
 1. A runner deleting an entry under review: [allowed; the open review row
    is settled `removed` by the author]. Quarantined photos are out of the
    runner's reach because the quarantine copy has no row.
-   **Answered (owner, 2026-09-27; decision D-56): allowed, as built.**
-   The server's 16 MP pixel cap (SAF-2) is accepted too (decision D-57).
+   **Answered (owner, 2026-09-27; decision D-59): allowed, as built.**
+   The server's 16 MP pixel cap (SAF-2) is accepted too (decision D-60).
 2. SAF-7 purge: [TTL only — no zone token]. URLs expire on a 15-minute
    bucket, so a removed photo leaves every cache within 30 minutes.
