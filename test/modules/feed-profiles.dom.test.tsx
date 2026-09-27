@@ -171,6 +171,10 @@ describe("OwnProfile (G): day one", () => {
     );
     expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
     expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
+    // The avatar's initial falls back to "You", same as the heading.
+    expect(
+      part("header")?.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("Y");
   });
 
   it("shows the city in mono under the name", async () => {

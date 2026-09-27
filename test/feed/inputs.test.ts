@@ -10,6 +10,7 @@ import {
   bandSignalsInput,
   coordinatesInput,
   entryIdInput,
+  handleInput,
   usefulInput,
   feedInput,
   itemBandStatInput,
@@ -251,6 +252,28 @@ describe("searchInput", () => {
     expect(searchInput.safeParse({ prefix: "a".repeat(61) }).success).toBe(
       false,
     );
+  });
+});
+
+describe("handleInput", () => {
+  it("takes the URL segment as the handle to look up", () => {
+    expect(handleInput.parse({ handle: "maya" })).toStrictEqual({
+      handle: "maya",
+    });
+  });
+
+  it("shares its bound with the search prefix, sixty characters", () => {
+    expect(
+      handleInput.safeParse({ handle: "a".repeat(60) }).success,
+    ).toBe(true);
+    expect(
+      handleInput.safeParse({ handle: "a".repeat(61) }).success,
+    ).toBe(false);
+  });
+
+  it("refuses a non-string handle, and needs one at all", () => {
+    expect(handleInput.safeParse({ handle: 12 }).success).toBe(false);
+    expect(handleInput.safeParse({}).success).toBe(false);
   });
 });
 

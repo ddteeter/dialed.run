@@ -100,8 +100,14 @@ describe("PostCard: the author row", () => {
   });
 
   it("says A runner for someone with no handle", async () => {
-    await card();
+    const post = await card();
     expect(screen.getByText("A runner")).toBeVisible();
+    // The avatar's initial falls back to "A runner" too.
+    expect(
+      post
+        .querySelector('[data-part="author"]')
+        ?.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("A");
   });
 
   it("dates the run in its own zone", async () => {
