@@ -68,6 +68,26 @@ export function passwordScreenHook(screen: AuthConfig["passwordScreen"]) {
 }
 
 /**
+ * What the deployment's own origin says about how auth should behave
+ * (OPS-4, audit finding 0.7), decided here rather than by `NODE_ENV`,
+ * which Better Auth reads by default and a Worker does not have.
+ *
+ * An `https` origin is a real deployment: its cookies carry the
+ * `__Secure-` prefix, and sign-in, sign-up and the other sensitive paths
+ * are rate limited. Anything else — local dev and CI, on
+ * `http://localhost` — gets neither: a browser refuses a secure cookie
+ * over plain http, and every e2e account signs up from one address inside
+ * a few seconds, which a production limit exists to refuse.
+ */
+export function deploymentPosture(baseUrl: string | undefined): {
+  secureCookies: boolean;
+  rateLimited: boolean;
+} {
+  const isHttps = baseUrl?.startsWith("https://") === true;
+  return { secureCookies: isHttps, rateLimited: isHttps };
+}
+
+/**
  * The Google provider, or `undefined` when the deployment has no
  * credentials (law 5: a missing secondary feature degrades, it does not
  * fail — email/password still works).
@@ -95,10 +115,27 @@ export function createAuth({
   plugins,
   passwordScreen,
 }: AuthConfig) {
+  const posture = deploymentPosture(baseUrl);
   return betterAuth({
     secret,
     telemetry: { enabled: false },
     ...(baseUrl !== undefined && { baseURL: baseUrl }),
+    // Better Auth's own limits for its sensitive paths (sign-in and
+    // sign-up: 3 per 10 s per address) and 100 per minute elsewhere, with
+    // the counters in D1 so every isolate shares them.
+    rateLimit: {
+      enabled: posture.rateLimited,
+      storage: "database",
+      window: 60,
+      max: 100,
+    },
+    advanced: {
+      useSecureCookies: posture.secureCookies,
+      // Cloudflare's edge sets this, and a client cannot: the one address
+      // worth keying a limit on. Better Auth's default reads
+      // X-Forwarded-For, which a client can write.
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+    },
     database: drizzleAdapter(db, {
       // Equivalent mutant, and the evidence is worth keeping: a *wrong*
       // recognised provider fails loudly — building this with "mysql" and

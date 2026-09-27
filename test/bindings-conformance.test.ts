@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import wranglerJsonc from "../wrangler.jsonc?raw";
 
 import { cronSchedules } from "../src/modules/ops/crons";
+import { PUBLIC_ORIGIN } from "../src/modules/ops/og/site-head";
 import { consumedQueueNames, queueRegistry } from "../src/modules/ops/queues";
 
 /**
@@ -150,5 +151,30 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
         `dead_letter_queue for ${entry.queue}`,
       ).toBe(entry.deadLetterQueue);
     }
+  });
+
+  it("declares the vars the code reads, with the production origin on https", () => {
+    // OPS-4: auth's secure cookies and rate limiting key on this origin's
+    // scheme, so an http value here would quietly turn both off in
+    // production. Local dev and CI override it in .dev.vars.
+    const vars =
+      typeof config === "object" && config !== null && "vars" in config
+        ? config.vars
+        : undefined;
+    const origin =
+      typeof vars === "object" && vars !== null && "BETTER_AUTH_URL" in vars
+        ? vars.BETTER_AUTH_URL
+        : undefined;
+    expect(String(origin)).toMatch(/^https:\/\//u);
+    // The head's og:image is absolute against the same origin, which a
+    // route cannot read from the environment.
+    expect(origin).toBe(PUBLIC_ORIGIN);
+    // Exactly these: a var is configuration the code reads, and anything
+    // else here is either a secret in the wrong place or dead config.
+    expect(
+      typeof vars === "object" && vars !== null
+        ? Object.keys(vars).toSorted((a, b) => a.localeCompare(b))
+        : [],
+    ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
   });
 });

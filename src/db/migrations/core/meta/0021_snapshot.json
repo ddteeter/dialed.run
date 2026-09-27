@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c027d117-a186-43f8-a55e-655e9bb45c31",
-  "prevId": "e0188924-ee8f-47cd-91ad-1f3987ef7b2c",
+  "id": "e0188924-ee8f-47cd-91ad-1f3987ef7b2c",
+  "prevId": "79f3be22-eb2e-49ba-9f5f-cc769389999a",
   "tables": {
     "blocks": {
       "name": "blocks",
@@ -1308,13 +1308,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'none'"
-        },
-        "reminder_matched_at": {
-          "name": "reminder_matched_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -1902,6 +1895,59 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "rate_limit": {
+      "name": "rate_limit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_limit_key": {
+          "name": "rate_limit_key",
+          "columns": [
+            "key"
+          ],
+          "isUnique": true
+        },
+        "rate_limit_last_request": {
+          "name": "rate_limit_last_request",
+          "columns": [
+            "last_request"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

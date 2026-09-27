@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "79f3be22-eb2e-49ba-9f5f-cc769389999a",
-  "prevId": "1c398f7e-7022-4657-a23e-1305e4f6cbdc",
+  "id": "f4aff5ef-b38a-4e5e-8125-fd9c5be47aa0",
+  "prevId": "f73d6077-017a-447c-bcce-b018f24307f1",
   "tables": {
     "blocks": {
       "name": "blocks",
@@ -450,6 +450,14 @@
             "read"
           ],
           "isUnique": false
+        },
+        "notifications_kind_created": {
+          "name": "notifications_kind_created",
+          "columns": [
+            "kind",
+            "created_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -776,6 +784,13 @@
             "event_time"
           ],
           "isUnique": true
+        },
+        "webhook_events_time": {
+          "name": "webhook_events_time",
+          "columns": [
+            "event_time"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -1308,6 +1323,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'none'"
+        },
+        "reminder_matched_at": {
+          "name": "reminder_matched_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -1393,6 +1415,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "connected_at": {
+          "name": "connected_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -1431,6 +1460,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },
