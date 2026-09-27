@@ -163,8 +163,8 @@ describe("Feed: Following", () => {
     await renderFeedScreen(
       feed({
         items: [
-          feedItem({ entryId: "01A", authorDisplayName: "Dana" }),
-          feedItem({ entryId: "01B", authorDisplayName: "Mark" }),
+          feedItem({ entryId: "01A", authorUsername: "Dana" }),
+          feedItem({ entryId: "01B", authorUsername: "Mark" }),
         ],
       }),
     );

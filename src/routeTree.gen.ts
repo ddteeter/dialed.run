@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
+import { Route as AccountUsernameRouteImport } from './routes/account/username'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -27,6 +28,7 @@ import { Route as NotificationsIndexRouteImport } from './routes/notifications/i
 import { Route as OgDefaultRouteImport } from './routes/og/default'
 import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding/done'
+import { Route as OnboardingHandleRouteImport } from './routes/onboarding/handle'
 import { Route as OnboardingNameRouteImport } from './routes/onboarding/name'
 import { Route as OnboardingTaplistRouteImport } from './routes/onboarding/taplist'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
@@ -60,6 +62,11 @@ const IndexRoute = IndexRouteImport.update({
 const DeskRouteRoute = DeskRouteRouteImport.update({
   id: '/desk',
   path: '/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountUsernameRoute = AccountUsernameRouteImport.update({
+  id: '/account/username',
+  path: '/account/username',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -140,6 +147,11 @@ const OnboardingCalibrateRoute = OnboardingCalibrateRouteImport.update({
 const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
   id: '/onboarding/done',
   path: '/onboarding/done',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingHandleRoute = OnboardingHandleRouteImport.update({
+  id: '/onboarding/handle',
+  path: '/onboarding/handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingNameRoute = OnboardingNameRouteImport.update({
@@ -267,6 +279,7 @@ const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
+  '/account/username': typeof AccountUsernameRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -278,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/handle': typeof OnboardingHandleRoute
   '/onboarding/name': typeof OnboardingNameRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
@@ -310,6 +324,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account/username': typeof AccountUsernameRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -321,6 +336,7 @@ export interface FileRoutesByTo {
   '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/handle': typeof OnboardingHandleRoute
   '/onboarding/name': typeof OnboardingNameRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
@@ -355,6 +371,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
+  '/account/username': typeof AccountUsernameRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -366,6 +383,7 @@ export interface FileRoutesById {
   '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
+  '/onboarding/handle': typeof OnboardingHandleRoute
   '/onboarding/name': typeof OnboardingNameRoute
   '/onboarding/taplist': typeof OnboardingTaplistRoute
   '/runs/$runId': typeof RunsRunIdRoute
@@ -401,6 +419,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/desk'
+    | '/account/username'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -412,6 +431,7 @@ export interface FileRouteTypes {
     | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
+    | '/onboarding/handle'
     | '/onboarding/name'
     | '/onboarding/taplist'
     | '/runs/$runId'
@@ -444,6 +464,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account/username'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -455,6 +476,7 @@ export interface FileRouteTypes {
     | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
+    | '/onboarding/handle'
     | '/onboarding/name'
     | '/onboarding/taplist'
     | '/runs/$runId'
@@ -488,6 +510,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/desk'
+    | '/account/username'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -499,6 +522,7 @@ export interface FileRouteTypes {
     | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
+    | '/onboarding/handle'
     | '/onboarding/name'
     | '/onboarding/taplist'
     | '/runs/$runId'
@@ -533,6 +557,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
+  AccountUsernameRoute: typeof AccountUsernameRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiStravaRoute: typeof ApiStravaRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -544,6 +569,7 @@ export interface RootRouteChildren {
   OgDefaultRoute: typeof OgDefaultRoute
   OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
   OnboardingDoneRoute: typeof OnboardingDoneRoute
+  OnboardingHandleRoute: typeof OnboardingHandleRoute
   OnboardingNameRoute: typeof OnboardingNameRoute
   OnboardingTaplistRoute: typeof OnboardingTaplistRoute
   RunsRunIdRoute: typeof RunsRunIdRoute
@@ -588,6 +614,13 @@ declare module '@tanstack/react-router' {
       path: '/desk'
       fullPath: '/desk'
       preLoaderRoute: typeof DeskRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/username': {
+      id: '/account/username'
+      path: '/account/username'
+      fullPath: '/account/username'
+      preLoaderRoute: typeof AccountUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -700,6 +733,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/done'
       fullPath: '/onboarding/done'
       preLoaderRoute: typeof OnboardingDoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/handle': {
+      id: '/onboarding/handle'
+      path: '/onboarding/handle'
+      fullPath: '/onboarding/handle'
+      preLoaderRoute: typeof OnboardingHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/name': {
@@ -888,6 +928,7 @@ const DeskRouteRouteWithChildren = DeskRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRouteRoute: DeskRouteRouteWithChildren,
+  AccountUsernameRoute: AccountUsernameRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiStravaRoute: ApiStravaRoute,
   AuthLoginRoute: AuthLoginRoute,
@@ -899,6 +940,7 @@ const rootRouteChildren: RootRouteChildren = {
   OgDefaultRoute: OgDefaultRoute,
   OnboardingCalibrateRoute: OnboardingCalibrateRoute,
   OnboardingDoneRoute: OnboardingDoneRoute,
+  OnboardingHandleRoute: OnboardingHandleRoute,
   OnboardingNameRoute: OnboardingNameRoute,
   OnboardingTaplistRoute: OnboardingTaplistRoute,
   RunsRunIdRoute: RunsRunIdRoute,

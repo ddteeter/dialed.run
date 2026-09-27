@@ -11,6 +11,7 @@ import {
   Mono,
   SignedOutLayout,
   SubmitButton,
+  TextField,
   Wordmark,
   useFormSubmit,
 } from "../../ui";
@@ -348,6 +349,65 @@ export function PasswordField({
         {isShown ? "Hide" : "Show"}
       </button>
     </FormField>
+  );
+}
+
+/**
+ * The two fields both forms ask for, by the names the error summary uses.
+ */
+export const CREDENTIAL_LABELS = { email: "Email", password: "Password" };
+
+/**
+ * Email then password — everything sign-up asks for since round 26 #7 took
+ * the name to O0, and everything log-in has ever asked for. One component
+ * because the two forms are now the same two fields, differing only in what
+ * the password field says about itself.
+ */
+export function CredentialFields({
+  form,
+  email,
+  onEmail,
+  password,
+  onPassword,
+  passwordAutoComplete,
+  passwordHint,
+  focusPasswordOnArrival = false,
+}: Readonly<{
+  form: Pick<ReturnType<typeof useFormSubmit>, "field" | "fieldErrors">;
+  email: string;
+  onEmail: (email: string) => void;
+  password: string;
+  onPassword: (password: string) => void;
+  passwordAutoComplete: "current-password" | "new-password";
+  /**
+  Au2's "At least 10 characters."; log-in shows none (round 26 #18).
+  */
+  passwordHint?: string | undefined;
+  focusPasswordOnArrival?: boolean | undefined;
+}>): JSX.Element {
+  return (
+    <>
+      <TextField
+        name="email"
+        label={CREDENTIAL_LABELS.email}
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={onEmail}
+        field={form.field}
+        error={form.fieldErrors.email}
+      />
+      <PasswordField
+        label={CREDENTIAL_LABELS.password}
+        autoComplete={passwordAutoComplete}
+        value={password}
+        onChange={onPassword}
+        field={form.field}
+        error={form.fieldErrors.password}
+        hint={passwordHint}
+        focusOnArrival={focusPasswordOnArrival}
+      />
+    </>
   );
 }
 

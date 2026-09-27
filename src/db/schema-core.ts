@@ -21,7 +21,10 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
   "user_profiles",
   {
     userId: text("user_id").primaryKey(),
-    displayName: text("display_name"),
+    // The runner's handle (task 126, ACC-1; decision D-41 replaced
+    // `display_name` with it). Stored lowercased, as the rule types it;
+    // null until O0. `modules/account/username.ts` is the one writer.
+    username: text("username"),
     cityLabel: text("city_label"),
     lat: real("lat"),
     lng: real("lng"),
@@ -42,21 +45,43 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     banReason: text("ban_reason"),
   },
   (t) => [
-    // People search is a prefix LIKE on display_name, which SQLite can only
-    // serve from an index when the index collation matches the comparison.
-    // SQLite's LIKE is case-insensitive for ASCII by default, so a plain
-    // BINARY index is unusable for it and every keystroke scanned the whole
-    // table — rows scanned are what D1 bills.
+    // One index, two jobs. **Uniqueness regardless of case**: a handle is
+    // stored lowercased, and NOCASE makes the index refuse "Maya" beside
+    // "maya" even from a writer that forgot to lowercase. **Search's prefix
+    // index**: people search is a prefix LIKE, which SQLite serves from an
+    // index only when the index collation matches LIKE's, and LIKE is
+    // case-insensitive for ASCII — so a BINARY index would scan the table
+    // on every keystroke (rows scanned are what D1 bills).
     //
-    // Verified with EXPLAIN QUERY PLAN: without this, "SCAN user_profiles";
-    // with it, "SEARCH user_profiles USING INDEX
-    // user_profiles_display_name_nocase (display_name>? AND display_name<?)".
-    //
-    // NOCASE folds ASCII only, so accented names still miss. Fixing that
-    // needs stored normalisation, not a collation.
-    index("user_profiles_display_name_nocase").on(
-      sql`${t.displayName} COLLATE NOCASE`,
+    // Verified with EXPLAIN QUERY PLAN on display_name, which this
+    // replaces: "SEARCH user_profiles USING INDEX … (display_name>? AND
+    // display_name<?)" with the NOCASE index, "SCAN" without.
+    uniqueIndex("user_profiles_username_nocase").on(
+      sql`${t.username} COLLATE NOCASE`,
     ),
+  ],
+);
+
+/**
+ * Every handle a runner has given up (task 126, ACC-1). Kept for two
+ * reasons: `/@old` answers "This runner changed their name." rather than
+ * a not-found or — worse — someone else's profile, and a handle a
+ * moderator took away (ACC-12) is not free the moment it is taken.
+ *
+ * **Never reclaimable by another runner.** A retired handle stays here, so
+ * the old link can never start pointing at a different person. Its own
+ * runner may take it back, which deletes the row.
+ */
+export const usernameHistory = /*#__PURE__*/ sqliteTable(
+  "username_history",
+  {
+    username: text("username").primaryKey(),
+    userId: text("user_id").notNull(),
+    retiredAt: integer("retired_at").notNull(),
+  },
+  (t) => [
+    // Account deletion's read: every handle one runner held.
+    index("username_history_user").on(t.userId),
   ],
 );
 

@@ -35,7 +35,7 @@ const RECENT_LIMIT = 20;
 
 export interface OwnProfile {
   userId: string;
-  displayName: string | undefined;
+  username: string | undefined;
   cityLabel: string | undefined;
   thermalLevel: number | undefined;
   followerCount: number;
@@ -103,7 +103,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
 
   return {
     userId,
-    displayName: profile?.displayName ?? undefined,
+    username: profile?.username ?? undefined,
     cityLabel: profile?.cityLabel ?? undefined,
     thermalLevel: profile?.thermalLevel ?? undefined,
     followerCount: followers,
@@ -126,7 +126,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
 
 export interface OtherProfile {
   userId: string;
-  displayName: string | null;
+  username: string | null;
   cityLabel: string | null;
   recentPublicEntries: {
     entryId: string;
@@ -164,7 +164,7 @@ export async function otherProfile(
 
   return {
     userId,
-    displayName: profile.displayName,
+    username: profile.username,
     cityLabel: profile.cityLabel,
     recentPublicEntries: entries.map((e) => ({
       entryId: e.id,

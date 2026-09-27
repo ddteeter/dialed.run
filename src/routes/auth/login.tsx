@@ -8,8 +8,9 @@ import { useState } from "react";
 import { signInSchema } from "../../lib/contracts";
 import {
   AuthPage,
+  CREDENTIAL_LABELS,
+  CredentialFields,
   LoginCrossLink,
-  PasswordField,
   SessionNotice,
   useAuthForm,
 } from "../../modules/auth/auth-page";
@@ -20,7 +21,6 @@ import {
   googleReturn,
   parseSignInSearch,
 } from "../../modules/auth/sign-in-search";
-import { TextField } from "../../ui";
 
 /**
  * Au2 — and Au7 when a form was carried here by an expired session. The
@@ -31,8 +31,6 @@ export const Route = createFileRoute("/auth/login")({
   validateSearch: parseSignInSearch,
   component: LoginPage,
 });
-
-const LABELS = { email: "Email", password: "Password" };
 
 function LoginPage() {
   const search = Route.useSearch();
@@ -54,7 +52,7 @@ function LoginPage() {
     schema: signInSchema,
     action: signIn,
     successMessage: "Signed in.",
-    labels: LABELS,
+    labels: CREDENTIAL_LABELS,
     onSuccess: async () => {
       // The shell reads "signed in" once, at the root; tell it.
       await router.invalidate();
@@ -77,24 +75,14 @@ function LoginPage() {
         void form.submit({ email, password });
       }}
     >
-      <TextField
-        name="email"
-        label={LABELS.email}
-        type="email"
-        autoComplete="email"
-        value={email}
-        onChange={setEmail}
-        field={form.field}
-        error={form.fieldErrors.email}
-      />
-      <PasswordField
-        label={LABELS.password}
-        autoComplete="current-password"
-        value={password}
-        onChange={setPassword}
-        field={form.field}
-        error={form.fieldErrors.password}
-        focusOnArrival={search.carried !== undefined}
+      <CredentialFields
+        form={form}
+        email={email}
+        onEmail={setEmail}
+        password={password}
+        onPassword={setPassword}
+        passwordAutoComplete="current-password"
+        focusPasswordOnArrival={search.carried !== undefined}
       />
     </AuthPage>
   );

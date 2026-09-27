@@ -139,7 +139,7 @@ function BlockedRow({
   return (
     <li className="flex flex-col gap-3 text-body">
       <div className="flex items-center justify-between gap-3">
-        <span>{runner.displayName ?? "A runner"}</span>
+        <span>{runner.username ?? "A runner"}</span>
         <button
           className="target cursor-pointer border-none bg-transparent p-0"
           type="button"

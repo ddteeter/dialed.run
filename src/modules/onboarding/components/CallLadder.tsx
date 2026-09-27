@@ -14,10 +14,11 @@ import type { Ladder } from "../ladder";
  * the next epic, and a teaser that guessed an outfit would be shipping the
  * thing the data is not yet good enough for. Nothing here reads a garment.
  *
- * K's two ends, which round 22 answered: *"Zero: K as drawn, meter at 0 …
- * 'Log five verdicts and the Call starts.' Threshold met in v1: K stays,
- * meter full, 'That's enough to call. The Call arrives in the next
- * release.' No button — there's no B1 to hand off to."*
+ * K's two ends, which round 22 answered and round 26 #15 re-counted to
+ * fifteen: *"At 0 the kicker reads 0 OF 15 VERDICTS and the line reads
+ * 'Your first verdict is one run away.'"* Threshold met in v1: K stays,
+ * meter full, *"That's enough to call. The Call arrives in the next
+ * release. No button — there's no B1 to hand off to."*
  *
  * "Coverage is the progress bar — not run count" (O6): forty verdicts all
  * at 50° is still nothing known about January, so the ladder renders the
@@ -70,69 +71,79 @@ export function CallLadder({
 }
 
 /**
- * K's hi-viz block — one of *"two yellow moments only"* — with the
- * countdown, the meter and the sentence for where the runner is.
+ * One cell per verdict the Call needs, in order.
+ */
+const CELLS = Array.from(
+  { length: CALL_VERDICT_THRESHOLD },
+  (_, index) => index,
+);
+
+/**
+ * The meter's columns, one per cell — read from the threshold, so the grid
+ * cannot disagree with `CELLS`. Inline because Tailwind only emits a class
+ * it can find written out whole, and `grid-cols-${n}` is not one.
+ */
+const METER_COLUMNS = {
+  gridTemplateColumns: `repeat(${String(CALL_VERDICT_THRESHOLD)}, minmax(0, 1fr))`,
+};
+
+/**
+ * K's hi-viz block — one of *"two yellow moments only"* — as round 26 #15
+ * redraws it ("K Call teaser 15", which supersedes round 22's K): the
+ * count in the kicker, the one instruction, a meter of fifteen cells, and
+ * the line for where the runner is.
+ *
+ * **Cells, not a bar**: *"each cell is one verdict you did."*
  */
 function Countdown({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
   const logged = CALL_VERDICT_THRESHOLD - ladder.verdictsUntilCall;
-  const remaining = ladder.verdictsUntilCall;
+  const counted = `${String(logged)} of ${String(CALL_VERDICT_THRESHOLD)} verdicts`;
 
   return (
     <section
       data-part="countdown"
       className="flex flex-col gap-3 rounded-card bg-hi-viz p-5 text-accent-ink"
     >
-      <Mono step="xs">Until your first call</Mono>
-      <p className="m-0 flex items-baseline gap-2">
-        <span className="font-display text-display">{remaining}</span>
-        <span className="text-lead font-bold">
-          {remaining === 1 ? "verdict" : "verdicts"}
-        </span>
+      <Mono step="xs">{`The Call · ${counted}`}</Mono>
+      <p className="m-0 font-display text-title">
+        {ladder.verdictsUntilCall === 0
+          ? "That’s enough to call."
+          : `Log ${String(CALL_VERDICT_THRESHOLD)} verdicts and the Call starts.`}
       </p>
       <div
-        role="meter"
-        aria-label="Verdicts toward your first call"
-        aria-valuemin={0}
-        aria-valuemax={CALL_VERDICT_THRESHOLD}
-        aria-valuenow={logged}
-        className="h-2 overflow-hidden rounded-pill border border-accent-ink"
+        role="img"
+        aria-label={`${counted} logged`}
+        className="grid gap-1"
+        style={METER_COLUMNS}
       >
-        <div
-          data-part="meter-fill"
-          className="h-full bg-accent-ink"
-          style={{
-            width: `${String((logged / CALL_VERDICT_THRESHOLD) * 100)}%`,
-          }}
-        />
+        {CELLS.map((cell) => (
+          <span
+            key={cell}
+            data-part="meter-cell"
+            data-state={cell < logged ? "logged" : undefined}
+            className={
+              cell < logged
+                ? "h-4 rounded-none border border-accent-ink bg-accent-ink"
+                : "h-4 rounded-none border border-accent-ink"
+            }
+          />
+        ))}
       </div>
-      <Bracketed>{`${String(logged)} of ${String(CALL_VERDICT_THRESHOLD)}`}</Bracketed>
-      <CountdownLine ladder={ladder} />
+      <p className="m-0 text-body">{countdownLine(ladder)}</p>
     </section>
   );
 }
 
 /**
- * Round 22's two sentences, at the two ends of the meter. Between them the
- * number says it, and a third sentence would only repeat it.
+ * The line under the meter, for where the runner is: none yet, some, or
+ * enough.
  */
-function CountdownLine({
-  ladder,
-}: Readonly<{ ladder: Ladder }>): JSX.Element | undefined {
+function countdownLine(ladder: Ladder): string {
   if (ladder.verdictsUntilCall === 0) {
-    return (
-      <p className="m-0 text-body">
-        That&rsquo;s enough to call. The Call arrives in the next release.
-      </p>
-    );
+    return "The Call arrives in the next release.";
   }
-  if (ladder.verdictTotal === 0) {
-    return (
-      <p className="m-0 text-body">
-        Log {CALL_VERDICT_THRESHOLD} verdicts and the Call starts.
-      </p>
-    );
-  }
-  return undefined;
+  if (ladder.verdictTotal === 0) return "Your first verdict is one run away.";
+  return `${String(ladder.verdictsUntilCall)} to go. Each one teaches it what you run warm or cold in.`;
 }
 
 /**

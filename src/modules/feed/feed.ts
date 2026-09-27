@@ -64,7 +64,7 @@ export function followingFeedStatement(
 export interface FeedItem {
   entryId: string;
   userId: string;
-  authorDisplayName: string | undefined;
+  authorUsername: string | undefined;
   runId: string;
   runTitle: string;
   distanceM: number;
@@ -125,7 +125,7 @@ async function hydrateEntries(
   const authorsQuery = database
     .select({
       userId: userProfiles.userId,
-      displayName: userProfiles.displayName,
+      username: userProfiles.username,
     })
     .from(userProfiles)
     .where(inArray(userProfiles.userId, userIds));
@@ -214,8 +214,8 @@ async function hydrateEntries(
       // onto a second line and the `?.` lives there, so `next-line` was
       // pointing at the key and covering nothing.
       // Stryker disable OptionalChaining
-      authorDisplayName:
-        authorsById.get(entry.userId)?.displayName ?? undefined,
+      authorUsername:
+        authorsById.get(entry.userId)?.username ?? undefined,
       // Stryker restore OptionalChaining
       runId: entry.runId,
       runTitle: run?.title ?? "Run",

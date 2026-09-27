@@ -22,7 +22,7 @@ import type {
  * no error to show for it.
  *
  * The `set` clause names only the calibrated columns on purpose:
- * `display_name`, `share_default` and `onboarding_complete` are other
+ * `username`, `share_default` and `onboarding_complete` are other
  * people's business, and recalibrating from settings must not reset them.
  */
 export async function saveCalibration(

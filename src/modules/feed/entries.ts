@@ -535,7 +535,7 @@ interface EntryDetailItem {
 export interface EntryDetail {
   id: string;
   userId: string;
-  authorDisplayName: string | undefined;
+  authorUsername: string | undefined;
   runId: string;
   runTitle: string;
   distanceM: number;
@@ -575,7 +575,7 @@ export async function getEntryDetail(
   if (!run) return undefined;
 
   const [author] = await database
-    .select({ displayName: userProfiles.displayName })
+    .select({ username: userProfiles.username })
     .from(userProfiles)
     .where(eq(userProfiles.userId, entry.userId))
     .limit(1);
@@ -634,7 +634,7 @@ export async function getEntryDetail(
   return {
     id: entry.id,
     userId: entry.userId,
-    authorDisplayName: author?.displayName ?? undefined,
+    authorUsername: author?.username ?? undefined,
     runId: run.id,
     runTitle: run.title,
     distanceM: run.distanceM,
