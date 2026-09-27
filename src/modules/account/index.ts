@@ -7,3 +7,16 @@
  */
 export { claimUsername, lookUpHandle, usernameOf } from "./username";
 export type { HandleClaim, HandleLookup } from "./username";
+export { isUnconfirmed, isVerified } from "./email-links";
+export {
+  authMail,
+  confirmEmail,
+  requestEmailChange,
+  resendConfirmation,
+} from "./verification";
+export type {
+  AuthMail,
+  ChangeResult,
+  Landing,
+  ResendResult,
+} from "./verification";

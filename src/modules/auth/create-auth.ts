@@ -9,6 +9,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
+import type { AuthMail } from "../account";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
 import { AUTH_COPY } from "./auth-copy";
 import {
@@ -37,6 +38,14 @@ export interface AuthConfig {
     verdict: (password: string) => Promise<BreachVerdict>;
     report: (error: unknown, context: Record<string, string>) => void;
   };
+  /**
+   * The emails auth sends (task 126: ACC-3, ACC-4) — the confirm link for
+   * a new account, "you already have an account" for a sign-up with a
+   * registered address, and the reset link. Required for the reason the
+   * breach screen is: no construction can quietly send nothing. The
+   * instance wires `account`'s `authMail`; tests a recorder.
+   */
+  mail: AuthMail;
 }
 
 /**
@@ -107,6 +116,12 @@ export function googleCredentials(
   return { clientId, clientSecret };
 }
 
+/**
+ * A reset link's life: an hour (ACC-4). Shorter than a confirm link's day
+ * because this one hands over the account.
+ */
+export const RESET_LINK_TTL_S = 60 * 60;
+
 export function createAuth({
   db,
   secret,
@@ -114,6 +129,7 @@ export function createAuth({
   google,
   plugins,
   passwordScreen,
+  mail,
 }: AuthConfig) {
   const posture = deploymentPosture(baseUrl);
   return betterAuth({
@@ -153,6 +169,35 @@ export function createAuth({
       // short password before the round trip, and this is what makes the
       // server refuse the same one when the form is bypassed.
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      // Every email sign-up ends on Au4, "Check your email" (round 26
+      // #11), whether the address is new or registered, and the page must
+      // not be able to tell the two apart. Signing a new account in would
+      // tell them apart, so sign-up signs nobody in — Better Auth then
+      // answers a registered address with the same body as a new one, and
+      // calls `onExistingUserSignUp` instead of making an account. The
+      // runner logs in (unconfirmed runners can: D-50), or follows the
+      // link, whichever comes first.
+      autoSignIn: false,
+      onExistingUserSignUp: ({ user }) => mail.existingAccount(user),
+      // ACC-4. Better Auth's reset: single use, its row deleted when
+      // spent; the link lives an hour, and a reset signs every session
+      // out, so a stolen session does not outlive the password it rode in
+      // on.
+      sendResetPassword: ({ user, token }) => mail.resetPassword(user, token),
+      resetPasswordTokenExpiresIn: RESET_LINK_TTL_S,
+      revokeSessionsOnPasswordReset: true,
+    },
+    // The confirm link goes out once the account exists. Only an email
+    // sign-up needs one: Google's accounts come confirmed (round 26 #11,
+    // "Google accounts skip Au4").
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            if (!user.emailVerified) await mail.newAccount(user);
+          },
+        },
+      },
     },
     ...(google !== undefined && { socialProviders: { google } }),
     hooks: { before: passwordScreenHook(passwordScreen) },

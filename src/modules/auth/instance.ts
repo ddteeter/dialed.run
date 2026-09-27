@@ -2,6 +2,8 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
+import { authMail } from "../account";
+import { emailDepsFromEnv } from "../email";
 import { captureException } from "../ops";
 import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
@@ -21,4 +23,7 @@ export const auth = createAuth({
     verdict: (password) => breachVerdict(password),
     report: captureException,
   },
+  // Task 126 (ACC-3, ACC-4): the confirm, existing-account and reset
+  // emails, through modules/email.
+  mail: authMail(drizzle(env.DIALED_CORE), emailDepsFromEnv, captureException),
 });

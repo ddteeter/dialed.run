@@ -38,7 +38,7 @@ import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { hasReacted, usefulCount } from "./reactions";
-import { isPublicByDefault } from "./share-default";
+import { isPublicByDefault, isSharedAsChosen } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
 type EntryTag = (typeof entryTags)[number];
@@ -268,12 +268,20 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
     entryItemIds.has(itemFlag.itemId),
   );
 
+  // Decision D-50: an unconfirmed runner's entry stays private whatever
+  // the toggle said (task 126; `./share-default`).
+  const isPublic = await isSharedAsChosen(
+    database,
+    input.userId,
+    input.isPublic,
+  );
+
   const statements = [
     database
       .update(outfitEntries)
       .set({
         verdict: input.verdict,
-        isPublic: input.isPublic,
+        isPublic,
         // A clear-to-null update needs a real SQL NULL, not `undefined`
         // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
         caption: input.caption ?? sql`NULL`,

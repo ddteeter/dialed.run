@@ -20,10 +20,19 @@ describe("the app auth instance", () => {
     // Not the secret: the test bindings set none, which is itself the
     // reason `create-auth.ts` takes it as a parameter.
     expect(typeof auth.options.database).toBe("function");
-    expect(auth.options.emailAndPassword).toStrictEqual({
+    expect(auth.options.emailAndPassword).toMatchObject({
       enabled: true,
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      autoSignIn: false,
     });
+    // The account emails are wired (ACC-3, ACC-4): a deleted `mail:` line
+    // would not compile, but these say the instance's reach them.
+    expect(typeof auth.options.emailAndPassword.sendResetPassword).toBe(
+      "function",
+    );
+    expect(typeof auth.options.databaseHooks.user.create.after).toBe(
+      "function",
+    );
   });
 
   it("is built on the deployment's origin, in its production posture (OPS-4)", () => {
