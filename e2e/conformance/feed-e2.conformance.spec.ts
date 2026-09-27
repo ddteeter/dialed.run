@@ -187,7 +187,7 @@ test.describe("with the location granted", () => {
     // Five runners, all more than three days back and inside fourteen:
     // under the floor for three days, over it for fourteen.
     for (let index = 0; index < 5; index += 1) {
-      const runner = await seedRunner(rows, `E2 runner ${String(index)}`);
+      const runner = await seedRunner(rows, `e2_runner_${String(index)}`);
       await seedEntry(rows, {
         userId: runner,
         // Whole hundredths, as the cache rounds them: 24.01 + 0.01 is not 24.02.

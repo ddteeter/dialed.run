@@ -23,6 +23,15 @@ import { DEMO_ACCOUNTS, storageStateFor } from "./accounts";
  */
 const AUTH_DIR = "node_modules/.cache/dialed-demo-auth";
 
+/**
+ * A handle for this run's account: the demo's name, underscored, and the
+ * run's last digits so a second run on the same local database is free —
+ * old handles are never reclaimable (round 26 #7).
+ */
+function demoHandle(account: string, suffix: string): string {
+  return `${account.replace("-", "_")}_${suffix.slice(-6)}`;
+}
+
 setup("create the demo accounts", async ({ browser }, testInfo) => {
   // Five signups through a real browser, serially. Nothing here is paced —
   // the setup project is not the demo project — but it is still five round
@@ -41,16 +50,27 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
     await page
       .locator('html[data-hydrated="true"]')
       .waitFor({ state: "attached" });
-    await page.getByLabel("Name").fill("Demo Runner");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("a-long-enough-password");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    // A new account lands in O1 now (D-52), and `/` sends it back here
-    // until `onboarding_complete` is set. Every demo but `onboarding`
-    // wants to start past that, and `/onboarding/done` is the route that
-    // sets it — the same one P3 uses, rather than a hand-written upsert
-    // that could drift from it.
+    // A new account picks its handle at O0 first (round 26 #7), through
+    // the real form — the same path every runner takes, so the demos'
+    // `@handle`s are ones the rule and the reserved list accepted.
+    await expect(page).toHaveURL(/\/onboarding\/handle/, { timeout: 15_000 });
+    await page
+      .locator('html[data-hydrated="true"]')
+      .waitFor({ state: "attached" });
+    await page
+      .getByRole("textbox", { name: "Username" })
+      .fill(demoHandle(account, suffix));
+    await page.getByRole("button", { name: "Next" }).click();
+
+    // Then O1 (D-52), and `/` sends it back here until
+    // `onboarding_complete` is set. Every demo but `onboarding` wants to
+    // start past that, and `/onboarding/done` is the route that sets it —
+    // the same one P3 uses, rather than a hand-written upsert that could
+    // drift from it.
     await expect(page).toHaveURL(/\/onboarding\/calibrate/, {
       timeout: 15_000,
     });

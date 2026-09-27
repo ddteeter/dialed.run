@@ -1,5 +1,5 @@
 /**
- * Runner search: prefix match on `user_profiles.display_name`, public
+ * Runner search: prefix match on `user_profiles.username`, public
  * profiles only (all profiles are public at MVP — see design doc), served
  * by the NOCASE expression index.
  *
@@ -8,18 +8,30 @@
  * them — one covering-index read for the whole page, not one per row. The
  * viewer is never a result: following yourself is not a thing.
  */
-import { and, eq, inArray, like, ne } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { follows, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
+import { normalizeUsername } from "../../lib/contracts";
 import { columnWhere } from "../../lib/keyed-read";
 
 const RESULT_LIMIT = 20;
 
+/**
+ * `typed` as a LIKE prefix that matches only itself: `_` is in nearly
+ * every handle and is LIKE's any-one-character, so unescaped `maya_` would
+ * find `mayax`. One pass over the three, so a `\` added as an escape is
+ * never escaped again.
+ */
+function likePrefix(typed: string): string {
+  const escaped = typed.replaceAll(/[\\%_]/gu, String.raw`\$&`);
+  return `${escaped}%`;
+}
+
 export interface SearchResult {
   userId: string;
-  displayName: string;
+  username: string;
   following: boolean;
 }
 
@@ -27,18 +39,22 @@ export async function searchRunners(
   viewerId: string,
   prefix: string,
 ): Promise<SearchResult[]> {
-  const trimmed = prefix.trim();
-  if (trimmed.length === 0) return [];
+  // The handle as it is stored: no "@", no spaces, lowercased — the field
+  // shows "@" before a handle, so a runner may well type one.
+  const typed = normalizeUsername(prefix);
+  if (typed.length === 0) return [];
   const database = drizzle(env.DIALED_CORE);
   const rows = await database
     .select({
       userId: userProfiles.userId,
-      displayName: userProfiles.displayName,
+      username: userProfiles.username,
     })
     .from(userProfiles)
     .where(
       and(
-        like(userProfiles.displayName, `${trimmed}%`),
+        // ESCAPE with an ASCII character keeps SQLite's LIKE optimisation,
+        // so the prefix is still served by the NOCASE index.
+        sql`${userProfiles.username} LIKE ${likePrefix(typed)} ESCAPE '\\'`,
         ne(userProfiles.userId, viewerId),
       ),
     )
@@ -71,7 +87,7 @@ export async function searchRunners(
   // Stryker disable ConditionalExpression,MethodExpression
   return rows.filter(isNamed).map((r) => ({
     userId: r.userId,
-    displayName: r.displayName,
+    username: r.username,
     following: followed.has(r.userId),
   }));
 }
@@ -79,8 +95,8 @@ export async function searchRunners(
 
 function isNamed(row: {
   userId: string;
-  displayName: string | null;
-}): row is { userId: string; displayName: string } {
+  username: string | null;
+}): row is { userId: string; username: string } {
   // Stryker disable next-line ConditionalExpression
-  return row.displayName !== null;
+  return row.username !== null;
 }

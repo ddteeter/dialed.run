@@ -65,7 +65,7 @@ function EntryDetailPage() {
               id: entryId,
               label: entry.runTitle,
               authorId: entry.userId,
-              authorName: entry.authorDisplayName,
+              authorName: entry.authorUsername,
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}

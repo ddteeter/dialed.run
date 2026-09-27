@@ -196,6 +196,16 @@ describe("which type an edge resolves to", () => {
       ["/feed/me", "/runs"],
       ["/runs", "/runs/strava"],
       ["/", "/onboarding/name"],
+      // Task 126: O0 (round 26 #7) — the redirect `startHandleIfNeeded`
+      // fires from `/`, and Settings › Username is a settings detail like
+      // its neighbours. Neither is covered by the source-scanning sweep
+      // below: `account/route-decisions.ts` writes `to: "/onboarding/handle"`
+      // as a plain string, but during Stryker's own run every file under
+      // the mutate scope is instrumented, which turns that literal into a
+      // conditional expression the sweep's regex can't see — so this pair
+      // has to be pinned directly, the same way the rest of this list is.
+      ["/", "/onboarding/handle"],
+      ["/onboarding/settings", "/account/username"],
       ["/onboarding/name", "/onboarding/calibrate"],
       ["/onboarding/calibrate", "/onboarding/taplist"],
       ["/onboarding/taplist", "/onboarding/settings"],

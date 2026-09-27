@@ -96,13 +96,13 @@ describe("username search", () => {
   beforeEach(resetTables);
 
   it("prefix-matches display names (public profiles only, per MVP)", async () => {
-    await makeUser({ displayName: "Ana Runner" });
-    await makeUser({ displayName: "Andy Trails" });
-    await makeUser({ displayName: "Beth Miles" });
+    await makeUser({ username: "Ana Runner" });
+    await makeUser({ username: "Andy Trails" });
+    await makeUser({ username: "Beth Miles" });
 
-    const viewer = await makeUser({ displayName: "Viewer" });
+    const viewer = await makeUser({ username: "Viewer" });
     const results = await searchRunners(viewer, "An");
-    expect(results.map((r) => r.displayName)).toEqual(
+    expect(results.map((r) => r.username)).toEqual(
       expect.arrayContaining(["Ana Runner", "Andy Trails"]),
     );
     expect(results).toHaveLength(2);

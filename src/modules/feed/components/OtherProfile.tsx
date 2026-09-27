@@ -49,7 +49,7 @@ export function OtherProfile({
     unfollow,
     onStatus: setStatus,
   });
-  const name = profile.displayName ?? "A runner";
+  const name = profile.username ?? "A runner";
 
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">

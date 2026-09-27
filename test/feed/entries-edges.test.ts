@@ -626,7 +626,7 @@ describe("getEntryDetail says what the card shows", () => {
     // Each of these has a fallback beside it, and a fallback that fires
     // when it should not is a card that shows nothing where something was
     // recorded.
-    const userId = await makeUser({ displayName: "Dee" });
+    const userId = await makeUser({ username: "Dee" });
     const runId = await makeRun({ userId, lat: 66.11, lng: -93.27 });
     await makeObservation({
       lat: 66.11,
@@ -652,7 +652,7 @@ describe("getEntryDetail says what the card shows", () => {
 
     const detail = await getEntryDetail(entryId, userId);
 
-    expect(detail?.authorDisplayName).toBe("Dee");
+    expect(detail?.authorUsername).toBe("Dee");
     expect(detail?.verdict).toBe(-2);
     expect(detail?.conditions?.feelsLikeC).toBe(3);
     expect(detail?.items[0]).toMatchObject({
@@ -669,7 +669,7 @@ describe("getEntryDetail says what the card shows", () => {
 
     const detail = await getEntryDetail(entryId, userId);
 
-    expect(detail?.authorDisplayName).toBeUndefined();
+    expect(detail?.authorUsername).toBeUndefined();
   });
 
   it("answers with nothing when the run behind the entry is gone", async () => {

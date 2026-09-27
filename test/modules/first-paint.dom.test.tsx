@@ -51,7 +51,7 @@ describe("the status region on first paint", () => {
         entry={{
           id: "01ENTRY",
           userId: "01USER",
-          authorDisplayName: "mark_t",
+          authorUsername: "mark_t",
           runId: "01RUN",
           runTitle: "Run",
           distanceM: 8047,
@@ -79,7 +79,7 @@ describe("the status region on first paint", () => {
       <OtherProfile
         profile={{
           userId: "01RAVI",
-          displayName: "Ravi K",
+          username: "Ravi K",
           cityLabel: NOTHING,
           recentPublicEntries: [],
         }}

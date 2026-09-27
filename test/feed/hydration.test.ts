@@ -247,19 +247,19 @@ describe("a feed card carries its own entry's detail", () => {
   });
 
   it("names the author, and says nothing rather than null when they have not", async () => {
-    const named = await makeUser({ displayName: "Dee" });
+    const named = await makeUser({ username: "Dee" });
     await publicEntry({ userId: named, lat: 46.11 });
 
     const withName = await followingFeed(named);
-    expect(withName.items[0]?.authorDisplayName).toBe("Dee");
+    expect(withName.items[0]?.authorUsername).toBe("Dee");
 
     await db()
       .update(userProfiles)
-      .set({ displayName: sqlNull() })
+      .set({ username: sqlNull() })
       .where(eq(userProfiles.userId, named));
 
     const without = await followingFeed(named);
-    expect(without.items[0]?.authorDisplayName).toBeUndefined();
+    expect(without.items[0]?.authorUsername).toBeUndefined();
   });
 });
 

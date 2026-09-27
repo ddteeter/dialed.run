@@ -58,7 +58,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   testInfo.setTimeout(150_000);
   const suffix = String(Date.now());
   const otherUserId = newUlid();
-  const otherDisplayName = `Demo Trailrunner ${suffix}`;
+  const otherUsername = `trail_${suffix.slice(-8)}`;
   const itemId = newUlid();
   const publicRunId = newUlid();
   const publicEntryId = newUlid();
@@ -84,7 +84,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   await withLocalDb(async ({ core, weather }) => {
     await core.insert(userProfiles).values({
       userId: otherUserId,
-      displayName: otherDisplayName,
+      username: otherUsername,
       cityLabel: "Portland, OR",
     });
 
@@ -288,12 +288,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // their profile (H).
     await page.getByRole("link", { name: "Find a runner" }).click();
     await scene(page, "Search · name and a Follow pill, no city");
-    await page.getByPlaceholder("Search by name").fill(otherDisplayName);
-    const row = page
-      .getByRole("listitem")
-      .filter({ hasText: otherDisplayName });
+    await page.getByPlaceholder("Search by name").fill(otherUsername);
+    const row = page.getByRole("listitem").filter({ hasText: otherUsername });
     await expect(row.getByRole("button", { name: "Follow" })).toBeVisible();
-    await row.getByRole("link", { name: otherDisplayName }).click();
+    await row.getByRole("link", { name: otherUsername }).click();
 
     await scene(page, "H · only their public entries");
     await expect(page.getByText("Portland, OR")).toBeVisible();
@@ -346,7 +344,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await card.getByText(publicCaption).click();
     await hydrated(page);
     await expect(
-      page.getByRole("heading", { name: otherDisplayName }),
+      page.getByRole("heading", { name: otherUsername }),
     ).toBeVisible();
     await expect(
       page.locator('[data-part="run-strip"] [data-part="verdict-badge"]'),

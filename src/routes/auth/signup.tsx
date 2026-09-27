@@ -10,7 +10,8 @@ import {
   AuthCrossLink,
   AuthLegal,
   AuthPage,
-  PasswordField,
+  CREDENTIAL_LABELS,
+  CredentialFields,
   useAuthForm,
 } from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
@@ -19,11 +20,10 @@ import {
   googleReturn,
   parseSignInSearch,
 } from "../../modules/auth/sign-in-search";
-import { TextField } from "../../ui";
 
 /**
- * Au1. The name field stays until the username task replaces it (owner,
- * 2026-09-24): the board's two fields are that task's, not this one's.
+ * Au2 · create an account (round 26 renumbered it): email and password
+ * only. The handle is O0's, the first onboarding step (round 26 #7).
  */
 export const Route = createFileRoute("/auth/signup")({
   // Only `error` matters here: a failed Google round trip comes back to
@@ -32,12 +32,9 @@ export const Route = createFileRoute("/auth/signup")({
   component: SignupPage,
 });
 
-const LABELS = { name: "Name", email: "Email", password: "Password" };
-
 function SignupPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -53,7 +50,7 @@ function SignupPage() {
     schema: signUpSchema,
     action: signUp,
     successMessage: "Account created.",
-    labels: LABELS,
+    labels: CREDENTIAL_LABELS,
     onSuccess: async () => {
       await router.invalidate();
       await navigate({ to: "/" });
@@ -77,36 +74,17 @@ function SignupPage() {
         />
       }
       onSubmit={() => {
-        void form.submit({ name, email, password });
+        void form.submit({ email, password });
       }}
     >
-      <TextField
-        name="name"
-        label={LABELS.name}
-        autoComplete="name"
-        value={name}
-        onChange={setName}
-        field={form.field}
-        error={form.fieldErrors.name}
-      />
-      <TextField
-        name="email"
-        label={LABELS.email}
-        type="email"
-        autoComplete="email"
-        value={email}
-        onChange={setEmail}
-        field={form.field}
-        error={form.fieldErrors.email}
-      />
-      <PasswordField
-        label={LABELS.password}
-        autoComplete="new-password"
-        value={password}
-        onChange={setPassword}
-        field={form.field}
-        error={form.fieldErrors.password}
-        hint={`At least ${String(PASSWORD_MIN_LENGTH)} characters.`}
+      <CredentialFields
+        form={form}
+        email={email}
+        onEmail={setEmail}
+        password={password}
+        onPassword={setPassword}
+        passwordAutoComplete="new-password"
+        passwordHint={`At least ${String(PASSWORD_MIN_LENGTH)} characters.`}
       />
     </AuthPage>
   );

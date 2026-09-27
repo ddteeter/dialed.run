@@ -1,6 +1,6 @@
 /**
  * Covers: O1 (calibrate), O3 (the one list), P2.5 (make them real), P3 (now
- * go run), K (the Call teaser), U1/N (settings) — one journey, one video.
+ * go run), K (the Call teaser at 15, round 26 #15), U1/N (settings) — one journey, one video.
  *
  * The journey is the packet's own done-criterion read literally: a fresh
  * account reaches "now go run" with a real closet, and the Call tab then
@@ -206,8 +206,15 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await scene(page, "K · the meter at nothing, and one instruction");
   await page.goto("/call");
   await hydrated(page);
-  await expect(page.getByText(/verdicts and the Call starts\./u)).toBeVisible();
-  await expect(page.getByRole("meter")).toHaveAttribute("aria-valuenow", "0");
+  await expect(
+    page.getByText("Log 15 verdicts and the Call starts."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "0 of 15 verdicts logged" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Your first verdict is one run away."),
+  ).toBeVisible();
 
   // Settings as U1's index (round 22, item 20): rows that say their value,
   // and one small form per sub-page with its own Save.

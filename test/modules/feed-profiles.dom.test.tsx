@@ -25,7 +25,7 @@ const done = () => Promise.resolve();
 function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
   return {
     userId: "01USER",
-    displayName: "Dana Kim",
+    username: "Dana Kim",
     cityLabel: undefined,
     thermalLevel: undefined,
     followerCount: 0,
@@ -44,7 +44,7 @@ function otherProfile(
 ): OtherProfileData {
   return {
     userId: "01RAVI",
-    displayName: "Ravi K",
+    username: "Ravi K",
     cityLabel: NOTHING,
     recentPublicEntries: [],
     ...overrides,
@@ -92,9 +92,9 @@ function followScreen(options: {
 }
 
 function results(...names: string[]): SearchResult[] {
-  return names.map((displayName, index) => ({
+  return names.map((username, index) => ({
     userId: `01R${String(index)}`,
-    displayName,
+    username,
     following: index === 1,
   }));
 }
@@ -167,7 +167,7 @@ describe("OwnProfile (G): day one", () => {
 
   it("names the runner, or You, and shows a city only when O1 got one", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ displayName: undefined })} />,
+      <OwnProfile profile={ownProfile({ username: undefined })} />,
     );
     expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
     expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
@@ -325,7 +325,7 @@ describe("OtherProfile (H)", () => {
 
   it("falls back to A runner and shows a city only when there is one", async () => {
     await renderFeedScreen(
-      otherScreen({ displayName: NOTHING, cityLabel: "St. Paul" }),
+      otherScreen({ username: NOTHING, cityLabel: "St. Paul" }),
     );
     expect(screen.getByRole("heading", { name: "A runner" })).toBeVisible();
     expect(screen.getByText("St. Paul")).toHaveClass("font-mono");

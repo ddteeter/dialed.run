@@ -8,7 +8,7 @@ import type { BlockedRunner } from "../../src/modules/safety/blocks";
 function runner(overrides: Partial<BlockedRunner> = {}): BlockedRunner {
   return {
     userId: "u-1",
-    displayName: "j_holloway",
+    username: "j_holloway",
     blockedAt: 1_755_000_000,
     ...overrides,
   };
@@ -68,10 +68,7 @@ describe("the roster", () => {
   it("counts and names who is blocked", () => {
     render(
       <BlockedRunners
-        blocked={[
-          runner(),
-          runner({ userId: "u-2", displayName: "gearfiend22" }),
-        ]}
+        blocked={[runner(), runner({ userId: "u-2", username: "gearfiend22" })]}
         unblock={vi.fn()}
       />,
     );
@@ -84,7 +81,7 @@ describe("the roster", () => {
   it("names a runner who has no display name without leaving a gap", () => {
     render(
       <BlockedRunners
-        blocked={[runner({ displayName: undefined })]}
+        blocked={[runner({ username: undefined })]}
         unblock={vi.fn()}
       />,
     );
@@ -111,10 +108,7 @@ describe("the roster", () => {
     const user = userEvent.setup();
     render(
       <BlockedRunners
-        blocked={[
-          runner(),
-          runner({ userId: "u-2", displayName: "gearfiend22" }),
-        ]}
+        blocked={[runner(), runner({ userId: "u-2", username: "gearfiend22" })]}
         unblock={vi.fn().mockResolvedValue({})}
       />,
     );
@@ -164,7 +158,7 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     const unblock = vi.fn().mockRejectedValue(new Error("D1 down"));
     render(
       <BlockedRunners
-        blocked={[runner(), runner({ userId: "u-2", displayName: "gearfiend22" })]}
+        blocked={[runner(), runner({ userId: "u-2", username: "gearfiend22" })]}
         unblock={unblock}
       />,
     );
@@ -174,7 +168,9 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     await user.click(first);
 
     const band = await waitFor(() => {
-      const found = document.querySelector<HTMLElement>("[data-part='failure-band']");
+      const found = document.querySelector<HTMLElement>(
+        "[data-part='failure-band']",
+      );
       expect(found).not.toBeNull();
       return found;
     });

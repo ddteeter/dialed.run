@@ -103,7 +103,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           <Icon name="back" size={20} />
         </Link>
         <h1 className="m-0 font-display text-heading">
-          {isOwn ? "Your run" : (entry.authorDisplayName ?? "A runner")}
+          {isOwn ? "Your run" : (entry.authorUsername ?? "A runner")}
         </h1>
       </div>
 

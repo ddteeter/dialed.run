@@ -156,14 +156,33 @@ function GoogleMark(): JSX.Element {
 }
 
 /**
- * The hairline pill, the same width as the primary (Au1: *"Google is the
- * hairline pill, same width"*).
+ * Google's own light and dark specs in our pill (round 26 #13; decision
+ * D-49), the same width as the primary and 48 high to match our pills
+ * (Google's minimum is 40): fill `#FFFFFF`, a 1px `#747775` stroke and
+ * `#1F1F1F` text on light; `#131314`, `#8E918F` and `#E3E3E3` on dark.
+ * **These colours are Google's, not T1's**, and `data-part="google-button"`
+ * is the one element exempt from the palette check for that reason —
+ * nothing else may borrow them. The dark set is keyed on the root's
+ * `data-theme="dark"`, which is how task 111's theme will arrive.
+ *
+ * **The label is Archivo, not Roboto** (decision D-49): the stack has
+ * three families by rule. Google's guidelines (updated 2026-07-07) give the
+ * label as Google Sans Medium, not Roboto, and their "don't" list names no
+ * font — so this builds to D-49 and the PR asks the owner to confirm. At
+ * the weights that exist here (never 500), semibold.
  *
  * In flight the glyph drops for the label, so the width holds (Au5); on
  * failure the band sits directly above this button and not above Log in,
  * because *"the band belongs to the button that failed"* (Au6). No pink
  * anywhere on either.
  */
+/**
+ * Google's colours, stroke and shape, light then dark. Held in a constant
+ * so the contract the doc comment above states is one a test can read.
+ */
+export const GOOGLE_BUTTON_CLASS =
+  "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-[#747775] bg-[#FFFFFF] px-6 text-body font-semibold text-[#1F1F1F] in-data-[theme=dark]:border-[#8E918F] in-data-[theme=dark]:bg-[#131314] in-data-[theme=dark]:text-[#E3E3E3]";
+
 export function GoogleButton({
   google,
 }: Readonly<{ google: GoogleSignIn }>): JSX.Element {
@@ -179,13 +198,13 @@ export function GoogleButton({
       )}
       <button
         type="button"
-        data-part="google"
+        data-part="google-button"
         data-state={google.pending ? "pending" : undefined}
         {...inFlight(google.pending)}
         onClick={() => {
           void google.run();
         }}
-        className="target flex w-full cursor-pointer items-center justify-center rounded-pill border border-hairline bg-ground px-6 py-4 text-body font-semibold text-ink"
+        className={GOOGLE_BUTTON_CLASS}
       >
         <PendingLabel
           label={

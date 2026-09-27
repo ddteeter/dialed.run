@@ -37,7 +37,7 @@ export interface PostCardProps {
 
 export function PostCard(props: Readonly<PostCardProps>) {
   const { item, units, now, setUseful, onStatus } = props;
-  const name = item.authorDisplayName ?? "A runner";
+  const name = item.authorUsername ?? "A runner";
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
 

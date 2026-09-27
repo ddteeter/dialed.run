@@ -610,7 +610,7 @@ describe("the queue itself", () => {
     const subject = await makeUser();
     await core()
       .update(userProfiles)
-      .set({ displayName: "mark_t" })
+      .set({ username: "mark_t" })
       .where(eq(userProfiles.userId, subject));
     const productId = newUlid();
     await core()
@@ -658,7 +658,7 @@ describe("the queue itself", () => {
     const subject = await makeUser();
     await core()
       .update(userProfiles)
-      .set({ displayName: "mark_t" })
+      .set({ username: "mark_t" })
       .where(eq(userProfiles.userId, subject));
     await core()
       .insert(products)

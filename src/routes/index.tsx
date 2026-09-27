@@ -13,7 +13,8 @@ import { startOnboardingIfNeeded } from "../modules/onboarding/route-decisions";
  * and bailing therefore has to be recoverable — a one-shot redirect at
  * account creation strands the exact person the skippable design invites.
  * A signed-out visitor is never redirected: this is the only page they can
- * see.
+ * see. A runner with no handle never gets this far: the root route sends
+ * them to O0 first, whatever else is unfinished (round 26 #7).
  */
 export const Route = createFileRoute("/")({
   loader: async () => {

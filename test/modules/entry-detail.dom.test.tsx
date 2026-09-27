@@ -22,7 +22,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   return {
     id: "01ENTRY",
     userId: OWNER,
-    authorDisplayName: "mark_t",
+    authorUsername: "mark_t",
     runId: "01RUN",
     runTitle: "Evening run",
     distanceM: 5 * 1609.34,
@@ -147,7 +147,7 @@ describe("EntryDetail: the heading", () => {
 
   it("falls back to A runner, and never calls a signed-out viewer the author", async () => {
     await renderFeedScreen(
-      detail({ authorDisplayName: undefined }, { viewerId: undefined }),
+      detail({ authorUsername: undefined }, { viewerId: undefined }),
     );
     expect(screen.getByRole("heading", { name: "A runner" })).toBeVisible();
   });

@@ -93,7 +93,10 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
 
   // ---- What we built --------------------------------------------------
   const rows = seeded();
-  const runner = await seedRunner(rows, `E1 runner ${String(Date.now())}`);
+  const runner = await seedRunner(
+    rows,
+    `e1_runner_${String(Date.now()).slice(-8)}`,
+  );
   const startedAt = nowSeconds() - 2 * 3600;
   const withPhoto = await seedEntry(rows, {
     userId: runner,

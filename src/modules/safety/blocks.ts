@@ -115,7 +115,7 @@ export async function hiddenCounterpartIds(
 
 export interface BlockedRunner {
   userId: string;
-  displayName: string | undefined;
+  username: string | undefined;
   blockedAt: number;
 }
 
@@ -138,7 +138,7 @@ export async function blockedRunners(
     .select({
       blockedId: blocks.blockedId,
       createdAt: blocks.createdAt,
-      displayName: userProfiles.displayName,
+      username: userProfiles.username,
     })
     .from(blocks)
     .leftJoin(userProfiles, eq(userProfiles.userId, blocks.blockedId))
@@ -146,7 +146,7 @@ export async function blockedRunners(
 
   return rows.map((row) => ({
     userId: row.blockedId,
-    displayName: row.displayName ?? undefined,
+    username: row.username ?? undefined,
     blockedAt: row.createdAt,
   }));
 }

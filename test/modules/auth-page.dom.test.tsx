@@ -18,6 +18,8 @@ import {
   AuthCrossLink,
   AuthLegal,
   AuthPage,
+  CREDENTIAL_LABELS,
+  CredentialFields,
   LoginCrossLink,
   PasswordField,
   SessionNotice,
@@ -30,7 +32,6 @@ import {
   useCarriedEmail,
 } from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/modules/auth/sign-in-search";
-import { TextField } from "../../src/ui";
 
 /**
  * Au1–Au7 (round 22, `design/Auth.dc.html`), through the page both auth
@@ -86,7 +87,7 @@ function LogIn({
     schema: signInSchema,
     action: signIn,
     successMessage: "Signed in.",
-    labels: { email: "Email", password: "Password" },
+    labels: CREDENTIAL_LABELS,
     onSuccess: async () => {
       onSignedIn();
       await Promise.resolve();
@@ -107,23 +108,14 @@ function LogIn({
         void form.submit({ email, password });
       }}
     >
-      <TextField
-        name="email"
-        label="Email"
-        type="email"
-        value={email}
-        onChange={setEmail}
-        field={form.field}
-        error={form.fieldErrors.email}
-      />
-      <PasswordField
-        label="Password"
-        autoComplete="current-password"
-        value={password}
-        onChange={setPassword}
-        field={form.field}
-        error={form.fieldErrors.password}
-        focusOnArrival={carried !== undefined}
+      <CredentialFields
+        form={form}
+        email={email}
+        onEmail={setEmail}
+        password={password}
+        onPassword={setPassword}
+        passwordAutoComplete="current-password"
+        focusPasswordOnArrival={carried !== undefined}
       />
     </AuthPage>
   );
@@ -172,7 +164,7 @@ describe("Au2 · at rest", () => {
       "wordmark",
       "form",
       "or-divider",
-      "google",
+      "google-button",
       "cross-link",
     ]);
     // "A signed-out page never shows the tab bar."
@@ -350,19 +342,35 @@ describe("Au5 · Google in flight", () => {
     // At rest Google's own full-colour "G" leads the label — the official
     // asset, as Google's branding guidelines require (PR #104) — and it is
     // decoration: the words are the button's name.
-    const mark = part("google")?.querySelector("img");
+    const mark = part("google-button")?.querySelector("img");
     expect(mark).toHaveAttribute("src", "/brand/google-g.png");
     expect(mark).toHaveAttribute("alt", "");
     expect(mark).toHaveAttribute("width", "20");
     expect(mark).toHaveAttribute("height", "20");
     expect(mark).toHaveClass("size-5");
+    // Round 26 #13: Google's light spec in our pill, 48 high, and the dark
+    // set keyed on the theme — its colours, not T1's.
+    expect(part("google-button")).toHaveClass(
+      "target",
+      "h-12",
+      "w-full",
+      "rounded-pill",
+      "border",
+      "font-semibold",
+      "border-[#747775]",
+      "bg-[#FFFFFF]",
+      "text-[#1F1F1F]",
+      "in-data-[theme=dark]:border-[#8E918F]",
+      "in-data-[theme=dark]:bg-[#131314]",
+      "in-data-[theme=dark]:text-[#E3E3E3]",
+    );
     const answer = Promise.withResolvers<unknown>();
     client.social.mockReturnValue(answer.promise);
     await user.click(
       screen.getByRole("button", { name: "Continue with Google" }),
     );
 
-    const google = part("google");
+    const google = part("google-button");
     expect(google).toHaveAttribute("data-state", "pending");
     expect(google).toHaveAttribute("aria-busy", "true");
     expect(google).not.toHaveAttribute("disabled");
@@ -385,7 +393,7 @@ describe("Au5 · Google in flight", () => {
     await waitFor(() => {
       expect(leave).toHaveBeenCalledWith("https://accounts.example/consent");
     });
-    expect(part("google")).not.toHaveAttribute("data-state");
+    expect(part("google-button")).not.toHaveAttribute("data-state");
   });
 
   it("is cancelled by Log in: the late answer is dropped, not followed", async () => {
@@ -402,9 +410,9 @@ describe("Au5 · Google in flight", () => {
     await fillAndSubmit(user);
 
     // At rest at once, not when the abandoned answer eventually lands.
-    expect(part("google")).not.toHaveAttribute("data-state");
-    expect(part("google")).not.toHaveAttribute("aria-busy");
-    expect(part("google")).toHaveTextContent("Continue with Google");
+    expect(part("google-button")).not.toHaveAttribute("data-state");
+    expect(part("google-button")).not.toHaveAttribute("aria-busy");
+    expect(part("google-button")).toHaveTextContent("Continue with Google");
 
     await act(async () => {
       answer.resolve({
@@ -414,7 +422,7 @@ describe("Au5 · Google in flight", () => {
       await Promise.resolve();
     });
     await waitFor(() => {
-      expect(part("google")).not.toHaveAttribute("data-state");
+      expect(part("google-button")).not.toHaveAttribute("data-state");
     });
     expect(leave).not.toHaveBeenCalled();
   });
@@ -454,7 +462,7 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
     const band = part("failure-band");
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.google);
-    expect(band?.nextElementSibling).toBe(part("google"));
+    expect(band?.nextElementSibling).toBe(part("google-button"));
   });
 
   it("returns to rest, silently, when consent was cancelled", async () => {
@@ -499,7 +507,7 @@ describe("Au6 · Google failed", () => {
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.google);
     // The band belongs to the button that failed.
-    expect(band?.nextElementSibling).toBe(part("google"));
+    expect(band?.nextElementSibling).toBe(part("google-button"));
     expect(band?.closest("form")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent(
       `Not signed in. ${AUTH_COPY.google}`,
@@ -808,5 +816,69 @@ describe("AuthCrossLink and AuthLegal", () => {
         "By creating an account you agree to the terms and privacy policy.",
       ),
     ).toHaveClass("text-micro", "text-muted");
+  });
+});
+
+describe("CredentialFields (round 26 #7, #18)", () => {
+  const form = {
+    field: (name: string) => ({
+      name,
+      readOnly: false,
+      "aria-invalid": undefined,
+      "aria-describedby": undefined,
+      onInput: () => {
+        // nothing to clear
+      },
+    }),
+    fieldErrors: { email: "Enter your email address." },
+  };
+
+  it("is email then password, wired for sign-up's hint and autocomplete", () => {
+    render(
+      <CredentialFields
+        form={form}
+        email="dana.k@hey.com"
+        onEmail={vi.fn()}
+        password=""
+        onPassword={vi.fn()}
+        passwordAutoComplete="new-password"
+        passwordHint="At least 10 characters."
+      />,
+    );
+    const email = screen.getByLabelText(CREDENTIAL_LABELS.email);
+    expect(CREDENTIAL_LABELS).toStrictEqual({
+      email: "Email",
+      password: "Password",
+    });
+    expect(email).toHaveAttribute("type", "email");
+    expect(email).toHaveAttribute("autocomplete", "email");
+    expect(email).toHaveAttribute("name", "email");
+    expect(email).toHaveValue("dana.k@hey.com");
+    expect(screen.getByText("Enter your email address.")).toBeVisible();
+    const password = screen.getByLabelText(CREDENTIAL_LABELS.password);
+    expect(password).toHaveAttribute("autocomplete", "new-password");
+    expect(password).not.toHaveFocus();
+    expect(screen.getByText("At least 10 characters.")).toBeVisible();
+    expect(email.compareDocumentPosition(password)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("carries log-in's autocomplete, no hint, and Au7's focus", () => {
+    render(
+      <CredentialFields
+        form={{ ...form, fieldErrors: {} }}
+        email=""
+        onEmail={vi.fn()}
+        password=""
+        onPassword={vi.fn()}
+        passwordAutoComplete="current-password"
+        focusPasswordOnArrival
+      />,
+    );
+    const password = screen.getByLabelText(CREDENTIAL_LABELS.password);
+    expect(password).toHaveAttribute("autocomplete", "current-password");
+    expect(password).toHaveFocus();
+    expect(screen.queryByText(/characters/u)).toBeNull();
   });
 });

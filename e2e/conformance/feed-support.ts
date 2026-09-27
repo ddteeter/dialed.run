@@ -280,10 +280,10 @@ A runner with a public profile and nothing else — no account, no session.
 */
 export async function seedRunner(
   rows: Seeded,
-  displayName: string,
+  username: string,
 ): Promise<string> {
   const userId = minted(rows.runners);
-  await insertRow(userProfiles, { userId, displayName });
+  await insertRow(userProfiles, { userId, username });
   return userId;
 }
 

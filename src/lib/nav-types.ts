@@ -194,6 +194,10 @@ const NAV: readonly Edge[] = [
       "/runs/import/$importId",
       "/notifications",
       "/onboarding/name",
+      // Task 126: O0 is the first onboarding step (round 26 #7), and
+      // Settings › Username is a settings detail like its neighbours.
+      "/onboarding/handle",
+      "/account/username",
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",
