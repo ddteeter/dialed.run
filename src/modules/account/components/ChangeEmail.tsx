@@ -39,7 +39,6 @@ export function ChangeEmail({
     schema: changeEmailSchema,
     action: (values) => request({ data: values }),
     successMessage: "Link sent.",
-    labels: { email: "New email" },
     onSuccess: (result) => {
       setOutcome(result);
       if (result.status === "unverified") setIsSheetOpen(true);

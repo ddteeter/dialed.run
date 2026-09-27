@@ -23,7 +23,13 @@ const PURPOSE = "dialed.run unsubscribe v1";
 
 const encoder = new TextEncoder();
 
-async function signingKey(secret: string): Promise<CryptoKey> {
+/**
+ * Exported for its own test only: the derived key is never returned to any
+ * other caller in this module, so `extractable: false` on both `importKey`
+ * calls has no effect anything else here could observe short of reading the
+ * `CryptoKey`'s own `.extractable` flag directly.
+ */
+export async function signingKey(secret: string): Promise<CryptoKey> {
   const master = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),

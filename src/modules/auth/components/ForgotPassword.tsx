@@ -38,7 +38,6 @@ export function ForgotPassword({
     schema: resetRequestSchema,
     action: request,
     successMessage: "Reset link requested.",
-    labels: { email: "Email" },
     onSuccess: () => {
       setSentTo(email);
     },

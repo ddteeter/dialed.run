@@ -41,8 +41,13 @@ export function ResetPassword({
   const form = useFormSubmit({
     schema: newPasswordSchema,
     action: async (values): Promise<Outcome> => {
+      // `token` is undefined only when the "expired" panel above already
+      // took over the render, so submitting the form means it is defined —
+      // narrowed explicitly rather than with `?? ""`, which would have sent
+      // a real request with a placeholder token instead of stopping here.
+      if (token === undefined) return "expired";
       try {
-        await reset(token ?? "", values);
+        await reset(token, values);
         return "set";
       } catch (error: unknown) {
         if (error instanceof ResetLinkExpired) return "expired";
@@ -50,7 +55,6 @@ export function ResetPassword({
       }
     },
     successMessage: "Password set.",
-    labels: { password: "New password" },
     onSuccess: (result) => {
       setOutcome(result);
     },

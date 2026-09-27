@@ -50,10 +50,14 @@ describe("UnsubscribeLanding", () => {
     ).toBeVisible();
     // No push in v1 (decision D-44), so the board's push sentence is gone.
     expect(screen.queryByText(/push/iu)).toBeNull();
-    expect(
-      screen.getByRole("link", { name: "All notification settings ›" }),
-    ).toHaveAttribute("href", "/account/notifications");
-    expect(screen.getByText(/asks you to log in/u)).toBeVisible();
+    const settingsLink = screen.getByRole("link", {
+      name: "All notification settings ›",
+    });
+    expect(settingsLink).toHaveAttribute("href", "/account/notifications");
+    expect(settingsLink).toHaveClass("underline");
+    expect(settingsLink.closest("p")).toHaveTextContent(
+      "All notification settings › (asks you to log in)",
+    );
   });
 
   it("turns them back on, on the same page", async () => {

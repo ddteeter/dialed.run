@@ -85,7 +85,14 @@ export function dedupeKeyFor(message: OutboxMessage): string {
  * for "as soon as it is written".
  */
 export function notBeforeOf(message: OutboxMessage): number | undefined {
-  return message.kind === "email" ? message.payload.notBefore : undefined;
+  switch (message.kind) {
+    case "photo_delete": {
+      return undefined;
+    }
+    case "email": {
+      return message.payload.notBefore;
+    }
+  }
 }
 
 /**

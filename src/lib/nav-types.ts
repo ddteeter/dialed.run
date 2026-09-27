@@ -194,17 +194,19 @@ const NAV: readonly Edge[] = [
       "/runs/import/$importId",
       "/notifications",
       "/onboarding/name",
-      // Task 126: O0 is the first onboarding step (round 26 #7), and
-      // Settings › Username is a settings detail like its neighbours.
+      // Task 126: O0 is the first onboarding step (round 26 #7).
       "/onboarding/handle",
-      "/account/username",
       // Task 126 (PR 2): the account's settings pages are settings
       // details too. Au4 after sign-up, and "Forgot it?" from log-in, are
       // forward steps out of the auth pair — pushes by analogy, since NAV
       // has no row for either (a design delta).
+      //
+      // `/account/$section` claims `/account/username`, `/account/check-email`
+      // and `/account/forgot` too — the same shape as `/runs/$runId` above:
+      // a param segment matches any one segment, and all four are pushes,
+      // so listing the three by name said nothing the table did not
+      // already say. Measured: emptying each changed no answer.
       "/account/$section",
-      "/account/check-email",
-      "/account/forgot",
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",

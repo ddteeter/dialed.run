@@ -71,7 +71,6 @@ const BUTTON_STYLE: CSSProperties = {
   fontSize: "16px",
   fontWeight: 600,
   padding: "12px 24px",
-  textDecoration: "none",
 };
 
 const FOOT_STYLE: CSSProperties = {

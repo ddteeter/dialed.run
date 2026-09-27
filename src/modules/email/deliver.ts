@@ -109,9 +109,12 @@ async function optionalMail(
   recipient: Recipient,
   payload: EmailPayload,
   deps: EmailDeps,
-): Promise<"skip" | { readonly unsubscribe: string | undefined }> {
+): Promise<"skip" | { readonly unsubscribe?: string }> {
+  // `{}` rather than `{ unsubscribe: undefined }`: the caller only ever
+  // destructures the key, and the two are indistinguishable at every read —
+  // an explicit `undefined` value here was a mutant no input could kill.
   const preference = preferenceFor(payload.template.kind);
-  if (preference === undefined) return { unsubscribe: undefined };
+  if (preference === undefined) return {};
   if (!recipient.isVerified) return "skip";
   if (!(await isEmailWanted(db, recipient.userId, preference))) return "skip";
   return {

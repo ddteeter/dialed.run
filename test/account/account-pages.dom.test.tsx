@@ -176,6 +176,49 @@ describe("ResendLink", () => {
     expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
     expect(resend).toHaveBeenCalledTimes(2);
   });
+
+  it("does not arm the sixty-second timeout before anything has been sent", () => {
+    const timeout = vi.spyOn(globalThis, "setTimeout");
+    render(<ResendLink email="maya@example.com" resend={resender()} />);
+    expect(timeout).not.toHaveBeenCalledWith(expect.any(Function), SENT_FOR_MS);
+    timeout.mockRestore();
+  });
+
+  it("cancels the first minute's timer when a fresh send restarts it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({
+      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+    });
+    const resend = resender();
+    render(<ResendLink email="maya@example.com" resend={resend} />);
+
+    await user.click(resendButton());
+    await screen.findByText(/^Sent ✓/u);
+
+    // Halfway through the first minute, send again.
+    act(() => {
+      vi.advanceTimersByTime(SENT_FOR_MS / 2);
+    });
+    expect(screen.getByText(/^Sent ✓/u)).toBeVisible();
+    await user.click(resendButton());
+    await waitFor(() => {
+      expect(resend).toHaveBeenCalledTimes(2);
+    });
+    await screen.findByText(/^Sent ✓/u);
+
+    // If the first timer were not cancelled it would still fire here — a
+    // full minute after the *first* send, but only half a minute after the
+    // second — and wrongly clear "Sent" early.
+    act(() => {
+      vi.advanceTimersByTime(SENT_FOR_MS / 2 + 5000);
+    });
+    expect(screen.getByText(/^Sent ✓/u)).toBeVisible();
+
+    act(() => {
+      vi.advanceTimersByTime(SENT_FOR_MS);
+    });
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+  });
 });
 
 describe("CheckEmail (Au4)", () => {
@@ -211,15 +254,19 @@ describe("CheckEmail (Au4)", () => {
         resend={resender()}
       />,
     );
-    expect(screen.getByRole("link", { name: "Start over" })).toHaveAttribute(
-      "href",
-      "/auth/signup",
-    );
+    const startOver = screen.getByRole("link", { name: "Start over" });
+    expect(startOver).toHaveAttribute("href", "/auth/signup");
+    expect(startOver).toHaveClass("underline");
     expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
       "href",
       "/auth/login",
     );
-    expect(screen.getByText(/^Carry on without confirming\?/u)).toBeVisible();
+    expect(
+      screen.getByText(/^Wrong address\?/u).closest("p"),
+    ).toHaveTextContent("Wrong address? Start over");
+    expect(
+      screen.getByText(/^Carry on without confirming\?/u).closest("p"),
+    ).toHaveTextContent("Carry on without confirming? Log in");
     expect(screen.queryByText(/signed in/u)).toBeNull();
   });
 
@@ -227,7 +274,9 @@ describe("CheckEmail (Au4)", () => {
     await renderWithRouter(
       <CheckEmail email="maya@example.com" isSignedIn resend={resender()} />,
     );
-    expect(screen.getByText(/^You're signed in\./u)).toBeVisible();
+    expect(
+      screen.getByText(/^You're signed in\./u).closest("p"),
+    ).toHaveTextContent("You're signed in. Carry on to your closet ›");
     expect(
       screen.getByRole("link", { name: "Carry on to your closet ›" }),
     ).toHaveAttribute("href", "/");
@@ -282,10 +331,9 @@ describe("LinkLanding", () => {
         screen.getByRole("heading", { level: 1, name: heading }),
       ).toBeVisible();
       expect(screen.getByText(body)).toBeVisible();
-      expect(screen.getByRole("link", { name: action })).toHaveAttribute(
-        "href",
-        href,
-      );
+      const link = screen.getByRole("link", { name: action });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveClass("target");
       expect(
         screen.getByText(body).closest("[data-part=landing]"),
       ).toHaveAttribute("data-state", landing.state);
@@ -396,6 +444,7 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(screen.getByText(/^Now /u)).toHaveTextContent(
       "Now old@example.com. We'll send a link to the new address, and the account moves when you open it.",
     );
+    expect(screen.queryByRole("dialog")).toBeNull();
     await user.type(newEmailField(), "new@example.com");
     await user.click(sendLink());
 
@@ -406,6 +455,21 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(sent.closest("p")).toHaveTextContent(
       "Sent ✓ Open the link we sent to the new address. Your email stays old@example.com until you do.",
     );
+    expect(screen.getByRole("status")).toHaveTextContent("Link sent.");
+    // A "sent" answer is not "unverified": the confirm-first sheet stays
+    // closed, it does not open for every successful send.
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("prevents the browser's own submit, so the SPA's own handler is the only one", async () => {
+    const { user } = renderChange();
+    let submitEvent: Event | undefined;
+    document.addEventListener("submit", (event) => {
+      submitEvent = event;
+    });
+    await user.type(newEmailField(), "new@example.com");
+    await user.click(sendLink());
+    expect(submitEvent?.defaultPrevented).toBe(true);
   });
 
   it("refuses a malformed address in the field, before the round trip", async () => {

@@ -111,10 +111,11 @@ describe("ForgotPassword", () => {
     expect(
       screen.getByText("We'll email you a link to set a new one."),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    const remembered = screen.getByText(/^Remembered it\?/u);
+    expect(remembered.closest("p")).toHaveTextContent("Remembered it? Log in");
+    const login = screen.getByRole("link", { name: "Log in" });
+    expect(login).toHaveAttribute("href", "/auth/login");
+    expect(login).toHaveClass("underline");
     await user.type(
       screen.getByRole("textbox", { name: "Email" }),
       "maya@example.com",
@@ -125,6 +126,9 @@ describe("ForgotPassword", () => {
     expect(
       await screen.findByRole("heading", { name: "Check your inbox" }),
     ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Reset link requested.",
+    );
     expect(screen.getByText(/has a dialed\.run account/u)).toHaveTextContent(
       "If maya@example.com has a dialed.run account, a link to set a new password is on its way.",
     );
@@ -143,6 +147,18 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send link" }));
     expect(await screen.findByText("Enter your email address.")).toBeVisible();
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it("prevents the browser's own submit on ShellForm, so the SPA's handler is the only one", async () => {
+    const request = vi.fn(() => Promise.resolve());
+    const user = userEvent.setup();
+    await renderWithRouter(<ForgotPassword request={request} />);
+    let submitEvent: Event | undefined;
+    document.addEventListener("submit", (event) => {
+      submitEvent = event;
+    });
+    await user.click(screen.getByRole("button", { name: "Send link" }));
+    expect(submitEvent?.defaultPrevented).toBe(true);
   });
 
   it("bands a failed request as Not sent, and keeps the form", async () => {
@@ -187,13 +203,13 @@ describe("ResetPassword", () => {
     expect(
       await screen.findByRole("heading", { name: "Password set" }),
     ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Password set.");
     expect(
       screen.getByText("Log in with it. Every other device was signed out."),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    const login = screen.getByRole("link", { name: "Log in" });
+    expect(login).toHaveAttribute("href", "/auth/login");
+    expect(login).toHaveClass("bg-ink");
   });
 
   it("holds a short password to sign-up's floor, in the field", async () => {

@@ -93,6 +93,49 @@ describe("email links", () => {
     }
   });
 
+  it("encodes its secret URL-safe: no +, / or = survive the transform", async () => {
+    // A deterministic 32 bytes, chosen so the raw base64 carries a '+', a
+    // '/' and the padding '=' every 32-byte secret has (32 mod 3 == 2, so
+    // there is always exactly one) — the three characters the URL-safe
+    // transform must remove or replace. The expected value is computed here
+    // independently of `toBase64Url`, so a broken replacement in production
+    // shows up as a mismatch rather than being masked by both sides sharing
+    // one (possibly buggy) transform.
+    const bytes = new Uint8Array(32).fill(0xff);
+    bytes[0] = 0xfb;
+    const raw = btoa(String.fromCodePoint(...bytes));
+    expect(raw).toContain("+");
+    expect(raw).toContain("/");
+    expect(raw.endsWith("=")).toBe(true);
+    const expected = raw
+      .replaceAll("+", "-")
+      .replaceAll("/", "_")
+      .replaceAll("=", "");
+
+    // Seeded first: the account's id is itself random.
+    const { userId } = await seedUser({ isVerified: false });
+    const getRandomValues = vi
+      .spyOn(crypto, "getRandomValues")
+      .mockImplementation((array) => {
+        if (array instanceof Uint8Array) array.set(bytes);
+        return array;
+      });
+    try {
+      const token = await issueEmailLink(
+        db,
+        { userId, purpose: "verify", email: "a@example.com" },
+        NOW,
+      );
+      const secret = token.split(".", 3)[2];
+      expect(secret).toBe(expected);
+      expect(secret).not.toContain("+");
+      expect(secret).not.toContain("/");
+      expect(secret).not.toContain("=");
+    } finally {
+      getRandomValues.mockRestore();
+    }
+  });
+
   it("stop working when a newer one is sent", async () => {
     const { userId, email } = await seedUser({ isVerified: false });
     const first = await issueEmailLink(db, {
@@ -126,9 +169,42 @@ describe("confirmEmail", () => {
       email,
     });
     expect(await isVerified(db, userId)).toBe(true);
+    // `now` is epoch seconds, and `updatedAt` is stamped from it — wrong
+    // arithmetic here lands the account's own `updatedAt` near 1970 instead
+    // of the moment it was confirmed.
+    const [row] = await db
+      .select({ updatedAt: user.updatedAt })
+      .from(user)
+      .where(eq(user.id, userId));
+    expect(row?.updatedAt).toStrictEqual(new Date((NOW + 60) * 1000));
     expect(await confirmEmail(db, token, undefined, NOW + 120)).toStrictEqual({
       state: "used",
     });
+  });
+
+  it("confirms nothing for a token that names no live link", async () => {
+    expect(
+      await confirmEmail(db, "not-a-real-token", undefined, NOW),
+    ).toStrictEqual({ state: "expired" });
+  });
+
+  it("confirms nothing for a change link whose account is gone, before ever touching the outbox", async () => {
+    const send = vi.spyOn(env.EMAIL, "send");
+    const ghost = await issueEmailLink(
+      db,
+      {
+        userId: "gone-change",
+        purpose: "change",
+        email: "new-for-gone@example.com",
+      },
+      NOW,
+    );
+
+    expect(await confirmEmail(db, ghost, undefined, NOW)).toStrictEqual({
+      state: "expired",
+    });
+    expect(send).not.toHaveBeenCalled();
+    send.mockRestore();
   });
 
   it("says a link has run out after 24 hours, and confirms nothing", async () => {
@@ -309,6 +385,31 @@ describe("resendConfirmation", () => {
       await resendConfirmation(db, "nobody@example.com", mail, NOW + 10),
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
   });
+
+  it("shares its send limit's bucket with the other 'verify' emails, and 'reset' stays its own", async () => {
+    // Resend, the new-account note and the existing-account note all name
+    // the address a runner already has one confirm-link limit for — they
+    // must count against the very same row, not three private ones, or the
+    // "5 links this hour" ceiling stops meaning anything. `reset` is a
+    // different limit on purpose: a runner who has used up their confirm
+    // links can still reset a password.
+    const mail = fakeMail();
+    const hooks = authMail(db, () => mail, quiet);
+    const { userId, email } = await seedUser({ isVerified: false });
+
+    await resendConfirmation(db, email, mail, NOW);
+    await hooks.newAccount({ id: userId, email });
+    await hooks.existingAccount({ id: userId, email });
+    await hooks.resetPassword({ id: userId, email, emailVerified: true }, "t");
+
+    const limitRows = await db
+      .select({ key: emailSendLimits.key })
+      .from(emailSendLimits);
+    const keys = limitRows
+      .map((row) => row.key)
+      .toSorted((a, b) => a.localeCompare(b));
+    expect(keys).toStrictEqual([`reset:${email}`, `verify:${email}`]);
+  });
 });
 
 describe("authMail", () => {
@@ -419,6 +520,13 @@ describe("requestEmailChange", () => {
       purpose: "change",
       email: "fresh@example.com",
     });
+    // Its own bucket, named "change" — not the "verify" links' one.
+    const rows = await db
+      .select({ key: emailSendLimits.key })
+      .from(emailSendLimits);
+    expect(rows.map((row) => row.key)).toStrictEqual([
+      "change:fresh@example.com",
+    ]);
   });
 
   it("waits for a confirmed address first", async () => {
