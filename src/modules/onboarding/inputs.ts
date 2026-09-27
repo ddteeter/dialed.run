@@ -62,20 +62,16 @@ export const calibrationInput = z
     tempUnit: tempUnitSchema.optional(),
     distanceUnit: distanceUnitSchema.optional(),
   })
-  .superRefine(({ cityLabel, lat, lng }, context) => {
-    // A label with no coordinates is only ever typed text nobody found:
-    // a found city arrives with where it is (Use this made it the chip),
-    // the browser's location arrives as coordinates alone, and a blank
-    // field is no answer. Here rather than in the form, so the server
-    // refuses it too (FEED-5 review).
-    if (cityLabel !== undefined && (lat === undefined || lng === undefined)) {
-      context.addIssue({
-        code: "custom",
-        path: ["cityLabel"],
-        message: CITY_UNCONFIRMED,
-      });
-    }
-  });
+  // A label with no coordinates is only ever typed text nobody found: a
+  // found city arrives with where it is (Use this made it the chip), the
+  // browser's location arrives as coordinates alone, and a blank field is
+  // no answer. Here rather than in the form, so the server refuses it too
+  // (FEED-5 review).
+  .refine(
+    ({ cityLabel, lat, lng }) =>
+      cityLabel === undefined || (lat !== undefined && lng !== undefined),
+    { path: ["cityLabel"], message: CITY_UNCONFIRMED },
+  );
 export type Calibration = z.infer<typeof calibrationInput>;
 
 /**

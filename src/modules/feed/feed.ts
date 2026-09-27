@@ -111,9 +111,7 @@ export function followingFeedStatement(
       // The viewer as a constant row: `select ? from (select 1)`. Drizzle
       // has no select without a `from`, and borrowing a table for it would
       // make the viewer's own entries depend on a row existing there.
-      database
-        .select({ id: sql<string>`${viewerId}`.as("id") })
-        .from(sql`(select 1)`),
+      database.select({ id: sql<string>`${viewerId}` }).from(sql`(select 1)`),
     )
     .as("authors");
   const page = alias(outfitEntries, "page");
