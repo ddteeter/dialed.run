@@ -4,9 +4,20 @@
  * builder is exported separately so tests can pull `.toSQL()` off it and
  * run `EXPLAIN QUERY PLAN` without duplicating the query.
  */
-import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { alias } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -32,14 +43,24 @@ export interface FeedCursor {
 
 const PAGE_SIZE = 20;
 
+/**
+ * Strictly older than the cursor, in `(created_at, id)` order.
+ *
+ * **The leading `created_at <= ?` is what makes it a seek.** The bare
+ * `created_at < ? OR (created_at = ? AND id < ?)` is equivalent, but an OR
+ * across two shapes gives the planner no range, and D1's plan read each
+ * author's entries from their newest rather than from the cursor — so
+ * page k re-read the k − 1 pages before it. With the conjunct, the
+ * `entries_user_public_created` seek starts at the cursor (`feed.test.ts`
+ * pins `created_at<?` in the plan).
+ */
 function feedCursorPredicate(cursor: FeedCursor) {
-  const sameInstantEarlierId = and(
-    eq(outfitEntries.createdAt, cursor.createdAt),
-    lt(outfitEntries.id, cursor.id),
-  );
-  return or(
-    lt(outfitEntries.createdAt, cursor.createdAt),
-    sameInstantEarlierId,
+  return and(
+    lte(outfitEntries.createdAt, cursor.createdAt),
+    or(
+      lt(outfitEntries.createdAt, cursor.createdAt),
+      lt(outfitEntries.id, cursor.id),
+    ),
   );
 }
 
@@ -47,14 +68,34 @@ function feedCursorPredicate(cursor: FeedCursor) {
  * One page of E1: the viewer's own public entries and those of everyone
  * they follow, newest first.
  *
- * **The followee list is a subquery on `follows`, not a bound list**
- * (D-101). Binding the ids put one parameter per follow into the
- * statement, and with the seven others the 93rd follow crossed D1's
- * 100-parameter cap and failed the whole feed. The subquery binds the
- * viewer's id once however many runners they follow, and the plan is the
- * same shape it was: the page is still the `entries_public_created` seek,
- * and the followee set is a `follows_pk` covering-index search
- * (`feed.test.ts` pins both).
+ * **Driven from the authors, each read to at most a page** (FEED-5
+ * review). The statement is
+ *
+ *     authors (the viewer's followees, and the viewer)
+ *       CROSS JOIN page
+ *       WHERE page.id IN (that author's newest `limit` public entries
+ *                         past the cursor)
+ *
+ * so the rows it scans are at most `limit` per author — they scale with
+ * who the viewer follows, never with how many runners the site has. The
+ * earlier shape seeked `entries_public_created` across every runner's
+ * public entries and checked each author against the followee set row by
+ * row, so a viewer following a few quiet runners walked the whole site
+ * looking for a page. Taking each author's top `limit` loses nothing: the
+ * page's newest `limit` across all authors are all inside the union of
+ * each author's newest `limit`.
+ *
+ * `CROSS JOIN` is load-bearing, not style: it is SQLite's one way of
+ * fixing the join order, and without it the planner prefers the
+ * site-wide index because it reads in `ORDER BY` order and can stop at the
+ * `LIMIT`. Each author's read is an `entries_user_public_created` seek;
+ * the outer sort is over at most `limit` × authors rows.
+ *
+ * **The authors are a subquery, not a bound list** (D-101). Binding the
+ * ids put one parameter per follow into the statement, and the 93rd follow
+ * crossed D1's 100-parameter cap. The viewer joins the set through their
+ * own `user` row — a primary-key read, and a row that exists for anyone
+ * holding a session. `feed.test.ts` pins the plan.
  */
 export function followingFeedStatement(
   database: DrizzleD1Database,
@@ -62,23 +103,38 @@ export function followingFeedStatement(
   cursor: FeedCursor | undefined,
   limit = PAGE_SIZE,
 ) {
-  const followees = database
+  const authors = database
     .select({ id: follows.followeeId })
     .from(follows)
-    .where(eq(follows.followerId, viewerId));
-  const scope = and(
-    or(
-      eq(outfitEntries.userId, viewerId),
-      inArray(outfitEntries.userId, followees),
-    ),
-    publiclyVisibleEntry(),
-    cursor ? feedCursorPredicate(cursor) : undefined,
-  );
-  return database
-    .select()
+    .where(eq(follows.followerId, viewerId))
+    .unionAll(
+      // The viewer as a constant row: `select ? from (select 1)`. Drizzle
+      // has no select without a `from`, and borrowing a table for it would
+      // make the viewer's own entries depend on a row existing there.
+      database
+        .select({ id: sql<string>`${viewerId}`.as("id") })
+        .from(sql`(select 1)`),
+    )
+    .as("authors");
+  const page = alias(outfitEntries, "page");
+  const authorsNewest = database
+    .select({ id: outfitEntries.id })
     .from(outfitEntries)
-    .where(scope)
+    .where(
+      and(
+        eq(outfitEntries.userId, authors.id),
+        publiclyVisibleEntry(),
+        cursor ? feedCursorPredicate(cursor) : undefined,
+      ),
+    )
     .orderBy(desc(outfitEntries.createdAt), desc(outfitEntries.id))
+    .limit(limit);
+  return database
+    .select(getTableColumns(page))
+    .from(authors)
+    .crossJoin(page)
+    .where(inArray(page.id, authorsNewest))
+    .orderBy(desc(page.createdAt), desc(page.id))
     .limit(limit);
 }
 

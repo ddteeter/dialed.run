@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
@@ -25,6 +24,11 @@ import type {
  * The `set` clause names only the calibrated columns on purpose:
  * `display_name`, `share_default` and `onboarding_complete` are other
  * people's business, and recalibrating from settings must not reset them.
+ *
+ * **The place goes through `placeWrite`, the one writer of it** (FEED-5),
+ * in the same batch as the rest: one answer, so it lands whole or not at
+ * all. A calibration that answered no place has nothing for it to write,
+ * and the stored place is left alone.
  */
 export async function saveCalibration(
   db: DrizzleD1Database,
@@ -33,26 +37,20 @@ export async function saveCalibration(
 ): Promise<void> {
   const calibrated = {
     thermalLevel: input.thermalLevel,
-    ...placeColumns(input),
     tempUnit: input.tempUnit,
     distanceUnit: input.distanceUnit,
   };
-  await db
+  const calibration = db
     .insert(userProfiles)
     .values({ userId, ...calibrated })
     .onConflictDoUpdate({ target: userProfiles.userId, set: calibrated });
+  const place = placeWrite(db, userId, input);
+  await (place === undefined ? calibration : db.batch([calibration, place]));
 }
 
 /**
- * **The one writer of the profile's place** (FEED-5): the three columns
- * `user_profiles` keeps it in, written together from a place the runner
- * found and confirmed. Your conditions' Use this calls it directly; O1's
- * calibration writes the same columns through the same `placeColumns`, in
- * the one upsert that also carries the thermal answer and the units.
- *
- * An upsert for `saveCalibration`'s reason — nothing else creates this
- * row — and its `set` names only the place, so a runner's calibration,
- * units and sharing default are untouched.
+ * Your conditions' Use this: a place the runner found and confirmed,
+ * written through `placeWrite`.
  *
  * Answers with what it saved, so the screen shows the stored place rather
  * than its own copy of what it sent.
@@ -62,38 +60,46 @@ export async function savePlace(
   userId: string,
   place: Place,
 ): Promise<Place> {
-  const columns = placeColumns(place);
-  await db
-    .insert(userProfiles)
-    .values({ userId, ...columns })
-    .onConflictDoUpdate({ target: userProfiles.userId, set: columns });
+  await placeWrite(db, userId, place);
   return place;
 }
 
 /**
- * Where the runner runs, as the three columns it is stored in — all three,
- * or none.
+ * **The one writer of the profile's place** (FEED-5): the three columns
+ * `user_profiles` keeps it in, written together, as a statement not yet
+ * sent — `savePlace` awaits it, `saveCalibration` batches it. `undefined`
+ * when no part of a place arrived: a recalibration that answered only the
+ * thermal question leaves the stored place alone rather than erasing it.
+ *
+ * An upsert for `saveCalibration`'s reason — nothing else creates this
+ * row — and its `set` names only the place, so a runner's calibration,
+ * units and sharing default are untouched.
  *
  * **Drizzle drops an `undefined` key from `set`**, so writing a new place
  * as `{ cityLabel, lat: undefined, lng: undefined }` left the *old*
  * coordinates under the new label: a runner who moved from Minneapolis to
  * a typed "Austin" kept Minneapolis's weather. So when any part of a place
- * arrives, the parts that did not are written as NULL (`orSqlNull`). When none does —
- * a recalibration that answered only the thermal question — the stored
- * place is left alone rather than erased.
+ * arrives, the parts that did not are written as NULL (`orSqlNull`) — the
+ * browser's location, say, arrives as coordinates with no label.
  */
-function placeColumns(input: Pick<Calibration, "cityLabel" | "lat" | "lng">): {
-  cityLabel?: string | SQL;
-  lat?: number | SQL;
-  lng?: number | SQL;
-} {
-  const { cityLabel, lat, lng } = input;
-  if ([cityLabel, lat, lng].every((part) => part === undefined)) return {};
-  return {
+function placeWrite(
+  db: DrizzleD1Database,
+  userId: string,
+  place: Pick<Calibration, "cityLabel" | "lat" | "lng">,
+) {
+  const { cityLabel, lat, lng } = place;
+  if ([cityLabel, lat, lng].every((part) => part === undefined)) {
+    return;
+  }
+  const columns = {
     cityLabel: orSqlNull(cityLabel),
     lat: orSqlNull(lat),
     lng: orSqlNull(lng),
   };
+  return db
+    .insert(userProfiles)
+    .values({ userId, ...columns })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: columns });
 }
 
 /**

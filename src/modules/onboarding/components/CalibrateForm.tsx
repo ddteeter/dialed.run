@@ -19,7 +19,7 @@ import {
   useFormSubmit,
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
-import { CITY_UNCONFIRMED, calibrationInput } from "../inputs";
+import { calibrationInput } from "../inputs";
 import type { Calibration } from "../inputs";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
 
@@ -116,7 +116,7 @@ export function CalibrateForm({
 
   const form = useFormSubmit({
     schema: calibrationInput,
-    action: async (values) => saveCalibration({ data: confirmed(values) }),
+    action: async (values) => saveCalibration({ data: values }),
     onSuccess: onSaved,
     successMessage: "Calibrated.",
     labels: LABELS,
@@ -198,30 +198,6 @@ export function CalibrateForm({
 }
 
 type LookUpCity = (input: { data: { label: string } }) => Promise<CityLookup>;
-
-/**
- * A typed city nobody pressed Find on (round 26 #12): Next says so on the
- * field — *"Press Find, or clear the field to skip."* Shaped the way
- * `useFormSubmit` lands a field issue, so it is the field's yellow and
- * focus goes to it: the fix is in the field.
- */
-class CityUnconfirmed extends Error {
-  readonly issues = [{ path: ["cityLabel"], message: CITY_UNCONFIRMED }];
-}
-
-/**
- * The calibration, once its place is one the runner confirmed: a found
- * city arrives with its coordinates (Use this made it the chip), the
- * browser's location arrives as coordinates alone, and a blank field is no
- * answer. A label with no coordinates is only ever typed text nobody
- * found, and that is the one thing Next refuses.
- */
-function confirmed(values: Calibration): Calibration {
-  if (values.cityLabel !== undefined && values.lat === undefined) {
-    throw new CityUnconfirmed();
-  }
-  return values;
-}
 
 /**
  * A typed city is an answer only once found; a blank field is no answer

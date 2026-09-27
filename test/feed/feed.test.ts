@@ -117,33 +117,103 @@ describe("following feed (E1)", () => {
     expect(second.nextCursor).toBeUndefined();
   });
 
+  it("pages through entries made in the same instant, by id", async () => {
+    const viewer = await makeUser();
+    const tied: string[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      const runId = await makeRun({ userId: viewer });
+      tied.push(await makeEntry({ userId: viewer, runId, createdAt: NOW }));
+    }
+    const byIdDescending = tied.toSorted((a, b) => b.localeCompare(a));
+
+    const first = await followingFeed(viewer, undefined, 2);
+    expect(first.items.map((item) => item.entryId)).toEqual(
+      byIdDescending.slice(0, 2),
+    );
+    const second = await followingFeed(viewer, first.nextCursor, 2);
+    expect(second.items.map((item) => item.entryId)).toEqual(
+      byIdDescending.slice(2),
+    );
+  });
+
+  it("reads each author only to a page, and loses nothing by it", async () => {
+    // One prolific followee whose whole page is newer than the quiet one's
+    // only entry, then the quiet one's entry must still lead page two.
+    const viewer = await makeUser();
+    const prolific = await makeUser();
+    const quiet = await makeUser();
+    await follow(viewer, prolific);
+    await follow(viewer, quiet);
+    const prolificEntries: string[] = [];
+    for (let index = 0; index < 4; index += 1) {
+      const runId = await makeRun({ userId: prolific });
+      prolificEntries.push(
+        await makeEntry({
+          userId: prolific,
+          runId,
+          createdAt: NOW + 10 + 2 * index,
+        }),
+      );
+    }
+    const quietEntry = await makeEntry({
+      userId: quiet,
+      runId: await makeRun({ userId: quiet }),
+      createdAt: NOW + 13,
+    });
+    const newestFirst = [
+      prolificEntries[3],
+      prolificEntries[2],
+      quietEntry,
+      prolificEntries[1],
+      prolificEntries[0],
+    ];
+
+    const first = await followingFeed(viewer, undefined, 2);
+    expect(first.items.map((item) => item.entryId)).toEqual(
+      newestFirst.slice(0, 2),
+    );
+    const second = await followingFeed(viewer, first.nextCursor, 2);
+    expect(second.items.map((item) => item.entryId)).toEqual(
+      newestFirst.slice(2, 4),
+    );
+    const third = await followingFeed(viewer, second.nextCursor, 2);
+    expect(third.items.map((item) => item.entryId)).toEqual(
+      newestFirst.slice(4),
+    );
+    expect(third.nextCursor).toBeUndefined();
+  });
+
   it("binds the viewer once however many they follow, and keeps its index seeks", async () => {
     const viewer = await makeUser();
     for (let index = 0; index < 120; index += 1) {
       await follow(viewer, await makeUser());
     }
 
-    const statement = followingFeedStatement(
-      drizzle(env.DIALED_CORE),
-      viewer,
-      { createdAt: NOW, id: "01ZZZZZZZZZZZZZZZZZZZZZZZZ" },
-    );
+    const statement = followingFeedStatement(drizzle(env.DIALED_CORE), viewer, {
+      createdAt: NOW,
+      id: "01ZZZZZZZZZZZZZZZZZZZZZZZZ",
+    });
     const { sql, params } = statement.toSQL();
-    // The viewer twice (own entries, and the follows lookup), the two
-    // visibility values, the three cursor values and the limit: eight, at
-    // one follow or a thousand.
-    expect(params).toHaveLength(8);
+    // The viewer twice (the follows lookup, and their own user row), the
+    // two visibility values, the three cursor values and the limit twice
+    // (per author, and the page): nine, at one follow or a thousand.
+    expect(params).toHaveLength(9);
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
       .all<{ detail: string }>();
     const details = plan.results.map((row) => row.detail).join("\n");
-    expect(details).toMatch(
-      /SEARCH outfit_entries USING INDEX entries_public_created/u,
-    );
+    // Driven from the authors: the followees off `follows_pk`, the viewer
+    // off their own user row, and each author's entries a seek on
+    // `entries_user_public_created` that starts at the cursor. What it
+    // scans is at most a page per author, never the site's entries.
     expect(details).toMatch(
       /SEARCH follows USING COVERING INDEX follows_pk \(follower_id=\?\)/u,
     );
-    expect(details).not.toMatch(/SCAN\s+outfit_entries/iu);
-    expect(details).not.toMatch(/SCAN\s+follows/iu);
+    expect(details).toMatch(/SCAN CONSTANT ROW/u);
+    expect(details).toMatch(
+      /SEARCH outfit_entries USING INDEX entries_user_public_created \(user_id=\? AND is_public=\? AND moderation_status=\? AND created_at<\?\)/u,
+    );
+    expect(details).not.toMatch(/entries_public_created/u);
+    expect(details).not.toMatch(/SCAN\s+(?:outfit_entries|page|follows)/iu);
   });
 });

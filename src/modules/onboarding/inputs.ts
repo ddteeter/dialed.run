@@ -23,6 +23,13 @@ const profileLatitude = latitudeSchema.transform(roundCoordinate);
 const profileLongitude = longitudeSchema.transform(roundCoordinate);
 
 /**
+ * Next pressed with a city typed but never found (round 26 #12): the
+ * field message says the two ways on. `calibrationInput` carries it, so
+ * the server refuses an unconfirmed city as the form does.
+ */
+export const CITY_UNCONFIRMED = "Press Find, or clear the field to skip.";
+
+/**
  * What O1 collects: how warm the person runs, where they run, and which
  * units they read in.
  *
@@ -35,34 +42,41 @@ const profileLongitude = longitudeSchema.transform(roundCoordinate);
  * Error copy lives here rather than in the form, per the Forms & failure
  * contract: one schema, run on both sides.
  */
-export const calibrationInput = z.object({
-  thermalLevel: thermalLevelSchema,
-  /**
-   * The provider's name for the place the runner found and confirmed
-   * (round 26 #12) — a label for a human, never parsed into coordinates.
-   * Up to 200, because it is Visual Crossing's `resolvedAddress`, which
-   * the weather module caps there.
-   */
-  cityLabel: z
-    .string()
-    .trim()
-    .min(1, { message: "Tell us where you run, or skip this." })
-    .max(200)
-    .optional(),
-  lat: profileLatitude.optional(),
-  lng: profileLongitude.optional(),
-  tempUnit: tempUnitSchema.optional(),
-  distanceUnit: distanceUnitSchema.optional(),
-});
+export const calibrationInput = z
+  .object({
+    thermalLevel: thermalLevelSchema,
+    /**
+     * The provider's name for the place the runner found and confirmed
+     * (round 26 #12) — a label for a human, never parsed into coordinates.
+     * Up to 200, because it is Visual Crossing's `resolvedAddress`, which
+     * the weather module caps there.
+     */
+    cityLabel: z
+      .string()
+      .trim()
+      .min(1, { message: "Tell us where you run, or skip this." })
+      .max(200)
+      .optional(),
+    lat: profileLatitude.optional(),
+    lng: profileLongitude.optional(),
+    tempUnit: tempUnitSchema.optional(),
+    distanceUnit: distanceUnitSchema.optional(),
+  })
+  .superRefine(({ cityLabel, lat, lng }, context) => {
+    // A label with no coordinates is only ever typed text nobody found:
+    // a found city arrives with where it is (Use this made it the chip),
+    // the browser's location arrives as coordinates alone, and a blank
+    // field is no answer. Here rather than in the form, so the server
+    // refuses it too (FEED-5 review).
+    if (cityLabel !== undefined && (lat === undefined || lng === undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["cityLabel"],
+        message: CITY_UNCONFIRMED,
+      });
+    }
+  });
 export type Calibration = z.infer<typeof calibrationInput>;
-
-/**
- * Next pressed with a city typed but never found (round 26 #12): the
- * field message says the two ways on. Beside the schema whose field it
- * lands on, because it is that field's copy — it comes from the form's
- * own check rather than from a parse.
- */
-export const CITY_UNCONFIRMED = "Press Find, or clear the field to skip.";
 
 /**
  * A place the runner found and pressed Use this on: the provider's name

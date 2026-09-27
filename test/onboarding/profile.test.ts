@@ -155,6 +155,8 @@ function isCityLengthTaken(length: number): boolean {
   return calibrationInput.safeParse({
     thermalLevel: 0,
     cityLabel: "a".repeat(length),
+    lat: 0,
+    lng: 0,
   }).success;
 }
 
@@ -248,12 +250,9 @@ describe("a profile's coordinates are rounded where they are parsed (STR-14, D-1
     expect(
       calibrationInput.parse({ thermalLevel: 0, ...PRECISE }),
     ).toMatchObject({ lat: PORTLAND.lat, lng: PORTLAND.lng });
-    const labelOnly = calibrationInput.parse({
-      thermalLevel: 0,
-      cityLabel: PORTLAND.cityLabel,
-    });
-    expect(labelOnly).not.toHaveProperty("lat");
-    expect(labelOnly).not.toHaveProperty("lng");
+    const noPlace = calibrationInput.parse({ thermalLevel: 0 });
+    expect(noPlace).not.toHaveProperty("lat");
+    expect(noPlace).not.toHaveProperty("lng");
   });
 });
 
@@ -351,9 +350,46 @@ describe("calibrationInput", () => {
     const parsed = calibrationInput.parse({
       thermalLevel: 0,
       cityLabel: "  Seattle, WA  ",
+      lat: 47.61,
+      lng: -122.33,
     });
 
     expect(parsed.cityLabel).toBe("Seattle, WA");
+  });
+});
+
+/**
+What the server function's validator refuses a calibration with, if anything.
+*/
+function refusal(input: Record<string, unknown>) {
+  const parsed = calibrationInput.safeParse({ thermalLevel: 0, ...input });
+  return parsed.success ? undefined : parsed.error.issues;
+}
+
+// The server function's validator is `calibrationInput.parse` itself
+// (`onboarding/functions.ts`), so what it refuses here the server refuses.
+describe("calibrationInput refuses a city nobody pressed Find on (FEED-5 review)", () => {
+  it("says the two ways on, on the city field, for a label with no coordinates", () => {
+    expect(refusal({ cityLabel: "Portland" })).toStrictEqual([
+      expect.objectContaining({
+        path: ["cityLabel"],
+        message: CITY_UNCONFIRMED,
+      }),
+    ]);
+    expect(() =>
+      calibrationInput.parse({ thermalLevel: 0, cityLabel: "Portland" }),
+    ).toThrow(CITY_UNCONFIRMED);
+  });
+
+  it("refuses a label with half a coordinate, either half", () => {
+    expect(refusal({ cityLabel: "Portland", lat: 45.52 })).toHaveLength(1);
+    expect(refusal({ cityLabel: "Portland", lng: -122.68 })).toHaveLength(1);
+  });
+
+  it("takes a found city, the browser's location alone, and no place at all", () => {
+    expect(refusal(PORTLAND)).toBeUndefined();
+    expect(refusal({ lat: 45.52, lng: -122.68 })).toBeUndefined();
+    expect(refusal({})).toBeUndefined();
   });
 });
 

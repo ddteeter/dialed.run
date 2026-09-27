@@ -286,11 +286,13 @@ minutes.
 
 ## Feed read paths (lane 104)
 
-**Following feed** — fanout-on-read, one indexed query: public
-`outfit_entries` joined to `follows` on author (plus self), ordered by
-`created_at DESC`, cursor-paginated (created_at + id). Covering indexes:
-`follows(follower_id, followee_id)` and
-`outfit_entries(user_id, created_at DESC)`. No feed table, no write
+**Following feed** — fanout-on-read, one indexed query driven from the
+authors: the viewer's followees (`follows(follower_id, followee_id)`) plus
+the viewer, `CROSS JOIN`ed to each author's newest page of public entries
+past the cursor (`outfit_entries(user_id, is_public, moderation_status,
+created_at)`), then ordered by `created_at DESC, id DESC` and cut to the
+page. Rows scanned are at most a page per author — they scale with who
+the viewer follows, not with the site. No feed table, no write
 amplification. Photos are not public bucket URLs: every photo is served by the Worker
 (`routes/feed/photo.$.tsx`), which checks visibility and screening before it
 reads R2. Task 128 (SAF-7) moves public-entry photos to short-lived signed

@@ -183,6 +183,13 @@
       "when": 1790483610105,
       "tag": "0025_drop_strava_access_token_and_refresh_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1790530413633,
+      "tag": "0026_add_entries_user_public_created_index",
+      "breakpoints": true
     }
   ]
 }

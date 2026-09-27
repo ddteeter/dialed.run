@@ -15,14 +15,27 @@ build on PRs that are not merged yet; those are sequenced, not guessed at.
   `user_id = ? OR user_id IN (SELECT followee_id FROM follows WHERE
 follower_id = ?)`. Two bound ids however many follows. EXPLAIN before and
   after goes in the PR; a test pins "no SCAN" on both tables at 150 follows.
+  **Revised in review (PR #117):** that shape still seeked
+  `entries_public_created` across every runner and checked each author row
+  by row. The statement now drives from the authors — followees plus the
+  viewer as a constant row, `CROSS JOIN`ed to each author's newest `limit`
+  entries past the cursor — on a new additive index,
+  `entries_user_public_created (user_id, is_public, moderation_status,
+created_at)` (migration `0026_add_entries_user_public_created_index`).
+  The cursor predicate leads with `created_at <= ?` so each seek starts at
+  the cursor. Rows scanned: at most a page per author.
 - **FEED-3** — `bellState` takes the awaiting set from `runsAwaitingVerdict`
   (passed in by `bellStateFn`: notifications → runs → notifications would be
   a cycle), read with `limit = cap + 1` since the bell stops at `9+`. The
   14-day window goes from mark-all and `markable` too. Names: "Notifications"
   and "Notifications, {n} new".
 - **FEED-5 / FEED-12 / FEED-2** — one writer, `savePlace` in
-  `onboarding/profile.ts`, exported by a new `onboarding/index.ts`; the
-  calibration upsert builds its place columns with the same helper. Find is
+  `onboarding/profile.ts`, exported by a new `onboarding/index.ts`. In
+  review both callers were put on one statement: `placeWrite` is the only
+  thing that writes the three place columns; `savePlace` awaits it and
+  `saveCalibration` batches it with the thermal answer and units. O1's
+  "press Find" rule is a `superRefine` on `calibrationInput`, so the server
+  refuses an unconfirmed city too. Find is
   one server function (`lookUpCityFn`, O1's, now wired to `resolvePlace`)
   answering `found {address, lat, lng}` / `not-found` / `unavailable`. A
   shared `CityFinder` (onboarding components, exported through the index)
