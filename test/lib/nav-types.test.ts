@@ -206,6 +206,10 @@ describe("which type an edge resolves to", () => {
       // has to be pinned directly, the same way the rest of this list is.
       ["/", "/onboarding/handle"],
       ["/onboarding/settings", "/account/username"],
+      // Task 126 PR 2: the account's settings pages, Au4, and Forgot it?
+      ["/onboarding/settings", "/account/sign-in"],
+      ["/auth/signup", "/account/check-email"],
+      ["/auth/login", "/account/forgot"],
       ["/onboarding/name", "/onboarding/calibrate"],
       ["/onboarding/calibrate", "/onboarding/taplist"],
       ["/onboarding/taplist", "/onboarding/settings"],

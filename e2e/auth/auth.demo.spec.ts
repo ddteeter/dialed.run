@@ -1,13 +1,16 @@
 /**
- * Covers: Au2 (create account, email and password only), O0 (pick a
- * handle, a taken one first), Au3 (wrong password), Au1 (log in), sign out
- * from the settings index — one journey, one video.
+ * Covers: Au2 (create account, email and password only), Au4 (check your
+ * email, Resend), the confirm link's landing, O0 (pick a handle, a taken
+ * one first), Au3 (wrong password), ACC-4 (forgot it, the reset link, a
+ * new password), Au1 (log in), sign out from the settings index — one
+ * journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts (see home.spec.ts).
  */
 import { expect, scene, test } from "../support/demo";
+import { confirmLinkFor, resetLinkFor } from "../support/email-links";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -53,6 +56,31 @@ test("create an account -> sign out -> a guarded page -> a wrong password -> log
   await page.getByRole("button", { name: "Show" }).click();
   await expect(page.getByLabel("Password")).toHaveAttribute("type", "text");
   await page.getByRole("button", { name: "Create account" }).click();
+
+  // Round 26 #11: every email sign-up ends on Au4, new address or not, and
+  // signs nobody in — the page must not tell the two apart.
+  await scene(page, "Au4 · Check your email, for a new address or a known one");
+  await expect(page).toHaveURL(/\/account\/check-email/u, { timeout: 15_000 });
+  await hydrated(page);
+  await expect(
+    page.getByRole("heading", { name: "Check your email" }),
+  ).toBeVisible();
+  await expect(page.getByText(`We sent a link to ${email}.`)).toBeVisible();
+  await page.getByRole("button", { name: "Resend link" }).click();
+  await scene(page, "Resend: a new link, and the old one stops working");
+  await expect(page.getByText(/^Sent ✓/u)).toBeVisible({ timeout: 15_000 });
+
+  // The link, opened from the inbox (e2e/support/email-links).
+  await scene(page, "The link confirms the address");
+  await page.goto(await confirmLinkFor(email));
+  await expect(
+    page.getByRole("heading", { name: "Email confirmed" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await page.goto("/auth/login");
+  await hydrated(page);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Log in" }).click();
 
   // Round 26 #7: every new account picks its handle at O0, the first
   // onboarding step. A reserved one reads as taken, with nothing to suggest.
@@ -106,8 +134,33 @@ test("create an account -> sign out -> a guarded page -> a wrong password -> log
     "Not signed in. One field needs a fix.",
   );
 
-  await scene(page, "Au1 · the right one logs in");
-  await page.getByLabel("Password").fill(PASSPHRASE);
+  // ACC-4: forgotten, it is reset by email.
+  await scene(page, "Forgot it? A reset link goes to the address");
+  await page.getByRole("link", { name: "Forgot it?" }).click();
+  await expect(page).toHaveURL(/\/account\/forgot/u, { timeout: 15_000 });
+  await expect(
+    page.getByRole("heading", { name: "Forgot your password?" }),
+  ).toBeVisible();
+  await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Send link" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Check your inbox" }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await scene(page, "The reset link sets a new password");
+  await page.goto(await resetLinkFor(email));
+  await hydrated(page);
+  await page.getByLabel("New password").fill(`${PASSPHRASE}-new`);
+  await page.getByRole("button", { name: "Set password" }).click();
+  await expect(page.getByRole("heading", { name: "Password set" })).toBeVisible(
+    { timeout: 15_000 },
+  );
+
+  await scene(page, "Au1 · the new one logs in");
+  await page.goto("/auth/login?redirect=%2Fcall");
+  await hydrated(page);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(`${PASSPHRASE}-new`);
   await page.getByRole("button", { name: "Log in" }).click();
   // Back where the runner was going, not home.
   await expect(page).toHaveURL(/\/call$/u, { timeout: 15_000 });

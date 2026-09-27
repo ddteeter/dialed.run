@@ -36,23 +36,31 @@ export async function signInAsOperator(page: Page): Promise<void> {
   // request says it comes from the app, which it does.
   await page.goto("/auth/login");
   const origin = new URL(page.url()).origin;
+  const credentials = {
+    email: `operator-${String(Date.now())}@example.com`,
+    // Never used again: the session is what the journey needs.
+    password: crypto.randomUUID(),
+  };
   const signUp = await page.request.post("/api/auth/sign-up/email", {
     headers: { origin },
-    data: {
-      name: "Desk Operator",
-      email: `operator-${String(Date.now())}@example.com`,
-      // Never used again: the session is what the journey needs.
-      password: crypto.randomUUID(),
-    },
+    data: { name: "Desk Operator", ...credentials },
   });
   if (!signUp.ok())
     throw new Error(`sign-up failed: ${String(signUp.status())}`);
+  // Sign-up signs nobody in (task 126, ACC-3: every sign-up ends on Au4),
+  // so the session is the log-in's.
+  const signIn = await page.request.post("/api/auth/sign-in/email", {
+    headers: { origin },
+    data: credentials,
+  });
+  if (!signIn.ok())
+    throw new Error(`sign-in failed: ${String(signIn.status())}`);
 
   const cookies = await context.cookies();
   const token = cookies
     .find((cookie) => cookie.name.endsWith("session_token"))
     ?.value.split(".", 1)[0];
-  if (token === undefined) throw new Error("sign-up left no session cookie");
+  if (token === undefined) throw new Error("sign-in left no session cookie");
 
   await withLocalDb(async ({ core }) => {
     const [row] = await core

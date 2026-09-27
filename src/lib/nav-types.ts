@@ -198,6 +198,13 @@ const NAV: readonly Edge[] = [
       // Settings › Username is a settings detail like its neighbours.
       "/onboarding/handle",
       "/account/username",
+      // Task 126 (PR 2): the account's settings pages are settings
+      // details too. Au4 after sign-up, and "Forgot it?" from log-in, are
+      // forward steps out of the auth pair — pushes by analogy, since NAV
+      // has no row for either (a design delta).
+      "/account/$section",
+      "/account/check-email",
+      "/account/forgot",
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",

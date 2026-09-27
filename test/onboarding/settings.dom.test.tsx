@@ -60,7 +60,7 @@ describe("the index (U1/N)", () => {
 
     // U1's Account row (ACC-7/8): the handle, "@" included as everywhere,
     // and what else lives behind it.
-    expect(row(/^Account/u)).toHaveAttribute("href", "/account");
+    expect(row(/^Account/u)).toHaveAttribute("href", "/account/sign-in");
     expect(row(/^Account/u)).toHaveTextContent(
       /^Account@maya_runs · email, password›$/u,
     );
@@ -113,8 +113,7 @@ describe("the index (U1/N)", () => {
         .getAllByRole("link")
         .map((link) => link.getAttribute("href")),
     ).toEqual([
-      "/account",
-      "/account/notifications",
+      "/account/sign-in",
       "/onboarding/calibrate",
       "/onboarding/settings/units",
     ]);

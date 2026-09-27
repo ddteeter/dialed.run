@@ -140,16 +140,7 @@ export function SettingsIndex({
               : `@${username} · email, password`
           }
         />
-        <SettingsRow
-          to="/account/$section"
-          params={{ section: "notifications" }}
-          label="Notifications"
-          value={
-            runReminderEmail
-              ? "Run reminders by email"
-              : "Run reminders in the app only"
-          }
-        />
+
         <CalibrationRow
           thermalLevel={current.thermalLevel}
           tempUnit={current.tempUnit}
@@ -179,6 +170,17 @@ export function SettingsIndex({
           params={{}}
           label="Blocked runners"
           value={`${String(blockedCount)} blocked`}
+        />
+        {/* U1 draws Notifications under Review, after Blocked runners. */}
+        <SettingsRow
+          to="/account/$section"
+          params={{ section: "notifications" }}
+          label="Notifications"
+          value={
+            runReminderEmail
+              ? "Run reminders by email"
+              : "Run reminders in the app only"
+          }
         />
       </SettingsGroup>
       <SettingsGroup title="Data">
