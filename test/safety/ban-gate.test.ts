@@ -34,6 +34,10 @@ function core() {
 const auth = createAuth({
   db: core(),
   secret: "test-secret-not-for-production",
+  // The requests below come from http://localhost; without this Better
+  // Auth trusts only the test bindings' https BETTER_AUTH_URL and refuses
+  // them 403 "Invalid origin" (see test/auth/auth.test.ts).
+  baseUrl: "http://localhost",
   passwordScreen: CLEAN_SCREEN,
   plugins: [banGate()],
 });
