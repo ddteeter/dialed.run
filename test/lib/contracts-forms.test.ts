@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 
 import {
+  changeEmailSchema,
+  changePasswordSchema,
+  newPasswordSchema,
   PASSWORD_MIN_LENGTH,
+  resetRequestSchema,
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
   normalizeUsername,
@@ -106,6 +110,54 @@ describe("signUpSchema", () => {
     ).toStrictEqual(["Use at least 10 characters."]);
     expect(
       signUpSchema.safeParse({ ...signUp, password: "a".repeat(10) }).success,
+    ).toBe(true);
+  });
+});
+
+describe("the account forms (ACC-4, ACC-7, ACC-8)", () => {
+  it("ask for an address the way sign-in does", () => {
+    for (const schema of [resetRequestSchema, changeEmailSchema]) {
+      expect(messagesFor(schema, { email: "" }, "email")).toContain(
+        "Enter your email address.",
+      );
+      expect(messagesFor(schema, { email: "dee" }, "email")).toStrictEqual([
+        "That does not look like an email address.",
+      ]);
+      expect(schema.parse({ email: "dee@example.com" })).toStrictEqual({
+        email: "dee@example.com",
+      });
+    }
+  });
+
+  it("hold a new password to sign-up's floor", () => {
+    expect(
+      messagesFor(newPasswordSchema, { password: "a".repeat(9) }, "password"),
+    ).toStrictEqual(["Use at least 10 characters."]);
+    expect(
+      newPasswordSchema.safeParse({ password: "a".repeat(10) }).success,
+    ).toBe(true);
+  });
+
+  it("ask for the current password before a new one", () => {
+    expect(
+      messagesFor(
+        changePasswordSchema,
+        { currentPassword: "", password: "a".repeat(10) },
+        "currentPassword",
+      ),
+    ).toStrictEqual(["Enter your current password."]);
+    expect(
+      messagesFor(
+        changePasswordSchema,
+        { currentPassword: "x", password: "a".repeat(9) },
+        "password",
+      ),
+    ).toStrictEqual(["Use at least 10 characters."]);
+    expect(
+      changePasswordSchema.safeParse({
+        currentPassword: "x",
+        password: "a".repeat(10),
+      }).success,
     ).toBe(true);
   });
 });

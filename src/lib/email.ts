@@ -26,6 +26,13 @@ export const EMAIL_PREFERENCE_KINDS = ["run_reminder"] as const;
 export const emailPreferenceKindSchema = z.enum(EMAIL_PREFERENCE_KINDS);
 export type EmailPreferenceKind = z.infer<typeof emailPreferenceKindSchema>;
 
+/**
+ * How many links of one kind an address may be sent in an hour (round 26
+ * #11: "That's 5 links this hour."). Here rather than beside the limit so
+ * the page that says it and the table that counts it read one number.
+ */
+export const EMAIL_SENDS_PER_HOUR = 5;
+
 const address = z.email();
 const link = z.url({ protocol: /^https?$/u });
 
@@ -129,6 +136,14 @@ const PREFERENCE_OF: Readonly<
   email_changed: undefined,
   run_reminder: "run_reminder",
 };
+
+/**
+ * Settings › Notifications' one switch in v1 (ACC-11; round 26 #19) — the
+ * form's schema and the server function's, here so both sides read one.
+ */
+export const notificationSettingsSchema = z.object({
+  runReminder: z.boolean(),
+});
 
 export function preferenceFor(
   kind: EmailKind,

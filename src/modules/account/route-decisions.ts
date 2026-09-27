@@ -1,4 +1,5 @@
 import { redirect } from "@tanstack/react-router";
+import { z } from "zod";
 
 import {
   isRememberedForSession,
@@ -88,3 +89,98 @@ export async function gateOnHandle({
   if (isInBrowser && gate === "has-handle") rememberForSession(HANDLE_CLAIMED);
   startHandleIfNeeded(gate === "needs-handle", pathname);
 }
+
+/**
+ * A link's search, as it arrives: whatever is there, strings or nothing.
+ * Anything else — a repeated param, an edited URL — is dropped rather than
+ * failing the page, which then says the link has run out.
+ */
+const optionalText = z.string().optional().catch(undefined);
+
+/**
+Au4's search: the address sign-up sent the link to.
+*/
+export const checkEmailSearch = z.object({ email: optionalText });
+
+/**
+ * A token link's search — the confirm link's and the reset link's.
+ */
+export const tokenSearch = z.object({ token: optionalText });
+
+/**
+ * The unsubscribe link's search, kept whole: its signature is checked on
+ * the server, and a page that dropped a param here would call a good link
+ * bad.
+ */
+export const unsubscribeSearch = z.object({
+  u: optionalText,
+  k: optionalText,
+  s: optionalText,
+});
+
+/**
+ * Au4 with nobody to be about — signed out, and no address from sign-up —
+ * has nothing to say, so it is sign-up again.
+ */
+export function startOverIfNoAddress(
+  account: { email: string } | undefined,
+  searchEmail: string | undefined,
+): void {
+  if (account === undefined && (searchEmail ?? "") === "") {
+    redirect({ to: "/auth/signup", throw: true });
+  }
+}
+
+/**
+ * Who Au4 is about. Signed in (back through "Log in to resend"), it is the
+ * runner's own address; signed out, it is the address sign-up just sent
+ * to.
+ */
+export function checkEmailView(
+  account: { email: string } | undefined,
+  searchEmail: string,
+): { email: string; isSignedIn: boolean } {
+  return {
+    email: account?.email ?? searchEmail,
+    isSignedIn: account !== undefined,
+  };
+}
+
+/**
+ * The account's settings pages (ACC-7, ACC-8, ACC-11), one route like
+ * Settings' own sections: U1 Account ("sign-in"), and its Email and
+ * Password, and Notifications. Every email footer's "Email settings" is
+ * `/account/notifications`.
+ */
+const accountSectionSchema = z.enum([
+  "sign-in",
+  "email",
+  "password",
+  "notifications",
+]);
+
+export type AccountSection = z.infer<typeof accountSectionSchema>;
+
+/**
+ * A section this route has, or X1: an Error carrying the marker the
+ * router's `isNotFound()` reads (`only-throw-error` rejects throwing
+ * TanStack's plain `notFound()` object).
+ */
+export function accountSectionOrNotFound(section: string): AccountSection {
+  const parsed = accountSectionSchema.safeParse(section);
+  if (parsed.success) return parsed.data;
+  throw Object.assign(new Error(`no account section "${section}"`), {
+    isNotFound: true,
+  });
+}
+
+/**
+The heading each section's page wears.
+*/
+export const ACCOUNT_SECTION_TITLES: Readonly<Record<AccountSection, string>> =
+  {
+    "sign-in": "Account",
+    email: "Email",
+    password: "Password",
+    notifications: "Notifications",
+  };

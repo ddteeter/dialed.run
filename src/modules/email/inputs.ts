@@ -1,0 +1,14 @@
+/**
+ * The email module's server-function inputs (a route file may not declare
+ * a schema; see `server-functions-are-glue`).
+ */
+import { z } from "zod";
+
+/**
+ * An unsubscribe link's search, as it arrived — checked by its signature
+ * in `switchByLink`, not here, so a malformed link lands on the "doesn't
+ * work" page rather than an error.
+ */
+export const linkSearchInput = z.object({ search: z.unknown() });
+
+export { notificationSettingsSchema as notificationSettingsInput } from "../../lib/email";

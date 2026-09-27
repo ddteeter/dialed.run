@@ -83,6 +83,7 @@ function LoginPage() {
         onPassword={setPassword}
         passwordAutoComplete="current-password"
         focusPasswordOnArrival={search.carried !== undefined}
+        hasForgotLink
       />
     </AuthPage>
   );

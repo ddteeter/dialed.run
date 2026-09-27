@@ -54,19 +54,14 @@ interface ClientError {
 const UNKNOWN_CREDENTIALS = "INVALID_EMAIL_OR_PASSWORD";
 
 /**
- * Better Auth's answer to a sign-up for an address that already has an
- * account.
- */
-const EMAIL_TAKEN = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
-
-/**
  * The refusals each form lands on a field, by Better Auth's code:
  * everything else it says is the band's.
  *
- * Sign-up has two — a taken email (Au3's one exception) and a password
- * the breach screen found (`breached-password.ts`, NIST SP 800-63B
- * §3.1.1.2). Log-in has one, and it is on Password whichever half was
- * wrong.
+ * Sign-up has one: a password the breach screen found
+ * (`breached-password.ts`, NIST SP 800-63B §3.1.1.2). A taken email is no
+ * longer one — Au3's exception is retired (round 26 #11), and Better Auth
+ * answers a registered address exactly as a new one. Log-in has one, and
+ * it is on Password whichever half was wrong.
  */
 type FieldRefusals = ReadonlyMap<
   string | undefined,
@@ -80,9 +75,28 @@ const SIGN_IN_REFUSALS: FieldRefusals = new Map([
   ],
 ]);
 
-const SIGN_UP_REFUSALS: FieldRefusals = new Map([
-  [EMAIL_TAKEN, { field: "email", message: AUTH_COPY.emailTaken }],
-  [BREACHED_CODE, { field: "password", message: AUTH_COPY.passwordBreached }],
+const BREACHED_REFUSAL: { readonly field: string; readonly message: string } = {
+  field: "password",
+  message: AUTH_COPY.passwordBreached,
+};
+
+/**
+Sign-up and a reset set a new password, and refuse the same one.
+*/
+const NEW_PASSWORD_REFUSALS: FieldRefusals = new Map([
+  [BREACHED_CODE, BREACHED_REFUSAL],
+]);
+
+/**
+ * ACC-7: a wrong current password on its own field, a breached new one on
+ * the new one's.
+ */
+const CHANGE_PASSWORD_REFUSALS: FieldRefusals = new Map([
+  [
+    "INVALID_PASSWORD",
+    { field: "currentPassword", message: AUTH_COPY.currentPasswordWrong },
+  ],
+  [BREACHED_CODE, BREACHED_REFUSAL],
 ]);
 
 /**
@@ -120,7 +134,72 @@ export async function signIn(values: SignInValues): Promise<void> {
  */
 export async function signUp(values: SignInValues): Promise<void> {
   const { error } = await authClient.signUp.email({ ...values, name: "" });
-  throwIfRefused(error, SIGN_UP_REFUSALS);
+  throwIfRefused(error, NEW_PASSWORD_REFUSALS);
+}
+
+/**
+ * ACC-4's request. Better Auth answers an address with no account exactly
+ * as it answers one with an account, so the form can say "check your
+ * inbox" to both.
+ */
+export async function requestPasswordReset(
+  values: Readonly<{ email: string }>,
+): Promise<void> {
+  const { error } = await authClient.requestPasswordReset(values);
+  throwIfRefused(error, new Map());
+}
+
+/**
+ * The reset link's token was spent, replaced or has run out — the page's
+ * "That link has run out" rather than the form's band.
+ */
+export class ResetLinkExpired extends Error {
+  constructor() {
+    super("reset link expired");
+    this.name = "ResetLinkExpired";
+  }
+}
+
+/**
+Better Auth's answer to a spent, unknown or expired reset token.
+*/
+const INVALID_TOKEN = "INVALID_TOKEN";
+
+export async function resetPassword(
+  token: string,
+  values: Readonly<{ password: string }>,
+): Promise<void> {
+  const { error } = await authClient.resetPassword({
+    newPassword: values.password,
+    token,
+  });
+  if (error?.code === INVALID_TOKEN) throw new ResetLinkExpired();
+  throwIfRefused(error, NEW_PASSWORD_REFUSALS);
+}
+
+/**
+ * ACC-7. Every other session ends with the old password: a change is
+ * usually a runner who suspects someone else has it.
+ */
+export async function changePassword(
+  values: Readonly<{ currentPassword: string; password: string }>,
+): Promise<void> {
+  const { error } = await authClient.changePassword({
+    currentPassword: values.currentPassword,
+    newPassword: values.password,
+    revokeOtherSessions: true,
+  });
+  throwIfRefused(error, CHANGE_PASSWORD_REFUSALS);
+}
+
+/**
+ * ACC-7's "Sign out everywhere": every session this account has, this one
+ * included, so the runner lands signed out like any other sign-out.
+ */
+export async function signOutEverywhere(): Promise<void> {
+  const { error } = await authClient.revokeSessions();
+  if (error) throw new AuthRejected(error.status);
+  forgetSession();
 }
 
 /**

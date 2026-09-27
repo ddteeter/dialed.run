@@ -5,6 +5,7 @@ import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
+import { notificationSettingsSchema } from "../../../lib/email";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
   FormErrorSummary,
@@ -106,6 +107,7 @@ export function SettingsIndex({
   current,
   username,
   blockedCount,
+  runReminderEmail,
   signOut,
 }: Readonly<{
   current: CurrentSettings;
@@ -115,6 +117,10 @@ export function SettingsIndex({
   username: string | undefined;
   blockedCount: number;
   /**
+  Whether the Strava run reminder comes by email (ACC-11).
+  */
+  runReminderEmail: boolean;
+  /**
   The foot's Sign out, the route's to wire (it needs the router).
   */
   signOut: ReactNode;
@@ -122,14 +128,27 @@ export function SettingsIndex({
   return (
     <div className="flex flex-col gap-6">
       <SettingsGroup title="You">
-        {/* U1's first row is Account ("drew.t · email, password"); until
-            its page exists (ACC-7/8) what it holds is the handle, so it opens
-            Settings › Username (round 26 #7). */}
+        {/* U1's first row is Account ("drew.t · email, password"): the
+            handle, the address and the password live behind it (ACC-7/8). */}
         <SettingsRow
-          to="/account/username"
-          params={{}}
+          to="/account/$section"
+          params={{ section: "sign-in" }}
           label="Account"
-          value={username === undefined ? "Not picked" : `@${username}`}
+          value={
+            username === undefined
+              ? "Email, password"
+              : `@${username} · email, password`
+          }
+        />
+        <SettingsRow
+          to="/account/$section"
+          params={{ section: "notifications" }}
+          label="Notifications"
+          value={
+            runReminderEmail
+              ? "Run reminders by email"
+              : "Run reminders in the app only"
+          }
         />
         <CalibrationRow
           thermalLevel={current.thermalLevel}
@@ -420,5 +439,163 @@ function SaveFoot({
       />
       <SubmitButton label="Save" pendingLabel="Saving" pending={form.pending} />
     </>
+  );
+}
+
+/**
+ * One kind of notification on Settings › Notifications (round 26 #19,
+ * "SETTINGS › NOTIFICATIONS · PER KIND"): what it is, when it comes, and
+ * how it reaches you by email. No push column — PWA push is out of scope
+ * (decision D-44), so the board's Push switches are absent.
+ */
+function NotificationKind({
+  title,
+  when,
+  children,
+}: Readonly<{
+  title: string;
+  when: string;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <section className="flex flex-col gap-2 border-b border-hairline pb-4">
+      <h2 className="m-0 text-body font-semibold">{title}</h2>
+      <p className="m-0 text-small text-quiet">{when}</p>
+      {children}
+    </section>
+  );
+}
+
+/**
+A kind whose email is not a switch: "IN THE APP ONLY", "ALWAYS SENT".
+*/
+function FixedEmail({ text }: Readonly<{ text: string }>): JSX.Element {
+  return (
+    <p className="m-0 flex items-center justify-between gap-3 text-body">
+      Email
+      <Mono step="xs" className="text-quiet">
+        {text}
+      </Mono>
+    </p>
+  );
+}
+
+/**
+ * Settings › Notifications (ACC-11): only the Strava run reminder can be
+ * emailed in v1, on by default; Useful stays in the app; account and
+ * security email always comes.
+ */
+export function NotificationsForm({
+  current,
+  save,
+  changeEmail,
+}: Readonly<{
+  current: { email: string; runReminder: boolean };
+  save: (input: { data: { runReminder: boolean } }) => Promise<unknown>;
+  /**
+  The "Change email" link, the route's to wire.
+  */
+  changeEmail: ReactNode;
+}>): JSX.Element {
+  return (
+    <SectionForm
+      schema={notificationSettingsSchema}
+      initial={{ runReminder: current.runReminder }}
+      save={save}
+      successMessage="Notifications saved."
+      // One field, so no summary rows (SharingForm's reasoning).
+      labels={{}}
+    >
+      {({ value, onChange, form }) => (
+        <div className="flex flex-col gap-4">
+          <NotificationKind
+            title="Run reminders"
+            when="When a run lands on Strava. Only while Strava is connected."
+          >
+            <ToggleField
+              name="runReminder"
+              label="Email"
+              field={form.field}
+              isOn={value.runReminder}
+              onChange={(runReminder) => {
+                onChange({ runReminder });
+              }}
+            />
+          </NotificationKind>
+          <NotificationKind
+            title="Useful on your runs"
+            when="When a runner finds your run useful."
+          >
+            <FixedEmail text="In the app only" />
+          </NotificationKind>
+          <NotificationKind
+            title="Account and security"
+            when="Confirming your email, password and email changes."
+          >
+            <FixedEmail text="Always sent" />
+          </NotificationKind>
+          <p className="m-0 text-small text-quiet">
+            Emails go to <strong>{current.email}</strong>. {changeEmail}
+          </p>
+        </div>
+      )}
+    </SectionForm>
+  );
+}
+
+/**
+ * U1 · Account (ACC-7, ACC-8): the address and whether it is confirmed,
+ * the handle, the password, and signing out everywhere. A row with
+ * nowhere to go is absent — an account made with Google has no password
+ * to change.
+ */
+export function AccountIndex({
+  account,
+  username,
+  confirmBand,
+  signOutEverywhere,
+}: Readonly<{
+  account: { email: string; isVerified: boolean; hasPassword: boolean };
+  username: string | undefined;
+  /**
+   * Round 26 #11's nag — "Confirm your email to share runs. Resend link" —
+   * which draws nothing once the address is confirmed (route's to wire).
+   */
+  confirmBand: ReactNode;
+  signOutEverywhere: ReactNode;
+}>): JSX.Element {
+  return (
+    <div className="flex flex-col gap-6">
+      {/* The nag sits at the top, as it does on Feed and You. */}
+      {confirmBand}
+      <SettingsGroup title="Sign-in">
+        <SettingsRow
+          to="/account/$section"
+          params={{ section: "email" }}
+          label="Email"
+          value={
+            account.isVerified
+              ? account.email
+              : `${account.email} · not confirmed yet`
+          }
+          action="Change ›"
+        />
+        <SettingsRow
+          to="/account/username"
+          params={{}}
+          label="Username"
+          value={username === undefined ? "Not picked" : `@${username}`}
+        />
+        {account.hasPassword ? (
+          <SettingsRow
+            to="/account/$section"
+            params={{ section: "password" }}
+            label="Password"
+            value="Change the password you log in with"
+          />
+        ) : undefined}
+      </SettingsGroup>
+      {signOutEverywhere}
+    </div>
   );
 }

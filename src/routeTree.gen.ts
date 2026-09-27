@@ -11,7 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
+import { Route as AccountSectionRouteImport } from './routes/account/$section'
+import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
+import { Route as AccountForgotRouteImport } from './routes/account/forgot'
+import { Route as AccountResetRouteImport } from './routes/account/reset'
+import { Route as AccountUnsubscribeRouteImport } from './routes/account/unsubscribe'
 import { Route as AccountUsernameRouteImport } from './routes/account/username'
+import { Route as AccountVerifyRouteImport } from './routes/account/verify'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -64,9 +70,39 @@ const DeskRouteRoute = DeskRouteRouteImport.update({
   path: '/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountSectionRoute = AccountSectionRouteImport.update({
+  id: '/account/$section',
+  path: '/account/$section',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountCheckEmailRoute = AccountCheckEmailRouteImport.update({
+  id: '/account/check-email',
+  path: '/account/check-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountForgotRoute = AccountForgotRouteImport.update({
+  id: '/account/forgot',
+  path: '/account/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountResetRoute = AccountResetRouteImport.update({
+  id: '/account/reset',
+  path: '/account/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountUnsubscribeRoute = AccountUnsubscribeRouteImport.update({
+  id: '/account/unsubscribe',
+  path: '/account/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountUsernameRoute = AccountUsernameRouteImport.update({
   id: '/account/username',
   path: '/account/username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountVerifyRoute = AccountVerifyRouteImport.update({
+  id: '/account/verify',
+  path: '/account/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -279,7 +315,13 @@ const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
+  '/account/$section': typeof AccountSectionRoute
+  '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/forgot': typeof AccountForgotRoute
+  '/account/reset': typeof AccountResetRoute
+  '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
+  '/account/verify': typeof AccountVerifyRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -324,7 +366,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account/$section': typeof AccountSectionRoute
+  '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/forgot': typeof AccountForgotRoute
+  '/account/reset': typeof AccountResetRoute
+  '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
+  '/account/verify': typeof AccountVerifyRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -371,7 +419,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
+  '/account/$section': typeof AccountSectionRoute
+  '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/forgot': typeof AccountForgotRoute
+  '/account/reset': typeof AccountResetRoute
+  '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
+  '/account/verify': typeof AccountVerifyRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/auth/login': typeof AuthLoginRoute
@@ -419,7 +473,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/desk'
+    | '/account/$section'
+    | '/account/check-email'
+    | '/account/forgot'
+    | '/account/reset'
+    | '/account/unsubscribe'
     | '/account/username'
+    | '/account/verify'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -464,7 +524,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account/$section'
+    | '/account/check-email'
+    | '/account/forgot'
+    | '/account/reset'
+    | '/account/unsubscribe'
     | '/account/username'
+    | '/account/verify'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -510,7 +576,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/desk'
+    | '/account/$section'
+    | '/account/check-email'
+    | '/account/forgot'
+    | '/account/reset'
+    | '/account/unsubscribe'
     | '/account/username'
+    | '/account/verify'
     | '/api/health'
     | '/api/strava'
     | '/auth/login'
@@ -557,7 +629,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
+  AccountSectionRoute: typeof AccountSectionRoute
+  AccountCheckEmailRoute: typeof AccountCheckEmailRoute
+  AccountForgotRoute: typeof AccountForgotRoute
+  AccountResetRoute: typeof AccountResetRoute
+  AccountUnsubscribeRoute: typeof AccountUnsubscribeRoute
   AccountUsernameRoute: typeof AccountUsernameRoute
+  AccountVerifyRoute: typeof AccountVerifyRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiStravaRoute: typeof ApiStravaRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -616,11 +694,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeskRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/$section': {
+      id: '/account/$section'
+      path: '/account/$section'
+      fullPath: '/account/$section'
+      preLoaderRoute: typeof AccountSectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/check-email': {
+      id: '/account/check-email'
+      path: '/account/check-email'
+      fullPath: '/account/check-email'
+      preLoaderRoute: typeof AccountCheckEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/forgot': {
+      id: '/account/forgot'
+      path: '/account/forgot'
+      fullPath: '/account/forgot'
+      preLoaderRoute: typeof AccountForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/reset': {
+      id: '/account/reset'
+      path: '/account/reset'
+      fullPath: '/account/reset'
+      preLoaderRoute: typeof AccountResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/unsubscribe': {
+      id: '/account/unsubscribe'
+      path: '/account/unsubscribe'
+      fullPath: '/account/unsubscribe'
+      preLoaderRoute: typeof AccountUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/username': {
       id: '/account/username'
       path: '/account/username'
       fullPath: '/account/username'
       preLoaderRoute: typeof AccountUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/verify': {
+      id: '/account/verify'
+      path: '/account/verify'
+      fullPath: '/account/verify'
+      preLoaderRoute: typeof AccountVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -928,7 +1048,13 @@ const DeskRouteRouteWithChildren = DeskRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRouteRoute: DeskRouteRouteWithChildren,
+  AccountSectionRoute: AccountSectionRoute,
+  AccountCheckEmailRoute: AccountCheckEmailRoute,
+  AccountForgotRoute: AccountForgotRoute,
+  AccountResetRoute: AccountResetRoute,
+  AccountUnsubscribeRoute: AccountUnsubscribeRoute,
   AccountUsernameRoute: AccountUsernameRoute,
+  AccountVerifyRoute: AccountVerifyRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiStravaRoute: ApiStravaRoute,
   AuthLoginRoute: AuthLoginRoute,

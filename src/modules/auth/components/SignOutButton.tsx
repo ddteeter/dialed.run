@@ -15,7 +15,15 @@ import { ControlFailureBand } from "../../../ui";
  */
 export function SignOutButton({
   signOut,
-}: Readonly<{ signOut: () => Promise<unknown> }>): JSX.Element {
+  isEverywhere = false,
+}: Readonly<{
+  signOut: () => Promise<unknown>;
+  /**
+   * ACC-7's "Sign out everywhere", on Settings › Account: every session
+   * this account has, this device's included.
+   */
+  isEverywhere?: boolean | undefined;
+}>): JSX.Element {
   const control = useControlAction<[]>({
     action: signOut,
     kicker: "Still signed in",
@@ -32,8 +40,8 @@ export function SignOutButton({
         className="target cursor-pointer self-center border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4"
       >
         <PendingLabel
-          label="Sign out"
-          pendingLabel="Signing out"
+          label={isEverywhere ? "Sign out everywhere" : "Sign out"}
+          pendingLabel={isEverywhere ? "Signing out everywhere" : "Signing out"}
           pending={control.pending}
         />
       </button>

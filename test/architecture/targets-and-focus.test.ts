@@ -245,9 +245,23 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
         .map((element) => element.path)
         .toSorted((a, b) => a.localeCompare(b)),
     ).toEqual([
+      // Au4's three foot lines: "Wrong address? Start over", "Carry on
+      // without confirming? Log in", "You're signed in. Carry on to your
+      // closet ›" (round 26 #11).
+      "src/modules/account/components/CheckEmail.tsx",
+      "src/modules/account/components/CheckEmail.tsx",
+      "src/modules/account/components/CheckEmail.tsx",
       "src/modules/auth/auth-page.tsx",
+      // "Remembered it? Log in" (ACC-4).
+      "src/modules/auth/components/ForgotPassword.tsx",
+      // "Change emails in Settings › Notifications." and "All notification
+      // settings › (asks you to log in)" (round 26 #19).
+      "src/modules/email/components/UnsubscribeLanding.tsx",
+      "src/modules/email/components/UnsubscribeLanding.tsx",
       // "Not now — leave it in the queue." (Product Screens A2).
       "src/modules/feed/components/AttachKit.tsx",
+      // "Emails go to {address}. Change email" (round 26 #19).
+      "src/routes/account/$section.tsx",
       "src/routes/runs/new.tsx",
       "src/ui/ProductLink.tsx",
       "src/ui/WeatherAttribution.tsx",

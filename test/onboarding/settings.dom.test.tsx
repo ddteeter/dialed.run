@@ -52,15 +52,24 @@ describe("the index (U1/N)", () => {
       <SettingsIndex
         current={ANSWERED}
         username="maya_runs"
+        runReminderEmail
         blockedCount={2}
         signOut={undefined}
       />,
     );
 
-    // U1's Account row, holding the handle for now (round 26 #7: "Settings
-    // › Username changes it later"), "@" included as everywhere.
-    expect(row(/^Account/u)).toHaveAttribute("href", "/account/username");
-    expect(row(/^Account/u)).toHaveTextContent("@maya_runs");
+    // U1's Account row (ACC-7/8): the handle, "@" included as everywhere,
+    // and what else lives behind it.
+    expect(row(/^Account/u)).toHaveAttribute("href", "/account");
+    expect(row(/^Account/u)).toHaveTextContent(
+      /^Account@maya_runs · email, password›$/u,
+    );
+    // ACC-11: the one email a runner can switch.
+    expect(row(/^Notifications/u)).toHaveAttribute(
+      "href",
+      "/account/notifications",
+    );
+    expect(row(/^Notifications/u)).toHaveTextContent("Run reminders by email");
     expect(row(/^How you run/u)).toHaveAttribute(
       "href",
       "/onboarding/calibrate",
@@ -82,7 +91,7 @@ describe("the index (U1/N)", () => {
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
     expect(row(/^Connections/u)).toHaveAttribute("href", "/runs/strava");
     // A row with nowhere to go is absent, not dead.
-    expect(screen.queryByText(/Export|Delete|Notifications/u)).toBeNull();
+    expect(screen.queryByText(/Export|Delete/u)).toBeNull();
   });
 
   it("groups the rows under U1's headings, in U1's order", async () => {
@@ -90,6 +99,7 @@ describe("the index (U1/N)", () => {
       <SettingsIndex
         current={ANSWERED}
         username="maya_runs"
+        runReminderEmail
         blockedCount={0}
         signOut={undefined}
       />,
@@ -103,7 +113,8 @@ describe("the index (U1/N)", () => {
         .getAllByRole("link")
         .map((link) => link.getAttribute("href")),
     ).toEqual([
-      "/account/username",
+      "/account",
+      "/account/notifications",
       "/onboarding/calibrate",
       "/onboarding/settings/units",
     ]);
@@ -119,16 +130,20 @@ describe("the index (U1/N)", () => {
           distanceUnit: "km",
           shareDefault: false,
         }}
+        runReminderEmail={false}
         blockedCount={0}
         signOut={undefined}
       />,
     );
     expect(row(/^Units/u)).toHaveTextContent("Celsius, kilometres");
+    expect(row(/^Notifications/u)).toHaveTextContent(
+      "Run reminders in the app only",
+    );
     expect(row(/^Privacy/u)).toHaveTextContent("New runs stay private");
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
     // An account that has not reached O0 has no handle to show.
-    expect(row(/^Account/u)).toHaveTextContent(/^AccountNot picked›$/u);
+    expect(row(/^Account/u)).toHaveTextContent(/^AccountEmail, password›$/u);
   });
 
   it("asks the unanswered calibration as the ruling words it", async () => {
@@ -137,6 +152,7 @@ describe("the index (U1/N)", () => {
       <SettingsIndex
         current={{ ...ANSWERED, thermalLevel: undefined }}
         username="maya_runs"
+        runReminderEmail
         blockedCount={0}
         signOut={undefined}
       />,
@@ -155,6 +171,7 @@ describe("the index (U1/N)", () => {
       <SettingsIndex
         current={ANSWERED}
         username="maya_runs"
+        runReminderEmail
         blockedCount={0}
         signOut={<button type="button">Sign out</button>}
       />,

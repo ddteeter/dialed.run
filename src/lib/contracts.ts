@@ -258,15 +258,42 @@ export const PASSWORD_MIN_LENGTH = 10;
  * path and a taken handle never shares a screen with "is this email
  * registered?".
  */
+const newPasswordField = z
+  .string()
+  .min(
+    PASSWORD_MIN_LENGTH,
+    `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
+  );
+
 export const signUpSchema = z.object({
   email: emailField,
-  password: z
-    .string()
-    .min(
-      PASSWORD_MIN_LENGTH,
-      `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
-    ),
+  password: newPasswordField,
 });
+
+/**
+ * ACC-4's first step: "Forgot it?" asks for the address the link goes to.
+ * The same answer follows whether or not it has an account.
+ */
+export const resetRequestSchema = z.object({ email: emailField });
+
+/**
+ACC-4's second step: the new password, on the same floor as sign-up's.
+*/
+export const newPasswordSchema = z.object({ password: newPasswordField });
+
+/**
+ * ACC-7: the current password proves it is the runner, and the new one
+ * meets sign-up's floor.
+ */
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password."),
+  password: newPasswordField,
+});
+
+/**
+ACC-8: the address the account moves to, once its link is opened.
+*/
+export const changeEmailSchema = z.object({ email: emailField });
 
 /**
  * The handle's length bounds (round 26 #7: "3–20 letters, numbers or _").

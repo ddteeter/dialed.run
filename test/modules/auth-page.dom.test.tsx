@@ -21,10 +21,10 @@ import {
   CREDENTIAL_LABELS,
   CredentialFields,
   LoginCrossLink,
-  PasswordField,
   SessionNotice,
   useAuthForm,
 } from "../../src/modules/auth/auth-page";
+import { PasswordField } from "../../src/modules/auth/password-field";
 import { signIn } from "../../src/modules/auth/credentials";
 import { useGoogleSignIn } from "../../src/modules/auth/google-button";
 import {

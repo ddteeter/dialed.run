@@ -9,11 +9,12 @@ import { sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { emailSendLimits } from "../../db/schema-core";
+import { EMAIL_SENDS_PER_HOUR } from "../../lib/email";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
 
-export const SENDS_PER_WINDOW = 5;
+export const SENDS_PER_WINDOW = EMAIL_SENDS_PER_HOUR;
 export const SEND_WINDOW_S = 60 * 60;
 
 /**

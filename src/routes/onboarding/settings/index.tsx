@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 
 import { usernameQuery } from "../../../modules/account/functions";
+import { notificationSettingsQuery } from "../../../modules/email/functions";
 import { SignOutButton } from "../../../modules/auth/components/SignOutButton";
 import { signOut } from "../../../modules/auth/credentials";
 import { requireSession } from "../../../modules/auth/functions";
@@ -22,20 +23,27 @@ import { Page } from "../../../ui";
 export const Route = createFileRoute("/onboarding/settings/")({
   loader: async ({ location }) => {
     await requireSession(location.href);
-    const [current, { blocked }, unreadCount, { username }] =
+    const [current, { blocked }, unreadCount, { username }, notifications] =
       await Promise.all([
         settingsQuery(),
         blockedRunnersQuery(),
         unreadNotificationCountFn(),
         usernameQuery(),
+        notificationSettingsQuery(),
       ]);
-    return { current, blockedCount: blocked.length, unreadCount, username };
+    return {
+      current,
+      blockedCount: blocked.length,
+      unreadCount,
+      username,
+      runReminderEmail: notifications.runReminder,
+    };
   },
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { current, blockedCount, unreadCount, username } =
+  const { current, blockedCount, unreadCount, username, runReminderEmail } =
     Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
@@ -47,6 +55,7 @@ function SettingsPage() {
           current={current}
           username={username}
           blockedCount={blockedCount}
+          runReminderEmail={runReminderEmail}
           signOut={
             <SignOutButton
               signOut={async () => {

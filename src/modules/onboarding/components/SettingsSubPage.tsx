@@ -79,3 +79,23 @@ export function SettingsSectionPage({
     </SettingsSubPage>
   );
 }
+
+/**
+ * One page of a sectioned settings route — the account's (ACC-7, ACC-8,
+ * ACC-11) — picked by its section: the section's title over its form.
+ * The route builds every section's form and this shows the one asked for,
+ * so the route holds no choice of its own.
+ */
+export function PickedSubPage<TSection extends string>({
+  section,
+  titles,
+  pages,
+}: Readonly<{
+  section: TSection;
+  titles: Readonly<Record<TSection, string>>;
+  pages: Readonly<Record<TSection, ReactNode>>;
+}>): JSX.Element {
+  return (
+    <SettingsSubPage title={titles[section]}>{pages[section]}</SettingsSubPage>
+  );
+}

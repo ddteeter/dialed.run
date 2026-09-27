@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../lib/contracts";
@@ -34,7 +30,6 @@ export const Route = createFileRoute("/auth/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -49,11 +44,12 @@ function SignupPage() {
   const { form, cause } = useAuthForm({
     schema: signUpSchema,
     action: signUp,
-    successMessage: "Account created.",
+    // The same words for a new address and a registered one: Au4 follows
+    // either way, and so does this sentence (round 26 #11).
+    successMessage: "Check your email.",
     labels: CREDENTIAL_LABELS,
     onSuccess: async () => {
-      await router.invalidate();
-      await navigate({ to: "/" });
+      await navigate({ to: "/account/check-email", search: { email } });
     },
   });
 
