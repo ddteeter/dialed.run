@@ -1,0 +1,1 @@
+CREATE INDEX `verification_identifier` ON `verification` (`identifier`);

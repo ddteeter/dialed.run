@@ -13,6 +13,8 @@
  */
 import { z } from "zod";
 
+import { emailPayloadSchema } from "./email";
+
 /**
  * Clear what a garment's photo prefix holds beyond the photo its row names
  * (nothing, once the photo is removed or the garment deleted). The runner's
@@ -27,7 +29,30 @@ const photoDelete = z.object({
   }),
 });
 
-export const outboxMessageSchema = z.discriminatedUnion("kind", [photoDelete]);
+/**
+ * An email owed (task 126, ACC-2): anything secondary to the write that
+ * owes it — an invite, a notice, the run reminder — so the event and the
+ * intent to tell someone about it commit together (law 8c) and the drain
+ * retries a send that failed.
+ *
+ * `dedupeKey` is the caller's name for "the same email": a second debt
+ * with it is the same row. `notBefore` (epoch seconds) holds a row back
+ * until then — task 127's reminder goes out 20 minutes after the run
+ * lands — and a row with one is left to the drain, never a fast path.
+ */
+const email = z.object({
+  kind: z.literal("email"),
+  payload: z.object({
+    dedupeKey: z.string().min(1),
+    notBefore: z.int().optional(),
+    email: emailPayloadSchema,
+  }),
+});
+
+export const outboxMessageSchema = z.discriminatedUnion("kind", [
+  photoDelete,
+  email,
+]);
 
 export type OutboxMessage = z.infer<typeof outboxMessageSchema>;
 export type OutboxKind = OutboxMessage["kind"];
@@ -41,10 +66,26 @@ export const outboxKinds: readonly OutboxKind[] =
 /**
  * The debt's identity: a second enqueue of the same key is the same row.
  * One `photo_delete` per garment, because what it does — reconcile the
- * garment's prefix against its row — covers every version at once.
+ * garment's prefix against its row — covers every version at once. An
+ * email's is its writer's to name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
-  return `${message.payload.userId}:${message.payload.itemId}`;
+  switch (message.kind) {
+    case "photo_delete": {
+      return `${message.payload.userId}:${message.payload.itemId}`;
+    }
+    case "email": {
+      return message.payload.dedupeKey;
+    }
+  }
+}
+
+/**
+ * The earliest the debt may be worked, in epoch seconds, or `undefined`
+ * for "as soon as it is written".
+ */
+export function notBeforeOf(message: OutboxMessage): number | undefined {
+  return message.kind === "email" ? message.payload.notBefore : undefined;
 }
 
 /**

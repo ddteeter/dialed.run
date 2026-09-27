@@ -67,14 +67,24 @@ export const account = /*#__PURE__*/ sqliteTable("account", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-export const verification = /*#__PURE__*/ sqliteTable("verification", {
-  id: text("id").primaryKey(),
-  identifier: text("identifier").notNull(),
-  value: text("value").notNull(),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-});
+export const verification = /*#__PURE__*/ sqliteTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [
+    // Better Auth reads a password reset's row by `identifier`
+    // (`reset-password:<token>`), and the table had no index for it, so
+    // every reset scanned the table (task 126, ACC-4). Not unique: the
+    // schema Better Auth documents does not promise it.
+    index("verification_identifier").on(t.identifier),
+  ],
+);
 
 /**
  * Better Auth's rate-limit counters (OPS-4), one row per key (the client

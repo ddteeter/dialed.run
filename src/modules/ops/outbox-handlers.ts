@@ -13,6 +13,7 @@ import { wardrobeItems } from "../../db/schema-core";
 import { env } from "../../env";
 import { photoKeyFor } from "../../lib/garment-photo-key";
 import type { OutboxKind, OutboxMessage } from "../../lib/outbox";
+import { deliverEmail } from "../email";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -33,6 +34,28 @@ export type OutboxHandlers = {
     readonly context: (payload: PayloadOf<K>) => Record<string, string>;
   };
 };
+
+/**
+ * One message, bound to its kind's handler.
+ *
+ * Generic over the kind so the compiler can see that a message's payload
+ * is its own handler's: indexing the map with a message of the whole
+ * union reads every handler's payload type at once, and no payload is all
+ * of them.
+ */
+export function boundHandler<K extends OutboxKind>(
+  handlers: OutboxHandlers,
+  message: { readonly kind: K; readonly payload: PayloadOf<K> },
+): {
+  run: (db: Db) => Promise<void>;
+  context: () => Record<string, string>;
+} {
+  const handler = handlers[message.kind];
+  return {
+    run: (db) => handler.run(db, message.payload),
+    context: () => handler.context(message.payload),
+  };
+}
 
 /**
  * The photo the garment's row names, or undefined when it names none —
@@ -121,6 +144,20 @@ export const outboxHandlers: OutboxHandlers = {
     context: (payload) => ({
       userId: payload.userId,
       itemId: payload.itemId,
+    }),
+  },
+  // Task 126 (ACC-2): an owed email. A send is at-least-once like every
+  // handler here — a row whose send landed but whose delete did not is
+  // sent again, which the dedupe key keeps to one row, not one message.
+  email: {
+    run: async (db, payload) => {
+      await deliverEmail(db, payload.email);
+    },
+    // Ids only (law 7): never the address, which is what a report would
+    // otherwise carry.
+    context: (payload) => ({
+      dedupeKey: payload.dedupeKey,
+      template: payload.email.template.kind,
     }),
   },
 };

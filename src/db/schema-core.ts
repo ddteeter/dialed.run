@@ -8,6 +8,7 @@
 import { sql } from "drizzle-orm";
 
 import { colorNames, garmentVisibilities } from "../lib/contracts";
+import { EMAIL_PREFERENCE_KINDS } from "../lib/email";
 import {
   index,
   integer,
@@ -84,6 +85,71 @@ export const usernameHistory = /*#__PURE__*/ sqliteTable(
     index("username_history_user").on(t.userId),
   ],
 );
+
+/**
+ * A runner's email switches (task 126, ACC-11; decision D-43; round 26
+ * #19), one row per runner and kind they have touched. **No row means the
+ * default**, which for the one kind today — the Strava run reminder — is
+ * on. Transactional emails have no kind here and no switch: they are
+ * always sent. There is no push column: PWA push is out of scope
+ * (decision D-44).
+ *
+ * Read at send time by `modules/email`, and by task 127's reminder before
+ * it owes one.
+ */
+export const notificationPreferences = /*#__PURE__*/ sqliteTable(
+  "notification_preferences",
+  {
+    userId: text("user_id").notNull(),
+    kind: text("kind", { enum: EMAIL_PREFERENCE_KINDS }).notNull(),
+    email: integer("email", { mode: "boolean" }).notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("notification_preferences_pk").on(t.userId, t.kind)],
+);
+
+/**
+ * The live link for confirming an address (task 126, ACC-3 and ACC-8), one
+ * per runner and purpose: `verify` confirms the address the account was
+ * made with, `change` moves the account to a new one.
+ *
+ * **One row, so one live link.** Sending another replaces the hash, which
+ * is what makes "the old one no longer works" true (round 26 #11) — Better
+ * Auth's own verification tokens are signed and stateless, and cannot be
+ * withdrawn. Only the SHA-256 of the token is kept, so a read of this
+ * table cannot confirm an address. `used_at` is what tells "already
+ * confirmed" (a used link) from "run out" (an expired or replaced one).
+ */
+export const emailVerifications = /*#__PURE__*/ sqliteTable(
+  "email_verifications",
+  {
+    userId: text("user_id").notNull(),
+    purpose: text("purpose", { enum: ["verify", "change"] }).notNull(),
+    // The address the link confirms: the account's own for `verify`, the
+    // new one for `change`. A `verify` link for an address the account
+    // has since left confirms nothing.
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+  },
+  (t) => [uniqueIndex("email_verifications_pk").on(t.userId, t.purpose)],
+);
+
+/**
+ * How many emails of one kind an address has been sent this hour (round
+ * 26 #11: "That's 5 links this hour. You can send another at {time}.").
+ *
+ * **Keyed by the address, not the account**, and counted whether or not
+ * the address has one: a limit that only an existing account could hit
+ * would tell whoever hit it that the account exists — the thing Au4 is
+ * drawn to never reveal. The key is `{kind}:{address}`.
+ */
+export const emailSendLimits = /*#__PURE__*/ sqliteTable("email_send_limits", {
+  key: text("key").primaryKey(),
+  windowStartedAt: integer("window_started_at").notNull(),
+  sends: integer("sends").notNull(),
+});
 
 export const brands = /*#__PURE__*/ sqliteTable(
   "brands",

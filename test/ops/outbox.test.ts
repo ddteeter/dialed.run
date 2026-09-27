@@ -38,7 +38,7 @@ function db() {
 function photoDelete(
   userId: string = newUlid(),
   itemId: string = newUlid(),
-): OutboxMessage {
+): Extract<OutboxMessage, { kind: "photo_delete" }> {
   return { kind: "photo_delete", payload: { userId, itemId } };
 }
 
@@ -75,6 +75,7 @@ Handlers whose `run` is the given mock, with the real context.
 function handlersRunning(run: OutboxHandlers["photo_delete"]["run"]) {
   return {
     photo_delete: { run, context: outboxHandlers.photo_delete.context },
+    email: outboxHandlers.email,
   } satisfies OutboxHandlers;
 }
 

@@ -30,6 +30,10 @@
     // (base URL, rate limiting, secure cookies) is what the tests exercise.
     "BETTER_AUTH_URL": "https://dialed.test",
   },
+  // Task 126 (ACC-2): the email sender, as ../wrangler.jsonc binds it.
+  // No test sends through it — they hand `deliverEmail` a fake — but the
+  // conformance test keeps the two configs in step.
+  "send_email": [{ "name": "EMAIL" }],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "dialed-media" },
     { "binding": "IMPORTS", "bucket_name": "dialed-imports" },

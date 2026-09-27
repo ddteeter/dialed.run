@@ -21,12 +21,17 @@ import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import {
   dedupeKeyFor,
+  notBeforeOf,
   outboxKinds,
   readOutboxRow,
   type OutboxKind,
   type OutboxMessage,
 } from "../../lib/outbox";
-import { outboxHandlers, type OutboxHandlers } from "./outbox-handlers";
+import {
+  boundHandler,
+  outboxHandlers,
+  type OutboxHandlers,
+} from "./outbox-handlers";
 import { captureException } from "./sentry";
 
 type Db = ReturnType<typeof drizzle>;
@@ -93,7 +98,13 @@ export function oweOutbox(message: OutboxMessage): OutboxDebt {
  * early to see.
  */
 export function outboxInsert(db: Db, debt: OutboxDebt, now = nowSeconds()) {
-  const due = now + OUTBOX_FAST_PATH_GRACE_S;
+  // A debt held back (an email's `notBefore`) is due when it says, or
+  // after the grace if that is later: the drain must still not race a
+  // fast path.
+  const due = Math.max(
+    now + OUTBOX_FAST_PATH_GRACE_S,
+    notBeforeOf(debt.message) ?? 0,
+  );
   return db
     .insert(outbox)
     .values({
@@ -123,16 +134,16 @@ export async function settleOutbox(
   report: Report = captureException,
   handlers: OutboxHandlers = outboxHandlers,
 ): Promise<void> {
-  const handler = handlers[debt.message.kind];
+  const handler = boundHandler(handlers, debt.message);
   try {
-    await handler.run(db, debt.message.payload);
+    await handler.run(db);
     await db.delete(outbox).where(eq(outbox.id, debt.id));
   } catch (error) {
     report(error, {
       surface: "outbox-fast-path",
       kind: debt.message.kind,
       outboxId: debt.id,
-      ...handler.context(debt.message.payload),
+      ...handler.context(),
     });
   }
 }
@@ -141,6 +152,12 @@ export interface DrainOptions {
   readonly report?: Report;
   readonly handlers?: OutboxHandlers;
   readonly now?: number;
+  /**
+   * The kinds to drain, every kind this build knows by default. The hourly
+   * firings drain `email` alone, so a held-back reminder goes out within
+   * the hour rather than at the next daily digest.
+   */
+  readonly kinds?: readonly OutboxKind[];
 }
 
 type ClaimedRow = typeof outbox.$inferSelect;
@@ -212,16 +229,15 @@ async function didSettle(
     report(new Error(`outbox row unreadable: ${read.problem}`), where);
     return false;
   }
-  const { message } = read;
-  const handler = handlers[message.kind];
+  const handler = boundHandler(handlers, read.message);
   try {
-    await handler.run(db, message.payload);
+    await handler.run(db);
     // Its own id, as the fast path does: a row taken over by a newer
     // write since this run claimed it is that writer's to settle.
     await db.delete(outbox).where(eq(outbox.id, row.id));
     return true;
   } catch (error) {
-    report(error, { ...where, ...handler.context(message.payload) });
+    report(error, { ...where, ...handler.context() });
     return false;
   }
 }
@@ -244,7 +260,8 @@ export async function drainOutbox(
   const report = options.report ?? captureException;
   const handlers = options.handlers ?? outboxHandlers;
   const now = options.now ?? nowSeconds();
-  for (const kind of outboxKinds) {
+  const kinds = options.kinds ?? outboxKinds;
+  for (const kind of kinds) {
     const claimed = await claimDue(db, kind, now);
     if (claimed.length === 0) continue;
     let settled = 0;
