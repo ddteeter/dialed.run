@@ -385,15 +385,25 @@ export async function usernameOf(
 }
 
 /**
- * Whether any page should send this visitor to O0 first: signed
- * in and no handle yet. A signed-out visitor never is — the landing page
- * is the only thing they can see, and a redirect to a screen that needs a
- * session would be a loop.
+ * What the root route needs to know about this visitor before any page:
+ * signed out, signed in with no handle yet (O0 first), or signed in with
+ * one. A signed-out visitor is never sent to O0 — the landing page is the
+ * only thing they can see, and a redirect to a screen that needs a session
+ * would be a loop.
+ *
+ * Three answers rather than a boolean because the browser remembers only
+ * the last (`route-decisions`' `gateOnHandle`): a handle, once claimed, is
+ * never cleared, while "signed out" and "no handle yet" both change the
+ * moment the runner signs in or picks one.
  */
-export async function requiresHandle(
+export type HandleGate = "signed-out" | "needs-handle" | "has-handle";
+
+export async function handleGate(
   db: Db,
   userId: string | undefined,
-): Promise<boolean> {
-  if (userId === undefined) return false;
-  return (await usernameOf(db, userId)) === undefined;
+): Promise<HandleGate> {
+  if (userId === undefined) return "signed-out";
+  return (await usernameOf(db, userId)) === undefined
+    ? "needs-handle"
+    : "has-handle";
 }

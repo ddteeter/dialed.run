@@ -1,8 +1,17 @@
 import { isRedirect } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  forgetSession,
+  isRememberedForSession,
+} from "../../src/lib/session-memo";
 
 import { takenMessage } from "../../src/modules/account/handle-copy";
-import { startHandleIfNeeded } from "../../src/modules/account/route-decisions";
+import {
+  gateOnHandle,
+  startHandleIfNeeded,
+} from "../../src/modules/account/route-decisions";
+import type { HandleGate } from "../../src/modules/account/username";
 
 /**
  * What `startHandleIfNeeded` threw for `pathname`, or `undefined`.
@@ -30,9 +39,19 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
     }
   });
 
-  it("lets them stay on O0 itself and on the auth pages", () => {
+  it("lets them stay on O0 itself, on the auth pages and on the pages an email link opens", () => {
     expect(gateAt(true, "/onboarding/handle")).toBeUndefined();
     expect(gateAt(true, "/auth/login")).toBeUndefined();
+    for (const pathname of [
+      "/account/check-email",
+      "/account/verify",
+      "/account/reset",
+      "/account/unsubscribe",
+    ]) {
+      expect(gateAt(true, pathname), pathname).toBeUndefined();
+    }
+    // Settings › Username is an account page, and it is behind O0.
+    expect(isRedirect(gateAt(true, "/account/username"))).toBe(true);
     // A prefix of O0's path is not O0.
     expect(isRedirect(gateAt(true, "/onboarding/handles"))).toBe(true);
     expect(isRedirect(gateAt(true, "/authx"))).toBe(true);
@@ -48,8 +67,81 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
     // sign-in's `?redirect=`, passes through.
     const [source] = Object.values(rootRoute);
     expect(source).toMatch(
-      /beforeLoad: async \(\{ location \}\) => \{\s*startHandleIfNeeded\(await handleGateQuery\(\), location\.pathname\);/u,
+      /beforeLoad: async \(\{ location \}\) => \{\s*await gateOnHandle\(\{\s*ask: handleGateQuery,\s*pathname: location\.pathname,\s*isInBrowser: typeof document !== "undefined",\s*\}\);/u,
     );
+  });
+});
+
+/**
+ * What `gateOnHandle` threw, or `undefined`, with the server's answer
+ * counted.
+ */
+async function gateOnce(
+  answer: HandleGate,
+  isInBrowser: boolean,
+  pathname = "/closet",
+): Promise<{ thrown: unknown; asked: number }> {
+  const ask = vi.fn(() => Promise.resolve(answer));
+  try {
+    await gateOnHandle({ ask, pathname, isInBrowser });
+  } catch (error: unknown) {
+    return { thrown: error, asked: ask.mock.calls.length };
+  }
+  return { thrown: undefined, asked: ask.mock.calls.length };
+}
+
+describe("gateOnHandle (the root's O0 gate, memoised)", () => {
+  beforeEach(() => {
+    forgetSession();
+  });
+
+  it("sends a runner with no handle to O0, and lets the others through", async () => {
+    const needs = await gateOnce("needs-handle", true);
+    expect(isRedirect(needs.thrown)).toBe(true);
+    const has = await gateOnce("has-handle", true);
+    expect(has.thrown).toBeUndefined();
+    const signedOut = await gateOnce("signed-out", false);
+    expect(signedOut.thrown).toBeUndefined();
+    // O0 itself is never a redirect to O0.
+    const onO0 = await gateOnce("needs-handle", true, "/onboarding/handle");
+    expect(onO0.thrown).toBeUndefined();
+  });
+
+  it("asks once a session in the browser once the runner has a handle", async () => {
+    const first = await gateOnce("has-handle", true);
+    expect(first.asked).toBe(1);
+    expect(isRememberedForSession("has-handle")).toBe(true);
+    // The next navigation does not ask at all — even an answer that would
+    // have redirected is never heard.
+    const next = await gateOnce("needs-handle", true);
+    expect(next.asked).toBe(0);
+    expect(next.thrown).toBeUndefined();
+  });
+
+  it("keeps asking while the answer can still change", async () => {
+    await gateOnce("signed-out", true);
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    await gateOnce("needs-handle", true);
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const again = await gateOnce("needs-handle", true);
+    expect(again.asked).toBe(1);
+  });
+
+  it("remembers nothing on the server, where every request shares the module", async () => {
+    await gateOnce("has-handle", false);
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    // …and does not trust a memo there either, if one somehow existed.
+    await gateOnce("has-handle", true);
+    const onServer = await gateOnce("has-handle", false);
+    expect(onServer.asked).toBe(1);
+  });
+
+  it("asks afresh after the session is forgotten (sign-in, sign-out)", async () => {
+    await gateOnce("has-handle", true);
+    forgetSession();
+    const after = await gateOnce("needs-handle", true);
+    expect(after.asked).toBe(1);
+    expect(isRedirect(after.thrown)).toBe(true);
   });
 });
 

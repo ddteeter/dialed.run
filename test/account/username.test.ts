@@ -10,7 +10,7 @@ import {
   claimUsername,
   isReservedHandle,
   lookUpHandle,
-  requiresHandle,
+  handleGate,
   usernameOf,
 } from "../../src/modules/account/username";
 
@@ -537,7 +537,7 @@ describe("lookUpHandle", () => {
   });
 });
 
-describe("usernameOf and requiresHandle", () => {
+describe("usernameOf and handleGate", () => {
   it("reads the handle, and nothing before O0", async () => {
     expect(await usernameOf(db, await runner({ username: "dee" }))).toBe("dee");
     expect(await usernameOf(db, await runner())).toBeUndefined();
@@ -545,11 +545,11 @@ describe("usernameOf and requiresHandle", () => {
   });
 
   it("sends a signed-in runner with no handle to O0, and nobody else", async () => {
-    expect(await requiresHandle(db, await runner())).toBe(true);
-    expect(await requiresHandle(db, newUlid())).toBe(true);
-    expect(await requiresHandle(db, await runner({ username: "dee" }))).toBe(
-      false,
+    expect(await handleGate(db, await runner())).toBe("needs-handle");
+    expect(await handleGate(db, newUlid())).toBe("needs-handle");
+    expect(await handleGate(db, await runner({ username: "dee" }))).toBe(
+      "has-handle",
     );
-    expect(await requiresHandle(db, undefined)).toBe(false);
+    expect(await handleGate(db, undefined)).toBe("signed-out");
   });
 });

@@ -1,3 +1,4 @@
+import { forgetSession } from "../../lib/session-memo";
 import { AUTH_COPY, AuthRejected } from "./auth-copy";
 import { BREACHED_CODE } from "./breached-password";
 import { authClient } from "./client";
@@ -107,6 +108,9 @@ interface SignInValues {
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
   throwIfRefused(error, SIGN_IN_REFUSALS);
+  // A different runner may be signed in now: what the browser remembered
+  // about the last one (`lib/session-memo`) is not about them.
+  forgetSession();
 }
 
 /**
@@ -127,6 +131,7 @@ export async function signUp(values: SignInValues): Promise<void> {
 export async function signOut(): Promise<void> {
   const { error } = await authClient.signOut();
   if (error) throw new AuthRejected(error.status);
+  forgetSession();
 }
 
 /**

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  forgetSession,
+  isRememberedForSession,
+  rememberForSession,
+} from "../../src/lib/session-memo";
 import { AUTH_COPY, AuthRejected } from "../../src/modules/auth/auth-copy";
 import {
   AuthFieldError,
@@ -45,6 +50,7 @@ beforeEach(() => {
   client.social.mockReset();
   client.signUp.mockReset();
   client.signOut.mockReset();
+  forgetSession();
 });
 
 /**
@@ -60,6 +66,20 @@ describe("signIn", () => {
     client.email.mockResolvedValue({ data: {}, error: undefined });
     await expect(signIn(person)).resolves.toBeUndefined();
     expect(client.email).toHaveBeenCalledWith(person);
+  });
+
+  it("forgets what the browser remembered about the last runner, once it has signed someone in", async () => {
+    rememberForSession("has-handle");
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
+    });
+    await caught(signIn(person));
+    // Nobody new is signed in, so nothing is forgotten.
+    expect(isRememberedForSession("has-handle")).toBe(true);
+    client.email.mockResolvedValue({ data: {}, error: undefined });
+    await signIn(person);
+    expect(isRememberedForSession("has-handle")).toBe(false);
   });
 
   it("lands a wrong password on Password, in the board's one sentence", async () => {
@@ -187,8 +207,11 @@ describe("signOut", () => {
       data: { success: true },
       error: undefined,
     });
+    rememberForSession("has-handle");
     await expect(signOut()).resolves.toBeUndefined();
     expect(client.signOut).toHaveBeenCalledTimes(1);
+    // The next runner to sign in on this page is asked about afresh.
+    expect(isRememberedForSession("has-handle")).toBe(false);
   });
 
   it("rejects with the status when Better Auth refuses, so Sign out can say Still signed in", async () => {
@@ -196,7 +219,9 @@ describe("signOut", () => {
       data: undefined,
       error: { status: 500 },
     });
+    rememberForSession("has-handle");
     const error = await caught(signOut());
+    expect(isRememberedForSession("has-handle")).toBe(true);
     expect(error).toBeInstanceOf(AuthRejected);
     expect(error).toMatchObject({ status: 500 });
   });

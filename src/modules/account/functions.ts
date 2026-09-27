@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../env";
 import { usernameInput } from "../../lib/contracts";
 import { optionalUserId, requireUserId } from "../auth";
-import { claimUsername, requiresHandle, usernameOf } from "./username";
+import { claimUsername, handleGate, usernameOf } from "./username";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -35,9 +35,8 @@ export const usernameQuery = createServerFn({ method: "GET" }).handler(
 
 /**
  * Whether the root route should send this visitor to O0 before anything
- * else: signed in and no handle yet. A signed-out visitor never is (the
- * landing page is all they can see).
+ * else — see `handleGate` for the three answers.
  */
 export const handleGateQuery = createServerFn({ method: "GET" }).handler(
-  async () => requiresHandle(db(), await optionalUserId()),
+  async () => handleGate(db(), await optionalUserId()),
 );
