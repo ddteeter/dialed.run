@@ -1,17 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  cityLookupInput,
-  lookUpCity,
-} from "../../src/modules/onboarding/place";
+import { cityLookupInput, cityNotFound } from "../../src/lib/city-lookup";
+import { lookUpCity } from "../../src/modules/onboarding/place";
 import type { PlaceResolver } from "../../src/modules/onboarding/place";
 
 /**
- * O1's typed city, resolved once on confirm (owner, 2026-09-24). Three
- * answers, because the form does three different things with them — and a
- * provider failure is reported, never swallowed (laws 6 and 7).
+ * Find (round 26 #12): a typed city resolved once, when the runner asks.
+ * Three answers, because the field does three different things with them
+ * — and a provider failure is reported, never swallowed (laws 6 and 7).
  */
-function lookUp(resolver: PlaceResolver | undefined) {
+function lookUp(resolver: PlaceResolver) {
   const report = vi.fn();
   return {
     report,
@@ -25,14 +23,19 @@ function lookUp(resolver: PlaceResolver | undefined) {
 }
 
 describe("lookUpCity", () => {
-  it("answers found, with the coordinates, for a place the provider knows", async () => {
+  it("answers found, with the provider's name for the place and where it is", async () => {
     const resolver = vi.fn<PlaceResolver>(() =>
-      Promise.resolve({ lat: 44.98, lng: -93.27 }),
+      Promise.resolve({
+        lat: 44.98,
+        lng: -93.27,
+        address: "Minneapolis, MN, United States",
+      }),
     );
     const { answer, report } = lookUp(resolver);
 
     expect(await answer).toStrictEqual({
       kind: "found",
+      address: "Minneapolis, MN, United States",
       lat: 44.98,
       lng: -93.27,
     });
@@ -58,27 +61,30 @@ describe("lookUpCity", () => {
       userId: "u-1",
     });
   });
-
-  it("answers unavailable, and reports nothing, before a resolver is wired", async () => {
-    const { answer, report } = lookUp(undefined);
-    expect(await answer).toStrictEqual({ kind: "unavailable" });
-    expect(report).not.toHaveBeenCalled();
-  });
 });
 
 describe("cityLookupInput", () => {
-  it("takes a trimmed, bounded label and refuses a blank one", () => {
+  it("takes a trimmed, bounded label and refuses a blank one in the field's words", () => {
     expect(cityLookupInput.parse({ label: "  Austin  " })).toStrictEqual({
       label: "Austin",
     });
-    expect(cityLookupInput.safeParse({ label: " ".repeat(3) }).success).toBe(
-      false,
-    );
+    const blank = cityLookupInput.safeParse({ label: " ".repeat(3) });
+    expect(blank.error?.issues.map((issue) => issue.message)).toStrictEqual([
+      "Type the city you run in.",
+    ]);
     expect(cityLookupInput.safeParse({ label: "a".repeat(121) }).success).toBe(
       false,
     );
     expect(cityLookupInput.safeParse({ label: "a".repeat(120) }).success).toBe(
       true,
+    );
+  });
+});
+
+describe("cityNotFound", () => {
+  it("quotes what was typed, as round 26 #12 draws it", () => {
+    expect(cityNotFound("Portlnd, OR")).toBe(
+      `We couldn't find "Portlnd, OR". Check the spelling, or try a nearby city.`,
     );
   });
 });

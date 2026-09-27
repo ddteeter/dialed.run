@@ -5,7 +5,10 @@ import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
 import { fileReportAction } from "../../modules/safety/functions";
-import { shouldAskForVerdict } from "../../modules/feed/route-decisions";
+import {
+  noindexHead,
+  shouldAskForVerdict,
+} from "../../modules/feed/route-decisions";
 import {
   deleteEntryPhotoAction,
   entryDetailQuery,
@@ -20,6 +23,7 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/entry/$entryId")({
+  head: noindexHead,
   beforeLoad: async () => {
     requireSignedIn(await getSession());
   },
@@ -65,7 +69,7 @@ function EntryDetailPage() {
               id: entryId,
               label: entry.runTitle,
               authorId: entry.userId,
-              authorName: entry.authorDisplayName,
+              authorName: entry.authorUsername,
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}

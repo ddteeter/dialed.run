@@ -269,7 +269,7 @@ async function subjectsFor(
       database
         .select({
           userId: userProfiles.userId,
-          displayName: userProfiles.displayName,
+          username: userProfiles.username,
         })
         .from(userProfiles)
         .where(inArray(userProfiles.userId, subjectIds)),
@@ -290,7 +290,7 @@ async function subjectsFor(
   }
   for (const row of profileRows) {
     found.set(`profile:${row.userId}`, {
-      label: row.displayName ?? undefined,
+      label: row.username ?? undefined,
       photoKeys: [],
     });
   }

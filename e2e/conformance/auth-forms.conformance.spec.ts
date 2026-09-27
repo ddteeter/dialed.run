@@ -22,11 +22,15 @@ import { partsExcept, partsIn, wordsOf } from "./auth-parts";
  *   `data-part`. Changing it is the coordinator's (task 120's primitives).
  * - The failure band: the board's has no button and relabels the primary
  *   "Try again"; the shared `FailureBand` always carries its own. Same.
- * - Au1's Name field stays until the username task (owner, 2026-09-24).
  * - "Forgot it?" is drawn on Au2–Au4 and Au7; there is no reset flow to
  *   send it to, so it is absent rather than a dead link.
  * - The Google button's "G" is Google's official image, not the board's
  *   typed letter in a ring (owner, PR #104; design-deltas item 29).
+ *
+ * **The Google button's part is `google-button`**, round 26 #13's name for
+ * it (the one element exempt from the palette and icon checks); this
+ * board, round 22's, calls the same region `google`, so its name is
+ * translated on the way in.
  */
 
 const BOARD = "Auth.dc.html";
@@ -44,8 +48,16 @@ function screen(label: string): string {
  */
 const UNMARKED = new Set(["primary-action"]);
 
+/**
+ * A round-22 part name as the build spells it.
+ */
+function buildPart(part: string): string {
+  return part === "google" ? "google-button" : part;
+}
+
 async function boardParts(page: Page, label: string): Promise<string[]> {
-  return partsExcept(page, screen(label), [...UNMARKED]);
+  const parts = await partsExcept(page, screen(label), [...UNMARKED]);
+  return parts.map((part) => buildPart(part));
 }
 
 /**
@@ -76,7 +88,7 @@ async function drawn(
     // build carries Google's official image instead (owner, PR #104), so
     // that letter is not text in the build and is set aside here.
     words.set(
-      part,
+      buildPart(part),
       part === "google" && drawnWords[0] === "G"
         ? drawnWords.slice(1)
         : drawnWords,
@@ -117,8 +129,8 @@ test.describe("Au · phone", () => {
     await expectSameWords(page, board.words, {});
     // No tab bar and no product bar: "every tab is a signed-in place".
     await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
-    // Known gap: the Name field, until the username task.
-    await expect(page.getByLabel("Name")).toBeVisible();
+    // Round 26 #7: sign-up asks email and password only; the handle is O0's.
+    await expect(page.getByLabel("Name")).toHaveCount(0);
   });
 
   test("Au2 log in, at rest", async ({ page, baseURL }) => {
@@ -206,7 +218,7 @@ test.describe("Au · phone", () => {
       held.push(route);
     });
     await page.getByRole("button", { name: "Continue with Google" }).click();
-    const google = page.locator(`${PANEL} [data-part='google']`);
+    const google = page.locator(`${PANEL} [data-part='google-button']`);
     await expect(google).toHaveAttribute("data-state", "pending");
     expect(held).toHaveLength(1);
 

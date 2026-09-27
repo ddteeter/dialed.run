@@ -30,7 +30,7 @@ test("report a runner, block them, and take the block back", async ({
 }) => {
   const suffix = String(Date.now());
   const strangerId = newUlid();
-  const strangerName = `Demo Stranger ${suffix}`;
+  const strangerName = `stranger_${suffix.slice(-8)}`;
   const runId = newUlid();
   const entryId = newUlid();
   const reportedRunId = newUlid();
@@ -42,7 +42,7 @@ test("report a runner, block them, and take the block back", async ({
   await withLocalDb(async ({ core }) => {
     await core.insert(userProfiles).values({
       userId: strangerId,
-      displayName: strangerName,
+      username: strangerName,
       cityLabel: "Portland, OR",
     });
     await core.insert(runs).values({

@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
+import { handleGateQuery } from "../modules/account/functions";
+import { startHandleIfNeeded } from "../modules/account/route-decisions";
 import { signedInQuery } from "../modules/auth/functions";
 import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
@@ -94,6 +96,11 @@ export const Route = createRootRoute({
       },
     ],
   }),
+  // O0 before anything else, on every navigation (round 26 #7): the one
+  // place no sign-in redirect, bookmark or typed URL can go around.
+  beforeLoad: async ({ location }) => {
+    startHandleIfNeeded(await handleGateQuery(), location.pathname);
+  },
   // Whether anyone is signed in, read once and kept until a sign-in or a
   // sign-out invalidates it: the system states frame themselves by it
   // (round 22, X1/X2) and nothing else here needs it fresh per navigation.

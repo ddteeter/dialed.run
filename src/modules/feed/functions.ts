@@ -12,7 +12,6 @@ import {
   attachKitInput,
   bandCountsInput,
   bandSignalsInput,
-  conditionsCityInput,
   coordinatesInput,
   entryIdInput,
   feedInput,
@@ -37,7 +36,7 @@ import {
 } from "./entries";
 import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
-import { conditionsHome, saveConditionsCity } from "./home";
+import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
@@ -46,7 +45,7 @@ import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
-import { resolvePlace } from "../weather";
+import { placeInput, savePlace } from "../onboarding";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -209,15 +208,15 @@ export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * Location denied: the typed city is found by the weather provider and
- * saved as the profile's place, and the tab never asks again.
+ * Location denied: Use this on the place Find came back with (round 26
+ * #12) saves it as the profile's place, through the one writer of those
+ * columns (FEED-5), and the tab never asks again.
  */
 export const saveConditionsCityAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => conditionsCityInput.parse(input))
-  .handler(async ({ data }) => {
-    const userId = await requireUserId();
-    return saveConditionsCity(userId, data.cityLabel, resolvePlace);
-  });
+  .validator((input: unknown) => placeInput.parse(input))
+  .handler(async ({ data }) =>
+    savePlace(drizzle(env.DIALED_CORE), await requireUserId(), data),
+  );
 
 // ---- Units (D-6) --------------------------------------------------------------
 

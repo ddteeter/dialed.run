@@ -1,6 +1,6 @@
 /**
  * Covers: O1 (calibrate), O3 (the one list), P2.5 (make them real), P3 (now
- * go run), K (the Call teaser), U1/N (settings) — one journey, one video.
+ * go run), K (the Call teaser at 15, round 26 #15), U1/N (settings) — one journey, one video.
  *
  * The journey is the packet's own done-criterion read literally: a fresh
  * account reaches "now go run" with a real closet, and the Call tab then
@@ -15,6 +15,7 @@
  */
 import { storageStateFor } from "../support/accounts";
 import { expect, scene, test } from "../support/demo";
+import { answerFind } from "../conformance/feed-support";
 
 // Signed in already, and deliberately NOT past onboarding: the setup leaves
 // this one account unfinished, because walking the flow is the journey.
@@ -61,7 +62,31 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await scene(page, "Units are two segmented pairs, from the locale");
   await expect(page.getByRole("radio", { name: "°F" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "mi" })).toBeChecked();
+  // Round 26 #12: the typed city is found before it is used. Next with a
+  // city nobody found says so on the field; Find shows the one place the
+  // provider found; Use this makes it the chip.
   await page.getByLabel("Where you run").fill("Minneapolis");
+  await scene(page, "A typed city is found before it is used");
+  await page.getByRole("button", { name: "Start running" }).click();
+  await expect(
+    page.getByText("Press Find, or clear the field to skip."),
+  ).toBeVisible();
+  await answerFind(page, {
+    kind: "found",
+    address: "Minneapolis, MN, United States",
+    lat: 44.98,
+    lng: -93.27,
+  });
+  await page.getByRole("button", { name: "Find" }).click();
+  await expect(page.locator("[data-part='resolved']")).toContainText(
+    "Weather for Minneapolis, MN, United States",
+  );
+  await page.getByRole("button", { name: "Use this" }).click();
+  await expect(page.locator("[data-part='city-chip']")).toContainText(
+    "Minneapolis, MN, United States",
+    { ignoreCase: true },
+  );
+  await expect(page.getByRole("button", { name: "Change city" })).toBeVisible();
   await page.getByRole("button", { name: "Start running" }).click();
 
   // O3. Every row is on offer and nothing arrives ticked — the counter
@@ -173,9 +198,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(
     page.getByRole("link", { name: /Smartwool Intraknit 200/ }),
   ).toBeVisible();
-  await expect(
-    page.getByText("5 of 6 pieces are still generic"),
-  ).toBeVisible();
+  await expect(page.getByText("5 of 6 pieces are still generic")).toBeVisible();
 
   // O6. The teaser with no verdicts behind it: it says it is listening, and
   // it makes no call. A recommendation here would be the one thing this
@@ -183,8 +206,15 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await scene(page, "K · the meter at nothing, and one instruction");
   await page.goto("/call");
   await hydrated(page);
-  await expect(page.getByText(/verdicts and the Call starts\./u)).toBeVisible();
-  await expect(page.getByRole("meter")).toHaveAttribute("aria-valuenow", "0");
+  await expect(
+    page.getByText("Log 15 verdicts and the Call starts."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "0 of 15 verdicts logged" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Your first verdict is one run away."),
+  ).toBeVisible();
 
   // Settings as U1's index (round 22, item 20): rows that say their value,
   // and one small form per sub-page with its own Save.

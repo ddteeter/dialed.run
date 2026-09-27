@@ -19,6 +19,14 @@ import { withLocalDb } from "../support/local-db";
  */
 export const OPERATOR_ID = "e2e-desk-operator";
 
+/**
+ * The operator's handle. Every signed-in runner without one is sent to O0
+ * by the root's handle gate, and the Desk is not O0's subject, so the
+ * operator arrives with one already claimed. Fixed like the id: the last
+ * run's operator row is deleted first, which frees it.
+ */
+const OPERATOR_HANDLE = "desk_operator";
+
 export async function signInAsOperator(page: Page): Promise<void> {
   const context = page.context();
   // Better Auth's own sign-up endpoint, through the page's request context
@@ -74,6 +82,13 @@ export async function signInAsOperator(page: Page): Promise<void> {
         .update(userProfiles)
         .set({ userId: OPERATOR_ID })
         .where(eq(userProfiles.userId, from)),
+      core
+        .insert(userProfiles)
+        .values({ userId: OPERATOR_ID, username: OPERATOR_HANDLE })
+        .onConflictDoUpdate({
+          target: userProfiles.userId,
+          set: { username: OPERATOR_HANDLE },
+        }),
     ]);
   });
 }

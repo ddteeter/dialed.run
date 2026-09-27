@@ -11,10 +11,12 @@ import {
   unfollowAction,
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
+import { noindexHead } from "../../modules/feed/route-decisions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/u/$userId")({
+  head: noindexHead,
   beforeLoad: async () => {
     requireSignedIn(await getSession());
   },
@@ -44,9 +46,9 @@ function OtherProfilePage() {
             subject={{
               type: "profile",
               id: profile.userId,
-              label: profile.displayName ?? "A runner",
+              label: profile.username ?? "A runner",
               authorId: profile.userId,
-              authorName: profile.displayName ?? undefined,
+              authorName: profile.username ?? undefined,
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}

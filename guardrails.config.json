@@ -348,11 +348,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/follows.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- followerCount and usefulCount both delegate to columnWhere, each over its own covering index",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: followerCount and usefulCount both delegate to columnWhere, each over its own covering index.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two owner-scoped reads in one function, over runs and over entries; see the note on the second",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two owner-scoped reads in one function, over runs and over entries; see the note on the second.",
       "count": 1

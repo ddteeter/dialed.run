@@ -1,12 +1,17 @@
 import { Link } from "@tanstack/react-router";
 
 import { Icon, Mono } from "../../../ui";
+import { BELL_NUMBER_CAP } from "../bell-cap";
 
 /**
- * The most the number says before it stops counting (round 22, item 13):
- * *"Caps at 9+."* Past nine the exact figure is not what a runner acts on.
+ * A count as the bell says it: digits, and `9+` past the cap (round 22,
+ * item 13; round 26 #9: "The count is in digits").
  */
-const NUMBER_CAP = 9;
+function capped(count: number): string {
+  return count > BELL_NUMBER_CAP
+    ? `${String(BELL_NUMBER_CAP)}+`
+    : String(count);
+}
 
 type BellMark = "number" | "dot" | "quiet";
 
@@ -41,16 +46,15 @@ export function NotificationBell({
   verdictsWaiting = 0,
 }: Readonly<{ unreadCount: number; verdictsWaiting?: number | undefined }>) {
   const mark = markOf(unreadCount, verdictsWaiting);
-  const number =
-    verdictsWaiting > NUMBER_CAP
-      ? `${String(NUMBER_CAP)}+`
-      : String(verdictsWaiting);
+  const number = capped(verdictsWaiting);
   // The mark is drawn, so the name has to say it: a sighted runner reads
   // "3" or a dot, and a screen reader would otherwise hear "Notifications"
-  // whatever the state.
+  // whatever the state. Round 26 #9 names two: "Notifications" and
+  // "Notifications, 3 new". The dot has no drawn name; it says how many
+  // unread rows it stands for, in the same words.
   const name: Readonly<Record<BellMark, string>> = {
-    number: `Notifications, ${number} waiting for a verdict`,
-    dot: "Notifications, unread",
+    number: `Notifications, ${number} new`,
+    dot: `Notifications, ${capped(unreadCount)} new`,
     quiet: "Notifications",
   };
 

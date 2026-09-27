@@ -25,7 +25,10 @@ export const weatherObservations = /*#__PURE__*/ sqliteTable(
     windKph: real("wind_kph").notNull(),
     precipMm: real("precip_mm").notNull(),
     condition: text("condition").notNull(),
-    source: text("source", { enum: ["visualcrossing", "manual"] }).notNull(),
+    // Real observations only: a band a runner sets lives in manual_conditions,
+    // and no manual cache row was ever deployed. "manual" left this enum with
+    // the owner's approval (2026-09-26, task 129); a TS enum, so no SQL moved.
+    source: text("source", { enum: ["visualcrossing"] }).notNull(),
     fetchedAt: integer("fetched_at").notNull(),
     // D-96: the IANA zone of the place observed, as Visual Crossing names
     // it. On the observation rather than the run because observations are

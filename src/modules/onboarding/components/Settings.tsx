@@ -104,10 +104,15 @@ function SettingsGroup({
  */
 export function SettingsIndex({
   current,
+  username,
   blockedCount,
   signOut,
 }: Readonly<{
   current: CurrentSettings;
+  /**
+  The runner's handle, or nothing for an account that has not reached O0.
+  */
+  username: string | undefined;
   blockedCount: number;
   /**
   The foot's Sign out, the route's to wire (it needs the router).
@@ -117,6 +122,15 @@ export function SettingsIndex({
   return (
     <div className="flex flex-col gap-6">
       <SettingsGroup title="You">
+        {/* U1's first row is Account ("drew.t · email, password"); until
+            its page exists (ACC-7/8) what it holds is the handle, so it opens
+            Settings › Username (round 26 #7). */}
+        <SettingsRow
+          to="/account/username"
+          params={{}}
+          label="Account"
+          value={username === undefined ? "Not picked" : `@${username}`}
+        />
         <CalibrationRow
           thermalLevel={current.thermalLevel}
           tempUnit={current.tempUnit}

@@ -37,7 +37,7 @@ function weatherDb() {
 }
 
 export async function makeUser(overrides?: {
-  displayName?: string;
+  username?: string;
   shareDefault?: boolean;
   /** Left unset by default, which is what a profile predating D-6 looks
    *  like: the columns exist and hold NULL. */
@@ -49,7 +49,10 @@ export async function makeUser(overrides?: {
     .insert(userProfiles)
     .values({
       userId,
-      displayName: overrides?.displayName ?? `runner-${userId.slice(-6)}`,
+      // A real handle (lowercase, the rule's alphabet), since the column
+      // is unique regardless of case.
+      username:
+        overrides?.username ?? `runner_${userId.slice(-8).toLowerCase()}`,
       shareDefault: overrides?.shareDefault ?? true,
       tempUnit: overrides?.tempUnit,
       distanceUnit: overrides?.distanceUnit,
@@ -206,7 +209,6 @@ export async function makeObservation(params: {
   tempC: number;
   feelsLikeC: number;
   precipMm?: number;
-  source?: "visualcrossing" | "manual";
   timeZone?: string;
 }): Promise<void> {
   const key = cacheKeyFor(
@@ -227,7 +229,7 @@ export async function makeObservation(params: {
       windKph: 10,
       precipMm: params.precipMm ?? 0,
       condition: "clear",
-      source: params.source ?? "visualcrossing",
+      source: "visualcrossing",
       timeZone: params.timeZone,
       fetchedAt: NOW,
     });

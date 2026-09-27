@@ -22,7 +22,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   return {
     id: "01ENTRY",
     userId: OWNER,
-    authorDisplayName: "mark_t",
+    authorUsername: "mark_t",
     runId: "01RUN",
     runTitle: "Evening run",
     distanceM: 5 * 1609.34,
@@ -147,7 +147,7 @@ describe("EntryDetail: the heading", () => {
 
   it("falls back to A runner, and never calls a signed-out viewer the author", async () => {
     await renderFeedScreen(
-      detail({ authorDisplayName: undefined }, { viewerId: undefined }),
+      detail({ authorUsername: undefined }, { viewerId: undefined }),
     );
     expect(screen.getByRole("heading", { name: "A runner" })).toBeVisible();
   });
@@ -211,8 +211,38 @@ describe("EntryDetail: the run strip", () => {
   it("says nothing at all about conditions it does not have", async () => {
     await renderFeedScreen(detail());
     expect(part("run-strip")?.children).toHaveLength(2);
+    expect(credit()).toBeNull();
+  });
+
+  it("credits Visual Crossing in the strip, under its reading (FEED-8)", async () => {
+    await renderFeedScreen(
+      detail({ conditions: pointConditions({ tempC: 8, feelsLikeC: 6 }) }),
+    );
+
+    expect(part("run-strip")).toContainElement(credit());
+    expect(credit()).toHaveAttribute(
+      "href",
+      "https://www.visualcrossing.com/weather-data",
+    );
+  });
+
+  it("credits nobody for a band the runner set", async () => {
+    await renderFeedScreen(
+      detail({
+        conditions: {
+          ...pointConditions({ tempC: 8, feelsLikeC: 6 }),
+          source: "manual",
+        },
+      }),
+    );
+    expect(screen.getByText("46° · clear")).toBeVisible();
+    expect(credit()).toBeNull();
   });
 });
+
+const credit = () =>
+  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
+
 
 describe("EntryDetail: the owner's verdict prompt", () => {
   it("takes the badge's place, directly under the strip, and opens A3", async () => {

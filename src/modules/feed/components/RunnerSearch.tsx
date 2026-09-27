@@ -149,13 +149,13 @@ function ResultRow({
   return (
     <li className="flex flex-col gap-3 border-b border-hairline py-3">
       <div className="flex items-center gap-3">
-        <Avatar name={result.displayName} size="small" />
+        <Avatar name={result.username} size="small" />
         <Link
           to="/feed/u/$userId"
           params={{ userId: result.userId }}
           className="target flex flex-1 items-center text-body font-semibold text-ink no-underline"
         >
-          {result.displayName}
+          {result.username}
         </Link>
         <FollowPill toggle={toggle} />
       </div>

@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { calibrationInput } from "../../src/modules/onboarding/inputs";
+import {
+  CITY_UNCONFIRMED,
+  calibrationInput,
+} from "../../src/modules/onboarding/inputs";
+import { placeInput, savePlace } from "../../src/modules/onboarding";
 import {
   completeOnboarding,
   currentSettings,
@@ -60,13 +64,13 @@ describe("saveCalibration", () => {
   it("recalibrates an existing profile without resetting anything else", async () => {
     // Settings "recalibrate" reaches O1 again. A display name, a share
     // preference and a completed flag are other people's business.
-    const userId = await makeUser({ displayName: "Ada", shareDefault: false });
+    const userId = await makeUser({ username: "Ada", shareDefault: false });
     await completeOnboarding(coreDb(), userId);
 
     await saveCalibration(coreDb(), userId, { thermalLevel: -1 });
 
     expect(await profileOf(userId)).toMatchObject({
-      displayName: "Ada",
+      username: "Ada",
       shareDefault: false,
       onboardingComplete: true,
       thermalLevel: -1,
@@ -144,6 +148,117 @@ describe("saveCalibration", () => {
     // `toBeNull` rather than the literal, which `unicorn/no-null` forbids.
     expect(row?.cityLabel).toBeNull();
     expect(row?.lat).toBeNull();
+  });
+});
+
+function isCityLengthTaken(length: number): boolean {
+  return calibrationInput.safeParse({
+    thermalLevel: 0,
+    cityLabel: "a".repeat(length),
+    lat: 0,
+    lng: 0,
+  }).success;
+}
+
+const PORTLAND = {
+  cityLabel: "Portland, OR, United States",
+  lat: 45.52,
+  lng: -122.68,
+};
+
+describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
+  it("creates the profile row with all three columns, and answers with them", async () => {
+    const userId = newUlid();
+
+    expect(await savePlace(coreDb(), userId, PORTLAND)).toStrictEqual(PORTLAND);
+
+    expect(await profileOf(userId)).toMatchObject(PORTLAND);
+  });
+
+  it("replaces a place whole, and leaves everything O1 saved beside it alone", async () => {
+    const userId = await makeUser({ username: "Ada", shareDefault: false });
+    await saveCalibration(coreDb(), userId, {
+      thermalLevel: 1,
+      cityLabel: "Minneapolis, MN, United States",
+      lat: 44.98,
+      lng: -93.27,
+      tempUnit: "c",
+      distanceUnit: "km",
+    });
+
+    await savePlace(coreDb(), userId, PORTLAND);
+
+    expect(await profileOf(userId)).toMatchObject({
+      ...PORTLAND,
+      thermalLevel: 1,
+      tempUnit: "c",
+      distanceUnit: "km",
+      username: "Ada",
+      shareDefault: false,
+    });
+  });
+
+  it("writes the same three columns O1's calibration does, from either path", async () => {
+    const fromConditions = newUlid();
+    const fromO1 = newUlid();
+
+    await savePlace(coreDb(), fromConditions, PORTLAND);
+    await saveCalibration(coreDb(), fromO1, { thermalLevel: 0, ...PORTLAND });
+
+    const [a, b] = [await profileOf(fromConditions), await profileOf(fromO1)];
+    const place = (row: typeof a) => ({
+      cityLabel: row?.cityLabel,
+      lat: row?.lat,
+      lng: row?.lng,
+    });
+    expect(place(a)).toStrictEqual(PORTLAND);
+    expect(place(b)).toStrictEqual(place(a));
+  });
+});
+
+describe("placeInput", () => {
+  it("takes a found place: the provider's name, trimmed, and where it is", () => {
+    expect(
+      placeInput.parse({ ...PORTLAND, cityLabel: `  ${PORTLAND.cityLabel} ` }),
+    ).toStrictEqual(PORTLAND);
+  });
+
+  it("refuses a place with no name, a name past the provider's cap, or no coordinates", () => {
+    for (const bad of [
+      { ...PORTLAND, cityLabel: " " },
+      { ...PORTLAND, cityLabel: "a".repeat(201) },
+      { cityLabel: PORTLAND.cityLabel, lat: PORTLAND.lat },
+      { ...PORTLAND, lat: 91 },
+      { ...PORTLAND, lng: -181 },
+    ]) {
+      expect(placeInput.safeParse(bad).success).toBe(false);
+    }
+    expect(
+      placeInput.safeParse({ ...PORTLAND, cityLabel: "a".repeat(200) }).success,
+    ).toBe(true);
+  });
+});
+
+describe("a profile's coordinates are rounded where they are parsed (STR-14, D-110)", () => {
+  const PRECISE = { ...PORTLAND, lat: 45.523456, lng: -122.676789 };
+
+  it("rounds a place from Your conditions to two decimal places", () => {
+    expect(placeInput.parse(PRECISE)).toStrictEqual(PORTLAND);
+  });
+
+  it("rounds O1's calibration the same way, and leaves absent coordinates absent", () => {
+    expect(
+      calibrationInput.parse({ thermalLevel: 0, ...PRECISE }),
+    ).toMatchObject({ lat: PORTLAND.lat, lng: PORTLAND.lng });
+    const noPlace = calibrationInput.parse({ thermalLevel: 0 });
+    expect(noPlace).not.toHaveProperty("lat");
+    expect(noPlace).not.toHaveProperty("lng");
+  });
+});
+
+describe("CITY_UNCONFIRMED", () => {
+  it("says the two ways on, as round 26 #12 draws it", () => {
+    expect(CITY_UNCONFIRMED).toBe("Press Find, or clear the field to skip.");
   });
 });
 
@@ -226,13 +341,55 @@ describe("calibrationInput", () => {
     }
   });
 
+  it("takes the provider's name for a place, up to its cap of 200", () => {
+    expect(isCityLengthTaken(200)).toBe(true);
+    expect(isCityLengthTaken(201)).toBe(false);
+  });
+
   it("trims a typed city, because people type trailing spaces", () => {
     const parsed = calibrationInput.parse({
       thermalLevel: 0,
       cityLabel: "  Seattle, WA  ",
+      lat: 47.61,
+      lng: -122.33,
     });
 
     expect(parsed.cityLabel).toBe("Seattle, WA");
+  });
+});
+
+/**
+What the server function's validator refuses a calibration with, if anything.
+*/
+function refusal(input: Record<string, unknown>) {
+  const parsed = calibrationInput.safeParse({ thermalLevel: 0, ...input });
+  return parsed.success ? undefined : parsed.error.issues;
+}
+
+// The server function's validator is `calibrationInput.parse` itself
+// (`onboarding/functions.ts`), so what it refuses here the server refuses.
+describe("calibrationInput refuses a city nobody pressed Find on (FEED-5 review)", () => {
+  it("says the two ways on, on the city field, for a label with no coordinates", () => {
+    expect(refusal({ cityLabel: "Portland" })).toStrictEqual([
+      expect.objectContaining({
+        path: ["cityLabel"],
+        message: CITY_UNCONFIRMED,
+      }),
+    ]);
+    expect(() =>
+      calibrationInput.parse({ thermalLevel: 0, cityLabel: "Portland" }),
+    ).toThrow(CITY_UNCONFIRMED);
+  });
+
+  it("refuses a label with half a coordinate, either half", () => {
+    expect(refusal({ cityLabel: "Portland", lat: 45.52 })).toHaveLength(1);
+    expect(refusal({ cityLabel: "Portland", lng: -122.68 })).toHaveLength(1);
+  });
+
+  it("takes a found city, the browser's location alone, and no place at all", () => {
+    expect(refusal(PORTLAND)).toBeUndefined();
+    expect(refusal({ lat: 45.52, lng: -122.68 })).toBeUndefined();
+    expect(refusal({})).toBeUndefined();
   });
 });
 

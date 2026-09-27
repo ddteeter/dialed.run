@@ -25,7 +25,7 @@ const done = () => Promise.resolve();
 function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
   return {
     userId: "01USER",
-    displayName: "Dana Kim",
+    username: "Dana Kim",
     cityLabel: undefined,
     thermalLevel: undefined,
     followerCount: 0,
@@ -44,7 +44,7 @@ function otherProfile(
 ): OtherProfileData {
   return {
     userId: "01RAVI",
-    displayName: "Ravi K",
+    username: "Ravi K",
     cityLabel: NOTHING,
     recentPublicEntries: [],
     ...overrides,
@@ -92,9 +92,9 @@ function followScreen(options: {
 }
 
 function results(...names: string[]): SearchResult[] {
-  return names.map((displayName, index) => ({
+  return names.map((username, index) => ({
     userId: `01R${String(index)}`,
-    displayName,
+    username,
     following: index === 1,
   }));
 }
@@ -153,15 +153,21 @@ describe("OwnProfile (G): day one", () => {
     const log = screen.getByRole("link", { name: "Log a run" });
     expect(log).toHaveAttribute("href", "/runs/new");
     expect(log).toHaveClass("bg-action");
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
-      "href",
-      "/onboarding/settings",
-    );
+    // Round 26 #18: the icon button in every state, and day one keeps its
+    // inline link as well.
+    const settings = screen.getAllByRole("link", { name: "Settings" });
+    expect(settings).toHaveLength(2);
+    for (const link of settings) {
+      expect(link).toHaveAttribute("href", "/onboarding/settings");
+    }
+    const [icon, inline] = settings;
+    expect(icon).toHaveAttribute("data-part", "settings-button");
+    expect(inline).not.toHaveAttribute("data-part");
   });
 
   it("names the runner, or You, and shows a city only when O1 got one", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ displayName: undefined })} />,
+      <OwnProfile profile={ownProfile({ username: undefined })} />,
     );
     expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
     expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
@@ -184,15 +190,18 @@ describe("OwnProfile (G): past day one", () => {
     warm: 0,
   };
 
-  it("keeps the way to Settings, the only place to sign out", async () => {
+  it("keeps the way to Settings, the only place to sign out, as the icon alone", async () => {
     await renderFeedScreen(
       <OwnProfile profile={ownProfile({ runCount: 12 })} />,
     );
 
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
-      "href",
-      "/onboarding/settings",
-    );
+    // Round 26 #18: "The established G has the icon only."
+    const settings = screen.getByRole("link", { name: "Settings" });
+    expect(settings).toHaveAttribute("href", "/onboarding/settings");
+    expect(settings).toHaveAttribute("data-part", "settings-button");
+    expect(part("header")).toContainElement(settings);
+    expect(settings.querySelector("svg")).not.toBeNull();
+    expect(settings).toHaveTextContent("");
   });
 
   it("drops the next step and shows the counts it has", async () => {
@@ -316,7 +325,7 @@ describe("OtherProfile (H)", () => {
 
   it("falls back to A runner and shows a city only when there is one", async () => {
     await renderFeedScreen(
-      otherScreen({ displayName: NOTHING, cityLabel: "St. Paul" }),
+      otherScreen({ username: NOTHING, cityLabel: "St. Paul" }),
     );
     expect(screen.getByRole("heading", { name: "A runner" })).toBeVisible();
     expect(screen.getByText("St. Paul")).toHaveClass("font-mono");

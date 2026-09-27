@@ -35,6 +35,7 @@ function feed(
         locate: () => Promise.resolve(undefined),
         conditionsFor:
           overrides.conditionsFor ?? (() => Promise.resolve(undefined)),
+        lookUpCity: () => Promise.resolve({ kind: "not-found" }),
         saveCity: () => Promise.resolve({ lat: 1, lng: 2, cityLabel: "Here" }),
       }}
     />
@@ -163,8 +164,8 @@ describe("Feed: Following", () => {
     await renderFeedScreen(
       feed({
         items: [
-          feedItem({ entryId: "01A", authorDisplayName: "Dana" }),
-          feedItem({ entryId: "01B", authorDisplayName: "Mark" }),
+          feedItem({ entryId: "01A", authorUsername: "Dana" }),
+          feedItem({ entryId: "01B", authorUsername: "Mark" }),
         ],
       }),
     );
@@ -191,6 +192,7 @@ describe("Feed: Following", () => {
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
           conditionsFor: () => Promise.resolve(undefined),
+          lookUpCity: () => Promise.resolve({ kind: "not-found" }),
           saveCity: () =>
             Promise.resolve({ lat: 1, lng: 2, cityLabel: "Here" }),
         }}

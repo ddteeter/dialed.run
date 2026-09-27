@@ -75,13 +75,13 @@ test("H with nothing public keeps its header and Follow, and says so plainly", a
   expect(drawn, "the board has no empty H").not.toHaveLength(0);
 
   const rows = seeded();
-  const runner = await seedRunner(rows, "Ravi K");
+  const runner = await seedRunner(rows, "ravi_k");
   try {
     await page.setViewportSize(PHONE);
     await page.goto(`/feed/u/${runner}`);
     await hydrated(page);
 
-    await expect(page.getByRole("heading", { name: "Ravi K" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ravi_k" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Follow" })).toBeVisible();
     // **No counts on H**, as drawn.
     await expect(page.locator('[data-part="counts"]')).toHaveCount(drawnCounts);

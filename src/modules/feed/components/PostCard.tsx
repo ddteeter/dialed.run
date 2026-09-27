@@ -2,12 +2,13 @@ import { Link } from "@tanstack/react-router";
 
 import type { Units } from "../../../lib/contracts";
 import { formatDistance } from "../../../lib/measures";
-import { Mono } from "../../../ui";
+import { Mono, WeatherAttribution } from "../../../ui";
 import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";
-import { stripConditions } from "../strip";
+import { isProvidersReading, stripConditions } from "../strip";
 import { Avatar } from "./Avatar";
 import { ConditionsCell } from "./ConditionsCell";
+
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
@@ -36,7 +37,7 @@ export interface PostCardProps {
 
 export function PostCard(props: Readonly<PostCardProps>) {
   const { item, units, now, setUseful, onStatus } = props;
-  const name = item.authorDisplayName ?? "A runner";
+  const name = item.authorUsername ?? "A runner";
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
 
@@ -90,6 +91,9 @@ export function PostCard(props: Readonly<PostCardProps>) {
           )}
         </div>
       </Link>
+      {/* Outside the link, because it is a link of its own: Visual
+          Crossing's licence asks for the credit near the data (FEED-8). */}
+      {isProvidersReading(item.conditions) ? <WeatherAttribution /> : undefined}
       <UsefulButton
         entryId={item.entryId}
         usefulCount={item.usefulCount}
