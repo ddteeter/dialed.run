@@ -21,7 +21,6 @@ import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import {
   dedupeKeyFor,
-  notBeforeOf,
   outboxKinds,
   readOutboxRow,
   type OutboxKind,
@@ -78,10 +77,19 @@ export function backoffSeconds(attempts: number): number {
 export interface OutboxDebt {
   readonly id: string;
   readonly message: OutboxMessage;
+  /**
+   * The earliest the drain may work it, in epoch seconds — task 127's
+   * reminder, 20 minutes after the run lands. Omitted, it is due once the
+   * fast path's grace has passed.
+   */
+  readonly notBefore?: number | undefined;
 }
 
-export function oweOutbox(message: OutboxMessage): OutboxDebt {
-  return { id: newUlid(), message };
+export function oweOutbox(
+  message: OutboxMessage,
+  notBefore?: number,
+): OutboxDebt {
+  return { id: newUlid(), message, notBefore };
 }
 
 /**
@@ -98,13 +106,10 @@ export function oweOutbox(message: OutboxMessage): OutboxDebt {
  * early to see.
  */
 export function outboxInsert(db: Db, debt: OutboxDebt, now = nowSeconds()) {
-  // A debt held back (an email's `notBefore`) is due when it says, or
+  // A debt held back (`notBefore`) is due when it says, or
   // after the grace if that is later: the drain must still not race a
   // fast path.
-  const due = Math.max(
-    now + OUTBOX_FAST_PATH_GRACE_S,
-    notBeforeOf(debt.message) ?? 0,
-  );
+  const due = Math.max(now + OUTBOX_FAST_PATH_GRACE_S, debt.notBefore ?? 0);
   return db
     .insert(outbox)
     .values({

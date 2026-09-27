@@ -13,7 +13,7 @@ import {
   type EmailKind,
 } from "../../src/lib/email";
 import { nowSeconds } from "../../src/lib/now";
-import { dedupeKeyFor, notBeforeOf } from "../../src/lib/outbox";
+import { dedupeKeyFor } from "../../src/lib/outbox";
 import {
   claimEmailSend,
   deliverEmail,
@@ -380,32 +380,16 @@ describe("claimEmailSend", () => {
 describe("the email outbox kind", () => {
   it("is keyed by its writer and held back until its notBefore", async () => {
     const payload = { to: { userId: "u1" }, template: REMINDER } as const;
-    const held = emailDebt(payload, {
-      dedupeKey: "reminder:u1:2026-09-27",
-      notBefore: NOW + 20 * 60 + 1,
-    });
+    const held = emailDebt(payload, { dedupeKey: "reminder:u1:2026-09-27" });
     expect(held).toStrictEqual({
       kind: "email",
-      payload: {
-        dedupeKey: "reminder:u1:2026-09-27",
-        notBefore: NOW + 20 * 60 + 1,
-        email: payload,
-      },
+      payload: { dedupeKey: "reminder:u1:2026-09-27", email: payload },
     });
     expect(dedupeKeyFor(held)).toBe("reminder:u1:2026-09-27");
-    expect(notBeforeOf(held)).toBe(NOW + 20 * 60 + 1);
-
     const now = emailDebt(payload, { dedupeKey: "k" });
-    expect(now.payload).not.toHaveProperty("notBefore");
-    expect(notBeforeOf(now)).toBeUndefined();
-    expect(
-      notBeforeOf({
-        kind: "photo_delete",
-        payload: { userId: "u", itemId: "i" },
-      }),
-    ).toBeUndefined();
 
-    const heldDebt = oweOutbox(held);
+    const heldDebt = oweOutbox(held, NOW + 20 * 60 + 1);
+    expect(heldDebt.notBefore).toBe(NOW + 20 * 60 + 1);
     const nowDebt = oweOutbox(now);
     await db.batch([
       outboxInsert(db, heldDebt, NOW),

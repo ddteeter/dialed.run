@@ -193,11 +193,9 @@ describe("renderEmail", () => {
     // empty one. Both the (absent) reason line and the real footer line
     // share FOOTER_STYLE, so a stray empty paragraph would show up as a
     // second copy of its inline style in the HTML.
-    const footerStyle = "font-size:12px;line-height:18px;color:#7a7a70;margin:0";
-    expect(
-      verify.html.split(footerStyle).length - 1,
-      verify.html,
-    ).toBe(1);
+    const footerStyle =
+      "font-size:12px;line-height:18px;color:#7a7a70;margin:0";
+    expect(verify.html.split(footerStyle).length - 1, verify.html).toBe(1);
     // The reminder genuinely has a reason, so it carries two.
     expect(reminder.html.split(footerStyle).length - 1).toBe(2);
   });

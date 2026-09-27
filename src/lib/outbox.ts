@@ -36,15 +36,14 @@ const photoDelete = z.object({
  * retries a send that failed.
  *
  * `dedupeKey` is the caller's name for "the same email": a second debt
- * with it is the same row. `notBefore` (epoch seconds) holds a row back
- * until then — task 127's reminder goes out 20 minutes after the run
- * lands — and a row with one is left to the drain, never a fast path.
+ * with it is the same row. A row can be held back (ops' `oweOutbox`
+ * `notBefore`) — task 127's reminder goes out 20 minutes after the run
+ * lands — and a held row is left to the drain, never a fast path.
  */
 const email = z.object({
   kind: z.literal("email"),
   payload: z.object({
     dedupeKey: z.string().min(1),
-    notBefore: z.int().optional(),
     email: emailPayloadSchema,
   }),
 });
@@ -76,21 +75,6 @@ export function dedupeKeyFor(message: OutboxMessage): string {
     }
     case "email": {
       return message.payload.dedupeKey;
-    }
-  }
-}
-
-/**
- * The earliest the debt may be worked, in epoch seconds, or `undefined`
- * for "as soon as it is written".
- */
-export function notBeforeOf(message: OutboxMessage): number | undefined {
-  switch (message.kind) {
-    case "photo_delete": {
-      return undefined;
-    }
-    case "email": {
-      return message.payload.notBefore;
     }
   }
 }

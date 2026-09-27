@@ -38,7 +38,10 @@ describe("UnsubscribeLanding", () => {
       <UnsubscribeLanding landing={OFF} resubscribe={vi.fn()} />,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: "Run reminder emails are off" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Run reminder emails are off",
+      }),
     ).toBeVisible();
     expect(screen.getByText("Done · maya@example.com")).toHaveClass(
       "text-dialed-text",
@@ -72,7 +75,9 @@ describe("UnsubscribeLanding", () => {
 
     expect(resubscribe).toHaveBeenCalledTimes(1);
     expect(
-      await screen.findByRole("heading", { name: "Run reminder emails are on" }),
+      await screen.findByRole("heading", {
+        name: "Run reminder emails are on",
+      }),
     ).toBeVisible();
     expect(
       screen.getByText("The next run that lands on Strava gets one."),

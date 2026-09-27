@@ -9,17 +9,16 @@ import type { OutboxMessage } from "../../lib/outbox";
  *
  * `dedupeKey` names "the same email": a second debt with it replaces the
  * first rather than sending twice (a reminder per runner per day, say).
- * `notBefore` holds it until then, in epoch seconds.
+ * To hold it back, pass `notBefore` to `oweOutbox` alongside it.
  */
 export function emailDebt(
   payload: EmailPayload,
-  options: Readonly<{ dedupeKey: string; notBefore?: number | undefined }>,
+  options: Readonly<{ dedupeKey: string }>,
 ): OutboxMessage {
   return {
     kind: "email",
     payload: {
       dedupeKey: options.dedupeKey,
-      ...(options.notBefore !== undefined && { notBefore: options.notBefore }),
       email: payload,
     },
   };

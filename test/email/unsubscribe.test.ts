@@ -14,7 +14,7 @@ import { SECRET } from "./helpers";
  */
 
 describe("signingKey", () => {
-  it("derives a key that cannot be exported", async () => {
+  it("keys by the secret, and the key cannot be exported", async () => {
     const key = await signingKey(SECRET);
     expect(key.extractable).toBe(false);
     expect(key.usages).toContain("sign");
@@ -23,27 +23,15 @@ describe("signingKey", () => {
 });
 
 describe("unsubscribeSignature", () => {
-  it("matches an independent HMAC over the purpose-derived key, pinning the purpose label", async () => {
+  it("matches an independent HMAC over the purpose-led message, pinning the purpose label", async () => {
     // Computed here without importing anything from the production module,
     // so a change to the purpose label, the derivation or the encoding
     // shows up as a mismatch rather than being masked by both sides sharing
     // one (possibly mutated) implementation.
     const encoder = new TextEncoder();
-    const master = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(SECRET),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const derived = await crypto.subtle.sign(
-      "HMAC",
-      master,
-      encoder.encode("dialed.run unsubscribe v1"),
-    );
     const key = await crypto.subtle.importKey(
       "raw",
-      derived,
+      encoder.encode(SECRET),
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign"],
@@ -51,7 +39,7 @@ describe("unsubscribeSignature", () => {
     const raw = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode("u1|run_reminder"),
+      encoder.encode("dialed.run unsubscribe v1|u1|run_reminder"),
     );
     const expected = btoa(String.fromCodePoint(...new Uint8Array(raw)))
       .replaceAll("+", "-")

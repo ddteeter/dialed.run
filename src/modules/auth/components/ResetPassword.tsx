@@ -20,32 +20,55 @@ const LINK_CLASS =
 type Outcome = "set" | "expired";
 
 /**
+The run-out panel: a link with no token, or one the server refused.
+*/
+function RunOut(): JSX.Element {
+  return (
+    <SignedOutPanel heading="That link has run out">
+      <div data-part="reset-expired" className="flex flex-col gap-6">
+        <p className="m-0 text-lead">
+          Reset links work once, for 1 hour. Ask for another.
+        </p>
+        <Link to="/account/forgot" className={LINK_CLASS}>
+          Send another
+        </Link>
+      </div>
+    </SignedOutPanel>
+  );
+}
+
+/**
  * ACC-4's second step: the link's page, where the new password is set
  * (undrawn: design deltas). The link is single use and lives an hour, and
- * spending it signs every session out, so the way on is Log in.
+ * spending it signs every session out, so the way on is Log in. A link
+ * with no token has run out before anything is typed.
  */
 export function ResetPassword({
   token,
   reset,
 }: Readonly<{
-  /**
-  The link's token, or nothing for a link with none — which has run out.
-  */
   token: string | undefined;
   reset: (token: string, values: { password: string }) => Promise<void>;
 }>): JSX.Element {
-  const [password, setPassword] = useState("");
-  const [outcome, setOutcome] = useState<Outcome | undefined>(
-    token === undefined ? "expired" : undefined,
+  return token === undefined ? (
+    <RunOut />
+  ) : (
+    <ResetForm token={token} reset={reset} />
   );
+}
+
+function ResetForm({
+  token,
+  reset,
+}: Readonly<{
+  token: string;
+  reset: (token: string, values: { password: string }) => Promise<void>;
+}>): JSX.Element {
+  const [password, setPassword] = useState("");
+  const [outcome, setOutcome] = useState<Outcome | undefined>();
   const form = useFormSubmit({
     schema: newPasswordSchema,
     action: async (values): Promise<Outcome> => {
-      // `token` is undefined only when the "expired" panel above already
-      // took over the render, so submitting the form means it is defined —
-      // narrowed explicitly rather than with `?? ""`, which would have sent
-      // a real request with a placeholder token instead of stopping here.
-      if (token === undefined) return "expired";
       try {
         await reset(token, values);
         return "set";
@@ -76,20 +99,7 @@ export function ResetPassword({
     );
   }
 
-  if (outcome === "expired") {
-    return (
-      <SignedOutPanel heading="That link has run out">
-        <div data-part="reset-expired" className="flex flex-col gap-6">
-          <p className="m-0 text-lead">
-            Reset links work once, for 1 hour. Ask for another.
-          </p>
-          <Link to="/account/forgot" className={LINK_CLASS}>
-            Send another
-          </Link>
-        </div>
-      </SignedOutPanel>
-    );
-  }
+  if (outcome === "expired") return <RunOut />;
 
   return (
     <SignedOutPanel heading="Set a new password">

@@ -8,7 +8,10 @@ import {
   switchByLink,
 } from "../../src/modules/email/landing";
 import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
-import { accountPage, accountView } from "../../src/modules/account/account-view";
+import {
+  accountPage,
+  accountView,
+} from "../../src/modules/account/account-view";
 import { newUlid } from "../../src/lib/ids";
 import { core, ORIGIN, SECRET, seedUser } from "./helpers";
 
@@ -25,7 +28,9 @@ beforeEach(async () => {
 });
 
 async function signedSearch(userId: string): Promise<Record<string, string>> {
-  const url = new URL(await unsubscribeUrl(ORIGIN, SECRET, userId, "run_reminder"));
+  const url = new URL(
+    await unsubscribeUrl(ORIGIN, SECRET, userId, "run_reminder"),
+  );
   return Object.fromEntries(url.searchParams);
 }
 

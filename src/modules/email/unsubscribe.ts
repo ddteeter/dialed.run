@@ -3,9 +3,9 @@
  * never expiring, and working without a session — "Opening it is the
  * unsubscribe: no confirm button and no 'are you sure'."
  *
- * HMAC-SHA256 over `userId|kind`, keyed by a key derived from the auth
- * secret with a purpose label, so a signature made for this can never be
- * replayed as anything else the secret signs. Rotating `BETTER_AUTH_SECRET`
+ * HMAC-SHA256, keyed by the auth secret, over `purpose|userId|kind` — the
+ * purpose label first, so a signature made for this can never be replayed
+ * as anything else the secret signs. Rotating `BETTER_AUTH_SECRET`
  * breaks every link in every inbox; that is the cost of a link that needs
  * no table, and it is the owner's to pay knowingly.
  */
@@ -24,27 +24,13 @@ const PURPOSE = "dialed.run unsubscribe v1";
 const encoder = new TextEncoder();
 
 /**
- * Exported for its own test only: the derived key is never returned to any
- * other caller in this module, so `extractable: false` on both `importKey`
- * calls has no effect anything else here could observe short of reading the
- * `CryptoKey`'s own `.extractable` flag directly.
+ * The key: the auth secret itself, never extractable. Exported for its own
+ * test — nothing else here hands the key out.
  */
 export async function signingKey(secret: string): Promise<CryptoKey> {
-  const master = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const derived = await crypto.subtle.sign(
-    "HMAC",
-    master,
-    encoder.encode(PURPOSE),
-  );
   return crypto.subtle.importKey(
     "raw",
-    derived,
+    encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"],
@@ -68,7 +54,9 @@ function message(
   userId: string,
   kind: EmailPreferenceKind,
 ): Uint8Array<ArrayBuffer> {
-  return encoder.encode(`${userId}|${kind}`);
+  // The purpose label leads the message, so a signature made for this can
+  // never be replayed as anything else the same secret signs.
+  return encoder.encode(`${PURPOSE}|${userId}|${kind}`);
 }
 
 export async function unsubscribeSignature(
