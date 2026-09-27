@@ -114,16 +114,11 @@ async function importTcx(userId: string): Promise<void> {
 
 async function connect(userId: string): Promise<string> {
   const athleteId = newUlid();
-  await coreDb()
-    .insert(stravaConnections)
-    .values({
-      userId,
-      athleteId,
-      accessToken: "access",
-      refreshToken: "refresh",
-      expiresAt: nowSeconds() + HOUR,
-      status: "ok",
-    });
+  await coreDb().insert(stravaConnections).values({
+    userId,
+    athleteId,
+    refreshToken: "refresh",
+  });
   return athleteId;
 }
 

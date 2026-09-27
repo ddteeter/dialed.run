@@ -200,7 +200,7 @@ export async function stravaStatusOf(
 }
 
 /**
-Exchanges the OAuth `code` and upserts the connection as `ok`. Re-running
+Exchanges the OAuth `code` and upserts the connection. Re-running
 with a fresh code (the runner reconnects) replaces the row outright.
 */
 export async function completeStravaConnect(
@@ -212,10 +212,7 @@ export async function completeStravaConnect(
   const tokens = await api.exchangeCode(code);
   const connection = {
     athleteId: tokens.athleteId,
-    accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
-    expiresAt: tokens.expiresAt,
-    status: "ok" as const,
     connectedAt: nowSeconds(),
   };
   // A reconnect cancels a revocation still owed for the same grant, in the
@@ -322,7 +319,6 @@ export async function disconnectStrava(
     db.delete(stravaConnections).where(eq(stravaConnections.userId, userId)),
     db.insert(stravaRevocations).values({
       id: revocationId,
-      accessToken: connection.accessToken,
       refreshToken: connection.refreshToken,
       createdAt: nowSeconds(),
     }),

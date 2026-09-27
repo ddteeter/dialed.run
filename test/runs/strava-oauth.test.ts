@@ -80,9 +80,7 @@ function fakeApi(
           // (one athlete belongs to one user), and these tests share a
           // database within the file.
           athleteId: newUlid(),
-          accessToken: "access-1",
           refreshToken: "refresh-1",
-          expiresAt: nowS() + 3600,
         })),
     revoke: () => Promise.reject(new Error("oauth.ts never revokes")),
   };
@@ -118,9 +116,7 @@ describe("completeStravaConnect (102 §6)", () => {
         exchangeCode: () =>
           Promise.resolve({
             athleteId,
-            accessToken: "access-1",
             refreshToken: "refresh-1",
-            expiresAt: nowS() + 3600,
           }),
       }),
       userId,
@@ -129,7 +125,7 @@ describe("completeStravaConnect (102 §6)", () => {
 
     const connection = await getStravaConnection(db, userId);
     expect(connection?.athleteId).toBe(athleteId);
-    expect(connection?.status).toBe("ok");
+    expect(connection?.refreshToken).toBe("refresh-1");
   });
 
   it("reconnecting replaces the existing row rather than erroring", async () => {
@@ -142,9 +138,7 @@ describe("completeStravaConnect (102 §6)", () => {
         exchangeCode: () =>
           Promise.resolve({
             athleteId: "222",
-            accessToken: "access-new",
             refreshToken: "refresh-new",
-            expiresAt: nowS() + 7200,
           }),
       }),
       userId,
@@ -153,7 +147,7 @@ describe("completeStravaConnect (102 §6)", () => {
 
     const connection = await getStravaConnection(db, userId);
     expect(connection?.athleteId).toBe("222");
-    expect(connection?.accessToken).toBe("access-new");
+    expect(connection?.refreshToken).toBe("refresh-new");
   });
 });
 
@@ -171,10 +165,7 @@ describe("disconnectStrava", () => {
     await db.insert(stravaConnections).values({
       userId,
       athleteId,
-      accessToken: "access-live",
-      refreshToken: "refresh-1",
-      expiresAt: nowS() + 3600,
-      status: "ok",
+      refreshToken: "refresh-live",
     });
     const queue = fakeRevokeQueue();
 
@@ -191,11 +182,10 @@ describe("disconnectStrava", () => {
     const [pending] = await db
       .select()
       .from(stravaRevocations)
-      .where(eq(stravaRevocations.accessToken, "access-live"));
-    expect(pending?.accessToken).toBe("access-live");
-    // STR-2: the token a revoke can still use hours later. An access token
-    // is dead six hours after issue; the refresh token lives until rotated.
-    expect(pending?.refreshToken).toBe("refresh-1");
+      .where(eq(stravaRevocations.refreshToken, "refresh-live"));
+    // STR-2: the token a revoke can still use however late the drain
+    // runs — a refresh token lives until rotated.
+    expect(pending?.refreshToken).toBe("refresh-live");
 
     // The queue message is only a pointer to it — no secret on the wire.
     expect(queue.sent).toEqual([
@@ -210,14 +200,11 @@ describe("disconnectStrava", () => {
   it("still records the revocation when dispatch fails", async () => {
     const db = coreDb();
     const userId = newUlid();
-    const token = `access-${newUlid()}`;
+    const token = `refresh-${newUlid()}`;
     await db.insert(stravaConnections).values({
       userId,
       athleteId: newUlid(),
-      accessToken: token,
-      refreshToken: "refresh-1",
-      expiresAt: nowS() + 3600,
-      status: "ok",
+      refreshToken: token,
     });
     const failing = {
       sent: [] as unknown[],
@@ -236,7 +223,7 @@ describe("disconnectStrava", () => {
     const rows = await db
       .select()
       .from(stravaRevocations)
-      .where(eq(stravaRevocations.accessToken, token));
+      .where(eq(stravaRevocations.refreshToken, token));
     expect(rows).toHaveLength(1);
 
     // A dropped dispatch is not silent: the digest re-dispatches the row,
@@ -311,95 +298,34 @@ describe("stravaAuthorizeUrl carries every parameter Strava needs", () => {
   });
 });
 
-describe("completeStravaConnect writes every token it was given", () => {
-  it("stores the athlete, both tokens and the expiry", async () => {
+describe("completeStravaConnect stores only what a revoke needs (D-54)", () => {
+  it("stores the athlete and the refresh token, and nothing else", async () => {
     const db = coreDb();
     const userId = newUlid();
+    const athleteId = `athlete-${newUlid()}`;
+    const before = nowS();
 
     await completeStravaConnect(
       db,
       fakeApi({
         exchangeCode: () =>
-          Promise.resolve({
-            athleteId: `athlete-${newUlid()}`,
-            accessToken: "access-9",
-            refreshToken: "refresh-9",
-            expiresAt: 1_768_485_600,
-          }),
+          Promise.resolve({ athleteId, refreshToken: "refresh-9" }),
       }),
       userId,
       "the-code",
     );
 
-    expect(await getStravaConnection(db, userId)).toMatchObject({
-      accessToken: "access-9",
+    // No access token, no expiry, no refresh-failure tracking: the row
+    // is the grant's identity and the one token that revokes it.
+    const connection = await getStravaConnection(db, userId);
+    const connectedAt = connection?.connectedAt ?? 0;
+    expect(connectedAt).toBeGreaterThanOrEqual(before);
+    expect(connection).toStrictEqual({
+      userId,
+      athleteId,
       refreshToken: "refresh-9",
-      expiresAt: 1_768_485_600,
-      status: "ok",
+      connectedAt,
     });
-  });
-
-  it("stamps the connection's expiry in epoch seconds", async () => {
-    // `expires_at` from Strava is already epoch seconds; storing anything
-    // else makes every refresh look overdue or never due.
-    const db = coreDb();
-    const userId = newUlid();
-    const expiresAt = nowS() + 3600;
-
-    await completeStravaConnect(
-      db,
-      fakeApi({
-        exchangeCode: () =>
-          Promise.resolve({
-            athleteId: `athlete-${newUlid()}`,
-            accessToken: "access",
-            refreshToken: "refresh",
-            expiresAt,
-          }),
-      }),
-      userId,
-      "code",
-    );
-
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.expiresAt).toBe(expiresAt);
-  });
-
-  it("clears a broken status when the user reconnects", async () => {
-    // Reconnecting is the only way out of `broken`, so the upsert has to
-    // set the status rather than leaving whatever was there.
-    const db = coreDb();
-    const userId = newUlid();
-    const freshAthlete = `athlete-${newUlid()}`;
-    await db.insert(stravaConnections).values({
-      userId,
-      athleteId: `athlete-old-${newUlid()}`,
-      accessToken: "access-old",
-      refreshToken: "refresh-old",
-      expiresAt: nowS() - 10,
-      status: "broken",
-      refreshFailureCount: 3,
-    });
-
-    await completeStravaConnect(
-      db,
-      fakeApi({
-        exchangeCode: () =>
-          Promise.resolve({
-            athleteId: freshAthlete,
-            accessToken: "access-new",
-            refreshToken: "refresh-new",
-            expiresAt: nowS() + 3600,
-          }),
-      }),
-      userId,
-      "code",
-    );
-
-    const connection = await getStravaConnection(db, userId);
-    expect(connection?.status).toBe("ok");
-    expect(connection?.athleteId).toBe(freshAthlete);
-    expect(connection?.accessToken).toBe("access-new");
   });
 });
 
@@ -427,10 +353,7 @@ describe("disconnectStrava when there is nothing connected", () => {
     await db.insert(stravaConnections).values({
       userId,
       athleteId: newUlid(),
-      accessToken: "access-noqueue",
-      refreshToken: "refresh",
-      expiresAt: nowS() + 3600,
-      status: "ok",
+      refreshToken: "refresh-noqueue",
     });
 
     await disconnectStrava(
@@ -444,7 +367,7 @@ describe("disconnectStrava when there is nothing connected", () => {
     const [pending] = await db
       .select()
       .from(stravaRevocations)
-      .where(eq(stravaRevocations.accessToken, "access-noqueue"));
+      .where(eq(stravaRevocations.refreshToken, "refresh-noqueue"));
     expect(pending).toBeDefined();
   });
 });
@@ -588,7 +511,7 @@ describe("connectFromCallback (the callback, as one decision)", () => {
 
     expect(result).toStrictEqual({ ok: true });
     const connection = await getStravaConnection(db, userId);
-    expect(connection?.status).toBe("ok");
+    expect(connection?.refreshToken).toBe("refresh-1");
   });
 
   it("refuses a forged callback without calling Strava", async () => {
@@ -814,13 +737,8 @@ describe("completeStravaConnect: a grant made now", () => {
     const refreshToken = `refresh-${newUlid()}`;
     const otherToken = `refresh-${newUlid()}`;
     await db.insert(stravaRevocations).values([
-      { id: newUlid(), accessToken: "a", refreshToken, createdAt: 1 },
-      {
-        id: newUlid(),
-        accessToken: "b",
-        refreshToken: otherToken,
-        createdAt: 1,
-      },
+      { id: newUlid(), refreshToken, createdAt: 1 },
+      { id: newUlid(), refreshToken: otherToken, createdAt: 1 },
     ]);
 
     await completeStravaConnect(
@@ -829,9 +747,7 @@ describe("completeStravaConnect: a grant made now", () => {
         exchangeCode: () =>
           Promise.resolve({
             athleteId: newUlid(),
-            accessToken: "access",
             refreshToken,
-            expiresAt: nowS() + 3600,
           }),
       }),
       userId,

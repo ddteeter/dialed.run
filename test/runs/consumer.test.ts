@@ -17,7 +17,7 @@ import {
   importFailureReason,
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
-import type { StoredToken, StravaApi } from "../../src/modules/runs/strava/api";
+import type { StravaApi } from "../../src/modules/runs/strava/api";
 import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
@@ -307,10 +307,7 @@ async function connectAthlete(
   await db.insert(stravaConnections).values({
     userId,
     athleteId,
-    accessToken: "access",
     refreshToken: "refresh",
-    expiresAt: nowSeconds() + 3600,
-    status: "ok",
   });
   return userId;
 }
@@ -553,14 +550,10 @@ describe("the import consumer's quieter paths", () => {
   });
 });
 
-async function seedRevocation(
-  accessToken = "token",
-  refreshToken?: string,
-): Promise<string> {
+async function seedRevocation(refreshToken = "token"): Promise<string> {
   const id = newUlid();
   await coreDb().insert(stravaRevocations).values({
     id,
-    accessToken,
     refreshToken,
     createdAt: nowSeconds(),
   });
@@ -571,10 +564,10 @@ async function seedRevocation(
  * A Strava api whose revoke records what it was handed.
  */
 function recordingRevoke(): {
-  revoked: StoredToken[];
+  revoked: string[];
   stravaApi: Pick<StravaApi, "revoke">;
 } {
-  const revoked: StoredToken[] = [];
+  const revoked: string[] = [];
   return {
     revoked,
     stravaApi: {
@@ -592,7 +585,7 @@ describe("the Strava revoke job (the outbox's other half)", () => {
     // drain runs. The order is the guarantee: the row is what says we
     // still owe Strava a call, so it goes only after Strava confirms.
     const { revoked, stravaApi } = recordingRevoke();
-    const revocationId = await seedRevocation("the-access", "the-refresh");
+    const revocationId = await seedRevocation("the-refresh");
     const deps = makeDeps({ stravaApi });
 
     const { batch } = fakeBatch([
@@ -600,31 +593,7 @@ describe("the Strava revoke job (the outbox's other half)", () => {
     ]);
     await handleImportsBatch(batch, deps);
 
-    expect(revoked).toStrictEqual([
-      { token: "the-refresh", kind: "refresh_token" },
-    ]);
-    const rows = await coreDb()
-      .select()
-      .from(stravaRevocations)
-      .where(eq(stravaRevocations.id, revocationId));
-    expect(rows).toHaveLength(0);
-  });
-
-  it("revokes a row written before the refresh token with its access token", async () => {
-    // Law 9's cousin for tables: a row the previous deploy wrote still
-    // drains. Strava answers 200 whether or not the token is found, so
-    // even a dead access token settles the row.
-    const { revoked, stravaApi } = recordingRevoke();
-    const revocationId = await seedRevocation("legacy-access");
-
-    const { batch } = fakeBatch([
-      { body: { type: "strava_revoke", revocationId } },
-    ]);
-    await handleImportsBatch(batch, makeDeps({ stravaApi }));
-
-    expect(revoked).toStrictEqual([
-      { token: "legacy-access", kind: "access_token" },
-    ]);
+    expect(revoked).toStrictEqual(["the-refresh"]);
     const rows = await coreDb()
       .select()
       .from(stravaRevocations)
@@ -924,17 +893,12 @@ async function seedConnection(connectedAt?: number): Promise<{
   const userId = newUlid();
   const athleteId = newUlid();
   const refreshToken = `refresh-${athleteId}`;
-  await coreDb()
-    .insert(stravaConnections)
-    .values({
-      userId,
-      athleteId,
-      accessToken: "access",
-      refreshToken,
-      expiresAt: nowSeconds() + 3600,
-      status: "ok",
-      connectedAt,
-    });
+  await coreDb().insert(stravaConnections).values({
+    userId,
+    athleteId,
+    refreshToken,
+    connectedAt,
+  });
   return { userId, athleteId, refreshToken };
 }
 

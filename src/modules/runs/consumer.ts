@@ -33,7 +33,7 @@ import {
   type ReminderJob,
   type RevokeJob,
 } from "./queue-messages";
-import type { StoredToken, StravaApi } from "./strava/api";
+import type { StravaApi } from "./strava/api";
 import { deauthorizeAthlete } from "./strava/deauthorize";
 import {
   pairRunWith,
@@ -293,20 +293,6 @@ async function processReminderJob(
 }
 
 /**
- * The token a revocation is made with: the refresh token (STR-2), which
- * does not expire, or — for a row written before that column existed —
- * the access token it copied, which is the best there is.
- */
-function revocationToken(row: {
-  accessToken: string;
-  refreshToken: string | null;
-}): StoredToken {
-  return row.refreshToken === null
-    ? { token: row.accessToken, kind: "access_token" }
-    : { token: row.refreshToken, kind: "refresh_token" };
-}
-
-/**
  * Revoke a Strava grant the user has already been disconnected from.
  *
  * Idempotent by nature: Strava answers 200 to a revoke "whether or not the
@@ -339,7 +325,7 @@ async function processRevokeJob(
     .limit(1);
   if (pending === undefined) return; // already revoked
 
-  await deps.stravaApi.revoke(revocationToken(pending));
+  await deps.stravaApi.revoke(pending.refreshToken);
   // Only after Strava confirms. A failure above throws, the queue retries,
   // and the row stays — which is the whole point of writing it down.
   await deps.db

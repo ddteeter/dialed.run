@@ -77,11 +77,11 @@ describe("exchangeCode", () => {
 
     const tokens = await createStravaApi(CONFIG).exchangeCode("the-code");
 
+    // D-54: the access token and its expiry come back from Strava and
+    // go no further — only what a revoke needs leaves this call.
     expect(tokens).toStrictEqual({
       athleteId: "12345",
-      accessToken: "access",
       refreshToken: "refresh",
-      expiresAt: 1_768_485_600,
     });
 
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
@@ -174,11 +174,8 @@ describe("exchangeCode", () => {
 
   it("refuses a response missing any token it needs", async () => {
     const partials = [
-      { ...EXCHANGE_BODY, access_token: "" },
       { ...EXCHANGE_BODY, refresh_token: "" },
       { ...EXCHANGE_BODY, refresh_token: undefined },
-      { ...EXCHANGE_BODY, expires_at: -1 },
-      { ...EXCHANGE_BODY, expires_at: 1.5 },
       { ...EXCHANGE_BODY, athlete: undefined },
       { ...EXCHANGE_BODY, athlete: { id: 1.5 } },
     ];
@@ -193,15 +190,12 @@ describe("exchangeCode", () => {
 });
 
 describe("revoke (STR-5: POST /oauth/revoke)", () => {
-  it("posts the token and its kind, authenticated as the app", async () => {
+  it("posts the refresh token and its kind, authenticated as the app", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response(undefined, { status: 200 }));
 
-    await createStravaApi(CONFIG).revoke({
-      token: "tok en/+&",
-      kind: "refresh_token",
-    });
+    await createStravaApi(CONFIG).revoke("tok en/+&");
 
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
     expect(urlOf(url).href).toBe("https://www.strava.com/oauth/revoke");
@@ -229,9 +223,7 @@ describe("revoke (STR-5: POST /oauth/revoke)", () => {
       new Response(undefined, { status: 200 }),
     );
 
-    await expect(
-      createStravaApi(CONFIG).revoke({ token: "t", kind: "access_token" }),
-    ).resolves.toBeUndefined();
+    await expect(createStravaApi(CONFIG).revoke("t")).resolves.toBeUndefined();
   });
 
   it("throws on a refusal, so the queue retries it", async () => {
@@ -243,9 +235,7 @@ describe("revoke (STR-5: POST /oauth/revoke)", () => {
         new Response(undefined, { status }),
       );
 
-      const error = await rejectionFrom(
-        createStravaApi(CONFIG).revoke({ token: "t", kind: "access_token" }),
-      );
+      const error = await rejectionFrom(createStravaApi(CONFIG).revoke("t"));
       expect(error).toMatchObject({ status, refusal: undefined });
     }
   });

@@ -84,9 +84,7 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
       await core.insert(stravaConnections).values({
         userId,
         athleteId,
-        accessToken: "demo-access",
         refreshToken,
-        expiresAt: nowSeconds() + 3600,
         connectedAt: nowSeconds() - 60,
       });
     });

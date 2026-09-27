@@ -18,31 +18,26 @@ export interface StravaConfig {
   clientSecret: string;
 }
 
+/**
+ * What a code exchange keeps (D-54): the athlete, and the refresh token a
+ * later revoke needs. Strava also returns an access token and its expiry;
+ * neither is read, so neither leaves this file.
+ */
 export interface ExchangedTokens {
   athleteId: string;
-  accessToken: string;
   refreshToken: string;
-  expiresAt: number;
-}
-
-/**
- * A token to revoke, and which kind it is — Strava's `token_type_hint`.
- */
-export interface StoredToken {
-  token: string;
-  kind: "access_token" | "refresh_token";
 }
 
 export interface StravaApi {
   exchangeCode(code: string): Promise<ExchangedTokens>;
   /**
-   * Revoke a grant through `POST /oauth/revoke` (STR-5), with either of its
-   * tokens. Strava: "Revoking a refresh token will also revoke any
-   * associated access tokens, and vice versa", and it answers 200 "whether
-   * or not the token was found" — so a grant that is already dead settles
-   * exactly as a live one does.
+   * Revoke a grant through `POST /oauth/revoke` (STR-5), with its refresh
+   * token. Strava: "Revoking a refresh token will also revoke any
+   * associated access tokens", and it answers 200 "whether or not the token
+   * was found" — so a grant that is already dead settles exactly as a live
+   * one does.
    */
-  revoke(token: StoredToken): Promise<void>;
+  revoke(refreshToken: string): Promise<void>;
 }
 
 const TOKEN_URL = "https://www.strava.com/oauth/token";
@@ -54,9 +49,7 @@ const REVOKE_URL = "https://www.strava.com/oauth/revoke";
 const FETCH_TIMEOUT_MS = 10_000;
 
 const exchangeResponseSchema = z.object({
-  access_token: z.string().min(1),
   refresh_token: z.string().min(1),
-  expires_at: z.number().int().positive(),
   athlete: z.object({ id: z.number().int() }),
 });
 
@@ -174,16 +167,14 @@ export function createStravaApi(config: StravaConfig): StravaApi {
       }
       return {
         athleteId: String(parsed.data.athlete.id),
-        accessToken: parsed.data.access_token,
         refreshToken: parsed.data.refresh_token,
-        expiresAt: parsed.data.expires_at,
       };
     },
-    async revoke({ token, kind }) {
+    async revoke(refreshToken) {
       // The body is empty on success, and nothing in it is read.
       await post(
         REVOKE_URL,
-        { token, token_type_hint: kind },
+        { token: refreshToken, token_type_hint: "refresh_token" },
         { authorization: basicAuth(config) },
       );
     },

@@ -3,7 +3,7 @@
  *
  * Strava's API Policy §7.4 requires a revoked grant's data to be deleted
  * "within thirty (30) days". What we hold is the connection row — the
- * athlete id and both tokens — and this deletes it the moment the event is
+ * athlete id and the refresh token — and this deletes it the moment the event is
  * consumed, which is well inside that.
  *
  * **It also owes Strava a revoke, because the event may be forged.** A
@@ -76,7 +76,6 @@ export async function deauthorizeAthlete(
     db.delete(stravaConnections).where(aboutThisGrant),
     db.insert(stravaRevocations).values({
       id: newUlid(),
-      accessToken: connection.accessToken,
       refreshToken: connection.refreshToken,
       createdAt: nowSeconds(),
     }),
