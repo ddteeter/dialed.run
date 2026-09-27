@@ -7,14 +7,21 @@
  * pill inline, so each result carries whether the viewer already follows
  * them — one covering-index read for the whole page, not one per row. The
  * viewer is never a result: following yourself is not a thing.
+ *
+ * Nor is a banned runner, or anyone in a block pair with the viewer
+ * (FEED-7, D-107): W2 says a blocked runner cannot find you in search and
+ * you will not see them there. Both in the `WHERE`, ahead of the `LIMIT`,
+ * so twenty hidden matches cannot leave an empty page that looks real.
  */
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { follows, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { normalizeUsername } from "../../lib/contracts";
 import { columnWhere } from "../../lib/keyed-read";
+import { runnerShownTo } from "./runner-visibility";
 
 const RESULT_LIMIT = 20;
 
@@ -35,16 +42,17 @@ export interface SearchResult {
   following: boolean;
 }
 
-export async function searchRunners(
+/**
+ * The read behind search, as a statement so a test can read its plan: the
+ * prefix off `user_profiles_username_nocase`, and the block pair two
+ * primary-key probes per candidate.
+ */
+export function searchStatement(
+  database: DrizzleD1Database,
   viewerId: string,
-  prefix: string,
-): Promise<SearchResult[]> {
-  // The handle as it is stored: no "@", no spaces, lowercased — the field
-  // shows "@" before a handle, so a runner may well type one.
-  const typed = normalizeUsername(prefix);
-  if (typed.length === 0) return [];
-  const database = drizzle(env.DIALED_CORE);
-  const rows = await database
+  typed: string,
+) {
+  return database
     .select({
       userId: userProfiles.userId,
       username: userProfiles.username,
@@ -56,9 +64,23 @@ export async function searchRunners(
         // so the prefix is still served by the NOCASE index.
         sql`${userProfiles.username} LIKE ${likePrefix(typed)} ESCAPE '\\'`,
         ne(userProfiles.userId, viewerId),
+        isNull(userProfiles.bannedAt),
+        runnerShownTo(viewerId, userProfiles.userId),
       ),
     )
     .limit(RESULT_LIMIT);
+}
+
+export async function searchRunners(
+  viewerId: string,
+  prefix: string,
+): Promise<SearchResult[]> {
+  // The handle as it is stored: no "@", no spaces, lowercased — the field
+  // shows "@" before a handle, so a runner may well type one.
+  const typed = normalizeUsername(prefix);
+  if (typed.length === 0) return [];
+  const database = drizzle(env.DIALED_CORE);
+  const rows = await searchStatement(database, viewerId, typed);
   const found = rows.map((row) => row.userId);
   const followedAmongFound = and(
     eq(follows.followerId, viewerId),

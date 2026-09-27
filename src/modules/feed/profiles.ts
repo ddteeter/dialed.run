@@ -4,7 +4,7 @@
  * other-profile query strips everything but display info + recent public
  * entries (no aggregates, no offset translation).
  */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -24,7 +24,9 @@ import { bandsAscending, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";
 import { unitsFor } from "./units";
 import { countWhere } from "./count-where";
-import { followerCount, followingCount } from "./follows";
+import { followerCount, followingCount, isFollowing } from "./follows";
+import { runnerShownTo } from "./runner-visibility";
+import { lookUpHandle } from "../account";
 import { publiclyVisibleEntry } from "../safety";
 
 function db() {
@@ -138,15 +140,29 @@ export interface OtherProfile {
 
 /**
 H v1: public info + recent PUBLIC entries only — no aggregates.
+
+**Told who is looking** (FEED-7, D-107/D-108). A banned runner, or one in
+a block pair with the viewer, answers with nothing — the same answer as
+a runner who does not exist, so the page reads as not found rather than
+as "there is someone here you may not see". Their entries go through the
+viewer-aware form of the one visibility rule, so what the viewer reported
+drops out too, in SQL and ahead of the `LIMIT`.
 */
 export async function otherProfile(
   userId: string,
+  viewerId: string,
 ): Promise<OtherProfile | undefined> {
   const database = db();
   const [profile] = await database
     .select()
     .from(userProfiles)
-    .where(eq(userProfiles.userId, userId))
+    .where(
+      and(
+        eq(userProfiles.userId, userId),
+        isNull(userProfiles.bannedAt),
+        runnerShownTo(viewerId, userProfiles.userId),
+      ),
+    )
     .limit(1);
   if (!profile) return undefined;
 
@@ -158,7 +174,9 @@ export async function otherProfile(
       caption: outfitEntries.caption,
     })
     .from(outfitEntries)
-    .where(and(eq(outfitEntries.userId, userId), publiclyVisibleEntry()))
+    .where(
+      and(eq(outfitEntries.userId, userId), publiclyVisibleEntry(viewerId)),
+    )
     .orderBy(desc(outfitEntries.createdAt))
     .limit(RECENT_LIMIT);
 
@@ -172,5 +190,41 @@ export async function otherProfile(
       verdict: e.verdict,
       caption: e.caption,
     })),
+  };
+}
+
+/**
+What `/@handle` answers (round 26 #7): the runner who holds it now, the
+viewer themself, or a handle somebody used to hold — which says "This
+runner changed their name." and never who they are now, because a
+redirect would link the old handle to the new one (decision D-56).
+*/
+export type ProfileAtHandle =
+  | {
+      readonly kind: "runner";
+      readonly profile: OtherProfile;
+      readonly isFollowing: boolean;
+    }
+  | { readonly kind: "own" }
+  | { readonly kind: "changed" };
+
+/**
+`undefined` for a handle nobody has held, and for one whose holder the
+viewer may not see (banned, or a block either way) — deliberately the same
+answer, for the reason `otherProfile` gives.
+*/
+export async function profileAtHandle(
+  viewerId: string,
+  handle: string,
+): Promise<ProfileAtHandle | undefined> {
+  const found = await lookUpHandle(db(), handle);
+  if (found?.kind !== "current") return found;
+  if (found.userId === viewerId) return { kind: "own" };
+  const profile = await otherProfile(found.userId, viewerId);
+  if (profile === undefined) return undefined;
+  return {
+    kind: "runner",
+    profile,
+    isFollowing: await isFollowing(viewerId, found.userId),
   };
 }

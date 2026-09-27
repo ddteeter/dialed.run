@@ -181,6 +181,8 @@ const NAV: readonly Edge[] = [
       "/closet/edit/$itemId",
       "/feed/entry/$entryId",
       "/feed/u/$userId",
+      // Task 129 (FEED-10): the same profile, addressed by handle.
+      "/@{$handle}",
       "/feed/search",
       "/runs",
       // `/runs/$runId` claims `/runs/strava` too — a param segment matches

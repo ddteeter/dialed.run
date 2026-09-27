@@ -5,13 +5,20 @@ import type { ReactNode } from "react";
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatDistance, formatPace } from "../../../lib/measures";
-import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
+import {
+  Bracketed,
+  FormStatus,
+  Icon,
+  Mono,
+  WeatherAttribution,
+} from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
 import { runWhenLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
+import { Handle } from "./Handle";
 import { ReportFoot } from "./ReportFoot";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -103,9 +110,18 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           <Icon name="back" size={20} />
         </Link>
         <h1 className="m-0 font-display text-heading">
-          {isOwn ? "Your run" : (entry.authorUsername ?? "A runner")}
+          {isOwn ? "Your run" : <Handle username={entry.authorUsername} />}
         </h1>
       </div>
+
+      {/* D-62's marker (FEED-6), placeholder until designed: the author's
+          own entry that reports have hidden pending review. Only the
+          author ever gets here with it set — nobody else can open it. */}
+      {entry.underReview ? (
+        <p data-part="under-review" className="m-0 text-muted">
+          <Bracketed>Under review</Bracketed>
+        </p>
+      ) : undefined}
 
       <PhotoPager photoKeys={entry.photoKeys} />
 

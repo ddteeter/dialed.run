@@ -312,7 +312,7 @@ describe("ownProfile: the social counts", () => {
 
 describe("otherProfile", () => {
   it("answers with nothing for a runner who has no profile", async () => {
-    expect(await otherProfile("01JNOBODY000000000000000")).toBeUndefined();
+    expect(await otherProfile("01JNOBODY000000000000000", await makeUser())).toBeUndefined();
   });
 
   it("shows public entries and hides private ones", async () => {
@@ -334,7 +334,7 @@ describe("otherProfile", () => {
       isPublic: false,
     });
 
-    const profile = await otherProfile(userId);
+    const profile = await otherProfile(userId, await makeUser());
 
     expect(profile?.username).toBe("Public runner");
     expect(
@@ -359,7 +359,7 @@ describe("otherProfile", () => {
       createdAt: NOW,
     });
 
-    const profile = await otherProfile(userId);
+    const profile = await otherProfile(userId, await makeUser());
 
     expect(
       profile?.recentPublicEntries.map((entry) => entry.entryId),
@@ -379,7 +379,7 @@ describe("otherProfile", () => {
       .set({ caption: "Cold first mile" })
       .where(eq(outfitEntries.id, entryId));
 
-    const profile = await otherProfile(userId);
+    const profile = await otherProfile(userId, await makeUser());
 
     expect(profile?.recentPublicEntries[0]).toStrictEqual({
       entryId,
@@ -397,7 +397,7 @@ describe("otherProfile", () => {
       .set({ cityLabel: "Minneapolis" })
       .where(eq(userProfiles.userId, userId));
 
-    const profile = await otherProfile(userId);
+    const profile = await otherProfile(userId, await makeUser());
     expect(profile?.cityLabel).toBe("Minneapolis");
   });
 });

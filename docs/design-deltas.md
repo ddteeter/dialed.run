@@ -438,6 +438,24 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       ask:** drop the case line or say what it names; and what D4 says
       when it has the reason but no date.
 
+32. **Two surfaces task 129's follow-up built without a drawing.** Both
+    are composed from existing primitives; neither adds a glyph, colour or
+    motion.
+    - **D-62's under-review marker on D** (FEED-6,
+      `feed/components/EntryDetail.tsx`). The author of an entry hidden
+      pending review sees `[UNDER REVIEW]` — bracket notation in `--muted`
+      — under D's heading, and nobody else ever reaches the entry. The
+      packet asked for the marker "on the card and on D"; there is no card
+      to mark, because a hidden entry never enters Following, the author's
+      own included. **The ask:** the marker, and whether it needs a line
+      saying why ("Only you can see this while we look at it" or similar —
+      no sentence is shipped, because it is user-facing wording).
+    - **`/@old` — "This runner changed their name."** (FEED-10,
+      `feed/components/RunnerAtHandle.tsx`). The ruling gives the sentence;
+      the page around it is H's column and back link with the sentence set
+      as H's empty-state lead, and nothing else — no avatar, no Follow, no
+      report. **The ask:** confirm the page is the sentence alone.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25

@@ -69,6 +69,29 @@ formatter, shared through `lib/dates`), coordinate rounding in `onboarding/input
 (#113's `roundCoordinate`, so both O1 and Your conditions store two decimal
 places), the enum drop (#112).
 
+### Follow-up PR (after #116 and #118): FEED-6, 7, 10
+
+- **FEED-7.** H's entries use `publiclyVisibleEntry(viewerId)`. H and
+  runner search drop a banned runner (`banned_at IS NULL`) and anyone in a
+  block pair with the viewer (`feed/runner-visibility.ts`, a `NOT EXISTS`
+  on `blocks` — safety's own probe is private and bound to an entry's
+  author, so a profile row cannot reuse it; a candidate for safety to
+  export). Both filters are in the `WHERE`, ahead of the `LIMIT`; the
+  search plan is pinned (two full-key `blocks_pk` probes per candidate).
+  H of a hidden runner answers `undefined`, which the route already reads
+  as "back to the feed". "Accounts pending deletion" has no state to read
+  yet (128 deletes immediately), so there is nothing to filter.
+- **FEED-6.** `getEntryDetail` carries `underReview` from
+  `isUnderReviewForAuthor`; D renders a placeholder `[UNDER REVIEW]`. No
+  card marker: a hidden entry never reaches Following.
+- **FEED-10.** One `Handle` component (Archivo 600, "@", as stored) on the
+  author row, D's heading, G, H and search. `/@{$handle}` is a top-level
+  route (the URL is the ruling's); `profileAtHandle` reads `lookUpHandle`
+  and answers runner / own / changed / nothing, and `orHandlePage` sends
+  own to G and nothing back to the feed. S1 ("@x found your … run useful")
+  is not built — there is no useful notification to style.
+- **FEED-11** stays sequenced: 126's verification has not landed.
+
 ## Test plan
 
 - worker: 150-follow feed page + cursor + EXPLAIN; bell counts a 30-day-old

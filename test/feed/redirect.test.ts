@@ -2,9 +2,12 @@ import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import type { ProfileAtHandle } from "../../src/modules/feed/profiles";
 import {
   orBackToFeed,
+  orHandlePage,
   redirectTo,
+  toHandlePage,
   requireSignedIn,
 } from "../../src/modules/feed/redirect";
 
@@ -87,5 +90,54 @@ describe("orBackToFeed", () => {
         orBackToFeed(undefined);
       }).to,
     ).toBe("/feed");
+  });
+});
+
+describe("orHandlePage", () => {
+  it("hands back a runner or a changed handle, as they are", () => {
+    const changed: ProfileAtHandle = { kind: "changed" };
+    const runner: ProfileAtHandle = {
+      kind: "runner",
+      isFollowing: false,
+      profile: {
+        userId: "01RAVI",
+        username: "ravi_k",
+        cityLabel: "Portland",
+        recentPublicEntries: [],
+      },
+    };
+    expect(orHandlePage(changed)).toBe(changed);
+    expect(orHandlePage(runner)).toBe(runner);
+  });
+
+  it("sends the viewer's own handle to G, not to a Follow on themself", () => {
+    expect(
+      redirectFrom(() => {
+        orHandlePage({ kind: "own" });
+      }).to,
+    ).toBe("/feed/me");
+  });
+
+  it("sends a handle nobody may be shown back to the feed", () => {
+    expect(
+      redirectFrom(() => {
+        orHandlePage(undefined);
+      }).to,
+    ).toBe("/feed");
+  });
+});
+
+describe("toHandlePage", () => {
+  it("sends H by id to the runner's /@handle", () => {
+    expect(
+      redirectFrom(() => toHandlePage({ username: "ravi_k" })),
+    ).toMatchObject({ to: "/@{$handle}", params: { handle: "ravi_k" } });
+  });
+
+  it("sends a runner the viewer may not see, or one with no handle, back to the feed", () => {
+    expect(redirectFrom(() => toHandlePage(undefined)).to).toBe("/feed");
+    expect(redirectFrom(() => toHandlePage({ username: NO_SESSION })).to).toBe(
+      "/feed",
+    );
   });
 });

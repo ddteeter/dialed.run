@@ -124,7 +124,7 @@ describe("authorization", () => {
     });
     await makeEntry({ userId: author, runId: privateRun, isPublic: false });
 
-    const profile = await otherProfile(author);
+    const profile = await otherProfile(author, await makeUser());
     const entryIds = profile?.recentPublicEntries.map((e) => e.entryId) ?? [];
     expect(entryIds).toEqual([publicEntry]);
   });

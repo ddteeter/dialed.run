@@ -5,6 +5,7 @@ import {
   bandContextFor,
   isBacklogWorthOpening,
   noindexHead,
+  profileReportSubject,
   shouldAskForVerdict,
 } from "../../src/modules/feed/route-decisions";
 
@@ -148,5 +149,31 @@ describe("isBacklogWorthOpening", () => {
 
   it("is the number the contract names", () => {
     expect(BACKLOG_MINIMUM).toBe(2);
+  });
+});
+
+describe("profileReportSubject", () => {
+  it("reports the profile by its runner, named by their handle", () => {
+    expect(
+      profileReportSubject({ userId: "01RAVI", username: "ravi_k" }),
+    ).toStrictEqual({
+      type: "profile",
+      id: "01RAVI",
+      label: "ravi_k",
+      authorId: "01RAVI",
+      authorName: "ravi_k",
+    });
+  });
+
+  it("says A runner, and names no author, for a runner with no handle", () => {
+    expect(
+      profileReportSubject({ userId: "01RAVI", username: undefined }),
+    ).toStrictEqual({
+      type: "profile",
+      id: "01RAVI",
+      label: "A runner",
+      authorId: "01RAVI",
+      authorName: undefined,
+    });
   });
 });

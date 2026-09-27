@@ -95,7 +95,7 @@ describe("PostCard: the author row", () => {
     const post = await card({ authorUsername: "dana_k" });
 
     const author = post.querySelector('[data-part="author"]');
-    expect(author).toHaveTextContent("Ddana_k2h ago · 10:00 AM");
+    expect(author).toHaveTextContent("D@dana_k2h ago · 10:00 AM");
     expect(screen.getByText("2h ago · 10:00 AM")).toHaveClass("font-mono");
   });
 

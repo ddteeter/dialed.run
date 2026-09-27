@@ -36,6 +36,7 @@ function feedRouter(element: ReactElement, at: string) {
       stub("/feed/search", "Search"),
       stub("/feed/verdict/$entryId", "Verdict"),
       stub("/feed/u/$userId", "A profile"),
+      stub("/@{$handle}", "A profile by handle"),
       stub("/call", "The Call"),
       stub("/runs/backlog", "Backlog"),
       stub("/runs/new", "Log a run"),

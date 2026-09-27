@@ -32,6 +32,7 @@ import { readInChunks } from "../../lib/chunked";
 import { forIds } from "../../lib/for-ids";
 import {
   entryVisibleTo,
+  isUnderReviewForAuthor,
   publicPhotoStatus,
   publiclyVisibleEntry,
 } from "../safety";
@@ -555,6 +556,12 @@ export interface EntryDetail {
   tags: string[];
   usefulCount: number;
   conditions: Conditions | undefined;
+  /**
+  D-62: hidden pending review, and the viewer is its author — the one
+  person who still sees it, so the one who needs telling why nobody else
+  does (FEED-6, from 128's predicate).
+  */
+  underReview: boolean;
 }
 
 export async function getEntryDetail(
@@ -676,6 +683,7 @@ export async function getEntryDetail(
     tags: tags.map((t) => t.tag),
     usefulCount: usefulRows.length,
     conditions: observations.get(run.id),
+    underReview: isUnderReviewForAuthor(entry, viewerId),
   };
 }
 

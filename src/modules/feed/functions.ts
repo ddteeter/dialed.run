@@ -15,6 +15,7 @@ import {
   coordinatesInput,
   entryIdInput,
   feedInput,
+  handleInput,
   itemBandStatInput,
   saveBacklogRowInput,
   searchInput,
@@ -40,7 +41,7 @@ import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
-import { otherProfile, ownProfile } from "./profiles";
+import { otherProfile, ownProfile, profileAtHandle } from "./profiles";
 import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
@@ -244,8 +245,15 @@ export const otherProfileQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => userIdInput.parse(input))
   .handler(async ({ data }) => {
     // H requires sign-in, so its data does too (task 128, SAF-14).
-    await requireUserId();
-    return otherProfile(data.userId);
+    const viewerId = await requireUserId();
+    return otherProfile(data.userId, viewerId);
+  });
+
+export const profileAtHandleQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => handleInput.parse(input))
+  .handler(async ({ data }) => {
+    const viewerId = await requireUserId();
+    return profileAtHandle(viewerId, data.handle);
   });
 
 // ---- Username search ------------------------------------------------------------
