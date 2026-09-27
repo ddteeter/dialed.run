@@ -403,7 +403,7 @@ async function insertRevocation(): Promise<Ulid> {
   const id = newUlid();
   await coreDb().insert(stravaRevocations).values({
     id,
-    accessToken: "token",
+    refreshToken: "token",
     createdAt: nowSeconds(),
   });
   return id;
@@ -527,7 +527,7 @@ async function seedAnomaly(
     case "strava-revocation": {
       await db.insert(stravaRevocations).values({
         id: newUlid(),
-        accessToken: "token",
+        refreshToken: "token",
         createdAt: nowSeconds(),
       });
       return;

@@ -131,6 +131,63 @@ export async function seedRun(
   return runId;
 }
 
+/**
+ * A real observation in the fixtures' cache cell for one hour — what makes
+ * a run starting then attach from cache rather than asking Visual
+ * Crossing. Returns its id, for `unseedObservations`.
+ */
+export async function seedObservation(
+  hourBucket: number,
+  reading: { tempC: number; precipMm: number },
+): Promise<string> {
+  return withLocalDb(async ({ weather }) => {
+    const values = {
+      tempC: reading.tempC,
+      feelsLikeC: reading.tempC - 3,
+      precipMm: reading.precipMm,
+      fetchedAt: nowSeconds(),
+    };
+    // Upserted: a cell a previous run left behind takes this reading, and
+    // its id is the one handed back to take out.
+    const [row] = await weather
+      .insert(weatherObservations)
+      .values({
+        id: newUlid(),
+        latR: LAT,
+        lngR: LNG,
+        hourBucket,
+        humidity: 80,
+        windKph: 10,
+        condition: "overcast",
+        timeZone: "America/Chicago",
+        source: "visualcrossing",
+        ...values,
+      })
+      .onConflictDoUpdate({
+        target: [
+          weatherObservations.latR,
+          weatherObservations.lngR,
+          weatherObservations.hourBucket,
+        ],
+        set: values,
+      })
+      .returning({ id: weatherObservations.id });
+    if (row === undefined) throw new Error("no observation seeded");
+    return row.id;
+  });
+}
+
+export async function unseedObservations(
+  ids: readonly string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  await withLocalDb(async ({ weather }) => {
+    await weather
+      .delete(weatherObservations)
+      .where(inArray(weatherObservations.id, [...ids]));
+  });
+}
+
 export async function seedItem(
   seeded: Seeded,
   name: string,

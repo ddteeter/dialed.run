@@ -207,6 +207,7 @@ effort       text      -- enum: easy | steady | workout | race, NULLABLE
                        -- (unused by v1 logic; accrues for the call)
 title        text
 weather_status text    -- enum: none | pending | attached | manual | failed
+reminder_matched_at int -- NULLABLE; the Strava reminder this file run answered (127)
 ```
 
 ### outfit_entries
@@ -256,9 +257,15 @@ reactions:      entry_id, user_id, kind ('useful'), created_at; PK (entry_id, us
 entry_photos:   id, entry_id, photo_key, position (max 4 per entry)
 notifications:  id, user_id, kind, subject_id, body, read, created_at,
                 UNIQUE(user_id, kind, subject_id)  -- dedupe key
-strava_connections:  user_id PK, athlete_id, tokens, status ('ok'|'broken')
+strava_connections:  user_id PK, athlete_id, refresh_token,
+                     connected_at NULLABLE -- when the grant was made (127)
+                     -- refresh_token is kept ONLY to revoke the grant (D-54);
+                     -- no access token, expiry or status is stored
                      -- webhook reminder flow ONLY; no other module may import it
-processed_webhook_events: UNIQUE(object_id, aspect_type, event_time)
+processed_webhook_events: UNIQUE(object_id, aspect_type, event_time),
+                INDEX(event_time) -- pruned after 7 days (127, STR-10)
+strava_revocations: id, refresh_token, created_at
+                -- the revoke outbox (law 8c); drained with the refresh token
 cron_checkpoints: cron_name PK, last_run_at
 imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'failed'),
                 failure_reason, run_id NULLABLE, created_at
@@ -337,7 +344,7 @@ weather_observations: id, run_id (nullable), lat_r, lng_r, hour_bucket,
   source ('visualcrossing'), fetched_at
 UNIQUE(lat_r, lng_r, hour_bucket)   -- the cache key: lat/lng rounded to 2dp
 
-manual_conditions: run_id (PK), temp_c, set_at   -- R2b's band, one run's own
+manual_conditions: run_id (PK), temp_c, set_at, sky NULLABLE -- R2b's band and sky (dry|damp|rain|snow), one run's own
 ```
 
 `weather_observations` is a shared cache and holds real observations only.

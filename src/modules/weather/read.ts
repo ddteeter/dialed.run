@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
-import type { WeatherObservation } from "../../lib/contracts";
+import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
 import {
   bandObservation,
@@ -23,6 +23,11 @@ import {
  * user-typed fallback — 104 shows manual readings differently. */
 export type WeatherReading = WeatherObservation & {
   source: "visualcrossing" | "manual";
+  /**
+   * The sky a runner picked in R2b (task 127, STR-12) — only ever on a
+   * `manual` reading, and absent on a band set before the sheet asked.
+   */
+  sky?: ManualSky;
 };
 
 function keyString(latR: number, lngR: number, hourBucket: number): string {
@@ -45,7 +50,11 @@ export async function manualReadingsForRuns(
   return new Map(
     bands.map((band) => [
       band.runId,
-      { ...bandObservation(band), source: "manual" as const },
+      {
+        ...bandObservation(band),
+        source: "manual" as const,
+        ...(band.sky !== null && { sky: band.sky }),
+      },
     ]),
   );
 }

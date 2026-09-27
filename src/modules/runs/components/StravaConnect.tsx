@@ -1,15 +1,16 @@
 import type { JSX, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { clockLabel, dayLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
   inFlight,
   Mono,
   PendingLabel,
+  StravaButton,
   useControlAction,
 } from "../../../ui";
-import type { ControlAction } from "../../../ui";
 
 /**
  * The server functions, handed in rather than imported.
@@ -22,95 +23,67 @@ import type { ControlAction } from "../../../ui";
  */
 export interface StravaConnectProps {
   configured: boolean;
-  status: "ok" | "broken" | undefined;
+  connected: boolean;
+  /**
+   * When Strava last told us a run landed (epoch seconds) — T3a's "LAST
+   * RUN SEEN". Undefined until the first one.
+   */
+  lastRunSeenAt: number | undefined;
   /**
   How many runs the runner has — what T3b promises is kept.
   */
   runCount: number;
-  getAuthorizeUrl: () => Promise<string | undefined>;
   disconnect: () => Promise<unknown>;
 }
 
-/**
- * Leaves for Strava's own consent screen, with a URL fetched at click
- * time — a plain navigation to an external address, not a typed Link.
- * An answer with no URL is a failure like any other: there is nowhere to
- * go, and the band says so.
- */
-export async function leaveForStrava(
-  getAuthorizeUrl: StravaConnectProps["getAuthorizeUrl"],
-): Promise<void> {
-  const url = await getAuthorizeUrl();
-  if (url === undefined) throw new Error("Strava gave no authorize URL.");
-  globalThis.location.assign(url);
-}
-
-const PRIMARY =
-  "target rounded-field border-none bg-ink px-4 text-body font-bold text-ground";
 const SECONDARY =
   "target rounded-field border border-ink bg-transparent px-4 text-body font-semibold text-ink";
 
 /**
- * The connect control and its failure band — identical whether Strava has
- * never been connected or needs reconnecting after a break; only the
- * button's words change between the two, so those are the only prop.
+ * The time a run last landed on Strava, in the runner's own zone — which
+ * only the device knows, so it is drawn after mount and never in the
+ * server's first paint (see `lib/dates.ts`).
+ *
+ * The effect has no dependency list on purpose: it sets the same value
+ * after every render, which React ignores, and leaves no array for a
+ * mutant to replace. A device that names no zone it would accept reads
+ * as UTC, which `lib/dates` already does for an undefined zone.
  */
-function ConnectAction({
-  connect,
-  label,
-  pendingLabel,
-}: Readonly<{
-  connect: ControlAction<[]>;
-  label: string;
-  pendingLabel: string;
-}>): JSX.Element {
+function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  });
+  if (!isMounted) return <></>;
+  const zone = deviceTimeZone();
   return (
-    <>
-      <button
-        type="button"
-        {...inFlight(connect.pending)}
-        onClick={() => {
-          void connect.run();
-        }}
-        className={PRIMARY}
-      >
-        <PendingLabel
-          label={label}
-          pendingLabel={pendingLabel}
-          pending={connect.pending}
-        />
-      </button>
-      <ControlFailureBand
-        failure={connect.failure}
-        onRetry={connect.retry}
-        retryRef={connect.retryRef}
-      />
-    </>
+    <>{` · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`}</>
   );
 }
 
 /**
- * Connect and disconnect (Remaining Screens T1, T3; round 22, item 23).
+ * Connect and disconnect (Remaining Screens T1, T3; round 22, item 23;
+ * round 25; round 26, item 21).
  *
  * **Not configured, nothing is drawn** — *"the row and button are absent
  * — never a dead control."* **Disconnect confirms**, as T3b draws it: what
  * is kept, what stops, and "Keep it" beside the verb. **A failure is a
  * control's** (round 23, item 9): the band under the control names what
- * is still true — `NOT CONNECTED`, `STILL CONNECTED` — and nothing snaps
- * back, because nothing moved before the server answered.
+ * is still true — `STILL CONNECTED` — and nothing snaps back, because
+ * nothing moved before the server answered.
+ *
+ * There is no "reconnect" state any more (task 127). Nothing refreshes a
+ * token, so nothing can find a grant broken; a runner who revokes us on
+ * Strava's side is disconnected outright, and sees the connect button.
  */
 export function StravaConnect({
   configured,
-  status,
+  connected,
+  lastRunSeenAt,
   runCount,
-  getAuthorizeUrl,
   disconnect,
 }: Readonly<StravaConnectProps>): JSX.Element | undefined {
   const [isConfirming, setIsConfirming] = useState(false);
-  const connect = useControlAction({
-    kicker: "Not connected",
-    action: async () => leaveForStrava(getAuthorizeUrl),
-  });
   const cut = useControlAction({
     kicker: "Still connected",
     action: disconnect,
@@ -121,15 +94,10 @@ export function StravaConnect({
 
   if (!configured) return undefined;
 
-  if (status === undefined) {
+  if (!connected) {
     return (
       <div className="flex flex-col gap-3">
-        <FormStatus>{connect.status}</FormStatus>
-        <ConnectAction
-          connect={connect}
-          label="Connect Strava"
-          pendingLabel="Connecting"
-        />
+        <StravaButton />
         <p className="m-0 text-small text-muted">
           You&rsquo;ll approve this on Strava&rsquo;s own screen.
         </p>
@@ -139,26 +107,14 @@ export function StravaConnect({
 
   return (
     <div className="flex flex-col gap-3">
-      <FormStatus>{connect.status || cut.status}</FormStatus>
-      {/* Round 25's T3a status line is "CONNECTED · LAST RUN SEEN {time}".
-          The time is not stored anywhere this reads — the webhook leaves
-          only a reminder row — so the line is "CONNECTED" until it is. */}
-      {status === "ok" ? (
-        <Mono step="sm" className="text-dialed-text">
-          Connected
-        </Mono>
-      ) : (
-        <p className="m-0 font-semibold text-ink">
-          Strava needs to be reconnected.
-        </p>
-      )}
-      {status === "broken" ? (
-        <ConnectAction
-          connect={connect}
-          label="Reconnect Strava"
-          pendingLabel="Reconnecting"
-        />
-      ) : undefined}
+      <FormStatus>{cut.status}</FormStatus>
+      {/* Round 25's T3a status line. */}
+      <Mono step="sm" className="text-dialed-text">
+        Connected
+        {lastRunSeenAt === undefined ? undefined : (
+          <LastRunSeen at={lastRunSeenAt} />
+        )}
+      </Mono>
       {isConfirming ? (
         <div
           data-slot="disconnect-confirm"
@@ -184,7 +140,7 @@ export function StravaConnect({
               onClick={() => {
                 void cut.run();
               }}
-              className={PRIMARY}
+              className="target rounded-field border-none bg-ink px-4 text-body font-bold text-ground"
             >
               <PendingLabel
                 label="Disconnect"

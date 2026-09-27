@@ -35,14 +35,11 @@ export type NotificationKind =
  * | kit_reminder    | the run id                                       |
  * | import_failed   | the import id                                    |
  * | strava_reminder | the Strava activity id (`event.object_id`)       |
- * | strava_broken   | none — the subject is the connection itself      |
+ * | strava_broken   | the deauthorization event's time                 |
  *
- * `strava_broken` passing the userId was "this kind has no subject" in
- * disguise, which made the field read as meaningless. It is `null` now, so
- * the shape says what is true. The dedupe still works: SQLite treats NULLs
- * as distinct in a UNIQUE index, so the guard for that kind is the
- * status transition in oauth.ts, not this key — a connection only becomes
- * broken from ok.
+ * A kind with no subject would pass `null`, and SQLite treats NULLs as
+ * distinct in a UNIQUE index, so this key would not dedupe it — its guard
+ * would have to live at the call site.
  */
 export interface NotificationDraft {
   userId: string;

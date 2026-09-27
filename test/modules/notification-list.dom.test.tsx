@@ -106,7 +106,7 @@ describe("NotificationList · the rows", () => {
     // A literal for the reason `feed-profiles` carries: deriving the
     // expectation from the same ambient call the component used made the
     // assertion true of any answer, including two different ones.
-    const time = screen.getAllByText("Tue 12 Aug, 12:00");
+    const time = screen.getAllByText("Tue Aug 12, 12:00");
     expect(time[0]).toHaveClass("font-mono");
   });
 

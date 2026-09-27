@@ -1,0 +1,1 @@
+ALTER TABLE `runs` ADD `reminder_matched_at` integer;

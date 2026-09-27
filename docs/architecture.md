@@ -414,10 +414,11 @@ flowchart LR
   - **Built**: Turnstile's verification (`ops/turnstile.ts`, fail closed) and
     widget (`ui/Turnstile.tsx`), which task 126 places on sign-up and request
     access; hard size and type caps on every upload.
-  - **Not built yet**: invite-only sign-up (decision D-39, task 126);
-    Better Auth's own rate limiter, explicitly on with
-    database storage so the count is shared across isolates (OPS-4). Until
-    then it is off in production, because it keys on `NODE_ENV`.
+  - **Built (OPS-4)**: Better Auth's own rate limiter, on for an https
+    origin (`BETTER_AUTH_URL`) rather than by `NODE_ENV`, keyed on
+    `cf-connecting-ip`, with its counters in D1 (`rate_limit`) so every
+    isolate shares them; secure cookies on the same condition.
+  - **Not built yet**: invite-only sign-up (decision D-39, task 126).
   - **Not built, and not code**: WAF and rate-limiting rules at the zone,
     which need the custom domain (deployment plan). A Workers Rate Limiting
     binding would be a `wrangler.jsonc` change, which is the owner's.

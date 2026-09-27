@@ -5,7 +5,6 @@ import { unreadNotificationCountFn } from "../../modules/notifications/functions
 import { StravaConnect } from "../../modules/runs/components/StravaConnect";
 import {
   disconnectStravaFn,
-  getStravaAuthorizeUrlFn,
   getStravaStatusFn,
 } from "../../modules/runs/functions";
 import { Page } from "../../ui";
@@ -37,9 +36,9 @@ function StravaPage() {
         </p>
         <StravaConnect
           configured={strava.configured}
-          status={strava.status}
+          connected={strava.connected}
+          lastRunSeenAt={strava.lastRunSeenAt}
           runCount={strava.runCount}
-          getAuthorizeUrl={getStravaAuthorizeUrlFn}
           disconnect={disconnectStravaFn}
         />
       </Page>
