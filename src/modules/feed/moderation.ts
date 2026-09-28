@@ -27,12 +27,16 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
 import { env } from "../../env";
-import { entryPhotoPrefix, quarantineKeyFor } from "../../lib/entry-photo-key";
+import {
+  entryPhotoKeyFor,
+  entryPhotoPrefix,
+  quarantineKeyFor,
+} from "../../lib/entry-photo-key";
 import { notificationInsert } from "../notifications";
 import { captureException } from "../ops";
 import {
   moderationActionInsert,
-  openRow,
+  openSubject,
   removalSentence,
   removalStatements,
   resolveReview,
@@ -128,6 +132,7 @@ const subjectColumn = {
 async function quarantine(
   target: Target,
   subjectType: ModeratedSubjectType,
+  subjectId: string,
 ): Promise<string> {
   for (const key of target.photoKeys) {
     const object = await env.MEDIA.get(key);
@@ -138,7 +143,7 @@ async function quarantine(
   }
   return quarantineKeyFor(
     subjectType === "photo"
-      ? (target.photoKeys[0] ?? "")
+      ? entryPhotoKeyFor(target.ownerId, target.entryId, subjectId)
       : entryPhotoPrefix(target.ownerId, target.entryId),
   );
 }
@@ -174,7 +179,7 @@ export async function moderateContent(
   if (target === undefined) return "not_found";
   const preservedKey =
     input.action === "quarantine"
-      ? await quarantine(target, input.subjectType)
+      ? await quarantine(target, input.subjectType, input.subjectId)
       : undefined;
   const words = removalStatements[input.reason];
   await commit(
@@ -213,6 +218,16 @@ export async function moderateContent(
  * with everything else. A product or a profile keeps safety's own path —
  * a product is hidden, and a person is banned from the Desk.
  */
+/**
+Whether a queue subject is one `moderateContent` takes down.
+*/
+function isModerated(subject: {
+  subjectType: string;
+  subjectId: string;
+}): subject is { subjectType: ModeratedSubjectType; subjectId: string } {
+  return subject.subjectType === "entry" || subject.subjectType === "photo";
+}
+
 export async function decideReview(
   db: Db,
   reviewerId: string,
@@ -222,23 +237,23 @@ export async function decideReview(
   if (decision.action === "approve") {
     return resolveReview(queueId, reviewerId, "approve");
   }
-  const row = await openRow(queueId);
-  if (typeof row === "string") return row;
-  const { subjectType, subjectId } = row;
-  const outcome =
-    subjectType === "entry" || subjectType === "photo"
-      ? await moderateContent(db, {
-          actorId: reviewerId,
-          action: decision.action,
-          subjectType,
-          subjectId,
-          reason: decision.reason,
-        })
-      : "not_found";
+  // Only a row still open is acted on; a settled or missing one is
+  // answered by safety's own writer below, which says which it was.
+  const subject = await openSubject(queueId);
+  const isTakenDown =
+    subject !== undefined &&
+    isModerated(subject) &&
+    (await moderateContent(db, {
+      actorId: reviewerId,
+      action: decision.action,
+      subjectType: subject.subjectType,
+      subjectId: subject.subjectId,
+      reason: decision.reason,
+    })) === "removed";
   // Anything moderateContent did not take down — a product, a profile, or
   // an entry already gone — is settled by safety's own writer, so the row
   // never stays open on a subject nobody can act on.
-  return outcome === "removed"
+  return isTakenDown
     ? "resolved"
-    : resolveReview(queueId, reviewerId, "remove");
+    : resolveReview(queueId, reviewerId, decision.action);
 }

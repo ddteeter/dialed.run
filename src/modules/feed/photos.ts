@@ -215,8 +215,8 @@ const ENTRY_PHOTO_QUALITY = 88;
 export async function photoAccess(
   photoKey: string,
   viewerId: string | undefined,
-): Promise<"none" | "owner" | "shared"> {
-  if (viewerId === undefined) return "none";
+): Promise<{ isShared: boolean } | undefined> {
+  if (viewerId === undefined) return undefined;
   const shownToOthers = and(
     publiclyVisibleEntry(viewerId),
     eq(entryPhotos.screenStatus, publicPhotoStatus),
@@ -225,8 +225,9 @@ export async function photoAccess(
     photoKey,
     or(eq(outfitEntries.userId, viewerId), shownToOthers),
   );
-  if (row === undefined) return "none";
-  return row.ownerId === viewerId ? "owner" : "shared";
+  if (row === undefined) return undefined;
+  // Shared: someone other than its owner is looking.
+  return { isShared: row.ownerId !== viewerId };
 }
 
 /**
@@ -237,7 +238,7 @@ export async function isPhotoVisible(
   photoKey: string,
   viewerId: string | undefined,
 ): Promise<boolean> {
-  return (await photoAccess(photoKey, viewerId)) !== "none";
+  return (await photoAccess(photoKey, viewerId)) !== undefined;
 }
 
 /**
@@ -353,11 +354,10 @@ export async function photoResponse(
   if (signed.signature !== undefined)
     return signedPhotoResponse(key, signed, now);
   const access = await photoAccess(key, viewerId);
-  if (access === "none") return notFound();
-  const signature =
-    access === "shared"
-      ? await signPhotoKey(key, signedExpiry(now))
-      : undefined;
+  if (access === undefined) return notFound();
+  const signature = access.isShared
+    ? await signPhotoKey(key, signedExpiry(now))
+    : undefined;
   if (signature === undefined) return bytesResponse(key, PRIVATE_CACHE);
   return signedRedirect(key, signature, now);
 }

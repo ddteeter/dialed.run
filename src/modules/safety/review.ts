@@ -24,7 +24,7 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere } from "../../lib/keyed-read";
+import { columnWhere, firstRowWhere } from "../../lib/keyed-read";
 import { orSqlNull } from "../../lib/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -424,7 +424,12 @@ export async function releaseStaleClaims(
   return { released: released.length };
 }
 
-export type ReviewDecision = "approve" | "remove";
+/**
+ * What a reviewer decided. A quarantine is a Remove that also keeps a copy
+ * (task 128 · SAF-5), so for the queue row and a subject safety settles
+ * itself — a product, a profile — it is a Remove.
+ */
+export type ReviewDecision = "approve" | "remove" | "quarantine";
 
 export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
 
@@ -435,7 +440,7 @@ export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
  * parameter list into different clone spans, which is not a thing a reader
  * should have to think about.
  */
-export type OpenRow =
+type OpenRow =
   | "not_found"
   | "already_resolved"
   | { subjectType: ReportSubjectType; subjectId: string };
@@ -451,7 +456,7 @@ export type OpenRow =
  * something different for each: a stale tab whose row someone else already
  * settled is not the same as a link to a row that is gone.
  */
-export async function openRow(queueId: string): Promise<OpenRow> {
+async function openRow(queueId: string): Promise<OpenRow> {
   // fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what "load a row and decide" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module
   const [row] = await db()
     .select({
@@ -468,6 +473,24 @@ export async function openRow(queueId: string): Promise<OpenRow> {
     return "already_resolved";
   }
   return { subjectType: row.subjectType, subjectId: row.subjectId };
+}
+
+/**
+ * The subject of a queue row still waiting on a decision, or nothing — for
+ * a caller that acts only on open rows and leaves "why not" to
+ * `resolveReview`.
+ */
+export async function openSubject(
+  queueId: string,
+): Promise<{ subjectType: ReportSubjectType; subjectId: string } | undefined> {
+  return firstRowWhere(
+    db(),
+    reviewQueue,
+    and(
+      eq(reviewQueue.id, queueId),
+      inArray(reviewQueue.status, ["pending", "reviewing"]),
+    ),
+  );
 }
 
 /**

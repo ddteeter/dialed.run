@@ -94,7 +94,7 @@ export {
 export {
   claimForReview,
   claimLeaseSeconds,
-  openRow,
+  openSubject,
   pendingReviewCount,
   pendingReviewQueue,
   reasonsFrom,
@@ -102,7 +102,6 @@ export {
   resolveReview,
   settleOpenReviews,
   type ClaimOutcome,
-  type OpenRow,
   type QueueRow,
   type ReleaseReport,
   type ResolveOutcome,

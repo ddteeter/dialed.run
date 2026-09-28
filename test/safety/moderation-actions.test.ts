@@ -375,6 +375,44 @@ describe("quarantine: one copy, where no route looks (SAF-5)", () => {
     );
   });
 
+  it("asks R2 for nothing when a whole entry has no photos", async () => {
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const media = env.MEDIA;
+    const asked: string[] = [];
+    Reflect.set(
+      env,
+      "MEDIA",
+      new Proxy(media, {
+        get(target, property): unknown {
+          return property === "get"
+            ? (key: string) => {
+                asked.push(key);
+                return target.get(key);
+              }
+            : Reflect.get(target, property, target);
+        },
+      }),
+    );
+    try {
+      await moderateContent(
+        core(),
+        {
+          actorId: "moderator",
+          action: "quarantine",
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "explicit",
+        },
+        quiet,
+      );
+    } finally {
+      Reflect.set(env, "MEDIA", media);
+    }
+    expect(asked).toStrictEqual([]);
+  });
+
   it("skips a photo whose object is already gone", async () => {
     const { photoId, key } = await postedPhoto();
     await env.MEDIA.delete(key);
@@ -493,6 +531,12 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(await stored("quarantine/")).toStrictEqual([
       quarantineKeyFor(second.key),
     ]);
+    expect(
+      await core()
+        .select()
+        .from(entryPhotos)
+        .where(eq(entryPhotos.id, first.photoId)),
+    ).toStrictEqual([]);
     expect(await queueStatus(removalRow)).toStrictEqual({
       status: "removed",
       resolvedBy: "rev",
@@ -520,9 +564,59 @@ describe("decideReview: the queue's Remove really deletes", () => {
     ).toBe("resolved");
     const settled = await queueStatus(goneRow);
     expect(settled?.status).toBe("removed");
+    expect(await queueStatus(productRow)).toStrictEqual({
+      status: "removed",
+      resolvedBy: "rev",
+    });
     expect(
       await core().select().from(products).where(eq(products.id, productId)),
     ).toStrictEqual([]);
+  });
+
+  it("takes down a row nobody has claimed yet", async () => {
+    const { entryId } = await postedPhoto();
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "reports",
+      status: "pending",
+      createdAt: nowSeconds(),
+    });
+
+    await decideReview(core(), "rev", {
+      queueId,
+      action: "remove",
+      reason: "rules",
+    });
+
+    expect(
+      await core()
+        .select({ id: outfitEntries.id })
+        .from(outfitEntries)
+        .where(eq(outfitEntries.id, entryId)),
+    ).toStrictEqual([]);
+  });
+
+  it("never takes down what a reviewer already approved", async () => {
+    const { entryId } = await postedPhoto();
+    const queueId = await queued("entry", entryId);
+    await decideReview(core(), "rev", { queueId, action: "approve" });
+
+    expect(
+      await decideReview(core(), "rev", {
+        queueId,
+        action: "remove",
+        reason: "rules",
+      }),
+    ).toBe("already_resolved");
+    expect(
+      await core()
+        .select({ id: outfitEntries.id })
+        .from(outfitEntries)
+        .where(eq(outfitEntries.id, entryId)),
+    ).toHaveLength(1);
   });
 
   it("says what a stale tab needs to hear", async () => {
@@ -534,6 +628,12 @@ describe("decideReview: the queue's Remove really deletes", () => {
       reason: "rules",
     });
 
+    expect(
+      await core()
+        .select()
+        .from(outfitEntries)
+        .where(eq(outfitEntries.id, entryId)),
+    ).toStrictEqual([]);
     expect(
       await decideReview(core(), "rev", {
         queueId: queueId,
