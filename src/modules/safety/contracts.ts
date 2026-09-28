@@ -120,6 +120,20 @@ export const removalReasonSchema = z.enum(removalReasons, {
 });
 
 /**
+ * What the author is told (round 27 #20): the same sentence in the bell
+ * row, the band where the thing was, and — once 126's outbox lands — the
+ * email.
+ */
+export function removalSentence(
+  subjectType: "entry" | "photo",
+  reason: RemovalReason,
+): string {
+  const what =
+    subjectType === "photo" ? "this photo" : "this entry from the feed";
+  return `A moderator removed ${what}: ${removalStatements[reason]}.`;
+}
+
+/**
  * Why a moderator took a runner's handle away (round 27 #16): the fixed
  * list D8's Rename control offers, quoted back on O0's "USERNAME CHANGED
  * BY A MODERATOR" field.

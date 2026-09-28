@@ -61,7 +61,6 @@ export function prefixPattern(typed: string): string {
   return `${escaped}%`;
 }
 
-
 function matching(query: string | undefined) {
   if (query === undefined || query === "") return;
   const pattern = prefixPattern(query.replace(/^@/u, ""));
@@ -116,4 +115,3 @@ export async function accountCount(db: Db): Promise<number> {
   const [row] = await db.select({ count: sql<number>`COUNT(*)` }).from(user);
   return row?.count ?? 0;
 }
-

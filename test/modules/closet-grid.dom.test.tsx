@@ -269,6 +269,54 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
   });
 });
 
+describe("ClosetGrid: a photo being checked (D-69, round 27 #21)", () => {
+  it("tags the tile ONLY YOU, alone in the kicker", async () => {
+    const checking = itemView({
+      item: wardrobeItem({
+        id: "01CHK",
+        name: "New jacket",
+        brand: "Janji",
+        photoKey: "items/u/01CHK/v1",
+        visibility: "pending",
+      }),
+      isGeneric: false,
+    });
+    await renderWithRouter(<ClosetGrid listing={listing([checking])} />);
+
+    const link = screen.getByRole("link", { name: /New jacket/ });
+    const kicker = link.querySelector(".order-first");
+    expect(kicker).toHaveTextContent(/^\[Only you\]$/);
+  });
+
+  it("says nothing once the photo is cleared, or when there is no photo", async () => {
+    const cleared = itemView({
+      item: wardrobeItem({
+        id: "01CLR",
+        name: "Old jacket",
+        brand: "Janji",
+        photoKey: "items/u/01CLR/v1",
+        visibility: "pass",
+      }),
+      isGeneric: false,
+    });
+    const bare = itemView({
+      item: wardrobeItem({
+        id: "01BAR",
+        name: "Bare jacket",
+        brand: "Janji",
+        visibility: "pending",
+      }),
+      isGeneric: false,
+    });
+    await renderWithRouter(<ClosetGrid listing={listing([cleared, bare])} />);
+
+    for (const name of [/Old jacket/, /Bare jacket/]) {
+      const link = screen.getByRole("link", { name });
+      expect(link.querySelector(".order-first")).toBeNull();
+    }
+  });
+});
+
 describe("ClosetGrid: what a tile says", () => {
   it("names a branded piece and links to it, with no tags", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);

@@ -25,7 +25,6 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   decideReview,
   moderateContent,
-  removalNotice,
 } from "../../src/modules/feed/moderation";
 import { photoResponse } from "../../src/modules/feed/photos";
 import {
@@ -37,6 +36,7 @@ import {
   prefixPattern,
   removalReasons,
   removalReasonSchema,
+  removalSentence,
   removalStatements,
   renameReasonSchema,
   RUNNERS_PAGE,
@@ -193,10 +193,10 @@ describe("the removal reasons (SAF-8's statement of reasons)", () => {
   });
 
   it("writes the author's sentence for a photo and for an entry", () => {
-    expect(removalNotice("photo", "home")).toBe(
+    expect(removalSentence("photo", "home")).toBe(
       "A moderator removed this photo: it shows where someone lives.",
     );
-    expect(removalNotice("entry", "spam")).toBe(
+    expect(removalSentence("entry", "spam")).toBe(
       "A moderator removed this entry from the feed: it's an ad or spam.",
     );
   });

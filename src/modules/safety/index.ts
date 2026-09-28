@@ -40,6 +40,7 @@ export {
   autoHideReporterThreshold,
   removalReasons,
   removalReasonSchema,
+  removalSentence,
   removalStatements,
   renameReasons,
   renameReasonSchema,
@@ -159,6 +160,11 @@ export {
 } from "./retry";
 
 export { AccountClosed } from "./components/AccountClosed";
+export {
+  ContentRemoved,
+  NoticeBand,
+  PhotoBeingChecked,
+} from "./components/NoticeBand";
 export { BlockedRunners } from "./components/BlockedRunners";
 export { ReportAffordance } from "./components/ReportAffordance";
 export { ReportSheet, type ReportSubject } from "./components/ReportSheet";

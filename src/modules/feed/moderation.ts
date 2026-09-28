@@ -33,6 +33,7 @@ import { captureException } from "../ops";
 import {
   moderationActionInsert,
   openRow,
+  removalSentence,
   removalStatements,
   resolveReview,
   settleOpenReviews,
@@ -160,19 +161,6 @@ function deletions(db: Db, input: ModerateInput, target: Target): Statements {
 }
 
 /**
- * The author's bell row (S1; round 27 #20), and the sentence the band
- * where the thing was reads.
- */
-export function removalNotice(
-  subjectType: ModeratedSubjectType,
-  reason: RemovalReason,
-): string {
-  const what =
-    subjectType === "photo" ? "this photo" : "this entry from the feed";
-  return `A moderator removed ${what}: ${removalStatements[reason]}.`;
-}
-
-/**
  * Takes the subject down, records it and tells its author — one batch,
  * then the bytes.
  */
@@ -206,7 +194,7 @@ export async function moderateContent(
         userId: target.ownerId,
         kind: "content_removed",
         subjectId: input.subjectId,
-        body: removalNotice(input.subjectType, input.reason),
+        body: removalSentence(input.subjectType, input.reason),
       }),
       // NEED(#119, 126 · ACC-2): the content-removed email (round 27 #20)
       // joins this batch as an `emailDebt` row once `modules/email` is on
