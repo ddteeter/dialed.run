@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as AccountUsernameRouteImport } from './routes/account/username'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -57,6 +58,11 @@ import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AtChar123handleChar125Route = AtChar123handleChar125RouteImport.update({
+  id: '/@{$handle}',
+  path: '/@{$handle}',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeskRouteRoute = DeskRouteRouteImport.update({
@@ -279,6 +285,7 @@ const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
+  '/@{$handle}': typeof AtChar123handleChar125Route
   '/account/username': typeof AccountUsernameRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/@{$handle}': typeof AtChar123handleChar125Route
   '/account/username': typeof AccountUsernameRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
@@ -371,6 +379,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
+  '/@{$handle}': typeof AtChar123handleChar125Route
   '/account/username': typeof AccountUsernameRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/desk'
+    | '/@{$handle}'
     | '/account/username'
     | '/api/health'
     | '/api/strava'
@@ -464,6 +474,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/@{$handle}'
     | '/account/username'
     | '/api/health'
     | '/api/strava'
@@ -510,6 +521,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/desk'
+    | '/@{$handle}'
     | '/account/username'
     | '/api/health'
     | '/api/strava'
@@ -557,6 +569,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
+  AtChar123handleChar125Route: typeof AtChar123handleChar125Route
   AccountUsernameRoute: typeof AccountUsernameRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiStravaRoute: typeof ApiStravaRoute
@@ -607,6 +620,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/@{$handle}': {
+      id: '/@{$handle}'
+      path: '/@{$handle}'
+      fullPath: '/@{$handle}'
+      preLoaderRoute: typeof AtChar123handleChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desk': {
@@ -928,6 +948,7 @@ const DeskRouteRouteWithChildren = DeskRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRouteRoute: DeskRouteRouteWithChildren,
+  AtChar123handleChar125Route: AtChar123handleChar125Route,
   AccountUsernameRoute: AccountUsernameRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiStravaRoute: ApiStravaRoute,

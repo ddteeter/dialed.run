@@ -187,6 +187,8 @@ describe("which type an edge resolves to", () => {
       ["/feed", "/feed/entry/e1"],
       ["/feed/me", "/feed/entry/e1"],
       ["/feed/entry/e1", "/feed/u/u1"],
+      // Task 129 (FEED-10): H by handle, a prefixed param.
+      ["/feed/search", "/@maya_runs"],
       ["/feed", "/feed/search"],
       ["/runs", "/runs/r1"],
       ["/runs/import/i1", "/runs/r1"],
@@ -519,5 +521,15 @@ describe("viewTransitionTypesFor", () => {
         toLocation: at("/runs/new", 2),
       }),
     ).toEqual(["nav-rise"]);
+  });
+});
+
+describe("a prefixed param (`/@{$handle}`)", () => {
+  it("needs its literal prefix and a non-empty value", () => {
+    expect(typeOf("/feed/search", "/@m")).toBe("push");
+    // No handle after the @, or no @ at all, is not H.
+    expect(typeOf("/feed/search", "/@")).toBe("cut");
+    expect(typeOf("/feed/search", "/maya_runs")).toBe("cut");
+    expect(typeOf("/feed/search", "/x@maya_runs")).toBe("cut");
   });
 });

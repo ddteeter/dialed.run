@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { classifyFailure, FailureBand, FormStatus, Mono } from "../../../ui";
 import type { SearchResult } from "../search";
 import { Avatar } from "./Avatar";
+import { Handle } from "./Handle";
 import { FollowBand, FollowPill, useFollowToggle } from "./Follow";
 import type { FollowAction } from "./Follow";
 
@@ -151,11 +152,11 @@ function ResultRow({
       <div className="flex items-center gap-3">
         <Avatar name={result.username} size="small" />
         <Link
-          to="/feed/u/$userId"
-          params={{ userId: result.userId }}
-          className="target flex flex-1 items-center text-body font-semibold text-ink no-underline"
+          to="/@{$handle}"
+          params={{ handle: result.username }}
+          className="target flex flex-1 items-center text-body text-ink no-underline"
         >
-          {result.username}
+          <Handle username={result.username} />
         </Link>
         <FollowPill toggle={toggle} />
       </div>

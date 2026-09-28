@@ -67,6 +67,7 @@ describe("the status region on first paint", () => {
           tags: [],
           usefulCount: 0,
           conditions: undefined,
+          underReview: false,
           viewerHasReacted: false,
         }}
       />,

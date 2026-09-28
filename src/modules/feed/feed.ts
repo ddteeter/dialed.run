@@ -34,7 +34,11 @@ import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import { followingCount } from "./follows";
-import { publicPhotoStatus, publiclyVisibleEntry } from "../safety";
+import {
+  isUnderReviewForAuthor,
+  publicPhotoStatus,
+  publiclyVisibleEntry,
+} from "../safety";
 
 export interface FeedCursor {
   createdAt: number;
@@ -42,6 +46,8 @@ export interface FeedCursor {
 }
 
 const PAGE_SIZE = 20;
+
+type ModerationStatus = (typeof outfitEntries.$inferSelect)["moderationStatus"];
 
 /**
  * Strictly older than the cursor, in `(created_at, id)` order.
@@ -100,6 +106,15 @@ function feedCursorPredicate(cursor: FeedCursor) {
  * Each author's read goes through the one visibility rule told who is
  * looking, so a blocked pair and what the viewer reported drop out in SQL,
  * ahead of the `LIMIT` (task 128, SAF-12/13).
+ *
+ * **The author always sees their own shared entries, under review
+ * included** (D-67, FEED-6). Each author row carries the one
+ * `moderation_status` it reads: `ok` for everyone, plus a second row for
+ * the viewer alone asking for `hidden_pending_review`. So the status stays
+ * an equality in the seek — `moderation_status = authors.status` — rather
+ * than an `IN` that would cost each author a sort over their history, and
+ * the arm that skips the visibility rule can only ever name the viewer.
+ * Nobody else's under-review entry has an author row that asks for it.
  */
 export function followingFeedStatement(
   database: DrizzleD1Database,
@@ -108,24 +123,48 @@ export function followingFeedStatement(
   limit = PAGE_SIZE,
 ) {
   const authors = database
-    .select({ id: follows.followeeId })
+    .select({
+      id: follows.followeeId,
+      status: sql<ModerationStatus>`'ok'`.as("status"),
+    })
     .from(follows)
     .where(eq(follows.followerId, viewerId))
     .unionAll(
-      // The viewer as a constant row: `select ? from (select 1)`. Drizzle
+      // The viewer as constant rows: `select ? from (select 1)`. Drizzle
       // has no select without a `from`, and borrowing a table for it would
       // make the viewer's own entries depend on a row existing there.
-      database.select({ id: sql<string>`${viewerId}` }).from(sql`(select 1)`),
+      database
+        .select({
+          id: sql<string>`${viewerId}`,
+          status: sql<ModerationStatus>`'ok'`,
+        })
+        .from(sql`(select 1)`),
+    )
+    .unionAll(
+      database
+        .select({
+          id: sql<string>`${viewerId}`,
+          status: sql<ModerationStatus>`'hidden_pending_review'`,
+        })
+        .from(sql`(select 1)`),
     )
     .as("authors");
   const page = alias(outfitEntries, "page");
+  // The viewer's under-review row skips the rule for strangers; every
+  // other author row goes through it.
+  const shownToViewer = or(
+    eq(authors.status, "hidden_pending_review"),
+    publiclyVisibleEntry(viewerId),
+  );
   const authorsNewest = database
     .select({ id: outfitEntries.id })
     .from(outfitEntries)
     .where(
       and(
         eq(outfitEntries.userId, authors.id),
-        publiclyVisibleEntry(viewerId),
+        eq(outfitEntries.isPublic, true),
+        eq(outfitEntries.moderationStatus, authors.status),
+        shownToViewer,
         cursor ? feedCursorPredicate(cursor) : undefined,
       ),
     )
@@ -167,6 +206,12 @@ export interface FeedItem {
   */
   viewerHasReacted: boolean;
   conditions: Conditions | undefined;
+  /**
+  The viewer's own entry, hidden from everyone else pending review — the
+  card says so (D-62, D-67). Always false on anyone else's: nobody else
+  is ever shown one.
+  */
+  underReview: boolean;
 }
 
 export interface FeedPage {
@@ -312,6 +357,7 @@ async function hydrateEntries(
       usefulCount: usefulCounts.get(entry.id) ?? 0,
       viewerHasReacted: reactedByViewer.has(entry.id),
       conditions: run ? observations.get(run.id) : undefined,
+      underReview: isUnderReviewForAuthor(entry, viewerId),
     };
   });
 }

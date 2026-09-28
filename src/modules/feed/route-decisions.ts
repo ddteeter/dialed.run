@@ -96,3 +96,33 @@ export function noindexHead(): {
 } {
   return { meta: [{ name: "robots", content: "noindex" }] };
 }
+
+/**
+ * The `ReportAffordance` subject for the runner H shows (`/@{$handle}`).
+ *
+ * A route may not branch (`server-functions-are-glue`), and `label` /
+ * `authorName`'s `?? "A runner"` / `?? undefined` fallbacks are exactly that
+ * kind of small decision. Structurally typed rather than typed against
+ * `modules/safety`'s `ReportSubject` on purpose: this file is imported at
+ * route module scope, and a route's module-scope imports must be reachable
+ * without `env`, so nothing here reaches for a module whose barrel it does
+ * not otherwise need.
+ */
+export function profileReportSubject(profile: {
+  userId: string;
+  username?: string | null | undefined;
+}): {
+  type: "profile";
+  id: string;
+  label: string;
+  authorId: string;
+  authorName: string | undefined;
+} {
+  return {
+    type: "profile",
+    id: profile.userId,
+    label: profile.username ?? "A runner",
+    authorId: profile.userId,
+    authorName: profile.username ?? undefined,
+  };
+}
