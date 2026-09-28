@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { openCheckIn, reportException } from "../../src/modules/ops/sentry";
+import {
+  openCheckIn,
+  reportException,
+  sentryEnvironmentFor,
+  workerTarget,
+} from "../../src/modules/ops/sentry";
 
 /**
  * The error reporter, which is the one thing that must not fail.
@@ -13,6 +18,7 @@ import { openCheckIn, reportException } from "../../src/modules/ops/sentry";
  */
 
 const DSN = "https://abc123@o1.ingest.sentry.io/42";
+const TARGET = { dsn: DSN, environment: "development" } as const;
 
 /**
  * A keep-alive that holds nothing, for tests that do not ask about it.
@@ -39,10 +45,15 @@ describe("with no DSN configured", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const boom = new Error("boom");
 
-    reportException(undefined, keep, boom, {
-      context: { runId: "r1" },
-      tags: {},
-    });
+    reportException(
+      { dsn: undefined, environment: "development" },
+      keep,
+      boom,
+      {
+        context: { runId: "r1" },
+        tags: {},
+      },
+    );
 
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
@@ -59,10 +70,15 @@ describe("with no DSN configured", () => {
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    reportException("", keep, new Error("boom"), {
-      context: { runId: "r2" },
-      tags: {},
-    });
+    reportException(
+      { dsn: "", environment: "development" },
+      keep,
+      new Error("boom"),
+      {
+        context: { runId: "r2" },
+        tags: {},
+      },
+    );
 
     expect(error).toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -76,7 +92,7 @@ describe("with a DSN configured", () => {
       .mockResolvedValue(new Response("{}"));
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
 
-    reportException(DSN, keep, new Error("boom"), {
+    reportException(TARGET, keep, new Error("boom"), {
       context: { runId: "r3" },
       tags: {},
     });
@@ -98,7 +114,7 @@ describe("with a DSN configured", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}"));
 
-    reportException(DSN, keep, new Error("boom"), {
+    reportException(TARGET, keep, new Error("boom"), {
       context: { runId: "r4", surface: "import" },
       tags: {},
     });
@@ -174,7 +190,7 @@ describe("the send outlives the invocation (audit finding 0.4)", () => {
     const kept: Promise<unknown>[] = [];
 
     reportException(
-      DSN,
+      TARGET,
       (promise) => {
         kept.push(promise);
       },
@@ -201,10 +217,15 @@ describe("the send outlives the invocation (audit finding 0.4)", () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const keepAlive = vi.fn();
 
-    reportException(undefined, keepAlive, new Error("boom"), {
-      context: {},
-      tags: {},
-    });
+    reportException(
+      { dsn: undefined, environment: "development" },
+      keepAlive,
+      new Error("boom"),
+      {
+        context: {},
+        tags: {},
+      },
+    );
 
     expect(keepAlive).not.toHaveBeenCalled();
   });
@@ -216,7 +237,7 @@ describe("grouping and tags (OPS-2)", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}"));
 
-    reportException(DSN, keep, new Error("digest"), {
+    reportException(TARGET, keep, new Error("digest"), {
       context: { kind: "outbox" },
       tags: { digest: "daily", digest_kind: "outbox" },
       fingerprint: ["daily-digest", "outbox", "2026-09-25"],
@@ -238,7 +259,7 @@ describe("grouping and tags (OPS-2)", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}"));
 
-    reportException(DSN, keep, new Error("ordinary"), {
+    reportException(TARGET, keep, new Error("ordinary"), {
       context: { runId: "r5" },
       tags: {},
     });
@@ -264,7 +285,7 @@ describe("cron check-ins (OPS-3)", () => {
     const kept: Promise<unknown>[] = [];
 
     openCheckIn(
-      DSN,
+      TARGET,
       (promise) => {
         kept.push(promise);
       },
@@ -297,7 +318,7 @@ describe("cron check-ins (OPS-3)", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}"));
 
-    openCheckIn(DSN, keep, MONITOR).finish("error");
+    openCheckIn(TARGET, keep, MONITOR).finish("error");
     await vi.waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
@@ -323,9 +344,82 @@ describe("cron check-ins (OPS-3)", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const keepAlive = vi.fn();
 
-    openCheckIn(undefined, keepAlive, MONITOR).finish("ok");
+    openCheckIn(
+      { dsn: undefined, environment: "development" },
+      keepAlive,
+      MONITOR,
+    ).finish("ok");
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(keepAlive).not.toHaveBeenCalled();
   });
+});
+
+describe("environment", () => {
+  it("is production only for the production origin", () => {
+    expect(sentryEnvironmentFor("https://dialed.run")).toBe("production");
+    expect(sentryEnvironmentFor("http://localhost:3000")).toBe("development");
+    expect(sentryEnvironmentFor("https://dialed.test")).toBe("development");
+    // An unset var is a misconfigured deploy, and one that errs out of
+    // alerts rather than a laptop erring into them.
+    expect(sentryEnvironmentFor(undefined)).toBe("development");
+  });
+
+  it("reads this Worker's DSN and origin from its bindings", () => {
+    // The test bindings carry no DSN and a non-production origin
+    // (test/wrangler.test.jsonc), so this is the development target.
+    expect(workerTarget()).toStrictEqual({
+      dsn: undefined,
+      environment: "development",
+    });
+  });
+
+  it.each(["production", "development"] as const)(
+    "tags an error event with %s",
+    async (environment) => {
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response("{}"));
+
+      reportException({ dsn: DSN, environment }, keep, new Error("boom"), {
+        context: { runId: "r6" },
+        tags: {},
+      });
+      await vi.waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalled();
+      });
+
+      const event = sentItems(fetchSpy).find(
+        (item) =>
+          typeof item === "object" && item !== null && "contexts" in item,
+      );
+      expect(event).toHaveProperty("environment", environment);
+    },
+  );
+
+  it.each(["production", "development"] as const)(
+    "tags both check-ins of a firing with %s",
+    async (environment) => {
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response("{}"));
+
+      openCheckIn({ dsn: DSN, environment }, keep, {
+        slug: "weather-retry",
+        schedule: "0 * * * *",
+      }).finish("ok");
+      await vi.waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+      });
+
+      const checkIns = sentItems(fetchSpy).filter(
+        (item) =>
+          typeof item === "object" && item !== null && "check_in_id" in item,
+      );
+      expect(checkIns).toStrictEqual([
+        expect.objectContaining({ status: "in_progress", environment }),
+        expect.objectContaining({ status: "ok", environment }),
+      ]);
+    },
+  );
 });
