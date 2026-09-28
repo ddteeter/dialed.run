@@ -23,7 +23,11 @@ import type { NotificationsDb } from "./db";
 import { nowSeconds } from "../../lib/now";
 
 export type NotificationKind =
-  "kit_reminder" | "import_failed" | "strava_reminder" | "strava_broken";
+  | "kit_reminder"
+  | "import_failed"
+  | "strava_reminder"
+  | "strava_broken"
+  | "content_removed";
 
 /**
  * What this notification is *about* — the thing it links to, and the key
@@ -36,6 +40,7 @@ export type NotificationKind =
  * | import_failed   | the import id                                    |
  * | strava_reminder | the Strava activity id (`event.object_id`)       |
  * | strava_broken   | the deauthorization event's time                 |
+ * | content_removed | the removed entry or photo's id (128 · SAF-8)    |
  *
  * A kind with no subject would pass `null`, and SQLite treats NULLs as
  * distinct in a UNIQUE index, so this key would not dedupe it — its guard

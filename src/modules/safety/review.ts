@@ -435,7 +435,7 @@ export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
  * parameter list into different clone spans, which is not a thing a reader
  * should have to think about.
  */
-type OpenRow =
+export type OpenRow =
   | "not_found"
   | "already_resolved"
   | { subjectType: ReportSubjectType; subjectId: string };
@@ -451,7 +451,7 @@ type OpenRow =
  * something different for each: a stale tab whose row someone else already
  * settled is not the same as a link to a row that is gone.
  */
-async function openRow(queueId: string): Promise<OpenRow> {
+export async function openRow(queueId: string): Promise<OpenRow> {
   // fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what "load a row and decide" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module
   const [row] = await db()
     .select({

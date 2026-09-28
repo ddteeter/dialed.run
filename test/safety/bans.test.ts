@@ -136,7 +136,7 @@ describe("unbanning", () => {
     const banState = await banStateOf(userId);
     expect(banState.banned).toBe(true);
 
-    await unbanUser(userId);
+    await unbanUser(userId, "desk-operator");
 
     // This is the regression guard for a real bug: `.set({ bannedAt:
     // undefined })` type-checks and drizzle DROPS the undefined, so the
@@ -152,7 +152,7 @@ describe("unbanning", () => {
   it("does not restore the revoked sessions", async () => {
     const userId = await signedInUser(2);
     await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
-    await unbanUser(userId);
+    await unbanUser(userId, "desk-operator");
 
     // They sign in again, which is correct — the rows were deleted, not
     // suspended, and inventing new ones would be forging a login.

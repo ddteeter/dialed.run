@@ -51,9 +51,9 @@ import {
 import { settleOpenReviews } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
-type Report = typeof captureException;
+export type Report = typeof captureException;
 type Debt = ReturnType<typeof oweOutbox>;
-type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+export type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 
 /**
 The one photo to delete, by the id its key ends in.
@@ -70,7 +70,7 @@ export type Scope = "all" | readonly string[];
  * never read into memory, so "all" is the same one statement for a runner
  * with ten thousand entries as for one with one.
  */
-function owned(
+export function owned(
   db: Db,
   table: typeof outfitEntries | typeof runs,
   userId: string,
@@ -96,18 +96,19 @@ function owned(
  * entries stay — they are what someone said — and the settled review row
  * is what stops the sweep queueing them again.
  */
-function entryStatements(
+export function entryStatements(
   db: Db,
   userId: string,
   entries: ReturnType<typeof owned>,
+  settledBy: string = userId,
 ): Statements {
   const photos = db
     .select({ id: entryPhotos.id })
     .from(entryPhotos)
     .where(inArray(entryPhotos.entryId, entries));
   return [
-    settleOpenReviews(db, "photo", photos, userId),
-    settleOpenReviews(db, "entry", entries, userId),
+    settleOpenReviews(db, "photo", photos, settledBy),
+    settleOpenReviews(db, "entry", entries, settledBy),
     db
       .delete(outfitEntryItems)
       .where(inArray(outfitEntryItems.entryId, entries)),
@@ -140,7 +141,7 @@ function deleteNotificationsAbout(
  * One reconcile per entry named, or one for the runner's whole prefix.
  * An entry id that turns out not to be theirs costs one empty listing.
  */
-function mediaDebts(userId: string, scope: Scope): Debt[] {
+export function mediaDebts(userId: string, scope: Scope): Debt[] {
   return scope === "all"
     ? [oweOutbox({ kind: "entry_media_delete", payload: { userId } })]
     : scope.map((entryId) =>
@@ -151,7 +152,7 @@ function mediaDebts(userId: string, scope: Scope): Debt[] {
 /**
 The batch, then the fast path for each debt.
 */
-async function commit(
+export async function commit(
   db: Db,
   statements: Statements,
   debts: readonly Debt[],

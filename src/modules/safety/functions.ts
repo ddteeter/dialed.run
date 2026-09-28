@@ -13,7 +13,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireUserId } from "../auth";
 
 import { requireAdmin } from "./admin";
-import { banUser } from "./bans";
+import { drizzle } from "drizzle-orm/d1";
+
+import { env } from "../../env";
+
+import { banUser, unbanUser } from "./bans";
+import { forceRename } from "./rename";
+import { accountCount, deskRunners } from "./runners";
 import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
 import { denyDomain } from "./denylist";
 import {
@@ -21,7 +27,10 @@ import {
   blockRunnerInput,
   denyDomainInput,
   fileReportInput,
+  forceRenameInput,
   reviewDecisionInput,
+  runnersFilterInput,
+  unbanUserInput,
 } from "./inputs";
 import { fileReport } from "./reports";
 import { claimForReview, pendingReviewQueue, resolveReview } from "./review";
@@ -96,4 +105,36 @@ export const denyDomainAction = createServerFn({ method: "POST" })
     const addedBy = requireAdmin(await requireUserId());
     await denyDomain(data.domain, addedBy, data.reason);
     return { denied: true };
+  });
+
+export const unbanUserAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => unbanUserInput.parse(input))
+  .handler(async ({ data }) => {
+    const unbannedBy = requireAdmin(await requireUserId());
+    await unbanUser(data.userId, unbannedBy);
+    return { banned: false };
+  });
+
+/**
+Round 27 #16: the handle becomes `@runner_NNNN`, with a reason.
+*/
+export const forceRenameAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => forceRenameInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await requireUserId());
+    return forceRename(drizzle(env.DIALED_CORE), { ...data, actorId });
+  });
+
+/**
+Desk · Runners, "D8" (round 27 #22).
+*/
+export const deskRunnersQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => runnersFilterInput.parse(input))
+  .handler(async ({ data }) => {
+    requireAdmin(await requireUserId());
+    const db = drizzle(env.DIALED_CORE);
+    return {
+      runners: await deskRunners(db, data),
+      total: await accountCount(db),
+    };
   });
