@@ -150,7 +150,7 @@ Where 2a departs from the plan above, and why:
 Changed on review of PR #119:
 
 - **An email change asks for the current password** (Better Auth's
-  `verify-password`, through `auth`'s `isCurrentPassword`), and when its
+  `verify-password`, through `auth`'s `checkCurrentPassword`), and when its
   link is spent every other session is signed out; the one the link was
   opened in stays.
 - **A link is claimed before it is acted on** (law 2): `UPDATE … WHERE
