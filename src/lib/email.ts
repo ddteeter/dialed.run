@@ -100,6 +100,16 @@ const contentRemoved = z.object({
   reason: z.string().min(1),
 });
 
+/**
+ * Round 27 #15's "Email ban": a moderator closed the account (task 128 ·
+ * SAF-4), with the reason the notice quotes. Account mail, so always sent,
+ * and no button — there is nothing to log in to.
+ */
+const accountClosed = z.object({
+  kind: z.literal("account_closed"),
+  reason: z.string().min(1),
+});
+
 export const emailTemplateSchema = z.discriminatedUnion("kind", [
   verifyEmail,
   existingAccount,
@@ -108,6 +118,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   emailChanged,
   runReminder,
   contentRemoved,
+  accountClosed,
 ]);
 
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
@@ -149,6 +160,7 @@ const PREFERENCE_OF: Readonly<
   email_changed: undefined,
   run_reminder: "run_reminder",
   content_removed: undefined,
+  account_closed: undefined,
 };
 
 /**

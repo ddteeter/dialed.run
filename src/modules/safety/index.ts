@@ -17,6 +17,7 @@ export {
 
 export {
   banStateOf,
+  banEmail,
   banUser,
   unbanUser,
   type BanInput,

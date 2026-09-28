@@ -15,14 +15,17 @@
  * them looks like it works.
  */
 import { eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { drizzle } from "drizzle-orm/d1";
 
 import { session } from "../../db/schema-auth";
 import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { firstRowWhere } from "../../lib/keyed-read";
+import type { OutboxMessage } from "../../lib/outbox";
 import { orSqlNull } from "../../lib/sql-null";
 import { nowSeconds } from "../../lib/now";
+import { emailDebt } from "../email";
 
 import { moderationActionInsert } from "./moderation-actions";
 
@@ -48,7 +51,10 @@ export interface BanInput {
  * than failing. A moderator clicking twice on a slow connection should not
  * see an error about the thing they wanted to happen.
  */
-export async function banUser(input: BanInput): Promise<void> {
+export async function banUser(
+  input: BanInput,
+  also: (database: ReturnType<typeof db>) => BatchItem<"sqlite">[] = () => [],
+): Promise<void> {
   const bannedAt = nowSeconds();
   await db().batch([
     db()
@@ -67,10 +73,25 @@ export async function banUser(input: BanInput): Promise<void> {
       subjectOwnerId: input.userId,
       reason: input.reason,
     }),
+    ...also(db()),
   ]);
-  // NEED(#119, 126 · ACC-2): the ban notice email joins this batch as an
-  // `emailDebt` row — the reason, and how to appeal — once `modules/email`
-  // is on main.
+}
+
+/**
+ * The ban's email (round 27 #15, "Email ban"), as an outbox message: the
+ * server function owes it through `ops` and hands `banUser` its insert
+ * (`also`), so it lands in the ban's batch. Safety cannot reach `ops`
+ * itself — `ops` imports safety. Keyed by the runner, so a second click
+ * on Close account replaces the debt rather than sending twice.
+ */
+export function banEmail(input: BanInput): OutboxMessage {
+  return emailDebt(
+    {
+      to: { userId: input.userId },
+      template: { kind: "account_closed", reason: input.reason },
+    },
+    { dedupeKey: `account_closed:${input.userId}` },
+  );
 }
 
 /**

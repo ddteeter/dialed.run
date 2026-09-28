@@ -16,8 +16,9 @@ import { requireAdmin } from "./admin";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
+import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
 
-import { banUser, unbanUser } from "./bans";
+import { banEmail, banUser, unbanUser } from "./bans";
 import { accountCount, forceRename, listAccounts } from "../account";
 import { placeholderHandle, renameRecord } from "./rename";
 import { deskRunners, runnersWhere } from "./runners";
@@ -87,7 +88,11 @@ export const banUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => banUserInput.parse(input))
   .handler(async ({ data }) => {
     const bannedBy = requireAdmin(await requireUserId());
-    await banUser({ userId: data.userId, reason: data.reason, bannedBy });
+    const ban = { userId: data.userId, reason: data.reason, bannedBy };
+    // The ban's email, owed in the ban's batch, then the fast path.
+    const debt = oweOutbox(banEmail(ban));
+    await banUser(ban, (database) => [outboxInsert(database, debt)]);
+    await settleOutbox(drizzle(env.DIALED_CORE), debt);
     return { banned: true };
   });
 

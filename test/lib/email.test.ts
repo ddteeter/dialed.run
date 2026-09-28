@@ -24,6 +24,7 @@ describe("emailTemplateSchema", () => {
       { kind: "email_changed", newEmail: "new@example.com" },
       { kind: "run_reminder", landedAt: "6:58 AM", runs: 3 },
       { kind: "content_removed", subject: "photo", reason: "it's spam" },
+      { kind: "account_closed", reason: "spam" },
     ];
     for (const payload of payloads) {
       expect(
@@ -31,6 +32,13 @@ describe("emailTemplateSchema", () => {
         JSON.stringify(payload),
       ).toMatchObject({ success: true });
     }
+  });
+
+  it("refuses a ban notice with no reason", () => {
+    expect(
+      emailTemplateSchema.safeParse({ kind: "account_closed", reason: "" })
+        .success,
+    ).toBe(false);
   });
 
   it("refuses a removal notice with no reason, or about anything but an entry or a photo", () => {
@@ -99,6 +107,7 @@ describe("preferenceFor", () => {
     expect(preferenceFor("email_change")).toBeUndefined();
     expect(preferenceFor("email_changed")).toBeUndefined();
     expect(preferenceFor("content_removed")).toBeUndefined();
+    expect(preferenceFor("account_closed")).toBeUndefined();
   });
 });
 

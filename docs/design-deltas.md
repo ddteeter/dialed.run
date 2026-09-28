@@ -537,6 +537,12 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     - **The notice band** (round 27 #20, #21) is the §4a band's shape
       without its retry. #20's "See the community rules" link is left out
       until the rules page exists.
+    - **"Email content removed" and "Email ban"** (round 27 #15) are
+      built from round 26's template. Content removed says "one of your
+      runs" rather than the run's date, and its button is Log in, since
+      the board's "See the community rules" has no page yet. The ban email
+      names no handle ("We closed your account…") and drops the board's
+      "No case number." from its foot; it has no button, as drawn.
 
 ## Answered in round 27 (imported 2026-09-27)
 

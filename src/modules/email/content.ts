@@ -24,7 +24,10 @@ export interface EmailContent {
   The body: one or two sentences, above the button.
   */
   readonly body: string;
-  readonly button: EmailLink;
+  /**
+  Absent only where the board draws none — the ban email.
+  */
+  readonly button?: EmailLink | undefined;
   /**
   A quiet line under the button: how long the link works, what to ignore.
   */
@@ -149,6 +152,14 @@ export function emailContent(
         body: `${REMOVED[template.subject]} Reason: ${template.reason}. ${STAYS[template.subject]}`,
         button: logIn(origin),
         foot: "Think we got it wrong? Reply to this email.",
+        footer,
+      };
+    }
+    case "account_closed": {
+      return {
+        subject: "Your dialed.run account is closed",
+        body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
+        foot: "Think we got it wrong? Reply within 30 days and a different moderator will look.",
         footer,
       };
     }

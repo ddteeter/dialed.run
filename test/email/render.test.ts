@@ -123,6 +123,15 @@ describe("emailContent", () => {
         footer: [PRIVACY],
       },
     ],
+    [
+      { kind: "account_closed", reason: "repeated harassment" },
+      {
+        subject: "Your dialed.run account is closed",
+        body: "We closed your account for breaking the community rules: repeated harassment. You can't log in, and your shared runs are gone from the feed.",
+        foot: "Think we got it wrong? Reply within 30 days and a different moderator will look.",
+        footer: [PRIVACY],
+      },
+    ],
   ])("says what round 26 draws for %o", (template, expected) => {
     expect(
       emailContent(template, { origin: ORIGIN, unsubscribe: UNSUBSCRIBE }),
@@ -226,5 +235,15 @@ describe("renderEmail", () => {
     expect(verify.html.split(footerStyle).length - 1, verify.html).toBe(1);
     // The reminder genuinely has a reason, so it carries two.
     expect(reminder.html.split(footerStyle).length - 1).toBe(2);
+  });
+
+  it("draws no button where the board draws none (the ban email)", () => {
+    const closed = renderEmail(
+      { kind: "account_closed", reason: "spam" },
+      { origin: ORIGIN },
+    );
+    expect(closed.html).not.toContain("background-color:#ff2d8a");
+    expect(closed.text).not.toContain(`${ORIGIN}/auth/login`);
+    expect(reminder.html).toContain("background-color:#ff2d8a");
   });
 });

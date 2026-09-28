@@ -307,6 +307,7 @@ describe("preferences", () => {
       "email_change",
       "email_changed",
       "content_removed",
+      "account_closed",
     ];
     for (const kind of kinds) expect(preferenceFor(kind), kind).toBeUndefined();
     expect(preferenceFor("run_reminder")).toBe("run_reminder");
