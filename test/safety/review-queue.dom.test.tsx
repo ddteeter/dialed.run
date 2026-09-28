@@ -167,6 +167,33 @@ describe("deciding", () => {
     expect(screen.getByText(/entry · e-2/)).toBeInTheDocument();
   });
 
+  it("decides one row at a time, the oldest first unless another is picked", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([
+      row(),
+      row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+    ]);
+
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Decide this one" }));
+    expect(
+      screen.queryByRole("button", { name: "Decide this one" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    expect(resolve).toHaveBeenCalledWith({
+      data: { queueId: "01HYYYYYYYYYYYYYYYYYYYYYYY", action: "approve" },
+    });
+    await waitFor(() => {
+      expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    });
+    // The one left is decided next, with no pick needed.
+    expect(
+      screen.queryByRole("button", { name: "Decide this one" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+  });
+
   it("does not ask the same row twice", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);

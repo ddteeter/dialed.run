@@ -108,7 +108,9 @@ A moderator's force-rename (round 27 #16).
 */
 export const forceRenameInput = z.object({
   userId: z.string().min(1).max(64),
-  reason: renameReasonSchema,
+  // Not `reason`: D8 draws Rename beside Close account, whose field is
+  // `reason`, and a field's name is its id.
+  nameReason: renameReasonSchema,
 });
 
 /**

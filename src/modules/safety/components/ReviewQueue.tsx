@@ -127,7 +127,7 @@ type Decide = (input: { data: ReviewActionValues }) => Promise<unknown>;
  * The row leaves the list only once the server has said so: a remove
  * that failed must stay where the reviewer can try it again.
  */
-function ReviewRow({
+function Decision({
   row,
   decide,
   onSettled,
@@ -156,6 +156,73 @@ function ReviewRow({
   }
 
   return (
+    <DeskForm
+      form={form}
+      className="flex flex-col gap-2"
+      onSubmit={() => {
+        send("remove");
+      }}
+      action={
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="target"
+            type="button"
+            onClick={() => {
+              void form.submit({ queueId: row.id, action: "approve" });
+            }}
+          >
+            <Mono step="xs">Approve</Mono>
+          </button>
+          <SubmitButton
+            label="Remove"
+            pendingLabel="Removing"
+            pending={form.pending}
+          />
+          <button
+            className="target"
+            type="button"
+            onClick={() => {
+              send("quarantine");
+            }}
+          >
+            <Mono step="xs">Remove as suspected CSAM</Mono>
+          </button>
+        </div>
+      }
+    >
+      <ChoiceField<RemovalReason>
+        name="reason"
+        label="Why it comes down"
+        options={removalReasons}
+        optionLabels={REASON_LABELS}
+        value={reason}
+        onChange={setReason}
+        field={form.field}
+        error={form.fieldErrors.reason}
+      />
+    </DeskForm>
+  );
+}
+
+/**
+ * A waiting row. Only the row being decided carries the decision, so the
+ * page holds one reason picker — and a reviewer decides one thing at a
+ * time, the oldest first unless they pick another.
+ */
+function ReviewRow({
+  row,
+  active,
+  onActivate,
+  decide,
+  onSettled,
+}: Readonly<{
+  row: QueueRow;
+  active: boolean;
+  onActivate: () => void;
+  decide: Decide;
+  onSettled: (id: string) => void;
+}>): JSX.Element {
+  return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
       <span className="text-body font-semibold">
         {row.subjectType} · {row.subject.label ?? row.subjectId}
@@ -165,51 +232,17 @@ function ReviewRow({
       <span className="text-micro text-quiet">
         <Bracketed>{row.source}</Bracketed>
       </span>
-      <DeskForm
-        form={form}
-        className="flex flex-col gap-2"
-        onSubmit={() => {
-          send("remove");
-        }}
-        action={
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="target"
-              type="button"
-              onClick={() => {
-                void form.submit({ queueId: row.id, action: "approve" });
-              }}
-            >
-              <Mono step="xs">Approve</Mono>
-            </button>
-            <SubmitButton
-              label="Remove"
-              pendingLabel="Removing"
-              pending={form.pending}
-            />
-            <button
-              className="target"
-              type="button"
-              onClick={() => {
-                send("quarantine");
-              }}
-            >
-              <Mono step="xs">Remove as suspected CSAM</Mono>
-            </button>
-          </div>
-        }
-      >
-        <ChoiceField<RemovalReason>
-          name="reason"
-          label="Why it comes down"
-          options={removalReasons}
-          optionLabels={REASON_LABELS}
-          value={reason}
-          onChange={setReason}
-          field={form.field}
-          error={form.fieldErrors.reason}
-        />
-      </DeskForm>
+      {active ? (
+        <Decision row={row} decide={decide} onSettled={onSettled} />
+      ) : (
+        <button
+          className="target self-start"
+          type="button"
+          onClick={onActivate}
+        >
+          <Mono step="xs">Decide this one</Mono>
+        </button>
+      )}
     </li>
   );
 }
@@ -227,6 +260,10 @@ export function ReviewQueue(
   // Rows leave the list as they are decided; `useSettled` says why that
   // is safe.
   const { remaining: waiting, settle } = useSettled(props.queue, queueRowId);
+  const [chosen, setChosen] = useState<string | undefined>();
+  const activeId = waiting.some((row) => row.id === chosen)
+    ? chosen
+    : waiting[0]?.id;
 
   return (
     <div className="flex flex-col gap-4">
@@ -244,6 +281,10 @@ export function ReviewQueue(
           <ReviewRow
             key={row.id}
             row={row}
+            active={row.id === activeId}
+            onActivate={() => {
+              setChosen(row.id);
+            }}
             decide={props.resolve}
             onSettled={settle}
           />

@@ -28,7 +28,7 @@ import { DeskForm } from "./DeskForm";
  */
 
 type Rename = (input: {
-  data: { userId: string; reason: RenameReason };
+  data: { userId: string; nameReason: RenameReason };
 }) => Promise<RenameOutcome>;
 type Ban = (input: {
   data: { userId: string; reason: string };
@@ -77,7 +77,7 @@ function Search({ filter }: Readonly<{ filter: RunnersFilter }>): JSX.Element {
         });
       }}
     >
-      <label className="flex flex-col gap-1">
+      <label className="target flex flex-col gap-1">
         <Mono step="xs" className="text-muted">
           Handle or email
         </Mono>
@@ -171,7 +171,7 @@ function RenamePanel({
       onDone();
     },
     successMessage: "Rename sent.",
-    labels: { reason: "Why the name has to go" },
+    labels: { nameReason: "Why the name has to go" },
   });
   return (
     <DeskForm
@@ -181,7 +181,7 @@ function RenamePanel({
       onSubmit={() => {
         void form.submit({
           userId: runner.userId,
-          reason: reason === "" ? undefined : reason,
+          nameReason: reason === "" ? undefined : reason,
         });
       }}
       action={
@@ -193,14 +193,14 @@ function RenamePanel({
       }
     >
       <ChoiceField<RenameReason>
-        name="reason"
+        name="nameReason"
         label="Why the name has to go"
         options={renameReasons}
         optionLabels={RENAME_LABELS}
         value={reason}
         onChange={setReason}
         field={form.field}
-        error={form.fieldErrors.reason}
+        error={form.fieldErrors.nameReason}
       />
       <p className="text-small text-quiet">
         The handle becomes @runner_ and four digits, and the old one is never

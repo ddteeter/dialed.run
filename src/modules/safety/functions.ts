@@ -113,7 +113,11 @@ export const forceRenameAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => forceRenameInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await requireUserId());
-    return forceRename(drizzle(env.DIALED_CORE), { ...data, actorId });
+    return forceRename(drizzle(env.DIALED_CORE), {
+      userId: data.userId,
+      reason: data.nameReason,
+      actorId,
+    });
   });
 
 /**

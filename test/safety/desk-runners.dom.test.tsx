@@ -86,9 +86,7 @@ describe("D8's table", () => {
     expect(screen.getByText("[412 accounts]")).toBeInTheDocument();
     const [header, first, second] = screen.getAllByRole("row");
     expect(header).toHaveTextContent("HandleEmailJoinedRunsReportsState");
-    expect(first).toHaveTextContent(
-      "@adaada@example.com2025-09-04122[ACTIVE]",
-    );
+    expect(first).toHaveTextContent("@adaada@example.com2025-09-04122[ACTIVE]");
     expect(second).toHaveTextContent("—bo@example.com2023-11-1400[CLOSED]");
   });
 
@@ -145,9 +143,9 @@ describe("selecting a runner", () => {
       "Rename",
       "Close account",
     ]);
-    expect(
-      screen.getByRole("row", { selected: true }),
-    ).toHaveTextContent("@ada");
+    expect(screen.getByRole("row", { selected: true })).toHaveTextContent(
+      "@ada",
+    );
   });
 
   it("names a runner with no handle by their email", async () => {
@@ -174,7 +172,7 @@ describe("Rename (round 27 #16)", () => {
     await user.click(screen.getByRole("button", { name: "Rename" }));
 
     expect(rename).toHaveBeenCalledWith({
-      data: { userId: "u-ada", reason: "Pretends to be someone else" },
+      data: { userId: "u-ada", nameReason: "Pretends to be someone else" },
     });
     expect(
       await screen.findByText("Renamed to @runner_4821."),
