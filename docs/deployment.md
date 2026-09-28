@@ -248,6 +248,10 @@ needs its own Strava app, not a second subscription.
   "an event is seen" filtered to the tag `digest = daily`. The digest sends
   one event per anomaly kind, tagged `digest_kind`, and fingerprints it by
   kind and day, so each day's anomalies arrive as a new issue as well.
+- **Every alert rule filters `environment:production`.** Each event and
+  check-in is tagged `production` only when `BETTER_AUTH_URL` is the
+  production origin, and `development` otherwise, so a local or CI run
+  holding a real DSN cannot page you.
 
 ## 9. Restoring a database (D1 Time Travel)
 

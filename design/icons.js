@@ -21,6 +21,11 @@
  * - Do not scale a glyph non-uniformly, rotate it, or add a second color.
  * - Verdict + [GENERIC] icons are drawn inside the brand brackets on purpose.
  *   Those five are the only glyphs allowed to carry the bracket motif.
+ * - FOREIGN MARKS: exactly two parts may carry a mark and palette that are
+ *   not ours: data-part="google-button" (Google's official G, Google's
+ *   colours; label in Archivo) and data-part="strava-button" (Strava's
+ *   official "Connect with Strava" asset). They are brand assets, not icons:
+ *   never add them to ICONS, never recolour them, never use them elsewhere.
  *
  * ADDING AN ICON
  * Draw on the 24 grid, keep the live area within 3–21, snap to whole or half
@@ -159,6 +164,9 @@ export const TAB_BAR = [
 
 /** discover moved nav → social: it is a browse surface, not a v1 tab. */
 export const ICON_NAMES = Object.keys(ICONS);
+
+/** The only parts allowed a foreign mark or palette (round 27 #2). Not icons. */
+export const FOREIGN_MARK_PARTS = ['google-button', 'strava-button'];
 export const COUNT = ICON_NAMES.length;
 
 /** Returns the full SVG markup string for an icon — used by the copy button. */

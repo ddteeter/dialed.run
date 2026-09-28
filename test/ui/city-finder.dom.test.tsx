@@ -143,6 +143,28 @@ describe("CityFinder", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("finds once on Enter on Find, and still never submits the form", async () => {
+    // Find sits in the field's row now (ui/form.tsx's `BesideTheBox`),
+    // inside the box that takes Enter — so Enter on Find is caught there
+    // and must not also fire the button's own click: one lookup, not two.
+    const { lookUp, onSubmit, user } = setup();
+
+    await user.type(field(), "Portland");
+    findButton().focus();
+    await user.keyboard("{Enter}");
+
+    await screen.findByText("Portland, OR, United States");
+    expect(lookUp).toHaveBeenCalledTimes(1);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("sits Find in the box's row, level with it", () => {
+    setup();
+    expect(findButton().closest('[data-part="field-row"]')).toContainElement(
+      field(),
+    );
+  });
+
   it("lets other keys through to the field", async () => {
     const { lookUp, user } = setup();
     await user.type(field(), "Bend");

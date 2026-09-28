@@ -7,7 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import { z } from "zod";
 
 import type { ImportOutcome } from "../../src/modules/runs/imports";
@@ -95,6 +95,19 @@ type Upload = (input: { data: FormData }) => Promise<{ importId: string }>;
 type GetOutcome = (input: {
   data: { importId: string };
 }) => Promise<ImportOutcome | undefined>;
+
+/**
+ * Waits until the form is watching the import: its first poll has gone
+ * out, so the poll and stall timers exist. Fake time advanced before that
+ * jumps the clock over timers not yet set — under `shouldAdvanceTime` the
+ * send can land on either side of the first advance, and a test that
+ * advanced straight after `user.upload` passed or failed on that race.
+ */
+async function firstPoll(getOutcome: Mock<GetOutcome>): Promise<void> {
+  await waitFor(() => {
+    expect(getOutcome).toHaveBeenCalled();
+  });
+}
 
 function form(
   overrides: {
@@ -358,12 +371,14 @@ describe("A1: sending and reading", () => {
     const upload = vi.fn<Upload>(() =>
       Promise.resolve({ importId: "01IMPORT" }),
     );
-    await renderWithRouter(form({ upload }));
+    const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
+    await renderWithRouter(form({ upload, getOutcome }));
 
     await user.upload(dropInput(), gpx());
     await waitFor(() => {
       expect(well()).toHaveAttribute("data-state", "uploading");
     });
+    await firstPoll(getOutcome);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(19_000);
     });
@@ -443,8 +458,10 @@ describe("A1: sending and reading", () => {
     const upload = vi.fn<Upload>(() =>
       Promise.resolve({ importId: "01IMPORT" }),
     );
-    await renderWithRouter(form({ upload, getOutcome: neverAnswers }));
+    const getOutcome = vi.fn<GetOutcome>(neverAnswers);
+    await renderWithRouter(form({ upload, getOutcome }));
     await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
@@ -475,6 +492,7 @@ describe("A1: sending and reading", () => {
     });
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
@@ -484,7 +502,8 @@ describe("A1: sending and reading", () => {
       await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
     });
 
-    expect(asked).toBeGreaterThan(0);
+    // More than the first poll: it kept asking, then the budget stopped it.
+    expect(asked).toBeGreaterThan(1);
     expect(getOutcome.mock.calls).toHaveLength(asked);
   });
 
@@ -504,6 +523,7 @@ describe("A1: sending and reading", () => {
     });
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000);

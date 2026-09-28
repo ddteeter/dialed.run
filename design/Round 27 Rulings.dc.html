@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 27 &nbsp;/&nbsp; 31 items · amend, draw, confirm</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">The owner decided. The boards agree. Every way out has a door.</h1>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <sc-for list="{{ toc }}" as="t" hint-placeholder-count="20">
+          <a href="{{ t.href }}" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">{{ t.label }}</a>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px;">Light mode at 390 unless marked DESK. Dark follows by the T1 swap. Contract amendments are made on the contract boards themselves (Accessibility §06, Theme T1, <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">icons.js</span>, Remaining Screens §AH 08, Round 26 #13); this board records them.</p>
+    </div>
+
+    <!-- A · amendments table -->
+    <div id="rA" style="display: flex; flex-direction: column; gap: 24px;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">A · Amendments</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;">Items 1, 2, 5, 6 and 9 are text changes, made where they live. Items 3, 4, 7 and 8 are drawn below.</span>
+      </div>
+      <sc-for list="{{ rulingGroups }}" as="g" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column; gap: 0; border: 1px solid #2A2A31;">
+          <div style="background: #1C1C22; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ g.title }}</div>
+          <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="5">
+            <div id="{{ r.id }}" style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 150px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+              <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+              <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- 3 Google label -->
+    <div id="r3" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">3 · Google's button, our label</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: Archivo 500, 15px, in Google's label colour. The G, fill, stroke and pill stay Google's.</strong> 500 is the nearest match to Roboto Medium's weight, so the button keeps Google's visual weight without a fourth family.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ googleFrames }}" as="gf" hint-placeholder-count="2">
+          <div data-screen-label="{{ gf.screen }}" style="background: {{ gf.ground }}; border: 1px solid #2A2A31; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; width: 340px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: {{ gf.kc }};">{{ gf.label }}</span>
+            <span data-part="google-button" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: {{ gf.bg }}; border: 1px solid {{ gf.stroke }}; border-radius: 100px; height: 48px; font-family: Archivo, sans-serif; font-weight: 500; font-size: 15px; color: {{ gf.fg }};"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 300px; min-width: 260px; font-size: 14px; line-height: 1.55; color: #DEDDD6; display: flex; flex-direction: column; gap: 8px;">
+          <span><strong style="color: #F4F3EF;">Changed:</strong> the label family only. Round 26 #13's frames, Au2, the invite stage, T1's exemption note and <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">icons.js</span> now say Archivo. The Roboto font request is gone from every board.</span>
+          <span><strong style="color: #F4F3EF;">Unchanged:</strong> "Continue with Google", 48 high, the G at 20px with a 10px gap, and Google's light and dark pairs.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 No queued shares -->
+    <div id="r4" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">4 · Unverified saves private</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the share switch shows off and says why. Pressing it opens the #17 sheet. Confirming the email restores the runner's default for new runs, and runs saved before it stay private.</strong> There's no queue, so there's no count to report.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ shareFrames }}" as="s" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.label }}</span>
+            <div data-screen-label="{{ s.screen }}" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; align-items: center; gap: 14px; border: 1px solid #DCDBD2; background: #FFFFFF; border-radius: 12px; padding: 14px 16px;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-size: 16px; font-weight: 700;">Share with runners on dialed.run</span>
+                  <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ s.sub }}</span>
+                </div>
+                <span role="switch" aria-checked="{{ s.on }}" style="flex: 0 0 52px; height: 30px; border-radius: 100px; border: 2px solid #0B0B0E; background: {{ s.track }}; display: flex; align-items: center; justify-content: {{ s.justify }}; padding: 0 3px;"><span style="width: 20px; height: 20px; border-radius: 100px; background: {{ s.knob }};"></span></span>
+              </div>
+              <span style="font-size: 13px; line-height: 1.5; color: #4E4E44;">{{ s.note }}</span>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 320px; min-width: 260px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">LINK LANDING · CONFIRMED (REPLACES ROUND 26 COPY)</span>
+          <div data-screen-label="Link success r27" style="background: #F4F3EF; color: #0B0B0E; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 10px; max-width: 390px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00776A;">CONFIRMED</span>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">Email confirmed</span>
+            <span style="font-size: 14px; line-height: 1.45; color: #4E4E44;">New runs follow your sharing setting. Runs you logged before today stay private; share any of them from the run.</span>
+            <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Open dialed.run</span>
+          </div>
+          <div style="background: #0B0B0E; border: 1px solid #2A2A31; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Gone:</strong> "Shares when you confirm your email." and "3 runs shared." The WAITS list reads: share (saves private), Useful, report, email change. Password reset moves to CAN (#9).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 Public -->
+    <div id="r7" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">7 · "Public" is retired</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the word "public" leaves the product copy. The opposite of private is "shared with runners on dialed.run", or just "shared" once the sentence has said who.</strong> Stored values can stay <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">PUBLIC</span>; the runner never reads them.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #1C1C22; padding: 10px 16px; display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr) minmax(0, 1fr); gap: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;"><span>WHERE</span><span>WAS</span><span>NOW</span></div>
+        <sc-for list="{{ publicRows }}" as="p" hint-placeholder-count="6">
+          <div style="background: #0B0B0E; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: baseline; font-size: 14px; line-height: 1.5;">
+            <span style="font-weight: 600;">{{ p.where }}</span>
+            <span style="color: #8B8B93; text-decoration: line-through;">{{ p.was }}</span>
+            <span style="color: #F4F3EF;">{{ p.now }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Share card.</strong> Only the default card ships: wordmark, "Log runs, see what worked", ink ground. og:title "dialed.run" on every URL. Round 26 #22's per-entry card is struck, because link previews never show entry data.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Indexing.</strong> Until public launch every response sends <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">X-Robots-Tag: noindex</span> and robots.txt disallows all. After launch only <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">/</span> is indexable; /privacy, /terms and /copyright stay noindex but reachable. The same flag as the invite field flips it.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Signed-out /@handle and entry URLs</strong> go to Au1 with "Log in to see this run." They never render an entry to a logged-out visitor.</div>
+      </div>
+    </div>
+
+    <!-- 8 Unsubscribe -->
+    <div id="r8" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">8 · Unsubscribe is one press</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: the body link opens a signed-out page with one ink button. The POST unsubscribes. The mail client's List-Unsubscribe-Post stays one click.</strong> The same rule covers every link that changes state: "This wasn't me" (#15) lands on a page with a button too.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ unsubFrames }}" as="f" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; min-height: 520px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+              <div style="padding: 32px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: {{ f.kc }};">{{ f.kicker }}</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">{{ f.head }}</span>
+                <p style="margin: 0; font-size: 16px; line-height: 1.5;">{{ f.body }}</p>
+                <sc-if value="{{ f.primary }}" hint-placeholder-val="{{ true }}"><span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">{{ f.primary }}</span></sc-if>
+                <sc-if value="{{ f.link }}" hint-placeholder-val="{{ false }}"><span style="font-size: 15px; color: #C21A6B; font-weight: 600;">{{ f.link }}</span></sc-if>
+                <span style="margin-top: auto; font-size: 13px; line-height: 1.45; color: #4E4E44; border-top: 1px solid #DCDBD2; padding-top: 12px;">{{ f.foot }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 320px; min-width: 260px; display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">No log-in, no confirm-the-confirm.</strong> The link is signed and never expires. The page names the address, masked: "for ma•••@example.com".</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Already off.</strong> Opening the link again shows the done state directly. Pressing it twice is harmless.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Fails (§4a).</strong> A band under the button: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">STILL SUBSCRIBED</span> · "That didn't go through. Try again?"</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Turn them back on</strong> is a second button press on the same page (a POST), and returns to the first state.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 Password reset -->
+    <div id="r10" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">10 · Password reset &nbsp;·&nbsp; <span id="r9">9</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: four screens, one email. "Check your inbox" reads the same whether the address has an account or not. A completed reset confirms the email and signs out every other device.</strong> Possession of the inbox has just been proved, so it counts.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ resetFrames }}" as="f" hint-placeholder-count="5">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; min-height: 560px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+              <div style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                <sc-if value="{{ f.kicker }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: {{ f.kc }};">{{ f.kicker }}</span></sc-if>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">{{ f.head }}</span>
+                <sc-if value="{{ f.body }}" hint-placeholder-val="{{ true }}"><p style="margin: 0; font-size: 16px; line-height: 1.5;">{{ f.body }}</p></sc-if>
+                <sc-for list="{{ f.fields }}" as="x" hint-placeholder-count="1">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ x.k }}</label><span style="font-size: 14px; font-weight: 600; color: #C21A6B;">{{ x.aside }}</span></div>
+                    <sc-if value="{{ x.hint }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #4E4E44;">{{ x.hint }}</span></sc-if>
+                    <div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: {{ x.border }}; border-radius: 10px; padding: 0 15px; font-size: 16px; letter-spacing: {{ x.ls }};">{{ x.v }}</div>
+                    <sc-if value="{{ x.msg }}" hint-placeholder-val="{{ false }}"><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">{{ x.msg }}</span></sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ f.band }}" hint-placeholder-val="{{ false }}">
+                  <div data-part="control-failure" role="status" style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">{{ f.band.k }}</span><span style="font-size: 14px; line-height: 1.45;">{{ f.band.t }}</span></div>
+                </sc-if>
+                <sc-if value="{{ f.turnstile }}" hint-placeholder-val="{{ false }}"><div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TURNSTILE · SHOWN ONLY IF CHALLENGED</div></sc-if>
+                <sc-if value="{{ f.primary }}" hint-placeholder-val="{{ true }}"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">{{ f.primary }}</span></sc-if>
+                <sc-if value="{{ f.secondary }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #4E4E44;">{{ f.secondaryLead }} <span style="color: #C21A6B; font-weight: 600;">{{ f.secondary }}</span></span></sc-if>
+                <sc-if value="{{ f.foot }}" hint-placeholder-val="{{ false }}"><span style="margin-top: auto; font-size: 13px; line-height: 1.45; color: #4E4E44; border-top: 1px solid #DCDBD2; padding-top: 12px;">{{ f.foot }}</span></sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">"Forgot it?"</strong> sits right-aligned on the PASSWORD label line of Au1. It carries whatever is in the email field into Au6.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Google-only accounts</strong> get the reset email too, with the button "Set a password". Afterwards they can log in either way.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">One link at a time.</strong> A new request kills the old link. The rate limit uses #11's grammar: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">NOT SENT</span> · "That's 5 links this hour. You can send another at 7:42 PM." It shows only to the same browser, so it never reveals whether the account exists.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">After saving</strong> the runner is logged in here and lands on Closet with the status line "Password changed. Other devices are signed out." A banned account's link lands on D4 instead.</div>
+      </div>
+    </div>
+
+    <!-- 11 Account -->
+    <div id="r11" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">11 · U1 Account &nbsp;·&nbsp; <span id="r13">13</span> · <span id="r14">14</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: U1 is one list, safest row first and delete last, set apart. Every change that takes over the account asks for the current password. Google-only accounts are asked to re-authenticate with Google instead.</strong></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">U1 · SETTINGS › ACCOUNT · EMAIL CHANGE PENDING</span>
+          <div data-screen-label="U1 Account" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px; display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 14px; color: #B9B8AE;">← Settings</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Account</span></div>
+            <div style="padding: 8px 20px 22px; display: flex; flex-direction: column;">
+              <sc-for list="{{ accountRows }}" as="a" hint-placeholder-count="6">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 16px 0; border-top: {{ a.rule }}; margin-top: {{ a.gap }};">
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+                    <span style="font-size: 16px; font-weight: 600; color: {{ a.c }};">{{ a.t }}</span>
+                    <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ a.sub }}</span>
+                    <sc-if value="{{ a.pending }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #0B0B0E; background: #EDECE3; padding: 6px 8px; margin-top: 4px; line-height: 1.5;">{{ a.pending }}</span></sc-if>
+                  </div>
+                  <span style="flex: 0 0 auto; font-size: 15px; font-weight: 600; color: {{ a.ac }};">{{ a.action }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <sc-for list="{{ accountSheets }}" as="s" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.label }}</span>
+            <div data-screen-label="{{ s.screen }}" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+              <div style="padding: 10px 0 0; display: flex; justify-content: center;"><span style="width: 36px; height: 4px; border-radius: 100px; background: #B9B8AE;"></span></div>
+              <div style="padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">{{ s.head }}</span>
+                <span style="font-size: 15px; line-height: 1.5;">{{ s.body }}</span>
+                <sc-for list="{{ s.fields }}" as="x" hint-placeholder-count="1">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ x.k }}</label>
+                    <sc-if value="{{ x.hint }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #4E4E44;">{{ x.hint }}</span></sc-if>
+                    <div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: {{ x.border }}; border-radius: 10px; padding: 0 15px; font-size: 16px; letter-spacing: {{ x.ls }};">{{ x.v }}</div>
+                    <sc-if value="{{ x.msg }}" hint-placeholder-val="{{ false }}"><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">{{ x.msg }}</span></sc-if>
+                  </div>
+                </sc-for>
+                <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">{{ s.primary }}</span>
+                <span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 14px; text-align: center; font-size: 15px; font-weight: 600; outline: {{ s.focus }}; outline-offset: 2px;">{{ s.secondary }}</span>
+              </div>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">{{ s.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ pendingFrames }}" as="f" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; min-height: 480px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+              <div style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C21A6B;">{{ f.kicker }}</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">{{ f.head }}</span>
+                <p style="margin: 0; font-size: 16px; line-height: 1.5;">{{ f.body }}</p>
+                <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">{{ f.primary }}</span>
+                <span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44;">{{ f.secondary }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 320px; min-width: 260px; display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Email change.</strong> The old address keeps working until the new one confirms. Its notice (#15) carries "This wasn't me", which cancels the change and signs out everywhere. Only one change can be pending; a second replaces the first.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Export (13).</strong> Pressing "Get a copy" turns the row's action to <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">[ Preparing ]</span> and the sub-line to "We'll email a link when it's ready." One export a day. The ZIP: runs.csv, entries.csv, garments.csv, your original run files and photos, and a README naming each column.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Delete (14), the pending week.</strong> Every device signs out. Shared runs leave the feed at once and stop counting toward anyone's Call. The handle stays reserved. At day 7 everything is deleted, the handle is released and the runner gets no further email.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Logging in during the week</strong> never cancels silently. Au1 succeeds, then shows the interstitial. "Keep my account" restores it with the share state it had. "Log out" leaves the date as it was.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12 Legal + Turnstile -->
+    <div id="r12" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">12 · Legal lines and pages &nbsp;·&nbsp; <span id="r5">5</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: one sentence of agreement and one of age, under the form, above nothing. Turnstile runs managed and sits directly above the primary; it takes space only when it has to challenge. All three documents use the contract: the 620 measure and the <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">lead</span> step.</strong></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ signFrames }}" as="f" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+              <div style="padding: 26px 24px 22px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">{{ f.head }}</span>
+                <sc-for list="{{ f.fields }}" as="x" hint-placeholder-count="2">
+                  <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ x.k }}</label><div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 0 15px; font-size: 16px; color: {{ x.c }}; letter-spacing: {{ x.ls }};">{{ x.v }}</div></div>
+                </sc-for>
+                <div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; text-align: center; padding: 0 12px;">TURNSTILE · 300×65 · ONLY WHEN CHALLENGED</div>
+                <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">{{ f.primary }}</span>
+                <sc-if value="{{ f.google }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+                    <span data-part="google-button" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Archivo, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><span style="width: 20px; height: 20px; border-radius: 100px; border: 3px solid #4285F4; border-right-color: #EA4335; border-bottom-color: #34A853; border-left-color: #FBBC05;"></span>Continue with Google</span>
+                  </div>
+                </sc-if>
+                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.45; color: #4E4E44;">
+                  <sc-for list="{{ f.lines }}" as="l" hint-placeholder-count="2"><span>{{ l.a }}<span style="color: #C21A6B; font-weight: 600; text-decoration: underline; text-underline-offset: 2px;">{{ l.l1 }}</span>{{ l.b }}<span style="color: #C21A6B; font-weight: 600; text-decoration: underline; text-underline-offset: 2px;">{{ l.l2 }}</span>{{ l.c }}</span></sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 320px; min-width: 260px; display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">No checkbox.</strong> Pressing Create account (or Google) is the agreement, and the line says so. The server stores the terms version and the time.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Age.</strong> 16, the strictest age of digital consent we serve, so one line works everywhere. No birth date is asked or stored.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Turnstile fails (§4a)</strong> under the primary: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">NOT SENT</span> · "We couldn't check this browser. Reload the page and try again." The typed fields stay filled. It isn't on Au1 or Au6: rate limits cover those.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Google runs Turnstile too</strong>, before the redirect, because it creates accounts as well. On Au2 the widget sits above Create account and serves both.</div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">/TERMS · /COPYRIGHT · DESK · PRIVACY'S LAYOUT, CONTRACT TYPE (/PRIVACY REDRAWN THE SAME)</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+          <sc-for list="{{ legalPages }}" as="p" hint-placeholder-count="2">
+            <div style="overflow-x: auto; max-width: 100%;">
+              <div data-screen-label="{{ p.screen }}" style="width: 1040px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+                <div style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span><span style="margin-left: auto; font-size: 15px; color: #B9B8AE;">Log in</span></div>
+                <div style="padding: 40px 24px 48px; display: grid; grid-template-columns: 220px minmax(0, 620px); gap: 56px; justify-content: center;">
+                  <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">CONTENTS</span>
+                    <sc-for list="{{ p.toc }}" as="t" hint-placeholder-count="6"><span style="color: {{ t.c }}; font-weight: {{ t.w }};">{{ t.t }}</span></sc-for>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 18px; max-width: 620px;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ p.kicker }}</span>
+                    <span style="font-family: 'Archivo Black', sans-serif; font-size: 44px; letter-spacing: -0.03em; line-height: 0.98;">{{ p.head }}</span>
+                    <p data-type-step="lead" style="margin: 0; font-size: 19px; line-height: 1.5;">{{ p.lead }}</p>
+                    <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.02em; padding-top: 8px;">{{ p.h2 }}</span>
+                    <p data-type-step="lead" style="margin: 0; font-size: 19px; line-height: 1.5; color: #2A2A26;">{{ p.body }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 860px;">Frames render <span style="font-family: 'IBM Plex Mono', monospace;">lead</span> at its token value; the build reads the token, not these pixels. Phone: the contents collapse to a plain list above the heading, as on /privacy. Footer order everywhere: Privacy · Terms · Copyright. Copyright carries the notice-and-takedown address, because runners upload photos.</p>
+      </div>
+    </div>
+
+    <!-- 15 Emails -->
+    <div id="r15" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">15 · The rest of the email &nbsp;·&nbsp; <span id="r19">19</span> · <span id="r20">20</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: round 26's template, unchanged: wordmark, one paragraph, one button (or none), one foot line. All of these are account and security mail, so they're always sent and carry no unsubscribe.</strong></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px;">
+        <sc-for list="{{ emails }}" as="m" hint-placeholder-count="8">
+          <div data-screen-label="{{ m.screen }}" style="background: #FFFFFF; color: #0B0B0E; border-radius: 8px; overflow: hidden; border: 1px solid #DCDBD2; display: flex; flex-direction: column;">
+            <div style="background: #EDECE3; padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #4E4E44;">{{ m.tag }} · TO {{ m.to }}<br />SUBJECT <span style="color: #0B0B0E; font-weight: 600;">{{ m.subject }}</span></div>
+            <div style="padding: 20px 18px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #7A7A70;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <p style="margin: 0; font-size: 15px; line-height: 1.5;">{{ m.body }}</p>
+              <sc-if value="{{ m.button }}" hint-placeholder-val="{{ true }}"><span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 700;">{{ m.button }}</span></sc-if>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">{{ m.foot }}</p>
+              <span style="margin-top: auto; font-size: 12px; color: #7A7A70; border-top: 1px solid #EDECE3; padding-top: 10px;">dialed.run · <span style="text-decoration: underline;">Privacy policy</span> · <span style="text-decoration: underline;">Terms</span></span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- In-app notices: 17 18 19 20 21 23 -->
+    <div id="r17" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">17 · <span id="r18">18</span> · 19 · 20 · <span id="r21">21</span> · <span id="r23">23</span> · Notices in place</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: each notice lives on the thing it's about, as a §4a band sized to it (#24). The kicker is the state that's still true. None of them is a modal.</strong> The build's copy for 18 and 19 stands, with contractions.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr)); gap: 24px;">
+        <sc-for list="{{ notices }}" as="n" hint-placeholder-count="7">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ n.label }}</span>
+            <div data-screen-label="{{ n.screen }}" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 390px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ n.where }}</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">{{ n.title }}</span></div>
+              <sc-if value="{{ n.photo }}" hint-placeholder-val="{{ false }}"><div style="position: relative; aspect-ratio: 4 / 5; max-height: 200px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"><span style="position: absolute; left: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #0B0B0E; color: #F4F3EF; padding: 4px 7px;">{{ n.photo }}</span></div></sc-if>
+              <div role="status" style="border: 1px solid #0B0B0E; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: #F4F3EF;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">{{ n.k }}</span>
+                <span style="font-size: 15px; line-height: 1.45;">{{ n.t }}</span>
+                <sc-if value="{{ n.t2 }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ n.t2 }}</span></sc-if>
+                <sc-if value="{{ n.strava }}" hint-placeholder-val="{{ false }}"><span data-part="strava-button" role="img" aria-label="Connect with Strava" style="height: 48px; padding: 0 18px; background: #FC5200; color: #FFFFFF; border-radius: 4px; display: flex; align-items: center; font-size: 14px; font-weight: 700; letter-spacing: 0.02em;">CONNECT WITH STRAVA · OFFICIAL ASSET</span></sc-if>
+                <sc-if value="{{ n.action }}" hint-placeholder-val="{{ false }}"><span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 10px 16px; font-size: 14px; font-weight: 700;">{{ n.action }}</span></sc-if>
+              </div>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">{{ n.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">17 · CONFIRM YOUR EMAIL FIRST · SHEET · FROM USEFUL, REPORT OR THE SHARE SWITCH</span>
+        <div data-screen-label="Confirm email first sheet" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+          <div style="padding: 10px 0 0; display: flex; justify-content: center;"><span style="width: 36px; height: 4px; border-radius: 100px; background: #B9B8AE;"></span></div>
+          <div style="padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">Confirm your email first</span>
+            <span style="font-size: 15px; line-height: 1.5;">Sharing, marking runs Useful and reporting need a confirmed address. We sent a link to <strong>maya@example.com</strong>.</span>
+            <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">Resend link</span>
+            <span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44; outline: 2px solid #0B0B0E; outline-offset: 2px; border-radius: 100px; padding: 12px;">Not now</span>
+          </div>
+        </div>
+        <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">"Not now" has focus. Resend runs round 26's three states in place. The body's first word changes with the trigger: "Sharing…", "Marking runs Useful…", "Reporting…" leads, the rest stays.</p>
+      </div>
+    </div>
+
+    <!-- 16 + 22 Desk Runners -->
+    <div id="r22" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">22 · Desk › Runners &nbsp;·&nbsp; <span id="r16">16 · Force-rename</span></span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Ruling: a search, a list, and the selected runner in a right column holding Rename and Ban as two panels. Rename is the lighter action, so it comes first.</strong> Both need a reason from a fixed list, and the reason is what the runner reads.</span>
+      </div>
+      <div style="overflow-x: auto; max-width: 100%;">
+        <div data-screen-label="D8 Desk Runners" data-state="desk" style="width: 1280px; background: #0B0B0E; color: #F4F3EF; border-radius: 12px; overflow: hidden; border: 1px solid #2A2A31; display: grid; grid-template-columns: 200px minmax(0, 1fr) 380px;">
+          <div style="border-right: 1px solid #2A2A31; padding: 20px 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="padding: 0 25px 16px; font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>desk<span style="color: #FF2D8A;">]</span></span>
+            <sc-for list="{{ deskNav }}" as="d" hint-placeholder-count="6">
+              <div style="display: flex; justify-content: space-between; padding: 10px 20px 10px {{ d.pl }}; background: {{ d.bg }}; border-left: {{ d.bl }}; font-size: 14px; font-weight: {{ d.w }};"><span>{{ d.t }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: {{ d.cc }};">{{ d.c }}</span></div>
+            </sc-for>
+          </div>
+          <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+            <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">Runners</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">412 ACCOUNTS</span></div>
+            <div style="display: flex; gap: 8px;"><div style="flex: 1; min-height: 44px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 8px; padding: 0 14px; font-size: 15px; color: #8B8B93;">Handle or email</div><span style="border: 1px solid #3A3A42; border-radius: 100px; padding: 10px 14px; font-size: 13px;">All</span><span style="border: 1px solid #3A3A42; border-radius: 100px; padding: 10px 14px; font-size: 13px;">Reported</span><span style="border: 1px solid #3A3A42; border-radius: 100px; padding: 10px 14px; font-size: 13px;">Closed</span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) 80px 70px 70px 90px; gap: 12px; padding: 0 12px 8px; border-bottom: 1px solid #2A2A31; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;"><span>HANDLE</span><span>EMAIL</span><span>JOINED</span><span>RUNS</span><span>REPORTS</span><span>STATE</span></div>
+            <sc-for list="{{ runners }}" as="r" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) 80px 70px 70px 90px; gap: 12px; padding: 12px; background: {{ r.bg }}; border-left: {{ r.bl }}; font-size: 14px; align-items: baseline;">
+                <span style="font-weight: 600;">{{ r.h }}</span><span style="color: #B9B8AE; overflow: hidden; text-overflow: ellipsis;">{{ r.e }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">{{ r.j }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">{{ r.n }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ r.rc }};">{{ r.rep }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: {{ r.sc }};">{{ r.s }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border-left: 1px solid #2A2A31; padding: 24px 20px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 20px; font-weight: 600;">@quadzilla_69</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">JOINED SEP 02 · 14 RUNS · 3 REPORTS ON NAME</span></div>
+            <div data-part="rename-panel" style="border: 1px solid #3A3A42; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">RENAME</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">Replaces the handle with a placeholder and asks the runner to pick a new one. Runs and closet stay.</span>
+              <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">REASON</span><div style="min-height: 44px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 8px; padding: 0 12px; font-size: 14px;">Offensive or sexual ▾</div></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">BECOMES @runner_4821 · OLD HANDLE BLOCKED</span>
+              <span style="align-self: flex-start; background: #F4F3EF; color: #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Rename runner</span>
+            </div>
+            <div data-part="ban-panel" style="border: 1px solid #3A3A42; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #FF2D8A;">CLOSE ACCOUNT · D3</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">D3's panel, unchanged, moved here from the entry view.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">16 · WHAT THE RENAMED RUNNER SEES · NEXT LOAD, ANY SCREEN</span>
+          <div data-screen-label="Renamed runner" style="width: 390px; min-height: 560px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div>
+            <div style="padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C21A6B;">USERNAME CHANGED BY A MODERATOR</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">Pick a new username</span>
+              <p style="margin: 0; font-size: 16px; line-height: 1.5;">@quadzilla_69 broke the rules on names: offensive or sexual. For now you're @runner_4821. Your runs and closet haven't changed.</p>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">USERNAME</label><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">3–20 letters, numbers or _.</span><div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 0 15px; font-size: 16px;"><span style="color: #7A7A70;">@</span></div></div>
+              <span style="margin-top: auto; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Save username</span>
+              <span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44;">Keep @runner_4821 for now</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1 1 360px; min-width: 260px; display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31; align-self: flex-start;">
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Reasons (fixed list):</strong> Offensive or sexual · Pretends to be someone else · Contains personal information · Advertising.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Shown once.</strong> The screen is O0's field, shown on the next load. "Keep … for now" dismisses it; Settings › Username works as usual afterwards. No email: the name wasn't the account.</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">The old handle</strong> is blocked from re-registration for everyone. /@old shows round 26's "This runner changed their name."</div>
+          <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Row click</strong> selects; there is no separate runner page. Reports count only reports on the name and profile; entry reports stay in Review.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C · confirm -->
+    <div id="rC" style="display: flex; flex-direction: column; gap: 24px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">C · Placeholders</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 800px; line-height: 1.45;">24–31. Drawn below where the answer is a shape rather than a word.</span>
+      </div>
+      <sc-for list="{{ confirmGroups }}" as="g" hint-placeholder-count="1">
+        <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+          <div style="background: #1C1C22; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ g.title }}</div>
+          <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="8">
+            <div id="{{ r.id }}" style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 150px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+              <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+              <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ deleteSheets }}" as="s" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.label }}</span>
+            <div data-screen-label="{{ s.screen }}" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;">
+              <div style="padding: 10px 0 0; display: flex; justify-content: center;"><span style="width: 36px; height: 4px; border-radius: 100px; background: #B9B8AE;"></span></div>
+              <div style="padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">{{ s.head }}</span>
+                <span style="font-size: 15px; line-height: 1.5;">{{ s.body }}</span>
+                <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">{{ s.verb }}</span>
+                <span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 14px; text-align: center; font-size: 15px; font-weight: 600; outline: 2px solid #0B0B0E; outline-offset: 2px;">Keep it</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div id="r26" style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">26 · D, OWNER · FOOT OF THE PAGE · NO OVERFLOW</span>
+          <div data-screen-label="D delete links" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">… THE ENTRY ABOVE</span>
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOURS</span>
+              <span style="font-size: 15px; font-weight: 600;">Edit this entry</span>
+              <span style="font-size: 15px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">Delete this entry</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">"Delete photo {n}" moves off the foot and onto the photo: a 44×44 icon button, top-right of each photo in the owner's view, named "Delete photo 2". The run page's foot reads "Delete this run" under the same YOURS kicker.</p>
+        </div>
+        <div id="r27" style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">27 · W3 · BLUR CELLS · A MAP OF THE PHOTO, NOT PILLS</span>
+          <div data-screen-label="W3 blur cells" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="position: relative; aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);">
+              <sc-for list="{{ blurCanvas }}" as="c" hint-placeholder-count="9"><span style="background: {{ c.bg }}; outline: {{ c.ol }}; outline-offset: -2px;"></span></sc-for>
+            </div>
+            <div role="group" aria-label="Blur by area" style="display: flex; align-items: flex-start; gap: 14px;">
+              <div style="display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px;">
+                <sc-for list="{{ blurCells }}" as="c" hint-placeholder-count="9"><span aria-pressed="{{ c.pressed }}" style="border: 1px solid #0B0B0E; border-radius: 4px; background: {{ c.bg }}; color: {{ c.fg }}; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; outline: {{ c.ol }}; outline-offset: 2px;">{{ c.t }}</span></sc-for>
+              </div>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Blur by area. Ink = blurred. The focused cell outlines its ninth of the photo.</span>
+            </div>
+          </div>
+        </div>
+        <div id="r28" style="display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">28 · D-62 · AUTHOR'S OWN, UNDER REVIEW · CARD + DETAIL</span>
+          <div data-screen-label="Under review own" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="border: 1px solid #DCDBD2; background: #FFFFFF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;">6.2 MI · 41° DAMP</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">UNDER REVIEW</span></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">SAT AUG 29 · DIALED</span>
+            </div>
+            <div role="status" style="border: 1px solid #0B0B0E; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">HIDDEN WHILE WE CHECK</span>
+              <span style="font-size: 15px; line-height: 1.45;">A runner reported this entry. Other runners can't see it until a moderator has looked, usually within a day.</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">You can still edit or delete it.</span>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">The card gets the hi-viz tag; the detail gets the band at the top. Neither says who reported it or why.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const toc = ['A', '3', '4', '7', '8', '10', '11', '12', '15', '17', '22', 'C'].map((n) => ({ href: '#r' + n, label: { A: 'A · 1–9 amendments', '3': '3 · Google label', '4': '4 · Private until confirmed', '7': '7 · "Public"', '8': '8 · Unsubscribe', '10': '9–10 · Reset', '11': '11 · 13 · 14 · Account', '12': '5 · 12 · Legal', '15': '15 · 19 · 20 · Emails', '17': '17–21 · 23 · Notices', '22': '16 · 22 · Runners', C: 'C · 24–31' }[n] }));
+
+    const Y = '#00E0C6', N = '#FF2D8A', A = '#F5FF3D';
+    const R = (id, q, v, a) => ({ id, q, v, a, vc: v.startsWith('YES') || v.startsWith('CONFIRM') || v === 'DONE' ? Y : v.startsWith('NO') ? N : A });
+
+    const rulingGroups = [
+      { title: 'A · MADE ON THE CONTRACT BOARDS', rows: [
+        R('r1', '1 · Focus on a field (§06)', 'DONE', 'Accessibility Contract §06 now carries the FormField exception: the ring sits on the border, 2px ink, offset −1px. Error stays distinct: a 2px ink border plus the hi-viz band, and the band tells error+focus apart.'),
+        R('r2', '2 · Google and Strava exemptions', 'DONE', 'Theme T1 has an "Exempt from this table" block naming both parts and their colours. icons.js adds a FOREIGN MARKS rule and exports FOREIGN_MARK_PARTS = [\'google-button\', \'strava-button\']. Neither is an icon.'),
+        R('r5x', '5 · Legal page type', 'YES · CONTRACT', 'The 620 measure and the lead step, on /privacy, /terms and /copyright. 680 and 17/1.65 are struck from product.md. Drawn in 12.'),
+        R('r6', '6 · §AH rule 08', 'DONE', 'Amended on the §AH board, light and dark: "…and no swatch unless the shade is exact: a named colour alone gets no square."'),
+        R('r9x', '9 · Reset confirms the email', 'YES', 'Password reset moves from WAITS to CAN. Saving a new password from the link marks the address confirmed, and new runs start following the runner\'s sharing default. Drawn in 10.'),
+      ]},
+    ];
+
+    const googleFrames = [
+      { screen: 'Google button light r27', ground: '#F4F3EF', kc: '#7A7A70', label: 'LIGHT · ARCHIVO 500 15 · #1F1F1F', bg: '#FFFFFF', stroke: '#747775', fg: '#1F1F1F' },
+      { screen: 'Google button dark r27', ground: '#0B0B0E', kc: '#8B8B93', label: 'DARK · ARCHIVO 500 15 · #E3E3E3', bg: '#131314', stroke: '#8E918F', fg: '#E3E3E3' },
+    ];
+
+    const sw = (on) => ({ on: String(on), track: on ? '#FF2D8A' : '#FFFFFF', knob: on ? '#F4F3EF' : '#0B0B0E', justify: on ? 'flex-end' : 'flex-start' });
+    const shareFrames = [
+      { label: 'A3 · UNVERIFIED · SAVES PRIVATE', screen: 'A3 share unverified', sub: 'Confirm your email to share. This run saves private.', note: 'Off, at full strength, never disabled (rule 07). Pressing it opens #17. The default in settings is untouched.', ...sw(false) },
+      { label: 'A3 · CONFIRMED · DEFAULT RESTORED', screen: 'A3 share verified', sub: 'Signed-in runners can see it. Search engines and link previews can\'t.', note: 'The runner\'s default (here: shared) applies from the first run after confirming.', ...sw(true) },
+    ];
+
+    const publicRows = [
+      { where: 'A3 · share switch', was: 'Share publicly', now: 'Share with runners on dialed.run' },
+      { where: 'Settings › Sharing default', was: 'New runs are public', now: 'Share new runs with runners on dialed.run' },
+      { where: 'F / A3 · state label', was: 'PUBLIC · PRIVATE', now: 'SHARED · PRIVATE' },
+      { where: 'D · owner meta line', was: 'Public entry', now: 'Shared with runners on dialed.run' },
+      { where: 'The nag band', was: 'Confirm your email to share runs.', now: 'Confirm your email to share runs with other runners. Resend link' },
+      { where: '/privacy §4 heading', was: 'What\'s public', now: 'What other runners see' },
+    ];
+
+    const unsubFrames = [
+      { label: '8 · LANDING · FROM THE EMAIL BODY', screen: 'Unsubscribe landing', kicker: 'RUN REMINDER EMAILS', kc: '#7A7A70', head: 'Stop run reminder emails?', body: 'We\'ll stop emailing ma•••@example.com when a run lands on Strava. Push reminders and account emails don\'t change.', primary: 'Unsubscribe', link: '', foot: 'Change every kind in Settings › Notifications.' },
+      { label: '8 · DONE · SAME URL AFTER THE POST', screen: 'Unsubscribe done', kicker: 'UNSUBSCRIBED', kc: '#00776A', head: 'Run reminder emails are off', body: 'You won\'t get another one. Strava stays connected, and push reminders still work if they\'re on.', primary: '', link: 'Turn them back on', foot: 'Change every kind in Settings › Notifications.' },
+    ];
+
+    const F = (k, v, o = {}) => ({ k, v, aside: '', hint: '', msg: '', border: o.err ? '2px solid #0B0B0E' : '1px solid #B9B8AE', ls: o.pw ? '0.2em' : 'normal', ...o });
+    const resetFrames = [
+      { label: 'Au1 · LOG IN · "FORGOT IT?"', screen: 'Au1 Forgot it', head: 'Log in', body: '', fields: [F('EMAIL', 'maya@example.com'), F('PASSWORD', '', { aside: 'Forgot it?' })], primary: 'Log in', secondaryLead: 'New here?', secondary: 'Create an account' },
+      { label: 'Au6 · RESET · REQUEST', screen: 'Au6 Reset request', head: 'Reset your password', body: 'We\'ll email you a link to set a new one.', fields: [F('EMAIL', 'maya@example.com')], primary: 'Send reset link', secondaryLead: 'Remembered it?', secondary: 'Log in' },
+      { label: 'Au6 · SENT · SAME FOR ANY ADDRESS', screen: 'Au6 Check inbox', kicker: 'SENT', kc: '#00776A', head: 'Check your inbox', body: 'If maya@example.com has an account, a reset link is on its way. It works once, for one hour.', fields: [], primary: '', secondaryLead: 'Not there? Check spam, or', secondary: 'send it again', foot: 'Google accounts get a link to set a password.' },
+      { label: 'Au7 · SET A NEW PASSWORD · FROM THE LINK', screen: 'Au7 New password', head: 'Set a new password', body: 'For maya@example.com.', fields: [F('NEW PASSWORD', '••••••', { pw: true, err: true, hint: 'At least 10 characters.', msg: 'Use at least 10 characters.' })], primary: 'Save and log in', foot: 'Saving confirms this email and signs out your other devices.' },
+      { label: 'Au7 · LINK RAN OUT OR WAS USED', screen: 'Au7 Link expired', kicker: 'LINK EXPIRED', kc: '#C21A6B', head: 'That link has run out', body: 'Reset links work once, for one hour. Ask for a new one and use the newest email.', fields: [], primary: 'Send a new link', secondaryLead: '', secondary: 'Log in' },
+    ];
+
+    const row = (t, sub, action, o = {}) => ({ t, sub, action, c: '#0B0B0E', ac: '#C21A6B', rule: '1px solid #DCDBD2', gap: '0', pending: '', ...o });
+    const accountRows = [
+      row('Email', 'maya@example.com', 'Change', { rule: '0', pending: 'WAITING · maya@newmail.com · Resend · Cancel' }),
+      row('Password', 'Changed Aug 12', 'Change'),
+      row('Sign out everywhere', 'Every device, including this one', 'Sign out'),
+      row('Export your data', 'Runs, closet, entries, photos and your run files', 'Get a copy'),
+      row('Delete account', 'Deleted after 7 days. Log in before then to keep it.', 'Delete', { c: '#C21A6B', gap: '20px', rule: '2px solid #0B0B0E' }),
+    ];
+    const accountSheets = [
+      { label: 'U1 · CHANGE EMAIL', screen: 'U1 Change email', head: 'Change your email', body: 'We\'ll send a confirm link to the new address and tell the old one.', fields: [F('NEW EMAIL', 'maya@newmail.com'), F('CURRENT PASSWORD', '••••••••••••', { pw: true })], primary: 'Send confirm link', secondary: 'Cancel', focus: 'none', note: 'Wrong password: field message "That\'s not your current password." Address in use: the same confirm flow runs and the owner of that address gets round 26\'s existing-account email, so nothing is revealed here.' },
+      { label: 'U1 · CHANGE PASSWORD', screen: 'U1 Change password', head: 'Change your password', body: 'Your other devices will be signed out.', fields: [F('CURRENT PASSWORD', '••••••••••••', { pw: true }), F('NEW PASSWORD', '', { hint: 'At least 10 characters.' })], primary: 'Change password', secondary: 'Cancel', focus: 'none', note: 'Google-only accounts see "Set a password" and no current-password field; it sends the #10 link instead. Breach and length refusals are round 26\'s.' },
+      { label: 'U1 · SIGN OUT EVERYWHERE', screen: 'U1 Sign out everywhere', head: 'Sign out everywhere?', body: 'Every device signs out, including this one. You\'ll log in again here.', fields: [], primary: 'Sign out everywhere', secondary: 'Keep me signed in', focus: '2px solid #0B0B0E', note: 'The retire-confirm grammar. Lands on Au1 with the status line "Signed out everywhere."' },
+      { label: '14 · DELETE ACCOUNT · CONFIRM', screen: 'U1 Delete account', head: 'Delete your account?', body: 'Your runs, closet, entries and photos go in 7 days. Shared runs leave the feed now. Log in before Sat, Oct 4 to keep everything.', fields: [F('CURRENT PASSWORD', '••••••••••••', { pw: true })], primary: 'Delete my account', secondary: 'Keep it', focus: '2px solid #0B0B0E', note: 'Google-only: the field is replaced by "Continue with Google" to re-authenticate. Export sits above in the list; the sheet doesn\'t repeat it.' },
+    ];
+    const pendingFrames = [
+      { label: '14 · AFTER CONFIRMING · SIGNED OUT', screen: 'Delete pending', kicker: 'DELETION SCHEDULED', head: 'Your account goes on Sat, Oct 4', body: 'You\'re signed out on every device. Changed your mind? Log in before then and choose to keep it.', primary: 'Log in', secondary: 'Open dialed.run' },
+      { label: '14 · LOGGING IN DURING THE 7 DAYS', screen: 'Delete pending sign in', kicker: 'DELETION SCHEDULED', head: 'Keep your account?', body: 'It\'s set to be deleted on Sat, Oct 4, with everything in it. Keep it and it all comes back as it was.', primary: 'Keep my account', secondary: 'Log out' },
+    ];
+
+    const signFrames = [
+      { label: 'Au2 · FOOT OF THE FORM · TURNSTILE ABOVE THE PRIMARY', screen: 'Au2 legal lines', head: 'Create an account', google: true, fields: [{ k: 'INVITE CODE', v: 'DIAL-TR8K', c: '#0B0B0E', ls: '0.08em' }, { k: 'EMAIL', v: 'maya@example.com', c: '#0B0B0E', ls: 'normal' }, { k: 'PASSWORD', v: '••••••••••••', c: '#0B0B0E', ls: '0.2em' }], primary: 'Create account', lines: [{ a: 'By creating an account you agree to the ', l1: 'Terms', b: ' and have read the ', l2: 'Privacy policy', c: '.' }, { a: 'dialed.run is for runners 16 and over.', l1: '', b: '', l2: '', c: '' }] },
+      { label: 'Au5 · REQUEST ACCESS · SAME PLACE', screen: 'Au5 Turnstile', head: 'Request access', google: false, fields: [{ k: 'EMAIL', v: 'sam@example.com', c: '#0B0B0E', ls: 'normal' }, { k: 'NOTE · OPTIONAL', v: 'Winter runner in Duluth.', c: '#0B0B0E', ls: 'normal' }], primary: 'Send request', lines: [{ a: 'We use your email only to reply. ', l1: 'Privacy policy', b: '', l2: '', c: '' }] },
+    ];
+    const tocOf = (arr, cur) => arr.map((t, i) => ({ t, c: i === cur ? '#0B0B0E' : '#4E4E44', w: i === cur ? 700 : 400 }));
+    const legalPages = [
+      { screen: 'Terms desk', kicker: 'TERMS · UPDATED SEP 2026', head: 'Terms of use', lead: 'These are the rules for using dialed.run. They\'re short because the app is: log your runs, see what worked, share if you want to.', h2: '3. What you share', body: 'You own your runs, notes and photos. Sharing one lets signed-in runners on dialed.run see it, and lets us show it to them. Delete it and that stops.', toc: tocOf(['1. Who can use it', '2. Your account', '3. What you share', '4. Community rules', '5. Closing accounts', '6. Changes'], 2) },
+      { screen: 'Copyright desk', kicker: 'COPYRIGHT · UPDATED SEP 2026', head: 'Copyright', lead: 'If a photo or note on dialed.run is yours and was posted without your permission, tell us and we\'ll take it down.', h2: '2. Sending a notice', body: 'Email copyright@dialed.run with a link to the entry, what you own, and a way to reach you. We hide the item while we check and tell the runner who posted it.', toc: tocOf(['1. What we do', '2. Sending a notice', '3. Counter-notice', '4. Repeat posting'], 1) },
+    ];
+
+    const emails = [
+      { screen: 'Email reset', tag: 'RESET', to: 'maya@example.com', subject: 'Reset your dialed.run password', body: 'Someone, probably you, asked to reset the password for this account.', button: 'Set a new password', foot: 'Works once, for one hour. Setting a password also confirms this email. Didn\'t ask? Ignore this; nothing has changed.' },
+      { screen: 'Email change new', tag: 'EMAIL CHANGE', to: 'NEW ADDRESS', subject: 'Confirm your new email for dialed.run', body: 'Tap below to make this the email for @maya_runs.', button: 'Confirm new email', foot: 'Works once, for 24 hours. Until then your old address stays in use. Didn\'t ask? Ignore this.' },
+      { screen: 'Email change old', tag: 'EMAIL CHANGE', to: 'OLD ADDRESS', subject: 'Your dialed.run email is changing', body: '@maya_runs asked to move this account to ma•••@newmail.com. It changes when that address is confirmed.', button: 'This wasn\'t me', foot: 'The button opens a page that cancels the change and signs out every device. Then reset your password.' },
+      { screen: 'Email Strava disconnected', tag: 'STRAVA', to: 'maya@example.com', subject: 'Strava is disconnected', body: 'You disconnected dialed.run on Strava, so run reminders have stopped. Your runs here haven\'t changed.', button: 'Connect again', foot: 'When Strava ends the connection itself, the first line reads "Strava ended the connection to dialed.run". Sent once per disconnect.' },
+      { screen: 'Email content removed', tag: 'MODERATION', to: 'maya@example.com', subject: 'We removed something from your run', body: 'We removed the photo from your Sat, Aug 29 run. Reason: it shows where someone lives. Your run and verdict stay.', button: 'See the community rules', foot: 'Think we got it wrong? Reply to this email.' },
+      { screen: 'Email ban', tag: 'MODERATION', to: 'maya@example.com', subject: 'Your dialed.run account is closed', body: 'We closed @maya_runs for breaking the community rules: repeated harassment. You can\'t log in, and your shared runs are gone from the feed.', button: '', foot: 'Think we got it wrong? Reply within 30 days and a different moderator will look. No case number.' },
+      { screen: 'Email export', tag: 'EXPORT', to: 'maya@example.com', subject: 'Your dialed.run export is ready', body: 'Your runs, closet, entries, photos and original run files are in one ZIP.', button: 'Download export', foot: 'The link works for 7 days, only while you\'re logged in.' },
+      { screen: 'Email delete scheduled', tag: 'DELETE', to: 'maya@example.com', subject: 'Your dialed.run account goes on Sat, Oct 4', body: 'You asked to delete your account. Everything in it goes on Sat, Oct 4.', button: 'Keep my account', foot: 'The button opens Au1. Logging in and choosing Keep cancels it. Didn\'t ask? Log in and keep it, then change your password.' },
+    ];
+
+    const notices = [
+      { label: '18 · T1 · STRAVA IS FULL', screen: 'T1 Strava full', where: 'SETTINGS › STRAVA', title: 'Get a nudge after every run', k: 'STRAVA IS FULL', t: 'Strava lets a new app connect only a few runners while it\'s reviewed, and dialed.run is at that limit. Nothing changed.', t2: 'You can still add every run by uploading its file.', strava: false, action: '', photo: '', note: 'The band replaces the Strava button for the pressed attempt; the button comes back on the next visit. In onboarding, the same band, and Skip becomes Next.' },
+      { label: '19 · S1 · DISCONNECTED ON STRAVA', screen: 'S1 Strava revoked', where: 'SETTINGS › STRAVA', title: 'Strava', k: 'NOT CONNECTED', t: 'You disconnected dialed.run on Strava, so run reminders have stopped.', t2: 'Runs you already added stay.', strava: true, action: '', photo: '', note: 'Replaces the connected row until reconnecting or dismissing with Disconnect. Strava-side revocation reads "Strava ended the connection, so run reminders have stopped."' },
+      { label: '20 · ON THE RUN · CONTENT REMOVED', screen: 'Content removed notice', where: 'SAT AUG 29 · YOUR RUN', title: '6.2 MI · 41° DAMP', k: 'PHOTO REMOVED', t: 'A moderator removed this photo: it shows where someone lives.', t2: 'Your run and verdict stay.', strava: false, action: 'See the community rules', photo: '', note: 'Where the removed thing was. A removed note or a removed whole entry uses the same band, kicker NOTE REMOVED or REMOVED FROM THE FEED. The bell gets one row linking here.' },
+      { label: '21 · D-69 · GARMENT PHOTO BEING CHECKED', screen: 'Garment photo checking', where: 'YOUR CLOSET · TOP · HALF-ZIP', title: 'Janji Rover Half-zip', k: 'BEING CHECKED', t: 'Only you can see this photo until it\'s checked, usually within a day.', t2: '', strava: false, action: '', photo: 'ONLY YOU', note: 'The closet tile carries the same ONLY YOU tag on its photo. If it\'s refused, the photo goes and #20\'s band says why.' },
+      { label: '23 · Au1 · BANNED, VIA GOOGLE', screen: 'Au1 account closed Google', where: 'LOG IN', title: 'Log in', k: 'ACCOUNT CLOSED', t: 'This account was closed for breaking the community rules.', t2: 'Think we got it wrong? Reply to the email we sent you.', strava: false, action: '', photo: '', note: 'Confirmed: D4\'s band on Au1, over the empty form, no case line. Same for a password log-in. It never says whether the password was right.' },
+    ];
+
+    const nv = (t, c, active, cc) => ({ t, c, bg: active ? '#16161B' : 'transparent', bl: active ? '3px solid #F5FF3D' : '0', pl: active ? '22px' : '25px', w: active ? 600 : 400, cc: cc || '#8B8B93' });
+    const deskNav = [nv('Today', ''), nv('Review', '4', false, '#F5FF3D'), nv('Duplicates', '23'), nv('Gave up', '3', false, '#F5FF3D'), nv('Access', '7', false, '#F5FF3D'), nv('Runners', '', true)];
+    const rn = (h, e, j, n, rep, s, sel) => ({ h, e, j, n, rep, s, bg: sel ? '#16161B' : 'transparent', bl: sel ? '3px solid #F5FF3D' : '3px solid transparent', rc: rep !== '0' ? '#F5FF3D' : '#8B8B93', sc: s === 'CLOSED' ? '#FF2D8A' : s === 'PENDING DELETE' ? '#F5FF3D' : '#00E0C6' });
+    const runners = [
+      rn('@quadzilla_69', 'qz@example.com', 'SEP 02', '14', '3', 'ACTIVE', true),
+      rn('@maya_runs', 'maya@example.com', 'AUG 11', '128', '0', 'ACTIVE'),
+      rn('@dee_k', 'dee.k@example.com', 'AUG 14', '61', '0', 'ACTIVE'),
+      rn('@paulo', 'paulo@example.com', 'AUG 20', '22', '0', 'PENDING DELETE'),
+      rn('@n8', 'nate@example.com', 'SEP 09', '9', '1', 'ACTIVE'),
+      rn('@runner_1290', 'x91@example.com', 'SEP 11', '2', '5', 'CLOSED'),
+    ];
+
+    const confirmGroups = [
+      { title: 'C · 24–31', rows: [
+        R('r24', '24 · Failure on a control that isn\'t a form', 'CONFIRM · RULE', 'One pattern: the §4a band, sized to the thing that failed, directly under it. The kicker is the state that\'s still true; one retry verb when retrying can work, none when it can\'t. Written into the Form Contract as 02b.'),
+        R('r25', '25a · Consensus words', 'MOST · SOME', 'Leading bar "Most", the rest "Some". A tie for the lead reads "Split" on each tied bar. A single bar reads "All".'),
+        R('r25b', '25b · Bell name and dot', 'CONFIRM', '"Notifications, 3 new"; above 9, "Notifications, more than 9 new", because "9+" reads badly aloud. The dot never draws a digit.'),
+        R('r26x', '26a · Where deletes live', 'FOOT · NO OVERFLOW', 'Entry and run: text links at the foot under a YOURS kicker, owner only. Photos: an icon button on each photo. There\'s no overflow menu, because an overflow holding one item hides it.'),
+        R('r26y', '26b · Delete confirm grammar', 'CONFIRM', 'Heading as the question, cost as the body, verb on an ink primary, "Keep it" focused. The three sheets are drawn below.'),
+        R('r27x', '27 · Keyboard blur targets', 'REDRAWN', 'A 3×3 grid of 44px square cells that maps the photo, not a row of pills. Pressed = ink with "✓". Names stay "Blur top-left"… Focus outlines the matching ninth on the canvas. Drawn below.'),
+        R('r28x', '28 · D-62 own under-review marker', 'DRAWN', 'Hi-viz UNDER REVIEW tag on the card; the §4a band HIDDEN WHILE WE CHECK on the detail. Drawn below.'),
+        R('r29', '29 · "Photo not added"', 'CONFIRM · REWORD BODY', 'The kicker stays PHOTO NOT ADDED. Body: "This photo couldn\'t be prepared without blur. Turn blur on, or pick another photo."'),
+        R('r30', '30 · D4 with no case number', 'CONFIRM', 'Omit the line. The board\'s CASE [B-0031] is struck. Appeals go by replying to the ban email.'),
+        R('r31a', '31a · Field height', 'YES · 50', '50px, now written into the Form Contract (02b) as the FormField min-height: 16px type, 1px border, content centred. Error\'s 2px border draws inward and doesn\'t change it.'),
+        R('r31b', '31b · Closet tile photo', '4:5', 'aspect-ratio 4 / 5, full tile width, radius 10 on top, the hatch placeholder when there\'s no photo. No fixed height, so the grid can reflow.'),
+        R('r31c', '31c · Desk primary width', 'SIZED TO LABEL', 'Round 25 wins. At desk ≥1040 the primary is sized to its label, left-aligned in the primary column. Full width is phone only.'),
+      ]},
+    ];
+
+    const deleteSheets = [
+      { label: '26 · DELETE ENTRY', screen: 'Delete entry sheet', head: 'Delete this entry?', body: 'Your verdict, kit and note for this run go, and it leaves the feed and your Call\'s record. The run stays. This can\'t be undone.', verb: 'Delete entry' },
+      { label: '26 · DELETE RUN', screen: 'Delete run sheet', head: 'Delete this run?', body: 'The run, its weather and its entry go, and your pieces lose this wear. This can\'t be undone.', verb: 'Delete run' },
+      { label: '26 · DELETE PHOTO', screen: 'Delete photo sheet', head: 'Delete photo 2?', body: 'It comes off this entry for everyone. The entry and its other photos stay. This can\'t be undone.', verb: 'Delete photo' },
+    ];
+
+    const pos = ['top-left', 'top', 'top-right', 'left', 'centre', 'right', 'bottom-left', 'bottom', 'bottom-right'];
+    const blurred = [0, 4];
+    const focused = 4;
+    const blurCanvas = pos.map((p, i) => ({ bg: blurred.includes(i) ? 'rgba(11,11,14,0.55)' : 'transparent', ol: i === focused ? '2px solid #F5FF3D' : 'none' }));
+    const blurCells = pos.map((p, i) => ({ pressed: String(blurred.includes(i)), bg: blurred.includes(i) ? '#0B0B0E' : '#FFFFFF', fg: blurred.includes(i) ? '#F4F3EF' : '#7A7A70', t: blurred.includes(i) ? '✓' : '', ol: i === focused ? '2px solid #0B0B0E' : 'none' }));
+
+    return { toc, rulingGroups, googleFrames, shareFrames, publicRows, unsubFrames, resetFrames, accountRows, accountSheets, pendingFrames, signFrames, legalPages, emails, notices, deskNav, runners, confirmGroups, deleteSheets, blurCanvas, blurCells };
+  }
+}
+</script>
+</body>
+</html>

@@ -161,8 +161,17 @@
  *
  * `color-scheme` is deliberately not set: this is a block, not a document,
  * and native controls inside it still sit on the page's own ground.
+ *
+ * **Written once, as a utility, so a second selector can take it at a
+ * breakpoint.** Desktop Contract DS0 bend 4: "Phone screens carry an ink
+ * header block … At width there is one top bar; per-screen headers drop to
+ * a plain TYPE.title above the content." Round 25 says it of A3 in as many
+ * words: "the ink header becomes the title line". So a screen's header is
+ * `data-ground="ink-until-wide"` — inverted below `wide`, on the page's
+ * own ground from it. A second copy of these values for the breakpoint
+ * would be a rival truth that nothing makes disagree out loud.
  */
-[data-ground="ink"] {
+@utility ground-ink {
   --ground: var(--night-run);
   --ink: var(--chalk);
   --panel: #16161b;
@@ -182,4 +191,12 @@
   /* One step toward an ink ground is lighter, not darker. */
   --ink-hover: #deddd6;
   --dialed-tint: #0a2524;
+}
+
+[data-ground="ink"] {
+  @apply ground-ink;
+}
+
+[data-ground="ink-until-wide"] {
+  @apply max-wide:ground-ink;
 }

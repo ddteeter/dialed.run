@@ -59,6 +59,9 @@ function cells(): string[] {
   return [...grid.children].map((cell) => cell.textContent);
 }
 
+const tile = (): HTMLElement =>
+  screen.getByRole("link", { name: "Add garment" });
+
 describe("ClosetGrid: the empty closet (ruling 16)", () => {
   it("says so in brackets, asks for three pieces, and offers the Add tile", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([])} />);
@@ -78,6 +81,28 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
       "href",
       "/closet/new",
     );
+  });
+
+  it("keeps the Add tile's height only while it is the only cell", async () => {
+    // A grid row is as tall as its tallest cell, so a minimum on the Add
+    // tile was a minimum on whichever row it landed in — a closet's last
+    // row ran to nearly twice every row above it. `only:` keeps the
+    // minimum for the empty closet, where there is no tile to match.
+    const { unmount } = await renderWithRouter(
+      <ClosetGrid listing={listing([])} />,
+    );
+    expect(tile().closest("li")).toHaveClass("only:min-h-40");
+    expect(tile()).toHaveClass("h-full");
+    expect(tile()).not.toHaveClass("min-h-40");
+    unmount();
+
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    // Beside a garment, the grid's equal rows size it. happy-dom lays
+    // nothing out, so the heights themselves are measured in a real
+    // browser at 390 and 1440, alone on a row and sharing one
+    // (e2e/conformance/closet-empty.conformance.spec.ts).
+    expect(tile().closest("li")).toHaveClass("only:min-h-40");
+    expect(tile().closest("ul")).toHaveClass("auto-rows-fr");
   });
 
   it("has no count and no switch about pieces there are none of", async () => {

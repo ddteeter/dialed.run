@@ -85,7 +85,7 @@ function declarations(selector: string): Map<string, string> {
 }
 
 const root = declarations(":root");
-const inkBlock = declarations('[data-ground="ink"]');
+const inkBlock = declarations("@utility ground-ink");
 
 /**
  * A role's actual colour, following `var(--x)` as far as it goes.
@@ -145,6 +145,20 @@ describe("the T1 port", () => {
     expect(t1).toHaveLength(20);
     expect(t1.map((pair) => pair.role)).toContain("--label");
     expect(root.size).toBeGreaterThan(15);
+  });
+
+  it("hands the one set of ink values to both grounds that invert", () => {
+    // Written once, as `ground-ink`, and taken by the always-inverted
+    // block and by a screen header that is ink only below `wide` (Desktop
+    // Contract DS0 bend 4). A second copy for the breakpoint would be a
+    // rival truth, so what is pinned is that both selectors apply it.
+    expect(inkBlock.size).toBeGreaterThan(10);
+    expect(tokens).toMatch(
+      /\[data-ground="ink"\]\s*\{\s*@apply ground-ink;\s*\}/u,
+    );
+    expect(tokens).toMatch(
+      /\[data-ground="ink-until-wide"\]\s*\{\s*@apply max-wide:ground-ink;\s*\}/u,
+    );
   });
 
   it.each(t1)("declares $role at T1's light value", ({ role, light }) => {

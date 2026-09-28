@@ -42,6 +42,18 @@ async function expectRailBeside(page: Page, primary: string): Promise<void> {
   expect(primaryBox.width).toBeLessThanOrEqual(620);
 }
 
+/**
+The `--ground` an element resolves, which is what `bg-ground` paints.
+*/
+async function groundOf(page: Page, selector: string): Promise<string> {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) =>
+      getComputedStyle(element).getPropertyValue("--ground").trim(),
+    );
+}
+
 test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside it", async ({
   page,
 }) => {
@@ -82,6 +94,21 @@ test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside
     await page.goto(`/feed/attach/${kitless}`);
     await hydrated(page);
     await expectRailBeside(page, "form, [data-slot='header']");
+    // A2's header is the title line at the desk too, on the page's ground.
+    const deskGround = await groundOf(page, "html");
+    expect(await groundOf(page, "[data-slot='header']")).toBe(deskGround);
+
+    // …and both are still the ink block on the phone: `--ground` is the
+    // night-run ink that `ground-ink` sets (ui/tokens.css).
+    const ink = await page
+      .locator("html")
+      .evaluate((element) =>
+        getComputedStyle(element).getPropertyValue("--night-run").trim(),
+      );
+    expect(ink).not.toBe(deskGround);
+    await page.setViewportSize(PHONE);
+    expect(await groundOf(page, "[data-slot='header']")).toBe(ink);
+    await page.setViewportSize(DESK);
 
     await page.goto(`/feed/verdict/${entryId}`);
     await hydrated(page);
@@ -89,10 +116,16 @@ test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside
     await expect(page.locator('[data-part="rail"]')).toContainText(
       "Rail half-zip",
     );
+    // "The ink header becomes the title line" (round 25, DS0 bend 4): at
+    // the desk the header stands on the page's own ground, not on ink.
+    expect(await groundOf(page, "[data-slot='header']")).toBe(
+      await groundOf(page, "html"),
+    );
 
-    // The phone never had these cards.
+    // The phone never had these cards, and A3's header is ink there.
     await page.setViewportSize(PHONE);
     await expect(page.locator('[data-part="rail"]')).toBeHidden();
+    expect(await groundOf(page, "[data-slot='header']")).toBe(ink);
   } finally {
     await unseed(seeded);
   }

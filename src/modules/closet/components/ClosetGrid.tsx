@@ -48,13 +48,21 @@ function piecesHeading(count: number): string {
  * Adding a garment is the grid's dashed tile (§6c.10: *"never a bar
  * action"*), and it is the last cell of the grid whatever the grid holds —
  * the only cell, on an empty closet.
+ *
+ * **Its height is the row's, unless it is the row.** A grid row is as tall
+ * as its tallest cell, so a minimum on this tile was a minimum on whichever
+ * row it landed in: a closet whose last row held the tile ran that row to
+ * nearly twice the height of every row above it. The grid's equal rows
+ * (`auto-rows-fr`) size it to a garment tile wherever it lands; it keeps
+ * the minimum only as the only cell (`only:`), where there is no garment
+ * tile to match.
  */
 function AddTile(): JSX.Element {
   return (
-    <li>
+    <li className="only:min-h-40">
       <Link
         to="/closet/new"
-        className="target flex h-full min-h-40 flex-col items-center justify-center gap-2 rounded-field border border-dashed border-hairline-2 p-3 text-muted no-underline"
+        className="target flex h-full flex-col items-center justify-center gap-2 rounded-field border border-dashed border-hairline-2 p-3 text-muted no-underline"
       >
         <Icon name="add" />
         <Mono step="xs">Add garment</Mono>
@@ -121,7 +129,10 @@ function Tiles({
       data-part="grid"
       // DS3's reflow rule for a grid of garments, verbatim: "grids of runs
       // or garments go from 2 tracks to `auto-fill, minmax(180px, 1fr)`".
-      className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 p-0"
+      // `auto-rows-fr` makes every row the tallest row's height, so the
+      // Add tile matches a garment tile even on a row of its own — one
+      // column on a phone, or a count the columns divide evenly.
+      className="m-0 grid list-none auto-rows-fr grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 p-0"
     >
       {shown.map((view) => (
         <li
