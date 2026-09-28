@@ -97,9 +97,16 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await expect(
     page.getByRole("heading", { name: "Run reminder emails are off" }),
   ).toBeVisible({ timeout: 15_000 });
+  // A second visit shows the done state (round 27 #8); turning them back
+  // on returns to the question.
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Run reminder emails are off" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
   await page.getByRole("button", { name: "Turn them back on" }).click();
   await expect(
-    page.getByRole("heading", { name: "Run reminder emails are on" }),
+    page.getByRole("heading", { name: "Stop run reminder emails?" }),
   ).toBeVisible({ timeout: 15_000 });
 
   await scene(page, "Sign out everywhere");

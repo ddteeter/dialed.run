@@ -30,11 +30,12 @@ async function renderWithRouter(element: ReactElement) {
 const OFF: SubscriptionLanding = {
   state: "off",
   kind: "run_reminder",
-  email: "maya@example.com",
+  email: "ma•••@example.com",
 };
+const ASK: SubscriptionLanding = { ...OFF, state: "ask" };
 
-describe("UnsubscribeLanding", () => {
-  it("says the reminder is off, for which address, with no log-in and no confirm", async () => {
+describe("UnsubscribeLanding (round 27 #8)", () => {
+  it("says the reminder is off, with no log-in and no confirm, and where every kind is changed", async () => {
     await renderWithRouter(
       <UnsubscribeLanding
         landing={OFF}
@@ -48,49 +49,47 @@ describe("UnsubscribeLanding", () => {
         name: "Run reminder emails are off",
       }),
     ).toBeVisible();
-    expect(screen.getByText("Done · maya@example.com")).toHaveClass(
-      "text-dialed-text",
-    );
+    expect(screen.getByText("Unsubscribed")).toHaveClass("text-dialed-text");
     expect(
-      screen.getByText(
-        "You won't get another. Account emails, like password changes, still come.",
-      ),
+      screen.getByText("You won't get another one. Strava stays connected."),
     ).toBeVisible();
     // No push in v1 (decision D-44), so the board's push sentence is gone.
     expect(screen.queryByText(/push/iu)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Unsubscribe" })).toBeNull();
     const settingsLink = screen.getByRole("link", {
-      name: "All notification settings ›",
+      name: "Settings › Notifications",
     });
     expect(settingsLink).toHaveAttribute("href", "/account/notifications");
     expect(settingsLink).toHaveClass("underline");
     expect(settingsLink.closest("p")).toHaveTextContent(
-      "All notification settings › (asks you to log in)",
+      "Change every kind in Settings › Notifications.",
     );
   });
 
-  it("turns them back on, on the same page", async () => {
-    const resubscribe = vi.fn(() =>
-      Promise.resolve<SubscriptionLanding>({ ...OFF, state: "on" }),
-    );
+  it("turns them back on, on the same page, and returns to the question", async () => {
+    const resubscribe = vi.fn(() => Promise.resolve<SubscriptionLanding>(ASK));
+    const unsubscribe = vi.fn(() => Promise.resolve<SubscriptionLanding>(OFF));
     const user = userEvent.setup();
     await renderWithRouter(
       <UnsubscribeLanding
-        landing={OFF}
-        unsubscribe={vi.fn()}
+        landing={ASK}
+        unsubscribe={unsubscribe}
         resubscribe={resubscribe}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Turn them back on" }));
+    await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
+    const turnOn = await screen.findByRole("button", {
+      name: "Turn them back on",
+    });
+    expect(turnOn).toHaveClass("underline");
+    await user.click(turnOn);
 
     expect(resubscribe).toHaveBeenCalledTimes(1);
     expect(
-      await screen.findByRole("heading", {
-        name: "Run reminder emails are on",
-      }),
+      await screen.findByRole("heading", { name: "Stop run reminder emails?" }),
     ).toBeVisible();
-    expect(
-      screen.getByText("The next run that lands on Strava gets one."),
-    ).toBeVisible();
+    // The earlier "Unsubscribed." is no longer true, so it is not said.
+    expect(screen.getByRole("status").textContent).toBe("");
     expect(
       screen.queryByRole("button", { name: "Turn them back on" }),
     ).toBeNull();
@@ -136,12 +135,12 @@ describe("UnsubscribeLanding", () => {
     ).toHaveAttribute("href", "/account/notifications");
   });
 
-  it("asks first: opening the link unsubscribes nobody until the button is pressed", async () => {
+  it("asks first, naming the address masked: nobody is unsubscribed until the button is pressed", async () => {
     const unsubscribe = vi.fn(() => Promise.resolve<SubscriptionLanding>(OFF));
     const user = userEvent.setup();
     await renderWithRouter(
       <UnsubscribeLanding
-        landing={{ ...OFF, state: "ask" }}
+        landing={ASK}
         unsubscribe={unsubscribe}
         resubscribe={vi.fn()}
       />,
@@ -149,10 +148,13 @@ describe("UnsubscribeLanding", () => {
     expect(
       screen.getByRole("heading", { name: "Stop run reminder emails?" }),
     ).toBeVisible();
-    expect(screen.getByText("maya@example.com")).toBeVisible();
+    expect(screen.getByText("Run reminder emails")).toHaveClass("text-quiet");
     expect(
-      screen.getByText("Account emails, like password changes, still come."),
+      screen.getByText(
+        "We'll stop emailing ma•••@example.com when a run lands on Strava. Account emails don't change.",
+      ),
     ).toBeVisible();
+    expect(screen.getByText(/^Change every kind in/u)).toBeVisible();
     expect(unsubscribe).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
@@ -166,22 +168,35 @@ describe("UnsubscribeLanding", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Unsubscribed.");
   });
 
-  it("keeps the question on screen, with the failure band, when the unsubscribe fails", async () => {
-    const unsubscribe = vi.fn(() => Promise.reject(new Error("down")));
+  it("keeps the question on screen under a STILL SUBSCRIBED band when the unsubscribe fails", async () => {
+    const unsubscribe = vi
+      .fn<() => Promise<SubscriptionLanding>>()
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce(OFF);
     const user = userEvent.setup();
     await renderWithRouter(
       <UnsubscribeLanding
-        landing={{ ...OFF, state: "ask" }}
+        landing={ASK}
         unsubscribe={unsubscribe}
         resubscribe={vi.fn()}
       />,
     );
     await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    expect(screen.getByText("Still subscribed")).toBeVisible();
     expect(
-      await screen.findByRole("button", { name: /try again/iu }),
+      screen.getByText("That didn't go through. Try again?"),
     ).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Stop run reminder emails?" }),
+    ).toBeVisible();
+
+    await user.click(retry);
+    expect(unsubscribe).toHaveBeenCalledTimes(2);
+    expect(
+      await screen.findByRole("heading", {
+        name: "Run reminder emails are off",
+      }),
     ).toBeVisible();
   });
 
@@ -189,7 +204,7 @@ describe("UnsubscribeLanding", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <UnsubscribeLanding
-        landing={{ ...OFF, state: "ask" }}
+        landing={ASK}
         unsubscribe={vi.fn(() => Promise.resolve<SubscriptionLanding>(OFF))}
         resubscribe={vi.fn()}
       />,

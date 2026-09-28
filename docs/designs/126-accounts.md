@@ -167,6 +167,26 @@ used_at IS NULL AND token_hash = ?`, and only the claimer confirms or
 - **The O0 memo is keyed to the runner**, with the owner in `localStorage`
   so a sign-in as someone else in another tab unkeys every tab's memo.
 
+Changed on the second review of PR #119:
+
+- **No `Message-ID` of ours.** Cloudflare Email Service sets it and
+  refuses a sender's with `E_HEADER_NOT_ALLOWED`; the sent mark alone
+  guards an owed email (D-66, corrected). The test double refuses every
+  header on Cloudflare's disallowed list.
+- **The email change owes its email through the outbox**, settled after
+  the answer: the link to a free address, round 27's existing-account
+  email to the owner of a taken one. Both paths do one lookup and one
+  batch, so the answer's timing says nothing.
+- **Tries at the current password are limited** — 5 per 15 minutes per
+  runner, in `password_attempts` (additive migration
+  `0032_add_password_attempts`). `auth.api.verifyPassword` called
+  server-side never passes Better Auth's HTTP limiter.
+- **A completed email change withdraws the old inbox's links**: Better
+  Auth's `verification` rows naming the runner (open reset links) and
+  their confirm link, in the move's batch.
+- **The drain reads one index range**: marking a row sent makes it due, so
+  `claimDue` no longer ORs in `sent_at IS NOT NULL`.
+
 ## Contract touches
 
 - Schema (all core): `replace_display_name_with_username` (**destructive,

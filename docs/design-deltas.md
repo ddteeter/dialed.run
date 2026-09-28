@@ -478,26 +478,29 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       height as a token (nothing in tokens.js gives one), or a ruling
       that v1's tile is text-only.
 
-33. **ACC-8 asks for the current password, undrawn (PR #119 review).**
-    Settings › Account › Email now has a **Current password** field under
-    **New email** — a plain password `TextField`, not Au's field with a Show
-    control, because that one lives in the auth module and the account
-    module cannot reach it. A wrong one lands on the field as "That
-    password doesn't match your account.", Change password's sentence.
-    Separately, **reset by email is now open to an unconfirmed runner**
-    (D-63), which round 26 #11 listed among what waits for confirmation.
-    **The ask:** draw the field (and whether it gets Show), and confirm
-    that reset no longer waits.
+33. **ACC-8 asks for the current password (PR #119 review).** **CLOSED
+    by round 27 (items 9 and 11): the field is drawn in "U1 Change email",
+    a wrong one reads "That's not your current password." (built, for
+    Change password too), and reset no longer waits (D-63 stands). The U1
+    list-and-sheets composition is not built.** One placeholder remains
+    from the same field:
+    - **Too many tries at the current password.** The server now limits
+      tries at it to 5 per 15 minutes per runner (Better Auth's HTTP
+      limiter never sees a server-side check). Past the limit the field
+      reads "Too many tries. You can try again at {time}." — Au's "Too
+      many tries." plus the send limit's clock (`currentPasswordLimited`
+      in `lib/contracts.ts`), placeholder copy. **The ask:** word it.
 
-34. **The unsubscribe landing asks before it unsubscribes (D-64), undrawn.**
-    Round 26 #19 draws opening the link as the unsubscribe. Scanners and
-    mail gateways prefetch every link, so opening it now changes nothing:
-    the landing (same signed-out shell) reads "Stop run reminder emails?",
-    names the address in mono, says "Account emails, like password
-    changes, still come.", and has one **Unsubscribe** submit button; its
-    POST lands on the drawn "Run reminder emails are off" state. A mail
-    client's own one-click button is unchanged. **The ask:** redraw the
-    landing's asking state, and word it.
+34. **The unsubscribe landing asks before it unsubscribes (D-64).**
+    **CLOSED by round 27 (item 8), and built:** "Stop run reminder
+    emails?" with the address masked, one ink Unsubscribe button, the
+    `STILL SUBSCRIBED` band, the done state on any later visit, and "Turn
+    them back on" returning to the question. The build drops the board's
+    push sentences (no push, D-44): the ask body reads "We'll stop
+    emailing {masked} when a run lands on Strava. Account emails don't
+    change." and the done body "You won't get another one. Strava stays
+    connected." "Turn them back on" is the inline link grammar in ink:
+    the board's `#C21A6B` is not a T1 role.
 
 ## Answered in round 27 (imported 2026-09-27)
 

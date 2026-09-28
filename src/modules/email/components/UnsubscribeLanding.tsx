@@ -4,7 +4,7 @@ import type { JSX } from "react";
 
 import {
   ControlFailureBand,
-  FormFailureBand,
+  FailureBand,
   FormStatus,
   Mono,
   PendingLabel,
@@ -20,16 +20,37 @@ import type { SubscriptionLanding } from "../landing";
 const LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
 /**
- * The unsubscribe landing (round 26 #19, "UNSUBSCRIBE LANDING ·
- * SIGNED-OUT SHELL · NO LOG-IN"). Opening the link changes nothing (D-64:
- * scanners fetch every link); the landing asks, with one Unsubscribe
- * button that POSTs, and then says it is done, with "Turn them back on"
- * to undo it on the same page. The asking state is undrawn (design
- * deltas).
+ * The landing's foot, on both states (round 27 #8): where every kind is
+ * changed instead.
+ */
+function SettingsFoot(): JSX.Element {
+  return (
+    <p className="m-0 border-t border-hairline pt-3 text-body text-quiet">
+      Change every kind in{" "}
+      <Link
+        data-target="inline"
+        to="/account/$section"
+        params={{ section: "notifications" }}
+        className={LINK_CLASS}
+      >
+        Settings › Notifications
+      </Link>
+      .
+    </p>
+  );
+}
+
+/**
+ * The unsubscribe landing, as round 27 #8 draws it ("Unsubscribe landing",
+ * "Unsubscribe done"; signed-out shell, no log-in). Opening the link
+ * changes nothing (D-64: scanners fetch every link); the landing asks,
+ * naming the address masked, with one ink Unsubscribe button that POSTs.
+ * A failure is the §4a band `STILL SUBSCRIBED`. Done, on the same URL —
+ * and on any later visit — it says the emails are off, and "Turn them
+ * back on" (a POST too) returns to the question.
  *
- * The board's second sentence — "If push is on, reminders still show on
- * your phone." — is dropped: there is no push (decision D-44). Listed as a
- * design delta.
+ * The board's push sentences are dropped: there is no push (decision
+ * D-44). Listed as a design delta.
  */
 export function UnsubscribeLanding({
   landing,
@@ -50,6 +71,10 @@ export function UnsubscribeLanding({
   const control = useControlAction<[]>({
     action: async () => {
       setCurrent(await resubscribe());
+    },
+    // Back on the question, the earlier "Unsubscribed." is no longer true.
+    onSuccess: () => {
+      form.announce("");
     },
     kicker: "Still off",
   });
@@ -83,7 +108,7 @@ export function UnsubscribeLanding({
         heading="Stop run reminder emails?"
         notice={
           <Mono step="xs" className="text-quiet">
-            {current.email}
+            Run reminder emails
           </Mono>
         }
       >
@@ -100,80 +125,66 @@ export function UnsubscribeLanding({
         >
           <FormStatus>{form.status}</FormStatus>
           <p className="m-0 text-lead">
-            Account emails, like password changes, still come.
+            We&apos;ll stop emailing {current.email} when a run lands on Strava.
+            Account emails don&apos;t change.
           </p>
-          <FormFailureBand
-            failure={form.failure}
-            onRetry={form.retry}
-            retryRef={form.retryRef}
-          />
           <SubmitButton
             label="Unsubscribe"
             pendingLabel="Unsubscribing"
             pending={form.pending}
           />
+          {form.failure === undefined ? undefined : (
+            <FailureBand
+              kicker="Still subscribed"
+              message="That didn't go through. Try again?"
+              onRetry={form.retry}
+              retryRef={form.retryRef}
+            />
+          )}
+          <SettingsFoot />
         </form>
       </SignedOutPanel>
     );
   }
 
-  const isOff = current.state === "off";
   return (
     <SignedOutPanel
-      heading={
-        isOff ? "Run reminder emails are off" : "Run reminder emails are on"
-      }
+      heading="Run reminder emails are off"
       notice={
         <Mono step="xs" className="text-dialed-text">
-          {`Done · ${current.email}`}
+          Unsubscribed
         </Mono>
       }
     >
       <div
         data-part="unsubscribe"
-        data-state={current.state}
+        data-state="off"
         className="flex flex-col gap-5"
       >
-        {/* The unsubscribe's own "Unsubscribed." until Turn them back on
-            says something of its own: the question it answered is gone. */}
         <FormStatus>{control.status || form.status}</FormStatus>
         <p className="m-0 text-lead">
-          {isOff
-            ? "You won't get another. Account emails, like password changes, still come."
-            : "The next run that lands on Strava gets one."}
+          You won&apos;t get another one. Strava stays connected.
         </p>
-        {isOff ? (
-          <button
-            type="button"
-            {...inFlight(control.pending)}
-            onClick={() => {
-              void control.run();
-            }}
-            className="target cursor-pointer self-start rounded-pill border border-ink bg-transparent px-5 text-body font-semibold text-ink"
-          >
-            <PendingLabel
-              label="Turn them back on"
-              pendingLabel="Turning them on"
-              pending={control.pending}
-            />
-          </button>
-        ) : undefined}
+        <button
+          type="button"
+          {...inFlight(control.pending)}
+          onClick={() => {
+            void control.run();
+          }}
+          className={`target cursor-pointer self-start border-none bg-transparent p-0 text-body ${LINK_CLASS}`}
+        >
+          <PendingLabel
+            label="Turn them back on"
+            pendingLabel="Turning them on"
+            pending={control.pending}
+          />
+        </button>
         <ControlFailureBand
           failure={control.failure}
           onRetry={control.retry}
           retryRef={control.retryRef}
         />
-        <p className="m-0 text-body text-quiet">
-          <Link
-            data-target="inline"
-            to="/account/$section"
-            params={{ section: "notifications" }}
-            className={LINK_CLASS}
-          >
-            All notification settings ›
-          </Link>{" "}
-          (asks you to log in)
-        </p>
+        <SettingsFoot />
       </div>
     </SignedOutPanel>
   );

@@ -5,7 +5,9 @@
  * message, so a GET that unsubscribes unsubscribes runners who never
  * clicked. The landing asks, and its one button POSTs. A mail client's own
  * one-click (RFC 8058) is a POST already, and stays one click. No session:
- * the signature is the permission.
+ * the signature is the permission. Round 27 #8 draws it: the address
+ * masked, a second visit showing the done state, and "Turn them back on"
+ * returning to the question.
  */
 import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -13,26 +15,36 @@ import type { drizzle } from "drizzle-orm/d1";
 import { user } from "../../db/schema-auth";
 import type { EmailPreferenceKind } from "../../lib/email";
 import { firstColumnWhere } from "../../lib/keyed-read";
-import { setEmailPreference } from "./preferences";
+import { isEmailWanted, setEmailPreference } from "./preferences";
 import { verifiedUnsubscribe } from "./unsubscribe";
 
 type Db = ReturnType<typeof drizzle>;
 
 export type SubscriptionLanding =
   | {
-      readonly state: "off" | "on";
+      /**
+       * `ask` while the kind is on — the question and its one button —
+       * and `off` once it is ("Run reminder emails are off").
+       */
+      readonly state: "ask" | "off";
       readonly kind: EmailPreferenceKind;
       /**
-      The address the landing names ("DONE · MAYA@EXAMPLE.COM").
-      */
-      readonly email: string;
-    }
-  | {
-      readonly state: "ask";
-      readonly kind: EmailPreferenceKind;
+       * The address the landing names, masked (round 27 #8's
+       * "ma•••@example.com"): a signed-out page anyone holding the link
+       * can open.
+       */
       readonly email: string;
     }
   | { readonly state: "invalid" };
+
+/**
+ * An address as a signed-out page may show it: the first two characters
+ * of the local part, then `•••`, then the whole domain.
+ */
+export function maskedAddress(email: string): string {
+  const at = email.lastIndexOf("@");
+  return `${email.slice(0, Math.min(2, at))}•••${email.slice(at)}`;
+}
 
 /**
  * The runner and address a signed link names, or nothing: what the
@@ -54,12 +66,27 @@ async function signedFor(
     eq(user.id, signed.userId),
   );
   if (email === undefined) return undefined;
-  return { ...signed, email };
+  return { ...signed, email: maskedAddress(email) };
+}
+
+/**
+ * What the landing shows for a kind that is on (the question) or off.
+ */
+function landingOf(
+  signed: Readonly<{ kind: EmailPreferenceKind; email: string }>,
+  isOn: boolean,
+): SubscriptionLanding {
+  return {
+    state: isOn ? "ask" : "off",
+    kind: signed.kind,
+    email: signed.email,
+  };
 }
 
 /**
  * Opening the link (GET): read, never write — the landing asks whether to
- * unsubscribe. A scanner that fetches it changes nothing.
+ * unsubscribe, or, when the kind is already off, says so (a second visit
+ * shows the done state). A scanner that fetches it changes nothing.
  */
 export async function readByLink(
   db: Db,
@@ -68,12 +95,12 @@ export async function readByLink(
 ): Promise<SubscriptionLanding> {
   const signed = await signedFor(db, secret, search);
   if (signed === undefined) return { state: "invalid" };
-  return { state: "ask", kind: signed.kind, email: signed.email };
+  return landingOf(signed, await isEmailWanted(db, signed.userId, signed.kind));
 }
 
 /**
- * Switch the kind a signed link names off (`isOn` false) or back on. A
- * tampered link, or one for an account that is gone, changes nothing and
+ * Switch the kind a signed link names off (`isOn` false) or back on — back
+ * on lands on the question again. A tampered link, or one for an account that is gone, changes nothing and
  * lands on "That link doesn't work."
  */
 export async function switchByLink(
@@ -85,7 +112,7 @@ export async function switchByLink(
   const signed = await signedFor(db, secret, search);
   if (signed === undefined) return { state: "invalid" };
   await setEmailPreference(db, signed.userId, signed.kind, isOn);
-  return { state: isOn ? "on" : "off", kind: signed.kind, email: signed.email };
+  return landingOf(signed, isOn);
 }
 
 /**

@@ -4,6 +4,7 @@ import { account } from "../../src/db/schema-auth";
 import { notificationPreferences } from "../../src/db/schema-core";
 import { isEmailWanted, notificationSettings } from "../../src/modules/email";
 import {
+  maskedAddress,
   oneClickUnsubscribe,
   readByLink,
   switchByLink,
@@ -36,14 +37,14 @@ async function signedSearch(userId: string): Promise<Record<string, string>> {
 }
 
 describe("readByLink (opening the link, D-64)", () => {
-  it("names the address and asks, and changes no preference", async () => {
+  it("names the address, masked, and asks, and changes no preference", async () => {
     const { userId, email } = await seedUser();
     const search = await signedSearch(userId);
 
     expect(await readByLink(db, SECRET, search)).toStrictEqual({
       state: "ask",
       kind: "run_reminder",
-      email,
+      email: maskedAddress(email),
     });
     expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
     expect(await db.select().from(notificationPreferences)).toStrictEqual([]);
@@ -55,6 +56,17 @@ describe("readByLink (opening the link, D-64)", () => {
     // A gateway prefetching every link, several times over.
     for (let n = 0; n < 3; n += 1) await readByLink(db, SECRET, search);
     expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
+  });
+
+  it("shows the done state on a second visit, once the kind is off", async () => {
+    const { userId, email } = await seedUser();
+    const search = await signedSearch(userId);
+    await switchByLink(db, SECRET, search, false);
+    expect(await readByLink(db, SECRET, search)).toStrictEqual({
+      state: "off",
+      kind: "run_reminder",
+      email: maskedAddress(email),
+    });
   });
 
   it("unsubscribes only on the button's POST", async () => {
@@ -86,22 +98,31 @@ describe("readByLink (opening the link, D-64)", () => {
   });
 });
 
+describe("maskedAddress", () => {
+  it("keeps two characters of the local part and the whole domain", () => {
+    expect(maskedAddress("maya@example.com")).toBe("ma•••@example.com");
+    expect(maskedAddress("m@example.com")).toBe("m•••@example.com");
+    // The domain is split at the last @, as an address is.
+    expect(maskedAddress('"a@b"@example.com')).toBe('"a•••@example.com');
+  });
+});
+
 describe("switchByLink", () => {
-  it("turns the reminder off on open, names the address, and back on again", async () => {
+  it("turns the reminder off, and back on to the question again", async () => {
     const { userId, email } = await seedUser();
     const search = await signedSearch(userId);
 
     expect(await switchByLink(db, SECRET, search, false)).toStrictEqual({
       state: "off",
       kind: "run_reminder",
-      email,
+      email: maskedAddress(email),
     });
     expect(await isEmailWanted(db, userId, "run_reminder")).toBe(false);
 
     expect(await switchByLink(db, SECRET, search, true)).toStrictEqual({
-      state: "on",
+      state: "ask",
       kind: "run_reminder",
-      email,
+      email: maskedAddress(email),
     });
     expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
   });
