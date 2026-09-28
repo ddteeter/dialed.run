@@ -495,6 +495,25 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       as H's empty-state lead, and nothing else — no avatar, no Follow, no
       report. **The ask:** confirm the page is the sentence alone.
 
+34. **Task 128 PR 2a's Desk and notice placeholders.** Built from existing
+    `ui/` primitives, bracket text and no new glyph; each wants a drawing.
+    - **Review queue decisions.** Each row picks a reason from the removal
+      list (the sentence the author is sent, round 27 #20) and offers
+      Approve · Remove · Remove as suspected CSAM. Only one row carries the
+      decision at a time — the oldest, or the one picked with "Decide this
+      one" — because `ChoiceField` takes its name as its id. The CSAM
+      button's name and the reason list's wording are the owner's too.
+    - **The takedown form** (SAF-6), under the review queue: what it is
+      (photo or entry), its id, and the notice.
+    - **D8's search** is a plain search box with the "Handle or email"
+      label, and the filters are three text links; D8's board draws both
+      but not their states. JOINED is `YYYY-MM-DD` mono.
+    - **Reopen account** on a closed runner's column: D3 draws Close, not
+      its undo.
+    - **The notice band** (round 27 #20, #21) is the §4a band's shape
+      without its retry. #20's "See the community rules" link is left out
+      until the rules page exists.
+
 ## Answered in round 27 (imported 2026-09-27)
 
 Thirty-one asks in three parts: amend the contracts and boards to match the

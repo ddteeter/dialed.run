@@ -66,10 +66,34 @@ dimensions from the JPEG/PNG/WebP header and refuses anything over 16 MP.
 In the browser, W3's canvas step always runs — blur off too — and caps the
 long edge at 2048px.
 
+**PR 2 split.** 2a is moderation and signed photos (SAF-5–8, 10, 15, the
+Desk's Runners page); 2b is the closet (SAF-16–19) and SAF-11.
+
+**Signed photos (SAF-7), as built.** `/feed/photo/<key>` keeps its URL.
+The owner gets the bytes `private`. A signed-in stranger the rule lets see
+the photo gets a 302 to `?e=<expiry>&s=<HMAC>` — the expiry is the next
+quarter-hour boundary plus one (15–30 minutes) — and the redirect itself
+is `private` for one bucket less than the URL lives. The signed URL is
+served `public, max-age=<seconds left>` after the signature **and** the
+entry's anonymous visibility pass, so a removal stops every uncached
+request at once and every cached copy within 30 minutes (open question
+2). Redirecting rather than signing in the feed's queries keeps the whole
+change in this lane's files. No `PHOTO_URL_SECRET`: nothing is signed,
+every signature is refused, and `/api/health` names it.
+
+**Moderation (SAF-5, 6, 8).** `feed/moderation.ts`, because the deletion
+statements are feed's and the arrow runs feed → safety. One batch holds
+retract's statements, the `moderation_actions` row and the author's
+`content_removed` notice, then retract's outbox debt. Quarantine copies
+each object to `quarantine/<key>` before the batch; no route serves that
+prefix (the reviewer route now refuses anything outside `entries/`). Bans,
+unbans and D8's force-rename write audit rows too; the force-rename sets
+`user_profiles.username_reset_reason`, which 126's O0 screen reads.
+
 ## Contract touches
 
-- Schema: PR 2 only, `add_moderation_actions` (additive, listed in the
-  shared packet). No other change; `moderation_status` already has
+- Schema: PR 2 only, `add_moderation_actions` and
+  `add_username_reset_reason` (both additive). No other change; `moderation_status` already has
   `removed`.
 - Routes: none in PR 1 — D4 is a component 126's sign-in form mounts, not a
   route; PR 2 adds the Desk pages.
