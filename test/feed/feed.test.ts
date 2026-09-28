@@ -201,6 +201,18 @@ describe("following feed (E1)", () => {
     // three cursor values and the limit twice (per author, and the page):
     // fifteen, at one follow or a thousand.
     expect(params).toHaveLength(15);
+    // The followees arm's status discriminator: raw `'ok'` aliased to
+    // `"status"` so the outer `eq(outfitEntries.moderationStatus,
+    // authors.status)` can name it. Every later reference to `authors.status`
+    // is drawn from this exact aliased object (drizzle's selection proxy
+    // resolves by object identity, not by re-deriving a name), so renaming or
+    // blanking either string here is invisible to a query-*result* test — the
+    // definition and every reference rename together and the statement stays
+    // internally consistent. Pinning the emitted text is what makes this
+    // literal line's shape a checked part of the contract, per this file's
+    // own note that `followingFeedStatement` exists so tests can inspect what
+    // it builds.
+    expect(sql).toMatch(/'ok' as "status"/u);
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
       .all<{ detail: string }>();
