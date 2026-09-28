@@ -209,6 +209,10 @@ const NAV: readonly Edge[] = [
       // so listing the three by name said nothing the table did not
       // already say. Measured: emptying each changed no answer.
       "/account/$section",
+      // Task 126 (ACC-5): `/join?code=` is arrived at from outside (an
+      // invite link) and goes straight on to Au2; D7's Copy link is the
+      // one place the app builds it. Typed as Au2's other forward steps.
+      "/join",
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",

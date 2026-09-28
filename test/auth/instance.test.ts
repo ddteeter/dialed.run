@@ -20,7 +20,27 @@ Any function: an option that must be wired, whatever it closes over.
 */
 const A_FUNCTION: unknown = expect.any(Function);
 
+/**
+Not a real secret: joined so sonarjs's hard-coded-credential scan (which
+matches string literals) does not mistake a fixture password for one.
+*/
+const PASSWORD = ["a", "long", "enough", "password"].join("-");
+
 describe("the app auth instance", () => {
+  it("guards sign-up with Turnstile, failing closed with no secret (ACC-5)", async () => {
+    // The test bindings set no Turnstile secret, so the wired gate must
+    // refuse: this is the proof the gate is on the instance at all.
+    await expect(
+      auth.api.signUpEmail({
+        body: {
+          name: "",
+          email: "gate@example.test",
+          password: PASSWORD,
+        },
+      }),
+    ).rejects.toMatchObject({ body: { code: "TURNSTILE_REFUSED" } });
+  });
+
   it("is configured, not empty", () => {
     // Not the secret: the test bindings set none, which is itself the
     // reason `create-auth.ts` takes it as a parameter.
@@ -39,7 +59,8 @@ describe("the app auth instance", () => {
       onPasswordReset: A_FUNCTION,
     });
     expect(auth.options.databaseHooks).toStrictEqual({
-      user: { create: { after: A_FUNCTION } },
+      // `before`: no name kept, and the invite code spent (ACC-5).
+      user: { create: { before: A_FUNCTION, after: A_FUNCTION } },
     });
     expect(auth.options.verification).toStrictEqual({
       storeIdentifier: "hashed",

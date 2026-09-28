@@ -13,8 +13,8 @@ import {
   useControlAction,
 } from "../../ui";
 import type { ControlAction, ControlFailure } from "../../ui";
-import { AUTH_COPY, AUTH_KICKER } from "./auth-copy";
-import { googleConsentUrl } from "./credentials";
+import { AUTH_COPY, AUTH_KICKER, AccessRefused } from "./auth-copy";
+import { googleConsentUrl, type Admission } from "./credentials";
 import { didGoogleFail } from "./sign-in-search";
 
 /**
@@ -30,14 +30,29 @@ export interface GoogleSignIn extends ControlAction<[]> {
 }
 
 /**
+ * Better Auth's answer when Google would have made an account from the
+ * log-in page, which only Au2 may do (ACC-5).
+ */
+const SIGNUP_DISABLED = "signup_disabled";
+
+/**
  * The band for a failure Google's round trip brought back, rather than one
  * this page saw happen. Same kicker, same sentence — the runner cannot
- * tell the two apart and should not have to.
+ * tell the two apart and should not have to — except for an address with
+ * no account, which is told where accounts are made.
  */
-const RETURNED: ControlFailure = {
-  kicker: AUTH_KICKER,
-  message: AUTH_COPY.google,
-};
+function returnedFailure(error: string | undefined): ControlFailure {
+  return {
+    kicker: AUTH_KICKER,
+    message:
+      error === SIGNUP_DISABLED ? AUTH_COPY.googleNoAccount : AUTH_COPY.google,
+  };
+}
+
+/**
+Every other failure of the attempt: Au6's sentence.
+*/
+const FAILED: ControlFailure = { kicker: AUTH_KICKER, message: AUTH_COPY.google };
 
 /**
  * Round 22, Au5–Au6: *"Google is a submit button"* — so it goes through
@@ -60,6 +75,7 @@ export function useGoogleSignIn({
   errorCallbackURL,
   returnedError,
   leave,
+  admission,
 }: Readonly<{
   /**
   Where Google's success lands — `/`, or the path Au7 carried.
@@ -74,6 +90,12 @@ export function useGoogleSignIn({
   */
   returnedError: string | undefined;
   leave: (url: string) => void;
+  /**
+   * Au2's: the code and Turnstile token, read at the press. Present, the
+   * attempt asks to make an account (ACC-5); absent (Au1), it only signs
+   * in.
+   */
+  admission?: (() => Admission) | undefined;
 }>): GoogleSignIn {
   // The attempt whose answer is still wanted, by identity: each attempt
   // mints its own token, so "is this answer still wanted" is a comparison
@@ -89,6 +111,9 @@ export function useGoogleSignIn({
   const [showsReturned, setShowsReturned] = useState(() =>
     didGoogleFail(returnedError),
   );
+  // What the way in said, when it refused the attempt: its own words in
+  // the band, rather than Au6's "Google didn't answer".
+  const [refusal, setRefusal] = useState<ControlFailure>();
   const control = useControlAction<[]>({
     kicker: AUTH_KICKER,
     action: async () => {
@@ -96,18 +121,28 @@ export function useGoogleSignIn({
       wanted.current = mine;
       setLive(mine);
       setShowsReturned(false);
+      setRefusal(undefined);
       try {
-        const url = await googleConsentUrl(callbackURL, errorCallbackURL);
+        const url = await googleConsentUrl(
+          callbackURL,
+          errorCallbackURL,
+          admission?.(),
+        );
         if (mine === wanted.current) leave(url);
       } catch (error: unknown) {
         // A cancelled attempt's failure is not the runner's news: they
         // have moved on to Log in, and a band for a button they abandoned
         // would sit over the form they are using.
-        if (mine === wanted.current) throw error;
+        if (mine !== wanted.current) return;
+        if (error instanceof AccessRefused) setRefusal(error);
+        throw error;
       }
     },
   });
-  const failure = control.failure ?? (showsReturned ? RETURNED : undefined);
+  const failed =
+    control.failure === undefined ? undefined : (refusal ?? FAILED);
+  const failure =
+    failed ?? (showsReturned ? returnedFailure(returnedError) : undefined);
 
   return {
     ...control,
@@ -191,7 +226,7 @@ export function GoogleButton({
       {google.failure === undefined ? undefined : (
         <FailureBand
           kicker={google.failure.kicker}
-          message={AUTH_COPY.google}
+          message={google.failure.message}
           onRetry={google.retry}
           retryRef={google.retryRef}
         />

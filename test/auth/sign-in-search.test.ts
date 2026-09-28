@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   didGoogleFail,
   googleReturn,
+  joinSearch,
+  onToSignUp,
   parseSignInSearch,
 } from "../../src/modules/auth/sign-in-search";
 
@@ -31,7 +33,20 @@ describe("parseSignInSearch", () => {
       redirect: undefined,
       carried: undefined,
       error: undefined,
+      code: undefined,
     });
+  });
+
+  it("carries an invite link's code, if it is short enough to be one (ACC-5)", () => {
+    expect(parseSignInSearch({ code: "DIAL-7K3P" }).code).toBe("DIAL-7K3P");
+    expect(parseSignInSearch({ code: "x".repeat(20) }).code).toBe(
+      "x".repeat(20),
+    );
+    expect(parseSignInSearch({ code: "x".repeat(21) }).code).toBeUndefined();
+    expect(joinSearch({ code: "DIAL-7K3P", redirect: "/x" })).toStrictEqual({
+      code: "DIAL-7K3P",
+    });
+    expect(joinSearch({ code: 7 })).toStrictEqual({ code: undefined });
   });
 
   it("is plain Au2 with nothing in the URL", () => {
@@ -100,7 +115,28 @@ describe("didGoogleFail", () => {
   });
 });
 
+describe("onToSignUp (/join)", () => {
+  it("goes on to Au2 with the code in its search", () => {
+    let thrown: unknown;
+    try {
+      onToSignUp({ code: "DIAL-7K3P" });
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({
+      options: { to: "/auth/signup", search: { code: "DIAL-7K3P" } },
+    });
+  });
+});
+
 describe("googleReturn", () => {
+  it("brings Au2's code back with a refused attempt", () => {
+    expect(googleReturn("/auth/signup", { code: "DIAL-7K3P" })).toEqual({
+      callbackURL: "/",
+      errorCallbackURL: "/auth/signup?code=DIAL-7K3P",
+    });
+  });
+
   it("sends success home and failure back to the page, when nothing was carried", () => {
     expect(googleReturn("/auth/signup", {})).toEqual({
       callbackURL: "/",

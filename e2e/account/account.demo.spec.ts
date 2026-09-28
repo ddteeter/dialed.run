@@ -9,6 +9,7 @@ import type { Page } from "@playwright/test";
 
 import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, unsubscribeLinkFor } from "../support/email-links";
+import { ensureInviteCode, turnstileAnswered } from "../support/invites";
 
 async function hydrated(page: Page): Promise<void> {
   await page
@@ -30,6 +31,8 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   // A confirmed runner with a handle, the way the auth demo makes one.
   await page.goto("/auth/signup");
   await hydrated(page);
+  await page.getByLabel("Invite code").fill(await ensureInviteCode());
+  await turnstileAnswered(page);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Create account" }).click();

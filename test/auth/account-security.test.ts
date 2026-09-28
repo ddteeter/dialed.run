@@ -19,6 +19,7 @@ import {
   PASSWORD_ATTEMPTS_PER_WINDOW,
 } from "../../src/modules/auth/password-check";
 import { recordingMail } from "./mail-recorder";
+import { OPEN_ACCESS } from "./open-access";
 
 /**
  * The account's security paths through Better Auth's real endpoints on
@@ -39,6 +40,7 @@ function instance(overrides: Partial<Parameters<typeof createAuth>[0]> = {}) {
     secret: "test-secret-not-for-production",
     baseUrl: ORIGIN,
     mail,
+    access: OPEN_ACCESS,
     passwordScreen: {
       verdict: () => Promise.resolve("clean" as const),
       report: () => {

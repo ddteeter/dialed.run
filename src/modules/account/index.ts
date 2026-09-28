@@ -8,6 +8,7 @@
 export { claimUsername, lookUpHandle, usernameOf } from "./username";
 export type { HandleClaim, HandleLookup } from "./username";
 export { isUnconfirmed, isVerified } from "./email-links";
+export { accessGate } from "./access";
 export {
   authMail,
   confirmEmail,

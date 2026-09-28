@@ -1,5 +1,12 @@
+import { ACCESS_CODES, ACCESS_HEADERS, INVITE_COPY } from "../../lib/access";
 import { forgetSession } from "../../lib/session-memo";
-import { AUTH_COPY, AuthRejected } from "./auth-copy";
+import {
+  AUTH_COPY,
+  AUTH_KICKER,
+  AccessRefused,
+  AuthRejected,
+  turnstileRefused,
+} from "./auth-copy";
 import { BREACHED_CODE } from "./breached-password";
 import { authClient } from "./client";
 
@@ -88,6 +95,22 @@ const NEW_PASSWORD_REFUSALS: FieldRefusals = new Map([
 ]);
 
 /**
+ * Sign-up's: a breached password, and the invite code's three refusals on
+ * the code's own field (round 26 #20: "the used and invalid messages as
+ * drawn", under INVITE CODE).
+ */
+const SIGN_UP_REFUSALS: FieldRefusals = new Map([
+  [BREACHED_CODE, BREACHED_REFUSAL],
+  ...(["missing", "invalid", "used"] as const).map(
+    (refusal) =>
+      [
+        ACCESS_CODES[refusal],
+        { field: "inviteCode", message: INVITE_COPY[refusal] },
+      ] as const,
+  ),
+]);
+
+/**
  * ACC-7: a wrong current password on its own field, a breached new one on
  * the new one's.
  */
@@ -128,13 +151,48 @@ export async function signIn(values: SignInValues): Promise<void> {
 }
 
 /**
+ * What sign-up carries beside Better Auth's own body (ACC-5): the invite
+ * code and the Turnstile token, as the headers its before-hook reads.
+ */
+export interface Admission {
+  readonly inviteCode?: string | undefined;
+  readonly turnstileToken: string | undefined;
+}
+
+function admissionHeaders({
+  inviteCode,
+  turnstileToken,
+}: Admission): Record<string, string> {
+  return {
+    [ACCESS_HEADERS.inviteCode]: inviteCode ?? "",
+    [ACCESS_HEADERS.turnstileToken]: turnstileToken ?? "",
+  };
+}
+
+/**
  * Better Auth's `user.name` is required by its sign-up endpoint and read by
  * nothing here: a runner's name is their handle, picked at O0 (round 26 #7),
- * which lives on `user_profiles`. So it is sent empty rather than asked for.
+ * which lives on `user_profiles`. So it is sent empty rather than asked for,
+ * and the server blanks whatever else arrives (owner, 2026-09-27).
+ *
+ * A Turnstile refusal is the band's, as `NOT SENT` (round 27 #12); the
+ * code's refusals are the code field's.
  */
-export async function signUp(values: SignInValues): Promise<void> {
-  const { error } = await authClient.signUp.email({ ...values, name: "" });
-  throwIfRefused(error, NEW_PASSWORD_REFUSALS);
+export async function signUp(
+  values: SignInValues & { inviteCode?: string | undefined },
+  turnstileToken: string | undefined,
+): Promise<void> {
+  const { error } = await authClient.signUp.email(
+    { email: values.email, password: values.password, name: "" },
+    {
+      headers: admissionHeaders({
+        inviteCode: values.inviteCode,
+        turnstileToken,
+      }),
+    },
+  );
+  if (error?.code === ACCESS_CODES.turnstile) throw turnstileRefused();
+  throwIfRefused(error, SIGN_UP_REFUSALS);
 }
 
 /**
@@ -229,18 +287,38 @@ export async function signOut(): Promise<void> {
 export async function googleConsentUrl(
   callbackURL: string,
   errorCallbackURL: string,
+  signUp?: Admission,
 ): Promise<string> {
-  const result = await authClient.signIn.social({
-    provider: "google",
-    callbackURL,
-    errorCallbackURL,
-    disableRedirect: true,
-  });
-  if (result.error) throw new AuthRejected(result.error.status);
+  const result = await authClient.signIn.social(
+    {
+      provider: "google",
+      callbackURL,
+      errorCallbackURL,
+      disableRedirect: true,
+      // Only Au2 asks to make an account, and only with its code and its
+      // Turnstile token (ACC-5), checked before Google is ever asked.
+      ...(signUp !== undefined && { requestSignUp: true }),
+    },
+    signUp === undefined ? {} : { headers: admissionHeaders(signUp) },
+  );
+  if (result.error) throw googleRefusal(result.error);
   // Optional in Better Auth's type because its id-token flow answers
   // without one; the redirect flow always has it, and an answer without it
   // is a failed attempt rather than a trip to nowhere.
   const { url } = result.data;
   if (url === undefined) throw new Error("no consent URL in Google's answer");
   return url;
+}
+
+/**
+ * Why the Google attempt was refused, as its band says it: the way in's
+ * refusals in their own words (the code's under Au2's kicker, Turnstile's
+ * as `NOT SENT`), and anything else as the status it came with.
+ */
+function googleRefusal(error: ClientError): Error {
+  if (error.code === ACCESS_CODES.turnstile) return turnstileRefused();
+  const refusal = SIGN_UP_REFUSALS.get(error.code);
+  return refusal?.field === "inviteCode"
+    ? new AccessRefused(AUTH_KICKER, refusal.message)
+    : new AuthRejected(error.status);
 }

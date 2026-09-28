@@ -167,6 +167,91 @@ export const passwordAttempts = /*#__PURE__*/ sqliteTable(
   },
 );
 
+/**
+ * Invite codes (task 126, ACC-5; decision D-39; round 26 #20). `DIAL-XXXX`,
+ * stored as `lib/access.ts` normalizes it, minted on Desk D7 — by hand,
+ * or by answering an access request — or seeded for the owner as a
+ * deployment step. A code works `max_uses` times; revoking one stops it at
+ * once, and an undo clears `revoked_at` again.
+ *
+ * `idempotency_key` is D7's create form's (law 8b), scoped to the operator
+ * who made it; `request_id` is the request a Send invite answered, unique
+ * so a second press returns the code the first one minted.
+ */
+export const inviteCodes = /*#__PURE__*/ sqliteTable(
+  "invite_codes",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    label: text("label"),
+    maxUses: integer("max_uses").notNull().default(1),
+    createdBy: text("created_by"),
+    idempotencyKey: text("idempotency_key"),
+    requestId: text("request_id"),
+    createdAt: integer("created_at").notNull(),
+    revokedAt: integer("revoked_at"),
+  },
+  (t) => [
+    uniqueIndex("invite_codes_code").on(t.code),
+    uniqueIndex("invite_codes_idempotency").on(t.createdBy, t.idempotencyKey),
+    uniqueIndex("invite_codes_request").on(t.requestId),
+    // D7's Codes list, newest first.
+    index("invite_codes_created").on(t.createdAt),
+  ],
+);
+
+/**
+ * A code spent on an account, one row per account (task 126, ACC-5).
+ *
+ * **Written before the account exists, by the account's own id.** Better
+ * Auth makes the user row, so no batch of ours can hold it; its create
+ * hook mints the id, and this row is the claim. `held_until` is what keeps
+ * two sign-ups racing for a single-use code from both getting it: a row
+ * counts against the code while its account exists *or* its hold is live,
+ * so a sign-up that died between the claim and the account frees the
+ * code when the hold runs out (`modules/account/invites.ts`).
+ */
+export const inviteRedemptions = /*#__PURE__*/ sqliteTable(
+  "invite_redemptions",
+  {
+    userId: text("user_id").primaryKey(),
+    codeId: text("code_id").notNull(),
+    email: text("email").notNull(),
+    heldUntil: integer("held_until").notNull(),
+    redeemedAt: integer("redeemed_at").notNull(),
+  },
+  (t) => [
+    // A code's uses, counted at the claim and listed on D7.
+    index("invite_redemptions_code").on(t.codeId),
+    // A retried sign-up clears its own dead claim by address.
+    index("invite_redemptions_email").on(t.email),
+  ],
+);
+
+/**
+ * Au5 · Request access (task 126, ACC-5; round 26 #20): one row per
+ * address, lowercased. A repeat updates the note; the receipt is the same
+ * whether the row is new, repeated, or the address already has an
+ * account. D7 lists the pending ones oldest first.
+ */
+export const accessRequests = /*#__PURE__*/ sqliteTable(
+  "access_requests",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    note: text("note"),
+    status: text("status", { enum: ["pending", "invited", "declined"] })
+      .notNull()
+      .default("pending"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("access_requests_email").on(t.email),
+    index("access_requests_status_created").on(t.status, t.createdAt),
+  ],
+);
+
 export const brands = /*#__PURE__*/ sqliteTable(
   "brands",
   {

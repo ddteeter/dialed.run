@@ -1,7 +1,12 @@
 import type { JSX, ReactNode, RefObject } from "react";
 
 import { Mono } from "./Mono";
-import type { FieldProps, FormFailure, SummaryRow } from "./use-form-submit";
+import type {
+  FieldProps,
+  FormFailure,
+  FormShell,
+  SummaryRow,
+} from "./use-form-submit";
 
 /**
  * The render half of the Forms & failure contract (docs/product.md).
@@ -39,6 +44,48 @@ export function FormStatus({ children }: Readonly<{ children?: string }>) {
     <div role="status" aria-live="polite" className="sr-only">
       {children}
     </div>
+  );
+}
+
+/**
+ * The `<form>` every submit form opens with: the ref `useFormSubmit` needs
+ * to focus a field, `noValidate` — the browser's own bubbles are a second,
+ * unstyled error system that fires before ours and would pre-empt the
+ * schema — the submit handler that turns the event into a call to
+ * `form.submit`, and the one `FormStatus` region every form mounts.
+ *
+ * Lifted out of `RequestAccess` and `DeskAccess`'s `NewCodeForm`, which had
+ * it duplicated line for line: the clone detector caught the same six
+ * attributes and the same status region twice, which is the "AuthPage took
+ * these as nine separate props" story again (see `FormShell`) one level
+ * lower — the scaffolding around the fields rather than the fields' own
+ * props.
+ */
+export function FormElement({
+  form,
+  dataPart,
+  onSubmit,
+  children,
+}: Readonly<{
+  form: Pick<FormShell, "formRef" | "status">;
+  dataPart: string;
+  onSubmit: () => void;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <form
+      ref={form.formRef}
+      noValidate
+      data-part={dataPart}
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <FormStatus>{form.status}</FormStatus>
+      {children}
+    </form>
   );
 }
 

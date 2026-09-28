@@ -13,8 +13,9 @@ import {
   useFormSubmit,
 } from "../../ui";
 import { SignedOutPanel } from "../../ui/SignedOutPanel";
-import type { FormShell } from "../../ui";
-import { AUTH_KICKER, authFailureMessage, authStatus } from "./auth-copy";
+import type { ControlFailure, FormShell } from "../../ui";
+import { IS_INVITE_ONLY } from "../../lib/access";
+import { authFailure, authStatus } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import { PasswordField } from "./password-field";
 import type { CarriedForm } from "./sign-in-search";
@@ -37,19 +38,7 @@ import type { CarriedForm } from "./sign-in-search";
  * form, or-divider, google, cross-link — so the conformance specs compare
  * region to region against the drawing rather than against memory.
  */
-export function AuthPage({
-  heading,
-  submitLabel,
-  pendingLabel,
-  form,
-  cause,
-  onSubmit,
-  google,
-  notice,
-  legal,
-  crossLink,
-  children,
-}: Readonly<{
+export function AuthPage(props: Readonly<{
   heading: string;
   submitLabel: string;
   pendingLabel: string;
@@ -77,15 +66,28 @@ export function AuthPage({
    * signed-out runner has an account."*
    */
   crossLink?: ReactNode;
+  /**
+   * Au2's Turnstile (round 27 #12): managed, directly above the primary.
+   * It covers Google too — the Google attempt carries its token, checked
+   * before the redirect. Not on Au1.
+   */
+  turnstile?: ReactNode;
+  /**
+  Au2's "No code? Request access", under Google (round 26 #20).
+  */
+  requestLink?: ReactNode;
   children: ReactNode;
 }>): JSX.Element {
-  const bandMessage = authFailureMessage(form.failure, cause);
+  // The slots (notice, legal, cross-link, Turnstile, request link) are read
+  // off `props` where they are placed; the rest are the page's own.
+  const { heading, submitLabel, pendingLabel, form, cause, google } = props;
+  const band = authFailure(form.failure, cause);
 
   return (
-    <SignedOutPanel heading={heading} notice={notice}>
+    <SignedOutPanel heading={heading} notice={props.notice}>
       <div
         data-part="form"
-        data-state={formState(bandMessage, form.summaryRows.length)}
+        data-state={formState(band, form.summaryRows.length)}
         className="flex flex-col gap-4"
       >
         {/* noValidate: the browser's own bubbles are a second, unstyled
@@ -98,14 +100,14 @@ export function AuthPage({
           onSubmit={(event) => {
             event.preventDefault();
             google.cancel();
-            onSubmit();
+            props.onSubmit();
           }}
         >
           <FormStatus>
             {authStatus({
               status: form.status,
-              bandMessage,
-              googleFailed: google.failure !== undefined,
+              band,
+              google: google.failure,
             })}
           </FormStatus>
           <FormErrorSummary
@@ -113,19 +115,20 @@ export function AuthPage({
             onFocusField={form.focusField}
             summaryRef={form.summaryRef}
           />
-          {children}
+          {props.children}
           {/* The form band with Auth's two words (round 22): "Not signed
                 in", not "Nothing saved". Same block, same place, same Try
                 again — `FormFailureBand` hard-codes the contract's opener,
                 so this is the band it wraps, given the other kicker. */}
-          {bandMessage === undefined ? undefined : (
+          {band === undefined ? undefined : (
             <FailureBand
-              kicker={AUTH_KICKER}
-              message={bandMessage}
+              kicker={band.kicker}
+              message={band.message}
               onRetry={form.retry}
               retryRef={form.retryRef}
             />
           )}
+          {props.turnstile}
           <SubmitButton
             label={submitLabel}
             pendingLabel={pendingLabel}
@@ -134,8 +137,9 @@ export function AuthPage({
         </form>
         <OrDivider />
         <GoogleButton google={google} />
-        {legal}
-        {crossLink}
+        {props.requestLink}
+        {props.legal}
+        {props.crossLink}
       </div>
     </SignedOutPanel>
   );
@@ -147,10 +151,10 @@ export function AuthPage({
  * (Au3), and rest is no state at all.
  */
 function formState(
-  bandMessage: string | undefined,
+  band: ControlFailure | undefined,
   fieldErrors: number,
 ): string | undefined {
-  if (bandMessage !== undefined) return "form-failure";
+  if (band !== undefined) return "form-failure";
   return fieldErrors > 0 ? "field-failure" : undefined;
 }
 
@@ -266,6 +270,67 @@ export function SessionNotice({
  * The two fields both forms ask for, by the names the error summary uses.
  */
 export const CREDENTIAL_LABELS = { email: "Email", password: "Password" };
+
+/**
+Au2's, with the invite code first (ACC-5).
+*/
+export const SIGN_UP_LABELS = { inviteCode: "Invite code", ...CREDENTIAL_LABELS };
+
+/**
+ * Au2's first field, above email and Google (round 26 #20): INVITE CODE,
+ * filled from `/join?code=`, under the board's one line saying why. Not
+ * drawn at all when invite-only is off — the one flag (`lib/access.ts`)
+ * removes it and `RequestAccessLink` together.
+ */
+export function InviteCodeField({
+  form,
+  value,
+  onChange,
+  isInviteOnly = IS_INVITE_ONLY,
+}: Readonly<{
+  form: Pick<ReturnType<typeof useFormSubmit>, "field" | "fieldErrors">;
+  value: string;
+  onChange: (code: string) => void;
+  isInviteOnly?: boolean;
+}>): JSX.Element | undefined {
+  if (!isInviteOnly) return undefined;
+  return (
+    <>
+      <p className="m-0 text-body">dialed.run is invite-only for now.</p>
+      <TextField
+        name="inviteCode"
+        label={SIGN_UP_LABELS.inviteCode}
+        autoComplete="off"
+        value={value}
+        onChange={onChange}
+        field={form.field}
+        error={form.fieldErrors.inviteCode}
+      />
+    </>
+  );
+}
+
+/**
+ * "No code? Request access", under Google, opening Au5 (round 26 #20).
+ * Goes with the field when the flag is off.
+ */
+export function RequestAccessLink({
+  isInviteOnly = IS_INVITE_ONLY,
+}: Readonly<{ isInviteOnly?: boolean }>): JSX.Element | undefined {
+  if (!isInviteOnly) return undefined;
+  return (
+    <p data-part="request-access" className="m-0 text-center text-body text-quiet">
+      No code?{" "}
+      <Link
+        data-target="inline"
+        to="/account/request-access"
+        className="font-bold text-ink underline underline-offset-4"
+      >
+        Request access
+      </Link>
+    </p>
+  );
+}
 
 /**
  * Email then password — everything sign-up asks for since round 26 #7 took

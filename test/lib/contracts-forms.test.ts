@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 
+import { IS_INVITE_ONLY } from "../../src/lib/access";
 import {
+  requestAccessSchema,
+  signUpSchemaFor,
   changeEmailSchema,
   CURRENT_PASSWORD_WRONG,
   changePasswordSchema,
@@ -82,16 +85,78 @@ describe("signInSchema", () => {
   });
 });
 
-const signUp = { ...signIn, password: "hunter22hunter22" };
+const signUp = {
+  inviteCode: "DIAL-7K3P",
+  ...signIn,
+  password: "hunter22hunter22",
+};
+
+describe("signUpSchemaFor (the invite-only flag)", () => {
+  it("needs a code of the right shape while invite-only is on, in the board's words", () => {
+    const withCode = signUpSchemaFor(true);
+    expect(
+      messagesFor(withCode, { ...signUp, inviteCode: "" }, "inviteCode"),
+    ).toStrictEqual(["Enter your invite code."]);
+    expect(
+      messagesFor(withCode, { ...signUp, inviteCode: "DIAL-0000" }, "inviteCode"),
+    ).toStrictEqual([
+      "That code doesn't work. Check it against the email or message it came in.",
+    ]);
+    expect(withCode.parse({ ...signUp, inviteCode: " dial-7k3p " })).toMatchObject(
+      { inviteCode: "DIAL-7K3P" },
+    );
+  });
+
+  it("asks for no code when invite-only is off, and ignores one that comes", () => {
+    const open = signUpSchemaFor(false);
+    const { email, password } = signUp;
+    expect(open.safeParse({ email, password }).success).toBe(true);
+    expect(open.parse({ ...signUp, inviteCode: "anything" })).toMatchObject({
+      inviteCode: "anything",
+    });
+  });
+
+  it("is invite-only today (D-39)", () => {
+    expect(IS_INVITE_ONLY).toBe(true);
+    expect(signUpSchema.safeParse({ ...signUp, inviteCode: "" }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("requestAccessSchema (Au5)", () => {
+  it("takes an address and a note of up to 280 characters", () => {
+    expect(
+      requestAccessSchema.parse({ email: "sam@example.com", note: "" }),
+    ).toStrictEqual({ email: "sam@example.com", note: "" });
+    expect(
+      messagesFor(
+        requestAccessSchema,
+        { email: "sam@example.com", note: "a".repeat(281) },
+        "note",
+      ),
+    ).toStrictEqual(["Keep the note under 280 characters."]);
+    expect(
+      requestAccessSchema.safeParse({
+        email: "sam@example.com",
+        note: "a".repeat(280),
+      }).success,
+    ).toBe(true);
+    expect(
+      messagesFor(requestAccessSchema, { email: "", note: "" }, "email"),
+    ).toContain("Enter your email address.");
+  });
+});
 
 describe("signUpSchema", () => {
   it("takes a well-formed registration", () => {
     expect(signUpSchema.safeParse(signUp).success).toBe(true);
   });
 
-  it("asks for email and password only — the handle is O0's (round 26 #7)", () => {
+  it("asks for the invite code, email and password only — the handle is O0's (round 26 #7, #20)", () => {
     expect(signUpSchema.safeParse({}).success).toBe(false);
     expect(Object.keys(signUpSchema.shape)).toStrictEqual([
+      "inviteCode",
       "email",
       "password",
     ]);

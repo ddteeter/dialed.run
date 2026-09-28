@@ -232,6 +232,20 @@
       "when": 1790570967556,
       "tag": "0032_add_password_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790602705699,
+      "tag": "0033_add_invite_codes_and_access_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1790602714176,
+      "tag": "0034_blank_user_names",
+      "breakpoints": true
     }
   ]
 }

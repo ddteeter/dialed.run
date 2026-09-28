@@ -1,16 +1,21 @@
 /**
- * Covers: Au2 (create account, email and password only), Au4 (check your
- * email, Resend), the confirm link's landing, O0 (pick a handle, a taken
- * one first), Au3 (wrong password), ACC-4 (forgot it, the reset link, a
- * new password), Au1 (log in), sign out from the settings index — one
- * journey, one video.
+ * Covers: Au2 in the invite stage (the code first, a code that doesn't
+ * work), Au5 (request access and its receipt), D7 (the request, Send
+ * invite), `/join` (the invite link fills the code), Au2 (create account),
+ * Au4 (check your email, Resend), the confirm link's landing, O0 (pick a
+ * handle, a taken one first), Au3 (wrong password), ACC-4 (forgot it, the
+ * reset link, a new password), Au1 (log in), sign out from the settings
+ * index — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts (see home.spec.ts).
  */
+import { INVITE_COPY } from "../../src/lib/access";
+import { signInAsOperator } from "../desk/operator";
 import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, resetLinkFor } from "../support/email-links";
+import { turnstileAnswered } from "../support/invites";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -25,19 +30,74 @@ Not a secret: a throwaway account on the local dev database.
 */
 const PASSPHRASE = ["a", "long", "enough", "passphrase"].join("-");
 
-test("create an account -> sign out -> a guarded page -> a wrong password -> log in and back", async ({
+test("request access -> an invite from the Desk -> create an account -> sign out -> a guarded page -> a wrong password -> log in and back", async ({
   page,
 }, testInfo) => {
-  testInfo.setTimeout(150_000);
+  testInfo.setTimeout(240_000);
   const email = `smoke-${String(Date.now())}@example.com`;
   await page.goto("/auth/signup");
   await hydrated(page);
 
-  await scene(page, "Au2 · Create account: email and password, no tab bar");
+  // ACC-5 (round 26 #20): sign-up is invite-only, email and Google alike.
+  await scene(page, "Au2 · invite-only for now: the code comes first");
   await expect(
     page.getByRole("heading", { name: "Create account" }),
   ).toBeVisible();
   await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
+  await expect(
+    page.getByText("dialed.run is invite-only for now."),
+  ).toBeVisible();
+
+  await scene(page, "A code that doesn't work is marked on the code");
+  await page.getByLabel("Invite code").fill("DIAL-ZZZZ");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSPHRASE);
+  await turnstileAnswered(page);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText(INVITE_COPY.invalid)).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await scene(page, "No code? Au5 · Request access");
+  await page.getByRole("link", { name: "Request access" }).click();
+  await expect(page).toHaveURL(/\/account\/request-access/u, {
+    timeout: 15_000,
+  });
+  await hydrated(page);
+  await page.getByLabel("Email").fill(email);
+  await page
+    .getByLabel("A note · optional")
+    .fill("Winter runner. Maya said to ask.");
+  await turnstileAnswered(page);
+  await page.getByRole("button", { name: "Request access" }).click();
+  await scene(page, "One receipt, for a new, repeat or registered address");
+  await expect(
+    page.getByRole("heading", { name: "You're on the list" }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await scene(page, "D7 · Access: the request waits; Send invite mints a code");
+  await signInAsOperator(page);
+  await page.goto("/desk/access");
+  await hydrated(page);
+  const request = page.getByRole("listitem").filter({ hasText: email });
+  await expect(request).toContainText("Winter runner. Maya said to ask.");
+  await request.getByRole("button", { name: "Send invite" }).click();
+  const invite = page
+    .getByRole("listitem")
+    .filter({ hasText: `${email} (request)` });
+  await expect(invite).toContainText("0/1", { timeout: 15_000 });
+  const code = /DIAL-[2-9A-HJ-NP-Z]{4}/u.exec(
+    (await invite.textContent()) ?? "",
+  )?.[0];
+  if (code === undefined) throw new Error("no code on the invited row");
+
+  // The invite link, opened signed out: `/join` fills the code in.
+  await scene(page, "The invite link fills the code in");
+  await page.context().clearCookies();
+  await page.goto(`/join?code=${code}`);
+  await expect(page).toHaveURL(/\/auth\/signup\?code=/u, { timeout: 15_000 });
+  await hydrated(page);
+  await expect(page.getByLabel("Invite code")).toHaveValue(code);
 
   // OPS-15 (decision D-48): from the keyboard, a field's ring lies on its
   // border — one line, not a border and a ring beyond it.
@@ -55,6 +115,7 @@ test("create an account -> sign out -> a guarded page -> a wrong password -> log
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Show" }).click();
   await expect(page.getByLabel("Password")).toHaveAttribute("type", "text");
+  await turnstileAnswered(page);
   await page.getByRole("button", { name: "Create account" }).click();
 
   // Round 26 #11: every email sign-up ends on Au4, new address or not, and

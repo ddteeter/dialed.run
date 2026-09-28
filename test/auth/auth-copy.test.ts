@@ -1,18 +1,52 @@
 import { describe, expect, it } from "vitest";
 
+import { TURNSTILE_REFUSED } from "../../src/lib/access";
 import {
   AUTH_COPY,
   AUTH_KICKER,
+  AccessRefused,
   AuthRejected,
-  authFailureMessage,
+  NOT_SENT,
+  authFailure,
   authStatus,
+  turnstileRefused,
 } from "../../src/modules/auth/auth-copy";
+
+/**
+The band's sentence alone, as the old tests read it.
+*/
+function authFailureMessage(
+  failure: Parameters<typeof authFailure>[0],
+  cause: unknown,
+): string | undefined {
+  return authFailure(failure, cause)?.message;
+}
 
 /**
  * The Auth board's failure sentences (round 22, Au3–Au6), and the two
  * words that open them.
  */
-describe("authFailureMessage", () => {
+describe("authFailure", () => {
+  it("opens every band of its own with Auth's words", () => {
+    expect(
+      authFailure({ kind: "server", message: "x" }, new AuthRejected(500)),
+    ).toStrictEqual({ kicker: AUTH_KICKER, message: AUTH_COPY.server });
+  });
+
+  it("lets a refusal of the way in say its own kicker and words", () => {
+    expect(
+      authFailure({ kind: "server", message: "x" }, turnstileRefused()),
+    ).toMatchObject({ kicker: NOT_SENT, message: TURNSTILE_REFUSED });
+    expect(NOT_SENT).toBe("Not sent");
+  });
+
+  it("builds a refusal that is an error with a kicker", () => {
+    const refusal = new AccessRefused("Kicker", "Words.");
+    expect(refusal).toBeInstanceOf(Error);
+    expect(refusal.name).toBe("AccessRefused");
+    expect(refusal).toMatchObject({ kicker: "Kicker", message: "Words." });
+  });
+
   it("has nothing to say when nothing failed", () => {
     expect(
       authFailureMessage(undefined, new AuthRejected(429)),
@@ -46,8 +80,8 @@ describe("authStatus", () => {
     expect(
       authStatus({
         status: "Nothing saved. One field needs a fix.",
-        bandMessage: undefined,
-        googleFailed: false,
+        band: undefined,
+        google: undefined,
       }),
     ).toBe("Not signed in. One field needs a fix.");
   });
@@ -56,16 +90,16 @@ describe("authStatus", () => {
     expect(
       authStatus({
         status: "Signed in.",
-        bandMessage: undefined,
-        googleFailed: false,
+        band: undefined,
+        google: undefined,
       }),
     ).toBe("Signed in.");
     // Only an opener is replaced, never the words mid-sentence.
     expect(
       authStatus({
         status: "Done. Nothing saved.",
-        bandMessage: undefined,
-        googleFailed: false,
+        band: undefined,
+        google: undefined,
       }),
     ).toBe("Done. Nothing saved.");
   });
@@ -74,18 +108,32 @@ describe("authStatus", () => {
     expect(
       authStatus({
         status: "Nothing saved. Our end failed. Nothing changed.",
-        bandMessage: AUTH_COPY.server,
-        googleFailed: true,
+        band: { kicker: AUTH_KICKER, message: AUTH_COPY.server },
+        google: { kicker: AUTH_KICKER, message: AUTH_COPY.google },
       }),
     ).toBe(`${AUTH_KICKER}. ${AUTH_COPY.server}`);
   });
 
   it("says Google's when only Google failed", () => {
     expect(
-      authStatus({ status: "", bandMessage: undefined, googleFailed: true }),
+      authStatus({
+        status: "",
+        band: undefined,
+        google: { kicker: AUTH_KICKER, message: AUTH_COPY.google },
+      }),
     ).toBe(
       "Not signed in. Google didn't answer. Try again, or use your email.",
     );
+  });
+
+  it("says a band's own kicker", () => {
+    expect(
+      authStatus({
+        status: "",
+        band: { kicker: NOT_SENT, message: TURNSTILE_REFUSED },
+        google: undefined,
+      }),
+    ).toBe(`Not sent. ${TURNSTILE_REFUSED}`);
   });
 
   it("keeps the rejection's status on the error it throws", () => {

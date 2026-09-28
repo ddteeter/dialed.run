@@ -14,6 +14,8 @@ import type { drizzle } from "drizzle-orm/d1";
 import { userProfiles, usernameHistory } from "../../db/schema-core";
 import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
 import { nowSeconds } from "../../lib/now";
+import { isProfaneHandle, readBackDigits } from "../../lib/profanity";
+import type { ScreenHandle } from "./handle-screen";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -55,32 +57,18 @@ const RESERVED_WITHIN: readonly string[] = [
 ];
 
 /**
- * The obvious disguises of a reserved word: underscores dropped and the
- * digits that stand in for letters read back as letters. `1` reads as
- * both `i` and `l`, so it yields two spellings.
- */
-function disguisesOf(handle: string): string[] {
-  const plain = handle
-    .replaceAll("_", "")
-    .replaceAll("0", "o")
-    .replaceAll("3", "e")
-    .replaceAll("4", "a")
-    .replaceAll("5", "s")
-    .replaceAll("7", "t");
-  return [plain.replaceAll("1", "i"), plain.replaceAll("1", "l")];
-}
-
-/**
- * Whether nobody may hold this handle. Takes the stored (lowercased) form.
+ * Whether nobody may hold this handle: a reserved name or one of its
+ * obvious disguises (underscores dropped, digits read back as letters —
+ * `adm1n`, `d_i_a_l_e_d`), or a word on the vendored list
+ * (`lib/profanity.ts`). Takes the stored (lowercased) form.
  */
 export function isReservedHandle(handle: string): boolean {
-  // The handle as typed is one of its own spellings, so the exact list is
-  // checked there too.
-  return disguisesOf(handle).some(
+  const isReserved = readBackDigits(handle.replaceAll("_", "")).some(
     (spelling) =>
       RESERVED_EXACT.has(spelling) ||
       RESERVED_WITHIN.some((word) => spelling.includes(word)),
   );
+  return isReserved || isProfaneHandle(handle);
 }
 
 /**
@@ -150,12 +138,11 @@ async function isFreeFor(
 }
 
 /**
- * The first word of a city label as a slug: "Portland, OR" is `portland`.
+ * Running words a suggestion may end in, before any digit (owner,
+ * 2026-09-27: never the city, which told every runner who saw a taken
+ * handle's suggestion where its owner runs).
  */
-function citySlug(cityLabel: string | null | undefined): string | undefined {
-  const slug = (cityLabel ?? "").toLowerCase().replace(/[^a-z0-9].*/su, "");
-  return slug === "" ? undefined : slug;
-}
+const SUGGESTION_WORDS = ["runs", "miles"];
 
 /**
  * The digits a suggestion may end in, 2 to 9: "maya2" reads as the second
@@ -175,19 +162,16 @@ function withSuffix(base: string, suffix: string): string {
 
 /**
  * **One real, free suggestion** (round 26 #7: "We never show a list"): the
- * typed handle plus the city slug, or else plus a digit. `undefined` when
- * none of those is free — a handle made of a reserved word has no free
- * neighbour, and a suggestion we would refuse is worse than none.
+ * typed handle plus a running word, or else plus a digit. `undefined` when
+ * none of those is free — a suggestion we would refuse is worse than none.
  */
 async function suggestionFor(
   db: Db,
   userId: string,
   handle: string,
-  cityLabel: string | null | undefined,
 ): Promise<string | undefined> {
-  const slug = citySlug(cityLabel);
   const candidates = [
-    ...(slug === undefined ? [] : [withSuffix(handle, `_${slug}`)]),
+    ...SUGGESTION_WORDS.map((word) => withSuffix(handle, `_${word}`)),
     ...SUGGESTION_DIGITS.map((digit) => withSuffix(handle, digit)),
   ];
   for (const candidate of candidates) {
@@ -225,17 +209,14 @@ function isHandleIndexViolation(error: unknown): boolean {
 }
 
 /**
- * The runner's current handle, and where they run (for the suggestion).
- */
+The runner's current handle.
+*/
 async function profileOf(
   db: Db,
   userId: string,
-): Promise<{ username: string | null; cityLabel: string | null } | undefined> {
+): Promise<{ username: string | null } | undefined> {
   const [row] = await db
-    .select({
-      username: userProfiles.username,
-      cityLabel: userProfiles.cityLabel,
-    })
+    .select({ username: userProfiles.username })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
@@ -284,6 +265,9 @@ function ensureProfile(db: Db, userId: string) {
  *
  * A reserved handle reads as taken with **no suggestion** (D-57): a
  * suggestion beside it would tell a prober which names are on the list.
+ * So does one on the word list, and one `screen` (OpenAI's moderation)
+ * flags — asked only once the handle has passed the list, and taken as
+ * clear when it cannot answer (`./handle-screen.ts`).
  *
  * **One batch** (CLAUDE.md "default to one batch"): the old handle kept in
  * the history, the new handle, and the runner's own history row for it
@@ -299,16 +283,21 @@ export async function claimUsername(
   db: Db,
   userId: string,
   typed: string,
+  screen: ScreenHandle,
 ): Promise<HandleClaim> {
-  if (isReservedHandle(typed)) {
-    return { kind: "taken", username: typed, suggestion: undefined };
-  }
+  const refused: HandleClaim = {
+    kind: "taken",
+    username: typed,
+    suggestion: undefined,
+  };
+  if (isReservedHandle(typed)) return refused;
   const profile = await profileOf(db, userId);
   if (profile?.username === typed) return { kind: "claimed", username: typed };
+  if ((await screen(typed)) === "flagged") return refused;
   const taken = async (): Promise<HandleClaim> => ({
     kind: "taken",
     username: typed,
-    suggestion: await suggestionFor(db, userId, typed, profile?.cityLabel),
+    suggestion: await suggestionFor(db, userId, typed),
   });
   if (await isHeldByAnother(db, userId, typed)) return taken();
 

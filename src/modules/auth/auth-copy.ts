@@ -1,5 +1,6 @@
+import { TURNSTILE_REFUSED } from "../../lib/access";
 import { CURRENT_PASSWORD_WRONG } from "../../lib/contracts";
-import type { FormFailure } from "../../ui";
+import type { ControlFailure, FormFailure } from "../../ui";
 
 /**
  * Every sentence the two auth forms say about a failure, from the Auth
@@ -45,7 +46,42 @@ export const AUTH_COPY = {
   Au6, the band that belongs to the Google button.
   */
   google: "Google didn't answer. Try again, or use your email.",
+  /**
+   * Google from the log-in page, for an address with no account: Better
+   * Auth refuses to make one there (`disableImplicitSignUp`), because an
+   * account is made on Au2, with a code. Placeholder copy (design deltas).
+   */
+  googleNoAccount: "No account uses that Google address. Create one first.",
 } as const;
+
+/**
+ * Round 27 #12: a Turnstile refusal is `NOT SENT`, on Au2 and Au5 alike —
+ * nothing reached the server's decision, so "not signed in" would be the
+ * wrong fact.
+ */
+export const NOT_SENT = "Not sent";
+
+/**
+ * A refusal the way in made (ACC-5) that belongs in a band rather than on
+ * a field: Turnstile's on the form, and every refusal on Au2's Google
+ * button — whose band is the only place its failure can be said (Au6).
+ */
+export class AccessRefused extends Error implements ControlFailure {
+  readonly kicker: string;
+
+  constructor(kicker: string, message: string) {
+    super(message);
+    this.name = "AccessRefused";
+    this.kicker = kicker;
+  }
+}
+
+/**
+Turnstile's refusal, as a band says it.
+*/
+export function turnstileRefused(): AccessRefused {
+  return new AccessRefused(NOT_SENT, TURNSTILE_REFUSED);
+}
 
 /**
  * *"'Not signed in', not 'Nothing saved'. Auth saves nothing, so the
@@ -73,14 +109,19 @@ export class AuthRejected extends Error {
 }
 
 /**
- * The band's sentence for a failed submit, or nothing when there is no
- * band to show.
+ * The band for a failed submit — its kicker and its sentence — or nothing
+ * when there is no band to show.
  */
-export function authFailureMessage(
+export function authFailure(
   failure: FormFailure | undefined,
   cause: unknown,
-): string | undefined {
+): ControlFailure | undefined {
   if (failure === undefined) return undefined;
+  if (cause instanceof AccessRefused) return cause;
+  return { kicker: AUTH_KICKER, message: authFailureMessage(failure, cause) };
+}
+
+function authFailureMessage(failure: FormFailure, cause: unknown): string {
   if (failure.kind === "network") return AUTH_COPY.network;
   return cause instanceof AuthRejected && cause.status === 429
     ? AUTH_COPY.rateLimited
@@ -104,15 +145,15 @@ const CONTRACT_OPENER = "Nothing saved.";
  */
 export function authStatus({
   status,
-  bandMessage,
-  googleFailed,
+  band,
+  google,
 }: Readonly<{
   status: string;
-  bandMessage: string | undefined;
-  googleFailed: boolean;
+  band: ControlFailure | undefined;
+  google: ControlFailure | undefined;
 }>): string {
-  if (bandMessage !== undefined) return `${AUTH_KICKER}. ${bandMessage}`;
-  if (googleFailed) return `${AUTH_KICKER}. ${AUTH_COPY.google}`;
+  const said = band ?? google;
+  if (said !== undefined) return `${said.kicker}. ${said.message}`;
   return status.startsWith(CONTRACT_OPENER)
     ? `${AUTH_KICKER}.${status.slice(CONTRACT_OPENER.length)}`
     : status;

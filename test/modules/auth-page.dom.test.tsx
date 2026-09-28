@@ -376,12 +376,15 @@ describe("Au5 · Google in flight", () => {
     expect(google).not.toHaveAttribute("disabled");
     expect(google?.querySelectorAll(".breathe")).toHaveLength(2);
     expect(google).toHaveTextContent("Opening Google");
-    expect(client.social).toHaveBeenCalledWith({
-      provider: "google",
-      callbackURL: "/closet",
-      errorCallbackURL: "/auth/login?redirect=%2Fcloset",
-      disableRedirect: true,
-    });
+    expect(client.social).toHaveBeenCalledWith(
+      {
+        provider: "google",
+        callbackURL: "/closet",
+        errorCallbackURL: "/auth/login?redirect=%2Fcloset",
+        disableRedirect: true,
+      },
+      {},
+    );
 
     await act(async () => {
       answer.resolve({

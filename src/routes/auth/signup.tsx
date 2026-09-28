@@ -2,12 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../lib/contracts";
+import { turnstileSiteKeyQuery } from "../../modules/account/functions";
 import {
   AuthCrossLink,
   AuthLegal,
   AuthPage,
-  CREDENTIAL_LABELS,
   CredentialFields,
+  InviteCodeField,
+  RequestAccessLink,
+  SIGN_UP_LABELS,
   useAuthForm,
 } from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
@@ -16,38 +19,47 @@ import {
   googleReturn,
   parseSignInSearch,
 } from "../../modules/auth/sign-in-search";
+import { Turnstile, useTurnstileToken } from "../../ui";
 
 /**
- * Au2 · create an account (round 26 renumbered it): email and password
- * only. The handle is O0's, the first onboarding step (round 26 #7).
+ * Au2 · create an account (round 26 renumbered it): the invite code while
+ * invite-only is on (round 26 #20), then email and password. The handle is
+ * O0's, the first onboarding step (round 26 #7). Turnstile sits directly
+ * above the primary and covers Google too (round 27 #12).
  */
 export const Route = createFileRoute("/auth/signup")({
-  // Only `error` matters here: a failed Google round trip comes back to
-  // sign-up, and says so (Au6).
+  // `error`: a failed Google round trip comes back to sign-up, and says so
+  // (Au6). `code`: an invite link's, via `/join`.
   validateSearch: parseSignInSearch,
+  loader: async () => turnstileSiteKeyQuery(),
   component: SignupPage,
 });
 
 function SignupPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const { siteKey } = Route.useLoaderData();
+  const [inviteCode, setInviteCode] = useState(search.code ?? "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // A Turnstile answer works once: every attempt takes it (ACC-5).
+  const turnstile = useTurnstileToken();
 
-  const search = Route.useSearch();
   const google = useGoogleSignIn({
     ...googleReturn("/auth/signup", search),
     returnedError: search.error,
     leave: (url) => {
       globalThis.location.assign(url);
     },
+    admission: () => ({ inviteCode, turnstileToken: turnstile.take() }),
   });
   const { form, cause } = useAuthForm({
     schema: signUpSchema,
-    action: signUp,
+    action: (values) => signUp(values, turnstile.take()),
     // The same words for a new address and a registered one: Au4 follows
     // either way, and so does this sentence (round 26 #11).
     successMessage: "Check your email.",
-    labels: CREDENTIAL_LABELS,
+    labels: SIGN_UP_LABELS,
     onSuccess: async () => {
       await navigate({ to: "/account/check-email", search: { email } });
     },
@@ -62,6 +74,15 @@ function SignupPage() {
       cause={cause}
       google={google}
       legal={<AuthLegal />}
+      turnstile={
+        <Turnstile
+          key={turnstile.widgetKey}
+          siteKey={siteKey}
+          action="sign-up"
+          onToken={turnstile.onToken}
+        />
+      }
+      requestLink={<RequestAccessLink />}
       crossLink={
         <AuthCrossLink
           prompt="Have an account?"
@@ -70,9 +91,14 @@ function SignupPage() {
         />
       }
       onSubmit={() => {
-        void form.submit({ email, password });
+        void form.submit({ inviteCode, email, password });
       }}
     >
+      <InviteCodeField
+        form={form}
+        value={inviteCode}
+        onChange={setInviteCode}
+      />
       <CredentialFields
         form={form}
         email={email}

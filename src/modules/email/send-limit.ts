@@ -20,8 +20,12 @@ export const SEND_WINDOW_S = 60 * 60;
 /**
  * The link emails a runner can ask for again, each limited on its own: a
  * runner who has used up their confirm links can still reset a password.
+ *
+ * `access` is Au5's request (ACC-5), which sends no email: it borrows the
+ * same hourly window keyed by the visitor's address rather than an email
+ * one, so a script cannot fill Desk D7 (the key is `access:{ip}`).
  */
-export type LimitedSend = "verify" | "reset" | "change";
+export type LimitedSend = "verify" | "reset" | "change" | "access";
 
 export type SendClaim =
   | { readonly isAllowed: true }

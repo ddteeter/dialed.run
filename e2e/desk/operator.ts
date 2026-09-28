@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 
 import { account, session, user } from "../../src/db/schema-auth";
 import { userProfiles } from "../../src/db/schema-core";
+import { admissionHeaders, ensureInviteCode } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
 
 /**
@@ -41,9 +42,12 @@ export async function signInAsOperator(page: Page): Promise<void> {
     // Never used again: the session is what the journey needs.
     password: crypto.randomUUID(),
   };
+  // Sign-up is invite-only and Turnstile-guarded (task 126, ACC-5): the
+  // harness's code, and the token Cloudflare's test secret accepts.
+  await ensureInviteCode();
   const signUp = await page.request.post("/api/auth/sign-up/email", {
-    headers: { origin },
-    data: { name: "Desk Operator", ...credentials },
+    headers: { origin, ...admissionHeaders() },
+    data: { name: "", ...credentials },
   });
   if (!signUp.ok())
     throw new Error(`sign-up failed: ${String(signUp.status())}`);

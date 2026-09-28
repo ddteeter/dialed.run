@@ -1,0 +1,565 @@
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
+
+import { user } from "../../src/db/schema-auth";
+import {
+  accessRequests,
+  emailSendLimits,
+  inviteCodes,
+  inviteRedemptions,
+  userProfiles,
+} from "../../src/db/schema-core";
+import { env } from "../../src/env";
+import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import {
+  accessGate,
+  requestAccess,
+  turnstileAttempt,
+} from "../../src/modules/account/access";
+import {
+  CLAIM_HOLD_S,
+  DESK_LIST_LIMIT,
+  accessDesk,
+  createInviteCode,
+  declineRequest,
+  inviteFromRequest,
+  inviteStanding,
+  redeemInvite,
+  restoreInviteCode,
+  revokeInviteCode,
+} from "../../src/modules/account/invites";
+import type { TurnstileAttempt } from "../../src/modules/ops";
+
+/**
+ * Invite codes and access requests (task 126, ACC-5) on real D1: a code's
+ * standing, the claim that spends it, Desk D7's writes, and Au5.
+ */
+const db = drizzle(env.DIALED_CORE);
+
+/**
+A real `null`, not the literal — unicorn/no-null forbids the keyword, and
+these fixtures assert against genuinely nullable DB columns.
+*/
+const NOTHING = z.null().parse(JSON.parse("null"));
+
+/**
+`expect.any(...)` is typed `any`; `unknown` here is what keeps assigning
+it into a fixture object from tripping no-unsafe-assignment.
+*/
+const ANY_STRING: unknown = expect.any(String);
+
+beforeEach(async () => {
+  await db.batch([
+    db.delete(inviteCodes),
+    db.delete(inviteRedemptions),
+    db.delete(accessRequests),
+    db.delete(emailSendLimits),
+  ]);
+});
+
+async function seedCode(
+  code: string,
+  values: { maxUses?: number; revokedAt?: number; createdAt?: number } = {},
+): Promise<string> {
+  const id = newUlid();
+  await db
+    .insert(inviteCodes)
+    .values({ id, code, createdAt: nowSeconds(), ...values });
+  return id;
+}
+
+/**
+An account row, as Better Auth would have made it.
+*/
+async function account(id: string, email: string): Promise<void> {
+  await db
+    .insert(user)
+    .values({
+      id,
+      email,
+      name: "",
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+}
+
+function claim(code: string, email = `${newUlid().toLowerCase()}@x.test`) {
+  return { code, userId: newUlid(), email };
+}
+
+describe("inviteStanding", () => {
+  it("is open for a live code with a use left, and invalid for none or a revoked one", async () => {
+    await seedCode("DIAL-OPEN");
+    await seedCode("DIAL-GONE", { revokedAt: nowSeconds() });
+    expect(await inviteStanding(db, "DIAL-OPEN")).toBe("open");
+    expect(await inviteStanding(db, "DIAL-GONE")).toBe("invalid");
+    expect(await inviteStanding(db, "DIAL-NONE")).toBe("invalid");
+  });
+
+  it("is used once its uses are spent — by an account, or by a live hold", async () => {
+    await seedCode("DIAL-TWOS", { maxUses: 2 });
+    const now = nowSeconds();
+    const first = claim("DIAL-TWOS");
+    expect(await redeemInvite(db, first, now)).toBe("redeemed");
+    await account(first.userId, first.email);
+    expect(await inviteStanding(db, "DIAL-TWOS", now)).toBe("open");
+    // A hold with no account yet counts while it is live…
+    expect(await redeemInvite(db, claim("DIAL-TWOS"), now)).toBe("redeemed");
+    expect(await inviteStanding(db, "DIAL-TWOS", now)).toBe("used");
+    // …and stops counting when it runs out, the account never having come.
+    expect(await inviteStanding(db, "DIAL-TWOS", now + CLAIM_HOLD_S)).toBe(
+      "open",
+    );
+    expect(await inviteStanding(db, "DIAL-TWOS", now + CLAIM_HOLD_S - 1)).toBe(
+      "used",
+    );
+  });
+});
+
+describe("redeemInvite", () => {
+  it("writes the claim against the account's id, address lowercased, with its hold", async () => {
+    const codeId = await seedCode("DIAL-7K3P");
+    const now = 1_000_000;
+    const mine = { code: "DIAL-7K3P", userId: newUlid(), email: "Maya@X.test" };
+    expect(await redeemInvite(db, mine, now)).toBe("redeemed");
+    expect(await db.select().from(inviteRedemptions)).toStrictEqual([
+      {
+        userId: mine.userId,
+        codeId,
+        email: "maya@x.test",
+        heldUntil: now + CLAIM_HOLD_S,
+        redeemedAt: now,
+      },
+    ]);
+  });
+
+  it("lets only one of two claims on a single-use code land", async () => {
+    await seedCode("DIAL-ONCE");
+    const results = await Promise.all([
+      redeemInvite(db, claim("DIAL-ONCE")),
+      redeemInvite(db, claim("DIAL-ONCE")),
+    ]);
+    expect(results.toSorted((a, b) => a.localeCompare(b))).toStrictEqual([
+      "redeemed",
+      "used",
+    ]);
+    expect(await db.select().from(inviteRedemptions)).toHaveLength(1);
+  });
+
+  it("refuses a revoked or unknown code as invalid, writing nothing", async () => {
+    await seedCode("DIAL-GONE", { revokedAt: nowSeconds() });
+    expect(await redeemInvite(db, claim("DIAL-GONE"))).toBe("invalid");
+    expect(await redeemInvite(db, claim("DIAL-NONE"))).toBe("invalid");
+    expect(await db.select().from(inviteRedemptions)).toStrictEqual([]);
+  });
+
+  it("lets a retried sign-up spend the code its failed attempt held", async () => {
+    await seedCode("DIAL-RTRY");
+    const email = "retry@x.test";
+    expect(await redeemInvite(db, claim("DIAL-RTRY", email))).toBe("redeemed");
+    // The account never arrived; the same address tries again.
+    const again = claim("DIAL-RTRY", email);
+    expect(await redeemInvite(db, again)).toBe("redeemed");
+    const rows = await db.select().from(inviteRedemptions);
+    expect(rows.map((row) => row.userId)).toStrictEqual([again.userId]);
+  });
+
+  it("never clears a claim whose account exists", async () => {
+    await seedCode("DIAL-KEEP", { maxUses: 2 });
+    const email = "kept@x.test";
+    const first = claim("DIAL-KEEP", email);
+    await redeemInvite(db, first);
+    await account(first.userId, email);
+    await redeemInvite(db, claim("DIAL-KEEP", email));
+    expect(await db.select().from(inviteRedemptions)).toHaveLength(2);
+  });
+});
+
+describe("Desk D7", () => {
+  it("lists pending requests oldest first, and codes newest first with who used them", async () => {
+    await db.insert(accessRequests).values([
+      { id: newUlid(), email: "new@x.test", createdAt: 30, updatedAt: 30 },
+      { id: newUlid(), email: "old@x.test", note: "Hi", createdAt: 10, updatedAt: 10 },
+      {
+        id: newUlid(),
+        email: "done@x.test",
+        status: "invited",
+        createdAt: 5,
+        updatedAt: 5,
+      },
+    ]);
+    const older = await seedCode("DIAL-OLDR", { maxUses: 3, createdAt: 100 });
+    await seedCode("DIAL-NEWR", { createdAt: 200, revokedAt: 250 });
+    const handled = { code: "DIAL-OLDR", userId: newUlid(), email: "a@x.test" };
+    const bare = { code: "DIAL-OLDR", userId: newUlid(), email: "b@x.test" };
+    const ghost = claim("DIAL-OLDR");
+    await redeemInvite(db, handled, 300);
+    await redeemInvite(db, bare, 301);
+    await redeemInvite(db, ghost, 302);
+    await account(handled.userId, handled.email);
+    await account(bare.userId, bare.email);
+    await db
+      .insert(userProfiles)
+      .values({ userId: handled.userId, username: "maya_runs" });
+
+    const desk = await accessDesk(db);
+    expect(desk.requests).toStrictEqual([
+      { id: ANY_STRING, email: "old@x.test", note: "Hi", createdAt: 10 },
+      { id: ANY_STRING, email: "new@x.test", note: NOTHING, createdAt: 30 },
+    ]);
+    expect(desk.codes).toStrictEqual([
+      {
+        id: ANY_STRING,
+        code: "DIAL-NEWR",
+        label: NOTHING,
+        maxUses: 1,
+        createdAt: 200,
+        isRevoked: true,
+        usedBy: [],
+      },
+      {
+        id: older,
+        code: "DIAL-OLDR",
+        label: NOTHING,
+        maxUses: 3,
+        createdAt: 100,
+        isRevoked: false,
+        // The handle once picked, the email before O0, and nothing for a
+        // claim whose account never came.
+        usedBy: ["@maya_runs", "b@x.test"],
+      },
+    ]);
+  });
+
+  it("lists at most the limit, keeping the newest codes and the oldest requests", () => {
+    expect(DESK_LIST_LIMIT).toBe(200);
+  });
+
+  it("creates a code once per form key, with its label and uses", async () => {
+    const input = {
+      operatorId: "op",
+      label: "Tuesday track group",
+      maxUses: 8,
+      idempotencyKey: "key-1",
+    };
+    const first = await createInviteCode(db, input, 50);
+    const again = await createInviteCode(db, input, 60);
+    expect(again).toStrictEqual(first);
+    expect(first.code).toMatch(/^DIAL-[2-9A-HJ-NP-Z]{4}$/u);
+    const rows = await db.select().from(inviteCodes);
+    expect(rows).toMatchObject([
+      {
+        code: first.code,
+        label: "Tuesday track group",
+        maxUses: 8,
+        createdBy: "op",
+        idempotencyKey: "key-1",
+        createdAt: 50,
+        revokedAt: NOTHING,
+        requestId: NOTHING,
+      },
+    ]);
+  });
+
+  it("stores an empty label as none, and keys are the operator's own", async () => {
+    await createInviteCode(db, {
+      operatorId: "op",
+      label: "",
+      maxUses: 1,
+      idempotencyKey: "same",
+    });
+    await createInviteCode(db, {
+      operatorId: "other",
+      label: "",
+      maxUses: 1,
+      idempotencyKey: "same",
+    });
+    const rows = await db.select().from(inviteCodes);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.label === null)).toBe(true);
+  });
+
+  it("answers a request with a single-use code labelled for it, once", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "sam@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const first = await inviteFromRequest(db, { operatorId: "op", requestId }, 9);
+    const second = await inviteFromRequest(db, { operatorId: "op", requestId }, 10);
+    expect(second).toStrictEqual(first);
+    expect(await db.select().from(inviteCodes)).toMatchObject([
+      {
+        code: first?.code,
+        label: "sam@x.test (request)",
+        maxUses: 1,
+        createdBy: "op",
+        requestId,
+        createdAt: 9,
+        revokedAt: NOTHING,
+        idempotencyKey: NOTHING,
+      },
+    ]);
+    const [request] = await db.select().from(accessRequests);
+    expect(request).toMatchObject({ status: "invited", updatedAt: 9 });
+    const desk = await accessDesk(db);
+    expect(desk.requests).toStrictEqual([]);
+  });
+
+  it("mints nothing for a request that is not pending", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "no@x.test",
+      status: "declined",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    expect(
+      await inviteFromRequest(db, { operatorId: "op", requestId }),
+    ).toBeUndefined();
+    expect(await db.select().from(inviteCodes)).toStrictEqual([]);
+  });
+
+  it("declines silently, and only a pending request", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "d@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await declineRequest(db, requestId, 7);
+    await declineRequest(db, requestId, 8);
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { status: "declined", updatedAt: 7 },
+    ]);
+  });
+
+  it("revokes at once, keeps the first time, and undoes", async () => {
+    const id = await seedCode("DIAL-RVKE");
+    await revokeInviteCode(db, id, 40);
+    await revokeInviteCode(db, id, 41);
+    const [revoked] = await db.select().from(inviteCodes);
+    expect(revoked?.revokedAt).toBe(40);
+    expect(await inviteStanding(db, "DIAL-RVKE")).toBe("invalid");
+    await restoreInviteCode(db, id);
+    expect(await inviteStanding(db, "DIAL-RVKE")).toBe("open");
+  });
+});
+
+/**
+Turnstile's verdict, fixed.
+*/
+function verifyAs(shouldPass: boolean) {
+  const seen: TurnstileAttempt[] = [];
+  const verify = (attempt: TurnstileAttempt) => {
+    seen.push(attempt);
+    return Promise.resolve(
+      shouldPass
+        ? { ok: true as const }
+        : { ok: false as const, reason: "rejected" as const, codes: [] },
+    );
+  };
+  return { seen, verify };
+}
+
+const ATTEMPT: TurnstileAttempt = {
+  token: "t",
+  remoteIp: "203.0.113.9",
+  hostname: "dialed.run",
+};
+
+describe("requestAccess (Au5)", () => {
+  it("keeps the request, address lowercased, and answers with the one receipt", async () => {
+    const { verify } = verifyAs(true);
+    expect(
+      await requestAccess(
+        db,
+        { email: "Sam@X.test", note: "Winter runner.", attempt: ATTEMPT, isLimited: false },
+        verify,
+        5,
+      ),
+    ).toStrictEqual({ status: "received" });
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      {
+        email: "sam@x.test",
+        note: "Winter runner.",
+        status: "pending",
+        createdAt: 5,
+        updatedAt: 5,
+      },
+    ]);
+  });
+
+  it("updates the note on a repeat, clearing it when the repeat has none", async () => {
+    const { verify } = verifyAs(true);
+    const ask = (note: string, now: number) =>
+      requestAccess(
+        db,
+        { email: "sam@x.test", note, attempt: ATTEMPT, isLimited: false },
+        verify,
+        now,
+      );
+    await ask("First.", 1);
+    await ask("Second.", 2);
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: "Second.", createdAt: 1, updatedAt: 2 },
+    ]);
+    await ask("", 3);
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: NOTHING, updatedAt: 3 },
+    ]);
+  });
+
+  it("puts a declined address back on the list when it asks again, and leaves an invited one invited", async () => {
+    const { verify } = verifyAs(true);
+    await db.insert(accessRequests).values([
+      { id: newUlid(), email: "no@x.test", status: "declined", createdAt: 1, updatedAt: 1 },
+      { id: newUlid(), email: "yes@x.test", status: "invited", createdAt: 1, updatedAt: 1 },
+    ]);
+    for (const email of ["no@x.test", "yes@x.test"]) {
+      await requestAccess(
+        db,
+        { email, note: "", attempt: ATTEMPT, isLimited: false },
+        verify,
+      );
+    }
+    const rows = await db
+      .select({ email: accessRequests.email, status: accessRequests.status })
+      .from(accessRequests)
+      .orderBy(accessRequests.email);
+    expect(rows).toStrictEqual([
+      { email: "no@x.test", status: "pending" },
+      { email: "yes@x.test", status: "invited" },
+    ]);
+  });
+
+  it("refuses what Turnstile refuses, keeping nothing", async () => {
+    const { seen, verify } = verifyAs(false);
+    expect(
+      await requestAccess(
+        db,
+        { email: "sam@x.test", note: "", attempt: ATTEMPT, isLimited: false },
+        verify,
+      ),
+    ).toStrictEqual({ status: "refused" });
+    expect(seen).toStrictEqual([ATTEMPT]);
+    expect(await db.select().from(accessRequests)).toStrictEqual([]);
+  });
+
+  it("limits a visitor to five an hour on a real deployment, keyed by their address", async () => {
+    const { verify } = verifyAs(true);
+    const ask = (email: string, attempt: TurnstileAttempt) =>
+      requestAccess(db, { email, note: "", attempt, isLimited: true }, verify, 1000);
+    for (const n of [1, 2, 3, 4, 5]) {
+      expect(await ask(`${String(n)}@x.test`, ATTEMPT)).toStrictEqual({
+        status: "received",
+      });
+    }
+    expect(await ask("6@x.test", ATTEMPT)).toStrictEqual({
+      status: "limited",
+      until: 1000 + 3600,
+    });
+    expect(await db.select().from(accessRequests)).toHaveLength(5);
+    const [row] = await db
+      .select({ key: emailSendLimits.key })
+      .from(emailSendLimits);
+    expect(row?.key).toBe("access:203.0.113.9");
+    // Another visitor is not held up by the first.
+    expect(
+      await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
+    ).toStrictEqual({ status: "received" });
+    const keys = await db.select({ key: emailSendLimits.key }).from(emailSendLimits);
+    expect(
+      keys.map((key) => key.key).toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(["access:203.0.113.9", "access:unknown"]);
+  });
+
+  it("does not limit where the deployment does not", async () => {
+    const { verify } = verifyAs(true);
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      await requestAccess(
+        db,
+        { email: `${String(n)}@x.test`, note: "", attempt: ATTEMPT, isLimited: false },
+        verify,
+      );
+    }
+    expect(await db.select().from(accessRequests)).toHaveLength(6);
+    expect(await db.select().from(emailSendLimits)).toStrictEqual([]);
+  });
+});
+
+describe("turnstileAttempt", () => {
+  it("reads the edge's address and the request's host", () => {
+    const request = new Request("https://dialed.run/api/auth/sign-up/email", {
+      headers: { "cf-connecting-ip": "198.51.100.4" },
+    });
+    expect(turnstileAttempt("t", request)).toStrictEqual({
+      token: "t",
+      remoteIp: "198.51.100.4",
+      hostname: "dialed.run",
+    });
+  });
+
+  it("has no address and no host without a request", () => {
+    expect(turnstileAttempt(undefined, undefined)).toStrictEqual({
+      token: undefined,
+      remoteIp: undefined,
+      hostname: "",
+    });
+    expect(
+      turnstileAttempt("t", new Request("https://dialed.run/")),
+    ).toMatchObject({ remoteIp: undefined });
+  });
+});
+
+describe("accessGate", () => {
+  it("is invite-only by the flag, and answers from the database", async () => {
+    const gate = accessGate(db, verifyAs(true).verify);
+    expect(gate.isInviteOnly).toBe(true);
+    await seedCode("DIAL-GATE");
+    expect(await gate.standing("DIAL-GATE")).toBe("open");
+    expect(await gate.claim(claim("DIAL-GATE"))).toBe("redeemed");
+    expect(await gate.standing("DIAL-GATE")).toBe("used");
+  });
+
+  it("passes Turnstile only on its verdict, handing it the request's attempt", async () => {
+    const yes = verifyAs(true);
+    const no = verifyAs(false);
+    const request = new Request("https://dialed.run/x");
+    expect(await accessGate(db, yes.verify).passesTurnstile("t", request)).toBe(
+      true,
+    );
+    expect(await accessGate(db, no.verify).passesTurnstile("t", request)).toBe(
+      false,
+    );
+    expect(yes.seen).toStrictEqual([
+      { token: "t", remoteIp: undefined, hostname: "dialed.run" },
+    ]);
+  });
+});
+
+describe("the claim's account", () => {
+  it("reads the account by id, not by address", async () => {
+    await seedCode("DIAL-BYID", { maxUses: 1 });
+    const mine = claim("DIAL-BYID", "id@x.test");
+    await redeemInvite(db, mine);
+    // An account with this address but another id does not make the hold
+    // permanent: only the account the claim was made for does.
+    await account(newUlid(), "id@x.test");
+    const later = nowSeconds() + CLAIM_HOLD_S + 1;
+    expect(await inviteStanding(db, "DIAL-BYID", later)).toBe("open");
+    const [row] = await db
+      .select({ userId: inviteRedemptions.userId })
+      .from(inviteRedemptions)
+      .where(eq(inviteRedemptions.email, "id@x.test"));
+    expect(row?.userId).toBe(mine.userId);
+  });
+});
