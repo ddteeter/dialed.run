@@ -137,7 +137,7 @@ Where 2a departs from the plan above, and why:
   will not start — which stops CI's e2e. Local dev gets Miniflare's
   simulated sender.
 - **Decision D-50** is two gates on one read: `isVerified` (Useful,
-  report, change, reset — an account that is gone is not verified) and
+  report, change — an account that is gone is not verified) and
   `isUnconfirmed` (sharing — only an account that exists can be
   unconfirmed). The share default and `submitVerdict` both read the second.
 - **Rate limits** are per address and kind (`email_send_limits`), counted
@@ -146,6 +146,26 @@ Where 2a departs from the plan above, and why:
 - **The account's settings pages are one route**, `/account/$section`
   (`sign-in`, `email`, `password`, `notifications`), as Settings' own
   sections are.
+
+Changed on review of PR #119:
+
+- **An email change asks for the current password** (Better Auth's
+  `verify-password`, through `auth`'s `isCurrentPassword`), and when its
+  link is spent every other session is signed out; the one the link was
+  opened in stays.
+- **A link is claimed before it is acted on** (law 2): `UPDATE … WHERE
+used_at IS NULL AND token_hash = ?`, and only the claimer confirms or
+  moves the account. A failure after the claim hands the link back.
+- **Reset tokens are stored hashed** (`verification.storeIdentifier:
+"hashed"`).
+- **Reset is open to an unconfirmed runner, and a spent reset confirms the
+  address** (D-63). This retires the `isVerified` gate on reset by email.
+- **No email is sent on the request path.** Better Auth's sends go through
+  `advanced.backgroundTasks` (`waitUntil`), the new-account hook likewise,
+  and Resend claims its limit and hands the rest to the background, so no
+  answer is slower for an address that has an account.
+- **The O0 memo is keyed to the runner**, with the owner in `localStorage`
+  so a sign-in as someone else in another tab unkeys every tab's memo.
 
 ## Contract touches
 

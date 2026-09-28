@@ -438,6 +438,17 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       ask:** drop the case line or say what it names; and what D4 says
       when it has the reason but no date.
 
+32. **ACC-8 asks for the current password, undrawn (PR #119 review).**
+    Settings › Account › Email now has a **Current password** field under
+    **New email** — a plain password `TextField`, not Au's field with a Show
+    control, because that one lives in the auth module and the account
+    module cannot reach it. A wrong one lands on the field as "That
+    password doesn't match your account.", Change password's sentence.
+    Separately, **reset by email is now open to an unconfirmed runner**
+    (D-63), which round 26 #11 listed among what waits for confirmation.
+    **The ask:** draw the field (and whether it gets Show), and confirm
+    that reset no longer waits.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25
