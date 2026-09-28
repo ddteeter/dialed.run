@@ -5,15 +5,16 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { outfitEntries, usernameHistory } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryDetailForViewer } from "../../src/modules/feed/entries";
+import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
 import {
   otherProfile,
   profileAtHandle,
+  recentPublicEntriesStatement,
+  visibleRunnerHandle,
+  visibleRunnerStatement,
 } from "../../src/modules/feed/profiles";
-import {
-  searchRunners,
-  searchStatement,
-} from "../../src/modules/feed/search";
+import { searchRunners, searchStatement } from "../../src/modules/feed/search";
 import { banUser, blockRunner, fileReport } from "../../src/modules/safety";
 import { makeEntry, makeRun, makeUser, resetTables, NOW } from "./helpers";
 
@@ -50,8 +51,35 @@ async function entryIn(status: "ok" | "hidden_pending_review" | "removed") {
   return { author, entryId };
 }
 
+async function reportProfile(reporter: string, runner: string) {
+  await fileReport({
+    reporterId: reporter,
+    subjectType: "profile",
+    subjectId: runner,
+    reason: "spam",
+  });
+}
+
+async function planOf(statement: {
+  toSQL: () => { sql: string; params: unknown[] };
+}): Promise<string> {
+  const { sql, params } = statement.toSQL();
+  const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+    .bind(...params)
+    .all<{ detail: string }>();
+  return plan.results.map((row) => row.detail).join("\n");
+}
+
+async function followingIds(viewer: string) {
+  const page = await followingFeed(viewer);
+  return page.items.map((item) => [item.entryId, item.underReview]);
+}
+
 async function postedBy(author: string): Promise<string> {
-  return makeEntry({ userId: author, runId: await makeRun({ userId: author }) });
+  return makeEntry({
+    userId: author,
+    runId: await makeRun({ userId: author }),
+  });
 }
 
 describe("runner search leaves out hidden runners", () => {
@@ -257,5 +285,157 @@ describe("D's under-review marker", () => {
 
     expect(await markerFor(shown.entryId, shown.author)).toBe(false);
     expect(await markerFor(removed.entryId, removed.author)).toBe(false);
+  });
+});
+
+describe("a runner whose profile the viewer reported (D-68)", () => {
+  it("leaves the reporter's search, and nobody else's", async () => {
+    const reporter = await makeUser();
+    const bystander = await makeUser();
+    const reported = await makeUser({ username: "vic_reported" });
+    const kept = await makeUser({ username: "vic_kept" });
+    await reportProfile(reporter, reported);
+
+    expect(await foundIds(reporter, "vic")).toStrictEqual([kept]);
+    const seenByBystander = await foundIds(bystander, "vic");
+    expect(seenByBystander).toHaveLength(2);
+    expect(seenByBystander).toContain(reported);
+  });
+
+  it("is not moved by a report against one of their entries", async () => {
+    // A profile report and an entry report are different subjects, and
+    // the entry's id is not the runner's.
+    const reporter = await makeUser();
+    const runner = await makeUser({ username: "wen_runs" });
+    await fileReport({
+      reporterId: reporter,
+      subjectType: "entry",
+      subjectId: await postedBy(runner),
+      reason: "spam",
+    });
+
+    expect(await foundIds(reporter, "wen")).toStrictEqual([runner]);
+    const profile = await otherProfile(runner, reporter);
+    expect(profile?.userId).toBe(runner);
+  });
+
+  it("reads as not found on the reporter's H, by id and by handle, and nobody else's", async () => {
+    const reporter = await makeUser();
+    const bystander = await makeUser();
+    const reported = await makeUser({ username: "xan_reported" });
+    await reportProfile(reporter, reported);
+
+    expect(await otherProfile(reported, reporter)).toBeUndefined();
+    expect(await profileAtHandle(reporter, "xan_reported")).toBeUndefined();
+    expect(await visibleRunnerHandle(reported, reporter)).toBeUndefined();
+    const seenByBystander = await otherProfile(reported, bystander);
+    expect(seenByBystander?.userId).toBe(reported);
+    expect(await visibleRunnerHandle(reported, bystander)).toMatchObject({
+      username: "xan_reported",
+    });
+  });
+
+  it("probes the report on its unique index, and H reads the runner by primary key", async () => {
+    const details = await planOf(
+      visibleRunnerStatement(db(), "01RUNNER", "01VIEWER"),
+    );
+
+    expect(details).toMatch(
+      /SEARCH user_profiles USING INDEX sqlite_autoindex_user_profiles_1 \(user_id=\?\)/u,
+    );
+    expect(details).toMatch(
+      /SEARCH reports USING COVERING INDEX reports_one_per_reporter \(reporter_id=\? AND subject_type=\? AND subject_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN/u);
+  });
+
+  it("keeps search's probe on the same index", async () => {
+    const details = await planOf(searchStatement(db(), "01VIEWER", "maya"));
+
+    expect(details).toMatch(
+      /SEARCH reports USING COVERING INDEX reports_one_per_reporter \(reporter_id=\? AND subject_type=\? AND subject_id=\?\)/u,
+    );
+  });
+});
+
+describe("H's entries", () => {
+  it("seek the runner's shared, settled entries newest first, the viewer's rule as probes", async () => {
+    const details = await planOf(
+      recentPublicEntriesStatement(db(), "01RUNNER", "01VIEWER"),
+    );
+
+    expect(details).toMatch(
+      /SEARCH outfit_entries USING INDEX entries_user_public_created \(user_id=\? AND is_public=\? AND moderation_status=\?\)/u,
+    );
+    expect(
+      details.match(
+        /SEARCH blocks USING COVERING INDEX blocks_pk \(blocker_id=\? AND blocked_id=\?\)/gu,
+      ),
+    ).toHaveLength(2);
+    expect(details).toMatch(
+      /SEARCH reports USING COVERING INDEX reports_one_per_reporter \(reporter_id=\? AND subject_type=\? AND subject_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN|TEMP B-TREE/u);
+  });
+});
+
+describe("the author's own under-review entry on Following (D-67)", () => {
+  it("stays in the author's feed, marked", async () => {
+    const { author, entryId } = await entryIn("hidden_pending_review");
+    const shown = await postedBy(author);
+
+    // Both at the same instant, so their order is the ids' — not this
+    // test's business.
+    const ids = await followingIds(author);
+    expect(ids).toHaveLength(2);
+    expect(ids).toContainEqual([shown, false]);
+    expect(ids).toContainEqual([entryId, true]);
+  });
+
+  it("is gone from a follower's feed, whose own entries are unmarked", async () => {
+    const { author, entryId } = await entryIn("hidden_pending_review");
+    const shown = await postedBy(author);
+    const follower = await makeUser();
+    await follow(follower, author);
+    const theirs = await postedBy(follower);
+
+    const ids = await followingIds(follower);
+
+    expect(ids).toContainEqual([shown, false]);
+    expect(ids).toContainEqual([theirs, false]);
+    expect(ids.map(([id]) => id)).not.toContain(entryId);
+  });
+
+  it("does not bring back an entry a person removed, or one the author keeps private", async () => {
+    const { author } = await entryIn("removed");
+    await db()
+      .update(outfitEntries)
+      .set({ isPublic: false, moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, await postedBy(author)));
+
+    expect(await followingIds(author)).toStrictEqual([]);
+  });
+
+  it("still leaves out a followee blocked or reported by the viewer, and a banned one", async () => {
+    const viewer = await makeUser();
+    const blocked = await makeUser();
+    const reported = await makeUser();
+    const banned = await makeUser();
+    for (const runner of [blocked, reported, banned]) {
+      await follow(viewer, runner);
+    }
+    await postedBy(blocked);
+    const reportedEntry = await postedBy(reported);
+    await postedBy(banned);
+    await blockRunner(viewer, blocked);
+    await fileReport({
+      reporterId: viewer,
+      subjectType: "entry",
+      subjectId: reportedEntry,
+      reason: "spam",
+    });
+    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+
+    expect(await followingIds(viewer)).toStrictEqual([]);
   });
 });

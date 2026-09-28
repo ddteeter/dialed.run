@@ -5,13 +5,7 @@ import type { ReactNode } from "react";
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatDistance, formatPace } from "../../../lib/measures";
-import {
-  Bracketed,
-  FormStatus,
-  Icon,
-  Mono,
-  WeatherAttribution,
-} from "../../../ui";
+import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
@@ -19,6 +13,7 @@ import { runWhenLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { Handle } from "./Handle";
+import { UnderReview } from "./UnderReview";
 import { ReportFoot } from "./ReportFoot";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -114,14 +109,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         </h1>
       </div>
 
-      {/* D-62's marker (FEED-6), placeholder until designed: the author's
-          own entry that reports have hidden pending review. Only the
-          author ever gets here with it set — nobody else can open it. */}
-      {entry.underReview ? (
-        <p data-part="under-review" className="m-0 text-muted">
-          <Bracketed>Under review</Bracketed>
-        </p>
-      ) : undefined}
+      {entry.underReview ? <UnderReview /> : undefined}
 
       <PhotoPager photoKeys={entry.photoKeys} />
 

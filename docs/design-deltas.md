@@ -466,7 +466,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     are composed from existing primitives; neither adds a glyph, colour or
     motion.
     - **D-62's under-review marker, on the card and on D** (FEED-6,
-      `feed/components/EntryCard.tsx`, `feed/components/EntryDetail.tsx`).
+      `feed/components/PostCard.tsx`, `feed/components/EntryDetail.tsx`).
       The author of an entry hidden pending review still sees it in their
       own Following feed and on D (D-67), marked `[UNDER REVIEW]` —
       bracket notation in `--muted` — and nobody else ever reaches it.

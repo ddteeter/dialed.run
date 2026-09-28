@@ -41,7 +41,7 @@ import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
-import { otherProfile, ownProfile, profileAtHandle } from "./profiles";
+import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
 import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
@@ -241,12 +241,12 @@ export const ownProfileQuery = createServerFn({ method: "GET" }).handler(
   },
 );
 
-export const otherProfileQuery = createServerFn({ method: "GET" })
+export const runnerHandleQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => userIdInput.parse(input))
   .handler(async ({ data }) => {
     // H requires sign-in, so its data does too (task 128, SAF-14).
     const viewerId = await requireUserId();
-    return otherProfile(data.userId, viewerId);
+    return visibleRunnerHandle(data.userId, viewerId);
   });
 
 export const profileAtHandleQuery = createServerFn({ method: "GET" })

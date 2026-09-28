@@ -50,6 +50,7 @@ import { judgedFeelsLikeC } from "./judged-conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor, uiGroups } from "./groups";
 import { publiclyVisibleEntry } from "../safety";
+import { outfitEntriesSelect } from "./entries-query";
 
 const DAY_S = 24 * 3600;
 
@@ -74,6 +75,14 @@ A garment group worn by fewer runners than this is not shown.
 */
 export const MIN_GROUP_RUNNERS = 2;
 
+// Rhyme with profiles.ts's function of the same name, not a copy: this one
+// is every runner's unbounded window for the aggregate above — deliberately
+// unordered and un-LIMITed (a LIMIT here hid real matches behind a busy
+// afternoon elsewhere, PR #102 review — see the module doc at the top of
+// this file). profiles.ts's is a single runner's ordered, LIMITed recent
+// page. Merging the two callers would recouple exactly what that PR pulled
+// apart — but the `select`/`from` skeleton under both is shared once, via
+// `outfitEntriesSelect` (entries-query.ts), rather than retyped here.
 export function recentPublicEntriesStatement(
   database: DrizzleD1Database,
   sinceEpochSeconds: number,
@@ -81,25 +90,24 @@ export function recentPublicEntriesStatement(
 ) {
   // Only the four columns the tally reads: the window is unbounded by
   // count now, so every column left out is paid for on every row of it.
-  return database
-    .select({
+  return outfitEntriesSelect(
+    database,
+    {
       id: outfitEntries.id,
       runId: outfitEntries.runId,
       userId: outfitEntries.userId,
       verdict: outfitEntries.verdict,
-    })
-    .from(outfitEntries)
-    .where(
-      // publiclyVisibleEntry(), not a bare isPublic: a removed or
-      // pending-review entry must not count toward the numbers everyone
-      // reads (packet: "hidden content must not count"). A missed clause
-      // here hides nothing visibly — it just quietly skews the aggregate.
-      and(
-        publiclyVisibleEntry(),
-        gte(outfitEntries.createdAt, sinceEpochSeconds),
-        viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
-      ),
-    );
+    },
+    // publiclyVisibleEntry(), not a bare isPublic: a removed or
+    // pending-review entry must not count toward the numbers everyone
+    // reads (packet: "hidden content must not count"). A missed clause
+    // here hides nothing visibly — it just quietly skews the aggregate.
+    and(
+      publiclyVisibleEntry(),
+      gte(outfitEntries.createdAt, sinceEpochSeconds),
+      viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
+    ),
+  );
 }
 
 /**

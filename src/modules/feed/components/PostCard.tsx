@@ -8,6 +8,7 @@ import { postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { Avatar } from "./Avatar";
 import { Handle } from "./Handle";
+import { UnderReview } from "./UnderReview";
 import { ConditionsCell } from "./ConditionsCell";
 
 import { UsefulButton } from "./UsefulButton";
@@ -64,6 +65,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
           </span>
           <VerdictBadge verdict={item.verdict} />
         </div>
+        {item.underReview ? <UnderReview /> : undefined}
         {photo === undefined ? undefined : (
           <img
             data-part="photo"

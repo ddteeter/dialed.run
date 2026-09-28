@@ -79,6 +79,8 @@ export {
 export {
   entryVisibleTo,
   isUnderReviewForAuthor,
+  notBlockedEitherWay,
+  profileNotReportedBy,
   publicPhotoStatus,
   publiclyVisibleEntry,
 } from "./visibility";

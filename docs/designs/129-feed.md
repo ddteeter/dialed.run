@@ -72,24 +72,29 @@ places), the enum drop (#112).
 ### Follow-up PR (after #116 and #118): FEED-6, 7, 10
 
 - **FEED-7.** H's entries use `publiclyVisibleEntry(viewerId)`. H and
-  runner search drop a banned runner (`banned_at IS NULL`) and anyone in a
-  block pair with the viewer (`feed/runner-visibility.ts`, a `NOT EXISTS`
-  on `blocks` — safety's own probe is private and bound to an entry's
-  author, so a profile row cannot reuse it; a candidate for safety to
-  export). Both filters are in the `WHERE`, ahead of the `LIMIT`; the
-  search plan is pinned (two full-key `blocks_pk` probes per candidate).
+  runner search drop a banned runner (`banned_at IS NULL`), anyone in a
+  block pair with the viewer (`notBlockedEitherWay`, now exported by
+  `modules/safety` and taking the runner column, so entries and profiles
+  share one gate), and — for the reporter alone — a runner whose profile
+  they reported (`profileNotReportedBy`, D-68). All in the `WHERE`, ahead
+  of the `LIMIT`; the search, H-runner and H-entries plans are pinned
+  (`blocks_pk` and `reports_one_per_reporter` probes, never a scan).
   H of a hidden runner answers `undefined`, which the route already reads
   as "back to the feed". "Accounts pending deletion" has no state to read
   yet (128 deletes immediately), so there is nothing to filter.
-- **FEED-6.** `getEntryDetail` carries `underReview` from
-  `isUnderReviewForAuthor`; D renders a placeholder `[UNDER REVIEW]`. No
-  card marker: a hidden entry never reaches Following.
+- **FEED-6.** `getEntryDetail` and each Following item carry `underReview`
+  from `isUnderReviewForAuthor`; the card and D render one placeholder
+  `[UNDER REVIEW]` (`UnderReview.tsx`). The author's own under-review
+  entries stay in their Following feed (D-67): the authors subquery gives
+  the viewer a second row asking for `hidden_pending_review`, so the seek
+  on `entries_user_public_created` keeps `moderation_status` an equality.
 - **FEED-10.** One `Handle` component (Archivo 600, "@", as stored) on the
   author row, D's heading, G, H and search. `/@{$handle}` is a top-level
   route (the URL is the ruling's); `profileAtHandle` reads `lookUpHandle`
   and answers runner / own / changed / nothing, and `orHandlePage` sends
   own to G and nothing back to the feed. `/feed/u/$userId` now
-  redirects to the runner's current `/@handle`, so there is one H. S1 ("@x found your … run useful")
+  redirects to the runner's current `/@handle` through a handle-only read
+  (`visibleRunnerHandle`, the same gate as H), so there is one H. S1 ("@x found your … run useful")
   is not built — there is no useful notification to style.
 - **FEED-11** stays sequenced: 126's verification has not landed.
 

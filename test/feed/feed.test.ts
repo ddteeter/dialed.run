@@ -194,12 +194,13 @@ describe("following feed (E1)", () => {
       id: "01ZZZZZZZZZZZZZZZZZZZZZZZZ",
     });
     const { sql, params } = statement.toSQL();
-    // The viewer twice (the follows lookup, and their own user row), the
-    // two visibility values, the viewer three more times for the viewer
-    // rule (a block from either end, and their own reports — SAF-12/13),
-    // the three cursor values and the limit twice (per author, and the
-    // page): twelve, at one follow or a thousand.
-    expect(params).toHaveLength(12);
+    // The viewer three times (the follows lookup, and their two own author
+    // rows — D-67), `is_public` and the under-review arm's status, the two
+    // visibility values, the viewer three more times for the viewer rule
+    // (a block from either end, and their own reports — SAF-12/13), the
+    // three cursor values and the limit twice (per author, and the page):
+    // fifteen, at one follow or a thousand.
+    expect(params).toHaveLength(15);
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
       .all<{ detail: string }>();

@@ -4,8 +4,11 @@
  * this, round 26 #12), runner search, D (post detail — the strip, the
  * note, the kit), H (someone else's profile), D-11 (useful reactions), the
  * bell counting a run of any age that still owes a verdict (S2), G's
- * settings button, and a runner taking back their own entry — one photo,
- * then the whole entry (task 128 · SAF-3) — one journey, one video.
+ * settings button, `@handle` on the author row and `/@old` saying the
+ * runner changed their name (FEED-10), the author's own under-review entry
+ * marked on the card and on D (FEED-6, D-67), and a runner taking back
+ * their own entry — one photo, then the whole entry (task 128 · SAF-3) —
+ * one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -27,6 +30,7 @@ import {
   outfitEntryItems,
   runs,
   userProfiles,
+  usernameHistory,
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { weatherObservations } from "../../src/db/schema-weather";
@@ -57,6 +61,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   const suffix = String(Date.now());
   const otherUserId = newUlid();
   const otherUsername = `trail_${suffix.slice(-8)}`;
+  // A handle the same runner used to hold (FEED-10): `/@old` says they
+  // changed their name, and never who they are now (D-56).
+  const oldUsername = `was_${suffix.slice(-8)}`;
   const itemId = newUlid();
   const publicRunId = newUlid();
   const publicEntryId = newUlid();
@@ -84,6 +91,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       userId: otherUserId,
       username: otherUsername,
       cityLabel: "Portland, OR",
+    });
+    await core.insert(usernameHistory).values({
+      username: oldUsername,
+      userId: otherUserId,
+      retiredAt: nowSeconds(),
     });
 
     await core.insert(wardrobeItems).values({
@@ -322,6 +334,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       hasText: publicCaption,
     });
     await expect(card).toBeVisible();
+    // The author is their handle, "@" and all (FEED-10).
+    await expect(card.locator('[data-part="author"]')).toContainText(
+      `@${otherUsername}`,
+    );
     await expect(card.locator('[data-part="verdict-badge"]')).toHaveText(
       "Dialed",
     );
@@ -344,7 +360,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await card.getByText(publicCaption).click();
     await hydrated(page);
     await expect(
-      page.getByRole("heading", { name: otherUsername }),
+      page.getByRole("heading", { name: `@${otherUsername}` }),
     ).toBeVisible();
     await expect(
       page.locator('[data-part="run-strip"] [data-part="verdict-badge"]'),
@@ -472,6 +488,46 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       );
     });
 
+    // D-67: reports have hidden it pending review. Nobody else can see it
+    // now — but its author still does, marked, on the card and on D.
+    await withLocalDb(async ({ core }) => {
+      await core
+        .update(outfitEntries)
+        .set({ moderationStatus: "hidden_pending_review" })
+        .where(eq(outfitEntries.id, ownEntryId));
+    });
+    await scene(page, "Under review: still yours to see, and marked");
+    await page.goto("/feed");
+    await hydrated(page);
+    const ownCard = page.locator('[data-part="post"]').filter({
+      hasText: "Two photos, one too many",
+    });
+    await expect(ownCard.locator('[data-part="under-review"]')).toHaveText(
+      "[Under review]",
+      { ignoreCase: true },
+    );
+    await ownCard.getByText("Two photos, one too many").click();
+    await hydrated(page);
+    await expect(page.locator('[data-part="under-review"]')).toHaveText(
+      "[Under review]",
+      { ignoreCase: true },
+    );
+    await withLocalDb(async ({ core }) => {
+      await core
+        .update(outfitEntries)
+        .set({ moderationStatus: "ok" })
+        .where(eq(outfitEntries.id, ownEntryId));
+    });
+
+    // FEED-10: an old handle names nobody — it says the runner moved on.
+    await scene(page, "/@old · this runner changed their name");
+    await page.goto(`/@${oldUsername}`);
+    await hydrated(page);
+    await expect(
+      page.getByText("This runner changed their name."),
+    ).toBeVisible();
+    await expect(page.getByText(otherUsername)).toHaveCount(0);
+
     await scene(page, "Your own entry: take back one photo");
     await page.goto(`/feed/entry/${ownEntryId}`);
     await hydrated(page);
@@ -521,6 +577,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await core.delete(runs).where(eq(runs.id, publicRunId));
       await core.delete(runs).where(eq(runs.id, privateRunId));
       await core.delete(wardrobeItems).where(eq(wardrobeItems.id, itemId));
+      await core
+        .delete(usernameHistory)
+        .where(eq(usernameHistory.username, oldUsername));
       await core
         .delete(userProfiles)
         .where(eq(userProfiles.userId, otherUserId));

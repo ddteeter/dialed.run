@@ -4,8 +4,9 @@
  * other-profile query strips everything but display info + recent public
  * entries (no aggregates, no offset translation).
  */
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
   outfitEntries,
@@ -25,9 +26,10 @@ import type { CoverageBand } from "./coverage";
 import { unitsFor } from "./units";
 import { countWhere } from "./count-where";
 import { followerCount, followingCount, isFollowing } from "./follows";
-import { runnerShownTo } from "./runner-visibility";
 import { lookUpHandle } from "../account";
 import { publiclyVisibleEntry } from "../safety";
+import { runnersVisibleTo } from "./runner-visibility";
+import { outfitEntriesSelect } from "./entries-query";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -139,46 +141,89 @@ export interface OtherProfile {
 }
 
 /**
-H v1: public info + recent PUBLIC entries only — no aggregates.
+The runner as `viewerId` may see them, or no row: a banned runner, one in a
+block pair with the viewer, or one whose profile the viewer reported (D-68)
+answers with nothing — the same answer as a runner who does not exist, so
+the page reads as not found rather than as "there is someone here you may
+not see". All of it in SQL, a primary-key read plus index probes. A
+statement so a test can read its plan.
+*/
+export function visibleRunnerStatement(
+  database: DrizzleD1Database,
+  userId: string,
+  viewerId: string,
+) {
+  return runnersVisibleTo(
+    database,
+    viewerId,
+    eq(userProfiles.userId, userId),
+  ).limit(1);
+}
 
-**Told who is looking** (FEED-7, D-107/D-108). A banned runner, or one in
-a block pair with the viewer, answers with nothing — the same answer as
-a runner who does not exist, so the page reads as not found rather than
-as "there is someone here you may not see". Their entries go through the
-viewer-aware form of the one visibility rule, so what the viewer reported
-drops out too, in SQL and ahead of the `LIMIT`.
+/**
+H's entries: the runner's, through the viewer-aware form of the one
+visibility rule, so what the viewer reported drops out too — in SQL and
+ahead of the `LIMIT` (FEED-7, D-107/D-108).
+
+Rhyme with consensus.ts's function of the same name, not a copy: this one
+is a single runner's most-recent page — ordered, LIMITed. Consensus's is
+every runner's unbounded window for an aggregate, deliberately unordered
+and un-LIMITed (see that file's module doc: a LIMIT there hid real
+matches behind a busy afternoon elsewhere, PR #102 review). Merging the
+two callers would recouple exactly what that PR pulled apart — but the
+`select`/`from` skeleton under both is shared once, via
+`outfitEntriesSelect` (entries-query.ts), rather than retyped here.
+*/
+export function recentPublicEntriesStatement(
+  database: DrizzleD1Database,
+  userId: string,
+  viewerId: string,
+) {
+  return outfitEntriesSelect(
+    database,
+    {
+      id: outfitEntries.id,
+      createdAt: outfitEntries.createdAt,
+      verdict: outfitEntries.verdict,
+      caption: outfitEntries.caption,
+    },
+    and(eq(outfitEntries.userId, userId), publiclyVisibleEntry(viewerId)),
+  )
+    .orderBy(desc(outfitEntries.createdAt))
+    .limit(RECENT_LIMIT);
+}
+
+/**
+The runner's handle and nothing else, for `/feed/u/$userId`'s redirect —
+which needs a name to send the viewer to, not twenty entries to throw
+away. The same gate as H, so the redirect never names a runner H would
+refuse.
+*/
+export async function visibleRunnerHandle(
+  userId: string,
+  viewerId: string,
+): Promise<{ username: string | null } | undefined> {
+  const [row] = await visibleRunnerStatement(db(), userId, viewerId);
+  return row;
+}
+
+/**
+H v1: public info + recent PUBLIC entries only — no aggregates, and only a
+runner `visibleRunnerStatement` lets the viewer see.
 */
 export async function otherProfile(
   userId: string,
   viewerId: string,
 ): Promise<OtherProfile | undefined> {
   const database = db();
-  const [profile] = await database
-    .select()
-    .from(userProfiles)
-    .where(
-      and(
-        eq(userProfiles.userId, userId),
-        isNull(userProfiles.bannedAt),
-        runnerShownTo(viewerId, userProfiles.userId),
-      ),
-    )
-    .limit(1);
+  const [profile] = await visibleRunnerStatement(database, userId, viewerId);
   if (!profile) return undefined;
 
-  const entries = await database
-    .select({
-      id: outfitEntries.id,
-      createdAt: outfitEntries.createdAt,
-      verdict: outfitEntries.verdict,
-      caption: outfitEntries.caption,
-    })
-    .from(outfitEntries)
-    .where(
-      and(eq(outfitEntries.userId, userId), publiclyVisibleEntry(viewerId)),
-    )
-    .orderBy(desc(outfitEntries.createdAt))
-    .limit(RECENT_LIMIT);
+  const entries = await recentPublicEntriesStatement(
+    database,
+    userId,
+    viewerId,
+  );
 
   return {
     userId,
@@ -210,7 +255,7 @@ export type ProfileAtHandle =
 
 /**
 `undefined` for a handle nobody has held, and for one whose holder the
-viewer may not see (banned, or a block either way) — deliberately the same
+viewer may not see (banned, a block either way, or reported by them) — deliberately the same
 answer, for the reason `otherProfile` gives.
 */
 export async function profileAtHandle(

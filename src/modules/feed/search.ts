@@ -12,8 +12,9 @@
  * (FEED-7, D-107): W2 says a blocked runner cannot find you in search and
  * you will not see them there. Both in the `WHERE`, ahead of the `LIMIT`,
  * so twenty hidden matches cannot leave an empty page that looks real.
+ * Nor, for the viewer alone, a runner whose profile they reported (D-68).
  */
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -21,7 +22,7 @@ import { follows, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { normalizeUsername } from "../../lib/contracts";
 import { columnWhere } from "../../lib/keyed-read";
-import { runnerShownTo } from "./runner-visibility";
+import { runnersVisibleTo } from "./runner-visibility";
 
 const RESULT_LIMIT = 20;
 
@@ -52,23 +53,16 @@ export function searchStatement(
   viewerId: string,
   typed: string,
 ) {
-  return database
-    .select({
-      userId: userProfiles.userId,
-      username: userProfiles.username,
-    })
-    .from(userProfiles)
-    .where(
-      and(
-        // ESCAPE with an ASCII character keeps SQLite's LIKE optimisation,
-        // so the prefix is still served by the NOCASE index.
-        sql`${userProfiles.username} LIKE ${likePrefix(typed)} ESCAPE '\\'`,
-        ne(userProfiles.userId, viewerId),
-        isNull(userProfiles.bannedAt),
-        runnerShownTo(viewerId, userProfiles.userId),
-      ),
-    )
-    .limit(RESULT_LIMIT);
+  return runnersVisibleTo(
+    database,
+    viewerId,
+    and(
+      // ESCAPE with an ASCII character keeps SQLite's LIKE optimisation,
+      // so the prefix is still served by the NOCASE index.
+      sql`${userProfiles.username} LIKE ${likePrefix(typed)} ESCAPE '\\'`,
+      ne(userProfiles.userId, viewerId),
+    ),
+  ).limit(RESULT_LIMIT);
 }
 
 export async function searchRunners(
@@ -115,10 +109,9 @@ export async function searchRunners(
 }
 // Stryker restore ConditionalExpression,MethodExpression
 
-function isNamed(row: {
-  userId: string;
-  username: string | null;
-}): row is { userId: string; username: string } {
+function isNamed<T extends { username: string | null }>(
+  row: T,
+): row is T & { username: string } {
   // Stryker disable next-line ConditionalExpression
   return row.username !== null;
 }

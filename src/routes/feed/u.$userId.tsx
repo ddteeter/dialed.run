@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
-import { otherProfileQuery } from "../../modules/feed/functions";
+import { runnerHandleQuery } from "../../modules/feed/functions";
 import { requireSignedIn, toHandlePage } from "../../modules/feed/redirect";
 import { noindexHead } from "../../modules/feed/route-decisions";
 
@@ -15,6 +15,6 @@ export const Route = createFileRoute("/feed/u/$userId")({
   head: noindexHead,
   beforeLoad: async ({ params }) => {
     requireSignedIn(await getSession());
-    toHandlePage(await otherProfileQuery({ data: { userId: params.userId } }));
+    toHandlePage(await runnerHandleQuery({ data: { userId: params.userId } }));
   },
 });

@@ -358,3 +358,25 @@ describe("PostCard: Useful", () => {
     expect(screen.queryByText("Not marked")).toBeNull();
   });
 });
+
+describe("PostCard: the author's under-review marker (D-62, D-67)", () => {
+  it("marks the author's own hidden entry, under the author row", async () => {
+    const post = await card({ underReview: true, caption: "Held." });
+
+    const marker = post.querySelector('[data-part="under-review"]');
+    expect(marker).toHaveTextContent("[Under review]");
+    expect(partsOf(post).slice(0, 4)).toStrictEqual([
+      "author",
+      "under-review",
+      "caption",
+      "run-strip",
+    ]);
+  });
+
+  it("is absent from every other card", async () => {
+    const post = await card({ underReview: false });
+
+    expect(post.querySelector('[data-part="under-review"]')).toBeNull();
+    expect(screen.queryByText(/Under review/u)).toBeNull();
+  });
+});
