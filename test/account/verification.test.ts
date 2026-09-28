@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { user } from "../../src/db/schema-auth";
+import { session, user } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
+import { newUlid } from "../../src/lib/ids";
 import {
   emailSendLimits,
   emailVerifications,
@@ -20,7 +21,11 @@ import {
   issueEmailLink,
   readEmailLink,
 } from "../../src/modules/account/email-links";
-import { confirmLinkUrl } from "../../src/modules/account/verification";
+import {
+  confirmLinkUrl,
+  type Background,
+  type EmailChangeRequest,
+} from "../../src/modules/account/verification";
 import { core, fakeMail, ORIGIN, seedUser } from "../email/helpers";
 
 /**
@@ -68,18 +73,18 @@ describe("email links", () => {
       NOW,
     );
     expect(token.startsWith(`verify.${userId}.`)).toBe(true);
+    // Only the hash is stored, and it is what the read carries.
+    const [row] = await db.select().from(emailVerifications);
+    expect(row?.tokenHash).not.toContain(token.split(".", 3)[2] ?? "");
     expect(await readEmailLink(db, token)).toStrictEqual({
       userId,
       purpose: "verify",
       email,
       expiresAt: NOW + EMAIL_LINK_TTL_S,
       usedAt: undefined,
+      tokenHash: row?.tokenHash,
     });
     expect(EMAIL_LINK_TTL_S).toBe(86_400);
-
-    // Only the hash is stored.
-    const [row] = await db.select().from(emailVerifications);
-    expect(row?.tokenHash).not.toContain(token.split(".", 3)[2] ?? "");
 
     for (const bad of [
       `${token}x`,
@@ -303,8 +308,10 @@ describe("confirmEmail", () => {
     await confirmEmail(
       db,
       token,
-      (_error, context) => {
-        reports.push(context);
+      {
+        report: (_error, context) => {
+          reports.push(context);
+        },
       },
       NOW,
     );
@@ -337,17 +344,218 @@ describe("confirmEmail", () => {
   });
 });
 
+describe("confirmEmail, when two open one link (law 2)", () => {
+  it("confirms once: the second hears it was used", async () => {
+    const { userId, email } = await seedUser({ isVerified: false });
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+
+    const landings = await Promise.all([
+      confirmEmail(db, token, {}, NOW + 1),
+      confirmEmail(db, token, {}, NOW + 1),
+    ]);
+
+    expect(
+      landings
+        .map((landing) => landing.state)
+        .toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(["confirmed", "used"]);
+    expect(await isVerified(db, userId)).toBe(true);
+  });
+
+  it("moves the account once and tells the old address once", async () => {
+    const { userId } = await seedUser();
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "change", email: "twice@example.com" },
+      NOW,
+    );
+    const send = vi
+      .spyOn(env.EMAIL, "send")
+      .mockResolvedValue({ messageId: "sent-once" });
+
+    const landings = await Promise.all([
+      confirmEmail(db, token, {}, NOW + 1),
+      confirmEmail(db, token, {}, NOW + 2),
+    ]);
+
+    expect(
+      landings
+        .map((landing) => landing.state)
+        .toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(["confirmed", "used"]);
+    expect(send).toHaveBeenCalledTimes(1);
+    send.mockRestore();
+    expect(await db.select().from(outbox)).toHaveLength(0);
+    const moved = await emailOf(userId);
+    expect(moved.email).toBe("twice@example.com");
+  });
+
+  it("hands the link back when the change it authorised does not land", async () => {
+    const { userId, email } = await seedUser();
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "change", email: "retry@example.com" },
+      NOW,
+    );
+    const batch = vi
+      .spyOn(db, "batch")
+      .mockRejectedValueOnce(new Error("D1 down"));
+
+    await expect(confirmEmail(db, token, {}, NOW + 1)).rejects.toThrow(
+      "D1 down",
+    );
+    batch.mockRestore();
+
+    const unmoved = await emailOf(userId);
+    expect(unmoved.email).toBe(email);
+    expect(await readEmailLink(db, token)).toMatchObject({
+      usedAt: undefined,
+    });
+    // The next tap does what the first could not.
+    expect(await confirmEmail(db, token, {}, NOW + 2)).toMatchObject({
+      state: "confirmed",
+    });
+  });
+
+  it("hands a verify link back too, and only its own claim", async () => {
+    const { userId, email } = await seedUser({ isVerified: false });
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+    const update = vi.spyOn(db, "update");
+    // The first update is the claim; the second, the confirm, fails.
+    update.mockImplementationOnce((table) => {
+      update.mockRestore();
+      const claim = db.update(table);
+      vi.spyOn(db, "update").mockImplementationOnce(() => {
+        throw new Error("D1 down");
+      });
+      return claim;
+    });
+
+    await expect(confirmEmail(db, token, {}, NOW + 1)).rejects.toThrow(
+      "D1 down",
+    );
+    vi.restoreAllMocks();
+
+    expect(await isVerified(db, userId)).toBe(false);
+    expect(await readEmailLink(db, token)).toMatchObject({
+      usedAt: undefined,
+    });
+  });
+});
+
+/**
+A live session row for this runner, as a sign-in would leave.
+*/
+async function sessionFor(userId: string): Promise<string> {
+  const id = newUlid();
+  const now = new Date();
+  await db.insert(session).values({
+    id,
+    userId,
+    token: `token-${id}`,
+    expiresAt: new Date(now.getTime() + 86_400_000),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return id;
+}
+
+async function sessionIds(): Promise<string[]> {
+  const rows = await db.select({ id: session.id }).from(session);
+  return rows.map((row) => row.id).toSorted((a, b) => a.localeCompare(b));
+}
+
+describe("confirmEmail, moving the account (ACC-8)", () => {
+  it("signs every other session out, keeps the one the link was opened in, and touches nobody else's", async () => {
+    const { userId } = await seedUser();
+    const here = await sessionFor(userId);
+    await sessionFor(userId);
+    await sessionFor(userId);
+    const bystander = await seedUser();
+    const theirs = await sessionFor(bystander.userId);
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "change", email: "kept@example.com" },
+      NOW,
+    );
+
+    expect(
+      await confirmEmail(db, token, { currentSessionId: here }, NOW + 1),
+    ).toMatchObject({ state: "confirmed" });
+
+    const left = await sessionIds();
+    expect(left).toContain(here);
+    expect(left).toContain(theirs);
+    const mine = await db
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(mine.map((row) => row.id)).toStrictEqual([here]);
+  });
+
+  it("signs every session out when the link is opened signed out", async () => {
+    const { userId } = await seedUser();
+    await sessionFor(userId);
+    await sessionFor(userId);
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "change", email: "nobody-here@example.com" },
+      NOW,
+    );
+
+    await confirmEmail(db, token, {}, NOW + 1);
+
+    const mine = await db
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(mine).toStrictEqual([]);
+  });
+
+  it("signs nobody out for a verify link", async () => {
+    const { userId, email } = await seedUser({ isVerified: false });
+    const kept = await sessionFor(userId);
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+
+    await confirmEmail(db, token, {}, NOW + 1);
+
+    expect(await sessionIds()).toContain(kept);
+  });
+});
+
 describe("resendConfirmation", () => {
   it("sends a new link to an unconfirmed account, and the old one stops working", async () => {
     const mail = fakeMail();
+    const later = inBackground();
     const { userId, email } = await seedUser({ isVerified: false });
     const old = await issueEmailLink(db, { userId, purpose: "verify", email });
 
     expect(
-      await resendConfirmation(db, email.toUpperCase(), mail, NOW),
+      await resendConfirmation(
+        db,
+        email.toUpperCase(),
+        mail,
+        later.background,
+        NOW,
+      ),
     ).toStrictEqual({
       status: "sent",
     });
+    // Nothing is sent until the background work runs.
+    expect(mail.sent).toHaveLength(0);
+    await later.settled();
 
     expect(mail.sent).toHaveLength(1);
     expect(mail.sent[0]).toMatchObject({
@@ -364,25 +572,104 @@ describe("resendConfirmation", () => {
 
   it("answers the same for a confirmed account and for no account, sending the one and nothing to the other", async () => {
     const mail = fakeMail();
+    const later = inBackground();
     const { email } = await seedUser();
-    expect(await resendConfirmation(db, email, mail, NOW)).toStrictEqual({
+    expect(
+      await resendConfirmation(db, email, mail, later.background, NOW),
+    ).toStrictEqual({
       status: "sent",
     });
     expect(
-      await resendConfirmation(db, "nobody@example.com", mail, NOW),
+      await resendConfirmation(
+        db,
+        "nobody@example.com",
+        mail,
+        later.background,
+        NOW,
+      ),
     ).toStrictEqual({ status: "sent" });
+    await later.settled();
     expect(mail.sent.map((message) => message.subject)).toStrictEqual([
       "You already have a dialed.run account",
     ]);
   });
 
+  it("answers before it looks the address up, so no address answers slower for having an account", async () => {
+    const mail = fakeMail();
+    const later = inBackground();
+    const { email } = await seedUser({ isVerified: false });
+    const select = vi.spyOn(db, "select");
+    const insert = vi.spyOn(db, "insert");
+
+    // The same statements in the request path for an address with an
+    // account and one without: the limit's, and nothing else.
+    const work: number[][] = [];
+    for (const address of [email, "nobody@example.com"]) {
+      select.mockClear();
+      insert.mockClear();
+      expect(
+        await resendConfirmation(db, address, mail, later.background, NOW),
+      ).toStrictEqual({ status: "sent" });
+      work.push([select.mock.calls.length, insert.mock.calls.length]);
+      // Let this address's background finish before counting the next.
+      await later.settled();
+    }
+    select.mockRestore();
+    insert.mockRestore();
+
+    expect(work[0]).toStrictEqual(work[1]);
+    expect(mail.sent.map((message) => message.to)).toStrictEqual([email]);
+    expect(later.reports).toStrictEqual([]);
+  });
+
+  it("reports a send that fails in the background, and names no address", async () => {
+    const mail = fakeMail();
+    mail.failing(true);
+    const later = inBackground();
+    const { email } = await seedUser({ isVerified: false });
+
+    expect(
+      await resendConfirmation(db, email, mail, later.background, NOW),
+    ).toStrictEqual({ status: "sent" });
+    await later.settled();
+
+    expect(later.reports).toStrictEqual([{ surface: "resend-confirmation" }]);
+  });
+
+  it("hands nothing to the background once the limit is reached", async () => {
+    const mail = fakeMail();
+    const later = inBackground();
+    const keepAlive = vi.fn(later.background.keepAlive);
+    const background = { ...later.background, keepAlive };
+    for (let n = 0; n < 5; n += 1) {
+      await resendConfirmation(db, "nobody@example.com", mail, background, NOW);
+    }
+    expect(keepAlive).toHaveBeenCalledTimes(5);
+    await resendConfirmation(db, "nobody@example.com", mail, background, NOW);
+    expect(keepAlive).toHaveBeenCalledTimes(5);
+    await later.settled();
+  });
+
   it("says when the next link can go after five in an hour — for any address", async () => {
     const mail = fakeMail();
+    const later = inBackground();
     for (let n = 0; n < 5; n += 1) {
-      await resendConfirmation(db, "nobody@example.com", mail, NOW);
+      await resendConfirmation(
+        db,
+        "nobody@example.com",
+        mail,
+        later.background,
+        NOW,
+      );
     }
     expect(
-      await resendConfirmation(db, "nobody@example.com", mail, NOW + 10),
+      await resendConfirmation(
+        db,
+        "nobody@example.com",
+        mail,
+        later.background,
+        NOW + 10,
+      ),
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
   });
 
@@ -394,13 +681,15 @@ describe("resendConfirmation", () => {
     // different limit on purpose: a runner who has used up their confirm
     // links can still reset a password.
     const mail = fakeMail();
+    const later = inBackground();
     const hooks = authMail(db, () => mail, quiet);
     const { userId, email } = await seedUser({ isVerified: false });
 
-    await resendConfirmation(db, email, mail, NOW);
+    await resendConfirmation(db, email, mail, later.background, NOW);
+    await later.settled();
     await hooks.newAccount({ id: userId, email });
     await hooks.existingAccount({ id: userId, email });
-    await hooks.resetPassword({ id: userId, email, emailVerified: true }, "t");
+    await hooks.resetPassword({ id: userId, email }, "t");
 
     const limitRows = await db
       .select({ key: emailSendLimits.key })
@@ -413,7 +702,7 @@ describe("resendConfirmation", () => {
 });
 
 describe("authMail", () => {
-  it("confirms a new account's address, tells a registered one, and resets only a confirmed one", async () => {
+  it("confirms a new account's address, tells a registered one, and resets confirmed and unconfirmed alike", async () => {
     const mail = fakeMail();
     const reports: unknown[] = [];
     const hooks = authMail(
@@ -429,11 +718,11 @@ describe("authMail", () => {
     await hooks.newAccount({ id: fresh.userId, email: fresh.email });
     await hooks.existingAccount({ id: known.userId, email: known.email });
     await hooks.resetPassword(
-      { id: fresh.userId, email: fresh.email, emailVerified: false },
+      { id: fresh.userId, email: fresh.email },
       "unconfirmed-token",
     );
     await hooks.resetPassword(
-      { id: known.userId, email: known.email, emailVerified: true },
+      { id: known.userId, email: known.email },
       "reset-token",
     );
 
@@ -442,9 +731,11 @@ describe("authMail", () => {
     ).toStrictEqual([
       [fresh.email, "Confirm your email for dialed.run"],
       [known.email, "You already have a dialed.run account"],
+      // Unconfirmed too (owner, 2026-09-27): spending it confirms them.
+      [fresh.email, "Set a new password for dialed.run"],
       [known.email, "Set a new password for dialed.run"],
     ]);
-    expect(mail.sent[2]?.html).toContain(
+    expect(mail.sent[3]?.html).toContain(
       `${ORIGIN}/account/reset?token=reset-token`,
     );
     expect(reports).toStrictEqual([]);
@@ -469,7 +760,7 @@ describe("authMail", () => {
       hooks.existingAccount({ id: userId, email }),
     ).resolves.toBeUndefined();
     await expect(
-      hooks.resetPassword({ id: userId, email, emailVerified: true }, "t"),
+      hooks.resetPassword({ id: userId, email }, "t"),
     ).resolves.toBeUndefined();
     expect(reports).toStrictEqual([
       { surface: "verify-email", userId },
@@ -484,10 +775,7 @@ describe("authMail", () => {
     const { userId, email } = await seedUser();
     for (let n = 0; n < 7; n += 1) {
       await hooks.existingAccount({ id: userId, email });
-      await hooks.resetPassword(
-        { id: userId, email, emailVerified: true },
-        "t",
-      );
+      await hooks.resetPassword({ id: userId, email }, "t");
     }
     const subjects = mail.sent.map((message) => message.subject);
     expect(
@@ -505,7 +793,12 @@ describe("requestEmailChange", () => {
     const { userId, email } = await seedUser();
 
     expect(
-      await requestEmailChange(db, userId, "Fresh@Example.com", mail, NOW),
+      await requestEmailChange(
+        db,
+        change(userId, "Fresh@Example.com"),
+        mail,
+        NOW,
+      ),
     ).toStrictEqual({ status: "sent" });
 
     expect(mail.sent[0]).toMatchObject({
@@ -533,7 +826,12 @@ describe("requestEmailChange", () => {
     const mail = fakeMail();
     const { userId } = await seedUser({ isVerified: false });
     expect(
-      await requestEmailChange(db, userId, "new@example.com", mail, NOW),
+      await requestEmailChange(
+        db,
+        change(userId, "new@example.com"),
+        mail,
+        NOW,
+      ),
     ).toStrictEqual({ status: "unverified" });
     expect(mail.sent).toHaveLength(0);
   });
@@ -543,19 +841,68 @@ describe("requestEmailChange", () => {
     const { userId } = await seedUser();
     const other = await seedUser({ email: "held@example.com" });
     expect(
-      await requestEmailChange(db, userId, other.email, mail, NOW),
+      await requestEmailChange(db, change(userId, other.email), mail, NOW),
     ).toStrictEqual({ status: "sent" });
     expect(mail.sent).toHaveLength(0);
+  });
+
+  it("asks for the current password, and does nothing else when it is wrong", async () => {
+    const mail = fakeMail();
+    const { userId } = await seedUser();
+    const asked: string[] = [];
+
+    expect(
+      await requestEmailChange(
+        db,
+        change(userId, "taken-over@example.com", (password) => {
+          asked.push(password);
+          return Promise.resolve(false);
+        }),
+        mail,
+        NOW,
+      ),
+    ).toStrictEqual({ status: "wrong-password" });
+
+    expect(asked).toStrictEqual([TYPED]);
+    expect(mail.sent).toHaveLength(0);
+    // Not a send, so not counted against the address, and no link made.
+    expect(await db.select().from(emailSendLimits)).toHaveLength(0);
+    expect(await db.select().from(emailVerifications)).toHaveLength(0);
+  });
+
+  it("says confirm first before it asks about the password", async () => {
+    const mail = fakeMail();
+    const { userId } = await seedUser({ isVerified: false });
+    const passwordCheck = vi.fn(() => Promise.resolve(false));
+    expect(
+      await requestEmailChange(
+        db,
+        change(userId, "new@example.com", passwordCheck),
+        mail,
+        NOW,
+      ),
+    ).toStrictEqual({ status: "unverified" });
+    expect(passwordCheck).not.toHaveBeenCalled();
   });
 
   it("is limited per new address", async () => {
     const mail = fakeMail();
     const { userId } = await seedUser();
     for (let n = 0; n < 5; n += 1) {
-      await requestEmailChange(db, userId, "spam@example.com", mail, NOW);
+      await requestEmailChange(
+        db,
+        change(userId, "spam@example.com"),
+        mail,
+        NOW,
+      );
     }
     expect(
-      await requestEmailChange(db, userId, "spam@example.com", mail, NOW),
+      await requestEmailChange(
+        db,
+        change(userId, "spam@example.com"),
+        mail,
+        NOW,
+      ),
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
   });
 });
@@ -563,3 +910,52 @@ describe("requestEmailChange", () => {
 function quiet(): void {
   // these sends succeed, so there is nothing to report
 }
+
+/**
+ * The background a request hands its after-the-answer work to — collected
+ * here, so a test can look before it runs and after it has.
+ */
+function inBackground(): {
+  background: Background;
+  reports: Record<string, string>[];
+  settled: () => Promise<void>;
+} {
+  const work: Promise<unknown>[] = [];
+  const reports: Record<string, string>[] = [];
+  return {
+    background: {
+      keepAlive: (promise) => {
+        work.push(promise);
+      },
+      report: (_error, context) => {
+        reports.push(context);
+      },
+    },
+    reports,
+    settled: async () => {
+      await Promise.all(work);
+    },
+  };
+}
+
+/**
+ * An email change asked for with the right password, unless the check
+ * says otherwise.
+ */
+function change(
+  userId: string,
+  newEmail: string,
+  isOwn: (password: string) => Promise<boolean> = () => Promise.resolve(true),
+): EmailChangeRequest {
+  return {
+    userId,
+    newEmail,
+    currentPassword: TYPED,
+    isOwnPassword: isOwn,
+  };
+}
+
+/**
+Not a secret: what the change form was typed with, checked by a fake.
+*/
+const TYPED = ["the", "current", "password"].join("-");

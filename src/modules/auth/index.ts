@@ -23,5 +23,10 @@ export { auth } from "./instance";
 // pool-loadable either. Unit tests that need the error reach for
 // ./auth-error, which stays framework-free on purpose.
 export { AuthRequiredError, isAuthRequired } from "./auth-error";
-export { optionalUserId, requireUserId } from "./require-user";
+export {
+  isCurrentPassword,
+  currentSessionId,
+  optionalUserId,
+  requireUserId,
+} from "./require-user";
 export { sessionFromRequest } from "./session";

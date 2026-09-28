@@ -6,6 +6,7 @@ import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
@@ -46,6 +47,15 @@ export interface AuthConfig {
    * instance wires `account`'s `authMail`; tests a recorder.
    */
   mail: AuthMail;
+  /**
+   * Keeps the Worker alive for work the answer does not wait on — the
+   * instance wires `waitUntil`. With it, every email auth sends leaves
+   * the request path: a reset request, a sign-up and a repeat sign-up then
+   * answer in the same time whether or not the address has an account,
+   * which is what their identical bodies were promising. Without it (a
+   * test), the sends are awaited.
+   */
+  background?: ((work: Promise<unknown>) => void) | undefined;
 }
 
 /**
@@ -130,8 +140,15 @@ export function createAuth({
   plugins,
   passwordScreen,
   mail,
+  background,
 }: AuthConfig) {
   const posture = deploymentPosture(baseUrl);
+  // Better Auth's own sends go through `backgroundTasks`; the one it
+  // awaits itself — the after-create hook — through this.
+  async function later(work: Promise<void>): Promise<void> {
+    if (background === undefined) await work;
+    else background(work);
+  }
   return betterAuth({
     secret,
     telemetry: { enabled: false },
@@ -151,7 +168,13 @@ export function createAuth({
       // worth keying a limit on. Better Auth's default reads
       // X-Forwarded-For, which a client can write.
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      ...(background !== undefined && {
+        backgroundTasks: { handler: background },
+      }),
     },
+    // Reset tokens are stored as their hash, like our own email links: a
+    // leaked database hands nobody a live reset link.
+    verification: { storeIdentifier: "hashed" },
     database: drizzleAdapter(db, {
       // Equivalent mutant, and the evidence is worth keeping: a *wrong*
       // recognised provider fails loudly — building this with "mysql" and
@@ -186,6 +209,15 @@ export function createAuth({
       sendResetPassword: ({ user, token }) => mail.resetPassword(user, token),
       resetPasswordTokenExpiresIn: RESET_LINK_TTL_S,
       revokeSessionsOnPasswordReset: true,
+      // A spent reset link proves the runner reads that inbox, which is
+      // everything a confirm link proves (owner, 2026-09-27): an
+      // unconfirmed runner who resets is confirmed by it.
+      onPasswordReset: async ({ user }) => {
+        await db
+          .update(authSchema.user)
+          .set({ emailVerified: true })
+          .where(eq(authSchema.user.id, user.id));
+      },
     },
     // The confirm link goes out once the account exists. Only an email
     // sign-up needs one: Google's accounts come confirmed (round 26 #11,
@@ -194,7 +226,7 @@ export function createAuth({
       user: {
         create: {
           after: async (user) => {
-            if (!user.emailVerified) await mail.newAccount(user);
+            if (!user.emailVerified) await later(mail.newAccount(user));
           },
         },
       },

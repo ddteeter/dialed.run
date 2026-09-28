@@ -1,3 +1,4 @@
+import { CURRENT_PASSWORD_WRONG } from "../../lib/contracts";
 import type { FormFailure } from "../../ui";
 
 /**
@@ -27,7 +28,7 @@ export const AUTH_COPY = {
    * ACC-7: the current password, when it is not the account's. Placeholder
    * copy, the log-in refusal's shape (design deltas).
    */
-  currentPasswordWrong: "That password doesn't match your account.",
+  currentPasswordWrong: CURRENT_PASSWORD_WRONG,
   /**
   Au4, a server fault.
   */

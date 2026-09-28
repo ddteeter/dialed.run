@@ -18,7 +18,12 @@
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { auth } from "./instance";
-import { optionalUserIdFrom, userIdOrThrow } from "./session-user";
+import { isOwnPassword } from "./password-check";
+import {
+  optionalUserIdFrom,
+  sessionIdFrom,
+  userIdOrThrow,
+} from "./session-user";
 
 /**
  * The signed-in user's id, or `AuthRequiredError`. Server-function side
@@ -49,4 +54,24 @@ export async function optionalUserId(): Promise<string | undefined> {
   return optionalUserIdFrom(
     await auth.api.getSession({ headers: getRequestHeaders() }),
   );
+}
+
+/**
+ * The id of the session this request rides on, or `undefined` — so a
+ * change that signs out every other session can keep this one.
+ */
+export async function currentSessionId(): Promise<string | undefined> {
+  return sessionIdFrom(
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
+}
+
+/**
+ * Whether `password` is the signed-in runner's current one (ACC-8). The
+ * decision is `isOwnPassword`'s; this only hands it the request.
+ */
+export async function isCurrentPassword(
+  password: string,
+): Promise<boolean> {
+  return isOwnPassword(auth, getRequestHeaders(), password);
 }

@@ -6,9 +6,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { env, waitUntil } from "../../env";
 import { usernameInput } from "../../lib/contracts";
-import { optionalUserId, requireUserId } from "../auth";
+import {
+  isCurrentPassword,
+  currentSessionId,
+  optionalUserId,
+  requireUserId,
+} from "../auth";
 import { emailDepsFromEnv } from "../email";
 import { captureException } from "../ops";
 import { accountPage, accountView } from "./account-view";
@@ -73,7 +78,10 @@ export const optionalAccountQuery = createServerFn({ method: "GET" }).handler(
 export const resendConfirmationFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => resendInput.parse(data))
   .handler(async ({ data }) =>
-    resendConfirmation(db(), data.email, emailDepsFromEnv()),
+    resendConfirmation(db(), data.email, emailDepsFromEnv(), {
+      keepAlive: waitUntil,
+      report: captureException,
+    }),
   );
 
 /**
@@ -84,19 +92,27 @@ export const resendConfirmationFn = createServerFn({ method: "POST" })
 export const confirmEmailFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => confirmInput.parse(data))
   .handler(async ({ data }) =>
-    confirmEmail(db(), data.token, captureException),
+    confirmEmail(db(), data.token, {
+      report: captureException,
+      currentSessionId: await currentSessionId(),
+    }),
   );
 
 /**
-ACC-8: send the link that moves the account to a new address.
-*/
+ * ACC-8: send the link that moves the account to a new address, once the
+ * current password is proved.
+ */
 export const requestEmailChangeFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => changeEmailInput.parse(data))
   .handler(async ({ data }) =>
     requestEmailChange(
       db(),
-      await requireUserId(),
-      data.email,
+      {
+        userId: await requireUserId(),
+        newEmail: data.email,
+        currentPassword: data.currentPassword,
+        isOwnPassword: isCurrentPassword,
+      },
       emailDepsFromEnv(),
     ),
   );

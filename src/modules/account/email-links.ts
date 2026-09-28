@@ -9,7 +9,7 @@
  * A row per runner and purpose gives both. Only the token's SHA-256 is
  * stored.
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { DrizzleD1Database, drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
@@ -100,6 +100,10 @@ export interface ReadLink {
   readonly email: string;
   readonly expiresAt: number;
   readonly usedAt: number | undefined;
+  /**
+  The secret's hash, which a spend must still match.
+  */
+  readonly tokenHash: string;
 }
 
 export async function readEmailLink(
@@ -125,21 +129,61 @@ export async function readEmailLink(
     email: row.email,
     expiresAt: row.expiresAt,
     usedAt: row.usedAt ?? undefined,
+    tokenHash: hash,
   };
 }
 
 /**
- * The statement that spends a link, for the caller's batch: it goes with
- * the change the link authorises, or neither does.
+ * The row a spend may claim: this link, still unspent, and still the
+ * secret it was read with — a newer link issued since is a different row.
  */
-export function spendEmailLink(db: Db, link: ReadLink, now = nowSeconds()) {
-  return db
+function unspent(link: ReadLink) {
+  return and(
+    eq(emailVerifications.userId, link.userId),
+    eq(emailVerifications.purpose, link.purpose),
+    eq(emailVerifications.tokenHash, link.tokenHash),
+    isNull(emailVerifications.usedAt),
+  );
+}
+
+/**
+ * Spend a link (law 2, claim then work): `true` only for the one caller
+ * whose update claimed it. Two tabs opening the same link at once both
+ * read it unspent; only one of them may then act on it.
+ */
+export async function didClaimEmailLink(
+  db: Db,
+  link: ReadLink,
+  now = nowSeconds(),
+): Promise<boolean> {
+  const claimed = await db
     .update(emailVerifications)
     .set({ usedAt: now })
+    .where(unspent(link))
+    .returning({ userId: emailVerifications.userId });
+  return claimed.length > 0;
+}
+
+/**
+ * Hand a claimed link back, when the work it authorised did not land —
+ * so the runner's next tap tries again rather than reading "already
+ * used" for a change that never happened. Only this claim's own stamp is
+ * undone.
+ */
+export async function releaseEmailLink(
+  db: Db,
+  link: ReadLink,
+  now: number,
+): Promise<void> {
+  await db
+    .update(emailVerifications)
+    .set({ usedAt: sql`NULL` })
     .where(
       and(
         eq(emailVerifications.userId, link.userId),
         eq(emailVerifications.purpose, link.purpose),
+        eq(emailVerifications.tokenHash, link.tokenHash),
+        eq(emailVerifications.usedAt, now),
       ),
     );
 }
@@ -161,8 +205,8 @@ export async function emailConfirmationOf(
 /**
  * Whether this runner's address is confirmed (seam 7): the gate on
  * anything that trusts the address or that another runner acts on —
- * Useful, report, an email change, a reset by email. A runner who is gone
- * is not.
+ * Useful, report, an email change. (Not a reset: spending one confirms the
+ * address, D-63.) A runner who is gone is not.
  */
 export async function isVerified(
   db: DrizzleD1Database<Record<string, unknown>>,

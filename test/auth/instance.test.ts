@@ -15,24 +15,39 @@ import { sessionFromRequest } from "../../src/modules/auth/session";
  * and nobody stays signed in.
  */
 
+/**
+Any function: an option that must be wired, whatever it closes over.
+*/
+const A_FUNCTION: unknown = expect.any(Function);
+
 describe("the app auth instance", () => {
   it("is configured, not empty", () => {
     // Not the secret: the test bindings set none, which is itself the
     // reason `create-auth.ts` takes it as a parameter.
     expect(typeof auth.options.database).toBe("function");
-    expect(auth.options.emailAndPassword).toMatchObject({
+    // Whole, not a subset: an option added or dropped here changes what
+    // every sign-up, reset and password change does.
+    expect(auth.options.emailAndPassword).toStrictEqual({
       enabled: true,
       minPasswordLength: PASSWORD_MIN_LENGTH,
       autoSignIn: false,
+      // The account emails are wired (ACC-3, ACC-4).
+      onExistingUserSignUp: A_FUNCTION,
+      sendResetPassword: A_FUNCTION,
+      resetPasswordTokenExpiresIn: 3600,
+      revokeSessionsOnPasswordReset: true,
+      onPasswordReset: A_FUNCTION,
     });
-    // The account emails are wired (ACC-3, ACC-4): a deleted `mail:` line
-    // would not compile, but these say the instance's reach them.
-    expect(typeof auth.options.emailAndPassword.sendResetPassword).toBe(
-      "function",
-    );
-    expect(typeof auth.options.databaseHooks.user.create.after).toBe(
-      "function",
-    );
+    expect(auth.options.databaseHooks).toStrictEqual({
+      user: { create: { after: A_FUNCTION } },
+    });
+    expect(auth.options.verification).toStrictEqual({
+      storeIdentifier: "hashed",
+    });
+    // Every email leaves the request path in the deployed instance.
+    expect(auth.options.advanced.backgroundTasks).toStrictEqual({
+      handler: A_FUNCTION,
+    });
   });
 
   it("is built on the deployment's origin, in its production posture (OPS-4)", () => {

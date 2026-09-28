@@ -285,15 +285,32 @@ export const newPasswordSchema = z.object({ password: newPasswordField });
  * ACC-7: the current password proves it is the runner, and the new one
  * meets sign-up's floor.
  */
+/**
+ * The current password, which a change to the account asks for first
+ * (ACC-7, ACC-8). Only present: whether it matches is the server's to say,
+ * in `CURRENT_PASSWORD_WRONG`'s words.
+ */
+const currentPasswordField = z.string().min(1, "Enter your current password.");
+
+/**
+The server's refusal of a current password, on that field (ACC-7, ACC-8).
+*/
+export const CURRENT_PASSWORD_WRONG =
+  "That password doesn't match your account.";
+
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Enter your current password."),
+  currentPassword: currentPasswordField,
   password: newPasswordField,
 });
 
 /**
-ACC-8: the address the account moves to, once its link is opened.
-*/
-export const changeEmailSchema = z.object({ email: emailField });
+ * ACC-8: the address the account moves to, once its link is opened, and
+ * the current password that proves it is the runner asking.
+ */
+export const changeEmailSchema = z.object({
+  email: emailField,
+  currentPassword: currentPasswordField,
+});
 
 /**
  * The handle's length bounds (round 26 #7: "3–20 letters, numbers or _").

@@ -436,6 +436,19 @@ function renderChange(
 }
 
 const newEmailField = () => screen.getByRole("textbox", { name: "New email" });
+const currentPasswordField = () => screen.getByLabelText("Current password");
+/**
+Not a secret: typed into a form whose request is a mock.
+*/
+const PASSWORD = ["the", "current", "one"].join("-");
+
+async function fillChange(
+  user: ReturnType<typeof userEvent.setup>,
+  email: string,
+): Promise<void> {
+  await user.type(newEmailField(), email);
+  await user.type(currentPasswordField(), PASSWORD);
+}
 const sendLink = () => screen.getByRole("button", { name: "Send link" });
 
 describe("ChangeEmail (ACC-8)", () => {
@@ -445,11 +458,11 @@ describe("ChangeEmail (ACC-8)", () => {
       "Now old@example.com. We'll send a link to the new address, and the account moves when you open it.",
     );
     expect(screen.queryByRole("dialog")).toBeNull();
-    await user.type(newEmailField(), "new@example.com");
+    await fillChange(user, "new@example.com");
     await user.click(sendLink());
 
     expect(request).toHaveBeenCalledWith({
-      data: { email: "new@example.com" },
+      data: { email: "new@example.com", currentPassword: PASSWORD },
     });
     const sent = await screen.findByText(/^Sent ✓/u);
     expect(sent.closest("p")).toHaveTextContent(
@@ -467,14 +480,14 @@ describe("ChangeEmail (ACC-8)", () => {
     document.addEventListener("submit", (event) => {
       submitEvent = event;
     });
-    await user.type(newEmailField(), "new@example.com");
+    await fillChange(user, "new@example.com");
     await user.click(sendLink());
     expect(submitEvent?.defaultPrevented).toBe(true);
   });
 
   it("refuses a malformed address in the field, before the round trip", async () => {
     const { request, user } = renderChange();
-    await user.type(newEmailField(), "not-an-address");
+    await fillChange(user, "not-an-address");
     await user.click(sendLink());
     expect(
       await screen.findByText("That does not look like an email address."),
@@ -487,7 +500,7 @@ describe("ChangeEmail (ACC-8)", () => {
     const { request, user } = renderChange({
       answer: { status: "limited", until },
     });
-    await user.type(newEmailField(), "new@example.com");
+    await fillChange(user, "new@example.com");
     await user.click(sendLink());
     expect(await screen.findByText(limitedMessage(until))).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Try again" }));
@@ -496,7 +509,7 @@ describe("ChangeEmail (ACC-8)", () => {
 
   it("while unconfirmed, opens the confirm-first sheet instead of sending", async () => {
     const { request, user } = renderChange({ isVerified: false });
-    await user.type(newEmailField(), "new@example.com");
+    await fillChange(user, "new@example.com");
     await user.click(sendLink());
     expect(request).not.toHaveBeenCalled();
     const sheet = screen.getByRole("dialog", {
@@ -515,11 +528,33 @@ describe("ChangeEmail (ACC-8)", () => {
 
   it("opens the sheet when the server says the address is not confirmed", async () => {
     const { user } = renderChange({ answer: { status: "unverified" } });
-    await user.type(newEmailField(), "new@example.com");
+    await fillChange(user, "new@example.com");
     await user.click(sendLink());
     expect(
       await screen.findByRole("dialog", { name: "Confirm your email first" }),
     ).toBeVisible();
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+  });
+
+  it("asks for the current password before the round trip", async () => {
+    const { request, user } = renderChange();
+    await user.type(newEmailField(), "new@example.com");
+    await user.click(sendLink());
+    expect(
+      await screen.findByText("Enter your current password."),
+    ).toBeVisible();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("lands a wrong current password on its field, and says nothing was sent", async () => {
+    const { user } = renderChange({ answer: { status: "wrong-password" } });
+    await fillChange(user, "new@example.com");
+    await user.click(sendLink());
+    expect(
+      await screen.findByText("That password doesn't match your account."),
+    ).toBeVisible();
+    expect(currentPasswordField()).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -9,10 +9,10 @@
  * secondary email, the notice to the old address after a change, rides
  * the outbox in the same batch as the change (law 8c).
  */
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { user } from "../../db/schema-auth";
+import { session, user } from "../../db/schema-auth";
 import {
   firstColumnWhere,
   firstRowWhere,
@@ -27,11 +27,13 @@ import {
 } from "../email";
 import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
 import {
+  didClaimEmailLink,
   isVerified,
   issueEmailLink,
   readEmailLink,
-  spendEmailLink,
+  releaseEmailLink,
   type LinkPurpose,
+  type ReadLink,
 } from "./email-links";
 
 type Db = ReturnType<typeof drizzle>;
@@ -83,25 +85,36 @@ async function sendConfirmLink(
  * to an address with no account — so the page reveals nothing (round 26
  * #11, "Au3's exception is retired"). Only the limit differs, and it is
  * counted per address whether or not the address has an account.
+ *
+ * **The same answer in the same time**, too: everything after the limit
+ * — the lookup, the link, the send — runs in the background, so an
+ * address with an account is not the one that answers slower. A send that
+ * fails there is reported; the runner's next Resend is the retry.
  */
 export type ResendResult =
   | { readonly status: "sent" }
   | { readonly status: "limited"; readonly until: number };
 
-export async function resendConfirmation(
+/**
+ * Work the answer does not wait on: `waitUntil` to keep the Worker alive
+ * for it, and where a failure in it is reported (law 7).
+ */
+export interface Background {
+  readonly keepAlive: (work: Promise<unknown>) => void;
+  readonly report: Report;
+}
+
+async function sendConfirmationTo(
   db: Db,
   email: string,
   deps: EmailDeps,
-  now = nowSeconds(),
-): Promise<ResendResult> {
-  const claim = await claimEmailSend(db, "verify", email, now);
-  if (!claim.isAllowed) return { status: "limited", until: claim.until };
+): Promise<void> {
   const account = await firstRowWhere(
     db,
     user,
     eq(user.email, email.toLowerCase()),
   );
-  if (account === undefined) return { status: "sent" };
+  if (account === undefined) return;
   if (account.emailVerified) {
     await deliverEmail(
       db,
@@ -111,6 +124,36 @@ export async function resendConfirmation(
   } else {
     await sendConfirmLink(db, account, deps);
   }
+}
+
+/**
+ * The background half of a Resend: nothing awaits it, so a failure is
+ * reported here or nowhere.
+ */
+async function sendReported(
+  db: Db,
+  email: string,
+  deps: EmailDeps,
+  report: Report,
+): Promise<void> {
+  try {
+    await sendConfirmationTo(db, email, deps);
+  } catch (error) {
+    // Never the address (law 7): the surface is enough to find it.
+    report(error, { surface: "resend-confirmation" });
+  }
+}
+
+export async function resendConfirmation(
+  db: Db,
+  email: string,
+  deps: EmailDeps,
+  background: Background,
+  now = nowSeconds(),
+): Promise<ResendResult> {
+  const claim = await claimEmailSend(db, "verify", email, now);
+  if (!claim.isAllowed) return { status: "limited", until: claim.until };
+  background.keepAlive(sendReported(db, email, deps, background.report));
   return { status: "sent" };
 }
 
@@ -125,10 +168,7 @@ export async function resendConfirmation(
 export interface AuthMail {
   readonly newAccount: (account: Account) => Promise<void>;
   readonly existingAccount: (account: Account) => Promise<void>;
-  readonly resetPassword: (
-    account: Account & { readonly emailVerified: boolean },
-    token: string,
-  ) => Promise<void>;
+  readonly resetPassword: (account: Account, token: string) => Promise<void>;
 }
 
 export function authMail(
@@ -170,10 +210,9 @@ export function authMail(
       }),
     resetPassword: (account, token) =>
       quietly("reset-password-email", account.id, async () => {
-        // Reset by email waits for a confirmed address (round 26 #11): an
-        // unconfirmed one may be a typo that belongs to someone else, and
-        // this link would hand them the account.
-        if (!account.emailVerified) return;
+        // An unconfirmed runner may reset too (owner, 2026-09-27): the
+        // link goes to the address they signed up with, and spending it
+        // confirms that address (`createAuth`'s `onPasswordReset`).
         const claim = await claimEmailSend(db, "reset", account.email);
         if (!claim.isAllowed) return;
         const mail = deps();
@@ -208,21 +247,66 @@ export type Landing =
   | { readonly state: "expired" };
 
 const EXPIRED: Landing = { state: "expired" };
+const USED: Landing = { state: "used" };
+
+/**
+ * Every session of this runner's but the one named — which may be none,
+ * for a link opened where nobody is signed in.
+ */
+function otherSessionsOf(userId: string, keep: string | undefined) {
+  return keep === undefined
+    ? eq(session.userId, userId)
+    : and(eq(session.userId, userId), ne(session.id, keep));
+}
+
+/**
+ * The link's work, once it is claimed. A failure hands the link back, so
+ * the runner's next tap tries again rather than reading "already used" for
+ * a change that never landed.
+ */
+async function spendClaimed(
+  db: Db,
+  link: ReadLink,
+  now: number,
+  work: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await work();
+  } catch (error) {
+    await releaseEmailLink(db, link, now);
+    throw error;
+  }
+}
+
+export interface ConfirmOptions {
+  readonly report?: Report | undefined;
+  /**
+   * The session the link was opened in, when there is one: an email
+   * change signs every other session out, and this one stays.
+   */
+  readonly currentSessionId?: string | undefined;
+}
 
 /**
  * Spend a link. For `verify`, the account's address is confirmed; for
  * `change`, the account moves to the new address, which the link has just
- * confirmed, and the old address is told (outbox, law 8c).
+ * confirmed, the old address is told (outbox, law 8c), and every other
+ * session is signed out — whoever else holds one was signed in to the old
+ * address.
+ *
+ * Claim, then work (law 2): two tabs opening one link both read it
+ * unspent, and only the one whose claim lands acts on it. The other hears
+ * it was used.
  */
 export async function confirmEmail(
   db: Db,
   token: unknown,
-  report?: Report,
+  options: ConfirmOptions = {},
   now = nowSeconds(),
 ): Promise<Landing> {
   const link = await readEmailLink(db, token);
   if (link === undefined) return EXPIRED;
-  if (link.usedAt !== undefined) return { state: "used" };
+  if (link.usedAt !== undefined) return USED;
   if (link.expiresAt <= now) return EXPIRED;
   const current = await firstColumnWhere(
     db,
@@ -241,13 +325,13 @@ export async function confirmEmail(
   if (link.purpose === "verify") {
     // A link for an address the account has since left confirms nothing.
     if (current !== link.email) return EXPIRED;
-    await db.batch([
+    if (!(await didClaimEmailLink(db, link, now))) return USED;
+    await spendClaimed(db, link, now, () =>
       db
         .update(user)
         .set({ emailVerified: true, updatedAt })
         .where(eq(user.id, link.userId)),
-      spendEmailLink(db, link, now),
-    ]);
+    );
     return confirmed;
   }
 
@@ -255,6 +339,7 @@ export async function confirmEmail(
   // unique index would refuse the move, so say the link has run out.
   if (await hasRowWhere(db, user, user.email, eq(user.email, link.email)))
     return EXPIRED;
+  if (!(await didClaimEmailLink(db, link, now))) return USED;
   const notice = oweOutbox(
     emailDebt(
       {
@@ -264,37 +349,60 @@ export async function confirmEmail(
       { dedupeKey: `email_changed:${link.userId}:${String(now)}` },
     ),
   );
-  await db.batch([
-    db
-      .update(user)
-      .set({ email: link.email, emailVerified: true, updatedAt })
-      .where(eq(user.id, link.userId)),
-    spendEmailLink(db, link, now),
-    outboxInsert(db, notice, now),
-  ]);
-  await settleOutbox(db, notice, report);
+  await spendClaimed(db, link, now, () =>
+    db.batch([
+      db
+        .update(user)
+        .set({ email: link.email, emailVerified: true, updatedAt })
+        .where(eq(user.id, link.userId)),
+      db
+        .delete(session)
+        .where(otherSessionsOf(link.userId, options.currentSessionId)),
+      outboxInsert(db, notice, now),
+    ]),
+  );
+  await settleOutbox(db, notice, options.report);
   return confirmed;
 }
 
 /**
  * ACC-8: move the account to a new address, once the runner proves they
  * hold it. Waits for a confirmed address (round 26 #11) — `unverified` is
- * the "Confirm your email first" sheet.
+ * the "Confirm your email first" sheet — and for the account's current
+ * password: a session left open on a shared machine must not be enough to
+ * take the account's address, and with it every reset link after.
  *
  * An address that already has an account answers "sent" and is sent
  * nothing, so this form cannot be used to find out who has one.
  */
-export type ChangeResult = ResendResult | { readonly status: "unverified" };
+export type ChangeResult =
+  | ResendResult
+  | { readonly status: "unverified" }
+  | { readonly status: "wrong-password" };
+
+export interface EmailChangeRequest {
+  readonly userId: string;
+  readonly newEmail: string;
+  readonly currentPassword: string;
+  /**
+   * Whether the password is this account's — Better Auth's own check,
+   * wired by the server function (`auth`'s `isCurrentPassword`).
+   */
+  readonly isOwnPassword: (password: string) => Promise<boolean>;
+}
 
 export async function requestEmailChange(
   db: Db,
-  userId: string,
-  newEmail: string,
+  request: EmailChangeRequest,
   deps: EmailDeps,
   now = nowSeconds(),
 ): Promise<ChangeResult> {
+  const { userId } = request;
   if (!(await isVerified(db, userId))) return { status: "unverified" };
-  const email = newEmail.toLowerCase();
+  if (!(await request.isOwnPassword(request.currentPassword))) {
+    return { status: "wrong-password" };
+  }
+  const email = request.newEmail.toLowerCase();
   const claim = await claimEmailSend(db, "change", email, now);
   if (!claim.isAllowed) return { status: "limited", until: claim.until };
   if (await hasRowWhere(db, user, user.email, eq(user.email, email))) {

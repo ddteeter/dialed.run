@@ -40,6 +40,15 @@ const BASE = {
   },
 };
 
+/**
+Any function: an option that must be wired, whatever it closes over.
+*/
+const A_FUNCTION: unknown = expect.any(Function);
+
+function handler(): void {
+  // a background that collects nothing: only its presence is asserted
+}
+
 describe("googleCredentials", () => {
   it("pairs a client id with its secret", () => {
     expect(googleCredentials("id", "secret")).toStrictEqual({
@@ -80,13 +89,34 @@ describe("createAuth", () => {
   });
 
   it("enables email and password", () => {
-    expect(auth(BASE).options.emailAndPassword).toMatchObject({
+    expect(auth(BASE).options.emailAndPassword).toStrictEqual({
       enabled: true,
       // The form's floor, handed to the server: the two refuse the same
       // passwords because they read one number.
       minPasswordLength: PASSWORD_MIN_LENGTH,
       // Au4 for everyone: sign-up signs nobody in (ACC-3).
       autoSignIn: false,
+      onExistingUserSignUp: A_FUNCTION,
+      sendResetPassword: A_FUNCTION,
+      // ACC-4: an hour, and every session ends when it is spent.
+      resetPasswordTokenExpiresIn: RESET_LINK_TTL_S,
+      revokeSessionsOnPasswordReset: true,
+      onPasswordReset: A_FUNCTION,
+    });
+    expect(RESET_LINK_TTL_S).toBe(3600);
+  });
+
+  it("hands its sends to the background only when given one", () => {
+    expect(
+      auth({ ...BASE, background: handler }).options.advanced,
+    ).toStrictEqual({
+      useSecureCookies: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      backgroundTasks: { handler },
+    });
+    expect(auth(BASE).options.advanced).toStrictEqual({
+      useSecureCookies: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     });
   });
 
@@ -433,10 +463,5 @@ describe("the emails auth asks for (ACC-3, ACC-4)", () => {
     const reset = mail.calls.find((call) => call.kind === "resetPassword");
     expect(reset?.email).toBe(email);
     expect(reset?.token).toMatch(/^\w+$/u);
-    expect(instance.options.emailAndPassword).toMatchObject({
-      resetPasswordTokenExpiresIn: 3600,
-      revokeSessionsOnPasswordReset: true,
-    });
-    expect(RESET_LINK_TTL_S).toBe(3600);
   });
 });

@@ -3,6 +3,7 @@ import type { z } from "zod";
 
 import {
   changeEmailSchema,
+  CURRENT_PASSWORD_WRONG,
   changePasswordSchema,
   newPasswordSchema,
   PASSWORD_MIN_LENGTH,
@@ -116,17 +117,37 @@ describe("signUpSchema", () => {
 
 describe("the account forms (ACC-4, ACC-7, ACC-8)", () => {
   it("ask for an address the way sign-in does", () => {
+    const withPassword = { currentPassword: "x" };
     for (const schema of [resetRequestSchema, changeEmailSchema]) {
-      expect(messagesFor(schema, { email: "" }, "email")).toContain(
-        "Enter your email address.",
-      );
-      expect(messagesFor(schema, { email: "dee" }, "email")).toStrictEqual([
-        "That does not look like an email address.",
-      ]);
-      expect(schema.parse({ email: "dee@example.com" })).toStrictEqual({
-        email: "dee@example.com",
-      });
+      expect(
+        messagesFor(schema, { email: "", ...withPassword }, "email"),
+      ).toContain("Enter your email address.");
+      expect(
+        messagesFor(schema, { email: "dee", ...withPassword }, "email"),
+      ).toStrictEqual(["That does not look like an email address."]);
     }
+    expect(
+      resetRequestSchema.parse({ email: "dee@example.com" }),
+    ).toStrictEqual({ email: "dee@example.com" });
+  });
+
+  it("ask for the current password before an email change (ACC-8)", () => {
+    expect(
+      messagesFor(
+        changeEmailSchema,
+        { email: "dee@example.com", currentPassword: "" },
+        "currentPassword",
+      ),
+    ).toStrictEqual(["Enter your current password."]);
+    expect(
+      changeEmailSchema.parse({
+        email: "dee@example.com",
+        currentPassword: "x",
+      }),
+    ).toStrictEqual({ email: "dee@example.com", currentPassword: "x" });
+    expect(CURRENT_PASSWORD_WRONG).toBe(
+      "That password doesn't match your account.",
+    );
   });
 
   it("hold a new password to sign-up's floor", () => {

@@ -21,8 +21,12 @@ import { withLocalDb } from "./local-db";
  * - **the confirm link** is issued here as the app issues it — a fresh
  *   secret whose SHA-256 replaces the runner's row — and everything from
  *   opening it on is the app's own (`/account/verify`, the landing);
- * - **the reset link** is Better Auth's own token, read from its
- *   `verification` row, which is where the email's link came from;
+ * - **the reset link** is minted here, as a `verification` row of Better
+ *   Auth's own shape: the one the email carried cannot be read back,
+ *   because only its hash is stored (`storeIdentifier: "hashed"`). The
+ *   row is written with the identifier plain, which Better Auth's consume
+ *   still tries after the hashed one — so everything from opening the
+ *   link on (the page, the endpoint, the single use) is the app's own;
  * - **the unsubscribe link** is signed with the dev server's secret by the
  *   app's own signer.
  */
@@ -58,15 +62,19 @@ export async function confirmLinkFor(email: string): Promise<string> {
 
 export async function resetLinkFor(email: string): Promise<string> {
   const userId = await userIdOf(email);
-  return withLocalDb(async ({ core }) => {
-    const [row] = await core
-      .select({ identifier: verification.identifier })
-      .from(verification)
-      .where(eq(verification.value, userId));
-    const token = row?.identifier.replace(/^reset-password:/u, "");
-    if (token === undefined) throw new Error(`no reset link for ${email}`);
-    return `/account/reset?token=${encodeURIComponent(token)}`;
+  const token = randomBytes(18).toString("base64url");
+  const now = new Date();
+  await withLocalDb(async ({ core }) => {
+    await core.insert(verification).values({
+      id: randomBytes(12).toString("hex"),
+      identifier: `reset-password:${token}`,
+      value: userId,
+      expiresAt: new Date(now.getTime() + 3_600_000),
+      createdAt: now,
+      updatedAt: now,
+    });
   });
+  return `/account/reset?token=${encodeURIComponent(token)}`;
 }
 
 /**

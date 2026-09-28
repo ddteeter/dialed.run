@@ -1,7 +1,10 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { changeEmailSchema } from "../../../lib/contracts";
+import {
+  changeEmailSchema,
+  CURRENT_PASSWORD_WRONG,
+} from "../../../lib/contracts";
 import {
   FailureBand,
   FormFailureBand,
@@ -15,11 +18,23 @@ import { ConfirmEmailSheet } from "./ConfirmEmailSheet";
 import { limitedMessage } from "./ResendLink";
 
 /**
+ * The server's refusal of the current password, shaped the way
+ * `useFormSubmit` lands a field issue: the fix is in that field.
+ */
+class PasswordRefused extends Error {
+  readonly issues = [
+    { path: ["currentPassword"], message: CURRENT_PASSWORD_WRONG },
+  ];
+}
+
+/**
  * ACC-8: Settings › Account › Email (undrawn: design deltas). The account
  * moves only when the new address's link is opened, so the page says where
  * the link went and that nothing has changed yet. Waits for a confirmed
  * address (round 26 #11): the button draws at full strength and opens the
- * "Confirm your email first" sheet.
+ * "Confirm your email first" sheet. Asks for the current password, as
+ * Change password does: an open session alone must not be able to move
+ * the account's address.
  */
 export function ChangeEmail({
   current,
@@ -29,15 +44,22 @@ export function ChangeEmail({
 }: Readonly<{
   current: string;
   isVerified: boolean;
-  request: (input: { data: { email: string } }) => Promise<ChangeResult>;
+  request: (input: {
+    data: { email: string; currentPassword: string };
+  }) => Promise<ChangeResult>;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
 }>): JSX.Element {
   const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [outcome, setOutcome] = useState<ChangeResult | undefined>();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const form = useFormSubmit({
     schema: changeEmailSchema,
-    action: (values) => request({ data: values }),
+    action: async (values) => {
+      const result = await request({ data: values });
+      if (result.status === "wrong-password") throw new PasswordRefused();
+      return result;
+    },
     successMessage: "Link sent.",
     onSuccess: (result) => {
       setOutcome(result);
@@ -55,7 +77,7 @@ export function ChangeEmail({
         onSubmit={(event) => {
           event.preventDefault();
           if (isVerified) {
-            void form.submit({ email });
+            void form.submit({ email, currentPassword });
           } else {
             setIsSheetOpen(true);
           }
@@ -76,6 +98,16 @@ export function ChangeEmail({
           field={form.field}
           error={form.fieldErrors.email}
         />
+        <TextField
+          name="currentPassword"
+          label="Current password"
+          type="password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          field={form.field}
+          error={form.fieldErrors.currentPassword}
+        />
         {outcome?.status === "sent" ? (
           <p data-state="sent" className="m-0 text-body">
             <span className="font-semibold">Sent ✓</span> Open the link we sent
@@ -87,7 +119,7 @@ export function ChangeEmail({
             kicker="Not sent"
             message={limitedMessage(outcome.until)}
             onRetry={() => {
-              void form.submit({ email });
+              void form.submit({ email, currentPassword });
             }}
           />
         ) : undefined}
