@@ -155,6 +155,8 @@ describe("UnsubscribeLanding (round 27 #8)", () => {
       ),
     ).toBeVisible();
     expect(screen.getByText(/^Change every kind in/u)).toBeVisible();
+    // No band before anything has failed.
+    expect(screen.queryByText("Still subscribed")).toBeNull();
     expect(unsubscribe).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Unsubscribe" }));

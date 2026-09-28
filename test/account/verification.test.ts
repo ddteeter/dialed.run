@@ -904,7 +904,12 @@ describe("requestEmailChange", () => {
       ),
     ).toStrictEqual({ status: "sent" });
     expect(mail.sent).toHaveLength(0);
-    expect(await db.select().from(outbox)).toHaveLength(1);
+    const owed = await db.select({ key: outbox.dedupeKey }).from(outbox);
+    expect(owed).toHaveLength(1);
+    // Its own key per request, named for what it is.
+    expect(owed[0]?.key).toMatch(
+      new RegExp(`^email_change_taken:${userId}:[0-9A-Z]{26}$`, "u"),
+    );
     expect(keepAlive).toHaveBeenCalledTimes(1);
 
     await later.settled();
