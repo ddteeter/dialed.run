@@ -8,6 +8,7 @@ describe("outboxKinds", () => {
       "photo_delete",
       "entry_media_delete",
       "import_file_delete",
+      "email",
     ]);
   });
 });

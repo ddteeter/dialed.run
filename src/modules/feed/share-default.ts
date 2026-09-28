@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
+import { isUnconfirmed } from "../account";
 
 /**
  * Whether this runner's entries are public unless they say otherwise.
@@ -23,6 +24,12 @@ import { userProfiles } from "../../db/schema-core";
  * asked on review: the runner's preference changing later does not
  * retroactively republish anything, and an entry the runner made private
  * stays private through every subsequent save.
+ *
+ * **An unconfirmed runner's entries start private** (decision D-50;
+ * task 126): nothing unconfirmed reaches another runner, and confirming
+ * restores the runner's own default — it is read here, at creation, so
+ * nothing stored has to change when they confirm. Round 26 #11's "queued
+ * share" was not adopted; an entry is public or private, nothing else.
  *
  * **And sharing lives on the entry, not on the run.** `runs` has no
  * public flag at all — deliberately, because a run on its own is not a
@@ -46,5 +53,20 @@ export async function isPublicByDefault(
   // reads this as plain data instead — `Backlog.isPublicByDefault` — with
   // no insert to catch a wrong `undefined`, so the missing-profile case is
   // asserted directly (`test/feed/share-default.test.ts`).
-  return profile?.shareDefault ?? true;
+  return (
+    (profile?.shareDefault ?? true) && !(await isUnconfirmed(database, userId))
+  );
+}
+
+/**
+ * The runner's sharing choice for one entry, as it may be stored: an
+ * unconfirmed runner's entry stays private whatever the toggle said
+ * (decision D-50), so a verdict saved before confirming cannot share it.
+ */
+export async function isSharedAsChosen(
+  database: DrizzleD1Database,
+  userId: string,
+  isPublic: boolean,
+): Promise<boolean> {
+  return isPublic && !(await isUnconfirmed(database, userId));
 }

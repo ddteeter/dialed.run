@@ -18,8 +18,9 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../env";
 
 import { banUser, unbanUser } from "./bans";
-import { forceRename } from "./rename";
-import { accountCount, deskRunners } from "./runners";
+import { accountCount, forceRename, listAccounts } from "../account";
+import { placeholderHandle, renameRecord } from "./rename";
+import { deskRunners, runnersWhere } from "./runners";
 import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
 import { denyDomain } from "./denylist";
 import {
@@ -113,10 +114,16 @@ export const forceRenameAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => forceRenameInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await requireUserId());
-    return forceRename(drizzle(env.DIALED_CORE), {
+    const db = drizzle(env.DIALED_CORE);
+    return forceRename(db, {
       userId: data.userId,
+      typed: placeholderHandle(),
       reason: data.nameReason,
-      actorId,
+      recordedAs: renameRecord(db, {
+        userId: data.userId,
+        actorId,
+        reason: data.nameReason,
+      }),
     });
   });
 
@@ -128,8 +135,12 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     requireAdmin(await requireUserId());
     const db = drizzle(env.DIALED_CORE);
+    const accounts = await listAccounts(db, {
+      query: data.query,
+      only: runnersWhere(data.filter),
+    });
     return {
-      runners: await deskRunners(db, data),
+      runners: await deskRunners(db, accounts),
       total: await accountCount(db),
     };
   });

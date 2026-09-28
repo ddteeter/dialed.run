@@ -105,17 +105,32 @@ async function runCron(
       // docs/tasks/103-weather.md requirement 4/5: the hourly
       // pending-observation retry, claim-then-work at the module level.
       await retryPendingWeather();
-      return [];
+      return drainOwedEmail([]);
     }
     case "enrichment-retry": {
       const anomalies: string[] = [];
       await redispatchStalledEnrichments(anomalies);
-      return anomalies;
+      return drainOwedEmail(anomalies);
     }
     case "screening-retry": {
-      return runScreeningRetry();
+      return drainOwedEmail(await runScreeningRetry());
     }
   }
+}
+
+/**
+ * Owed email rides every hourly firing (task 126, ACC-2), not only the
+ * daily digest's drain: a reminder held back 20 minutes (task 127) should
+ * go out within the quarter hour it falls due, not the next noon, and a
+ * notice whose fast path failed should be retried within the hour. Three
+ * firings a quarter apart put a due row at most 30 minutes from its send.
+ *
+ * Each firing claims before it works (`drainOutbox`), so two overlapping
+ * firings never send one row twice.
+ */
+async function drainOwedEmail(anomalies: string[]): Promise<string[]> {
+  await drainOutbox(drizzle(env.DIALED_CORE), anomalies, { kinds: ["email"] });
+  return anomalies;
 }
 
 async function runScreeningRetry(): Promise<string[]> {

@@ -201,15 +201,64 @@
     {
       "idx": 28,
       "version": "6",
-      "when": 1790578600066,
-      "tag": "0028_add_moderation_actions",
+      "when": 1790538699878,
+      "tag": "0028_add_notification_preferences",
       "breakpoints": true
     },
     {
       "idx": 29,
       "version": "6",
-      "when": 1790578606308,
-      "tag": "0029_add_username_reset_reason",
+      "when": 1790538700235,
+      "tag": "0029_add_email_verifications_and_send_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1790538700572,
+      "tag": "0030_add_verification_identifier_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1790561874414,
+      "tag": "0031_add_outbox_sent_at_and_message_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790570967556,
+      "tag": "0032_add_password_attempts",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790602457980,
+      "tag": "0033_add_moderation_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1790602458326,
+      "tag": "0034_add_username_reset_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1790602458684,
+      "tag": "0035_add_username_history_locked_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1790602459035,
+      "tag": "0036_add_quarantined_content",
       "breakpoints": true
     }
   ]

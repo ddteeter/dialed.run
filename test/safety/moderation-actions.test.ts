@@ -1,14 +1,17 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
 import {
   entryPhotos,
   moderationActions,
   notifications,
+  outbox,
   outfitEntries,
   products,
+  quarantinedContent,
   reports,
   reviewQueue,
   runs,
@@ -26,26 +29,38 @@ import {
   decideReview,
   moderateContent,
 } from "../../src/modules/feed/moderation";
-import { photoResponse } from "../../src/modules/feed/photos";
+import {
+  photoResponse,
+  reviewerPhotoResponse,
+} from "../../src/modules/feed/photos";
 import {
   accountCount,
+  ACCOUNTS_PAGE,
+  claimUsername,
+  forceRename,
+  listAccounts,
+  prefixPattern,
+} from "../../src/modules/account";
+import {
+  AdminRequiredError,
   banUser,
   deskRunners,
-  forceRename,
   placeholderHandle,
-  prefixPattern,
+  QUARANTINE_PAGE,
+  QUARANTINE_RETENTION_SECONDS,
+  quarantinedContentFor,
   removalReasons,
   removalReasonSchema,
   removalSentence,
   removalStatements,
   renameReasonSchema,
+  renameRecord,
   runnersFilterInput,
-  RUNNERS_PAGE,
+  runnersWhere,
   takedownInput,
   unbanUser,
   unbanUserInput,
 } from "../../src/modules/safety";
-import { isUniqueViolation } from "../../src/modules/safety/rename";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -80,6 +95,17 @@ async function freshState(): Promise<void> {
 
 async function postedPhoto() {
   const author = await makeUser();
+  // A real account, so an owed email has someone to go to.
+  await core()
+    .insert(user)
+    .values({
+      id: author,
+      name: author,
+      email: `${author.toLowerCase()}@example.com`,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   const runId = await makeRun({ userId: author });
   const entryId = await makeEntry({ userId: author, runId, isPublic: true });
   const photoId = newUlid();
@@ -169,12 +195,55 @@ async function account(
   return userId;
 }
 
+/**
+The Desk's list, wired as its server function wires it.
+*/
+async function deskList(filter: {
+  query?: string | undefined;
+  filter: "all" | "reported" | "closed";
+}) {
+  const accounts = await listAccounts(core(), {
+    query: filter.query,
+    only: runnersWhere(filter.filter),
+  });
+  return deskRunners(core(), accounts);
+}
+
 async function idsFor(filter: {
   query?: string | undefined;
   filter: "all" | "reported" | "closed";
 }): Promise<string[]> {
-  const listed = await deskRunners(core(), filter);
+  const listed = await deskList(filter);
   return listed.map((runner) => runner.userId);
+}
+
+/**
+ * The email owed, as the outbox holds it. The sender is made to fail so
+ * the fast path leaves the row to read (it would otherwise send and
+ * delete it).
+ */
+async function owedEmails() {
+  const rows = await core()
+    .select({ dedupeKey: outbox.dedupeKey, payload: outbox.payload })
+    .from(outbox)
+    .where(eq(outbox.kind, "email"));
+  return rows.map((row) => {
+    const payload: unknown = JSON.parse(row.payload);
+    return { dedupeKey: row.dedupeKey, payload };
+  });
+}
+
+/**
+Runs `body` as the one admin.
+*/
+async function asAdmin<T>(admin: string, body: () => Promise<T>): Promise<T> {
+  const admins: unknown = env.ADMIN_USER_IDS;
+  Reflect.set(env, "ADMIN_USER_IDS", admin);
+  try {
+    return await body();
+  } finally {
+    Reflect.set(env, "ADMIN_USER_IDS", admins);
+  }
 }
 
 describe("the removal reasons (SAF-8's statement of reasons)", () => {
@@ -207,6 +276,12 @@ describe("the removal reasons (SAF-8's statement of reasons)", () => {
 
 describe("moderateContent: Remove deletes (SAF-5)", () => {
   beforeEach(freshState);
+  beforeEach(() => {
+    vi.spyOn(env.EMAIL, "send").mockRejectedValue(new Error("sender down"));
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it("deletes a photo's row and object, and records who, what and why", async () => {
     const { author, entryId, photoId, key } = await postedPhoto();
@@ -253,6 +328,23 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
         kind: "content_removed",
         subjectId: photoId,
         body: "A moderator removed this photo: it shows where someone lives.",
+      },
+    ]);
+    // The email is owed in the same batch (round 27 #15, `modules/email`).
+    expect(await owedEmails()).toStrictEqual([
+      {
+        dedupeKey: `content_removed:photo:${photoId}`,
+        payload: {
+          dedupeKey: `content_removed:photo:${photoId}`,
+          email: {
+            to: { userId: author },
+            template: {
+              kind: "content_removed",
+              subject: "photo",
+              reason: "it shows where someone lives",
+            },
+          },
+        },
       },
     ]);
   });
@@ -321,10 +413,217 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
     );
     expect(photo).toBe("not_found");
   });
+
+  it("answers a repeat as already removed, and writes nothing more", async () => {
+    const { author, photoId } = await postedPhoto();
+    const takedown = {
+      actorId: "desk",
+      action: "takedown",
+      subjectType: "photo",
+      subjectId: photoId,
+      reason: "copyright",
+      notice: "Acme, ref 1",
+    } as const;
+
+    expect(await moderateContent(core(), takedown, quiet)).toBe("removed");
+    expect(await moderateContent(core(), takedown, quiet)).toBe(
+      "already_removed",
+    );
+
+    expect(await auditFor(photoId)).toHaveLength(1);
+    expect(await noticesFor(author)).toHaveLength(1);
+    expect(await owedEmails()).toHaveLength(1);
+  });
 });
 
-describe("quarantine: one copy, where no route looks (SAF-5)", () => {
+describe("quarantine: silent, preserved, admin-only (SAF-5, D-70)", () => {
   beforeEach(freshState);
+
+  it("tells the uploader nothing: no bell row, no email", async () => {
+    const { author, photoId } = await postedPhoto();
+
+    await moderateContent(
+      core(),
+      {
+        actorId: "moderator",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      },
+      quiet,
+    );
+
+    expect(await noticesFor(author)).toStrictEqual([]);
+    expect(await owedEmails()).toStrictEqual([]);
+  });
+
+  it("hides the rows from every read and keeps them, with the uploader, for a year", async () => {
+    const { author, entryId, photoId, key } = await postedPhoto();
+    const [entryRow] = await core()
+      .select()
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    const before = nowSeconds();
+
+    await moderateContent(
+      core(),
+      {
+        actorId: "moderator",
+        action: "quarantine",
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+      },
+      quiet,
+    );
+
+    // Hidden: the rows every read touches are gone.
+    expect(
+      await core()
+        .select()
+        .from(outfitEntries)
+        .where(eq(outfitEntries.id, entryId)),
+    ).toStrictEqual([]);
+    expect(
+      await core()
+        .select()
+        .from(entryPhotos)
+        .where(eq(entryPhotos.entryId, entryId)),
+    ).toStrictEqual([]);
+    // Preserved: as they stood, beside the audit row that did it.
+    const [kept] = await core().select().from(quarantinedContent);
+    const [audit] = await auditFor(entryId);
+    expect(kept).toMatchObject({
+      moderationActionId: audit?.id,
+      subjectType: "entry",
+      subjectId: entryId,
+      uploaderId: author,
+      entryId,
+    });
+    expect(kept?.quarantinedAt).toBeGreaterThanOrEqual(before);
+    expect(kept?.retainUntil).toBe(
+      (kept?.quarantinedAt ?? 0) + QUARANTINE_RETENTION_SECONDS,
+    );
+    expect(QUARANTINE_RETENTION_SECONDS).toBe(31_536_000);
+    expect(JSON.parse(kept?.entrySnapshot ?? "")).toStrictEqual({
+      entry: [entryRow],
+      items: [],
+      tags: [],
+    });
+    const [photo] = z
+      .array(
+        z.object({
+          id: z.string(),
+          photoKey: z.string(),
+          preservedKey: z.string(),
+          uploadedAt: z.number(),
+          screenStatus: z.string(),
+        }),
+      )
+      .parse(JSON.parse(kept?.photosSnapshot ?? ""));
+    expect(photo).toMatchObject({
+      id: photoId,
+      photoKey: key,
+      preservedKey: quarantineKeyFor(key),
+      screenStatus: "pass",
+    });
+    expect(photo?.uploadedAt).toBeGreaterThanOrEqual(before - 60);
+  });
+
+  it("keeps only the photo in scope, and says when a copy had no bytes", async () => {
+    const { entryId, photoId, key } = await postedPhoto();
+    const otherId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: otherId,
+        entryId,
+        photoKey: `${key}-other`,
+        position: 1,
+        screenStatus: "pass",
+      });
+    await env.MEDIA.delete(key);
+
+    await moderateContent(
+      core(),
+      {
+        actorId: "moderator",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      },
+      quiet,
+    );
+
+    const [kept] = await core().select().from(quarantinedContent);
+    const photos = z
+      .array(z.looseObject({ id: z.string(), photoKey: z.string() }))
+      .parse(JSON.parse(kept?.photosSnapshot ?? ""));
+    expect(photos).toMatchObject([{ id: photoId, photoKey: key }]);
+    expect(photos[0]).not.toHaveProperty("preservedKey");
+    expect(photos[0]).not.toHaveProperty("uploadedAt");
+  });
+
+  it("is an admin's alone: the record, and the bytes", async () => {
+    const { author, photoId, key } = await postedPhoto();
+    const admin = await makeUser();
+    await moderateContent(
+      core(),
+      {
+        actorId: admin,
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      },
+      quiet,
+    );
+
+    await expect(quarantinedContentFor(core(), author)).rejects.toThrow(
+      AdminRequiredError,
+    );
+    const refused = await reviewerPhotoResponse(quarantineKeyFor(key), author);
+    expect(refused.status).toBe(404);
+    const viaRoute = await photoResponse(quarantineKeyFor(key), author);
+    expect(viaRoute.status).toBe(404);
+    const original = await photoResponse(key, author);
+    expect(original.status).toBe(404);
+
+    await asAdmin(admin, async () => {
+      const records = await quarantinedContentFor(core(), admin);
+      expect(records.map((record) => record.subjectId)).toStrictEqual([
+        photoId,
+      ]);
+      const served = await reviewerPhotoResponse(quarantineKeyFor(key), admin);
+      expect(served.status).toBe(200);
+    });
+  });
+
+  it("reads the newest first, a page at a time", async () => {
+    const admin = await makeUser();
+    const rows = Array.from({ length: QUARANTINE_PAGE + 1 }, (_, index) => ({
+      id: newUlid(),
+      moderationActionId: newUlid(),
+      subjectType: "photo" as const,
+      subjectId: `p${String(index)}`,
+      uploaderId: "u",
+      entryId: "e",
+      entrySnapshot: "{}",
+      photosSnapshot: "[]",
+      quarantinedAt: index,
+      retainUntil: index,
+    }));
+    for (const row of rows) await core().insert(quarantinedContent).values(row);
+
+    const records = await asAdmin(admin, () =>
+      quarantinedContentFor(core(), admin),
+    );
+    expect(records).toHaveLength(QUARANTINE_PAGE);
+    expect(records[0]?.subjectId).toBe(`p${String(QUARANTINE_PAGE)}`);
+    expect(QUARANTINE_PAGE).toBe(100);
+  });
 
   it("keeps one object under the quarantine prefix, and nothing under entries/", async () => {
     const { author, entryId, photoId, key } = await postedPhoto();
@@ -741,7 +1040,59 @@ describe("runnersFilterInput (D8's search and filter)", () => {
   });
 });
 
-describe("forceRename (round 27 #16)", () => {
+/**
+The Desk's rename, wired as its server function wires it.
+*/
+async function rename(
+  userId: string,
+  typed: string,
+  db: ReturnType<typeof core> = core(),
+) {
+  return forceRename(db, {
+    userId,
+    typed,
+    reason: "Offensive or sexual",
+    recordedAs: renameRecord(db, {
+      userId,
+      actorId: "op",
+      reason: "Offensive or sexual",
+    }),
+  });
+}
+
+async function historyOf(username: string) {
+  return core()
+    .select({
+      userId: usernameHistory.userId,
+      lockedAt: usernameHistory.lockedAt,
+    })
+    .from(usernameHistory)
+    .where(eq(usernameHistory.username, username));
+}
+
+/**
+ * A handle whose first batch (the read that decides) runs and whose second
+ * (the write) fails with `message`.
+ */
+function failingOnWrite(message: string) {
+  const real = core();
+  const counter = { batches: 0 };
+  // The first batch is the read that decides; the second writes.
+  const batch: typeof real.batch = async (items) => {
+    counter.batches += 1;
+    if (counter.batches === 1) return real.batch(items);
+    throw new Error(message);
+  };
+  return new Proxy(real, {
+    get(target, property, receiver): unknown {
+      return property === "batch"
+        ? batch
+        : Reflect.get(target, property, receiver);
+    },
+  });
+}
+
+describe("forceRename (round 27 #16), through account's rules", () => {
   beforeEach(freshState);
 
   it("pads the placeholder to four digits, and draws one at random", () => {
@@ -750,26 +1101,19 @@ describe("forceRename (round 27 #16)", () => {
     expect(placeholderHandle()).toMatch(/^runner_\d{4}$/u);
   });
 
-  it("swaps the handle, retires the old one, owes a re-pick and records it", async () => {
+  it("swaps the handle, locks the old one, owes a re-pick and records it", async () => {
     const runner = await makeUser({ username: "rudename" });
 
-    const outcome = await forceRename(core(), {
-      userId: runner,
-      actorId: "op",
-      reason: "Offensive or sexual",
-      replacement: "runner_4821",
-    });
+    const outcome = await rename(runner, "runner_4821");
 
     expect(outcome).toStrictEqual({ kind: "renamed", username: "runner_4821" });
     expect(await profileOf(runner)).toStrictEqual({
       username: "runner_4821",
       reason: "Offensive or sexual",
     });
-    const [retired] = await core()
-      .select({ userId: usernameHistory.userId })
-      .from(usernameHistory)
-      .where(eq(usernameHistory.username, "rudename"));
+    const [retired] = await historyOf("rudename");
     expect(retired?.userId).toBe(runner);
+    expect(retired?.lockedAt).toBeTypeOf("number");
     const [audit] = await auditFor(runner);
     expect(audit).toMatchObject({
       action: "rename",
@@ -778,30 +1122,77 @@ describe("forceRename (round 27 #16)", () => {
       // content — the audit's `subjectType` is what a reviewer later reads
       // to tell those apart.
       subjectType: "profile",
+      subjectOwnerId: runner,
       reason: "Offensive or sexual (was @rudename)",
     });
   });
 
-  it("collides only on the unique-handle index, and lets anything else through", () => {
-    // The batch's catch exists for one real failure: two concurrent
-    // renames racing the unique-handle index. Any other D1 failure must
-    // still surface as an error rather than being reported as a placeholder
-    // collision, which is why this is asserted on both sides.
-    expect(
-      isUniqueViolation(
-        new Error("D1_ERROR: UNIQUE constraint failed: user_profiles.username"),
-      ),
-    ).toBe(true);
-    expect(
-      isUniqueViolation(
-        new Error(
-          "D1_ERROR: NOT NULL constraint failed: user_profiles.user_id",
-        ),
-      ),
-    ).toBe(false);
+  it("retires the offending handle for everyone, its former holder included", async () => {
+    const runner = await makeUser({ username: "rudename" });
+    const other = await makeUser({ username: "someone_else" });
+    await rename(runner, "runner_0100");
+
+    expect(await claimUsername(core(), runner, "rudename")).toMatchObject({
+      kind: "taken",
+    });
+    expect(await claimUsername(core(), other, "rudename")).toMatchObject({
+      kind: "taken",
+    });
+    const renamed = await profileOf(runner);
+    expect(renamed?.username).toBe("runner_0100");
+    // The lock outlives the runner's later changes of their own.
+    expect(await claimUsername(core(), runner, "fresh_pick")).toStrictEqual({
+      kind: "claimed",
+      username: "fresh_pick",
+    });
+    expect(await claimUsername(core(), runner, "rudename")).toMatchObject({
+      kind: "taken",
+    });
+    expect(await historyOf("rudename")).toHaveLength(1);
   });
 
-  it("refuses a placeholder someone gave up, or holds, and writes nothing", async () => {
+  it("still lets a runner take back a handle they gave up themselves", async () => {
+    const runner = await makeUser({ username: "first" });
+    await claimUsername(core(), runner, "second");
+
+    expect(await claimUsername(core(), runner, "first")).toStrictEqual({
+      kind: "claimed",
+      username: "first",
+    });
+    expect(await historyOf("first")).toStrictEqual([]);
+  });
+
+  it("can hand the runner one of their own unlocked old handles", async () => {
+    const runner = await makeUser({ username: "first" });
+    await claimUsername(core(), runner, "rudename");
+
+    expect(await rename(runner, "first")).toStrictEqual({
+      kind: "renamed",
+      username: "first",
+    });
+    expect(await historyOf("first")).toStrictEqual([]);
+    const [locked] = await historyOf("rudename");
+    expect(locked?.lockedAt).toBeTypeOf("number");
+  });
+
+  it("locks a handle already in the history rather than failing on it", async () => {
+    const runner = await makeUser({ username: "rudename" });
+    // A history row for the current handle is not a state a claim leaves,
+    // but a lock must still land on it.
+    await core().insert(usernameHistory).values({
+      username: "rudename",
+      userId: runner,
+      retiredAt: 1,
+    });
+
+    expect(await rename(runner, "runner_0200")).toMatchObject({
+      kind: "renamed",
+    });
+    const [row] = await historyOf("rudename");
+    expect(row?.lockedAt).toBeTypeOf("number");
+  });
+
+  it("refuses a handle someone gave up, holds, or that is reserved or malformed, and writes nothing", async () => {
     const runner = await makeUser({ username: "rudename" });
     await core().insert(usernameHistory).values({
       username: "runner_0001",
@@ -810,55 +1201,41 @@ describe("forceRename (round 27 #16)", () => {
     });
     await makeUser({ username: "runner_0002" });
 
-    expect(
-      await forceRename(core(), {
-        userId: runner,
-        actorId: "op",
-        reason: "Advertising",
-        replacement: "runner_0001",
-      }),
-    ).toStrictEqual({ kind: "collided" });
-    expect(
-      await forceRename(core(), {
-        userId: runner,
-        actorId: "op",
-        reason: "Advertising",
-        replacement: "runner_0002",
-      }),
-    ).toStrictEqual({ kind: "collided" });
+    for (const typed of [
+      "runner_0001",
+      "runner_0002",
+      "dialed_team",
+      "Not A Handle!",
+      "rudename",
+    ]) {
+      expect(await rename(runner, typed)).toStrictEqual({ kind: "taken" });
+    }
     const unchanged = await profileOf(runner);
     expect(unchanged?.username).toBe("rudename");
+    expect(unchanged?.reason ?? undefined).toBeUndefined();
+    expect(await auditFor(runner)).toStrictEqual([]);
+    expect(await historyOf("rudename")).toStrictEqual([]);
   });
 
-  it("lets any other failure of the write through", async () => {
+  it("answers taken when the handle index refuses a race, and lets anything else through", async () => {
     const runner = await makeUser({ username: "rudename" });
-    const real = core();
-    const failing = new Proxy(real, {
-      get(target, property, receiver): unknown {
-        return property === "batch"
-          ? () => Promise.reject(new Error("D1 is down"))
-          : Reflect.get(target, property, receiver);
-      },
-    });
 
+    expect(
+      await rename(
+        runner,
+        "runner_0003",
+        failingOnWrite("UNIQUE constraint failed: user_profiles.username"),
+      ),
+    ).toStrictEqual({ kind: "taken" });
     await expect(
-      forceRename(failing, {
-        userId: runner,
-        actorId: "op",
-        reason: "Advertising",
-        replacement: "runner_0003",
-      }),
+      rename(runner, "runner_0003", failingOnWrite("D1 is down")),
     ).rejects.toThrow("D1 is down");
   });
 
   it("answers not found for a runner with no handle", async () => {
-    expect(
-      await forceRename(core(), {
-        userId: "nobody",
-        actorId: "op",
-        reason: "Advertising",
-      }),
-    ).toStrictEqual({ kind: "not_found" });
+    expect(await rename("nobody", "runner_0004")).toStrictEqual({
+      kind: "not_found",
+    });
   });
 });
 
@@ -896,7 +1273,7 @@ describe("deskRunners, D8 (round 27 #22)", () => {
       ]);
     await banUser({ userId: newer, reason: "Spam", bannedBy: "op" });
 
-    const listed = await deskRunners(core(), { filter: "all" });
+    const listed = await deskList({ filter: "all" });
 
     expect(listed).toStrictEqual([
       {
@@ -939,7 +1316,7 @@ describe("deskRunners, D8 (round 27 #22)", () => {
 
   it("escapes LIKE's wildcards and its escape", () => {
     expect(prefixPattern("A_b%c\\")).toBe(String.raw`a\_b\%c\\%`);
-    expect(RUNNERS_PAGE).toBe(100);
+    expect(ACCOUNTS_PAGE).toBe(100);
   });
 
   it("only strips a leading @, never one buried in the middle", async () => {
@@ -963,17 +1340,19 @@ describe("deskRunners, D8 (round 27 #22)", () => {
     ]);
   });
 
+  it("adds nothing, and reads nothing, for no accounts", async () => {
+    expect(await deskRunners(core(), [])).toStrictEqual([]);
+  });
+
   it("stops at a page", async () => {
-    for (let index = 0; index < RUNNERS_PAGE + 1; index += 1) {
+    for (let index = 0; index < ACCOUNTS_PAGE + 1; index += 1) {
       await account(
         `r${String(index)}@example.com`,
         `r${String(index)}`,
         index,
       );
     }
-    expect(await deskRunners(core(), { filter: "all" })).toHaveLength(
-      RUNNERS_PAGE,
-    );
+    expect(await deskList({ filter: "all" })).toHaveLength(ACCOUNTS_PAGE);
   });
 });
 

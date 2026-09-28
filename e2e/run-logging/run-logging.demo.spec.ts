@@ -82,6 +82,22 @@ function clockOf(epochSeconds: number): string {
   return clockLabel(epochSeconds, CHICAGO);
 }
 
+/**
+ * "Now" for this journey. `DEMO_CLOCK_UTC=HH:MM` pins it to the most recent
+ * instant at that UTC time of day, so an hour-dependent failure can be
+ * reproduced on demand rather than waited for.
+ */
+function demoNow(): number {
+  const real = nowSeconds();
+  const pin = /^(?<h>\d{2}):(?<m>\d{2})$/u.exec(
+    process.env.DEMO_CLOCK_UTC ?? "",
+  );
+  if (pin?.groups === undefined) return real;
+  const offset = Number(pin.groups.h) * 3600 + Number(pin.groups.m) * 60;
+  const today = Math.floor(real / 86_400) * 86_400 + offset;
+  return today <= real ? today : today - 86_400;
+}
+
 function hhmmOf(epochSeconds: number): string {
   return timeOfDay(epochSeconds, CHICAGO);
 }
@@ -108,7 +124,16 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
   // The file's start, and the two corrections A1 is shown: an hour with a
   // seeded observation, and one with none (no provider key locally, so it
   // is refused, which is the point of the beat).
-  const fileStart = (Math.floor(nowSeconds() / 3600) - 5) * 3600 + 4 * 60;
+  //
+  // All three on one Chicago day. A correction moves the time and never
+  // the date (round 26, #1), so "00:04" typed against an 11:04 PM start
+  // means 00:04 that same morning, 23 hours earlier — not the hour after.
+  // Five hours back from 09:0x UTC lands on 11:04 PM CDT, and the demo
+  // failed there. So a start later than 9:04 PM steps back until both
+  // corrections still fall before midnight.
+  const latestStart = (Math.floor(demoNow() / 3600) - 5) * 3600 + 4 * 60;
+  const hoursPastNine = Number(hhmmOf(latestStart).slice(0, 2)) - 21;
+  const fileStart = latestStart - Math.max(0, hoursPastNine) * 3600;
   const movedStart = fileStart + 3600;
   const noWeatherStart = fileStart + 2 * 3600;
   const observations = [

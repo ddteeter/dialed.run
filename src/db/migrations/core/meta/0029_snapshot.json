@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cbbeecd1-ecdb-431f-9e84-f50628f6b106",
-  "prevId": "82c55b96-97cc-4bc8-a55e-73bd30e90384",
+  "id": "8e16dca0-f8f3-4efe-906a-a2644f4e2bc1",
+  "prevId": "59a0637b-2362-49b7-b51d-f574a851cc5b",
   "tables": {
     "blocks": {
       "name": "blocks",
@@ -155,6 +155,98 @@
         }
       },
       "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "email_send_limits": {
+      "name": "email_send_limits",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "window_started_at": {
+          "name": "window_started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sends": {
+          "name": "sends",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "email_verifications": {
+      "name": "email_verifications",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "email_verifications_pk": {
+          "name": "email_verifications_pk",
+          "columns": [
+            "user_id",
+            "purpose"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -379,67 +471,32 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "moderation_actions": {
-      "name": "moderation_actions",
+    "notification_preferences": {
+      "name": "notification_preferences",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "actor_id": {
-          "name": "actor_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "action": {
-          "name": "action",
+        "kind": {
+          "name": "kind",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "subject_type": {
-          "name": "subject_type",
-          "type": "text",
+        "email": {
+          "name": "email",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "subject_id": {
-          "name": "subject_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "subject_owner_id": {
-          "name": "subject_owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "preserved_key": {
-          "name": "preserved_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -447,21 +504,13 @@
         }
       },
       "indexes": {
-        "moderation_actions_subject": {
-          "name": "moderation_actions_subject",
+        "notification_preferences_pk": {
+          "name": "notification_preferences_pk",
           "columns": [
-            "subject_type",
-            "subject_id"
+            "user_id",
+            "kind"
           ],
-          "isUnique": false
-        },
-        "moderation_actions_owner": {
-          "name": "moderation_actions_owner",
-          "columns": [
-            "subject_owner_id",
-            "created_at"
-          ],
-          "isUnique": false
+          "isUnique": true
         }
       },
       "foreignKeys": {},
@@ -1616,13 +1665,6 @@
         },
         "ban_reason": {
           "name": "ban_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "username_reset_reason": {
-          "name": "username_reset_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

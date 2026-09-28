@@ -207,7 +207,7 @@ describe("Rename (round 27 #16)", () => {
     expect(renameMessage({ kind: "renamed", username: "runner_0042" })).toBe(
       "Renamed to @runner_0042.",
     );
-    expect(renameMessage({ kind: "collided" })).toBe(
+    expect(renameMessage({ kind: "taken" })).toBe(
       "That placeholder is taken. Press Rename again.",
     );
     expect(renameMessage({ kind: "not_found" })).toBe(
@@ -559,6 +559,9 @@ describe("Takedown (SAF-6)", () => {
   it("tells the operator each outcome", () => {
     expect(takedownMessage("removed")).toBe(
       "Taken down. The runner has been told, and the notice is on record.",
+    );
+    expect(takedownMessage("already_removed")).toBe(
+      "Already taken down. Nothing more was sent or recorded.",
     );
     expect(takedownMessage("not_found")).toBe(
       "Nothing has that id. Check it against the notice.",

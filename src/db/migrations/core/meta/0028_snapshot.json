@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "82c55b96-97cc-4bc8-a55e-73bd30e90384",
+  "id": "59a0637b-2362-49b7-b51d-f574a851cc5b",
   "prevId": "a5fe19d9-2c81-430b-bf2d-b33fc98f7196",
   "tables": {
     "blocks": {
@@ -379,67 +379,32 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "moderation_actions": {
-      "name": "moderation_actions",
+    "notification_preferences": {
+      "name": "notification_preferences",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "actor_id": {
-          "name": "actor_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "action": {
-          "name": "action",
+        "kind": {
+          "name": "kind",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "subject_type": {
-          "name": "subject_type",
-          "type": "text",
+        "email": {
+          "name": "email",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "subject_id": {
-          "name": "subject_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "subject_owner_id": {
-          "name": "subject_owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "preserved_key": {
-          "name": "preserved_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -447,21 +412,13 @@
         }
       },
       "indexes": {
-        "moderation_actions_subject": {
-          "name": "moderation_actions_subject",
+        "notification_preferences_pk": {
+          "name": "notification_preferences_pk",
           "columns": [
-            "subject_type",
-            "subject_id"
+            "user_id",
+            "kind"
           ],
-          "isUnique": false
-        },
-        "moderation_actions_owner": {
-          "name": "moderation_actions_owner",
-          "columns": [
-            "subject_owner_id",
-            "created_at"
-          ],
-          "isUnique": false
+          "isUnique": true
         }
       },
       "foreignKeys": {},

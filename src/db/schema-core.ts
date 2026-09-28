@@ -8,6 +8,7 @@
 import { sql } from "drizzle-orm";
 
 import { colorNames, garmentVisibilities } from "../lib/contracts";
+import { EMAIL_PREFERENCE_KINDS } from "../lib/email";
 import {
   index,
   integer,
@@ -75,7 +76,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
  *
  * **Never reclaimable by another runner.** A retired handle stays here, so
  * the old link can never start pointing at a different person. Its own
- * runner may take it back, which deletes the row.
+ * runner may take it back, which deletes the row — unless it is locked.
  */
 export const usernameHistory = /*#__PURE__*/ sqliteTable(
   "username_history",
@@ -83,12 +84,95 @@ export const usernameHistory = /*#__PURE__*/ sqliteTable(
     username: text("username").primaryKey(),
     userId: text("user_id").notNull(),
     retiredAt: integer("retired_at").notNull(),
+    // Set when a moderator took the handle away (task 128, round 27 #16):
+    // a locked handle is refused to **everyone**, its former holder
+    // included, so a force-rename cannot be undone from Settings. Null for
+    // a handle the runner gave up themselves.
+    lockedAt: integer("locked_at"),
   },
   (t) => [
     // Account deletion's read: every handle one runner held.
     index("username_history_user").on(t.userId),
   ],
 );
+
+/**
+ * A runner's email switches (task 126, ACC-11; decision D-43; round 26
+ * #19), one row per runner and kind they have touched. **No row means the
+ * default**, which for the one kind today — the Strava run reminder — is
+ * on. Transactional emails have no kind here and no switch: they are
+ * always sent. There is no push column: PWA push is out of scope
+ * (decision D-44).
+ *
+ * Read at send time by `modules/email`, and by task 127's reminder before
+ * it owes one.
+ */
+export const notificationPreferences = /*#__PURE__*/ sqliteTable(
+  "notification_preferences",
+  {
+    userId: text("user_id").notNull(),
+    kind: text("kind", { enum: EMAIL_PREFERENCE_KINDS }).notNull(),
+    email: integer("email", { mode: "boolean" }).notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("notification_preferences_pk").on(t.userId, t.kind)],
+);
+
+/**
+ * The live link for confirming an address (task 126, ACC-3 and ACC-8), one
+ * per runner and purpose: `verify` confirms the address the account was
+ * made with, `change` moves the account to a new one.
+ *
+ * **One row, so one live link.** Sending another replaces the hash, which
+ * is what makes "the old one no longer works" true (round 26 #11) — Better
+ * Auth's own verification tokens are signed and stateless, and cannot be
+ * withdrawn. Only the SHA-256 of the token is kept, so a read of this
+ * table cannot confirm an address. `used_at` is what tells "already
+ * confirmed" (a used link) from "run out" (an expired or replaced one).
+ */
+export const emailVerifications = /*#__PURE__*/ sqliteTable(
+  "email_verifications",
+  {
+    userId: text("user_id").notNull(),
+    purpose: text("purpose", { enum: ["verify", "change"] }).notNull(),
+    // The address the link confirms: the account's own for `verify`, the
+    // new one for `change`. A `verify` link for an address the account
+    // has since left confirms nothing.
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+  },
+  (t) => [uniqueIndex("email_verifications_pk").on(t.userId, t.purpose)],
+);
+
+/**
+ * How many emails of one kind an address has been sent this hour (round
+ * 26 #11: "That's 5 links this hour. You can send another at {time}.").
+ *
+ * **Keyed by the address, not the account**, and counted whether or not
+ * the address has one: a limit that only an existing account could hit
+ * would tell whoever hit it that the account exists — the thing Au4 is
+ * drawn to never reveal. The key is `{kind}:{address}`.
+ */
+export const emailSendLimits = /*#__PURE__*/ sqliteTable("email_send_limits", {
+  key: text("key").primaryKey(),
+  windowStartedAt: integer("window_started_at").notNull(),
+  sends: integer("sends").notNull(),
+});
+
+/**
+ * How many times a signed-in runner has tried their current password this
+ * window (ACC-8's email change). Better Auth's own limiter counts HTTP
+ * requests; a server-side `auth.api.verifyPassword` call never passes
+ * through it, so without this a session holder could guess the password
+ * without limit. One row per runner, cleared by a right answer.
+ */
+export const passwordAttempts = /*#__PURE__*/ sqliteTable("password_attempts", {
+  userId: text("user_id").primaryKey(),
+  windowStartedAt: integer("window_started_at").notNull(),
+  attempts: integer("attempts").notNull(),
+});
 
 export const brands = /*#__PURE__*/ sqliteTable(
   "brands",
@@ -582,6 +666,12 @@ export const outbox = /*#__PURE__*/ sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: integer("next_attempt_at").notNull(),
     createdAt: integer("created_at").notNull(),
+    // Task 126 (PR #119 review): when an email row's send landed, and the
+    // id the sender gave it. Written in one statement right after the
+    // send, before the delete — a row that has it was sent, and the drain
+    // deletes it rather than sending again.
+    sentAt: integer("sent_at"),
+    messageId: text("message_id"),
   },
   (t) => [
     uniqueIndex("outbox_kind_dedupe").on(t.kind, t.dedupeKey),
@@ -824,5 +914,44 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
   (t) => [
     index("moderation_actions_subject").on(t.subjectType, t.subjectId),
     index("moderation_actions_owner").on(t.subjectOwnerId, t.createdAt),
+  ],
+);
+
+/**
+ * Suspected CSAM, held for the owner's report to NCMEC (task 128 · SAF-5;
+ * decision D-70). A quarantine deletes the entry or photo from every table
+ * a read touches — which is what hides it at once, from everyone, with no
+ * filter to forget — and moves what it was here first: the rows as they
+ * stood, the uploader, and where the bytes were copied to.
+ *
+ * **Locked and admin-only.** Nothing updates or deletes a row, no runner-
+ * facing read joins this table, and its one read (`quarantinedContent` in
+ * `modules/safety`) refuses anyone but an admin. `retainUntil` is a year
+ * after the quarantine; nothing purges on it yet (deployment plan §8).
+ * No foreign keys, on purpose: deleting the account must not take the
+ * evidence with it.
+ */
+export const quarantinedContent = /*#__PURE__*/ sqliteTable(
+  "quarantined_content",
+  {
+    id: text("id").primaryKey(),
+    // The audit row that records who quarantined it and why.
+    moderationActionId: text("moderation_action_id").notNull(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    uploaderId: text("uploader_id").notNull(),
+    entryId: text("entry_id").notNull(),
+    // JSON: the entry row, its items and its tags, as they stood.
+    entrySnapshot: text("entry_snapshot").notNull(),
+    // JSON: each photo row, where its bytes were copied to, and when R2
+    // says they were uploaded.
+    photosSnapshot: text("photos_snapshot").notNull(),
+    quarantinedAt: integer("quarantined_at").notNull(),
+    retainUntil: integer("retain_until").notNull(),
+  },
+  (t) => [
+    // The admin read, newest first; and a purge, when one exists, by date.
+    index("quarantined_content_quarantined").on(t.quarantinedAt),
+    index("quarantined_content_retain").on(t.retainUntil),
   ],
 );

@@ -108,22 +108,6 @@ describe("required configuration (OPS-4)", () => {
     expect(report.ok).toBe(false);
   });
 
-  it("names a missing PHOTO_URL_SECRET beside it (SAF-7)", async () => {
-    const secret: unknown = env.PHOTO_URL_SECRET;
-    Reflect.deleteProperty(env, "BETTER_AUTH_URL");
-    Reflect.deleteProperty(env, "PHOTO_URL_SECRET");
-    try {
-      const report = await checkHealth();
-      expect(report.missing).toStrictEqual([
-        "BETTER_AUTH_URL",
-        "PHOTO_URL_SECRET",
-      ]);
-      expect(report.ok).toBe(false);
-    } finally {
-      Reflect.set(env, "PHOTO_URL_SECRET", secret);
-    }
-  });
-
   it("treats an empty BETTER_AUTH_URL as missing", async () => {
     Reflect.set(env, "BETTER_AUTH_URL", "");
 
@@ -144,5 +128,22 @@ describe("required configuration (OPS-4)", () => {
       media: "ok",
     });
     expect(report.ok).toBe(true);
+  });
+});
+
+describe("the unsubscribe secret (task 126)", () => {
+  const ORIGINAL: unknown = env.UNSUBSCRIBE_SECRET;
+
+  afterEach(() => {
+    Reflect.set(env, "UNSUBSCRIBE_SECRET", ORIGINAL);
+  });
+
+  it("names a missing UNSUBSCRIBE_SECRET, and is not healthy without it", async () => {
+    Reflect.deleteProperty(env, "UNSUBSCRIBE_SECRET");
+
+    const report = await checkHealth();
+
+    expect(report.missing).toStrictEqual(["UNSUBSCRIBE_SECRET"]);
+    expect(report.ok).toBe(false);
   });
 });

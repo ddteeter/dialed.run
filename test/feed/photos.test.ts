@@ -10,7 +10,6 @@ import {
   entryPhotoIdOf,
   entryPhotoKeyFor,
   entryPhotoPrefix,
-  quarantineKeyFor,
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { imageDimensions } from "../../src/lib/photo-pipeline";
@@ -22,8 +21,6 @@ import {
   isPhotoVisible,
   photoResponse,
   photoUploadFrom,
-  reviewerPhotoResponse,
-  signedQueryOf,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
 import {
@@ -557,7 +554,7 @@ describe("photoResponse: the whole cached GET, in one function", () => {
     const refused = await photoResponse(key, undefined);
     expect(refused.status).toBe(404);
     const served = await photoResponse(key, await makeUser());
-    expect(served.status).toBe(302);
+    expect(served.status).toBe(200);
   });
 
   it("says not found when there is no key at all", async () => {
@@ -587,139 +584,5 @@ describe("photoResponse: the whole cached GET, in one function", () => {
 
     const gone = await photoResponse(key, userId);
     expect(gone.status).toBe(404);
-  });
-});
-
-describe("signed URLs for shared photos (SAF-7, D-46)", () => {
-  beforeEach(resetTables);
-
-  const NOW = 1_800_000_000; // a quarter-hour boundary
-
-  async function redirectFor(key: string, viewer: string) {
-    const response = await photoResponse(key, viewer, undefined, NOW);
-    const location = response.headers.get("location") ?? "";
-    return {
-      response,
-      signed: signedQueryOf(`https://dialed.test${location}`),
-    };
-  }
-
-  it("sends a signed-in stranger to a signed URL, itself private and shorter-lived", async () => {
-    const { key } = await ownedPhoto(true);
-    const { response, signed } = await redirectFor(key, await makeUser());
-
-    expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toMatch(
-      new RegExp(
-        String.raw`^/feed/photo/${key}\?e=${String(NOW + 1800)}&s=[\w-]+$`,
-        "u",
-      ),
-    );
-    // The URL lives 1800s; the redirect one bucket less.
-    expect(response.headers.get("cache-control")).toBe("private, max-age=900");
-    expect(signed.expires).toBe(String(NOW + 1800));
-  });
-
-  it("serves the signed URL to anyone, publicly, for no longer than it lives", async () => {
-    const { key } = await ownedPhoto(true);
-    const { signed } = await redirectFor(key, await makeUser());
-
-    const later = NOW + 600;
-    const served = await photoResponse(key, undefined, signed, later);
-
-    expect(served.status).toBe(200);
-    expect(served.headers.get("cache-control")).toBe("public, max-age=1200");
-    expect(served.headers.get("content-type")).toBe("image/jpeg");
-  });
-
-  it("refuses an expired, tampered or foreign signature", async () => {
-    const { key } = await ownedPhoto(true);
-    const other = await ownedPhoto(true);
-    const { signed } = await redirectFor(key, await makeUser());
-
-    const expired = await photoResponse(key, undefined, signed, NOW + 1800);
-    const tampered = await photoResponse(
-      key,
-      undefined,
-      { ...signed, expires: String(NOW + 1700) },
-      NOW,
-    );
-    const elsewhere = await photoResponse(other.key, undefined, signed, NOW);
-
-    expect(expired.status).toBe(404);
-    expect(tampered.status).toBe(404);
-    expect(elsewhere.status).toBe(404);
-  });
-
-  it("stops serving a signed URL once the entry is private again", async () => {
-    const { key } = await ownedPhoto(true);
-    const { signed } = await redirectFor(key, await makeUser());
-    await drizzle(env.DIALED_CORE)
-      .update(outfitEntries)
-      .set({ isPublic: false });
-
-    const refused = await photoResponse(key, undefined, signed, NOW);
-    expect(refused.status).toBe(404);
-  });
-
-  it("never gives the owner a public header, nor a stranger's private photo a URL", async () => {
-    const own = await ownedPhoto(false);
-    const ownView = await photoResponse(own.key, own.userId, undefined, NOW);
-    expect(ownView.status).toBe(200);
-    expect(ownView.headers.get("cache-control")).toBe("private, max-age=3600");
-
-    const shared = await ownedPhoto(true);
-    const ownShared = await photoResponse(
-      shared.key,
-      shared.userId,
-      undefined,
-      NOW,
-    );
-    expect(ownShared.headers.get("cache-control")).toBe(
-      "private, max-age=3600",
-    );
-  });
-
-  it("signs nothing without the secret, and serves the stranger privately (fail closed)", async () => {
-    const { key } = await ownedPhoto(true);
-    const configured: unknown = env.PHOTO_URL_SECRET;
-    Reflect.deleteProperty(env, "PHOTO_URL_SECRET");
-    try {
-      const response = await photoResponse(
-        key,
-        await makeUser(),
-        undefined,
-        NOW,
-      );
-      expect(response.status).toBe(200);
-      expect(response.headers.get("cache-control")).toBe(
-        "private, max-age=3600",
-      );
-    } finally {
-      Reflect.set(env, "PHOTO_URL_SECRET", configured);
-    }
-  });
-});
-
-describe("the reviewer's route never reaches the quarantine", () => {
-  beforeEach(resetTables);
-
-  it("says not found for a key outside entries/, even to an admin", async () => {
-    const admin = await makeUser();
-    const admins: unknown = env.ADMIN_USER_IDS;
-    Reflect.set(env, "ADMIN_USER_IDS", admin);
-    try {
-      const { key } = await ownedPhoto(true);
-      await env.MEDIA.put(quarantineKeyFor(key), JPEG_BYTES);
-      const quarantined = await reviewerPhotoResponse(
-        quarantineKeyFor(key),
-        admin,
-      );
-      const entryPhoto = await reviewerPhotoResponse(key, admin);
-      expect(quarantined.status).toBe(404);
-      expect(entryPhoto.status).toBe(200);
-    } finally {
-      Reflect.set(env, "ADMIN_USER_IDS", admins);
-    }
   });
 });

@@ -683,6 +683,13 @@ interface ChoosableProps<TOption extends string> {
 }
 
 /**
+ * The value of `ChoiceField`'s "—" option: nothing chosen. Exported so a
+ * caller that models "nothing chosen" as `undefined` maps it to the select
+ * with the option's own value, not a second copy of it.
+ */
+export const NO_CHOICE = "";
+
+/**
  * A `<select>` over a set the schema already holds.
  *
  * `GarmentForm` had three of these written out — layer, weight, fabric —
@@ -702,13 +709,6 @@ interface ChoosableProps<TOption extends string> {
  * choice is a different control and should not reuse this one by adding a
  * flag to it.
  */
-/**
- * The value of `ChoiceField`'s "—" option: nothing chosen. Exported so a
- * caller that models "nothing chosen" as `undefined` maps it to the select
- * with the option's own value, not a second copy of it.
- */
-export const NO_CHOICE = "";
-
 // fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group
 export function ChoiceField<TOption extends string>({
   name,

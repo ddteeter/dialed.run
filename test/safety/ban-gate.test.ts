@@ -9,6 +9,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { createAuth } from "../../src/modules/auth/create-auth";
+import { recordingMail } from "../auth/mail-recorder";
 import {
   ACCOUNT_CLOSED_CODE,
   banGate,
@@ -41,6 +42,7 @@ const auth = createAuth({
   // them 403 "Invalid origin" (see test/auth/auth.test.ts).
   baseUrl: "http://localhost",
   passwordScreen: CLEAN_SCREEN,
+  mail: recordingMail(),
   plugins: [banGate()],
 });
 
@@ -139,6 +141,7 @@ describe("a banned runner signing in (SAF-4)", () => {
       db: core(),
       secret: "test-secret-not-for-production",
       passwordScreen: CLEAN_SCREEN,
+      mail: recordingMail(),
       plugins: [gate],
     });
     const context = await gated.$context;
@@ -197,6 +200,7 @@ describe("a banned runner signing in with Google (SAF-4)", () => {
     baseUrl: "http://localhost",
     google: { clientId: "test-client", clientSecret: "test-client-secret" },
     passwordScreen: CLEAN_SCREEN,
+    mail: recordingMail(),
     plugins: [
       banGate(() =>
         Promise.resolve({ banned: true, reason: REASON, bannedAt: 1 }),

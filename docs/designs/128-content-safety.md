@@ -31,8 +31,7 @@ nothing to filter there today — 129 applies the rule when they arrive.
 
 **SAF-14.** `entryDetailQuery` and `otherProfileQuery` take
 `requireUserId` (additions to feed's `functions.ts`); the photo route needs
-a session (PR 2 adds "or a valid signature", issued only to signed-in
-viewers). Per the owner's clarification (decision D-58), "public" means
+a session, and nothing else (signed links were dropped, D-69). Per the owner's clarification (decision D-58), "public" means
 visible to signed-in runners: there is no crawler exception, and link
 previews use only the site-wide generic card.
 
@@ -66,39 +65,43 @@ dimensions from the JPEG/PNG/WebP header and refuses anything over 16 MP.
 In the browser, W3's canvas step always runs — blur off too — and caps the
 long edge at 2048px.
 
-**PR 2 split.** 2a is moderation and signed photos (SAF-5–8, 10, 15, the
+**PR 2 split.** 2a is moderation (SAF-5, 6, 8, 10, 15, the
 Desk's Runners page); 2b is the closet (SAF-16–19) and SAF-11.
 
-**Signed photos (SAF-7), as built.** `/feed/photo/<key>` keeps its URL.
-The owner gets the bytes `private`. A signed-in stranger the rule lets see
-the photo gets a 302 to `?e=<expiry>&s=<HMAC>` — the expiry is the next
-quarter-hour boundary plus one (15–30 minutes) — and the redirect itself
-is `private` for one bucket less than the URL lives. The signed URL is
-served `public, max-age=<seconds left>` after the signature **and** the
-entry's anonymous visibility pass, so a removal stops every uncached
-request at once and every cached copy within 30 minutes (open question
-2). Redirecting rather than signing in the feed's queries keeps the whole
-change in this lane's files. No `PHOTO_URL_SECRET`: nothing is signed,
-every signature is refused, and `/api/health` names it.
+**Signed photos (SAF-7): dropped (owner, 2026-09-28; decision D-69).**
+Cloudflare's CSAM tool scans only what its cache serves, and a response a
+Worker builds never enters that cache, so signed links bought no scanning.
+Photos stay `private` behind sign-in; CSAM coverage for public content is
+an open item in the deployment plan's §8.
 
 **Moderation (SAF-5, 6, 8).** `feed/moderation.ts`, because the deletion
 statements are feed's and the arrow runs feed → safety. One batch holds
-retract's statements, the `moderation_actions` row and the author's
-`content_removed` notice, then retract's outbox debt. Quarantine copies
-each object to `quarantine/<key>` before the batch; no route serves that
-prefix (the reviewer route now refuses anything outside `entries/`). Bans,
-unbans and D8's force-rename write audit rows too; the force-rename sets
-`user_profiles.username_reset_reason`, which 126's O0 screen reads.
+retract's statements, the `moderation_actions` row, and for a Remove or
+takedown the author's `content_removed` bell row and email (an
+`emailDebt` through `modules/email`), then retract's outbox debt. A
+repeat takedown answers `already_removed` and writes nothing.
+**Quarantine is silent** (D-70): no bell row, no email. It copies each
+object to `quarantine/<key>` and reads the rows before the batch, which
+deletes them and writes them to `quarantined_content` (admin-only, kept a
+year). Only the admin reviewer route serves that prefix. Bans, unbans and
+D8's force-rename write audit rows too. The force-rename is account's
+`forceRename` (usernameSchema, the reserved list, D-56), which locks the
+old handle in `username_history.locked_at` so nobody may take it, its
+former holder included, and sets `user_profiles.username_reset_reason`,
+which 126's O0 screen reads. D8's list is account's `listAccounts` and
+runs' `runCountsOf`, wired in the server function, because safety cannot
+import account (account → ops → safety).
 
 ## Contract touches
 
-- Schema: PR 2 only, `add_moderation_actions` and
-  `add_username_reset_reason` (both additive). No other change; `moderation_status` already has
+- Schema: PR 2 only, all additive: `0033_add_moderation_actions`,
+  `0034_add_username_reset_reason`, `0035_add_username_history_locked_at`,
+  `0036_add_quarantined_content`. No other change; `moderation_status` already has
   `removed`.
 - Routes: none in PR 1 — D4 is a component 126's sign-in form mounts, not a
   route; PR 2 adds the Desk pages.
 - Bindings/queues/crons: **none**. Outbox kinds ride the daily drain.
-- Secret (PR 2): `PHOTO_URL_SECRET` in `env.d.ts`.
+- Secrets: none (`PHOTO_URL_SECRET` went with SAF-7, D-69).
 
 ## Test plan
 
@@ -117,5 +120,4 @@ header refused without decoding. ui: the retract controls. browser: the
    runner's reach because the quarantine copy has no row.
    **Answered (owner, 2026-09-27; decision D-59): allowed, as built.**
    The server's 16 MP pixel cap (SAF-2) is accepted too (decision D-60).
-2. SAF-7 purge: [TTL only — no zone token]. URLs expire on a 15-minute
-   bucket, so a removed photo leaves every cache within 30 minutes.
+2. SAF-7 purge: moot — no photo is cached (D-69).

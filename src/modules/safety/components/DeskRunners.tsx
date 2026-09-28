@@ -54,7 +54,7 @@ What the operator is told after a Rename.
 */
 export function renameMessage(outcome: RenameOutcome): string {
   if (outcome.kind === "renamed") return `Renamed to @${outcome.username}.`;
-  if (outcome.kind === "collided") {
+  if (outcome.kind === "taken") {
     return "That placeholder is taken. Press Rename again.";
   }
   return "This runner has no handle to take away.";

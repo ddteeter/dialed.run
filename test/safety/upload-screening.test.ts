@@ -17,7 +17,6 @@ import { follow } from "../../src/modules/feed/follows";
 import {
   photoResponse,
   reviewerPhotoResponse,
-  signedQueryOf,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
 import {
@@ -66,13 +65,7 @@ async function statusFor(
   viewerId: string | undefined,
 ): Promise<number> {
   const response = await photoResponse(key, viewerId);
-  // A stranger is sent to the signed URL (SAF-7); what matters here is
-  // whether it then serves.
-  const location = response.headers.get("location");
-  if (location === null) return response.status;
-  const signed = signedQueryOf(`https://dialed.test${location}`);
-  const followed = await photoResponse(key, undefined, signed);
-  return followed.status;
+  return response.status;
 }
 
 const clean: Classify = () =>

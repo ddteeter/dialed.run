@@ -12,11 +12,7 @@ import {
   PhotoValidationError,
   uploadItemPhoto,
 } from "../../src/modules/closet/photos";
-import {
-  photoResponse,
-  signedQueryOf,
-  uploadPhoto,
-} from "../../src/modules/feed/photos";
+import { photoResponse, uploadPhoto } from "../../src/modules/feed/photos";
 import {
   imageCategories,
   type CategoryScores,
@@ -76,15 +72,7 @@ describe("an entry photo (SAF-1)", () => {
       },
       { classify: CLEAN },
     );
-    // A stranger is sent to the signed URL (SAF-7); those are the bytes a
-    // shared cache — and so anyone — ends up holding.
-    const redirect = await photoResponse(key, await makeUser());
-    const location = redirect.headers.get("location") ?? "";
-    const response = await photoResponse(
-      key,
-      undefined,
-      signedQueryOf(`https://dialed.test${location}`),
-    );
+    const response = await photoResponse(key, await makeUser());
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("image/jpeg");

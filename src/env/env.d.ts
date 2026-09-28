@@ -57,11 +57,12 @@ declare namespace Cloudflare {
      * `__Secure-` cookie prefix. A var in wrangler.jsonc, set by the
      * owner; `/api/health` names it when absent. */
     BETTER_AUTH_URL?: string;
-    /** The HMAC key for public entry photos' signed URLs (128, SAF-7;
-     * decision D-46). Absent: nothing is signed and every signed URL is
-     * refused (fail closed), so a photo is served `private` through the
-     * session only and no cache ever holds one. `/api/health` names it.
-     * See `modules/safety/photo-signing.ts`. */
-    PHOTO_URL_SECRET?: string;
+    /** Signs unsubscribe links (task 126; owner, 2026-09-27) — their own
+     * secret, so rotating `BETTER_AUTH_SECRET` does not break every link in
+     * every inbox, and an unsubscribe signature can never stand in for
+     * anything auth signs. Absent: no link is built, so no optional email
+     * goes, and every link is refused (fail closed); `/api/health` names
+     * it. */
+    UNSUBSCRIBE_SECRET?: string;
   }
 }

@@ -258,14 +258,67 @@ export const PASSWORD_MIN_LENGTH = 10;
  * path and a taken handle never shares a screen with "is this email
  * registered?".
  */
+const newPasswordField = z
+  .string()
+  .min(
+    PASSWORD_MIN_LENGTH,
+    `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
+  );
+
 export const signUpSchema = z.object({
   email: emailField,
-  password: z
-    .string()
-    .min(
-      PASSWORD_MIN_LENGTH,
-      `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
-    ),
+  password: newPasswordField,
+});
+
+/**
+ * ACC-4's first step: "Forgot it?" asks for the address the link goes to.
+ * The same answer follows whether or not it has an account.
+ */
+export const resetRequestSchema = z.object({ email: emailField });
+
+/**
+ACC-4's second step: the new password, on the same floor as sign-up's.
+*/
+export const newPasswordSchema = z.object({ password: newPasswordField });
+
+/**
+ * ACC-7: the current password proves it is the runner, and the new one
+ * meets sign-up's floor.
+ */
+/**
+ * The current password, which a change to the account asks for first
+ * (ACC-7, ACC-8). Only present: whether it matches is the server's to say,
+ * in `CURRENT_PASSWORD_WRONG`'s words.
+ */
+const currentPasswordField = z.string().min(1, "Enter your current password.");
+
+/**
+ * The server's refusal of a current password, on that field (ACC-7,
+ * ACC-8; round 27 #11's wording).
+ */
+export const CURRENT_PASSWORD_WRONG = "That's not your current password.";
+
+/**
+ * The same field, once the tries at the password are used up (ACC-8):
+ * `clock` is when the next may go, in the runner's own time. Placeholder
+ * copy, built from Au's "Too many tries." — design deltas.
+ */
+export function currentPasswordLimited(clock: string): string {
+  return `Too many tries. You can try again at ${clock}.`;
+}
+
+export const changePasswordSchema = z.object({
+  currentPassword: currentPasswordField,
+  password: newPasswordField,
+});
+
+/**
+ * ACC-8: the address the account moves to, once its link is opened, and
+ * the current password that proves it is the runner asking.
+ */
+export const changeEmailSchema = z.object({
+  email: emailField,
+  currentPassword: currentPasswordField,
 });
 
 /**

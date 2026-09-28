@@ -1,7 +1,9 @@
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { env, waitUntil } from "../../env";
+import { authMail } from "../account";
+import { emailDepsFromEnv } from "../email";
 import { captureException } from "../ops";
 import { banGate } from "../safety";
 import { breachVerdict } from "./breached-password";
@@ -24,4 +26,10 @@ export const auth = createAuth({
     verdict: (password) => breachVerdict(password),
     report: captureException,
   },
+  // Task 126 (ACC-3, ACC-4): the confirm, existing-account and reset
+  // emails, through modules/email.
+  mail: authMail(drizzle(env.DIALED_CORE), emailDepsFromEnv, captureException),
+  // Every email above leaves the request path, so no answer is slower for
+  // an address that has an account (review of PR #119).
+  background: waitUntil,
 });

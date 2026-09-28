@@ -156,6 +156,32 @@ describe("the cron heartbeat", () => {
     expect(outcome).toStrictEqual({ cronName: "weather-retry", anomalies: [] });
   });
 
+  it("drains only the 'email' outbox kind on the hourly retry, leaving other kinds for the daily digest", async () => {
+    // A due row of the *other* kind this build knows. If the hourly retry
+    // drained every kind rather than just `email`, this row would be
+    // claimed too — its `attempts` counter is the tell, since claiming
+    // happens whether or not the handler itself succeeds.
+    const id = newUlid();
+    await coreDb()
+      .insert(outbox)
+      .values({
+        id,
+        kind: "photo_delete",
+        dedupeKey: newUlid(),
+        payload: JSON.stringify({ userId: newUlid(), itemId: newUlid() }),
+        nextAttemptAt: nowSeconds() - 60,
+        createdAt: nowSeconds() - HOUR,
+      });
+
+    await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
+
+    const [row] = await coreDb()
+      .select({ attempts: outbox.attempts })
+      .from(outbox)
+      .where(eq(outbox.id, id));
+    expect(row?.attempts).toBe(0);
+  });
+
   it("dispatches the screening-retry schedule to the screening sweep", async () => {
     // The case label is the whole wiring: `wrangler.jsonc` fires a cron
     // expression, `crons.ts` maps it to a name, and this switch turns the

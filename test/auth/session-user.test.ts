@@ -4,6 +4,7 @@ import { AuthRequiredError } from "../../src/modules/auth/auth-error";
 import { sessionFromRequest } from "../../src/modules/auth/session";
 import {
   optionalUserIdFrom,
+  sessionIdFrom,
   userIdOrThrow,
   type SessionWithUser,
 } from "../../src/modules/auth/session-user";
@@ -55,5 +56,20 @@ describe("optionalUserIdFrom", () => {
     // The public feed and the entry page are readable signed out. Throwing
     // here would turn a browsable page into a redirect.
     expect(optionalUserIdFrom(await signedOut())).toBeUndefined();
+  });
+});
+
+describe("sessionIdFrom", () => {
+  it("returns the session's own id, not the runner's", () => {
+    expect(sessionIdFrom({ session: { id: "session-1" }, ...SIGNED_IN })).toBe(
+      "session-1",
+    );
+  });
+
+  it("returns undefined when nobody is signed in", async () => {
+    const nobody = await sessionFromRequest(
+      new Request("https://dialed.run/account/verify"),
+    );
+    expect(sessionIdFrom(nobody)).toBeUndefined();
   });
 });

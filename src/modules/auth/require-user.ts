@@ -16,9 +16,16 @@
  * loadable in the workers pool.
  */
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { drizzle } from "drizzle-orm/d1";
 
+import { env } from "../../env";
 import { auth } from "./instance";
-import { optionalUserIdFrom, userIdOrThrow } from "./session-user";
+import { checkOwnPassword, type PasswordCheck } from "./password-check";
+import {
+  optionalUserIdFrom,
+  sessionIdFrom,
+  userIdOrThrow,
+} from "./session-user";
 
 /**
  * The signed-in user's id, or `AuthRequiredError`. Server-function side
@@ -48,5 +55,34 @@ export async function requireUserId(): Promise<string> {
 export async function optionalUserId(): Promise<string | undefined> {
   return optionalUserIdFrom(
     await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
+}
+
+/**
+ * The id of the session this request rides on, or `undefined` — so a
+ * change that signs out every other session can keep this one.
+ */
+export async function currentSessionId(): Promise<string | undefined> {
+  return sessionIdFrom(
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
+}
+
+/**
+ * Whether `password` is the signed-in runner's current one (ACC-8), within
+ * the per-runner limit on tries. The decision is `checkOwnPassword`'s;
+ * this only hands it the request.
+ */
+export async function checkCurrentPassword(
+  password: string,
+): Promise<PasswordCheck> {
+  return checkOwnPassword(
+    {
+      auth,
+      db: drizzle(env.DIALED_CORE),
+      userId: await requireUserId(),
+      headers: getRequestHeaders(),
+    },
+    password,
   );
 }

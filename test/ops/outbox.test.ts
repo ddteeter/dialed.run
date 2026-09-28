@@ -18,6 +18,7 @@ import {
   backoffSeconds,
   checkOutboxBacklog,
   drainOutbox,
+  dueRowsOf,
   OUTBOX_DRAIN_CAP,
   OUTBOX_FAST_PATH_GRACE_S,
   OUTBOX_TERMINAL_ATTEMPTS,
@@ -82,6 +83,7 @@ function handlersRunning(run: OutboxHandlers["photo_delete"]["run"]) {
   return {
     ...outboxHandlers,
     photo_delete: { run, context: outboxHandlers.photo_delete.context },
+    email: outboxHandlers.email,
   } satisfies OutboxHandlers;
 }
 
@@ -115,7 +117,15 @@ describe("outboxInsert", () => {
 
     await outboxInsert(db(), debt, NOW);
 
-    expect(await rowById(debt.id)).toStrictEqual({
+    const row = await rowById(debt.id);
+    // Not sent yet: the email handler marks a row only after its send.
+    // (Read as absent, since D1 answers NULL.)
+    const unsent = {
+      sentAt: row?.sentAt ?? undefined,
+      messageId: row?.messageId ?? undefined,
+    };
+    expect(unsent).toStrictEqual({ sentAt: undefined, messageId: undefined });
+    expect({ ...row, sentAt: undefined, messageId: undefined }).toStrictEqual({
       id: debt.id,
       kind: "photo_delete",
       dedupeKey: "u1:i1",
@@ -124,6 +134,8 @@ describe("outboxInsert", () => {
       // Fifteen minutes: past any fast path, well inside a day.
       nextAttemptAt: NOW + 15 * 60,
       createdAt: NOW,
+      sentAt: undefined,
+      messageId: undefined,
     });
   });
 
@@ -157,7 +169,12 @@ describe("settleOutbox (the fast path)", () => {
 
     await settleOutbox(db(), debt, vi.fn(), handlersRunning(run));
 
-    expect(run).toHaveBeenCalledWith(expect.anything(), debt.message.payload);
+    // With the row it works, so a handler can mark it before the delete.
+    expect(run).toHaveBeenCalledWith(
+      expect.anything(),
+      debt.message.payload,
+      debt.id,
+    );
     expect(await rowById(debt.id)).toBeUndefined();
   });
 
@@ -406,6 +423,18 @@ describe("drainOutbox", () => {
   });
 });
 
+describe("the drain's read (D1 bills rows scanned)", () => {
+  it("is one range on outbox_kind_due: kind, then due by", async () => {
+    const { sql, params } = dueRowsOf(db(), "email", NOW).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    expect(plan.results.map((row) => row.detail)).toStrictEqual([
+      "SEARCH outbox USING INDEX outbox_kind_due (kind=? AND next_attempt_at<?)",
+    ]);
+  });
+});
+
 describe("boundHandler", () => {
   it("binds each kind's own context, not another's", () => {
     const photo = boundHandler(outboxHandlers, {
@@ -628,7 +657,7 @@ describe("reconcileEntryPhotos (task 128)", () => {
       await env.MEDIA.put(key, new Uint8Array([1]));
     }
 
-    await outboxHandlers.entry_media_delete.run(db(), { userId });
+    await outboxHandlers.entry_media_delete.run(db(), { userId }, "row");
 
     expect(await stored(entryPhotoPrefix(userId))).toStrictEqual([]);
     expect(await stored(someoneElse)).toStrictEqual([someoneElse]);
@@ -654,10 +683,10 @@ describe("the import_file_delete handler (task 128)", () => {
     const key = `imports/${userId}/${newUlid()}.gpx`;
     await env.IMPORTS.put(key, new Uint8Array([1]));
 
-    await outboxHandlers.import_file_delete.run(db(), { userId, key });
+    await outboxHandlers.import_file_delete.run(db(), { userId, key }, "row");
     expect(await env.IMPORTS.head(key)).toBeNull();
     await expect(
-      outboxHandlers.import_file_delete.run(db(), { userId, key }),
+      outboxHandlers.import_file_delete.run(db(), { userId, key }, "row"),
     ).resolves.toBeUndefined();
   });
 

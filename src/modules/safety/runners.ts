@@ -2,35 +2,41 @@
  * Desk · Runners, "D8" (round 27 #22): every account, searchable by handle
  * or email, filtered to All / Reported / Closed.
  *
- * **Sized for the Desk, not the feed.** D8's own header reads 412
- * ACCOUNTS; the counts are correlated subqueries on indexed columns
- * (`runs_user_started`, `reports_subject`), and the list is capped at
- * `RUNNERS_PAGE` rows, newest first. Search is a prefix on the handle,
- * which `user_profiles_username_nocase` serves, or on the email.
+ * **Safety reads only what is safety's.** The accounts come from
+ * `modules/account` (`listAccounts`) and the run counts from `modules/runs`
+ * (`runCountsOf`); what this adds is the filter, as SQL on the account's
+ * id so it narrows before account's `LIMIT`, and each row's reports and
+ * state. The route's server function wires the three together, because
+ * account reaches `ops`, which reaches safety — an import from here would
+ * be a cycle.
  *
  * **Reports here count only reports on the name or profile** (#22), so the
  * number says whether the account itself is the problem, not whether one
  * of their photos was.
  */
-import { and, desc, eq, isNotNull, or, sql } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import type { SQL, SQLWrapper } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { user } from "../../db/schema-auth";
-import { reports, runs, userProfiles } from "../../db/schema-core";
+import { reports, userProfiles } from "../../db/schema-core";
+import { readInChunks } from "../../lib/chunked";
+import { runCountsOf } from "../runs";
 
-type Db = ReturnType<typeof drizzle>;
+type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
 export type RunnerState = "ACTIVE" | "CLOSED";
 
-export interface DeskRunner {
+/**
+What account hands the Desk for each row (`AccountRow` in `modules/account`).
+*/
+export interface ListedAccount {
   userId: string;
   username: string | undefined;
   email: string;
-  /**
-  Epoch seconds.
-  */
   joinedAt: number;
+}
+
+export interface DeskRunner extends ListedAccount {
   runs: number;
   reports: number;
   state: RunnerState;
@@ -42,77 +48,73 @@ export interface RunnersFilter {
   filter: "all" | "reported" | "closed";
 }
 
-/**
-The most rows D8 draws at once.
-*/
-export const RUNNERS_PAGE = 100;
-
-const profileReports = sql<number>`(SELECT COUNT(*) FROM ${reports} WHERE ${reports.subjectType} = 'profile' AND ${reports.subjectId} = ${user.id})`;
-
-const runCount = sql<number>`(SELECT COUNT(*) FROM ${runs} WHERE ${runs.userId} = ${user.id})`;
+const onProfile = eq(reports.subjectType, "profile");
 
 /**
-The `LIKE` pattern for a prefix, with the wildcards in what was typed escaped.
-*/
-export function prefixPattern(typed: string): string {
-  const escaped = typed
-    .toLowerCase()
-    .replaceAll(/[\\%_]/gu, (wildcard) => `\\${wildcard}`);
-  return `${escaped}%`;
+ * D8's filter as a condition on the account's id, for `listAccounts`'
+ * `only`: Reported has a report on the profile, Closed is banned. All is
+ * no condition at all.
+ */
+export function runnersWhere(
+  filter: RunnersFilter["filter"],
+): ((userId: SQLWrapper) => SQL) | undefined {
+  return filterSql[filter];
 }
 
-function matching(query: string | undefined) {
-  // An empty query needs no guard of its own: its pattern is `%`, which
-  // matches every row, exactly as no filter does.
-  if (query === undefined) return;
-  const pattern = prefixPattern(query.replace(/^@/u, ""));
-  return or(
-    sql`${userProfiles.username} LIKE ${pattern} ESCAPE '\\'`,
-    sql`LOWER(${user.email}) LIKE ${pattern} ESCAPE '\\'`,
-  );
-}
-
-const onlyWhere: Readonly<Record<RunnersFilter["filter"], SQL | undefined>> = {
+const filterSql: Readonly<
+  Record<RunnersFilter["filter"], ((userId: SQLWrapper) => SQL) | undefined>
+> = {
   all: undefined,
-  reported: sql`${profileReports} > 0`,
-  closed: isNotNull(userProfiles.bannedAt),
+  reported: (userId) =>
+    sql`EXISTS (SELECT 1 FROM ${reports} WHERE ${onProfile} AND ${reports.subjectId} = ${userId})`,
+  closed: (userId) =>
+    sql`EXISTS (SELECT 1 FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${isNotNull(userProfiles.bannedAt)})`,
 };
 
+/**
+ * Each listed account with its runs, its profile reports and whether it is
+ * closed, in the order the accounts came: three reads over at most a page
+ * of ids, each in chunks under D1's 100-parameter cap. No accounts, no
+ * reads.
+ */
 export async function deskRunners(
   db: Db,
-  { query, filter }: RunnersFilter,
+  accounts: readonly ListedAccount[],
 ): Promise<DeskRunner[]> {
-  const rows = await db
-    .select({
-      userId: user.id,
-      username: userProfiles.username,
-      email: user.email,
-      joinedAt: user.createdAt,
-      runs: runCount,
-      reports: profileReports,
-      bannedAt: userProfiles.bannedAt,
-      banReason: userProfiles.banReason,
-    })
-    .from(user)
-    .leftJoin(userProfiles, eq(userProfiles.userId, user.id))
-    .where(and(matching(query), onlyWhere[filter]))
-    .orderBy(desc(user.createdAt))
-    .limit(RUNNERS_PAGE);
-  return rows.map((row) => ({
-    userId: row.userId,
-    username: row.username ?? undefined,
-    email: row.email,
-    joinedAt: Math.floor(row.joinedAt.getTime() / 1000),
-    runs: row.runs,
-    reports: row.reports,
-    state: typeof row.bannedAt === "number" ? "CLOSED" : "ACTIVE",
-    banReason: row.banReason ?? undefined,
-  }));
-}
-
-/**
-D8's header count: every account, whatever the filter.
-*/
-export async function accountCount(db: Db): Promise<number> {
-  return db.$count(user);
+  const ids = accounts.map((account) => account.userId);
+  const [runCounts, reportCounts, profiles] = await Promise.all([
+    readInChunks(ids, async (chunk) => runCountsOf(db, chunk)),
+    readInChunks(ids, async (chunk) =>
+      db
+        .select({ userId: reports.subjectId, reports: count() })
+        .from(reports)
+        .where(and(onProfile, inArray(reports.subjectId, chunk)))
+        .groupBy(reports.subjectId),
+    ),
+    readInChunks(ids, async (chunk) =>
+      db
+        .select({
+          userId: userProfiles.userId,
+          bannedAt: userProfiles.bannedAt,
+          banReason: userProfiles.banReason,
+        })
+        .from(userProfiles)
+        .where(inArray(userProfiles.userId, chunk)),
+    ),
+  ]);
+  const runsOf = new Map(runCounts.map((row) => [row.userId, row.runs]));
+  const reportsOf = new Map(
+    reportCounts.map((row) => [row.userId, row.reports]),
+  );
+  const profileOf = new Map(profiles.map((row) => [row.userId, row]));
+  return accounts.map((account) => {
+    const profile = profileOf.get(account.userId);
+    return {
+      ...account,
+      runs: runsOf.get(account.userId) ?? 0,
+      reports: reportsOf.get(account.userId) ?? 0,
+      state: typeof profile?.bannedAt === "number" ? "CLOSED" : "ACTIVE",
+      banReason: profile?.banReason ?? undefined,
+    };
+  });
 }

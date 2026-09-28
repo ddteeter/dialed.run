@@ -7,10 +7,12 @@
  * takedown and the DSA's statement of reasons cannot have, and a record of
  * a removal that did not happen is worse.
  */
+import { and, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { moderationActions } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
+import { hasRowWhere } from "../../lib/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -19,6 +21,10 @@ export type ModerationAction =
   (typeof moderationActions.$inferInsert)["action"];
 
 export interface ModerationRecord {
+  /**
+  Its id, when another row in the batch names it; minted otherwise.
+  */
+  id?: string | undefined;
   actorId: string;
   action: ModerationAction;
   subjectType: (typeof moderationActions.$inferInsert)["subjectType"];
@@ -40,8 +46,29 @@ export interface ModerationRecord {
  */
 export function moderationActionInsert(db: Db, record: ModerationRecord) {
   return db.insert(moderationActions).values({
-    id: newUlid(),
     ...record,
+    id: record.id ?? newUlid(),
     createdAt: nowSeconds(),
   });
+}
+
+/**
+ * Whether the Desk has already acted on this subject — so a second
+ * takedown of something already gone answers "already removed" rather
+ * than "not found" (`moderation_actions_subject`).
+ */
+export async function wasModerated(
+  db: Db,
+  subjectType: ModerationRecord["subjectType"],
+  subjectId: string,
+): Promise<boolean> {
+  return hasRowWhere(
+    db,
+    moderationActions,
+    moderationActions.id,
+    and(
+      eq(moderationActions.subjectType, subjectType),
+      eq(moderationActions.subjectId, subjectId),
+    ),
+  );
 }

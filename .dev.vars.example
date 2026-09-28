@@ -1,5 +1,8 @@
 # Copy to .dev.vars (gitignored). Prod values are Wrangler secrets.
 BETTER_AUTH_SECRET=generate-a-long-random-string
+# Signs unsubscribe links (task 126) — its own secret, not the auth one.
+# Required: without it no optional email goes and every link is refused.
+UNSUBSCRIBE_SECRET=generate-another-long-random-string
 # Required locally: wrangler.jsonc sets the production origin
 # (https://dialed.run). Without this override Better Auth refuses every
 # sign-in and sign-up from localhost (403 INVALID_ORIGIN), and the https
@@ -27,7 +30,3 @@ BETTER_AUTH_URL=http://localhost:3000
 # wrangler.jsonc, so this file is the only place it can be set locally —
 # which is also why the admin surfaces have no demo video yet (D-72).
 # ADMIN_USER_IDS=
-# Signs public entry photos' short-lived URLs (128, SAF-7). Without it no
-# photo is ever signed: each is served `private` to a signed-in viewer, no
-# shared cache holds one, and /api/health names it as missing.
-PHOTO_URL_SECRET=generate-another-long-random-string

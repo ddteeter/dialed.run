@@ -7,9 +7,11 @@ import { DeskForm, PickOne } from "./DeskForm";
 
 type Subject = "entry" | "photo";
 
+type Outcome = "removed" | "already_removed" | "not_found";
+
 type TakeDown = (input: {
   data: { subjectType: Subject; subjectId: string; notice: string };
-}) => Promise<{ outcome: "removed" | "not_found" }>;
+}) => Promise<{ outcome: Outcome }>;
 
 const SUBJECT_LABELS: Readonly<Record<Subject, string>> = {
   photo: "A photo",
@@ -19,11 +21,15 @@ const SUBJECT_LABELS: Readonly<Record<Subject, string>> = {
 /**
 What the operator is told once the Desk has answered.
 */
-export function takedownMessage(outcome: "removed" | "not_found"): string {
-  return outcome === "removed"
-    ? "Taken down. The runner has been told, and the notice is on record."
-    : "Nothing has that id. Check it against the notice.";
+export function takedownMessage(outcome: Outcome): string {
+  return MESSAGES[outcome];
 }
+
+const MESSAGES: Readonly<Record<Outcome, string>> = {
+  removed: "Taken down. The runner has been told, and the notice is on record.",
+  already_removed: "Already taken down. Nothing more was sent or recorded.",
+  not_found: "Nothing has that id. Check it against the notice.",
+};
 
 /**
  * A copyright takedown (task 128 · SAF-6; §1.2): a named photo or entry,
