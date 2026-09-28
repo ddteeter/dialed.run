@@ -1,15 +1,9 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import {
-  ChoiceField,
-  NO_CHOICE,
-  SubmitButton,
-  TextField,
-  useFormSubmit,
-} from "../../../ui";
+import { TextField, useFormSubmit } from "../../../ui";
 import { takedownInput } from "../inputs";
-import { DeskForm } from "./DeskForm";
+import { DeskForm, PickOne } from "./DeskForm";
 
 type Subject = "entry" | "photo";
 
@@ -74,25 +68,16 @@ export function Takedown({
         onSubmit={() => {
           void form.submit({ subjectType, subjectId, notice });
         }}
-        action={
-          <SubmitButton
-            label="Take it down"
-            pendingLabel="Taking it down"
-            pending={form.pending}
-          />
-        }
+        submit={{ label: "Take it down", pendingLabel: "Taking it down" }}
       >
-        <ChoiceField<Subject>
+        <PickOne<Subject>
           name="subjectType"
           label="What it is"
           options={["photo", "entry"]}
           optionLabels={SUBJECT_LABELS}
-          value={subjectType ?? NO_CHOICE}
-          onChange={(picked) => {
-            setSubjectType(
-              takedownInput.shape.subjectType.safeParse(picked).data,
-            );
-          }}
+          schema={takedownInput.shape.subjectType}
+          value={subjectType}
+          onChange={setSubjectType}
           field={form.field}
           error={form.fieldErrors.subjectType}
         />

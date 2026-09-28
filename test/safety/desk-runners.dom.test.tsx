@@ -4,7 +4,13 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -104,6 +110,9 @@ describe("D8's table", () => {
     expect(
       within(filters).getByRole("link", { name: "All" }),
     ).not.toHaveAttribute("aria-current");
+    expect(
+      within(filters).getByRole("link", { name: "Closed" }),
+    ).toHaveAttribute("href", "/desk/runners?query=ad&filter=closed");
   });
 
   it("searches by navigating, keeping the filter", async () => {
@@ -113,6 +122,9 @@ describe("D8's table", () => {
     await user.type(screen.getByRole("searchbox"), "bo");
     await user.keyboard("{Enter}");
 
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/desk/runners");
+    });
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
         query: "bo",
@@ -257,6 +269,97 @@ describe("Close account (D3)", () => {
     await user.click(screen.getByRole("button", { name: "Reopen account" }));
 
     expect(await screen.findByText("Still closed")).toBeInTheDocument();
+  });
+});
+
+describe("after an action", () => {
+  const cy: DeskRunner = {
+    ...ada,
+    userId: "u-cy",
+    username: "cy",
+    email: "cy@example.com",
+  };
+
+  it("keeps the search in the page rather than submitting the form", async () => {
+    await renderDesk();
+    const search = screen.getByRole("search");
+    expect(fireEvent.submit(search)).toBe(false);
+  });
+
+  it("renames, says so, and reloads the page's data", async () => {
+    const user = userEvent.setup();
+    const { router } = await renderDesk();
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(await screen.findByText("Rename sent.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+  });
+
+  it("treats a rename reason taken back as nothing chosen", async () => {
+    const user = userEvent.setup();
+    const { rename } = await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    const picker = screen.getByRole("combobox", {
+      name: /Why the name has to go/,
+    });
+
+    await user.selectOptions(picker, "Advertising");
+    expect(picker).toHaveDisplayValue("Advertising");
+    await user.selectOptions(picker, "—");
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(rename).not.toHaveBeenCalled();
+    expect(picker).toHaveDisplayValue("—");
+  });
+
+  it("says nothing in Rename before it is pressed", async () => {
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    const rename = screen.getByRole("form", { name: "Rename" });
+    expect(rename.querySelectorAll("p")).toHaveLength(1);
+  });
+
+  it("closes, says so, and reloads the page's data", async () => {
+    const user = userEvent.setup();
+    const { router } = await renderDesk();
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(await screen.findByText("Account closed.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+  });
+
+  it("starts each runner's panels afresh", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [ada, cy] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+
+    await user.click(screen.getByRole("button", { name: "@cy" }));
+
+    expect(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+    ).toHaveDisplayValue("—");
+    expect(screen.getByRole("textbox", { name: /Why/ })).toHaveValue("");
   });
 });
 

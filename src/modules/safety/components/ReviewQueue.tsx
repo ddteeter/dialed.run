@@ -3,10 +3,8 @@ import type { JSX } from "react";
 
 import {
   Bracketed,
-  ChoiceField,
   ListSection,
   Mono,
-  NO_CHOICE,
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
@@ -19,7 +17,7 @@ import {
 import type { RemovalReason, ReportReason } from "../contracts";
 import { reviewActionInput, type ReviewActionValues } from "../inputs";
 import type { QueueRow } from "../review";
-import { DeskForm } from "./DeskForm";
+import { DeskForm, PickOne } from "./DeskForm";
 import { useSettled } from "./use-settled";
 
 /**
@@ -189,15 +187,14 @@ function Decision({
         </div>
       }
     >
-      <ChoiceField<RemovalReason>
+      <PickOne<RemovalReason>
         name="reason"
         label="Why it comes down"
         options={removalReasons}
         optionLabels={REASON_LABELS}
-        value={reason ?? NO_CHOICE}
-        onChange={(picked) => {
-          setReason(removalReasonSchema.safeParse(picked).data);
-        }}
+        schema={removalReasonSchema}
+        value={reason}
+        onChange={setReason}
         field={form.field}
         error={form.fieldErrors.reason}
       />

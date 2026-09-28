@@ -1,13 +1,18 @@
 import { useId } from "react";
 import type { JSX, ReactNode } from "react";
 
+import type { z } from "zod";
+
 import {
+  ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
   Mono,
+  NO_CHOICE,
+  SubmitButton,
 } from "../../../ui";
-import type { FormShell } from "../../../ui";
+import type { FieldProps, FormShell } from "../../../ui";
 
 /**
  * The frame every Desk form shares (Form Contract): the live status, the
@@ -22,6 +27,7 @@ export function DeskForm({
   title,
   className = "flex flex-col gap-3",
   children,
+  submit,
   action,
 }: Readonly<{
   form: FormShell;
@@ -32,7 +38,12 @@ export function DeskForm({
   title?: string | undefined;
   className?: string | undefined;
   children: ReactNode;
-  action: ReactNode;
+  /**
+   * The one submit button's words — or, for a form with more than one
+   * decision, `action`: the row of them.
+   */
+  submit?: { label: string; pendingLabel: string } | undefined;
+  action?: ReactNode;
 }>): JSX.Element {
   const headingId = useId();
   return (
@@ -63,7 +74,47 @@ export function DeskForm({
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
-      {action}
+      {submit === undefined ? (
+        action
+      ) : (
+        <SubmitButton
+          label={submit.label}
+          pendingLabel={submit.pendingLabel}
+          pending={form.pending}
+        />
+      )}
     </form>
+  );
+}
+
+/**
+ * One choice from a fixed list, where nothing chosen is `undefined` —
+ * which the schema refuses with its own message — and reaches the select
+ * as the "—" option's own value. A pick is parsed through the schema.
+ */
+interface PickOneProps<T extends string> {
+  name: string;
+  label: string;
+  options: readonly T[];
+  optionLabels: Readonly<Record<T, string>>;
+  schema: z.ZodType<T>;
+  value: T | undefined;
+  onChange: (value: T | undefined) => void;
+  field: (name: string) => FieldProps;
+  error: string | undefined;
+}
+
+export function PickOne<T extends string>(
+  props: Readonly<PickOneProps<T>>,
+): JSX.Element {
+  const { schema, value, onChange, ...choice } = props;
+  return (
+    <ChoiceField<T>
+      {...choice}
+      value={value ?? NO_CHOICE}
+      onChange={(picked) => {
+        onChange(schema.safeParse(picked).data);
+      }}
+    />
   );
 }

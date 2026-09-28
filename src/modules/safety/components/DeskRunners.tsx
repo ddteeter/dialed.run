@@ -4,21 +4,23 @@ import type { JSX } from "react";
 
 import {
   Bracketed,
-  ChoiceField,
   ControlFailureBand,
   FormStatus,
   Mono,
-  SubmitButton,
   TextField,
   inFlight,
   useControlAction,
   useFormSubmit,
 } from "../../../ui";
-import { renameReasons, type RenameReason } from "../contracts";
+import {
+  renameReasonSchema,
+  renameReasons,
+  type RenameReason,
+} from "../contracts";
 import { banUserInput, forceRenameInput } from "../inputs";
 import type { RenameOutcome } from "../rename";
 import type { DeskRunner, RunnersFilter } from "../runners";
-import { DeskForm } from "./DeskForm";
+import { DeskForm, PickOne } from "./DeskForm";
 
 /**
  * Desk · Runners, "D8" (round 27 #22). A search and three filters over a
@@ -154,14 +156,14 @@ interface PanelProps<TAction> {
   onDone: () => void;
 }
 
-const PANEL = "flex flex-col gap-3 border border-hairline p-4";
-
 function RenamePanel({
   runner,
   act: rename,
   onDone,
 }: Readonly<PanelProps<Rename>>): JSX.Element {
-  const [reason, setReason] = useState<RenameReason | "">("");
+  // Nothing chosen is `undefined`, which the schema refuses with its own
+  // message; the select sees it as the "—" option's value.
+  const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
     schema: forceRenameInput,
@@ -171,32 +173,26 @@ function RenamePanel({
       onDone();
     },
     successMessage: "Rename sent.",
-    labels: { nameReason: "Why the name has to go" },
   });
   return (
     <DeskForm
       form={form}
       title="Rename"
-      className={PANEL}
+      className="flex flex-col gap-3 border border-hairline p-4"
       onSubmit={() => {
         void form.submit({
           userId: runner.userId,
-          nameReason: reason === "" ? undefined : reason,
+          nameReason: reason,
         });
       }}
-      action={
-        <SubmitButton
-          label="Rename"
-          pendingLabel="Renaming"
-          pending={form.pending}
-        />
-      }
+      submit={{ label: "Rename", pendingLabel: "Renaming" }}
     >
-      <ChoiceField<RenameReason>
+      <PickOne<RenameReason>
         name="nameReason"
         label="Why the name has to go"
         options={renameReasons}
         optionLabels={RENAME_LABELS}
+        schema={renameReasonSchema}
         value={reason}
         onChange={setReason}
         field={form.field}
@@ -222,23 +218,16 @@ function CloseAccountPanel({
     action: (values) => ban({ data: values }),
     onSuccess: onDone,
     successMessage: "Account closed.",
-    labels: { reason: "Why" },
   });
   return (
     <DeskForm
       form={form}
       title="Close account"
-      className={PANEL}
+      className="flex flex-col gap-3 border border-hairline p-4"
       onSubmit={() => {
         void form.submit({ userId: runner.userId, reason });
       }}
-      action={
-        <SubmitButton
-          label="Close account"
-          pendingLabel="Closing"
-          pending={form.pending}
-        />
-      }
+      submit={{ label: "Close account", pendingLabel: "Closing" }}
     >
       <TextField
         name="reason"
@@ -265,7 +254,7 @@ function ReopenPanel({
     onSuccess: onDone,
   });
   return (
-    <section className={PANEL}>
+    <section className="flex flex-col gap-3 border border-hairline p-4">
       <h2 className="m-0">
         <Mono step="xs">Account closed</Mono>
       </h2>
