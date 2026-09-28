@@ -12,6 +12,7 @@ import { bandVerdict } from "../coverage";
 import type { ownProfile } from "../profiles";
 import { BracketHeadline } from "./BracketHeadline";
 import { Avatar } from "./Avatar";
+import { Handle } from "./Handle";
 
 type Profile = Awaited<ReturnType<typeof ownProfile>>;
 
@@ -49,14 +50,19 @@ const VERDICT_WORD: Readonly<Record<VerdictKind, string>> = {
  *   otherwise.
  */
 export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
-  const name = profile.username ?? "You";
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
-          <Avatar name={name} size="large" />
+          <Avatar name={profile.username ?? "You"} size="large" />
           <div className="flex flex-1 flex-col gap-1">
-            <h1 className="m-0 font-display text-heading">{name}</h1>
+            <h1 className="m-0 text-heading">
+              {profile.username === undefined ? (
+                "You"
+              ) : (
+                <Handle username={profile.username} />
+              )}
+            </h1>
             {profile.cityLabel === undefined ? undefined : (
               <Mono className="text-muted">{profile.cityLabel}</Mono>
             )}

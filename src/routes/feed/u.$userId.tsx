@@ -1,60 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
-import { OtherProfile } from "../../modules/feed/components/OtherProfile";
-import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
-import { fileReportAction } from "../../modules/safety/functions";
-import {
-  followAction,
-  followStatusQuery,
-  otherProfileQuery,
-  unfollowAction,
-} from "../../modules/feed/functions";
-import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
+import { runnerHandleQuery } from "../../modules/feed/functions";
+import { requireSignedIn, toHandlePage } from "../../modules/feed/redirect";
 import { noindexHead } from "../../modules/feed/route-decisions";
-import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { bellStateFn } from "../../modules/notifications/functions";
 
+/**
+ * H by id, kept as an address because links and specs already use it, and
+ * sent to `/@handle` — the one H (round 26 #7, FEED-10). A redirect from
+ * an id names nobody new: it leads to the handle the runner holds now,
+ * never from an old handle (decision D-56).
+ */
 export const Route = createFileRoute("/feed/u/$userId")({
   head: noindexHead,
-  beforeLoad: async () => {
+  beforeLoad: async ({ params }) => {
     requireSignedIn(await getSession());
+    toHandlePage(await runnerHandleQuery({ data: { userId: params.userId } }));
   },
-  loader: async ({ params }) => ({
-    profile: orBackToFeed(
-      await otherProfileQuery({ data: { userId: params.userId } }),
-    ),
-    isFollowing: await followStatusQuery({ data: { userId: params.userId } }),
-    viewerId: requireSignedIn(await getSession()).user.id,
-    bell: await bellStateFn(),
-  }),
-  component: OtherProfilePage,
 });
-
-function OtherProfilePage() {
-  const { profile, isFollowing, viewerId, bell } = Route.useLoaderData();
-
-  return (
-    <BelledLayout {...bell}>
-      <OtherProfile
-        profile={profile}
-        isFollowing={isFollowing}
-        follow={followAction}
-        unfollow={unfollowAction}
-        reportAffordance={
-          <ReportAffordance
-            subject={{
-              type: "profile",
-              id: profile.userId,
-              label: profile.username ?? "A runner",
-              authorId: profile.userId,
-              authorName: profile.username ?? undefined,
-            }}
-            viewerId={viewerId}
-            fileReport={fileReportAction}
-          />
-        }
-      />
-    </BelledLayout>
-  );
-}

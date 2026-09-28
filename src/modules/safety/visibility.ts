@@ -15,6 +15,7 @@
  */
 import { and, eq, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   blocks,
@@ -56,7 +57,10 @@ export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
     authorNotBanned(),
     ...(viewerId === undefined
       ? []
-      : [notBlockedEitherWay(viewerId), notReportedBy(viewerId)]),
+      : [
+          notBlockedEitherWay(viewerId, outfitEntries.userId),
+          notReportedBy(viewerId),
+        ]),
   );
 }
 
@@ -83,11 +87,20 @@ function authorNotBanned(): SQL {
 
 /**
  * W2 promises both directions: "They can't see your entries" and "You
- * won't see them in the feed". One row, read from both ends — `blocks_pk`
- * leads on `blocker_id`, `blocks_blocked` on `blocked_id`.
+ * won't see them in the feed" — and, for a runner, "They can't … find you
+ * in search" (FEED-7, D-107). One row, read from both ends — `blocks_pk`
+ * leads on `blocker_id`, `blocks_blocked` on `blocked_id` — so the
+ * `NOT EXISTS` per candidate is two index probes and never a scan.
+ *
+ * `runnerId` is the column naming the other runner: an entry's author
+ * here, a profile row's user in the feed's search and H. One gate, so a
+ * block means the same thing wherever the subject is a person.
  */
-function notBlockedEitherWay(viewerId: string): SQL {
-  return sql`not exists (select 1 from ${blocks} where (${blocks.blockerId} = ${viewerId} and ${blocks.blockedId} = ${outfitEntries.userId}) or (${blocks.blockerId} = ${outfitEntries.userId} and ${blocks.blockedId} = ${viewerId}))`;
+export function notBlockedEitherWay(
+  viewerId: string,
+  runnerId: SQLiteColumn,
+): SQL {
+  return sql`not exists (select 1 from ${blocks} where (${blocks.blockerId} = ${viewerId} and ${blocks.blockedId} = ${runnerId}) or (${blocks.blockerId} = ${runnerId} and ${blocks.blockedId} = ${viewerId}))`;
 }
 
 /**
@@ -98,6 +111,21 @@ function notBlockedEitherWay(viewerId: string): SQL {
  */
 function notReportedBy(viewerId: string): SQL {
   return sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'entry' and ${reports.subjectId} = ${outfitEntries.id})`;
+}
+
+/**
+ * D-68: a runner whose profile the viewer reported is gone from that
+ * viewer's search and H straight away — W1's promise for an entry, kept
+ * for a person. Only for the reporter, like `notReportedBy`: the report
+ * row is the hide, and `reports_one_per_reporter` (reporter, type,
+ * subject) is exactly this probe. A profile report's subject is the
+ * runner's user id.
+ */
+export function profileNotReportedBy(
+  viewerId: string,
+  runnerId: SQLiteColumn,
+): SQL {
+  return sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'profile' and ${reports.subjectId} = ${runnerId})`;
 }
 
 /**

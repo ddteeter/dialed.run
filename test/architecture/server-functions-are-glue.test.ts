@@ -188,8 +188,11 @@ const negations = Array.from(
   // `.tsx?` and `$`: a route file is `.tsx`, and a dynamic segment puts a
   // `$` in its name. The first version of this matched neither, so it read
   // `!src/routes/closet/index.tsx` as `…/index.ts` and skipped
-  // `$itemId.tsx` entirely — an exclusion the check could not see.
-  strykerParsed.mutate.join(",").matchAll(/!(src\/[\w.$/-]+\.tsx?)/g),
+  // `$itemId.tsx` entirely — an exclusion the check could not see. `@`,
+  // `{` and `}` for the same reason: `/@{$handle}` is a prefixed param,
+  // and its file is `@{$handle}.tsx` (task 129, FEED-10). A one-item brace
+  // has no comma, so a glob reads it literally and the negation holds.
+  strykerParsed.mutate.join(",").matchAll(/!(src\/[\w.$@{}/-]+\.tsx?)/g),
   (match) => match[1] ?? "",
 );
 

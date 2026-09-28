@@ -39,6 +39,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     tags: [],
     usefulCount: 0,
     conditions: undefined,
+    underReview: false,
     viewerHasReacted: false,
     ...overrides,
   };
@@ -142,7 +143,7 @@ describe("EntryDetail: the heading", () => {
 
   it("is the author's name to anyone else, or A runner", async () => {
     await renderFeedScreen(detail());
-    expect(screen.getByRole("heading", { name: "mark_t" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "@mark_t" })).toBeVisible();
   });
 
   it("falls back to A runner, and never calls a signed-out viewer the author", async () => {

@@ -95,13 +95,19 @@ describe("PostCard: the author row", () => {
     const post = await card({ authorUsername: "dana_k" });
 
     const author = post.querySelector('[data-part="author"]');
-    expect(author).toHaveTextContent("Ddana_k2h ago · 10:00 AM");
+    expect(author).toHaveTextContent("D@dana_k2h ago · 10:00 AM");
     expect(screen.getByText("2h ago · 10:00 AM")).toHaveClass("font-mono");
   });
 
   it("says A runner for someone with no handle", async () => {
-    await card();
+    const post = await card();
     expect(screen.getByText("A runner")).toBeVisible();
+    // The avatar's initial falls back to "A runner" too.
+    expect(
+      post
+        .querySelector('[data-part="author"]')
+        ?.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("A");
   });
 
   it("dates the run in its own zone", async () => {
@@ -350,5 +356,27 @@ describe("PostCard: Useful", () => {
       [{ data: { entryId: "01A", useful: true } }],
     ]);
     expect(screen.queryByText("Not marked")).toBeNull();
+  });
+});
+
+describe("PostCard: the author's under-review marker (D-62, D-67)", () => {
+  it("marks the author's own hidden entry, under the author row", async () => {
+    const post = await card({ underReview: true, caption: "Held." });
+
+    const marker = post.querySelector('[data-part="under-review"]');
+    expect(marker).toHaveTextContent("[Under review]");
+    expect(partsOf(post).slice(0, 4)).toStrictEqual([
+      "author",
+      "under-review",
+      "caption",
+      "run-strip",
+    ]);
+  });
+
+  it("is absent from every other card", async () => {
+    const post = await card({ underReview: false });
+
+    expect(post.querySelector('[data-part="under-review"]')).toBeNull();
+    expect(screen.queryByText(/Under review/u)).toBeNull();
   });
 });

@@ -16,6 +16,8 @@ import type {
 } from "@tanstack/react-router";
 import { redirect } from "@tanstack/react-router";
 
+import type { ProfileAtHandle } from "./profiles";
+
 export function redirectTo<
   TRouter extends AnyRouter = RegisteredRouter,
   const TTo extends string | undefined = undefined,
@@ -48,4 +50,32 @@ exists is most of what they wanted to know.
 export function orBackToFeed<T>(value: T | undefined): T {
   if (value === undefined) redirectTo({ to: "/feed" });
   return value;
+}
+
+/**
+`/@handle`'s two redirects. A handle nobody may be shown goes back to the
+feed, the answer every feed route gives for "not there, or not yours to
+see". The viewer's own handle goes to G — H is for somebody else, and it
+would offer them a Follow on themself.
+
+What is left is a page to render: the runner, or "changed their name".
+*/
+export function orHandlePage(
+  result: ProfileAtHandle | undefined,
+): Exclude<ProfileAtHandle, { kind: "own" }> {
+  const found = orBackToFeed(result);
+  if (found.kind === "own") redirectTo({ to: "/feed/me" });
+  return found;
+}
+
+/**
+`/feed/u/$userId`'s answer: the runner's `/@handle`, or back to the feed
+for a runner the viewer may not see — or one with no handle, which after
+O0 no runner has, and which would have no page to go to.
+*/
+export function toHandlePage(
+  profile: { username: string | null } | undefined,
+): never {
+  const handle = orBackToFeed(orBackToFeed(profile).username ?? undefined);
+  return redirectTo({ to: "/@{$handle}", params: { handle } });
 }

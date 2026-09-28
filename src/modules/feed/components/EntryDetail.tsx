@@ -12,6 +12,8 @@ import type { entryDetailForViewer } from "../entries";
 import { runWhenLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
+import { Handle } from "./Handle";
+import { UnderReview } from "./UnderReview";
 import { ReportFoot } from "./ReportFoot";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -103,9 +105,11 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           <Icon name="back" size={20} />
         </Link>
         <h1 className="m-0 font-display text-heading">
-          {isOwn ? "Your run" : (entry.authorUsername ?? "A runner")}
+          {isOwn ? "Your run" : <Handle username={entry.authorUsername} />}
         </h1>
       </div>
+
+      {entry.underReview ? <UnderReview /> : undefined}
 
       <PhotoPager photoKeys={entry.photoKeys} />
 

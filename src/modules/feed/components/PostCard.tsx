@@ -7,6 +7,8 @@ import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { Avatar } from "./Avatar";
+import { Handle } from "./Handle";
+import { UnderReview } from "./UnderReview";
 import { ConditionsCell } from "./ConditionsCell";
 
 import { UsefulButton } from "./UsefulButton";
@@ -37,7 +39,6 @@ export interface PostCardProps {
 
 export function PostCard(props: Readonly<PostCardProps>) {
   const { item, units, now, setUseful, onStatus } = props;
-  const name = item.authorUsername ?? "A runner";
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
 
@@ -53,15 +54,18 @@ export function PostCard(props: Readonly<PostCardProps>) {
         className="target flex flex-col gap-3 text-ink no-underline"
       >
         <div data-part="author" className="flex items-center gap-3">
-          <Avatar name={name} size="small" />
+          <Avatar name={item.authorUsername ?? "A runner"} size="small" />
           <span className="flex flex-1 flex-col">
-            <span className="text-body font-semibold">{name}</span>
+            <span className="text-body">
+              <Handle username={item.authorUsername} />
+            </span>
             <Mono step="xs" className="text-muted">
               {postedLabel(item.startedAt, now, item.conditions?.timeZone)}
             </Mono>
           </span>
           <VerdictBadge verdict={item.verdict} />
         </div>
+        {item.underReview ? <UnderReview /> : undefined}
         {photo === undefined ? undefined : (
           <img
             data-part="photo"

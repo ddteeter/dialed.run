@@ -477,6 +477,23 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the tile itself is still short of C. **The ask:** the photo well's
       height as a token (nothing in tokens.js gives one), or a ruling
       that v1's tile is text-only.
+33. **Two surfaces task 129's follow-up built without a drawing.** Both
+    are composed from existing primitives; neither adds a glyph, colour or
+    motion.
+    - **D-62's under-review marker, on the card and on D** (FEED-6,
+      `feed/components/PostCard.tsx`, `feed/components/EntryDetail.tsx`).
+      The author of an entry hidden pending review still sees it in their
+      own Following feed and on D (D-67), marked `[UNDER REVIEW]` —
+      bracket notation in `--muted` — and nobody else ever reaches it.
+      **The ask:** the marker's placement on the card and on D, and
+      whether it needs a line saying why ("Only you can see this while we
+      look at it" or similar — no sentence is shipped, because it is
+      user-facing wording).
+    - **`/@old` — "This runner changed their name."** (FEED-10,
+      `feed/components/RunnerAtHandle.tsx`). The ruling gives the sentence;
+      the page around it is H's column and back link with the sentence set
+      as H's empty-state lead, and nothing else — no avatar, no Follow, no
+      report. **The ask:** confirm the page is the sentence alone.
 
 33. **ACC-8 asks for the current password (PR #119 review).** **CLOSED
     by round 27 (items 9 and 11): the field is drawn in "U1 Change email",

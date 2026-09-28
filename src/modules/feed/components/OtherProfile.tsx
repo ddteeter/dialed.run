@@ -6,6 +6,7 @@ import { dayLabel } from "../../../lib/dates";
 import { FormStatus, Icon, Mono } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import { Avatar } from "./Avatar";
+import { Handle, handleText } from "./Handle";
 import { ReportFoot } from "./ReportFoot";
 import { FollowBand, FollowPill, useFollowToggle } from "./Follow";
 import type { FollowAction } from "./Follow";
@@ -49,7 +50,7 @@ export function OtherProfile({
     unfollow,
     onStatus: setStatus,
   });
-  const name = profile.username ?? "A runner";
+  const name = handleText(profile.username);
 
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
@@ -63,9 +64,11 @@ export function OtherProfile({
       </Link>
       <div data-part="header" className="flex flex-col items-start gap-4">
         <div className="flex items-center gap-4">
-          <Avatar name={name} size="large" />
+          <Avatar name={profile.username ?? name} size="large" />
           <div className="flex flex-col gap-1">
-            <h1 className="m-0 font-display text-heading">{name}</h1>
+            <h1 className="m-0 text-heading">
+              <Handle username={profile.username} />
+            </h1>
             {profile.cityLabel === null ? undefined : (
               <Mono className="text-muted">{profile.cityLabel}</Mono>
             )}

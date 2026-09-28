@@ -66,6 +66,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     tags: [],
     usefulCount: 0,
     conditions: undefined,
+    underReview: false,
     viewerHasReacted: false,
     ...overrides,
   };

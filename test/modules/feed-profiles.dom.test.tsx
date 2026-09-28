@@ -25,7 +25,7 @@ const done = () => Promise.resolve();
 function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
   return {
     userId: "01USER",
-    username: "Dana Kim",
+    username: "dana_kim",
     cityLabel: undefined,
     thermalLevel: undefined,
     followerCount: 0,
@@ -44,7 +44,7 @@ function otherProfile(
 ): OtherProfileData {
   return {
     userId: "01RAVI",
-    username: "Ravi K",
+    username: "ravi_k",
     cityLabel: NOTHING,
     recentPublicEntries: [],
     ...overrides,
@@ -171,6 +171,10 @@ describe("OwnProfile (G): day one", () => {
     );
     expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
     expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
+    // The avatar's initial falls back to "You", same as the heading.
+    expect(
+      part("header")?.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("Y");
   });
 
   it("shows the city in mono under the name", async () => {
@@ -297,13 +301,13 @@ describe("OtherProfile (H)", () => {
   it("keeps its header and Follow with nothing public, and says so plainly", async () => {
     await renderFeedScreen(otherScreen());
 
-    expect(screen.getByRole("heading", { name: "Ravi K" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "@ravi_k" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
     expect(part("entries")).toHaveAttribute("data-state", "empty");
     expect(screen.getByText("No public entries yet.")).toBeVisible();
     expect(
       screen.getByText(
-        "Follow Ravi K and their shared runs will show in your feed.",
+        "Follow @ravi_k and their shared runs will show in your feed.",
       ),
     ).toBeVisible();
     // Their silence, not a next step: no brackets.
@@ -512,7 +516,7 @@ describe("RunnerSearch", () => {
 
   it("searches on what is typed, trimmed, and lists avatar, name and a Follow pill", async () => {
     const user = userEvent.setup();
-    const found = vi.fn(() => Promise.resolve(results("Ana", "Andy")));
+    const found = vi.fn(() => Promise.resolve(results("ana", "andy")));
     await renderFeedScreen(searchScreen(found));
 
     await user.type(screen.getByLabelText("Search by name"), " An");
@@ -523,8 +527,8 @@ describe("RunnerSearch", () => {
     expect(found).toHaveBeenLastCalledWith("An");
     const [ana, andy] = screen.getAllByRole("listitem");
     expect(
-      within(ana ?? document.body).getByRole("link", { name: "Ana" }),
-    ).toHaveAttribute("href", "/feed/u/01R0");
+      within(ana ?? document.body).getByRole("link", { name: "@ana" }),
+    ).toHaveAttribute("href", "/@ana");
     expect(
       within(ana ?? document.body).getByRole("button", { name: "Follow" }),
     ).toBeVisible();
@@ -532,7 +536,7 @@ describe("RunnerSearch", () => {
     expect(
       within(andy ?? document.body).getByRole("button", { name: "Following" }),
     ).toBeVisible();
-    expect(ana).toHaveTextContent(/^AAnaFollow/u);
+    expect(ana).toHaveTextContent(/^A@anaFollow/u);
   });
 
   it("breathes its trailing label while a search is out, and only then", async () => {
@@ -577,18 +581,18 @@ describe("RunnerSearch", () => {
     const slow = Promise.withResolvers<SearchResult[]>();
     await renderFeedScreen(
       searchScreen((prefix) =>
-        prefix === "A" ? slow.promise : Promise.resolve(results("Ana")),
+        prefix === "A" ? slow.promise : Promise.resolve(results("ana")),
       ),
     );
 
     await user.type(screen.getByLabelText("Search by name"), "An");
-    await screen.findByRole("link", { name: "Ana" });
+    await screen.findByRole("link", { name: "@ana" });
     slow.reject(new TypeError("offline"));
 
     await waitFor(() => {
       expect(screen.queryByText("Didn't load")).toBeNull();
     });
-    expect(screen.getByRole("link", { name: "Ana" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "@ana" })).toBeVisible();
   });
 
   it("does not say No runner called over a search that then failed", async () => {
@@ -610,11 +614,11 @@ describe("RunnerSearch", () => {
 
   it("does not say No runner called when there are runners", async () => {
     const user = userEvent.setup();
-    await renderFeedScreen(searchScreen(() => Promise.resolve(results("Ana"))));
+    await renderFeedScreen(searchScreen(() => Promise.resolve(results("ana"))));
 
     await user.type(screen.getByLabelText("Search by name"), "A");
 
-    expect(await screen.findByRole("link", { name: "Ana" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "@ana" })).toBeVisible();
     expect(screen.queryByText(/No runner called/u)).toBeNull();
   });
 
@@ -629,7 +633,7 @@ describe("RunnerSearch", () => {
 
   it("goes quiet again when the box is cleared, whitespace and all", async () => {
     const user = userEvent.setup();
-    const found = vi.fn(() => Promise.resolve(results("Ana")));
+    const found = vi.fn(() => Promise.resolve(results("ana")));
     await renderFeedScreen(searchScreen(found));
     const box = screen.getByLabelText("Search by name");
 
@@ -648,18 +652,18 @@ describe("RunnerSearch", () => {
     const slow = Promise.withResolvers<SearchResult[]>();
     await renderFeedScreen(
       searchScreen((prefix) =>
-        prefix === "A" ? slow.promise : Promise.resolve(results("Ana")),
+        prefix === "A" ? slow.promise : Promise.resolve(results("ana")),
       ),
     );
 
     await user.type(screen.getByLabelText("Search by name"), "An");
-    await screen.findByRole("link", { name: "Ana" });
+    await screen.findByRole("link", { name: "@ana" });
     slow.resolve(results("Old answer"));
 
     await waitFor(() => {
       expect(screen.queryByText("Old answer")).toBeNull();
     });
-    expect(screen.getByRole("link", { name: "Ana" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "@ana" })).toBeVisible();
   });
 
   it("says Didn't load when the search fails, and tries the same one again", async () => {
@@ -667,7 +671,7 @@ describe("RunnerSearch", () => {
     const found = vi
       .fn<(prefix: string) => Promise<SearchResult[]>>()
       .mockRejectedValueOnce(new TypeError("offline"))
-      .mockResolvedValueOnce(results("Ana"));
+      .mockResolvedValueOnce(results("ana"));
     await renderFeedScreen(searchScreen(found));
 
     await user.type(screen.getByLabelText("Search by name"), "A");
@@ -676,7 +680,7 @@ describe("RunnerSearch", () => {
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(await screen.findByRole("link", { name: "Ana" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "@ana" })).toBeVisible();
     expect(found).toHaveBeenLastCalledWith("A");
     expect(screen.queryByText("Didn't load")).toBeNull();
   });
@@ -685,7 +689,7 @@ describe("RunnerSearch", () => {
     const user = userEvent.setup();
     await renderFeedScreen(
       <RunnerSearch
-        search={() => Promise.resolve(results("Ana"))}
+        search={() => Promise.resolve(results("ana"))}
         follow={() => Promise.reject(new TypeError("offline"))}
         unfollow={done}
       />,
