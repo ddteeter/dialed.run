@@ -69,11 +69,12 @@ export function Takedown({
         form={form}
         className="flex flex-col gap-4"
         onSubmit={() => {
-          void form.submit({
-            subjectType: subjectType === "" ? undefined : subjectType,
-            subjectId,
-            notice,
-          });
+          // No `subjectType === "" ? undefined : subjectType` here:
+          // `takedownInput`'s enum message ("Pick a photo or an entry.")
+          // reads the same whether the field is missing or holds an
+          // unpicked "", so sending it through unconverted changes nothing
+          // a reviewer can see.
+          void form.submit({ subjectType, subjectId, notice });
         }}
         action={
           <SubmitButton

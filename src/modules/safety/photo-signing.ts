@@ -46,7 +46,11 @@ export function signedExpiry(now: number = nowSeconds()): number {
   return (Math.floor(now / signedBucketSeconds) + 2) * signedBucketSeconds;
 }
 
-async function hmacKey(secret: string): Promise<CryptoKey> {
+/**
+ * The signing key: never extractable, so nothing holding it can read the
+ * secret back out.
+ */
+export async function hmacKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -116,7 +120,8 @@ export async function isSignatureValid(
   const expires = Number(claimed.expires);
   if (!Number.isSafeInteger(expires)) return false;
   if (expires <= now || expires - now > maxSignedLifeSeconds) return false;
-  const signature = fromBase64Url(claimed.signature ?? "");
+  if (claimed.signature === undefined) return false;
+  const signature = fromBase64Url(claimed.signature);
   if (signature === undefined) return false;
   return crypto.subtle.verify(
     "HMAC",

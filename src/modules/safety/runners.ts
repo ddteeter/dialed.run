@@ -62,7 +62,9 @@ export function prefixPattern(typed: string): string {
 }
 
 function matching(query: string | undefined) {
-  if (query === undefined || query === "") return;
+  // An empty query needs no guard of its own: its pattern is `%`, which
+  // matches every row, exactly as no filter does.
+  if (query === undefined) return;
   const pattern = prefixPattern(query.replace(/^@/u, ""));
   return or(
     sql`${userProfiles.username} LIKE ${pattern} ESCAPE '\\'`,
@@ -112,6 +114,5 @@ export async function deskRunners(
 D8's header count: every account, whatever the filter.
 */
 export async function accountCount(db: Db): Promise<number> {
-  const [row] = await db.select({ count: sql<number>`COUNT(*)` }).from(user);
-  return row?.count ?? 0;
+  return db.$count(user);
 }

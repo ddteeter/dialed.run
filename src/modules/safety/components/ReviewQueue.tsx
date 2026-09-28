@@ -144,15 +144,15 @@ function Decision({
       onSettled(row.id);
     },
     successMessage: "Decided.",
-    labels: { reason: "Why it comes down" },
   });
 
   function send(action: "remove" | "quarantine"): void {
-    void form.submit({
-      queueId: row.id,
-      action,
-      reason: reason === "" ? undefined : reason,
-    });
+    // No `reason === "" ? undefined : reason` here: this form has exactly
+    // one field, so the error summary (which is the only thing `labels`
+    // or a missing-vs-invalid distinction would ever change) never
+    // renders — `removalReasonSchema`'s own message covers both "nothing
+    // picked" and "not a real reason" identically.
+    void form.submit({ queueId: row.id, action, reason });
   }
 
   return (

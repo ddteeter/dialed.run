@@ -261,6 +261,19 @@ describe("Close account (D3)", () => {
 });
 
 describe("Takedown (SAF-6)", () => {
+  it("opens with nothing chosen", () => {
+    render(<Takedown takeDown={vi.fn()} />);
+    const picker = screen.getByRole("combobox", {
+      name: /What it is/,
+    });
+    expect(picker).toHaveDisplayValue("—");
+    // The empty option is chosen, not merely shown: a value no option
+    // holds leaves nothing selected.
+    if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
+    expect(picker.selectedIndex).toBe(0);
+    expect(picker.value).toBe("");
+  });
+
   type TakeDown = Parameters<typeof Takedown>[0]["takeDown"];
 
   it("takes a named photo down against its notice, and says so", async () => {
@@ -294,9 +307,60 @@ describe("Takedown (SAF-6)", () => {
     expect(
       await screen.findByText(takedownMessage("removed")),
     ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Takedown sent.");
+    });
   });
 
-  it("refuses an empty form with the schema's sentences", async () => {
+  it("says nothing before anything has been submitted", () => {
+    const { container } = render(<Takedown takeDown={vi.fn<TakeDown>()} />);
+
+    // Any non-empty initial value for `said` would render this paragraph
+    // immediately, which would read as a confirmation nobody asked for.
+    expect(container.querySelector("p")).toBeNull();
+  });
+
+  it("offers exactly the two subjects, by the words a reviewer reads", () => {
+    render(<Takedown takeDown={vi.fn<TakeDown>()} />);
+
+    const select = screen.getByRole("combobox", { name: /What it is/ });
+    const options = within(select)
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(options).toStrictEqual(["—", "A photo", "A whole entry"]);
+  });
+
+  it("takes a whole entry down too", async () => {
+    const user = userEvent.setup();
+    const takeDown = vi
+      .fn<TakeDown>()
+      .mockResolvedValue({ outcome: "removed" });
+    render(<Takedown takeDown={takeDown} />);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /What it is/ }),
+      "A whole entry",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: /Its id/ }),
+      "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: /The notice/ }),
+      "Acme, ref 114",
+    );
+    await user.click(screen.getByRole("button", { name: "Take it down" }));
+
+    expect(takeDown).toHaveBeenCalledWith({
+      data: {
+        subjectType: "entry",
+        subjectId: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+        notice: "Acme, ref 114",
+      },
+    });
+  });
+
+  it("refuses an empty form with the schema's sentences, labelled by field", async () => {
     const user = userEvent.setup();
     const takeDown = vi.fn<TakeDown>();
     render(<Takedown takeDown={takeDown} />);
@@ -306,6 +370,18 @@ describe("Takedown (SAF-6)", () => {
     expect(takeDown).not.toHaveBeenCalled();
     const said = await screen.findAllByText("Pick a photo or an entry.");
     expect(said.length).toBeGreaterThan(0);
+    // Three empty fields fail together, which is exactly when the summary
+    // renders and its rows' labels — otherwise unobservable — are shown.
+    expect(screen.getByText("3 fields need a fix.")).toBeInTheDocument();
+    expect(
+      screen.getByText("What it is — Pick a photo or an entry."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Its id — not a ULID")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The notice — Say who sent the notice and its reference.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("tells the operator each outcome", () => {

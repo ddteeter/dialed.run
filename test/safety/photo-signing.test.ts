@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { env } from "../../src/env";
 
 import {
+  hmacKey,
   isSignatureValid,
   maxSignedLifeSeconds,
   signedExpiry,
@@ -90,6 +91,17 @@ async function isValid(
   return isSignatureValid(key, claimed, now, secret);
 }
 
+describe("hmacKey", () => {
+  it("can sign and verify, and cannot be read back out", async () => {
+    const key = await hmacKey(SECRET);
+    expect(key.extractable).toBe(false);
+    expect(key.usages.toSorted((a, b) => a.localeCompare(b))).toStrictEqual([
+      "sign",
+      "verify",
+    ]);
+  });
+});
+
 describe("isSignatureValid", () => {
   it("accepts its own signature while it lives", async () => {
     const { expires, signature } = await signed();
@@ -149,6 +161,32 @@ describe("isSignatureValid", () => {
     expect(
       await isValid({ expires: String(expires), signature }, NOW, KEY, ""),
     ).toBe(false);
+  });
+
+  it("refuses an expiry that fails the safe-integer guard, even forged for it", async () => {
+    // A guard that were ever bypassed would fall through to a comparison
+    // against `now` and then to `verify` — both of which are NaN-tolerant
+    // and would otherwise quietly agree with a signature minted for the
+    // same NaN expiry.
+    const forged = await signPhotoKey(KEY, NaN, SECRET);
+    if (forged === undefined) throw new Error("expected a signature");
+    expect(
+      await isValid({ expires: "banana", signature: forged.signature }),
+    ).toBe(false);
+  });
+
+  it("refuses a signature valid only in the middle, not from the start", async () => {
+    // The base64url check is anchored at both ends. A regex missing the
+    // leading `^` would still match the tail of this string and hand it to
+    // `atob`, which is not a base64 alphabet in the middle either — the
+    // point is that the leading `!` must be rejected outright, not that it
+    // happens to also fail to decode.
+    const expires = String(signedExpiry(NOW));
+    const isAccepted = await isValid({
+      expires,
+      signature: "!abcabcabcabcabcabc",
+    });
+    expect(isAccepted).toBe(false);
   });
 
   it("refuses a life longer than any URL it hands out, even when signed", async () => {

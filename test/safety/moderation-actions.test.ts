@@ -39,10 +39,13 @@ import {
   removalSentence,
   removalStatements,
   renameReasonSchema,
+  runnersFilterInput,
   RUNNERS_PAGE,
   takedownInput,
   unbanUser,
+  unbanUserInput,
 } from "../../src/modules/safety";
+import { isUniqueViolation } from "../../src/modules/safety/rename";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -167,7 +170,7 @@ async function account(
 }
 
 async function idsFor(filter: {
-  query?: string;
+  query?: string | undefined;
   filter: "all" | "reported" | "closed";
 }): Promise<string[]> {
   const listed = await deskRunners(core(), filter);
@@ -585,6 +588,59 @@ describe("bans are audited", () => {
   });
 });
 
+describe("unbanUserInput", () => {
+  it("takes a user id", () => {
+    expect(unbanUserInput.parse({ userId: "u-1" })).toEqual({
+      userId: "u-1",
+    });
+  });
+
+  it("refuses an empty one", () => {
+    expect(unbanUserInput.safeParse({ userId: "" }).success).toBe(false);
+  });
+
+  it("bounds it, since it is not always a ULID", () => {
+    expect(unbanUserInput.safeParse({ userId: "x".repeat(65) }).success).toBe(
+      false,
+    );
+    expect(unbanUserInput.safeParse({ userId: "x".repeat(64) }).success).toBe(
+      true,
+    );
+  });
+});
+
+describe("runnersFilterInput (D8's search and filter)", () => {
+  it("opens on everyone by default", () => {
+    expect(runnersFilterInput.parse({}).filter).toBe("all");
+  });
+
+  it("takes reported and closed too", () => {
+    expect(runnersFilterInput.parse({ filter: "reported" }).filter).toBe(
+      "reported",
+    );
+    expect(runnersFilterInput.parse({ filter: "closed" }).filter).toBe(
+      "closed",
+    );
+  });
+
+  it("refuses a filter that is not one of the three", () => {
+    expect(runnersFilterInput.safeParse({ filter: "banned" }).success).toBe(
+      false,
+    );
+    expect(runnersFilterInput.safeParse({ filter: "" }).success).toBe(false);
+  });
+
+  it("trims the query and caps it at 254", () => {
+    expect(
+      runnersFilterInput.parse({ query: "  ada  ", filter: "all" }).query,
+    ).toBe("ada");
+    expect(
+      runnersFilterInput.safeParse({ query: "x".repeat(255), filter: "all" })
+        .success,
+    ).toBe(false);
+  });
+});
+
 describe("forceRename (round 27 #16)", () => {
   beforeEach(freshState);
 
@@ -618,8 +674,31 @@ describe("forceRename (round 27 #16)", () => {
     expect(audit).toMatchObject({
       action: "rename",
       actorId: "op",
+      // A rename acts on the runner's profile, not on any of their posted
+      // content — the audit's `subjectType` is what a reviewer later reads
+      // to tell those apart.
+      subjectType: "profile",
       reason: "Offensive or sexual (was @rudename)",
     });
+  });
+
+  it("collides only on the unique-handle index, and lets anything else through", () => {
+    // The batch's catch exists for one real failure: two concurrent
+    // renames racing the unique-handle index. Any other D1 failure must
+    // still surface as an error rather than being reported as a placeholder
+    // collision, which is why this is asserted on both sides.
+    expect(
+      isUniqueViolation(
+        new Error("D1_ERROR: UNIQUE constraint failed: user_profiles.username"),
+      ),
+    ).toBe(true);
+    expect(
+      isUniqueViolation(
+        new Error(
+          "D1_ERROR: NOT NULL constraint failed: user_profiles.user_id",
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("refuses a placeholder someone gave up, or holds, and writes nothing", async () => {
@@ -649,6 +728,27 @@ describe("forceRename (round 27 #16)", () => {
     ).toStrictEqual({ kind: "collided" });
     const unchanged = await profileOf(runner);
     expect(unchanged?.username).toBe("rudename");
+  });
+
+  it("lets any other failure of the write through", async () => {
+    const runner = await makeUser({ username: "rudename" });
+    const real = core();
+    const failing = new Proxy(real, {
+      get(target, property, receiver): unknown {
+        return property === "batch"
+          ? () => Promise.reject(new Error("D1 is down"))
+          : Reflect.get(target, property, receiver);
+      },
+    });
+
+    await expect(
+      forceRename(failing, {
+        userId: runner,
+        actorId: "op",
+        reason: "Advertising",
+        replacement: "runner_0003",
+      }),
+    ).rejects.toThrow("D1 is down");
   });
 
   it("answers not found for a runner with no handle", async () => {
@@ -740,6 +840,27 @@ describe("deskRunners, D8 (round 27 #22)", () => {
   it("escapes LIKE's wildcards and its escape", () => {
     expect(prefixPattern("A_b%c\\")).toBe(String.raw`a\_b\%c\\%`);
     expect(RUNNERS_PAGE).toBe(100);
+  });
+
+  it("only strips a leading @, never one buried in the middle", async () => {
+    await account("bo@example.com", "bo_runs", 2000);
+
+    // Stripping the "@" wherever it falls would turn this into "bo_runs"
+    // and find the row below by accident; only a leading "@" is the
+    // "I typed a handle" marker the search box is for.
+    expect(await idsFor({ query: "b@o_runs", filter: "all" })).toStrictEqual(
+      [],
+    );
+  });
+
+  it("treats a query key present but undefined the same as no search", async () => {
+    const ada = await account("ada@example.com", "ada", 1000);
+    const bo = await account("bo@example.com", "bo_runs", 2000);
+
+    expect(await idsFor({ query: undefined, filter: "all" })).toStrictEqual([
+      bo,
+      ada,
+    ]);
   });
 
   it("stops at a page", async () => {

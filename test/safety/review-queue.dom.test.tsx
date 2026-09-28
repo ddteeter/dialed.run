@@ -72,6 +72,15 @@ describe("what a reviewer is shown", () => {
 });
 
 describe("deciding", () => {
+  it("opens with no reason chosen", () => {
+    renderQueue([row()]);
+    const picker = screen.getByRole("combobox");
+    expect(picker).toHaveDisplayValue("—");
+    if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
+    expect(picker.selectedIndex).toBe(0);
+    expect(picker.value).toBe("");
+  });
+
   const QUEUE_ID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
 
   it("approves without a reason and takes the row off the list", async () => {
@@ -85,6 +94,17 @@ describe("deciding", () => {
     });
     await waitFor(() => {
       expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("announces the decision in the live region", async () => {
+    const user = userEvent.setup();
+    renderQueue([row()]);
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Decided.");
     });
   });
 

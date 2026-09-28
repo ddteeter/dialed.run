@@ -45,6 +45,17 @@ function randomDigits(): number {
   return value % 10_000;
 }
 
+/**
+ * Whether a batch failure was the unique-handle index refusing a collision
+ * with a concurrent rename, rather than some other failure that must not be
+ * swallowed as one. Pulled out so the classification can be pinned directly,
+ * since triggering every *other* kind of D1 failure from a test is not
+ * practical.
+ */
+export function isUniqueViolation(error: unknown): boolean {
+  return String(error).includes("UNIQUE");
+}
+
 export interface ForceRenameInput {
   userId: string;
   actorId: string;
@@ -107,7 +118,7 @@ export async function forceRename(
       }),
     ]);
   } catch (error: unknown) {
-    if (String(error).includes("UNIQUE")) return { kind: "collided" };
+    if (isUniqueViolation(error)) return { kind: "collided" };
     throw error;
   }
   return { kind: "renamed", username };
