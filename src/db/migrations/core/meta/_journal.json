@@ -218,6 +218,13 @@
       "when": 1790538700572,
       "tag": "0030_add_verification_identifier_index",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1790561874414,
+      "tag": "0031_add_outbox_sent_at_and_message_id",
+      "breakpoints": true
     }
   ]
 }

@@ -13,7 +13,18 @@
  * - **the digest** (`checkOutboxBacklog`) reports rows that have exhausted
  *   their attempts, and rows of a kind this build cannot read (law 6).
  */
-import { and, asc, count, eq, gte, lte, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  isNotNull,
+  lte,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { outbox } from "../../db/schema-core";
@@ -141,7 +152,7 @@ export async function settleOutbox(
 ): Promise<void> {
   const handler = boundHandler(handlers, debt.message);
   try {
-    await handler.run(db);
+    await handler.run(db, debt.id);
     await db.delete(outbox).where(eq(outbox.id, debt.id));
   } catch (error) {
     report(error, {
@@ -184,6 +195,12 @@ async function claimDue(
   kind: OutboxKind,
   now: number,
 ): Promise<ClaimedRow[]> {
+  // Due, or already sent: a row whose send landed and whose delete did
+  // not is cleared at once, whenever it would next have been due.
+  const dueOrSent = or(
+    lte(outbox.nextAttemptAt, now),
+    isNotNull(outbox.sentAt),
+  );
   const due = await db
     .select({
       id: outbox.id,
@@ -191,7 +208,7 @@ async function claimDue(
       nextAttemptAt: outbox.nextAttemptAt,
     })
     .from(outbox)
-    .where(and(eq(outbox.kind, kind), lte(outbox.nextAttemptAt, now)))
+    .where(and(eq(outbox.kind, kind), dueOrSent))
     .orderBy(asc(outbox.nextAttemptAt))
     .limit(OUTBOX_DRAIN_CAP);
   const [first, ...rest] = due.map((row) =>
@@ -229,6 +246,13 @@ async function didSettle(
     attempts: String(row.attempts),
     terminal: String(row.attempts >= OUTBOX_TERMINAL_ATTEMPTS),
   };
+  // Sent already (the Worker that sent it died before its delete): the
+  // work is done, and doing it again is the duplicate the mark exists to
+  // prevent. Only the delete is owed.
+  if (row.sentAt !== null) {
+    await db.delete(outbox).where(eq(outbox.id, row.id));
+    return true;
+  }
   const read = readOutboxRow(row.kind, row.payload);
   if (!read.ok) {
     report(new Error(`outbox row unreadable: ${read.problem}`), where);
@@ -237,7 +261,7 @@ async function didSettle(
   const { message } = read;
   const handler = boundHandler(handlers, message);
   try {
-    await handler.run(db);
+    await handler.run(db, row.id);
     // Its own id, as the fast path does: a row taken over by a newer
     // write since this run claimed it is that writer's to settle.
     await db.delete(outbox).where(eq(outbox.id, row.id));

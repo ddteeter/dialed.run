@@ -643,6 +643,12 @@ export const outbox = /*#__PURE__*/ sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: integer("next_attempt_at").notNull(),
     createdAt: integer("created_at").notNull(),
+    // Task 126 (PR #119 review): when an email row's send landed, and the
+    // id the sender gave it. Written in one statement right after the
+    // send, before the delete — a row that has it was sent, and the drain
+    // deletes it rather than sending again.
+    sentAt: integer("sent_at"),
+    messageId: text("message_id"),
   },
   (t) => [
     uniqueIndex("outbox_kind_dedupe").on(t.kind, t.dedupeKey),

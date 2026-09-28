@@ -181,6 +181,38 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
     expect(after.asked).toBe(1);
     expect(isRedirect(after.thrown)).toBe(true);
   });
+
+  it("never writes the owner from the server, even when the answer names somebody else", async () => {
+    // A "has-handle" answer would also write the owner via
+    // `rememberForSession` itself, which would hide a broken `isInBrowser`
+    // guard on `noteSessionOwner`. This isolates it: the only call able to
+    // touch the owner here is the one the server must skip.
+    await gateOnce("has-handle", true, "/closet", "u1");
+    expect(isRememberedForSession("has-handle")).toBe(true);
+    await gateOnce("signed-out", false);
+    // Still u1's memo: a server request — which every other request
+    // shares the module with — must not touch the browser's owner.
+    expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("takes the owner from what the browser hears, even on an answer it does not remember", async () => {
+    await gateOnce("has-handle", true, "/closet", "u1");
+    // Another tab signed someone else in, so this tab asks again…
+    noteSessionOwner("u2");
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    // …and the server says it is u1 after all. The answer is not one the
+    // memo keeps, so only the owner it names can bring u1's facts back.
+    const back = await gateOnce("needs-handle", true, "/onboarding/handle");
+    expect(back.asked).toBe(1);
+    expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("takes nothing from what the server hears", async () => {
+    await gateOnce("has-handle", true, "/closet", "u1");
+    noteSessionOwner("u2");
+    await gateOnce("needs-handle", false, "/onboarding/handle");
+    expect(isRememberedForSession("has-handle")).toBe(false);
+  });
 });
 
 function thrownBy(run: () => void): unknown {

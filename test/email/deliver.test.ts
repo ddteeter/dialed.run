@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { user } from "../../src/db/schema-auth";
 import {
@@ -23,7 +23,11 @@ import {
   setEmailPreference,
   isEmailWanted,
 } from "../../src/modules/email";
-import { EMAIL_FROM } from "../../src/modules/email/deliver";
+import {
+  deliverOwedEmail,
+  EMAIL_FROM,
+  messageIdFor,
+} from "../../src/modules/email/deliver";
 import {
   SEND_WINDOW_S,
   SENDS_PER_WINDOW,
@@ -41,6 +45,7 @@ import {
   settleOutbox,
 } from "../../src/modules/ops/outbox";
 import {
+  emailHandler,
   outboxHandlers,
   type OutboxHandlers,
 } from "../../src/modules/ops/outbox-handlers";
@@ -417,6 +422,105 @@ describe("the email outbox kind", () => {
     expect(await db.select().from(outbox)).toHaveLength(0);
   });
 
+  it("marks the row sent with the sender's id, and the drain deletes a sent row rather than sending it again", async () => {
+    const { userId } = await seedUser();
+    const mail = fakeMail();
+    const debt = oweOutbox(
+      emailDebt(
+        { to: { userId }, template: { kind: "existing_account" } },
+        { dedupeKey: "sent-not-deleted" },
+      ),
+    );
+    await outboxInsert(db, debt, NOW);
+    // The Worker dies between the send and the delete: the fast path's
+    // delete never lands.
+    const remove = vi.spyOn(db, "delete").mockImplementationOnce(() => {
+      throw new Error("worker gone");
+    });
+    await settleOutbox(db, debt, quiet, handlersSendingTo(mail));
+    remove.mockRestore();
+
+    expect(mail.sent).toHaveLength(1);
+    const [row] = await db.select().from(outbox);
+    expect(row?.sentAt).toBeTypeOf("number");
+    expect(row?.messageId).toBe(mail.ids[0]);
+
+    // The next drain — before the row would even be due — clears it and
+    // sends nothing.
+    const anomalies: string[] = [];
+    await drainOutbox(db, anomalies, {
+      handlers: handlersSendingTo(mail),
+      now: NOW + 1,
+      kinds: ["email"],
+    });
+    expect(mail.sent).toHaveLength(1);
+    expect(await db.select().from(outbox)).toHaveLength(0);
+    expect(anomalies).toStrictEqual([
+      "1 email outbox row(s) were owed; 1 settled",
+    ]);
+  });
+
+  it("does not resend a sent row that the drain finds due, either", async () => {
+    const { userId } = await seedUser();
+    const mail = fakeMail();
+    const debt = oweOutbox(
+      emailDebt(
+        { to: { userId }, template: { kind: "existing_account" } },
+        { dedupeKey: "sent-and-due" },
+      ),
+    );
+    await outboxInsert(db, debt, NOW);
+    await db
+      .update(outbox)
+      .set({ sentAt: NOW, messageId: "earlier" })
+      .where(eq(outbox.id, debt.id));
+
+    await drainOutbox(db, [], {
+      handlers: handlersSendingTo(mail),
+      now: NOW + OUTBOX_FAST_PATH_GRACE_S,
+      kinds: ["email"],
+    });
+
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.select().from(outbox)).toHaveLength(0);
+  });
+
+  it("leaves an unsent row that is not yet due to its fast path", async () => {
+    const debt = oweOutbox(
+      emailDebt(
+        {
+          to: { address: "a@example.com" },
+          template: { kind: "existing_account" },
+        },
+        { dedupeKey: "not-yet" },
+      ),
+    );
+    await outboxInsert(db, debt, NOW);
+    const mail = fakeMail();
+    await drainOutbox(db, [], {
+      handlers: handlersSendingTo(mail),
+      now: NOW + 1,
+      kinds: ["email"],
+    });
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.select().from(outbox)).toHaveLength(1);
+  });
+
+  it("marks nothing for an email it skipped", async () => {
+    const debt = oweOutbox(
+      emailDebt(
+        { to: { userId: "gone" }, template: { kind: "existing_account" } },
+        { dedupeKey: "skipped" },
+      ),
+    );
+    await outboxInsert(db, debt, NOW);
+    const update = vi.spyOn(db, "update");
+    await settleOutbox(db, debt, quiet, handlersSendingTo(fakeMail()));
+    expect(update).not.toHaveBeenCalled();
+    update.mockRestore();
+    expect(await db.select().from(outbox)).toHaveLength(0);
+  });
+
   it("stays owed when the send fails, reported with no address in it", async () => {
     const { userId } = await seedUser();
     const mail = fakeMail();
@@ -531,13 +635,81 @@ function quiet(): void {
 The real handlers, with the email one sending through `mail`.
 */
 function handlersSendingTo(mail: ReturnType<typeof fakeMail>): OutboxHandlers {
-  return {
-    ...outboxHandlers,
-    email: {
-      run: async (database, payload) => {
-        await deliverEmail(database, payload.email, mail);
-      },
-      context: outboxHandlers.email.context,
-    },
-  };
+  return { ...outboxHandlers, email: emailHandler(() => mail) };
 }
+
+describe("an owed email's Message-ID", () => {
+  it("is the same for two sends of one debt, and different for another", async () => {
+    const mail = fakeMail();
+    const payload = {
+      to: { address: "a@example.com" },
+      template: { kind: "existing_account" },
+    } as const;
+
+    await deliverOwedEmail(db, payload, "debt-1", mail);
+    await deliverOwedEmail(db, payload, "debt-1", mail);
+    await deliverOwedEmail(db, payload, "debt-2", mail);
+
+    const ids = mail.sent.map((message) => message.headers?.["Message-ID"]);
+    expect(ids).toStrictEqual([
+      "<debt-1@dialed.run>",
+      "<debt-1@dialed.run>",
+      "<debt-2@dialed.run>",
+    ]);
+  });
+
+  it("answers the sender's own id", async () => {
+    const mail = fakeMail();
+    const sent = await deliverOwedEmail(
+      db,
+      {
+        to: { address: "a@example.com" },
+        template: { kind: "existing_account" },
+      },
+      "debt-3",
+      mail,
+    );
+    expect(sent).toStrictEqual({ status: "sent", messageId: mail.ids[0] });
+  });
+
+  it("answers no id when the sender gives none", async () => {
+    const mail = fakeMail();
+    const sent = await deliverOwedEmail(
+      db,
+      {
+        to: { address: "a@example.com" },
+        template: { kind: "existing_account" },
+      },
+      "debt-4",
+      { ...mail, send: () => Promise.resolve({}) },
+    );
+    expect(sent).toStrictEqual({ status: "sent", messageId: undefined });
+  });
+
+  it("uses a valid dedupe key as it is, and hashes one with characters a msg-id cannot hold", async () => {
+    expect(await messageIdFor("run.reminder_01J-x")).toBe(
+      "<run.reminder_01J-x@dialed.run>",
+    );
+    const hashed = await messageIdFor("email_changed:u1:1800000000");
+    expect(hashed).toMatch(/^<[0-9a-f]{64}@dialed\.run>$/u);
+    expect(await messageIdFor("email_changed:u1:1800000000")).toBe(hashed);
+    expect(await messageIdFor("email_changed:u1:1800000001")).not.toBe(hashed);
+    // A dot may only join runs: leading, trailing or doubled is hashed.
+    for (const key of [".a", "a.", "a..b", "a b", "a@b", "a<b>"]) {
+      expect(await messageIdFor(key), key).toMatch(/^<[0-9a-f]{64}@/u);
+    }
+  });
+
+  it("is not set on an email sent now, which has no debt to name it", async () => {
+    const mail = fakeMail();
+    await deliverEmail(
+      db,
+      {
+        to: { address: "a@example.com" },
+        template: { kind: "existing_account" },
+      },
+      mail,
+    );
+    expect(mail.sent[0]?.headers).toBeUndefined();
+  });
+});

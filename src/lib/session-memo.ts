@@ -37,14 +37,23 @@ interface OwnerStore {
   readonly write: (owner: string | undefined) => void;
 }
 
-const thisTab: { owner: string | undefined } = { owner: undefined };
+/**
+ * This tab's own answer, held in a closure rather than a module-level
+ * object. A plain `{ owner: undefined }` literal is indistinguishable from
+ * `{}` until something reads the (absent) key back — Stryker proved it, and
+ * a closed-over `let` has no key to drop.
+ */
+function tabScopedStore(): OwnerStore {
+  let owner: string | undefined;
+  return {
+    read: () => owner,
+    write: (next) => {
+      owner = next;
+    },
+  };
+}
 
-const tabStore: OwnerStore = {
-  read: () => thisTab.owner,
-  write: (owner) => {
-    thisTab.owner = owner;
-  },
-};
+const tabStore: OwnerStore = tabScopedStore();
 
 function sharedStore(storage: Storage): OwnerStore {
   return {
@@ -70,18 +79,6 @@ function ownerStore(): OwnerStore {
   }
 }
 
-/**
- * A refused read or write (a full or blocked store) is the same as no
- * owner: the next navigation asks, which is always correct.
- */
-function readOwner(): string | undefined {
-  try {
-    return ownerStore().read();
-  } catch {
-    return undefined;
-  }
-}
-
 function writeOwner(owner: string | undefined): void {
   try {
     ownerStore().write(owner);
@@ -95,8 +92,13 @@ function writeOwner(owner: string | undefined): void {
  * Each runner's facts, by user id. A fact about a runner stays true while
  * any session of theirs lasts, so one that signs back in finds theirs
  * again; what decides whether one is read is who the owner is now.
+ *
+ * Keyed `string | undefined` rather than `string` so a read's own answer —
+ * which is `undefined` for "nobody" — can be looked up directly, with no
+ * separate guard: nothing is ever `remembered.set` under the `undefined`
+ * key, so that lookup always misses on its own.
  */
-const remembered = new Map<string, Set<string>>();
+const remembered = new Map<string | undefined, Set<string>>();
 
 /**
 The server said who is signed in, or that nobody is.
@@ -112,9 +114,19 @@ export function rememberForSession(userId: string, fact: string): void {
   remembered.set(userId, facts);
 }
 
+/**
+ * A refused read (a full or blocked store, or the store itself unreachable)
+ * is the same as no owner: the next navigation asks, which is always
+ * correct. The `false` in the `catch` is a literal on purpose — it is what
+ * a caught failure means, not a stand-in for the lookup's own `undefined`,
+ * which is a different value even though both read as "no".
+ */
 export function isRememberedForSession(fact: string): boolean {
-  const owner = readOwner();
-  return owner !== undefined && remembered.get(owner)?.has(fact) === true;
+  try {
+    return remembered.get(ownerStore().read())?.has(fact) === true;
+  } catch {
+    return false;
+  }
 }
 
 /**

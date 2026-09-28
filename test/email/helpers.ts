@@ -21,21 +21,29 @@ export function core() {
  */
 export function fakeMail(): EmailDeps & {
   sent: EmailMessageBuilder[];
+  /**
+  The `messageId` each send answered, in order.
+  */
+  ids: string[];
   failing: (isFailing: boolean) => void;
 } {
   const sent: EmailMessageBuilder[] = [];
+  const ids: string[] = [];
   let isFailing = false;
   return {
     origin: ORIGIN,
     secret: SECRET,
     sent,
+    ids,
     failing: (next) => {
       isFailing = next;
     },
     send: (message) => {
       if (isFailing) return Promise.reject(new Error("send failed"));
       sent.push(message);
-      return Promise.resolve({ messageId: newUlid() });
+      const messageId = newUlid();
+      ids.push(messageId);
+      return Promise.resolve({ messageId });
     },
   };
 }

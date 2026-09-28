@@ -9,9 +9,22 @@
  */
 import { APIError } from "better-auth/api";
 
-import type { createAuth } from "./create-auth";
-
-type Auth = Pick<ReturnType<typeof createAuth>, "api">;
+/**
+ * Only the call this file makes — narrower than Better Auth's own
+ * `verifyPassword` endpoint type (which carries an `options`/`path` pair
+ * alongside several call-shape overloads, none of which this file uses),
+ * both because that is all this needs and because it is what lets a test
+ * double stand in for `auth` without implementing the rest of that shape.
+ * The real instance satisfies this structurally — it does strictly more.
+ */
+interface Auth {
+  readonly api: {
+    readonly verifyPassword: (input: {
+      body: { password: string };
+      headers: Headers;
+    }) => Promise<unknown>;
+  };
+}
 
 /**
 Better Auth's code for a password that is not the account's.

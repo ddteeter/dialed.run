@@ -1,5 +1,6 @@
 import process from "node:process";
 
+import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
@@ -267,6 +268,22 @@ describe("isOwnPassword (ACC-8's current password)", () => {
     await expect(
       isOwnPassword(auth, new Headers(), password),
     ).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  it("rethrows a refusal that carries no body at all, rather than answering no", async () => {
+    // Better Auth's own refusals always carry a body, but the type this
+    // file reads from (`error.body?.code`) allows for one that does not —
+    // `APIError`'s own constructor takes `body` as optional. A fake stands
+    // in for `auth` here because no real endpoint leaves it unset.
+    const bodyless = new APIError("BAD_REQUEST");
+    const fakeAuth = {
+      api: {
+        verifyPassword: () => Promise.reject(bodyless),
+      },
+    };
+    await expect(
+      isOwnPassword(fakeAuth, new Headers(), password),
+    ).rejects.toBe(bodyless);
   });
 });
 

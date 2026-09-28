@@ -5,6 +5,7 @@
  */
 import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import { z } from "zod";
 
 import { user } from "../../db/schema-auth";
 import { env } from "../../env";
@@ -128,10 +129,84 @@ async function optionalMail(
 }
 
 /**
+ * The left half of a msg-id (RFC 5322 §3.6.4, `dot-atom-text`): letters,
+ * digits and the atext symbols, in dot-separated runs.
+ */
+const DOT_ATOM = /^[\w!#$%&'*+/=?^`{|}~-]+(?:\.[\w!#$%&'*+/=?^`{|}~-]+)*$/u;
+
+/**
+ * The `Message-ID` an owed email carries, the same on every attempt: made
+ * from its outbox dedupe key, so a send retried after a Worker died
+ * between the send and the row's delete reaches the inbox with the id the
+ * first one had, and Gmail and others show one message. Cloudflare's
+ * sender has no idempotency key of its own. A key that is not already a
+ * valid id-left is hashed — deterministically, so the same debt still
+ * builds the same header.
+ */
+export async function messageIdFor(dedupeKey: string): Promise<string> {
+  if (DOT_ATOM.test(dedupeKey)) return `<${dedupeKey}@dialed.run>`;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(dedupeKey),
+  );
+  const hex = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return `<${hex}@dialed.run>`;
+}
+
+/**
+ * The sender's answer, as far as anything here reads it. The binding
+ * types it; a fake or a future binding may not, so it is parsed.
+ */
+const sendResultSchema = z.object({ messageId: z.string() });
+
+type Sent =
+  | { readonly status: "sent"; readonly messageId: string | undefined }
+  | { readonly status: "skipped" };
+
+async function send(
+  db: Db,
+  payload: EmailPayload,
+  deps: EmailDeps,
+  extraHeaders: Readonly<Record<string, string>>,
+): Promise<Sent> {
+  const recipient = await recipientOf(db, payload.to);
+  if (recipient === undefined) return { status: "skipped" };
+  const optional = await optionalMail(db, recipient, payload, deps);
+  if (optional === "skip") return { status: "skipped" };
+  const { unsubscribe } = optional;
+  const email = renderEmail(payload.template, {
+    origin: deps.origin,
+    unsubscribe,
+  });
+  const headers: Record<string, string> = {
+    ...extraHeaders,
+    ...(unsubscribe !== undefined && {
+      "List-Unsubscribe": `<${unsubscribe}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }),
+  };
+  const result = sendResultSchema.safeParse(
+    await deps.send({
+      from: EMAIL_FROM,
+      to: recipient.address,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      ...(Object.keys(headers).length > 0 && { headers }),
+    }),
+  );
+  return {
+    status: "sent",
+    messageId: result.success ? result.data.messageId : undefined,
+  };
+}
+
+/**
  * Render and send one email. `"skipped"` when there was nothing to send —
  * the runner is gone, or they do not want this kind — and a throw when the
- * send failed, so the outbox keeps the row and a caller sending now can
- * say so.
+ * send failed, so a caller sending now can say so.
  *
  * An optional email carries `List-Unsubscribe` with one-click (RFC 8058):
  * a mail client's own unsubscribe button POSTs the same signed link.
@@ -141,27 +216,22 @@ export async function deliverEmail(
   payload: EmailPayload,
   deps: EmailDeps = emailDepsFromEnv(),
 ): Promise<"sent" | "skipped"> {
-  const recipient = await recipientOf(db, payload.to);
-  if (recipient === undefined) return "skipped";
-  const optional = await optionalMail(db, recipient, payload, deps);
-  if (optional === "skip") return "skipped";
-  const { unsubscribe } = optional;
-  const email = renderEmail(payload.template, {
-    origin: deps.origin,
-    unsubscribe,
+  const sent = await send(db, payload, deps, {});
+  return sent.status;
+}
+
+/**
+ * An owed email (the outbox's): sent with the debt's own `Message-ID`, and
+ * answering the sender's `messageId`, which the outbox records on the row
+ * before deleting it.
+ */
+export async function deliverOwedEmail(
+  db: Db,
+  payload: EmailPayload,
+  dedupeKey: string,
+  deps: EmailDeps = emailDepsFromEnv(),
+): Promise<Sent> {
+  return send(db, payload, deps, {
+    "Message-ID": await messageIdFor(dedupeKey),
   });
-  await deps.send({
-    from: EMAIL_FROM,
-    to: recipient.address,
-    subject: email.subject,
-    html: email.html,
-    text: email.text,
-    ...(unsubscribe !== undefined && {
-      headers: {
-        "List-Unsubscribe": `<${unsubscribe}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
-    }),
-  });
-  return "sent";
 }
