@@ -81,6 +81,16 @@ test("City field empty: the label, round 26's hint, and Find", async ({
   await openDenied(page);
 
   expect(await built(page)).toEqual(board);
+
+  // Find is level with the box — same top, same bottom. It sat 8px high
+  // and 1.5px short while it guessed the label's height from beside the
+  // whole field; `FormField`'s `action` puts it in the box's own row.
+  const box = await page
+    .locator('[data-part="city-finder"] .field-box')
+    .boundingBox();
+  const find = await page.locator('[data-part="find"]').boundingBox();
+  expect(find?.y).toBe(box?.y);
+  expect(find?.height).toBe(box?.height);
 });
 
 test("City field resolved: Weather for the place, Use this, and the way out", async ({

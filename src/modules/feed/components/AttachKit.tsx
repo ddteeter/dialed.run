@@ -280,13 +280,17 @@ export function AttachKit({
         <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:mx-0 wide:max-w-column">
           <header
             data-slot="header"
-            data-ground="ink"
-            className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink"
+            // Ink on the phone, the title line from `wide` (DS0 bend 4) —
+            // see `ground-ink` in ui/tokens.css. `--dialed-text` rather
+            // than `teal`: it is teal on ink and the paper teal on paper,
+            // where the surface teal would not clear as text.
+            data-ground="ink-until-wide"
+            className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:px-0 wide:py-0"
           >
-            <h1 className="m-0 font-display text-heading">
+            <h1 className="m-0 font-display text-heading wide:text-title">
               What did you wear?
             </h1>
-            <Mono step="xs" className="text-teal">
+            <Mono step="xs" className="text-dialed-text">
               {subLine(context, units, selected.size)}
             </Mono>
           </header>

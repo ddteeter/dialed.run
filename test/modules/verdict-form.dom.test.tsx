@@ -1512,9 +1512,42 @@ describe("VerdictForm: the run header (round 21)", () => {
 
     const header = screen.getByRole("banner");
     expect(header).toHaveAttribute("data-slot", "header");
-    expect(header).toHaveAttribute("data-ground", "ink");
+    expect(header).toHaveAttribute("data-ground", "ink-until-wide");
     expect(within(header).getByText("Sat Aug 29 · 6:04 AM")).toBeVisible();
     expect(within(header).getByText("6.2 at 41°")).toBeVisible();
+  });
+
+  it("becomes the title line at width: the question, then the run in one mono line", async () => {
+    // Desktop Contract DS0 bend 4, and round 25's A3 desk: "The ink
+    // header becomes the title line" — "Did it work?" as the title over
+    // "SAT AUG 29 · 6:04 AM · 6.2 AT 41°". happy-dom applies no
+    // stylesheet, so what is pinned is the markup each width reads.
+    await renderWithRouter(
+      form({
+        entry: { startedAt: SAT_MORNING, distanceM: 9978, conditions },
+      }),
+    );
+
+    const header = screen.getByRole("banner");
+    // Ink below `wide` only (ui/tokens.css), and flush with the column
+    // from it, since there is no block left to bleed.
+    expect(header).toHaveClass("-mx-5", "-mt-6", "wide:mx-0", "wide:mt-0");
+    const question = within(header).getByRole("heading", {
+      level: 1,
+      name: "Did it work?",
+    });
+    expect(question).toHaveClass(
+      "wide:order-first",
+      "wide:font-display",
+      "wide:text-title",
+    );
+    // The phone's display line gives way to the run in the mono line.
+    expect(within(header).getByText("6.2 at 41°")).toHaveClass("wide:hidden");
+    const carried = within(header).getByText("· 6.2 at 41°");
+    expect(carried).toHaveClass("hidden", "wide:inline");
+    expect(carried.parentElement).toHaveTextContent(
+      "Sat Aug 29 · 6:04 AM · 6.2 at 41°",
+    );
   });
 
   it("names the unit instead of a temperature when the run has none", async () => {

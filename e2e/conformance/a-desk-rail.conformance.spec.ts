@@ -42,6 +42,18 @@ async function expectRailBeside(page: Page, primary: string): Promise<void> {
   expect(primaryBox.width).toBeLessThanOrEqual(620);
 }
 
+/**
+The `--ground` an element resolves, which is what `bg-ground` paints.
+*/
+async function groundOf(page: Page, selector: string): Promise<string> {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) =>
+      getComputedStyle(element).getPropertyValue("--ground").trim(),
+    );
+}
+
 test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside it", async ({
   page,
 }) => {
@@ -88,6 +100,11 @@ test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside
     await expectRailBeside(page, "form");
     await expect(page.locator('[data-part="rail"]')).toContainText(
       "Rail half-zip",
+    );
+    // "The ink header becomes the title line" (round 25, DS0 bend 4): at
+    // the desk the header stands on the page's own ground, not on ink.
+    expect(await groundOf(page, "[data-slot='header']")).toBe(
+      await groundOf(page, "html"),
     );
 
     // The phone never had these cards.

@@ -48,13 +48,19 @@ function piecesHeading(count: number): string {
  * Adding a garment is the grid's dashed tile (§6c.10: *"never a bar
  * action"*), and it is the last cell of the grid whatever the grid holds —
  * the only cell, on an empty closet.
+ *
+ * **Its height is the row's, unless it is the row.** A grid row is as tall
+ * as its tallest cell, so a minimum on this tile was a minimum on whichever
+ * row it landed in: a closet whose last row held the tile ran that row to
+ * nearly twice the height of every row above it. It keeps the minimum only
+ * as the only cell (`only:`), where there is no garment tile to match.
  */
 function AddTile(): JSX.Element {
   return (
-    <li>
+    <li className="only:min-h-40">
       <Link
         to="/closet/new"
-        className="target flex h-full min-h-40 flex-col items-center justify-center gap-2 rounded-field border border-dashed border-hairline-2 p-3 text-muted no-underline"
+        className="target flex h-full flex-col items-center justify-center gap-2 rounded-field border border-dashed border-hairline-2 p-3 text-muted no-underline"
       >
         <Icon name="add" />
         <Mono step="xs">Add garment</Mono>
