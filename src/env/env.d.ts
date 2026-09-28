@@ -57,5 +57,12 @@ declare namespace Cloudflare {
      * `__Secure-` cookie prefix. A var in wrangler.jsonc, set by the
      * owner; `/api/health` names it when absent. */
     BETTER_AUTH_URL?: string;
+    /** Signs unsubscribe links (task 126; owner, 2026-09-27) — their own
+     * secret, so rotating `BETTER_AUTH_SECRET` does not break every link in
+     * every inbox, and an unsubscribe signature can never stand in for
+     * anything auth signs. Absent: no link is built, so no optional email
+     * goes, and every link is refused (fail closed); `/api/health` names
+     * it. */
+    UNSUBSCRIBE_SECRET?: string;
   }
 }

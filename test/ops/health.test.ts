@@ -130,3 +130,20 @@ describe("required configuration (OPS-4)", () => {
     expect(report.ok).toBe(true);
   });
 });
+
+describe("the unsubscribe secret (task 126)", () => {
+  const ORIGINAL: unknown = env.UNSUBSCRIBE_SECRET;
+
+  afterEach(() => {
+    Reflect.set(env, "UNSUBSCRIBE_SECRET", ORIGINAL);
+  });
+
+  it("names a missing UNSUBSCRIBE_SECRET, and is not healthy without it", async () => {
+    Reflect.deleteProperty(env, "UNSUBSCRIBE_SECRET");
+
+    const report = await checkHealth();
+
+    expect(report.missing).toStrictEqual(["UNSUBSCRIBE_SECRET"]);
+    expect(report.ok).toBe(false);
+  });
+});

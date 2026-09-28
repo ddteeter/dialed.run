@@ -77,10 +77,19 @@ export function backoffSeconds(attempts: number): number {
 export interface OutboxDebt {
   readonly id: string;
   readonly message: OutboxMessage;
+  /**
+   * The earliest the drain may work it, in epoch seconds — task 127's
+   * reminder, 20 minutes after the run lands. Omitted, it is due once the
+   * fast path's grace has passed.
+   */
+  readonly notBefore?: number | undefined;
 }
 
-export function oweOutbox(message: OutboxMessage): OutboxDebt {
-  return { id: newUlid(), message };
+export function oweOutbox(
+  message: OutboxMessage,
+  notBefore?: number,
+): OutboxDebt {
+  return { id: newUlid(), message, notBefore };
 }
 
 /**
@@ -97,7 +106,10 @@ export function oweOutbox(message: OutboxMessage): OutboxDebt {
  * early to see.
  */
 export function outboxInsert(db: Db, debt: OutboxDebt, now = nowSeconds()) {
-  const due = now + OUTBOX_FAST_PATH_GRACE_S;
+  // A debt held back (`notBefore`) is due when it says, or
+  // after the grace if that is later: the drain must still not race a
+  // fast path.
+  const due = Math.max(now + OUTBOX_FAST_PATH_GRACE_S, debt.notBefore ?? 0);
   return db
     .insert(outbox)
     .values({
@@ -129,7 +141,7 @@ export async function settleOutbox(
 ): Promise<void> {
   const handler = boundHandler(handlers, debt.message);
   try {
-    await handler.run(db);
+    await handler.run(db, debt.id);
     await db.delete(outbox).where(eq(outbox.id, debt.id));
   } catch (error) {
     report(error, {
@@ -145,6 +157,12 @@ export interface DrainOptions {
   readonly report?: Report;
   readonly handlers?: OutboxHandlers;
   readonly now?: number;
+  /**
+   * The kinds to drain, every kind this build knows by default. The hourly
+   * firings drain `email` alone, so a held-back reminder goes out within
+   * the hour rather than at the next daily digest.
+   */
+  readonly kinds?: readonly OutboxKind[];
 }
 
 type ClaimedRow = typeof outbox.$inferSelect;
@@ -161,12 +179,14 @@ type ClaimedRow = typeof outbox.$inferSelect;
  * One batch for one round trip; each claim stands alone, so nothing
  * depends on them landing together.
  */
-async function claimDue(
-  db: Db,
-  kind: OutboxKind,
-  now: number,
-): Promise<ClaimedRow[]> {
-  const due = await db
+/**
+ * The drainer's read: one kind's due rows, oldest first. A row whose send
+ * landed is due too — marking it sent moves `next_attempt_at` to the send
+ * (`emailHandler`) — so this is one range on `outbox_kind_due` and never
+ * an OR the index cannot narrow. Exported for the test that reads its plan.
+ */
+export function dueRowsOf(db: Db, kind: OutboxKind, now: number) {
+  return db
     .select({
       id: outbox.id,
       attempts: outbox.attempts,
@@ -176,6 +196,14 @@ async function claimDue(
     .where(and(eq(outbox.kind, kind), lte(outbox.nextAttemptAt, now)))
     .orderBy(asc(outbox.nextAttemptAt))
     .limit(OUTBOX_DRAIN_CAP);
+}
+
+async function claimDue(
+  db: Db,
+  kind: OutboxKind,
+  now: number,
+): Promise<ClaimedRow[]> {
+  const due = await dueRowsOf(db, kind, now);
   const [first, ...rest] = due.map((row) =>
     db
       .update(outbox)
@@ -211,6 +239,13 @@ async function didSettle(
     attempts: String(row.attempts),
     terminal: String(row.attempts >= OUTBOX_TERMINAL_ATTEMPTS),
   };
+  // Sent already (the Worker that sent it died before its delete): the
+  // work is done, and doing it again is the duplicate the mark exists to
+  // prevent. Only the delete is owed.
+  if (row.sentAt !== null) {
+    await db.delete(outbox).where(eq(outbox.id, row.id));
+    return true;
+  }
   const read = readOutboxRow(row.kind, row.payload);
   if (!read.ok) {
     report(new Error(`outbox row unreadable: ${read.problem}`), where);
@@ -219,7 +254,7 @@ async function didSettle(
   const { message } = read;
   const handler = boundHandler(handlers, message);
   try {
-    await handler.run(db);
+    await handler.run(db, row.id);
     // Its own id, as the fast path does: a row taken over by a newer
     // write since this run claimed it is that writer's to settle.
     await db.delete(outbox).where(eq(outbox.id, row.id));
@@ -248,7 +283,8 @@ export async function drainOutbox(
   const report = options.report ?? captureException;
   const handlers = options.handlers ?? outboxHandlers;
   const now = options.now ?? nowSeconds();
-  for (const kind of outboxKinds) {
+  const kinds = options.kinds ?? outboxKinds;
+  for (const kind of kinds) {
     const claimed = await claimDue(db, kind, now);
     if (claimed.length === 0) continue;
     let settled = 0;

@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../src/env";
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../src/lib/contracts";
 import { createAuth } from "../../src/modules/auth/create-auth";
+import { recordingMail } from "./mail-recorder";
 
 /**
 A breach screen that finds nothing, so these cases are about auth itself.
@@ -24,6 +25,7 @@ const auth = createAuth({
   // origin in the test bindings, as in production) and refuses them 403.
   baseUrl: "http://localhost",
   passwordScreen: CLEAN_SCREEN,
+  mail: recordingMail(),
 });
 
 const credentials = {
@@ -100,6 +102,7 @@ describe("auth (better-auth on real D1)", () => {
       db: drizzle(env.DIALED_CORE),
       secret: "test-secret-not-for-production",
       passwordScreen: CLEAN_SCREEN,
+      mail: recordingMail(),
       google: {
         clientId: "test-client-id.apps.googleusercontent.com",
         clientSecret: "test-client-secret",

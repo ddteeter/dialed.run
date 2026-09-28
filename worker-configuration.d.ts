@@ -6,6 +6,7 @@ interface __BaseEnv_Env {
 	IMPORTS: R2Bucket;
 	DIALED_CORE: D1Database;
 	DIALED_WEATHER: D1Database;
+	EMAIL: SendEmail;
 	IMPORTS_QUEUE: Queue;
 	ENRICHMENT_QUEUE: Queue;
 	BETTER_AUTH_SECRET: string;

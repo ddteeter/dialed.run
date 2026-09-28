@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  forgetSession,
+  isRememberedForSession,
+  rememberForSession,
+} from "../../src/lib/session-memo";
 import { AUTH_COPY, AuthRejected } from "../../src/modules/auth/auth-copy";
 import {
   AuthFieldError,
+  changePassword,
   googleConsentUrl,
+  requestPasswordReset,
+  resetPassword,
+  ResetLinkExpired,
   signIn,
   signOut,
+  signOutEverywhere,
   signUp,
 } from "../../src/modules/auth/credentials";
 
@@ -19,12 +29,20 @@ const client = vi.hoisted(() => ({
   social: vi.fn(),
   signUp: vi.fn(),
   signOut: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  resetPassword: vi.fn(),
+  changePassword: vi.fn(),
+  revokeSessions: vi.fn(),
 }));
 vi.mock("../../src/modules/auth/client", () => ({
   authClient: {
     signIn: { email: client.email, social: client.social },
     signUp: { email: client.signUp },
     signOut: client.signOut,
+    requestPasswordReset: client.requestPasswordReset,
+    resetPassword: client.resetPassword,
+    changePassword: client.changePassword,
+    revokeSessions: client.revokeSessions,
   },
 }));
 
@@ -45,6 +63,11 @@ beforeEach(() => {
   client.social.mockReset();
   client.signUp.mockReset();
   client.signOut.mockReset();
+  client.requestPasswordReset.mockReset();
+  client.resetPassword.mockReset();
+  client.changePassword.mockReset();
+  client.revokeSessions.mockReset();
+  forgetSession();
 });
 
 /**
@@ -60,6 +83,20 @@ describe("signIn", () => {
     client.email.mockResolvedValue({ data: {}, error: undefined });
     await expect(signIn(person)).resolves.toBeUndefined();
     expect(client.email).toHaveBeenCalledWith(person);
+  });
+
+  it("forgets what the browser remembered about the last runner, once it has signed someone in", async () => {
+    rememberForSession("u1", "has-handle");
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
+    });
+    await caught(signIn(person));
+    // Nobody new is signed in, so nothing is forgotten.
+    expect(isRememberedForSession("has-handle")).toBe(true);
+    client.email.mockResolvedValue({ data: {}, error: undefined });
+    await signIn(person);
+    expect(isRememberedForSession("has-handle")).toBe(false);
   });
 
   it("lands a wrong password on Password, in the board's one sentence", async () => {
@@ -109,15 +146,15 @@ describe("signUp", () => {
     expect(client.signUp).toHaveBeenCalledWith({ ...person, name: "" });
   });
 
-  it("lands a taken email on Email — Au3's one exception", async () => {
+  it("no longer lands a taken email on Email — Au3's exception is retired (round 26 #11)", async () => {
+    // Better Auth no longer says "taken" at all (sign-up signs nobody in),
+    // and should it ever, it is a fault for the band, not a field fix.
     client.signUp.mockResolvedValue({
       data: undefined,
       error: { code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", status: 422 },
     });
     const thrown = await caught(signUp(account));
-    expect(thrown).toMatchObject({
-      issues: [{ path: ["email"], message: AUTH_COPY.emailTaken }],
-    });
+    expect(thrown).toBeInstanceOf(AuthRejected);
   });
 
   it("lands a breached password on Password (NIST SP 800-63B §3.1.1.2)", async () => {
@@ -139,6 +176,132 @@ describe("signUp", () => {
     const thrown = await caught(signUp(account));
     expect(thrown).toBeInstanceOf(AuthRejected);
     expect(thrown).toMatchObject({ status: 500 });
+  });
+});
+
+describe("requestPasswordReset (ACC-4)", () => {
+  it("asks Better Auth for the link, and fails only on a fault", async () => {
+    client.requestPasswordReset.mockResolvedValue({
+      data: {},
+      error: undefined,
+    });
+    await expect(
+      requestPasswordReset({ email: person.email }),
+    ).resolves.toBeUndefined();
+    expect(client.requestPasswordReset).toHaveBeenCalledWith({
+      email: person.email,
+    });
+
+    client.requestPasswordReset.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 429 },
+    });
+    const thrown = await caught(requestPasswordReset({ email: person.email }));
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(thrown).toMatchObject({ status: 429 });
+  });
+});
+
+describe("resetPassword (ACC-4)", () => {
+  it("sets the new password with the link's token", async () => {
+    client.resetPassword.mockResolvedValue({ data: {}, error: undefined });
+    await expect(
+      resetPassword("tok", { password: person.password }),
+    ).resolves.toBeUndefined();
+    expect(client.resetPassword).toHaveBeenCalledWith({
+      newPassword: person.password,
+      token: "tok",
+    });
+  });
+
+  it("says the link has run out when the token is spent or unknown", async () => {
+    client.resetPassword.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_TOKEN", status: 400 },
+    });
+    const thrown = await caught(resetPassword("tok", { password: "x" }));
+    expect(thrown).toBeInstanceOf(ResetLinkExpired);
+    expect(thrown).toMatchObject({
+      name: "ResetLinkExpired",
+      message: "reset link expired",
+    });
+  });
+
+  it("lands a breached password on Password, and anything else on the band", async () => {
+    client.resetPassword.mockResolvedValue({
+      data: undefined,
+      error: { code: "PASSWORD_BREACHED", status: 400 },
+    });
+    expect(await caught(resetPassword("t", { password: "x" }))).toMatchObject({
+      issues: [{ path: ["password"], message: AUTH_COPY.passwordBreached }],
+    });
+    client.resetPassword.mockResolvedValue({
+      data: undefined,
+      error: { code: "OTHER", status: 500 },
+    });
+    expect(await caught(resetPassword("t", { password: "x" }))).toBeInstanceOf(
+      AuthRejected,
+    );
+  });
+});
+
+describe("changePassword (ACC-7)", () => {
+  // Not secrets: fixtures handed to a mocked client.
+  const OLD = ["old", "pass", "phrase"].join("-");
+  const NEW = ["new", "pass", "phrase"].join("-");
+  const values = { currentPassword: OLD, password: NEW };
+
+  it("changes it and signs every other session out", async () => {
+    client.changePassword.mockResolvedValue({ data: {}, error: undefined });
+    await expect(changePassword(values)).resolves.toBeUndefined();
+    expect(client.changePassword).toHaveBeenCalledWith({
+      currentPassword: OLD,
+      newPassword: NEW,
+      revokeOtherSessions: true,
+    });
+  });
+
+  it("lands a wrong current password on its own field, and a breached new one on the other", async () => {
+    client.changePassword.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_PASSWORD", status: 400 },
+    });
+    expect(await caught(changePassword(values))).toMatchObject({
+      issues: [
+        { path: ["currentPassword"], message: AUTH_COPY.currentPasswordWrong },
+      ],
+    });
+    client.changePassword.mockResolvedValue({
+      data: undefined,
+      error: { code: "PASSWORD_BREACHED", status: 400 },
+    });
+    expect(await caught(changePassword(values))).toMatchObject({
+      issues: [{ path: ["password"], message: AUTH_COPY.passwordBreached }],
+    });
+    expect(AUTH_COPY.currentPasswordWrong).toBe(
+      "That's not your current password.",
+    );
+  });
+});
+
+describe("signOutEverywhere (ACC-7)", () => {
+  it("ends every session and forgets what the browser kept about this one", async () => {
+    rememberForSession("u1", "has-handle");
+    client.revokeSessions.mockResolvedValue({ data: {}, error: undefined });
+    await expect(signOutEverywhere()).resolves.toBeUndefined();
+    expect(client.revokeSessions).toHaveBeenCalledTimes(1);
+    expect(isRememberedForSession("has-handle")).toBe(false);
+  });
+
+  it("says still signed in when Better Auth refuses", async () => {
+    rememberForSession("u1", "has-handle");
+    client.revokeSessions.mockResolvedValue({
+      data: undefined,
+      error: { status: 500 },
+    });
+    const thrown = await caught(signOutEverywhere());
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(isRememberedForSession("has-handle")).toBe(true);
   });
 });
 
@@ -187,8 +350,11 @@ describe("signOut", () => {
       data: { success: true },
       error: undefined,
     });
+    rememberForSession("u1", "has-handle");
     await expect(signOut()).resolves.toBeUndefined();
     expect(client.signOut).toHaveBeenCalledTimes(1);
+    // The next runner to sign in on this page is asked about afresh.
+    expect(isRememberedForSession("has-handle")).toBe(false);
   });
 
   it("rejects with the status when Better Auth refuses, so Sign out can say Still signed in", async () => {
@@ -196,7 +362,9 @@ describe("signOut", () => {
       data: undefined,
       error: { status: 500 },
     });
+    rememberForSession("u1", "has-handle");
     const error = await caught(signOut());
+    expect(isRememberedForSession("has-handle")).toBe(true);
     expect(error).toBeInstanceOf(AuthRejected);
     expect(error).toMatchObject({ status: 500 });
   });

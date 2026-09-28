@@ -10,7 +10,9 @@ import {
   createAuth,
   deploymentPosture,
   googleCredentials,
+  RESET_LINK_TTL_S,
 } from "../../src/modules/auth/create-auth";
+import { recordingMail } from "./mail-recorder";
 
 /**
  * The auth factory's configuration, which nothing asserted.
@@ -29,6 +31,7 @@ function auth(overrides: Parameters<typeof createAuth>[0]) {
 const BASE = {
   db: drizzle(env.DIALED_CORE),
   secret: "test-secret-not-for-production",
+  mail: recordingMail(),
   passwordScreen: {
     verdict: () => Promise.resolve("clean" as const),
     report: () => {
@@ -36,6 +39,15 @@ const BASE = {
     },
   },
 };
+
+/**
+Any function: an option that must be wired, whatever it closes over.
+*/
+const A_FUNCTION: unknown = expect.any(Function);
+
+function handler(): void {
+  // a background that collects nothing: only its presence is asserted
+}
 
 describe("googleCredentials", () => {
   it("pairs a client id with its secret", () => {
@@ -82,6 +94,29 @@ describe("createAuth", () => {
       // The form's floor, handed to the server: the two refuse the same
       // passwords because they read one number.
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      // Au4 for everyone: sign-up signs nobody in (ACC-3).
+      autoSignIn: false,
+      onExistingUserSignUp: A_FUNCTION,
+      sendResetPassword: A_FUNCTION,
+      // ACC-4: an hour, and every session ends when it is spent.
+      resetPasswordTokenExpiresIn: RESET_LINK_TTL_S,
+      revokeSessionsOnPasswordReset: true,
+      onPasswordReset: A_FUNCTION,
+    });
+    expect(RESET_LINK_TTL_S).toBe(3600);
+  });
+
+  it("hands its sends to the background only when given one", () => {
+    expect(
+      auth({ ...BASE, background: handler }).options.advanced,
+    ).toStrictEqual({
+      useSecureCookies: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      backgroundTasks: { handler },
+    });
+    expect(auth(BASE).options.advanced).toStrictEqual({
+      useSecureCookies: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     });
   });
 
@@ -324,15 +359,26 @@ describe("secure cookies (OPS-4)", () => {
       password,
     });
 
-    const response = await instance.handler(
+    const headers = {
+      "content-type": "application/json",
+      origin: ORIGIN,
+      "cf-connecting-ip": "192.0.2.44",
+    };
+    // Sign-up signs nobody in (ACC-3, Au4), so the session cookie is the
+    // log-in's.
+    const signedUp = await instance.handler(
       new Request(`${ORIGIN}/api/auth/sign-up/email`, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          origin: ORIGIN,
-          "cf-connecting-ip": "192.0.2.44",
-        },
+        headers,
         body: signUpBody,
+      }),
+    );
+    expect(signedUp.status).toBe(200);
+    const response = await instance.handler(
+      new Request(`${ORIGIN}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ email, password }),
       }),
     );
 
@@ -340,5 +386,82 @@ describe("secure cookies (OPS-4)", () => {
     expect(response.headers.get("set-cookie")).toMatch(
       /^__Secure-better-auth\.session_token=/u,
     );
+  });
+});
+
+describe("the emails auth asks for (ACC-3, ACC-4)", () => {
+  const password = ["long", "enough", "password", "here"].join("-");
+
+  function signUpRequest(email: string): Request {
+    return new Request("http://localhost/api/auth/sign-up/email", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://localhost",
+      },
+      body: JSON.stringify({ name: "", email, password }),
+    });
+  }
+
+  it("sends a new account its confirm link, and signs nobody in", async () => {
+    const mail = recordingMail();
+    const instance = auth({ ...BASE, baseUrl: "http://localhost", mail });
+    const email = `new-${newUlid().toLowerCase()}@example.com`;
+
+    const response = await instance.handler(signUpRequest(email));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(mail.calls).toStrictEqual([{ kind: "newAccount", email }]);
+  });
+
+  it("answers a registered address exactly as a new one, and sends it the other email", async () => {
+    const mail = recordingMail();
+    const instance = auth({ ...BASE, baseUrl: "http://localhost", mail });
+    const email = `taken-${newUlid().toLowerCase()}@example.com`;
+    await instance.handler(signUpRequest(email));
+
+    const again = await instance.handler(signUpRequest(email));
+
+    expect(again.status).toBe(200);
+    expect(again.headers.get("set-cookie")).toBeNull();
+    const body: unknown = await again.json();
+    // No session token, as for a new account: the two bodies match.
+    expect(JSON.stringify(body)).toContain('"token":null');
+    expect(body).toMatchObject({ user: { email } });
+    expect(mail.calls).toStrictEqual([
+      { kind: "newAccount", email },
+      { kind: "existingAccount", email },
+    ]);
+  });
+
+  it("sends no confirm link to an account that arrives confirmed (Google's)", async () => {
+    const mail = recordingMail();
+    const instance = auth({ ...BASE, mail });
+    const context = await instance.$context;
+    // What Better Auth does on a Google sign-up's return: the user row,
+    // confirmed by Google.
+    await context.internalAdapter.createUser(
+      {
+        email: `google-${newUlid().toLowerCase()}@example.com`,
+        name: "",
+        emailVerified: true,
+      },
+      { method: "oauth" },
+    );
+    expect(mail.calls).toStrictEqual([]);
+  });
+
+  it("hands a reset request its single-use token, and ends every session when it is spent", async () => {
+    const mail = recordingMail();
+    const instance = auth({ ...BASE, baseUrl: "http://localhost", mail });
+    const email = `reset-${newUlid().toLowerCase()}@example.com`;
+    await instance.handler(signUpRequest(email));
+
+    await instance.api.requestPasswordReset({ body: { email } });
+
+    const reset = mail.calls.find((call) => call.kind === "resetPassword");
+    expect(reset?.email).toBe(email);
+    expect(reset?.token).toMatch(/^\w+$/u);
   });
 });

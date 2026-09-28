@@ -13,6 +13,8 @@
  */
 import { z } from "zod";
 
+import { emailPayloadSchema } from "./email";
+
 /**
  * Clear what a garment's photo prefix holds beyond the photo its row names
  * (nothing, once the photo is removed or the garment deleted). The runner's
@@ -60,10 +62,30 @@ const importFileDelete = z.object({
     .refine((payload) => payload.key.startsWith(`imports/${payload.userId}/`)),
 });
 
+/**
+ * An email owed (task 126, ACC-2): anything secondary to the write that
+ * owes it — an invite, a notice, the run reminder — so the event and the
+ * intent to tell someone about it commit together (law 8c) and the drain
+ * retries a send that failed.
+ *
+ * `dedupeKey` is the caller's name for "the same email": a second debt
+ * with it is the same row. A row can be held back (ops' `oweOutbox`
+ * `notBefore`) — task 127's reminder goes out 20 minutes after the run
+ * lands — and a held row is left to the drain, never a fast path.
+ */
+const email = z.object({
+  kind: z.literal("email"),
+  payload: z.object({
+    dedupeKey: z.string().min(1),
+    email: emailPayloadSchema,
+  }),
+});
+
 export const outboxMessageSchema = z.discriminatedUnion("kind", [
   photoDelete,
   entryMediaDelete,
   importFileDelete,
+  email,
 ]);
 
 export type OutboxMessage = z.infer<typeof outboxMessageSchema>;
@@ -82,7 +104,7 @@ export const outboxKinds: readonly OutboxKind[] =
  * per garment, because what it does — reconcile the garment's prefix
  * against its row — covers every version at once. One `entry_media_delete`
  * per entry, and one `*` for "every entry of this runner's". One
- * `import_file_delete` per object.
+ * `import_file_delete` per object. An email's is its writer's to name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
@@ -94,6 +116,9 @@ export function dedupeKeyFor(message: OutboxMessage): string {
     }
     case "import_file_delete": {
       return `${message.payload.userId}:${message.payload.key}`;
+    }
+    case "email": {
+      return message.payload.dedupeKey;
     }
   }
 }

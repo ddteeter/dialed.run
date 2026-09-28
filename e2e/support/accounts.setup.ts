@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, test as setup } from "@playwright/test";
 
 import { DEMO_ACCOUNTS, storageStateFor } from "./accounts";
+import { confirmLinkFor } from "./email-links";
 
 /**
  * Creates every demo's account and saves its session, before any demo runs.
@@ -18,8 +19,11 @@ import { DEMO_ACCOUNTS, storageStateFor } from "./accounts";
  * with no read-modify-write race. It writes under `node_modules`, because
  * Vite watches the source tree and a mid-run write there hot-reloads the
  * app out from under a running demo — see `./accounts.ts`. Each account gets its own browser
- * context, because signing up logs you in and the next one needs a clean
- * slate.
+ * context, so no session leaks from one to the next.
+ *
+ * **Sign-up signs nobody in, and ends on Au4** (round 26 #11), so each
+ * account opens its confirm link — the feed and verdict demos need runners
+ * whose entries can be public (decision D-50) — and then logs in.
  */
 const AUTH_DIR = "node_modules/.cache/dialed-demo-auth";
 
@@ -46,13 +50,29 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    await page.goto("/auth/signup");
-    await page
-      .locator('html[data-hydrated="true"]')
-      .waitFor({ state: "attached" });
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill("a-long-enough-password");
-    await page.getByRole("button", { name: "Create account" }).click();
+    // Sign up, open the confirm link, then log in: the same two fields
+    // on both forms, submitted by each form's own button.
+    for (const [path, submit] of [
+      ["/auth/signup", "Create account"],
+      ["/auth/login", "Log in"],
+    ] as const) {
+      await page.goto(path);
+      await page
+        .locator('html[data-hydrated="true"]')
+        .waitFor({ state: "attached" });
+      await page.getByLabel("Email").fill(email);
+      await page.getByLabel("Password").fill("a-long-enough-password");
+      await page.getByRole("button", { name: submit }).click();
+      if (path === "/auth/signup") {
+        await expect(page).toHaveURL(/\/account\/check-email/, {
+          timeout: 15_000,
+        });
+        await page.goto(await confirmLinkFor(email));
+        await expect(
+          page.getByRole("heading", { name: "Email confirmed" }),
+        ).toBeVisible({ timeout: 15_000 });
+      }
+    }
 
     // A new account picks its handle at O0 first (round 26 #7), through
     // the real form — the same path every runner takes, so the demos'

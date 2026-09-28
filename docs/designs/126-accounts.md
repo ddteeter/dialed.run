@@ -71,7 +71,7 @@ deliverEmail(db, payload, sender?): Promise<"sent" | "skipped">  // throws on a 
   firings, so `notBefore` (127's 20-minute reminder) lands 20–50 minutes
   after the run. `email` is a new `outbox` kind, no schema change.
 - **Preferences at send time.** `notification_preferences (user_id, kind,
-  email, updated_at)`; no row means the default (the reminder: on).
+email, updated_at)`; no row means the default (the reminder: on).
   Transactional kinds have no row and no switch. Optional mail goes only to
   a verified address.
 - **Templates are React Email** (`@react-email/*` components, rendered to
@@ -102,6 +102,91 @@ the step goes in the PR body). **ACC-9** holds its claim in
 `account_deletions` (reconciliation marker for the weather DB and R2, law 8c)
 with a 7-day tombstone purged from the daily firing.
 
+## PR 2, as built (split in two)
+
+PR 2 grew past one reviewable diff, so it is two, stacked:
+**2a** (`feat/126-accounts-lifecycle`) — the O0 memo, email plumbing,
+verification, reset, password and email change, sign out everywhere,
+Settings › Notifications and the unsubscribe link; **2b** — invites and
+request access (with lane 125's Turnstile and Desk D7), the legal pages,
+terms acceptance, export, force-rename, and the email hookups for lanes
+125 and 127. ACC-9 (deletion) waits on lane 128's delete primitives.
+
+Where 2a departs from the plan above, and why:
+
+- **React Email renders in workerd** (`test/email/render.test.ts` runs in
+  the workers pool). The components are React Email's; the renderer is
+  React's `renderToStaticMarkup` plus `html-to-text`, not
+  `@react-email/render`, which imports Prettier's standalone build at module
+  scope for an optional `pretty` flag.
+- **Confirm links are ours, not Better Auth's `emailVerification`.** Its
+  tokens are signed and stateless, so "the old one no longer works" and
+  "already confirmed" could not be true. `email_verifications` holds one
+  row per runner and purpose (`verify`, `change`), the token's SHA-256,
+  24 hours, `used_at`. An email change reuses it and moves the account
+  only when the new address's link is opened; the old address is told
+  through the outbox.
+- **Sign-up signs nobody in** (`autoSignIn: false`). A registered address
+  must read exactly as a new one (round 26 #11), and a session for one and
+  not the other is a difference; Better Auth then answers a registered
+  address with the same body and calls `onExistingUserSignUp`. Au4 drops
+  the board's "You're signed in" line for a signed-out visitor and offers
+  "Carry on without confirming? Log in" (a design delta).
+- **The `EMAIL` binding is not `remote: true`.** `remote` changes only
+  local dev, and there it needs a `CLOUDFLARE_API_TOKEN` or `vite dev`
+  will not start — which stops CI's e2e. Local dev gets Miniflare's
+  simulated sender.
+- **Decision D-50** is two gates on one read: `isVerified` (Useful,
+  report, change — an account that is gone is not verified) and
+  `isUnconfirmed` (sharing — only an account that exists can be
+  unconfirmed). The share default and `submitVerdict` both read the second.
+- **Rate limits** are per address and kind (`email_send_limits`), counted
+  whether or not the address has an account, so the limit cannot reveal
+  one.
+- **The account's settings pages are one route**, `/account/$section`
+  (`sign-in`, `email`, `password`, `notifications`), as Settings' own
+  sections are.
+
+Changed on review of PR #119:
+
+- **An email change asks for the current password** (Better Auth's
+  `verify-password`, through `auth`'s `checkCurrentPassword`), and when its
+  link is spent every other session is signed out; the one the link was
+  opened in stays.
+- **A link is claimed before it is acted on** (law 2): `UPDATE … WHERE
+used_at IS NULL AND token_hash = ?`, and only the claimer confirms or
+  moves the account. A failure after the claim hands the link back.
+- **Reset tokens are stored hashed** (`verification.storeIdentifier:
+"hashed"`).
+- **Reset is open to an unconfirmed runner, and a spent reset confirms the
+  address** (D-63). This retires the `isVerified` gate on reset by email.
+- **No email is sent on the request path.** Better Auth's sends go through
+  `advanced.backgroundTasks` (`waitUntil`), the new-account hook likewise,
+  and Resend claims its limit and hands the rest to the background, so no
+  answer is slower for an address that has an account.
+- **The O0 memo is keyed to the runner**, with the owner in `localStorage`
+  so a sign-in as someone else in another tab unkeys every tab's memo.
+
+Changed on the second review of PR #119:
+
+- **No `Message-ID` of ours.** Cloudflare Email Service sets it and
+  refuses a sender's with `E_HEADER_NOT_ALLOWED`; the sent mark alone
+  guards an owed email (D-66, corrected). The test double refuses every
+  header on Cloudflare's disallowed list.
+- **The email change owes its email through the outbox**, settled after
+  the answer: the link to a free address, round 27's existing-account
+  email to the owner of a taken one. Both paths do one lookup and one
+  batch, so the answer's timing says nothing.
+- **Tries at the current password are limited** — 5 per 15 minutes per
+  runner, in `password_attempts` (additive migration
+  `0032_add_password_attempts`). `auth.api.verifyPassword` called
+  server-side never passes Better Auth's HTTP limiter.
+- **A completed email change withdraws the old inbox's links**: Better
+  Auth's `verification` rows naming the runner (open reset links) and
+  their confirm link, in the move's batch.
+- **The drain reads one index range**: marking a row sent makes it due, so
+  `claimDue` no longer ORs in `sent_at IS NOT NULL`.
+
 ## Contract touches
 
 - Schema (all core): `replace_display_name_with_username` (**destructive,
@@ -109,6 +194,10 @@ with a 7-day tombstone purged from the daily firing.
   history table folds in), `add_invite_codes_and_access_requests`,
   `add_notification_preferences`, `add_account_deletions`, plus
   `add_terms_acceptance` (**additive, not in the shared list — flagged**).
+  PR 2a adds two more, both additive: `add_email_verifications_and_send_limits`
+  (the confirm links and the per-address limit) and
+  `add_verification_identifier_index` (Better Auth's reset lookup scanned
+  its `verification` table).
 - Binding: `send_email` `EMAIL` (decision D-42). No queue, no cron.
 - Routes: `/onboarding/handle`, `/account/*`, `/join`, `/privacy`, `/terms`,
   `/copyright`, `/desk/access`.

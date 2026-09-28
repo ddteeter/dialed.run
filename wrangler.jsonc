@@ -106,6 +106,17 @@
       },
     ],
   },
+  // Cloudflare Email Sending (decision D-42, owner-authorised; task 126).
+  // Read only by src/modules/email, which is the app's one sender; the
+  // conformance test fails if this and the module disagree.
+  //
+  // **Not `"remote": true`**, which was the first draft. `remote` only
+  // changes local dev — a deployed Worker always sends for real — and
+  // there it makes `vite dev` open a remote proxy session, which needs a
+  // CLOUDFLARE_API_TOKEN: without one, `npm run dev` refuses to start, and
+  // so does every e2e run in CI. Left local, dev and e2e get Miniflare's
+  // simulated sender, which sends nothing to anyone.
+  "send_email": [{ "name": "EMAIL" }],
   // Matched against src/modules/ops/crons.ts by the conformance test. A
   // schedule changed here and not there sends every firing to the `unknown`
   // branch, which is a cron that quietly stops working.

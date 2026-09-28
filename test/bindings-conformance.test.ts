@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 // filesystem (readFileSync resolves inside /bundle), so `?raw` is how the
 // config's actual bytes reach an assertion.
 import wranglerJsonc from "../wrangler.jsonc?raw";
+import testWranglerJsonc from "./wrangler.test.jsonc?raw";
 
 import { cronSchedules } from "../src/modules/ops/crons";
 import { PUBLIC_ORIGIN } from "../src/modules/ops/og/site-head";
@@ -126,6 +127,14 @@ function queueConsumers(config: unknown): BoundConsumer[] {
   });
 }
 
+/**
+ * Every production source, for the one-sender check below.
+ */
+const sources: Record<string, string> = import.meta.glob(
+  ["../src/**/*.{ts,tsx}", "!../src/routeTree.gen.ts"],
+  { query: "?raw", import: "default", eager: true },
+);
+
 describe("wrangler.jsonc matches the code that depends on it", () => {
   const config: unknown = JSON.parse(stripJsonc(wranglerJsonc));
 
@@ -176,5 +185,28 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
         ? Object.keys(vars).toSorted((a, b) => a.localeCompare(b))
         : [],
     ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
+  });
+
+  it("binds the email sender the email module reads, and nothing else sends", () => {
+    // Task 126 (ACC-2; decision D-42, owner-authorised): one binding,
+    // `EMAIL`, read only by `src/modules/email/deliver.ts`.
+    const bindings =
+      typeof config === "object" && config !== null && "send_email" in config
+        ? config.send_email
+        : undefined;
+    expect(bindings).toStrictEqual([{ name: "EMAIL" }]);
+    // The test pool's config carries it too, so the two stay in step.
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    expect(
+      typeof testConfig === "object" &&
+        testConfig !== null &&
+        "send_email" in testConfig
+        ? testConfig.send_email
+        : undefined,
+    ).toStrictEqual(bindings);
+    const readers = Object.entries(sources)
+      .filter(([, source]) => /\.EMAIL\b/u.test(source))
+      .map(([path]) => path);
+    expect(readers).toStrictEqual(["../src/modules/email/deliver.ts"]);
   });
 });

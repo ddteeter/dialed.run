@@ -162,6 +162,16 @@ flowchart TD
     FEED -->|index.ts only| SAFE
     CLOSET -->|index.ts only| AUTH
     PROD -->|index.ts only| AUTH
+    ROUTES --> ACCT[modules/account]
+    ROUTES --> MAIL[modules/email]
+    ACCT --> DB
+    MAIL --> DB
+    MAIL -->|the only reader of EMAIL| ENV
+    AUTH -->|index.ts only| ACCT
+    ACCT -->|index.ts only| MAIL
+    ACCT -->|index.ts only| OPS
+    OPS -->|index.ts only| MAIL
+    FEED -->|index.ts only| ACCT
 
     CLOSET --> UI[ui]
     RUNS --> UI
@@ -368,6 +378,8 @@ flowchart LR
     REQ[Request: D1 change +\noutbox row, one batch] -->|fast path| R2[(R2)]
     REQ -->|fast path failed| OB[(outbox table)]
     CRON2 -->|drain: claim, work, back off| OB
+    HOURLY[The three hourly crons] -->|drain kind email only| OB
+    OB -->|kind email: deliverEmail| MAILER[[EMAIL send_email binding]]
     W[Worker] -->|exceptions, kept alive by waitUntil| SENTRY[Sentry]
     PING[External uptime ping] --> HEALTH["/api/health: D1 SELECT 1\non both, R2 head"]
 ```
@@ -384,7 +396,21 @@ flowchart LR
   idempotent handler, backed off on failure, and named in the digest once
   they pass five attempts or carry a kind the running build cannot read.
   The first kind is `photo_delete` (Remove, Replace and Delete on a
-  garment); `strava_revocations` predates it and keeps its own table.
+  garment); `strava_revocations` predates it and keeps its own table. The
+  second is `email` (task 126): anything a runner did not just ask for — an
+  email-change notice, the run reminder, an invite, the digest — is owed in
+  the same batch as its event, keyed by its writer, optionally held back
+  (`notBefore`), and drained on the three hourly firings as well as the
+  digest, so a held reminder goes within the half hour it falls due.
+- **Email** (task 126, decision D-42): `modules/email` is the only sender
+  and the only reader of the `send_email` binding `EMAIL`
+  (`test/bindings-conformance.test.ts` pins both). What the runner just
+  asked for — a confirm link, a reset link, an email change — is sent now,
+  one attempt (law 3), and its page's Resend is the retry: those carry a
+  live token, which an outbox row should not hold. Everything else rides
+  the `email` outbox kind above. The one email a runner can switch off is
+  the Strava run reminder (`notification_preferences`); it carries
+  one-click `List-Unsubscribe` and a signed, never-expiring link.
 - **Alerting is exception-based**: the daily digest raises Sentry events
   **only when** thresholds trip, one per anomaly kind, fingerprinted by kind
   and day and tagged `digest_kind`, so every day's anomalies are a new issue

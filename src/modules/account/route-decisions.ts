@@ -1,12 +1,34 @@
 import { redirect } from "@tanstack/react-router";
+import { z } from "zod";
+
+import {
+  isRememberedForSession,
+  noteSessionOwner,
+  rememberForSession,
+} from "../../lib/session-memo";
+import type { HandleGateAnswer } from "./username";
 
 /**
- * Where a signed-in runner with no handle may still be: O0 itself, or the
- * redirect would loop, and the auth pages — signing out, or finishing
- * what a sign-in started, must not need a handle first.
+ * The pages a signed-in runner with no handle may still reach: O0 itself,
+ * or the redirect would loop, and the pages an email link opens —
+ * confirming an address, resetting a password, unsubscribing — which
+ * finish something the runner started elsewhere and must not need a
+ * handle first.
+ */
+const OPEN_WITHOUT_HANDLE: ReadonlySet<string> = new Set([
+  "/onboarding/handle",
+  "/account/check-email",
+  "/account/verify",
+  "/account/reset",
+  "/account/unsubscribe",
+]);
+
+/**
+ * …and the auth pages: signing out, or finishing what a sign-in started,
+ * must not need a handle first.
  */
 function isOpenWithoutHandle(pathname: string): boolean {
-  return pathname === "/onboarding/handle" || pathname.startsWith("/auth/");
+  return OPEN_WITHOUT_HANDLE.has(pathname) || pathname.startsWith("/auth/");
 }
 
 /**
@@ -32,3 +54,138 @@ export function startHandleIfNeeded(
     redirect({ to: "/onboarding/handle", throw: true });
   }
 }
+
+/**
+ * The fact the browser remembers once it has heard it (`lib/session-memo`).
+ */
+const HANDLE_CLAIMED = "has-handle";
+
+/**
+ * The root route's `beforeLoad`: ask whether this visitor needs O0, and
+ * send them there if so.
+ *
+ * **Asked once per session in the browser, not on every navigation.**
+ * The question is a server round trip, and it used to be paid before
+ * every page. Its one answer that cannot change while the session lasts
+ * is "has a handle" — a handle is renamed, never cleared — so the browser
+ * keeps that one and skips the trip afterwards. The other two answers are
+ * asked again each time: "signed out" and "no handle yet" both end the
+ * moment the runner signs in or claims one. Signing in or out forgets the
+ * memo (`auth/credentials`), and the memo is keyed to the runner the
+ * server named, so a switch of account in another tab is asked about too.
+ *
+ * `isInBrowser` is the caller's to say, because on the server the memo
+ * would be shared by every request the isolate serves.
+ */
+export async function gateOnHandle({
+  ask,
+  pathname,
+  isInBrowser,
+}: Readonly<{
+  ask: () => Promise<HandleGateAnswer>;
+  pathname: string;
+  isInBrowser: boolean;
+}>): Promise<void> {
+  if (isInBrowser && isRememberedForSession(HANDLE_CLAIMED)) return;
+  const answer = await ask();
+  if (isInBrowser) noteSessionOwner(answer.userId);
+  if (isInBrowser && answer.gate === "has-handle") {
+    rememberForSession(answer.userId, HANDLE_CLAIMED);
+  }
+  startHandleIfNeeded(answer.gate === "needs-handle", pathname);
+}
+
+/**
+ * A link's search, as it arrives: whatever is there, strings or nothing.
+ * Anything else — a repeated param, an edited URL — is dropped rather than
+ * failing the page, which then says the link has run out.
+ */
+const optionalText = z.string().optional().catch(undefined);
+
+/**
+Au4's search: the address sign-up sent the link to.
+*/
+export const checkEmailSearch = z.object({ email: optionalText });
+
+/**
+ * A token link's search — the confirm link's and the reset link's.
+ */
+export const tokenSearch = z.object({ token: optionalText });
+
+/**
+ * The unsubscribe link's search, kept whole: its signature is checked on
+ * the server, and a page that dropped a param here would call a good link
+ * bad.
+ */
+export const unsubscribeSearch = z.object({
+  u: optionalText,
+  k: optionalText,
+  s: optionalText,
+});
+
+/**
+ * Au4 with nobody to be about — signed out, and no address from sign-up —
+ * has nothing to say, so it is sign-up again.
+ */
+export function startOverIfNoAddress(
+  account: { email: string } | undefined,
+  searchEmail: string | undefined,
+): void {
+  if (account === undefined && (searchEmail ?? "") === "") {
+    redirect({ to: "/auth/signup", throw: true });
+  }
+}
+
+/**
+ * Who Au4 is about. Signed in (back through "Log in to resend"), it is the
+ * runner's own address; signed out, it is the address sign-up just sent
+ * to.
+ */
+export function checkEmailView(
+  account: { email: string } | undefined,
+  searchEmail: string,
+): { email: string; isSignedIn: boolean } {
+  return {
+    email: account?.email ?? searchEmail,
+    isSignedIn: account !== undefined,
+  };
+}
+
+/**
+ * The account's settings pages (ACC-7, ACC-8, ACC-11), one route like
+ * Settings' own sections: U1 Account ("sign-in"), and its Email and
+ * Password, and Notifications. Every email footer's "Email settings" is
+ * `/account/notifications`.
+ */
+const accountSectionSchema = z.enum([
+  "sign-in",
+  "email",
+  "password",
+  "notifications",
+]);
+
+export type AccountSection = z.infer<typeof accountSectionSchema>;
+
+/**
+ * A section this route has, or X1: an Error carrying the marker the
+ * router's `isNotFound()` reads (`only-throw-error` rejects throwing
+ * TanStack's plain `notFound()` object).
+ */
+export function accountSectionOrNotFound(section: string): AccountSection {
+  const parsed = accountSectionSchema.safeParse(section);
+  if (parsed.success) return parsed.data;
+  throw Object.assign(new Error(`no account section "${section}"`), {
+    isNotFound: true,
+  });
+}
+
+/**
+The heading each section's page wears.
+*/
+export const ACCOUNT_SECTION_TITLES: Readonly<Record<AccountSection, string>> =
+  {
+    "sign-in": "Account",
+    email: "Email",
+    password: "Password",
+    notifications: "Notifications",
+  };

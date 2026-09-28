@@ -1,23 +1,22 @@
 import { Link } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import {
   FailureBand,
   FormErrorSummary,
-  FormField,
   FormStatus,
   Mono,
-  SignedOutLayout,
   SubmitButton,
   TextField,
-  Wordmark,
   useFormSubmit,
 } from "../../ui";
-import type { FieldProps, FormShell } from "../../ui";
+import { SignedOutPanel } from "../../ui/SignedOutPanel";
+import type { FormShell } from "../../ui";
 import { AUTH_KICKER, authFailureMessage, authStatus } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
+import { PasswordField } from "./password-field";
 import type { CarriedForm } from "./sign-in-search";
 
 /**
@@ -83,80 +82,62 @@ export function AuthPage({
   const bandMessage = authFailureMessage(form.failure, cause);
 
   return (
-    <SignedOutLayout action="none">
-      {/* The panel: a 390 column on paper, top-aligned under the bar and
-          never vertically centred, "centring jumps when a band appears"
-          (Au2 1040). */}
-      <main
-        data-part="panel"
-        className="mx-auto flex w-full max-w-panel flex-col gap-7 px-6 pt-12 pb-12 wide:pt-14"
+    <SignedOutPanel heading={heading} notice={notice}>
+      <div
+        data-part="form"
+        data-state={formState(bandMessage, form.summaryRows.length)}
+        className="flex flex-col gap-4"
       >
-        <div data-part="header" className="flex flex-col gap-5">
-          {/* From 720 up the bar's wordmark is the one: "The panel drops
-              its own wordmark, so there is one." */}
-          <span data-part="wordmark" className="wide:hidden">
-            <Wordmark brackets={false} className="text-title" />
-          </span>
-          {notice}
-          <h1 className="m-0 font-display text-display uppercase">{heading}</h1>
-        </div>
-
-        <div
-          data-part="form"
-          data-state={formState(bandMessage, form.summaryRows.length)}
-          className="flex flex-col gap-4"
-        >
-          {/* noValidate: the browser's own bubbles are a second, unstyled
+        {/* noValidate: the browser's own bubbles are a second, unstyled
               error system that fires before ours and says "Please fill in
               this field" — banned copy, and it would pre-empt the schema. */}
-          <form
-            ref={form.formRef}
-            noValidate
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              google.cancel();
-              onSubmit();
-            }}
-          >
-            <FormStatus>
-              {authStatus({
-                status: form.status,
-                bandMessage,
-                googleFailed: google.failure !== undefined,
-              })}
-            </FormStatus>
-            <FormErrorSummary
-              rows={form.summaryRows}
-              onFocusField={form.focusField}
-              summaryRef={form.summaryRef}
-            />
-            {children}
-            {/* The form band with Auth's two words (round 22): "Not signed
+        <form
+          ref={form.formRef}
+          noValidate
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            google.cancel();
+            onSubmit();
+          }}
+        >
+          <FormStatus>
+            {authStatus({
+              status: form.status,
+              bandMessage,
+              googleFailed: google.failure !== undefined,
+            })}
+          </FormStatus>
+          <FormErrorSummary
+            rows={form.summaryRows}
+            onFocusField={form.focusField}
+            summaryRef={form.summaryRef}
+          />
+          {children}
+          {/* The form band with Auth's two words (round 22): "Not signed
                 in", not "Nothing saved". Same block, same place, same Try
                 again — `FormFailureBand` hard-codes the contract's opener,
                 so this is the band it wraps, given the other kicker. */}
-            {bandMessage === undefined ? undefined : (
-              <FailureBand
-                kicker={AUTH_KICKER}
-                message={bandMessage}
-                onRetry={form.retry}
-                retryRef={form.retryRef}
-              />
-            )}
-            <SubmitButton
-              label={submitLabel}
-              pendingLabel={pendingLabel}
-              pending={form.pending}
+          {bandMessage === undefined ? undefined : (
+            <FailureBand
+              kicker={AUTH_KICKER}
+              message={bandMessage}
+              onRetry={form.retry}
+              retryRef={form.retryRef}
             />
-          </form>
-          <OrDivider />
-          <GoogleButton google={google} />
-          {legal}
-          {crossLink}
-        </div>
-      </main>
-    </SignedOutLayout>
+          )}
+          <SubmitButton
+            label={submitLabel}
+            pendingLabel={pendingLabel}
+            pending={form.pending}
+          />
+        </form>
+        <OrDivider />
+        <GoogleButton google={google} />
+        {legal}
+        {crossLink}
+      </div>
+    </SignedOutPanel>
   );
 }
 
@@ -282,77 +263,6 @@ export function SessionNotice({
 }
 
 /**
- * The password field: the Form Contract's field with a Show control
- * inside the box (Au1–Au7 all draw it).
- *
- * `FormField` rather than `TextField` because the box holds two things;
- * every attribute `TextField` would have set is set here from the same
- * `field()` helper, which is the part a hand-rolled field loses.
- *
- * `focusOnArrival` is Au7's *"focus in Password"*: the email is already
- * there, so the password is the one thing left to type.
- */
-export function PasswordField({
-  label,
-  value,
-  onChange,
-  field,
-  error,
-  hint,
-  autoComplete,
-  focusOnArrival = false,
-}: Readonly<{
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  field: (name: string) => FieldProps;
-  error?: string | undefined;
-  hint?: string | undefined;
-  autoComplete: "current-password" | "new-password";
-  focusOnArrival?: boolean | undefined;
-}>): JSX.Element {
-  const [isShown, setIsShown] = useState(false);
-  // Arrival is once. An inline callback ref here was a new function on
-  // every render, so React re-ran it on every keystroke anywhere on the
-  // page and pulled the cursor out of Email into Password mid-word. Held
-  // stable, React calls it when the input mounts (and hands it `null` on
-  // the way out) — and again only if `focusOnArrival` itself changes.
-  const focusOnArrivalRef = useCallback(
-    (node: HTMLInputElement | null) => {
-      if (focusOnArrival) node?.focus();
-    },
-    [focusOnArrival],
-  );
-
-  return (
-    <FormField name="password" label={label} error={error} hint={hint}>
-      <input
-        {...field("password")}
-        ref={focusOnArrivalRef}
-        id="password"
-        type={isShown ? "text" : "password"}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        className="w-full border-none bg-transparent"
-      />
-      <button
-        type="button"
-        aria-controls="password"
-        onClick={() => {
-          setIsShown((shown) => !shown);
-        }}
-        className="target shrink-0 cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink"
-      >
-        {isShown ? "Hide" : "Show"}
-      </button>
-    </FormField>
-  );
-}
-
-/**
  * The two fields both forms ask for, by the names the error summary uses.
  */
 export const CREDENTIAL_LABELS = { email: "Email", password: "Password" };
@@ -372,6 +282,7 @@ export function CredentialFields({
   passwordAutoComplete,
   passwordHint,
   focusPasswordOnArrival = false,
+  hasForgotLink = false,
 }: Readonly<{
   form: Pick<ReturnType<typeof useFormSubmit>, "field" | "fieldErrors">;
   email: string;
@@ -384,6 +295,10 @@ export function CredentialFields({
   */
   passwordHint?: string | undefined;
   focusPasswordOnArrival?: boolean | undefined;
+  /**
+  Au1's "Forgot it?" (ACC-4), under Password on log-in only.
+  */
+  hasForgotLink?: boolean | undefined;
 }>): JSX.Element {
   return (
     <>
@@ -407,6 +322,14 @@ export function CredentialFields({
         hint={passwordHint}
         focusOnArrival={focusPasswordOnArrival}
       />
+      {hasForgotLink ? (
+        <Link
+          to="/account/forgot"
+          className="target inline-flex items-center self-start text-small font-semibold text-ink underline underline-offset-4"
+        >
+          Forgot it?
+        </Link>
+      ) : undefined}
     </>
   );
 }

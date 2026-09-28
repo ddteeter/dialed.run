@@ -197,6 +197,41 @@
       "when": 1790530413633,
       "tag": "0027_add_entries_user_public_created_index",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1790538699878,
+      "tag": "0028_add_notification_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1790538700235,
+      "tag": "0029_add_email_verifications_and_send_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1790538700572,
+      "tag": "0030_add_verification_identifier_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1790561874414,
+      "tag": "0031_add_outbox_sent_at_and_message_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790570967556,
+      "tag": "0032_add_password_attempts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 export { checkHealth } from "./health";
 export { oweOutbox, outboxInsert, settleOutbox } from "./outbox";
+export type { OutboxDebt } from "./outbox";
 export { handleQueueBatch } from "./queues";
 export { handleScheduled } from "./scheduled";
 export { secureResponse } from "./secure-response";

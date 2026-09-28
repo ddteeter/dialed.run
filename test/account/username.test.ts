@@ -10,7 +10,7 @@ import {
   claimUsername,
   isReservedHandle,
   lookUpHandle,
-  requiresHandle,
+  handleGate,
   usernameOf,
 } from "../../src/modules/account/username";
 
@@ -537,7 +537,7 @@ describe("lookUpHandle", () => {
   });
 });
 
-describe("usernameOf and requiresHandle", () => {
+describe("usernameOf and handleGate", () => {
   it("reads the handle, and nothing before O0", async () => {
     expect(await usernameOf(db, await runner({ username: "dee" }))).toBe("dee");
     expect(await usernameOf(db, await runner())).toBeUndefined();
@@ -545,11 +545,24 @@ describe("usernameOf and requiresHandle", () => {
   });
 
   it("sends a signed-in runner with no handle to O0, and nobody else", async () => {
-    expect(await requiresHandle(db, await runner())).toBe(true);
-    expect(await requiresHandle(db, newUlid())).toBe(true);
-    expect(await requiresHandle(db, await runner({ username: "dee" }))).toBe(
-      false,
-    );
-    expect(await requiresHandle(db, undefined)).toBe(false);
+    const newcomer = await runner();
+    expect(await handleGate(db, newcomer)).toStrictEqual({
+      gate: "needs-handle",
+      userId: newcomer,
+    });
+    const nobody = newUlid();
+    expect(await handleGate(db, nobody)).toStrictEqual({
+      gate: "needs-handle",
+      userId: nobody,
+    });
+    const dee = await runner({ username: "dee" });
+    expect(await handleGate(db, dee)).toStrictEqual({
+      gate: "has-handle",
+      userId: dee,
+    });
+    expect(await handleGate(db, undefined)).toStrictEqual({
+      gate: "signed-out",
+      userId: undefined,
+    });
   });
 });

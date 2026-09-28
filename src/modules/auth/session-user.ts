@@ -43,3 +43,13 @@ export function optionalUserIdFrom(
 ): string | undefined {
   return session?.user.id;
 }
+
+/**
+ * The session's own id, or `undefined` when nobody is signed in — for a
+ * change that signs every *other* session out and keeps this one.
+ */
+export function sessionIdFrom(
+  session: { readonly session: { readonly id: string } } | null,
+): string | undefined {
+  return session?.session.id;
+}

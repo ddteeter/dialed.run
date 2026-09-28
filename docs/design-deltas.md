@@ -495,6 +495,30 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       as H's empty-state lead, and nothing else — no avatar, no Follow, no
       report. **The ask:** confirm the page is the sentence alone.
 
+33. **ACC-8 asks for the current password (PR #119 review).** **CLOSED
+    by round 27 (items 9 and 11): the field is drawn in "U1 Change email",
+    a wrong one reads "That's not your current password." (built, for
+    Change password too), and reset no longer waits (D-63 stands). The U1
+    list-and-sheets composition is not built.** One placeholder remains
+    from the same field:
+    - **Too many tries at the current password.** The server now limits
+      tries at it to 5 per 15 minutes per runner (Better Auth's HTTP
+      limiter never sees a server-side check). Past the limit the field
+      reads "Too many tries. You can try again at {time}." — Au's "Too
+      many tries." plus the send limit's clock (`currentPasswordLimited`
+      in `lib/contracts.ts`), placeholder copy. **The ask:** word it.
+
+34. **The unsubscribe landing asks before it unsubscribes (D-64).**
+    **CLOSED by round 27 (item 8), and built:** "Stop run reminder
+    emails?" with the address masked, one ink Unsubscribe button, the
+    `STILL SUBSCRIBED` band, the done state on any later visit, and "Turn
+    them back on" returning to the question. The build drops the board's
+    push sentences (no push, D-44): the ask body reads "We'll stop
+    emailing {masked} when a run lands on Strava. Account emails don't
+    change." and the done body "You won't get another one. Strava stays
+    connected." "Turn them back on" is the inline link grammar in ink:
+    the board's `#C21A6B` is not a T1 role.
+
 ## Answered in round 27 (imported 2026-09-27)
 
 Thirty-one asks in three parts: amend the contracts and boards to match the
