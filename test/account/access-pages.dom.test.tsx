@@ -144,6 +144,10 @@ describe("Au5 · Request access", () => {
       "When there's room, we'll email a code to sam@example.com. There's nothing else to do until then.",
     );
     expect(inReceipt.getByText(/Have a code after all\?/)).toBeVisible();
+    // The question and its link read as one sentence, a space between.
+    expect(
+      inReceipt.getByText(/Have a code after all\?/).textContent,
+    ).toBe("Have a code after all? Create an account");
     const receiptLink = inReceipt.getByRole("link", {
       name: "Create an account",
     });
