@@ -97,6 +97,19 @@ describe("which type an edge resolves to", () => {
     }
   });
 
+  it("cuts between the Desk's own pages, as the tab bar does", () => {
+    // The Desk rail is a set of destinations, not a journey (DeskShell),
+    // and a Desk page re-reading itself with new search params stays put.
+    const desk = ["/desk", "/desk/runners"];
+    for (const from of desk) {
+      for (const to of desk) {
+        expect([from, to, typeOf(from, to)]).toEqual([from, to, "cut"]);
+      }
+    }
+    expect(typeOf("/feed", "/desk")).toBe("cut");
+    expect(typeOf("/feed", "/desk/runners")).toBe("cut");
+  });
+
   it("cuts when the path has not changed", () => {
     // A new search param or hash on the screen you are already on. Nothing
     // moved, so nothing should move.

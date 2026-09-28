@@ -154,6 +154,12 @@ const NAV: readonly Edge[] = [
   // NAV: "Tab bar → Feed / Closet / Call / You" — "Indicator slides. Content
   // cuts." The tab bar is a destination, not a journey.
   { from: "*", to: TABS, type: "cut" },
+  // Desk · Runners (D8), reached from the Desk rail and re-read with new
+  // search params by its own search and filters. Typed `cut` by analogy to
+  // the tab bar: the Desk rail is a set of destinations, not a journey, and
+  // NAV has no Desk rows. `/desk` itself needs no row — the default is
+  // already `cut`. Added under the header's ownership rule.
+  { from: "*", to: "/desk/runners", type: "cut" },
 
   // NAV: "Strava OAuth return → T2" — "A document load from another origin.
   // There is no outgoing screen; first-paint rules apply." Nothing to
