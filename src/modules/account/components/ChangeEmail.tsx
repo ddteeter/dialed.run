@@ -4,7 +4,9 @@ import type { JSX } from "react";
 import {
   changeEmailSchema,
   CURRENT_PASSWORD_WRONG,
+  currentPasswordLimited,
 } from "../../../lib/contracts";
+import { clockLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   FailureBand,
   FormFailureBand,
@@ -18,13 +20,16 @@ import { ConfirmEmailSheet } from "./ConfirmEmailSheet";
 import { limitedMessage } from "./ResendLink";
 
 /**
- * The server's refusal of the current password, shaped the way
- * `useFormSubmit` lands a field issue: the fix is in that field.
+ * The server's refusal of the current password — wrong, or tried too
+ * often — shaped the way `useFormSubmit` lands a field issue: the fix is
+ * in that field.
  */
 class PasswordRefused extends Error {
-  readonly issues = [
-    { path: ["currentPassword"], message: CURRENT_PASSWORD_WRONG },
-  ];
+  readonly issues: readonly { path: string[]; message: string }[];
+  constructor(message: string) {
+    super(message);
+    this.issues = [{ path: ["currentPassword"], message }];
+  }
 }
 
 /**
@@ -57,7 +62,13 @@ export function ChangeEmail({
     schema: changeEmailSchema,
     action: async (values) => {
       const result = await request({ data: values });
-      if (result.status === "wrong-password") throw new PasswordRefused();
+      if (result.status === "wrong-password") {
+        throw new PasswordRefused(CURRENT_PASSWORD_WRONG);
+      }
+      if (result.status === "password-limited") {
+        const clock = clockLabel(result.until, deviceTimeZone());
+        throw new PasswordRefused(currentPasswordLimited(clock));
+      }
       return result;
     },
     successMessage: "Link sent.",

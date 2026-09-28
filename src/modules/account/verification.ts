@@ -2,17 +2,21 @@
  * Confirming an address, and changing one (ACC-3, ACC-8; round 26 #11;
  * decision D-50).
  *
- * The emails here are what the runner just asked for — confirm this,
- * send it again, move my account — so they are sent now, one attempt
- * (law 3), and a failure is the runner's to retry from the page. They
- * carry a live token, which an outbox row should not hold. The one
- * secondary email, the notice to the old address after a change, rides
- * the outbox in the same batch as the change (law 8c).
+ * The confirm links are what the runner just asked for — confirm this,
+ * send it again — so they are sent once (law 3), after the answer, and a
+ * failure is the runner's to retry from the page. The email change's
+ * link, and the email its address's owner gets instead when the address
+ * is taken, ride the outbox: the answer must not wait on either, or the
+ * two would answer in different times (PR #119 review). The notice to the
+ * old address after a change rides it in the same batch as the change
+ * (law 8c).
  */
 import { and, eq, ne } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { session, user } from "../../db/schema-auth";
+import { session, user, verification } from "../../db/schema-auth";
+import { emailVerifications } from "../../db/schema-core";
+import { newUlid } from "../../lib/ids";
 import {
   firstColumnWhere,
   firstRowWhere,
@@ -25,9 +29,11 @@ import {
   emailDebt,
   type EmailDeps,
 } from "../email";
-import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
+import type { PasswordCheck } from "../auth";
+import { outboxInsert, oweOutbox, settleOutbox, type OutboxDebt } from "../ops";
 import {
   didClaimEmailLink,
+  emailLinkWrite,
   isVerified,
   issueEmailLink,
   readEmailLink,
@@ -290,9 +296,9 @@ export interface ConfirmOptions {
 /**
  * Spend a link. For `verify`, the account's address is confirmed; for
  * `change`, the account moves to the new address, which the link has just
- * confirmed, the old address is told (outbox, law 8c), and every other
+ * confirmed, the old address is told (outbox, law 8c), every other
  * session is signed out — whoever else holds one was signed in to the old
- * address.
+ * address — and every reset or confirm link still open is withdrawn.
  *
  * Claim, then work (law 2): two tabs opening one link both read it
  * unspent, and only the one whose claim lands acts on it. The other hears
@@ -349,6 +355,17 @@ export async function confirmEmail(
       { dedupeKey: `email_changed:${link.userId}:${String(now)}` },
     ),
   );
+  // Whoever holds the old inbox holds every link sent to it: a reset link
+  // (Better Auth's row names the runner in `value`; its identifier is
+  // hashed, so the runner is all there is to find it by) and a confirm
+  // link. Neither may outlive the move. Unindexed on `value`, and
+  // deliberately: the table holds only short-lived rows, and this runs
+  // once per completed email change.
+  const openResets = eq(verification.value, link.userId);
+  const openConfirm = and(
+    eq(emailVerifications.userId, link.userId),
+    eq(emailVerifications.purpose, "verify"),
+  );
   await spendClaimed(db, link, now, () =>
     db.batch([
       db
@@ -358,6 +375,8 @@ export async function confirmEmail(
       db
         .delete(session)
         .where(otherSessionsOf(link.userId, options.currentSessionId)),
+      db.delete(verification).where(openResets),
+      db.delete(emailVerifications).where(openConfirm),
       outboxInsert(db, notice, now),
     ]),
   );
@@ -370,60 +389,112 @@ export async function confirmEmail(
  * hold it. Waits for a confirmed address (round 26 #11) — `unverified` is
  * the "Confirm your email first" sheet — and for the account's current
  * password: a session left open on a shared machine must not be enough to
- * take the account's address, and with it every reset link after.
+ * take the account's address, and with it every reset link after. Tries
+ * at the password are limited per runner (`password-limited`).
  *
- * An address that already has an account answers "sent" and is sent
- * nothing, so this form cannot be used to find out who has one.
+ * An address that already has an account runs the same flow (round 27
+ * #11): its owner is sent round 26's existing-account email instead of a
+ * link. Both are owed through the outbox and sent after the answer, so
+ * neither the answer nor its timing says which happened.
  */
 export type ChangeResult =
   | ResendResult
   | { readonly status: "unverified" }
-  | { readonly status: "wrong-password" };
+  | { readonly status: "wrong-password" }
+  | { readonly status: "password-limited"; readonly until: number };
 
 export interface EmailChangeRequest {
   readonly userId: string;
   readonly newEmail: string;
   readonly currentPassword: string;
   /**
-   * Whether the password is this account's — Better Auth's own check,
-   * wired by the server function (`auth`'s `isCurrentPassword`).
+   * Whether the password is this account's, within the limit on tries —
+   * Better Auth's own check, wired by the server function (`auth`'s
+   * `checkCurrentPassword`).
    */
-  readonly isOwnPassword: (password: string) => Promise<boolean>;
+  readonly checkPassword: (password: string) => Promise<PasswordCheck>;
+}
+
+/**
+ * Where the owed email goes after the answer: `keepAlive` holds the
+ * Worker for it, `settle` is ops' `settleOutbox` (a test hands in one
+ * that sends through a fake), and the drain retries whatever it misses.
+ */
+export interface OwedMail {
+  readonly keepAlive: (work: Promise<unknown>) => void;
+  readonly report: Report;
+  readonly settle: (db: Db, debt: OutboxDebt, report: Report) => Promise<void>;
+}
+
+/**
+ * The email a change owes, and the writes that go with it: a link to a
+ * free address, or the existing-account email to the owner of a taken
+ * one. A fresh key per request, so a second request's debt is its own row
+ * and never an older row carrying an older link.
+ */
+async function changeMail(
+  db: Db,
+  userId: string,
+  email: string,
+  origin: string,
+  now: number,
+) {
+  const holder = await firstColumnWhere(
+    db,
+    user,
+    user.id,
+    eq(user.email, email),
+  );
+  const key = `${userId}:${newUlid()}`;
+  if (holder !== undefined) {
+    const notice = emailDebt(
+      { to: { userId: holder }, template: { kind: "existing_account" } },
+      { dedupeKey: `email_change_taken:${key}` },
+    );
+    return { writes: [], debt: oweOutbox(notice) };
+  }
+  const link = await emailLinkWrite(
+    db,
+    { userId, purpose: "change", email },
+    now,
+  );
+  const template = {
+    kind: "email_change",
+    url: confirmLinkUrl(origin, link.token),
+    newEmail: email,
+  } as const;
+  const confirm = emailDebt(
+    { to: { address: email }, template },
+    { dedupeKey: `email_change:${key}` },
+  );
+  return { writes: [link.write], debt: oweOutbox(confirm) };
 }
 
 export async function requestEmailChange(
   db: Db,
   request: EmailChangeRequest,
   deps: EmailDeps,
+  owed: OwedMail,
   now = nowSeconds(),
 ): Promise<ChangeResult> {
   const { userId } = request;
   if (!(await isVerified(db, userId))) return { status: "unverified" };
-  if (!(await request.isOwnPassword(request.currentPassword))) {
-    return { status: "wrong-password" };
+  const password = await request.checkPassword(request.currentPassword);
+  if (password.status === "limited") {
+    return { status: "password-limited", until: password.until };
   }
+  if (password.status === "wrong") return { status: "wrong-password" };
   const email = request.newEmail.toLowerCase();
   const claim = await claimEmailSend(db, "change", email, now);
   if (!claim.isAllowed) return { status: "limited", until: claim.until };
-  if (await hasRowWhere(db, user, user.email, eq(user.email, email))) {
-    return { status: "sent" };
-  }
-  const token = await issueEmailLink(
+  const { writes, debt } = await changeMail(
     db,
-    { userId, purpose: "change", email },
+    userId,
+    email,
+    deps.origin,
     now,
   );
-  await deliverEmail(
-    db,
-    {
-      to: { address: email },
-      template: {
-        kind: "email_change",
-        url: confirmLinkUrl(deps.origin, token),
-        newEmail: email,
-      },
-    },
-    deps,
-  );
+  await db.batch([outboxInsert(db, debt, now), ...writes]);
+  owed.keepAlive(owed.settle(db, debt, owed.report));
   return { status: "sent" };
 }

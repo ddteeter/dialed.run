@@ -10,6 +10,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { currentPasswordLimited } from "../../src/lib/contracts";
+import { clockLabel, deviceTimeZone } from "../../src/lib/dates";
 import { ChangeEmail } from "../../src/modules/account/components/ChangeEmail";
 import { CheckEmail } from "../../src/modules/account/components/CheckEmail";
 import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
@@ -546,12 +548,27 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(request).not.toHaveBeenCalled();
   });
 
+  it("lands used-up tries at the password on its field, with when to try again", async () => {
+    const until = 1_800_000_000;
+    const { user } = renderChange({
+      answer: { status: "password-limited", until },
+    });
+    await fillChange(user, "new@example.com");
+    await user.click(sendLink());
+    const clock = clockLabel(until, deviceTimeZone());
+    expect(
+      await screen.findByText(currentPasswordLimited(clock)),
+    ).toBeVisible();
+    expect(currentPasswordField()).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+  });
+
   it("lands a wrong current password on its field, and says nothing was sent", async () => {
     const { user } = renderChange({ answer: { status: "wrong-password" } });
     await fillChange(user, "new@example.com");
     await user.click(sendLink());
     expect(
-      await screen.findByText("That password doesn't match your account."),
+      await screen.findByText("That's not your current password."),
     ).toBeVisible();
     expect(currentPasswordField()).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();

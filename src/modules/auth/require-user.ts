@@ -16,9 +16,11 @@
  * loadable in the workers pool.
  */
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { drizzle } from "drizzle-orm/d1";
 
+import { env } from "../../env";
 import { auth } from "./instance";
-import { isOwnPassword } from "./password-check";
+import { checkOwnPassword, type PasswordCheck } from "./password-check";
 import {
   optionalUserIdFrom,
   sessionIdFrom,
@@ -67,11 +69,20 @@ export async function currentSessionId(): Promise<string | undefined> {
 }
 
 /**
- * Whether `password` is the signed-in runner's current one (ACC-8). The
- * decision is `isOwnPassword`'s; this only hands it the request.
+ * Whether `password` is the signed-in runner's current one (ACC-8), within
+ * the per-runner limit on tries. The decision is `checkOwnPassword`'s;
+ * this only hands it the request.
  */
-export async function isCurrentPassword(
+export async function checkCurrentPassword(
   password: string,
-): Promise<boolean> {
-  return isOwnPassword(auth, getRequestHeaders(), password);
+): Promise<PasswordCheck> {
+  return checkOwnPassword(
+    {
+      auth,
+      db: drizzle(env.DIALED_CORE),
+      userId: await requireUserId(),
+      headers: getRequestHeaders(),
+    },
+    password,
+  );
 }

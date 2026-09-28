@@ -312,7 +312,7 @@ describe("ChangePassword (ACC-7)", () => {
     await user.type(next(), OTHER);
     await user.click(screen.getByRole("button", { name: "Change password" }));
     expect(
-      await screen.findByText("That password doesn't match your account."),
+      await screen.findByText("That's not your current password."),
     ).toBeVisible();
     expect(current()).toHaveAttribute("aria-invalid", "true");
   });

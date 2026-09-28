@@ -279,7 +279,7 @@ describe("changePassword (ACC-7)", () => {
       issues: [{ path: ["password"], message: AUTH_COPY.passwordBreached }],
     });
     expect(AUTH_COPY.currentPasswordWrong).toBe(
-      "That password doesn't match your account.",
+      "That's not your current password.",
     );
   });
 });

@@ -24,9 +24,10 @@ export { auth } from "./instance";
 // ./auth-error, which stays framework-free on purpose.
 export { AuthRequiredError, isAuthRequired } from "./auth-error";
 export {
-  isCurrentPassword,
+  checkCurrentPassword,
   currentSessionId,
   optionalUserId,
   requireUserId,
 } from "./require-user";
+export type { PasswordCheck } from "./password-check";
 export { sessionFromRequest } from "./session";

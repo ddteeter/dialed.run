@@ -3,13 +3,21 @@ import process from "node:process";
 import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { session, user, verification } from "../../src/db/schema-auth";
+import { passwordAttempts } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
-import { isOwnPassword } from "../../src/modules/auth/password-check";
+import { confirmEmail } from "../../src/modules/account";
+import { issueEmailLink } from "../../src/modules/account/email-links";
+import {
+  checkOwnPassword,
+  isOwnPassword,
+  PASSWORD_ATTEMPT_WINDOW_S,
+  PASSWORD_ATTEMPTS_PER_WINDOW,
+} from "../../src/modules/auth/password-check";
 import { recordingMail } from "./mail-recorder";
 
 /**
@@ -225,6 +233,101 @@ describe("a password reset (ACC-4)", () => {
   });
 });
 
+describe("an email change (ACC-8) and the old inbox's reset link", () => {
+  it("withdraws a reset link sent before the move, so the old inbox cannot reset", async () => {
+    const { auth, mail } = instance();
+    const { email, userId } = await signUp(auth);
+    const bystander = await signUp(auth);
+    const reset = await resetTokenFor(auth, mail, email);
+    const theirs = await resetTokenFor(auth, mail, bystander.email);
+    const moved = `moved-${newUlid().toLowerCase()}@example.com`;
+    const link = await issueEmailLink(db, {
+      userId,
+      purpose: "change",
+      email: moved,
+    });
+
+    expect(await confirmEmail(db, link)).toMatchObject({ state: "confirmed" });
+
+    const next = ["a", "new", "long", "passphrase"].join("-");
+    const refusedReset = await refused("INVALID_TOKEN", () =>
+      auth.handler(post("reset-password", { token: reset, newPassword: next })),
+    );
+    expect(refusedReset.status).toBe(400);
+    // Only the runner who moved: another runner's open link still works.
+    const bystanderReset = await auth.handler(
+      post("reset-password", { token: theirs, newPassword: next }),
+    );
+    expect(bystanderReset.status).toBe(200);
+  });
+});
+
+/**
+A signed-in runner, as `checkOwnPassword` is handed one.
+*/
+async function signedIn() {
+  const { auth } = instance();
+  const { email, userId } = await signUp(auth);
+  const headers = new Headers({ cookie: await signIn(auth, email) });
+  return { auth, userId, headers };
+}
+
+describe("checkOwnPassword (tries at the current password, limited)", () => {
+  const NOW = 1_800_000_000;
+
+  it(`refuses the try after ${String(PASSWORD_ATTEMPTS_PER_WINDOW)} wrong ones, even with the right password, until the window ends`, async () => {
+    const check = { ...(await signedIn()), db };
+    for (let n = 0; n < PASSWORD_ATTEMPTS_PER_WINDOW; n += 1) {
+      expect(
+        await refused("INVALID_PASSWORD", () =>
+          checkOwnPassword(check, `${password}-not`, NOW + n),
+        ),
+      ).toStrictEqual({ status: "wrong" });
+    }
+    const verify = vi.spyOn(check.auth.api, "verifyPassword");
+    expect(await checkOwnPassword(check, password, NOW + 10)).toStrictEqual({
+      status: "limited",
+      until: NOW + PASSWORD_ATTEMPT_WINDOW_S,
+    });
+    // Past the limit the password is never put to Better Auth at all.
+    expect(verify).not.toHaveBeenCalled();
+    verify.mockRestore();
+
+    expect(
+      await checkOwnPassword(check, password, NOW + PASSWORD_ATTEMPT_WINDOW_S),
+    ).toStrictEqual({ status: "own" });
+  });
+
+  it("clears the count on the right password, and counts per runner", async () => {
+    const check = { ...(await signedIn()), db };
+    const other = { ...(await signedIn()), db };
+    for (let n = 0; n < PASSWORD_ATTEMPTS_PER_WINDOW - 1; n += 1) {
+      await refused("INVALID_PASSWORD", () =>
+        checkOwnPassword(check, `${password}-not`, NOW),
+      );
+    }
+    expect(await checkOwnPassword(other, password, NOW)).toStrictEqual({
+      status: "own",
+    });
+    expect(await checkOwnPassword(check, password, NOW)).toStrictEqual({
+      status: "own",
+    });
+    expect(
+      await db
+        .select()
+        .from(passwordAttempts)
+        .where(eq(passwordAttempts.userId, check.userId)),
+    ).toStrictEqual([]);
+    for (let n = 0; n < PASSWORD_ATTEMPTS_PER_WINDOW; n += 1) {
+      expect(
+        await refused("INVALID_PASSWORD", () =>
+          checkOwnPassword(check, `${password}-not`, NOW + 1),
+        ),
+      ).toStrictEqual({ status: "wrong" });
+    }
+  });
+});
+
 describe("Sign out everywhere (ACC-7)", () => {
   it("ends every session of the runner's through the real endpoint, the others included", async () => {
     const { auth } = instance();
@@ -281,9 +384,9 @@ describe("isOwnPassword (ACC-8's current password)", () => {
         verifyPassword: () => Promise.reject(bodyless),
       },
     };
-    await expect(
-      isOwnPassword(fakeAuth, new Headers(), password),
-    ).rejects.toBe(bodyless);
+    await expect(isOwnPassword(fakeAuth, new Headers(), password)).rejects.toBe(
+      bodyless,
+    );
   });
 });
 

@@ -8,6 +8,14 @@
  * the headers, so a worker test runs it against a real one.
  */
 import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
+import type { drizzle } from "drizzle-orm/d1";
+
+import { passwordAttempts } from "../../db/schema-core";
+import { nowSeconds } from "../../lib/now";
+import { windowedCountSet, windowedCountUntil } from "../../lib/window-count";
+
+type Db = ReturnType<typeof drizzle>;
 
 /**
  * Only the call this file makes — narrower than Better Auth's own
@@ -51,4 +59,81 @@ export async function isOwnPassword(
     }
     throw error;
   }
+}
+
+/**
+ * Tries at the current password a runner gets per window. Better Auth's
+ * own limiter counts HTTP requests to its endpoints, and a server-side
+ * `auth.api.verifyPassword` never passes through it, so this is the only
+ * thing between an open session and unlimited guesses.
+ */
+export const PASSWORD_ATTEMPTS_PER_WINDOW = 5;
+export const PASSWORD_ATTEMPT_WINDOW_S = 15 * 60;
+
+/**
+ * Count one try, and say when the runner may try again if this one is over
+ * the limit — `undefined` when it may go ahead. One statement, as the
+ * email send limit is (`windowedCountSet`), and counted before the check,
+ * so a try that is refused is still a try.
+ */
+async function claimAttempt(
+  db: Db,
+  userId: string,
+  now: number,
+): Promise<number | undefined> {
+  const next = windowedCountSet(
+    {
+      startedAt: passwordAttempts.windowStartedAt,
+      count: passwordAttempts.attempts,
+    },
+    now,
+    PASSWORD_ATTEMPT_WINDOW_S,
+  );
+  const rows = await db
+    .insert(passwordAttempts)
+    .values({ userId, windowStartedAt: now, attempts: 1 })
+    .onConflictDoUpdate({
+      target: passwordAttempts.userId,
+      set: { windowStartedAt: next.startedAt, attempts: next.count },
+    })
+    .returning({
+      startedAt: passwordAttempts.windowStartedAt,
+      count: passwordAttempts.attempts,
+    });
+  return windowedCountUntil(
+    rows,
+    PASSWORD_ATTEMPTS_PER_WINDOW,
+    PASSWORD_ATTEMPT_WINDOW_S,
+  );
+}
+
+export type PasswordCheck =
+  | { readonly status: "own" }
+  | { readonly status: "wrong" }
+  | {
+      readonly status: "limited";
+      /**
+      When the next try may go, in epoch seconds.
+      */
+      readonly until: number;
+    };
+
+/**
+ * `isOwnPassword`, limited per runner: past the limit the password is not
+ * checked at all, and the right one clears the count.
+ */
+export async function checkOwnPassword(
+  check: Readonly<{ auth: Auth; db: Db; userId: string; headers: Headers }>,
+  password: string,
+  now = nowSeconds(),
+): Promise<PasswordCheck> {
+  const until = await claimAttempt(check.db, check.userId, now);
+  if (until !== undefined) return { status: "limited", until };
+  if (!(await isOwnPassword(check.auth, check.headers, password))) {
+    return { status: "wrong" };
+  }
+  await check.db
+    .delete(passwordAttempts)
+    .where(eq(passwordAttempts.userId, check.userId));
+  return { status: "own" };
 }

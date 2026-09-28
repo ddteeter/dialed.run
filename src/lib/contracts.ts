@@ -293,10 +293,19 @@ export const newPasswordSchema = z.object({ password: newPasswordField });
 const currentPasswordField = z.string().min(1, "Enter your current password.");
 
 /**
-The server's refusal of a current password, on that field (ACC-7, ACC-8).
-*/
-export const CURRENT_PASSWORD_WRONG =
-  "That password doesn't match your account.";
+ * The server's refusal of a current password, on that field (ACC-7,
+ * ACC-8; round 27 #11's wording).
+ */
+export const CURRENT_PASSWORD_WRONG = "That's not your current password.";
+
+/**
+ * The same field, once the tries at the password are used up (ACC-8):
+ * `clock` is when the next may go, in the runner's own time. Placeholder
+ * copy, built from Au's "Too many tries." — design deltas.
+ */
+export function currentPasswordLimited(clock: string): string {
+  return `Too many tries. You can try again at ${clock}.`;
+}
 
 export const changePasswordSchema = z.object({
   currentPassword: currentPasswordField,

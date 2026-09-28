@@ -68,21 +68,37 @@ export async function issueEmailLink(
   link: Readonly<{ userId: string; purpose: LinkPurpose; email: string }>,
   now = nowSeconds(),
 ): Promise<string> {
+  const { token, write } = await emailLinkWrite(db, link, now);
+  await write;
+  return token;
+}
+
+/**
+ * `issueEmailLink`'s token and its write, unsent — for a caller whose
+ * `db.batch()` the link must land in.
+ */
+export async function emailLinkWrite(
+  db: Db,
+  link: Readonly<{ userId: string; purpose: LinkPurpose; email: string }>,
+  now = nowSeconds(),
+) {
   const secret = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
   const values = {
     email: link.email,
     tokenHash: await sha256(secret),
     expiresAt: now + EMAIL_LINK_TTL_S,
   };
-  await db
-    .insert(emailVerifications)
-    .values({ userId: link.userId, purpose: link.purpose, ...values })
-    .onConflictDoUpdate({
-      target: [emailVerifications.userId, emailVerifications.purpose],
-      // A fresh link is an unspent one, whatever the last one was.
-      set: { ...values, usedAt: sql`NULL` },
-    });
-  return `${link.purpose}.${link.userId}.${secret}`;
+  return {
+    token: `${link.purpose}.${link.userId}.${secret}`,
+    write: db
+      .insert(emailVerifications)
+      .values({ userId: link.userId, purpose: link.purpose, ...values })
+      .onConflictDoUpdate({
+        target: [emailVerifications.userId, emailVerifications.purpose],
+        // A fresh link is an unspent one, whatever the last one was.
+        set: { ...values, usedAt: sql`NULL` },
+      }),
+  };
 }
 
 /**

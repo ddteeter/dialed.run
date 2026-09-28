@@ -9,13 +9,13 @@ import { drizzle } from "drizzle-orm/d1";
 import { env, waitUntil } from "../../env";
 import { usernameInput } from "../../lib/contracts";
 import {
-  isCurrentPassword,
+  checkCurrentPassword,
   currentSessionId,
   optionalUserId,
   requireUserId,
 } from "../auth";
 import { emailDepsFromEnv } from "../email";
-import { captureException } from "../ops";
+import { captureException, settleOutbox } from "../ops";
 import { accountPage, accountView } from "./account-view";
 import { changeEmailInput, confirmInput, resendInput } from "./inputs";
 import { claimUsername, handleGate, usernameOf } from "./username";
@@ -111,8 +111,9 @@ export const requestEmailChangeFn = createServerFn({ method: "POST" })
         userId: await requireUserId(),
         newEmail: data.email,
         currentPassword: data.currentPassword,
-        isOwnPassword: isCurrentPassword,
+        checkPassword: checkCurrentPassword,
       },
       emailDepsFromEnv(),
+      { keepAlive: waitUntil, report: captureException, settle: settleOutbox },
     ),
   );

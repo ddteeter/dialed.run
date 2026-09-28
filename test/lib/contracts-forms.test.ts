@@ -145,9 +145,7 @@ describe("the account forms (ACC-4, ACC-7, ACC-8)", () => {
         currentPassword: "x",
       }),
     ).toStrictEqual({ email: "dee@example.com", currentPassword: "x" });
-    expect(CURRENT_PASSWORD_WRONG).toBe(
-      "That password doesn't match your account.",
-    );
+    expect(CURRENT_PASSWORD_WRONG).toBe("That's not your current password.");
   });
 
   it("hold a new password to sign-up's floor", () => {

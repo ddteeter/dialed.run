@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { session, user } from "../../src/db/schema-auth";
+import { session, user, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -25,7 +25,13 @@ import {
   confirmLinkUrl,
   type Background,
   type EmailChangeRequest,
+  type OwedMail,
 } from "../../src/modules/account/verification";
+import { settleOutbox } from "../../src/modules/ops/outbox";
+import {
+  emailHandler,
+  outboxHandlers,
+} from "../../src/modules/ops/outbox-handlers";
 import { core, fakeMail, ORIGIN, seedUser } from "../email/helpers";
 
 /**
@@ -238,7 +244,7 @@ describe("confirmEmail", () => {
     );
     await db
       .update(user)
-      .set({ email: "elsewhere@example.com" })
+      .set({ email: `elsewhere-${newUlid().toLowerCase()}@example.com` })
       .where(eq(user.id, moved.userId));
     expect(await confirmEmail(db, token, undefined, NOW)).toStrictEqual({
       state: "expired",
@@ -474,6 +480,56 @@ async function sessionIds(): Promise<string[]> {
 }
 
 describe("confirmEmail, moving the account (ACC-8)", () => {
+  it("withdraws every link still open for the runner — reset and confirm — and nobody else's", async () => {
+    const { userId, email } = await seedUser();
+    const bystander = await seedUser();
+    const confirmLink = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+    const theirLink = await issueEmailLink(
+      db,
+      { userId: bystander.userId, purpose: "verify", email: bystander.email },
+      NOW,
+    );
+    // Better Auth's reset rows, as it writes them: the identifier hashed,
+    // the runner in `value`.
+    const expiresAt = new Date((NOW + 3600) * 1000);
+    const at = new Date(NOW * 1000);
+    await db.insert(verification).values(
+      [userId, bystander.userId].map((value) => ({
+        id: newUlid(),
+        identifier: newUlid(),
+        value,
+        expiresAt,
+        createdAt: at,
+        updatedAt: at,
+      })),
+    );
+    const change = await issueEmailLink(
+      db,
+      {
+        userId,
+        purpose: "change",
+        email: `elsewhere-${newUlid().toLowerCase()}@example.com`,
+      },
+      NOW,
+    );
+
+    expect(await confirmEmail(db, change, undefined, NOW + 1)).toMatchObject({
+      state: "confirmed",
+    });
+
+    expect(await readEmailLink(db, confirmLink)).toBeUndefined();
+    expect(await readEmailLink(db, theirLink)).toBeDefined();
+    const left = await db
+      .select({ value: verification.value })
+      .from(verification);
+    expect(left.map((row) => row.value)).not.toContain(userId);
+    expect(left.map((row) => row.value)).toContain(bystander.userId);
+  });
+
   it("signs every other session out, keeps the one the link was opened in, and touches nobody else's", async () => {
     const { userId } = await seedUser();
     const here = await sessionFor(userId);
@@ -788,8 +844,9 @@ describe("authMail", () => {
 });
 
 describe("requestEmailChange", () => {
-  it("sends the confirm link to the new address, and waits for it", async () => {
+  it("owes the confirm link to the new address through the outbox, and sends it after the answer", async () => {
     const mail = fakeMail();
+    const later = owedTo(mail);
     const { userId, email } = await seedUser();
 
     expect(
@@ -797,14 +854,22 @@ describe("requestEmailChange", () => {
         db,
         change(userId, "Fresh@Example.com"),
         mail,
+        later.owed,
         NOW,
       ),
     ).toStrictEqual({ status: "sent" });
+    // Answered with the email owed, not sent.
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.select({ kind: outbox.kind }).from(outbox)).toStrictEqual([
+      { kind: "email" },
+    ]);
 
+    await later.settled();
     expect(mail.sent[0]).toMatchObject({
       to: "fresh@example.com",
       subject: "Confirm your new email for dialed.run",
     });
+    expect(await db.select().from(outbox)).toHaveLength(0);
     // Nothing has moved until the link is opened.
     const after = await emailOf(userId);
     expect(after.email).toBe(email);
@@ -822,32 +887,86 @@ describe("requestEmailChange", () => {
     ]);
   });
 
+  it("does the same work for an address with an account: its owner is owed the existing-account email", async () => {
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    const { userId } = await seedUser();
+    const other = await seedUser({ email: "held@example.com" });
+    const keepAlive = vi.fn(later.owed.keepAlive);
+
+    expect(
+      await requestEmailChange(
+        db,
+        change(userId, "Held@Example.com"),
+        mail,
+        { ...later.owed, keepAlive },
+        NOW,
+      ),
+    ).toStrictEqual({ status: "sent" });
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.select().from(outbox)).toHaveLength(1);
+    expect(keepAlive).toHaveBeenCalledTimes(1);
+
+    await later.settled();
+    expect(mail.sent).toHaveLength(1);
+    expect(mail.sent[0]).toMatchObject({
+      to: other.email,
+      subject: "You already have a dialed.run account",
+    });
+    // No link: the address cannot become this runner's.
+    expect(await db.select().from(emailVerifications)).toHaveLength(0);
+  });
+
+  it("owes each request its own email, so a second request never sends the first one's link", async () => {
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    const { userId } = await seedUser();
+    const held = owedTo(mail);
+    await requestEmailChange(
+      db,
+      change(userId, "first@example.com"),
+      mail,
+      held.owed,
+      NOW,
+    );
+    await requestEmailChange(
+      db,
+      change(userId, "second@example.com"),
+      mail,
+      later.owed,
+      NOW,
+    );
+    expect(await db.select().from(outbox)).toHaveLength(2);
+    await later.settled();
+    expect(mail.sent.map((message) => message.to)).toStrictEqual([
+      "second@example.com",
+    ]);
+    expect(await readEmailLink(db, tokenIn(mail.sent[0]))).toMatchObject({
+      email: "second@example.com",
+    });
+  });
+
   it("waits for a confirmed address first", async () => {
     const mail = fakeMail();
+    const later = owedTo(mail);
     const { userId } = await seedUser({ isVerified: false });
     expect(
       await requestEmailChange(
         db,
         change(userId, "new@example.com"),
         mail,
+        later.owed,
         NOW,
       ),
     ).toStrictEqual({ status: "unverified" });
+    await later.settled();
     expect(mail.sent).toHaveLength(0);
-  });
-
-  it("answers an address with an account as it answers any other, and sends it nothing", async () => {
-    const mail = fakeMail();
-    const { userId } = await seedUser();
-    const other = await seedUser({ email: "held@example.com" });
-    expect(
-      await requestEmailChange(db, change(userId, other.email), mail, NOW),
-    ).toStrictEqual({ status: "sent" });
-    expect(mail.sent).toHaveLength(0);
+    expect(await db.select().from(outbox)).toHaveLength(0);
   });
 
   it("asks for the current password, and does nothing else when it is wrong", async () => {
     const mail = fakeMail();
+    const later = owedTo(mail);
     const { userId } = await seedUser();
     const asked: string[] = [];
 
@@ -856,29 +975,54 @@ describe("requestEmailChange", () => {
         db,
         change(userId, "taken-over@example.com", (password) => {
           asked.push(password);
-          return Promise.resolve(false);
+          return Promise.resolve({ status: "wrong" });
         }),
         mail,
+        later.owed,
         NOW,
       ),
     ).toStrictEqual({ status: "wrong-password" });
 
     expect(asked).toStrictEqual([TYPED]);
+    await later.settled();
     expect(mail.sent).toHaveLength(0);
     // Not a send, so not counted against the address, and no link made.
     expect(await db.select().from(emailSendLimits)).toHaveLength(0);
     expect(await db.select().from(emailVerifications)).toHaveLength(0);
+    expect(await db.select().from(outbox)).toHaveLength(0);
+  });
+
+  it("says when the next try may go once the tries at the password are used up, and does nothing else", async () => {
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    const { userId } = await seedUser();
+    expect(
+      await requestEmailChange(
+        db,
+        change(userId, "new@example.com", () =>
+          Promise.resolve({ status: "limited", until: NOW + 900 }),
+        ),
+        mail,
+        later.owed,
+        NOW,
+      ),
+    ).toStrictEqual({ status: "password-limited", until: NOW + 900 });
+    expect(await db.select().from(emailSendLimits)).toHaveLength(0);
+    expect(await db.select().from(outbox)).toHaveLength(0);
   });
 
   it("says confirm first before it asks about the password", async () => {
     const mail = fakeMail();
     const { userId } = await seedUser({ isVerified: false });
-    const passwordCheck = vi.fn(() => Promise.resolve(false));
+    const passwordCheck = vi.fn(() =>
+      Promise.resolve({ status: "wrong" } as const),
+    );
     expect(
       await requestEmailChange(
         db,
         change(userId, "new@example.com", passwordCheck),
         mail,
+        owedTo(mail).owed,
         NOW,
       ),
     ).toStrictEqual({ status: "unverified" });
@@ -893,6 +1037,7 @@ describe("requestEmailChange", () => {
         db,
         change(userId, "spam@example.com"),
         mail,
+        owedTo(mail).owed,
         NOW,
       );
     }
@@ -901,11 +1046,43 @@ describe("requestEmailChange", () => {
         db,
         change(userId, "spam@example.com"),
         mail,
+        owedTo(mail).owed,
         NOW,
       ),
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
   });
 });
+
+/**
+ * Where a change's owed email goes after the answer: held until the test
+ * lets it go, so a test can look before it is sent and after, and sent
+ * through `mail`.
+ */
+function owedTo(mail: ReturnType<typeof fakeMail>): {
+  owed: OwedMail;
+  settled: () => Promise<void>;
+} {
+  const work: Promise<unknown>[] = [];
+  const { promise: gate, resolve: release } =
+    Promise.withResolvers<undefined>();
+  const handlers = { ...outboxHandlers, email: emailHandler(() => mail) };
+  return {
+    owed: {
+      keepAlive: (promise) => {
+        work.push(promise);
+      },
+      report: quiet,
+      settle: async (database, debt, report) => {
+        await gate;
+        await settleOutbox(database, debt, report, handlers);
+      },
+    },
+    settled: async () => {
+      release(undefined);
+      await Promise.all(work);
+    },
+  };
+}
 
 function quiet(): void {
   // these sends succeed, so there is nothing to report
@@ -945,13 +1122,14 @@ function inBackground(): {
 function change(
   userId: string,
   newEmail: string,
-  isOwn: (password: string) => Promise<boolean> = () => Promise.resolve(true),
+  check: EmailChangeRequest["checkPassword"] = () =>
+    Promise.resolve({ status: "own" }),
 ): EmailChangeRequest {
   return {
     userId,
     newEmail,
     currentPassword: TYPED,
-    isOwnPassword: isOwn,
+    checkPassword: check,
   };
 }
 

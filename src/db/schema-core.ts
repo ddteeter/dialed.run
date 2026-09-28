@@ -151,6 +151,22 @@ export const emailSendLimits = /*#__PURE__*/ sqliteTable("email_send_limits", {
   sends: integer("sends").notNull(),
 });
 
+/**
+ * How many times a signed-in runner has tried their current password this
+ * window (ACC-8's email change). Better Auth's own limiter counts HTTP
+ * requests; a server-side `auth.api.verifyPassword` call never passes
+ * through it, so without this a session holder could guess the password
+ * without limit. One row per runner, cleared by a right answer.
+ */
+export const passwordAttempts = /*#__PURE__*/ sqliteTable(
+  "password_attempts",
+  {
+    userId: text("user_id").primaryKey(),
+    windowStartedAt: integer("window_started_at").notNull(),
+    attempts: integer("attempts").notNull(),
+  },
+);
+
 export const brands = /*#__PURE__*/ sqliteTable(
   "brands",
   {
