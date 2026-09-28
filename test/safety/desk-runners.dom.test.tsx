@@ -363,6 +363,58 @@ describe("after an action", () => {
   });
 });
 
+/**
+An action that never answers, so its pending state stays on screen.
+*/
+function never(): Promise<never> {
+  return new Promise<never>(() => {
+    // Never settles.
+  });
+}
+
+describe("while an action is in flight", () => {
+  it("names each pending action", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ rename: vi.fn(never), ban: vi.fn(never) });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(await screen.findByText("Renaming")).toBeInTheDocument();
+    expect(await screen.findByText("Closing")).toBeInTheDocument();
+  });
+
+  it("names a pending takedown", async () => {
+    const user = userEvent.setup();
+    render(<Takedown takeDown={vi.fn(never)} />);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /What it is/ }),
+      "A photo",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: /Its id/ }),
+      "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+    );
+    await user.type(screen.getByRole("textbox", { name: /The notice/ }), "x");
+    await user.click(screen.getByRole("button", { name: "Take it down" }));
+    expect(await screen.findByText("Taking it down")).toBeInTheDocument();
+  });
+
+  it("keeps a Desk form in the page, and names only a titled one", () => {
+    render(<Takedown takeDown={vi.fn(never)} />);
+    const form = document.querySelector("form");
+    if (form === null) throw new Error("no form");
+    expect(form).not.toHaveAttribute("aria-labelledby");
+    expect(fireEvent.submit(form)).toBe(false);
+  });
+});
+
 describe("Takedown (SAF-6)", () => {
   it("opens with nothing chosen", () => {
     render(<Takedown takeDown={vi.fn()} />);

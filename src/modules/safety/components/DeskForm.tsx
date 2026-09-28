@@ -25,7 +25,7 @@ export function DeskForm({
   form,
   onSubmit,
   title,
-  className = "flex flex-col gap-3",
+  className,
   children,
   submit,
   action,
@@ -36,7 +36,7 @@ export function DeskForm({
   A panel's name, drawn as its heading and naming the form.
   */
   title?: string | undefined;
-  className?: string | undefined;
+  className: string;
   children: ReactNode;
   /**
    * The one submit button's words — or, for a form with more than one
