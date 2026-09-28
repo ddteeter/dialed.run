@@ -16,7 +16,7 @@ export function oneClickUnsubscribeResponse(
 ): Promise<Response> {
   return oneClickUnsubscribe(
     drizzle(env.DIALED_CORE),
-    env.BETTER_AUTH_SECRET,
+    env.UNSUBSCRIBE_SECRET,
     request,
   );
 }

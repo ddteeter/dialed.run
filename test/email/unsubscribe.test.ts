@@ -99,6 +99,15 @@ describe("verifiedUnsubscribe", () => {
     ).toBeUndefined();
   });
 
+  it("refuses every link when there is no secret, rather than signing with nothing", async () => {
+    const s = await unsubscribeSignature(SECRET, "u1", "run_reminder");
+    for (const secret of [undefined, ""]) {
+      expect(
+        await verifiedUnsubscribe(secret, { u: "u1", k: "run_reminder", s }),
+      ).toBeUndefined();
+    }
+  });
+
   it("answers undefined for a signature made with a different secret", async () => {
     const s = await unsubscribeSignature("other-secret", "u1", "run_reminder");
     expect(

@@ -29,9 +29,10 @@
     // An https origin, as production has, so the auth singleton's wiring
     // (base URL, rate limiting, secure cookies) is what the tests exercise.
     "BETTER_AUTH_URL": "https://dialed.test",
+    "BETTER_AUTH_SECRET": "test-secret-not-for-production",
     // Not a secret: signs unsubscribe links in a throwaway isolate, so the
     // one-click handler that reads it from the environment can be tested.
-    "BETTER_AUTH_SECRET": "test-secret-not-for-production",
+    "UNSUBSCRIBE_SECRET": "test-unsubscribe-secret-not-for-production",
   },
   // Task 126 (ACC-2): the email sender, as ../wrangler.jsonc binds it.
   // No test sends through it — they hand `deliverEmail` a fake — but the

@@ -195,6 +195,25 @@ describe("deliverEmail", () => {
     expect(mail.sent).toHaveLength(0);
   });
 
+  it("sends no optional mail without the unsubscribe secret, and transactional mail still goes", async () => {
+    const mail = fakeMail();
+    const { userId } = await seedUser();
+    for (const secret of [undefined, ""]) {
+      const unkeyed = { ...mail, secret };
+      expect(
+        await deliverEmail(db, { to: { userId }, template: REMINDER }, unkeyed),
+      ).toBe("skipped");
+      expect(
+        await deliverEmail(
+          db,
+          { to: { userId }, template: { kind: "existing_account" } },
+          unkeyed,
+        ),
+      ).toBe("sent");
+    }
+    expect(mail.sent.map((message) => message.subject)).toHaveLength(2);
+  });
+
   it("throws when the binding does, so the outbox keeps the debt", async () => {
     const mail = fakeMail();
     mail.failing(true);
@@ -220,7 +239,7 @@ describe("emailDepsFromEnv", () => {
         },
       },
       BETTER_AUTH_URL: ORIGIN,
-      BETTER_AUTH_SECRET: SECRET,
+      UNSUBSCRIBE_SECRET: SECRET,
     });
     expect([deps.origin, deps.secret]).toStrictEqual([ORIGIN, SECRET]);
     await deps.send({ from: "a@b.c", to: "d@e.f", subject: "s", text: "t" });
@@ -234,7 +253,7 @@ describe("emailDepsFromEnv", () => {
       emailDepsFromEnv({
         EMAIL: { send: () => Promise.resolve({ messageId: "m" }) },
         BETTER_AUTH_URL: undefined,
-        BETTER_AUTH_SECRET: SECRET,
+        UNSUBSCRIBE_SECRET: SECRET,
       }),
     ).toThrow("BETTER_AUTH_URL is not set");
   });

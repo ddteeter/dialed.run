@@ -5,6 +5,7 @@ import { notificationPreferences } from "../../src/db/schema-core";
 import { isEmailWanted, notificationSettings } from "../../src/modules/email";
 import {
   oneClickUnsubscribe,
+  readByLink,
   switchByLink,
 } from "../../src/modules/email/landing";
 import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
@@ -33,6 +34,57 @@ async function signedSearch(userId: string): Promise<Record<string, string>> {
   );
   return Object.fromEntries(url.searchParams);
 }
+
+describe("readByLink (opening the link, D-64)", () => {
+  it("names the address and asks, and changes no preference", async () => {
+    const { userId, email } = await seedUser();
+    const search = await signedSearch(userId);
+
+    expect(await readByLink(db, SECRET, search)).toStrictEqual({
+      state: "ask",
+      kind: "run_reminder",
+      email,
+    });
+    expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
+    expect(await db.select().from(notificationPreferences)).toStrictEqual([]);
+  });
+
+  it("leaves a runner subscribed when a scanner opens the link and nothing follows", async () => {
+    const { userId } = await seedUser();
+    const search = await signedSearch(userId);
+    // A gateway prefetching every link, several times over.
+    for (let n = 0; n < 3; n += 1) await readByLink(db, SECRET, search);
+    expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
+  });
+
+  it("unsubscribes only on the button's POST", async () => {
+    const { userId } = await seedUser();
+    const search = await signedSearch(userId);
+    await readByLink(db, SECRET, search);
+    expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
+    await switchByLink(db, SECRET, search, false);
+    expect(await isEmailWanted(db, userId, "run_reminder")).toBe(false);
+  });
+
+  it("says a tampered link, a gone account or a missing secret does not work", async () => {
+    const { userId } = await seedUser();
+    const search = await signedSearch(userId);
+    const invalid = { state: "invalid" };
+    expect(
+      await readByLink(db, SECRET, { ...search, s: "tampered" }),
+    ).toStrictEqual(invalid);
+    const gone = await signedSearch(newUlid());
+    expect(await readByLink(db, SECRET, gone)).toStrictEqual(invalid);
+    // Fail closed: with no secret, even a good link is refused.
+    for (const secret of [undefined, ""]) {
+      expect(await readByLink(db, secret, search)).toStrictEqual(invalid);
+      expect(await switchByLink(db, secret, search, false)).toStrictEqual(
+        invalid,
+      );
+    }
+    expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
+  });
+});
 
 describe("switchByLink", () => {
   it("turns the reminder off on open, names the address, and back on again", async () => {

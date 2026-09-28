@@ -38,9 +38,10 @@ export interface EmailDeps {
   */
   readonly origin: string;
   /**
-  The secret the unsubscribe link is signed with.
-  */
-  readonly secret: string;
+   * The secret the unsubscribe link is signed with (`UNSUBSCRIBE_SECRET`).
+   * Absent, no link can be built, so no optional email goes.
+   */
+  readonly secret: string | undefined;
 }
 
 /**
@@ -52,7 +53,7 @@ export function emailDepsFromEnv(
   bindings: Readonly<{
     EMAIL: { send: EmailDeps["send"] };
     BETTER_AUTH_URL?: string | undefined;
-    BETTER_AUTH_SECRET: string;
+    UNSUBSCRIBE_SECRET?: string | undefined;
   }> = env,
 ): EmailDeps {
   const origin = bindings.BETTER_AUTH_URL;
@@ -63,7 +64,7 @@ export function emailDepsFromEnv(
   return {
     send: (message) => bindings.EMAIL.send(message),
     origin,
-    secret: bindings.BETTER_AUTH_SECRET,
+    secret: bindings.UNSUBSCRIBE_SECRET,
   };
 }
 
@@ -117,6 +118,9 @@ async function optionalMail(
   const preference = preferenceFor(payload.template.kind);
   if (preference === undefined) return {};
   if (!recipient.isVerified) return "skip";
+  // No secret, no link — and optional mail without its unsubscribe link
+  // does not go (fail closed; `/api/health` names the secret).
+  if (deps.secret === undefined || deps.secret === "") return "skip";
   if (!(await isEmailWanted(db, recipient.userId, preference))) return "skip";
   return {
     unsubscribe: await unsubscribeUrl(

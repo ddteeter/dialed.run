@@ -1,8 +1,11 @@
 /**
- * What opening an unsubscribe link does (round 26 #19): "Opening it is the
- * unsubscribe: no confirm button and no 'are you sure'. 'Turn them back
- * on' undoes it on the same page." No session: the signature is the
- * permission.
+ * The unsubscribe link. **Opening it changes nothing** (owner, 2026-09-27,
+ * D-64 — overriding round 26 #19's "opening it is the unsubscribe"):
+ * security scanners and corporate mail gateways fetch every link in a
+ * message, so a GET that unsubscribes unsubscribes runners who never
+ * clicked. The landing asks, and its one button POSTs. A mail client's own
+ * one-click (RFC 8058) is a POST already, and stays one click. No session:
+ * the signature is the permission.
  */
 import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -24,7 +27,49 @@ export type SubscriptionLanding =
       */
       readonly email: string;
     }
+  | {
+      readonly state: "ask";
+      readonly kind: EmailPreferenceKind;
+      readonly email: string;
+    }
   | { readonly state: "invalid" };
+
+/**
+ * The runner and address a signed link names, or nothing: what the
+ * landing needs to ask.
+ */
+async function signedFor(
+  db: Db,
+  secret: string | undefined,
+  search: unknown,
+): Promise<
+  { userId: string; kind: EmailPreferenceKind; email: string } | undefined
+> {
+  const signed = await verifiedUnsubscribe(secret, search);
+  if (signed === undefined) return undefined;
+  const email = await firstColumnWhere(
+    db,
+    user,
+    user.email,
+    eq(user.id, signed.userId),
+  );
+  if (email === undefined) return undefined;
+  return { ...signed, email };
+}
+
+/**
+ * Opening the link (GET): read, never write — the landing asks whether to
+ * unsubscribe. A scanner that fetches it changes nothing.
+ */
+export async function readByLink(
+  db: Db,
+  secret: string | undefined,
+  search: unknown,
+): Promise<SubscriptionLanding> {
+  const signed = await signedFor(db, secret, search);
+  if (signed === undefined) return { state: "invalid" };
+  return { state: "ask", kind: signed.kind, email: signed.email };
+}
 
 /**
  * Switch the kind a signed link names off (`isOn` false) or back on. A
@@ -33,21 +78,14 @@ export type SubscriptionLanding =
  */
 export async function switchByLink(
   db: Db,
-  secret: string,
+  secret: string | undefined,
   search: unknown,
   isOn: boolean,
 ): Promise<SubscriptionLanding> {
-  const signed = await verifiedUnsubscribe(secret, search);
+  const signed = await signedFor(db, secret, search);
   if (signed === undefined) return { state: "invalid" };
-  const email = await firstColumnWhere(
-    db,
-    user,
-    user.email,
-    eq(user.id, signed.userId),
-  );
-  if (email === undefined) return { state: "invalid" };
   await setEmailPreference(db, signed.userId, signed.kind, isOn);
-  return { state: isOn ? "on" : "off", kind: signed.kind, email };
+  return { state: isOn ? "on" : "off", kind: signed.kind, email: signed.email };
 }
 
 /**
@@ -58,7 +96,7 @@ export async function switchByLink(
  */
 export async function oneClickUnsubscribe(
   db: Db,
-  secret: string,
+  secret: string | undefined,
   request: Request,
 ): Promise<Response> {
   const search = Object.fromEntries(new URL(request.url).searchParams);

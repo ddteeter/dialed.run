@@ -4,21 +4,28 @@ import type { JSX } from "react";
 
 import {
   ControlFailureBand,
+  FormFailureBand,
   FormStatus,
   Mono,
   PendingLabel,
+  SubmitButton,
   inFlight,
   useControlAction,
+  useFormSubmit,
 } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
+import { unsubscribeFormSchema } from "../inputs";
 import type { SubscriptionLanding } from "../landing";
 
 const LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
 /**
  * The unsubscribe landing (round 26 #19, "UNSUBSCRIBE LANDING ·
- * SIGNED-OUT SHELL · NO LOG-IN"). Opening the link was the unsubscribe;
- * this says so, and "Turn them back on" undoes it on the same page.
+ * SIGNED-OUT SHELL · NO LOG-IN"). Opening the link changes nothing (D-64:
+ * scanners fetch every link); the landing asks, with one Unsubscribe
+ * button that POSTs, and then says it is done, with "Turn them back on"
+ * to undo it on the same page. The asking state is undrawn (design
+ * deltas).
  *
  * The board's second sentence — "If push is on, reminders still show on
  * your phone." — is dropped: there is no push (decision D-44). Listed as a
@@ -26,12 +33,20 @@ const LINK_CLASS = "font-bold text-ink underline underline-offset-4";
  */
 export function UnsubscribeLanding({
   landing,
+  unsubscribe,
   resubscribe,
 }: Readonly<{
   landing: SubscriptionLanding;
+  unsubscribe: () => Promise<SubscriptionLanding>;
   resubscribe: () => Promise<SubscriptionLanding>;
 }>): JSX.Element {
   const [current, setCurrent] = useState(landing);
+  const form = useFormSubmit({
+    schema: unsubscribeFormSchema,
+    action: () => unsubscribe(),
+    onSuccess: setCurrent,
+    successMessage: "Unsubscribed.",
+  });
   const control = useControlAction<[]>({
     action: async () => {
       setCurrent(await resubscribe());
@@ -62,6 +77,46 @@ export function UnsubscribeLanding({
     );
   }
 
+  if (current.state === "ask") {
+    return (
+      <SignedOutPanel
+        heading="Stop run reminder emails?"
+        notice={
+          <Mono step="xs" className="text-quiet">
+            {current.email}
+          </Mono>
+        }
+      >
+        <form
+          ref={form.formRef}
+          noValidate
+          data-part="unsubscribe"
+          data-state="ask"
+          className="flex flex-col gap-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void form.submit({});
+          }}
+        >
+          <FormStatus>{form.status}</FormStatus>
+          <p className="m-0 text-lead">
+            Account emails, like password changes, still come.
+          </p>
+          <FormFailureBand
+            failure={form.failure}
+            onRetry={form.retry}
+            retryRef={form.retryRef}
+          />
+          <SubmitButton
+            label="Unsubscribe"
+            pendingLabel="Unsubscribing"
+            pending={form.pending}
+          />
+        </form>
+      </SignedOutPanel>
+    );
+  }
+
   const isOff = current.state === "off";
   return (
     <SignedOutPanel
@@ -79,7 +134,9 @@ export function UnsubscribeLanding({
         data-state={current.state}
         className="flex flex-col gap-5"
       >
-        <FormStatus>{control.status}</FormStatus>
+        {/* The unsubscribe's own "Unsubscribed." until Turn them back on
+            says something of its own: the question it answered is gone. */}
+        <FormStatus>{control.status || form.status}</FormStatus>
         <p className="m-0 text-lead">
           {isOff
             ? "You won't get another. Account emails, like password changes, still come."

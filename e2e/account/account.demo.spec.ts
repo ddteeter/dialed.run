@@ -85,13 +85,18 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await expect(page.getByRole("checkbox", { name: "Email" })).toBeChecked();
 
   // The link in every reminder's footer, opened from the inbox
-  // (e2e/support/email-links): opening it is the unsubscribe.
-  await scene(page, "The email's unsubscribe link: no log-in, no confirm");
+  // (e2e/support/email-links): opening it asks, and changes nothing until
+  // its one button is pressed (D-64 — scanners open every link).
+  await scene(page, "The email's unsubscribe link: no log-in, one button");
   await page.goto(await unsubscribeLinkFor(email));
+  await expect(
+    page.getByRole("heading", { name: "Stop run reminder emails?" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
+  await page.getByRole("button", { name: "Unsubscribe" }).click();
   await expect(
     page.getByRole("heading", { name: "Run reminder emails are off" }),
   ).toBeVisible({ timeout: 15_000 });
-  await hydrated(page);
   await page.getByRole("button", { name: "Turn them back on" }).click();
   await expect(
     page.getByRole("heading", { name: "Run reminder emails are on" }),

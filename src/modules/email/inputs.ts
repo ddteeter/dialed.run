@@ -11,4 +11,10 @@ import { z } from "zod";
  */
 export const linkSearchInput = z.object({ search: z.unknown() });
 
+/**
+ * The unsubscribe landing's form (D-64): one button and nothing to fill,
+ * because the link's own search is the whole of the permission.
+ */
+export const unsubscribeFormSchema = z.object({});
+
 export { notificationSettingsSchema as notificationSettingsInput } from "../../lib/email";

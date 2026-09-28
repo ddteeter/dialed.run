@@ -147,6 +147,7 @@ that has stopped firing altogether.
 | `ADMIN_USER_IDS`              | **yes**    | Comma-separated user ids. Unset means nobody is an admin: the Desk and the review queue answer not-found to everyone, the owner included                      |
 | `FIRECRAWL_API_KEY`           | optional   | A shop that refuses a Worker (11 of 14 sampled) is a failed fetch, and its product gets no composition                                                        |
 | `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                      |
+| `UNSUBSCRIBE_SECRET`          | **yes**    | Signs unsubscribe links (its own secret, not the auth one). Fails closed: no optional email goes, every link is refused, and `/api/health` names it           |
 
 **Vars, not secrets** — printed into the page or read as configuration.
 They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),
@@ -224,7 +225,8 @@ needs its own Strava app, not a second subscription.
 
 - `GET /api/health` — reports per-binding status; expect every check `ok`
   and `missing` empty. A failure here names the binding, and `missing`
-  names any required var by its own name (today, `BETTER_AUTH_URL`), which
+  names any required var by its own name (today, `BETTER_AUTH_URL` and
+  `UNSUBSCRIBE_SECRET`), which
   is faster than reading a stack. Either makes it answer 503.
 - Confirm all four cron triggers are listed under Settings → Triggers.
 - Confirm the four queues show a consumer attached.

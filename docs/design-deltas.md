@@ -449,6 +449,16 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     **The ask:** draw the field (and whether it gets Show), and confirm
     that reset no longer waits.
 
+33. **The unsubscribe landing asks before it unsubscribes (D-64), undrawn.**
+    Round 26 #19 draws opening the link as the unsubscribe. Scanners and
+    mail gateways prefetch every link, so opening it now changes nothing:
+    the landing (same signed-out shell) reads "Stop run reminder emails?",
+    names the address in mono, says "Account emails, like password
+    changes, still come.", and has one **Unsubscribe** submit button; its
+    POST lands on the drawn "Run reminder emails are off" state. A mail
+    client's own one-click button is unchanged. **The ask:** redraw the
+    landing's asking state, and word it.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25

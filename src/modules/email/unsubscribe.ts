@@ -3,11 +3,12 @@
  * never expiring, and working without a session — "Opening it is the
  * unsubscribe: no confirm button and no 'are you sure'."
  *
- * HMAC-SHA256, keyed by the auth secret, over `purpose|userId|kind` — the
- * purpose label first, so a signature made for this can never be replayed
- * as anything else the secret signs. Rotating `BETTER_AUTH_SECRET`
- * breaks every link in every inbox; that is the cost of a link that needs
- * no table, and it is the owner's to pay knowingly.
+ * HMAC-SHA256, keyed by its own secret (`UNSUBSCRIBE_SECRET`, owner
+ * 2026-09-27), over `purpose|userId|kind` — the purpose label first, so a
+ * signature made for this can never be replayed as anything else the
+ * secret signs. Rotating the secret breaks every link in every inbox;
+ * that is the cost of a link that needs no table. A missing secret
+ * refuses every link (fail closed).
  */
 import { z } from "zod";
 
@@ -110,9 +111,10 @@ export async function unsubscribeUrl(
  * is constant-time, rather than by re-signing and comparing strings.
  */
 export async function verifiedUnsubscribe(
-  secret: string,
+  secret: string | undefined,
   search: unknown,
 ): Promise<{ userId: string; kind: EmailPreferenceKind } | undefined> {
+  if (secret === undefined || secret === "") return undefined;
   const parsed = unsubscribeSearchSchema.safeParse(search);
   if (!parsed.success) return undefined;
   const { u: userId, k: kind, s } = parsed.data;

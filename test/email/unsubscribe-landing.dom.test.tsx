@@ -13,8 +13,9 @@ import { UnsubscribeLanding } from "../../src/modules/email/components/Unsubscri
 import type { SubscriptionLanding } from "../../src/modules/email/landing";
 
 /**
- * The unsubscribe landing (round 26 #19): opening the link was the
- * unsubscribe; "Turn them back on" undoes it on the same page.
+ * The unsubscribe landing (round 26 #19, D-64): opening the link asks,
+ * its one button unsubscribes, and "Turn them back on" undoes it on the
+ * same page.
  */
 async function renderWithRouter(element: ReactElement) {
   const rootRoute = createRootRoute({ component: () => element });
@@ -35,7 +36,11 @@ const OFF: SubscriptionLanding = {
 describe("UnsubscribeLanding", () => {
   it("says the reminder is off, for which address, with no log-in and no confirm", async () => {
     await renderWithRouter(
-      <UnsubscribeLanding landing={OFF} resubscribe={vi.fn()} />,
+      <UnsubscribeLanding
+        landing={OFF}
+        unsubscribe={vi.fn()}
+        resubscribe={vi.fn()}
+      />,
     );
     expect(
       screen.getByRole("heading", {
@@ -69,7 +74,11 @@ describe("UnsubscribeLanding", () => {
     );
     const user = userEvent.setup();
     await renderWithRouter(
-      <UnsubscribeLanding landing={OFF} resubscribe={resubscribe} />,
+      <UnsubscribeLanding
+        landing={OFF}
+        unsubscribe={vi.fn()}
+        resubscribe={resubscribe}
+      />,
     );
     await user.click(screen.getByRole("button", { name: "Turn them back on" }));
 
@@ -91,7 +100,11 @@ describe("UnsubscribeLanding", () => {
     const resubscribe = vi.fn(() => Promise.reject(new Error("down")));
     const user = userEvent.setup();
     await renderWithRouter(
-      <UnsubscribeLanding landing={OFF} resubscribe={resubscribe} />,
+      <UnsubscribeLanding
+        landing={OFF}
+        unsubscribe={vi.fn()}
+        resubscribe={resubscribe}
+      />,
     );
     await user.click(screen.getByRole("button", { name: "Turn them back on" }));
     await waitFor(() => {
@@ -108,6 +121,7 @@ describe("UnsubscribeLanding", () => {
     await renderWithRouter(
       <UnsubscribeLanding
         landing={{ state: "invalid" }}
+        unsubscribe={vi.fn()}
         resubscribe={vi.fn()}
       />,
     );
@@ -120,5 +134,54 @@ describe("UnsubscribeLanding", () => {
     expect(
       screen.getByRole("link", { name: "Settings › Notifications" }),
     ).toHaveAttribute("href", "/account/notifications");
+  });
+
+  it("asks first: opening the link unsubscribes nobody until the button is pressed", async () => {
+    const unsubscribe = vi.fn(() => Promise.resolve<SubscriptionLanding>(OFF));
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <UnsubscribeLanding
+        landing={{ ...OFF, state: "ask" }}
+        unsubscribe={unsubscribe}
+        resubscribe={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Stop run reminder emails?" }),
+    ).toBeVisible();
+    expect(screen.getByText("maya@example.com")).toBeVisible();
+    expect(
+      screen.getByText("Account emails, like password changes, still come."),
+    ).toBeVisible();
+    expect(unsubscribe).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("heading", {
+        name: "Run reminder emails are off",
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Unsubscribed.");
+  });
+
+  it("keeps the question on screen, with the failure band, when the unsubscribe fails", async () => {
+    const unsubscribe = vi.fn(() => Promise.reject(new Error("down")));
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <UnsubscribeLanding
+        landing={{ ...OFF, state: "ask" }}
+        unsubscribe={unsubscribe}
+        resubscribe={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
+    expect(
+      await screen.findByRole("button", { name: /try again/iu }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Stop run reminder emails?" }),
+    ).toBeVisible();
   });
 });

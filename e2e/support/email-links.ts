@@ -84,10 +84,10 @@ export async function resetLinkFor(email: string): Promise<string> {
  */
 function devSecret(): string {
   const vars = readFileSync(".dev.vars", "utf8");
-  const found = /^BETTER_AUTH_SECRET=(?<secret>.+)$/mu.exec(vars)?.groups
+  const found = /^UNSUBSCRIBE_SECRET=(?<secret>.+)$/mu.exec(vars)?.groups
     ?.secret;
   if (found === undefined)
-    throw new Error("no BETTER_AUTH_SECRET in .dev.vars");
+    throw new Error("no UNSUBSCRIBE_SECRET in .dev.vars");
   return found.trim().replaceAll(/^"|"$/gu, "");
 }
 

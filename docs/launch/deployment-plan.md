@@ -66,23 +66,23 @@ Vars go in `wrangler.jsonc` (`vars`), secrets with `wrangler secret put`.
 Both are the owner's edits; the code that reads each is already written or
 is written by the named lane.
 
-| name                                                        | kind   | required       | read by / written by  | without it                                                                                                       |
-| ----------------------------------------------------------- | ------ | -------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_URL=https://dialed.run`                        | var    | yes            | 125 · OPS-4           | Wrong-host callbacks; no `__Secure-` cookie prefix (0.7). `/api/health` reports it.                              |
-| `STRAVA_SUBSCRIPTION_ID`                                    | var    | for Strava     | 127 · STR-4           | The webhook cannot tell our events from forged ones (0.10). Set after step 5's subscription call returns the id. |
-| `TURNSTILE_SITE_KEY`                                        | var    | yes            | 125 · OPS-5           | No widget on sign-up or request access.                                                                          |
-| `BETTER_AUTH_SECRET`                                        | secret | yes            | auth                  | No sessions.                                                                                                     |
-| `VISUAL_CROSSING_API_KEY`                                   | secret | yes            | weather               | Every run falls back to manual.                                                                                  |
-| `OPENAI_API_KEY`                                            | secret | **yes**        | screening, extraction | Every photo stays `pending`, so **no entry photo is ever public** (§3.1).                                        |
-| `ADMIN_USER_IDS`                                            | secret | **yes**        | admin check           | The Desk and the review queue are unreachable.                                                                   |
-| `TURNSTILE_SECRET_KEY`                                      | secret | yes            | 125 · OPS-5           | Sign-up and request access refuse (fail closed).                                                                 |
-| `PHOTO_URL_SECRET` (name per 128's design doc)              | secret | before public  | 128 · SAF-7           | Public photos cannot be signed.                                                                                  |
-| Unsubscribe-link signing secret (name per 126's design doc) | secret | before friends | 126 · ACC-2           | Reminder emails carry no working one-click unsubscribe.                                                          |
-| `STRAVA_CLIENT_ID` / `_SECRET` / `_WEBHOOK_VERIFY_TOKEN`    | secret | for Strava     | runs                  | T1 shows "not configured".                                                                                       |
-| `GOOGLE_CLIENT_ID` / `_SECRET`                              | secret | optional       | auth                  | No Google sign-in; set both or neither.                                                                          |
-| `SENTRY_DSN`                                                | secret | strongly       | ops                   | Terminal failures go nowhere.                                                                                    |
-| `FIRECRAWL_API_KEY`                                         | secret | optional       | enrichment            | Shops that refuse a Worker (11 of 14) enrich from nothing.                                                       |
-| Cache-purge token (if 128 uses purge; see §8)               | secret | before public  | 128 · SAF-5, SAF-7    | Removed public photos stay cached until their TTL ends.                                                          |
+| name                                                     | kind   | required       | read by / written by  | without it                                                                                                       |
+| -------------------------------------------------------- | ------ | -------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL=https://dialed.run`                     | var    | yes            | 125 · OPS-4           | Wrong-host callbacks; no `__Secure-` cookie prefix (0.7). `/api/health` reports it.                              |
+| `STRAVA_SUBSCRIPTION_ID`                                 | var    | for Strava     | 127 · STR-4           | The webhook cannot tell our events from forged ones (0.10). Set after step 5's subscription call returns the id. |
+| `TURNSTILE_SITE_KEY`                                     | var    | yes            | 125 · OPS-5           | No widget on sign-up or request access.                                                                          |
+| `BETTER_AUTH_SECRET`                                     | secret | yes            | auth                  | No sessions.                                                                                                     |
+| `VISUAL_CROSSING_API_KEY`                                | secret | yes            | weather               | Every run falls back to manual.                                                                                  |
+| `OPENAI_API_KEY`                                         | secret | **yes**        | screening, extraction | Every photo stays `pending`, so **no entry photo is ever public** (§3.1).                                        |
+| `ADMIN_USER_IDS`                                         | secret | **yes**        | admin check           | The Desk and the review queue are unreachable.                                                                   |
+| `TURNSTILE_SECRET_KEY`                                   | secret | yes            | 125 · OPS-5           | Sign-up and request access refuse (fail closed).                                                                 |
+| `PHOTO_URL_SECRET` (name per 128's design doc)           | secret | before public  | 128 · SAF-7           | Public photos cannot be signed.                                                                                  |
+| `UNSUBSCRIBE_SECRET`                                     | secret | before friends | 126 · ACC-2           | Fails closed: no reminder email goes, every unsubscribe link is refused. `/api/health` reports it.               |
+| `STRAVA_CLIENT_ID` / `_SECRET` / `_WEBHOOK_VERIFY_TOKEN` | secret | for Strava     | runs                  | T1 shows "not configured".                                                                                       |
+| `GOOGLE_CLIENT_ID` / `_SECRET`                           | secret | optional       | auth                  | No Google sign-in; set both or neither.                                                                          |
+| `SENTRY_DSN`                                             | secret | strongly       | ops                   | Terminal failures go nowhere.                                                                                    |
+| `FIRECRAWL_API_KEY`                                      | secret | optional       | enrichment            | Shops that refuse a Worker (11 of 14) enrich from nothing.                                                       |
+| Cache-purge token (if 128 uses purge; see §8)            | secret | before public  | 128 · SAF-5, SAF-7    | Removed public photos stay cached until their TTL ends.                                                          |
 
 **GitHub**: secret `CLOUDFLARE_API_TOKEN` (Workers, D1, R2 edit), secret
 **`CLOUDFLARE_ACCOUNT_ID`** (the deploy step reads it; missing from the

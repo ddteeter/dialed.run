@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../env";
 import { requireUserId } from "../auth";
 import { linkSearchInput, notificationSettingsInput } from "./inputs";
-import { switchByLink } from "./landing";
+import { readByLink, switchByLink } from "./landing";
 import { setEmailPreference } from "./preferences";
 import { notificationSettings } from "./settings";
 
@@ -18,12 +18,22 @@ function db() {
 }
 
 /**
- * The unsubscribe landing's loader: opening the link is the unsubscribe.
+ * The unsubscribe landing's loader: reads the link and changes nothing
+ * (D-64) — the landing asks.
  */
+export const unsubscribeLinkQuery = createServerFn({ method: "GET" })
+  .validator((data: unknown) => linkSearchInput.parse(data))
+  .handler(async ({ data }) =>
+    readByLink(db(), env.UNSUBSCRIBE_SECRET, data.search),
+  );
+
+/**
+The landing's one button: the unsubscribe itself.
+*/
 export const unsubscribeFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => linkSearchInput.parse(data))
   .handler(async ({ data }) =>
-    switchByLink(db(), env.BETTER_AUTH_SECRET, data.search, false),
+    switchByLink(db(), env.UNSUBSCRIBE_SECRET, data.search, false),
   );
 
 /**
@@ -32,7 +42,7 @@ export const unsubscribeFn = createServerFn({ method: "POST" })
 export const resubscribeFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => linkSearchInput.parse(data))
   .handler(async ({ data }) =>
-    switchByLink(db(), env.BETTER_AUTH_SECRET, data.search, true),
+    switchByLink(db(), env.UNSUBSCRIBE_SECRET, data.search, true),
   );
 
 /**

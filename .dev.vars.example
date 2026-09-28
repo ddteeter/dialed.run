@@ -1,5 +1,8 @@
 # Copy to .dev.vars (gitignored). Prod values are Wrangler secrets.
 BETTER_AUTH_SECRET=generate-a-long-random-string
+# Signs unsubscribe links (task 126) — its own secret, not the auth one.
+# Required: without it no optional email goes and every link is refused.
+UNSUBSCRIBE_SECRET=generate-another-long-random-string
 # Required locally: wrangler.jsonc sets the production origin
 # (https://dialed.run). Without this override Better Auth refuses every
 # sign-in and sign-up from localhost (403 INVALID_ORIGIN), and the https

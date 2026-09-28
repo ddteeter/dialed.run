@@ -17,8 +17,10 @@ export interface HealthReport {
  * would never notice. `BETTER_AUTH_URL` decides where Better Auth sends
  * callbacks and whether its cookies carry the `__Secure-` prefix (audit
  * finding 0.7); unset, auth half-works, which is worse than not at all.
+ * `UNSUBSCRIBE_SECRET` signs unsubscribe links; unset, no optional email
+ * goes and every link is refused (task 126, fail closed).
  */
-const REQUIRED_CONFIG = ["BETTER_AUTH_URL"] as const;
+const REQUIRED_CONFIG = ["BETTER_AUTH_URL", "UNSUBSCRIBE_SECRET"] as const;
 
 function missingConfig(): string[] {
   return REQUIRED_CONFIG.filter((name) => {
