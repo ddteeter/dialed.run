@@ -143,24 +143,23 @@ const subjectColumn = {
 } as const;
 
 /**
- * Copies each photo's bytes under the quarantine prefix, and says where
- * each went and when R2 says it was uploaded. A photo whose object is
- * already gone has nothing to copy and says so with no `preservedKey`.
+ * Copies each photo's bytes under the quarantine prefix, and says, by the
+ * photo's key, where each went and when R2 says it was uploaded. A photo
+ * whose object is already gone has nothing to copy and no entry here.
  */
 async function copyBytes(photoKeys: readonly string[]) {
-  const copies = [];
+  const copies = new Map<
+    string,
+    { preservedKey: string; uploadedAt: number }
+  >();
   for (const photoKey of photoKeys) {
     const object = await env.MEDIA.get(photoKey);
-    if (object === null) {
-      copies.push({ photoKey });
-      continue;
-    }
+    if (object === null) continue;
     const preservedKey = quarantineKeyFor(photoKey);
     await env.MEDIA.put(preservedKey, object.body, {
       httpMetadata: object.httpMetadata ?? {},
     });
-    copies.push({
-      photoKey,
+    copies.set(photoKey, {
       preservedKey,
       uploadedAt: Math.floor(object.uploaded.getTime() / 1000),
     });
@@ -200,9 +199,8 @@ async function preservation(
   input: ModerateInput,
   actionId: string,
 ): Promise<{ preservedKey: string; record: BatchItem<"sqlite"> }> {
-  const copies = await copyBytes(target.photoKeys);
+  const copyOf = await copyBytes(target.photoKeys);
   const rows = await rowsOf(db, target, input);
-  const copyOf = new Map(copies.map((copy) => [copy.photoKey, copy]));
   const photos = rows.photos.map((photo) => ({
     ...photo,
     ...copyOf.get(photo.photoKey),

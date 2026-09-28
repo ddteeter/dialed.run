@@ -24,6 +24,7 @@ describe("emailTemplateSchema", () => {
       { kind: "email_changed", newEmail: "new@example.com" },
       { kind: "run_reminder", landedAt: "6:58 AM", runs: 3 },
       { kind: "content_removed", subject: "photo", reason: "it's spam" },
+      { kind: "content_removed", subject: "entry", reason: "it's spam" },
       { kind: "account_closed", reason: "spam" },
     ];
     for (const payload of payloads) {

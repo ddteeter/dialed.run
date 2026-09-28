@@ -529,6 +529,7 @@ describe("quarantine: silent, preserved, admin-only (SAF-5, D-70)", () => {
       screenStatus: "pass",
     });
     expect(photo?.uploadedAt).toBeGreaterThanOrEqual(before - 60);
+    expect(photo?.uploadedAt).toBeLessThanOrEqual(nowSeconds() + 60);
   });
 
   it("keeps only the photo in scope, and says when a copy had no bytes", async () => {
@@ -1337,6 +1338,33 @@ describe("deskRunners, D8 (round 27 #22)", () => {
     expect(await idsFor({ query: undefined, filter: "all" })).toStrictEqual([
       bo,
       ada,
+    ]);
+  });
+
+  it("reads an account with no profile row as active, with no handle", async () => {
+    const bare = newUlid();
+    await core()
+      .insert(user)
+      .values({
+        id: bare,
+        name: "bare",
+        email: "bare@example.com",
+        emailVerified: true,
+        createdAt: new Date(3000 * 1000),
+        updatedAt: new Date(3000 * 1000),
+      });
+
+    expect(await deskList({ filter: "all" })).toStrictEqual([
+      {
+        userId: bare,
+        username: undefined,
+        email: "bare@example.com",
+        joinedAt: 3000,
+        runs: 0,
+        reports: 0,
+        state: "ACTIVE",
+        banReason: undefined,
+      },
     ]);
   });
 
