@@ -68,6 +68,17 @@ export async function scene(page: Page, text: string): Promise<void> {
   await page.waitForTimeout(holdFor(text));
 }
 
+/**
+ * Layout stamps `html[data-hydrated]` once React attaches; driving
+ * controlled inputs before that races hydration's state reset. Shared by
+ * every demo spec — one wait, not one copy per journey.
+ */
+export async function hydrated(page: Page): Promise<void> {
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+}
+
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.addInitScript(() => {

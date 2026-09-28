@@ -9,6 +9,7 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { tinyJpeg } from "../feed/photos-fixture";
 import { uploadItemPhoto } from "../../src/modules/closet/photos";
 import { getEntryDetail } from "../../src/modules/feed/entries";
 import { followingFeed } from "../../src/modules/feed/feed";
@@ -33,6 +34,9 @@ import {
   makeUser,
   resetSafetyTables,
 } from "./helpers";
+
+// A real JPEG: stored photos are re-encoded (task 128 · SAF-1).
+const PHOTO_BYTES = new Uint8Array(await tinyJpeg()).buffer;
 
 /**
  * That the upload paths screen at all is the thing worth testing here.
@@ -110,7 +114,7 @@ describe("uploading an entry photo", () => {
         userId,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: clean },
     );
@@ -132,7 +136,7 @@ describe("uploading an entry photo", () => {
         userId,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: explicit },
     );
@@ -166,7 +170,7 @@ describe("uploading an entry photo", () => {
         userId,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: unavailable },
     );
@@ -189,7 +193,7 @@ describe("uploading an entry photo", () => {
         userId,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: clean },
     );
@@ -211,7 +215,7 @@ describe("uploading an entry photo", () => {
         userId,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: unavailable },
     );
@@ -308,7 +312,7 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
         userId: author,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: explicit },
     );
@@ -336,7 +340,7 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
         userId: author,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: explicit },
     );
@@ -358,7 +362,7 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
         userId: author,
         entryId,
         contentType: "image/jpeg",
-        bytes: new Uint8Array([1, 2, 3]).buffer,
+        bytes: PHOTO_BYTES,
       },
       { classify: explicit },
     );
@@ -383,7 +387,7 @@ async function flaggedPhoto(): Promise<{ key: string; owner: string }> {
       userId: owner,
       entryId,
       contentType: "image/jpeg",
-      bytes: new Uint8Array([1, 2, 3]).buffer,
+      bytes: PHOTO_BYTES,
     },
     { classify: explicit },
   );

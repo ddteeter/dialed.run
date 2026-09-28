@@ -17,12 +17,13 @@ export {
 
 export {
   banStateOf,
-  bannedAmong,
   banUser,
   unbanUser,
   type BanInput,
   type BanState,
 } from "./bans";
+
+export { ACCOUNT_CLOSED_CODE, banGate } from "./ban-gate";
 
 export {
   blockRunner,
@@ -67,6 +68,7 @@ export {
   reasonsFrom,
   releaseStaleClaims,
   resolveReview,
+  settleOpenReviews,
   type ClaimOutcome,
   type QueueRow,
   type ReleaseReport,
@@ -75,8 +77,8 @@ export {
 } from "./review";
 
 export {
-  isEntryPubliclyVisible,
-  isPhotoPubliclyVisible,
+  entryVisibleTo,
+  isUnderReviewForAuthor,
   publicPhotoStatus,
   publiclyVisibleEntry,
 } from "./visibility";
@@ -113,6 +115,7 @@ export {
   type RetryReport,
 } from "./retry";
 
+export { AccountClosed } from "./components/AccountClosed";
 export { BlockedRunners } from "./components/BlockedRunners";
 export { ReportAffordance } from "./components/ReportAffordance";
 export { ReportSheet, type ReportSubject } from "./components/ReportSheet";

@@ -4,7 +4,8 @@
  * this, round 26 #12), runner search, D (post detail — the strip, the
  * note, the kit), H (someone else's profile), D-11 (useful reactions), the
  * bell counting a run of any age that still owes a verdict (S2), G's
- * settings button — one journey, one video.
+ * settings button, and a runner taking back their own entry — one photo,
+ * then the whole entry (task 128 · SAF-3) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -14,9 +15,13 @@
  * entry seeded for the followed runner must never surface in the follower's
  * feed or on the runner's own public profile.
  */
+import { readFile } from "node:fs/promises";
+
 import { eq, inArray } from "drizzle-orm";
+import { getPlatformProxy } from "wrangler";
 
 import {
+  entryPhotos,
   entryTags as entryTagsTable,
   outfitEntries,
   outfitEntryItems,
@@ -26,9 +31,10 @@ import {
 } from "../../src/db/schema-core";
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
+import { userIdOf } from "../conformance/logging-fixtures";
 import { storageStateFor } from "../support/accounts";
 import { DESK, PHONE, bar, launcher } from "../support/bars";
-import { expect, scene, test } from "../support/demo";
+import { expect, hydrated, scene, test } from "../support/demo";
 
 // Signed in already: the account is created by the `demo-setup` project, so
 // this video opens on the feed rather than on a signup form.
@@ -40,14 +46,6 @@ import {
   feedUserId,
   forgetPlace,
 } from "../conformance/feed-support";
-
-/** Layout stamps html[data-hydrated] once React attaches; driving
- *  controlled inputs before that races hydration's state reset. */
-async function hydrated(page: import("@playwright/test").Page): Promise<void> {
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
-}
 
 test("follow a runner, browse their feed, open a verdict, and mark it useful", async ({
   page,
@@ -215,6 +213,8 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     ]);
   });
 
+  const ownRunId = newUlid();
+  const ownEntryId = newUlid();
   // A run of the viewer's own from a month ago that never got a verdict:
   // the bell counts it, at any age (FEED-3).
   const viewerId = await feedUserId();
@@ -418,8 +418,92 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // The same launcher, in its glyph-sized seat and saying so.
     await expect(launcher(page)).toHaveText("+ Add");
     await page.setViewportSize(DESK);
+
+    // ---- Taking it back (task 128 · SAF-3) ------------------------------
+    //
+    // Seeded here, not above: an entry of the viewer's own would have put
+    // something in the empty feed the first beats show.
+    const ownerId = await userIdOf("feed");
+    const photoIds = [newUlid(), newUlid()];
+    const photoKeys = photoIds.map(
+      (photoId) => `entries/${ownerId}/${ownEntryId}/${photoId}`,
+    );
+    const photo = await readFile("test/fixtures/sample-photo.bin");
+    const media = await getPlatformProxy<Env>();
+    try {
+      for (const key of photoKeys) {
+        await media.env.MEDIA.put(key, photo, {
+          httpMetadata: { contentType: "image/jpeg" },
+        });
+      }
+    } finally {
+      await media.dispose();
+    }
+    await withLocalDb(async ({ core }) => {
+      await core.insert(runs).values({
+        id: ownRunId,
+        userId: ownerId,
+        source: "manual",
+        startedAt: nowSeconds() - 7200,
+        durationS: 2400,
+        distanceM: 8000,
+        lat: 45.52,
+        lng: -122.68,
+        indoor: false,
+        title: "Tempo on the river",
+      });
+      await core.insert(outfitEntries).values({
+        id: ownEntryId,
+        runId: ownRunId,
+        userId: ownerId,
+        verdict: 0,
+        isPublic: true,
+        caption: "Two photos, one too many",
+        createdAt: nowSeconds() - 7000,
+      });
+      await core.insert(entryPhotos).values(
+        photoIds.map((id, position) => ({
+          id,
+          entryId: ownEntryId,
+          photoKey: photoKeys[position] ?? "",
+          position,
+          screenStatus: "pass" as const,
+        })),
+      );
+    });
+
+    await scene(page, "Your own entry: take back one photo");
+    await page.goto(`/feed/entry/${ownEntryId}`);
+    await hydrated(page);
+    await page.getByRole("button", { name: "Delete photo 2" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Delete photo 2?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Delete photo 2" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Delete photo 1" }),
+    ).toBeVisible();
+
+    await scene(page, "…or the whole entry: its kit, verdict and photos go");
+    await page.getByRole("button", { name: "Delete this entry" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Delete this entry?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(page).not.toHaveURL(new RegExp(ownEntryId));
+    await page.goto(`/feed/entry/${ownEntryId}`);
+    await expect(page).not.toHaveURL(new RegExp(ownEntryId));
   } finally {
     await forgetPlace(viewerId);
+    await withLocalDb(async ({ core }) => {
+      // Only what the deletes above did not reach, if a beat failed first.
+      await core.delete(entryPhotos).where(eq(entryPhotos.entryId, ownEntryId));
+      await core.delete(outfitEntries).where(eq(outfitEntries.id, ownEntryId));
+      await core.delete(runs).where(eq(runs.id, ownRunId));
+    });
     await withLocalDb(async ({ core, weather }) => {
       await core.delete(runs).where(eq(runs.id, oldRunId));
       await core

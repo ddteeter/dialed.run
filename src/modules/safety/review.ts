@@ -8,6 +8,7 @@
  * fact rather than an assumption.
  */
 import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
+import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core/query-builders/update";
@@ -85,6 +86,45 @@ export function enqueueForReview(
         },
       })
   );
+}
+
+/**
+ * Closes any open decision about subjects that are about to stop existing
+ * — a runner deleting what they posted (task 128 · SAF-3) — as `removed`,
+ * stamped with who removed them. Built, not run, so it rides in the same
+ * batch as the delete.
+ *
+ * **Settled rather than deleted, because the row is the marker.**
+ * `reconcileUnhiddenReports` re-queues any subject over the report
+ * threshold that has no queue row at all; deleting the row would have the
+ * next sweep queue a decision about nothing. A settled row says what
+ * happened, and a reviewer's open tab finds it already resolved.
+ *
+ * `subjectIds` is a list or a subquery (`inArray` takes either), so a
+ * caller deleting "every entry of this runner's" never has to read the
+ * ids into memory first.
+ */
+export function settleOpenReviews(
+  database: ReturnType<typeof drizzle>,
+  subjectType: ReportSubjectType,
+  subjectIds: SQLWrapper | readonly string[],
+  settledBy: string,
+) {
+  return database
+    .update(reviewQueue)
+    .set({
+      status: "removed",
+      resolvedBy: settledBy,
+      resolvedAt: nowSeconds(),
+      claimedAt: orSqlNull(undefined),
+    })
+    .where(
+      and(
+        eq(reviewQueue.subjectType, subjectType),
+        inArray(reviewQueue.subjectId, subjectIds),
+        inArray(reviewQueue.status, ["pending", "reviewing"]),
+      ),
+    );
 }
 
 /**
@@ -411,8 +451,8 @@ type OpenRow =
  * something different for each: a stale tab whose row someone else already
  * settled is not the same as a link to a row that is gone.
  */
-// fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what "load a row and decide" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module
 async function openRow(queueId: string): Promise<OpenRow> {
+  // fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what "load a row and decide" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module
   const [row] = await db()
     .select({
       subjectType: reviewQueue.subjectType,

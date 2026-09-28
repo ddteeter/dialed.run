@@ -30,7 +30,11 @@ import type { entryTags, itemFlagSchema } from "../../lib/contracts";
 import { ForbiddenError } from "../../lib/errors";
 import { readInChunks } from "../../lib/chunked";
 import { forIds } from "../../lib/for-ids";
-import { publicPhotoStatus } from "../safety";
+import {
+  entryVisibleTo,
+  publicPhotoStatus,
+  publiclyVisibleEntry,
+} from "../safety";
 import { requireOwned, requireOwner } from "../../lib/owned";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
@@ -218,8 +222,8 @@ export interface SubmitVerdictInput {
 async function assertOwnsEntry(
   entryId: string,
   userId: string,
-  // fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
 ): Promise<{ id: string; userId: string; runId: string }> {
+  // fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
   const [entry] = await db()
     .select({
       id: outfitEntries.id,
@@ -567,13 +571,24 @@ export async function getEntryDetail(
   viewerId: string | undefined,
 ): Promise<EntryDetail | undefined> {
   const database = db();
+  // Through the one visibility rule (task 128): the owner sees their own
+  // entry whatever its state, and anyone else only what the rule allows —
+  // shared, `ok`, an author who is not banned, no block between the two
+  // and nothing the viewer reported. It used to read `is_public` alone, so
+  // an entry three people reported stayed open here to anyone with its link.
   const [entry] = await database
     .select()
     .from(outfitEntries)
-    .where(eq(outfitEntries.id, entryId))
+    .where(
+      and(
+        eq(outfitEntries.id, entryId),
+        viewerId === undefined
+          ? publiclyVisibleEntry()
+          : entryVisibleTo(viewerId),
+      ),
+    )
     .limit(1);
   if (!entry) return undefined;
-  if (!entry.isPublic && entry.userId !== viewerId) return undefined;
 
   const [run] = await database
     .select()

@@ -234,7 +234,8 @@ async function didSettle(
     report(new Error(`outbox row unreadable: ${read.problem}`), where);
     return false;
   }
-  const handler = boundHandler(handlers, read.message);
+  const { message } = read;
+  const handler = boundHandler(handlers, message);
   try {
     await handler.run(db);
     // Its own id, as the fast path does: a row taken over by a newer

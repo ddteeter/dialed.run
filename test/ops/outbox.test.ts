@@ -2,8 +2,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { outbox, wardrobeItems } from "../../src/db/schema-core";
+import { entryPhotos, outbox, wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import {
+  entryPhotoKeyFor,
+  entryPhotoPrefix,
+} from "../../src/lib/entry-photo-key";
 import { photoKeyFor } from "../../src/lib/garment-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -22,8 +26,10 @@ import {
   settleOutbox,
 } from "../../src/modules/ops/outbox";
 import {
+  boundHandler,
   isLiveObject,
   outboxHandlers,
+  reconcileEntryPhotos,
   reconcileItemPhotos,
   type OutboxHandlers,
 } from "../../src/modules/ops/outbox-handlers";
@@ -74,6 +80,7 @@ Handlers whose `run` is the given mock, with the real context.
 */
 function handlersRunning(run: OutboxHandlers["photo_delete"]["run"]) {
   return {
+    ...outboxHandlers,
     photo_delete: { run, context: outboxHandlers.photo_delete.context },
     email: outboxHandlers.email,
   } satisfies OutboxHandlers;
@@ -400,6 +407,31 @@ describe("drainOutbox", () => {
   });
 });
 
+describe("boundHandler", () => {
+  it("binds each kind's own context, not another's", () => {
+    const photo = boundHandler(outboxHandlers, {
+      kind: "photo_delete",
+      payload: { userId: "u1", itemId: "i1" },
+    });
+    expect(photo.context()).toStrictEqual({ userId: "u1", itemId: "i1" });
+
+    const entry = boundHandler(outboxHandlers, {
+      kind: "entry_media_delete",
+      payload: { userId: "u1" },
+    });
+    expect(entry.context()).toStrictEqual({ userId: "u1", entryId: "*" });
+
+    const upload = boundHandler(outboxHandlers, {
+      kind: "import_file_delete",
+      payload: { userId: "u1", key: "imports/u1/a.gpx" },
+    });
+    expect(upload.context()).toStrictEqual({
+      userId: "u1",
+      key: "imports/u1/a.gpx",
+    });
+  });
+});
+
 describe("checkOutboxBacklog", () => {
   it("names rows past their terminal attempt, and rows no build here can drain", async () => {
     await owedRow({ attempts: OUTBOX_TERMINAL_ATTEMPTS });
@@ -521,5 +553,121 @@ describe("reconcileItemPhotos", () => {
     await reconcileItemPhotos(db(), userId, item.id);
 
     expect(await stored(`${prefix}/`)).toStrictEqual([`${live}/card.webp`]);
+  });
+});
+
+/**
+A photo row naming `key`, as the upload path writes one.
+*/
+async function namedPhoto(key: string): Promise<void> {
+  await db()
+    .insert(entryPhotos)
+    .values({
+      id: key.slice(key.lastIndexOf("/") + 1),
+      entryId: newUlid(),
+      photoKey: key,
+      position: 0,
+    });
+}
+
+describe("reconcileEntryPhotos (task 128)", () => {
+  it("clears every page of an entry with no rows left, and nothing beside it", async () => {
+    const userId = newUlid();
+    const entryId = newUlid();
+    const other = entryPhotoKeyFor(userId, newUlid(), newUlid());
+    for (let n = 0; n < 5; n += 1) {
+      await env.MEDIA.put(
+        entryPhotoKeyFor(userId, entryId, newUlid()),
+        new Uint8Array([1]),
+      );
+    }
+    await env.MEDIA.put(other, new Uint8Array([1]));
+
+    await reconcileEntryPhotos(db(), userId, entryId, 2);
+
+    expect(await stored(entryPhotoPrefix(userId, entryId))).toStrictEqual([]);
+    expect(await stored(other)).toStrictEqual([other]);
+    await env.MEDIA.delete(other);
+  });
+
+  it("keeps every photo a row still names", async () => {
+    const userId = newUlid();
+    const entryId = newUlid();
+    const kept = entryPhotoKeyFor(userId, entryId, newUlid());
+    const dropped = entryPhotoKeyFor(userId, entryId, newUlid());
+    await namedPhoto(kept);
+    await env.MEDIA.put(kept, new Uint8Array([1]));
+    await env.MEDIA.put(dropped, new Uint8Array([1]));
+
+    await reconcileEntryPhotos(db(), userId, entryId);
+
+    expect(await stored(entryPhotoPrefix(userId, entryId))).toStrictEqual([
+      kept,
+    ]);
+    await env.MEDIA.delete(kept);
+  });
+
+  it("does not keep an object because its id matches a row under another key", async () => {
+    const userId = newUlid();
+    const entryId = newUlid();
+    const photoId = newUlid();
+    const orphan = entryPhotoKeyFor(userId, entryId, photoId);
+    await namedPhoto(entryPhotoKeyFor(newUlid(), newUlid(), photoId));
+    await env.MEDIA.put(orphan, new Uint8Array([1]));
+
+    await reconcileEntryPhotos(db(), userId, entryId);
+
+    expect(await stored(orphan)).toStrictEqual([]);
+  });
+
+  it("with no entry, clears everything of the runner's that no row names", async () => {
+    const userId = newUlid();
+    const first = entryPhotoKeyFor(userId, newUlid(), newUlid());
+    const second = entryPhotoKeyFor(userId, newUlid(), newUlid());
+    const someoneElse = entryPhotoKeyFor(newUlid(), newUlid(), newUlid());
+    for (const key of [first, second, someoneElse]) {
+      await env.MEDIA.put(key, new Uint8Array([1]));
+    }
+
+    await outboxHandlers.entry_media_delete.run(db(), { userId });
+
+    expect(await stored(entryPhotoPrefix(userId))).toStrictEqual([]);
+    expect(await stored(someoneElse)).toStrictEqual([someoneElse]);
+    await env.MEDIA.delete(someoneElse);
+  });
+
+  it("names the runner and the entry — or all of them — for Sentry", () => {
+    expect(
+      outboxHandlers.entry_media_delete.context({
+        userId: "u1",
+        entryId: "e1",
+      }),
+    ).toStrictEqual({ userId: "u1", entryId: "e1" });
+    expect(
+      outboxHandlers.entry_media_delete.context({ userId: "u1" }),
+    ).toStrictEqual({ userId: "u1", entryId: "*" });
+  });
+});
+
+describe("the import_file_delete handler (task 128)", () => {
+  it("deletes the named upload, and a second run is a no-op", async () => {
+    const userId = newUlid();
+    const key = `imports/${userId}/${newUlid()}.gpx`;
+    await env.IMPORTS.put(key, new Uint8Array([1]));
+
+    await outboxHandlers.import_file_delete.run(db(), { userId, key });
+    expect(await env.IMPORTS.head(key)).toBeNull();
+    await expect(
+      outboxHandlers.import_file_delete.run(db(), { userId, key }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("names the runner and the key for Sentry", () => {
+    expect(
+      outboxHandlers.import_file_delete.context({
+        userId: "u1",
+        key: "imports/u1/a.gpx",
+      }),
+    ).toStrictEqual({ userId: "u1", key: "imports/u1/a.gpx" });
   });
 });

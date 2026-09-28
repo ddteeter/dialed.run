@@ -93,6 +93,14 @@ describe("the app auth instance", () => {
     });
   });
 
+  it("carries the ban gate, so a banned runner cannot sign in (task 128)", () => {
+    // Which plugins, not how many: the gate is what makes a ban stop
+    // sign-in, and dropping it would leave every other test here green.
+    expect(auth.options.plugins.map((plugin) => plugin.id)).toContain(
+      "ban-gate",
+    );
+  });
+
   it("has no Google provider without credentials", () => {
     // The test bindings set neither, so this is the degraded path — and
     // asserting it is what stops `googleCredentials` being wired backwards.

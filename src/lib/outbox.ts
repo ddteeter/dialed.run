@@ -30,6 +30,39 @@ const photoDelete = z.object({
 });
 
 /**
+ * Clear what an entry's photo prefix holds beyond the photos its rows
+ * still name (task 128 · SAF-3): an entry deleted, one photo deleted, or —
+ * with no `entryId` — every entry a runner ever posted, which is the shape
+ * account deletion asks for. Reconciled against the rows rather than
+ * naming keys, for the garment kind's reason: the rows that named them are
+ * deleted in the same batch that owes this.
+ */
+const entryMediaDelete = z.object({
+  kind: z.literal("entry_media_delete"),
+  payload: z.object({
+    userId: z.string().min(1),
+    entryId: z.string().min(1).optional(),
+  }),
+});
+
+/**
+ * Delete one run-file upload (a GPX or FIT track, which carries the route a
+ * runner ran from their door) once its run is deleted. The key is named
+ * because nothing else will: the `imports` row that held it goes in the
+ * same batch. It must sit under the runner's own prefix, so a drain can
+ * only ever reach their objects.
+ */
+const importFileDelete = z.object({
+  kind: z.literal("import_file_delete"),
+  payload: z
+    .object({
+      userId: z.string().min(1),
+      key: z.string().min(1),
+    })
+    .refine((payload) => payload.key.startsWith(`imports/${payload.userId}/`)),
+});
+
+/**
  * An email owed (task 126, ACC-2): anything secondary to the write that
  * owes it — an invite, a notice, the run reminder — so the event and the
  * intent to tell someone about it commit together (law 8c) and the drain
@@ -50,6 +83,8 @@ const email = z.object({
 
 export const outboxMessageSchema = z.discriminatedUnion("kind", [
   photoDelete,
+  entryMediaDelete,
+  importFileDelete,
   email,
 ]);
 
@@ -64,14 +99,23 @@ export const outboxKinds: readonly OutboxKind[] =
 
 /**
  * The debt's identity: a second enqueue of the same key is the same row.
- * One `photo_delete` per garment, because what it does — reconcile the
- * garment's prefix against its row — covers every version at once. An
- * email's is its writer's to name.
+ *
+ * Per kind, because what makes two debts one differs. One `photo_delete`
+ * per garment, because what it does — reconcile the garment's prefix
+ * against its row — covers every version at once. One `entry_media_delete`
+ * per entry, and one `*` for "every entry of this runner's". One
+ * `import_file_delete` per object. An email's is its writer's to name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
     case "photo_delete": {
       return `${message.payload.userId}:${message.payload.itemId}`;
+    }
+    case "entry_media_delete": {
+      return `${message.payload.userId}:${message.payload.entryId ?? "*"}`;
+    }
+    case "import_file_delete": {
+      return `${message.payload.userId}:${message.payload.key}`;
     }
     case "email": {
       return message.payload.dedupeKey;

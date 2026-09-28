@@ -14,13 +14,13 @@
  * in a page refresh later. The test asserts all three, because any two of
  * them looks like it works.
  */
-import { eq, isNotNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { session } from "../../db/schema-auth";
 import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnSetAmong, firstRowWhere } from "../../lib/keyed-read";
+import { firstRowWhere } from "../../lib/keyed-read";
 import { orSqlNull } from "../../lib/sql-null";
 import { nowSeconds } from "../../lib/now";
 
@@ -83,6 +83,10 @@ export async function unbanUser(userId: string): Promise<void> {
 export interface BanState {
   banned: boolean;
   reason: string | undefined;
+  /**
+  When, in epoch seconds — D4 dates the notice ("closed it on 16 September").
+  */
+  bannedAt: number | undefined;
 }
 
 /**
@@ -107,34 +111,11 @@ export async function banStateOf(userId: string): Promise<BanState> {
   // "no profile row yet" and "row with no ban" in one test, and the repo
   // forbids the null literal (unicorn/no-null).
   if (typeof row?.bannedAt !== "number") {
-    return { banned: false, reason: undefined };
+    return { banned: false, reason: undefined, bannedAt: undefined };
   }
-  return { banned: true, reason: row.banReason ?? undefined };
-}
-
-/**
- * The banned ids among a set — the read a feed or search filter needs, so
- * a banned author's rows drop out of a list someone else is looking at.
- *
- * Takes the candidates rather than returning "everyone banned": the banned
- * set grows without bound and a page only ever cares about the handful of
- * authors actually on it.
- */
-export async function bannedAmong(
-  candidateIds: readonly string[],
-): Promise<Set<string>> {
-  // isNotNull in the WHERE, not a .filter() afterwards: the same
-  // in-memory-filter rule that isQueuedForReview was fixed for. Here it
-  // would scan every candidate's row to throw most of them away, and on a
-  // feed page the candidates are every author on screen. `columnSetAmong`
-  // builds the membership clause itself — see `lib/keyed-read.ts` for why
-  // that is not a convenience.
-  return columnSetAmong(
-    db(),
-    userProfiles,
-    userProfiles.userId,
-    userProfiles.userId,
-    candidateIds,
-    isNotNull(userProfiles.bannedAt),
-  );
+  return {
+    banned: true,
+    reason: row.banReason ?? undefined,
+    bannedAt: row.bannedAt,
+  };
 }

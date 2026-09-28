@@ -260,6 +260,8 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/email/components/UnsubscribeLanding.tsx",
       // "Not now — leave it in the queue." (Product Screens A2).
       "src/modules/feed/components/AttachKit.tsx",
+      // D4's appeal address, set in its sentence (Operator Screens D4).
+      "src/modules/safety/components/AccountClosed.tsx",
       // "Emails go to {address}. Change email" (round 26 #19).
       "src/routes/account/$section.tsx",
       "src/routes/runs/new.tsx",

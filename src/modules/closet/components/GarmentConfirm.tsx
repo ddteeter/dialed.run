@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import { ControlFailureBand, inFlight, PendingLabel, Sheet } from "../../../ui";
+import { ConfirmSheet } from "../../../ui";
 import type { ControlAction } from "../../../ui";
 
 /**
@@ -90,61 +89,17 @@ export function GarmentConfirm({
   action: ControlAction<[]>;
   onClose: () => void;
 }>): JSX.Element {
-  const isOpen = kind !== undefined;
   const shown = kind ?? "retire";
-  const heading = `${VERBS[shown].verb} the ${name}?`;
-  // State rather than a ref, so the effect below re-runs once the button
-  // exists: on a sheet that mounts already open, the first pass of that
-  // effect runs before the ref callback has handed the button over.
-  const [keep, setKeep] = useState<HTMLButtonElement | undefined>();
-
-  // After the sheet's own effect has opened the dialog — a parent's effect
-  // runs after its children's — so the focus lands inside an open modal
-  // rather than on a button that is not yet on screen.
-  useEffect(() => {
-    if (isOpen && keep !== undefined) keep.focus();
-  }, [isOpen, keep]);
-
   return (
-    <Sheet open={isOpen} onClose={onClose} label={heading}>
-      <div
-        data-part="sheet"
-        data-state={`confirm-${shown}`}
-        className="flex flex-col gap-4"
-      >
-        <h2 className="m-0 font-display text-heading">{heading}</h2>
-        <p className="m-0 text-body text-quiet">{body(shown, runCount)}</p>
-        <button
-          type="button"
-          data-part="primary-action"
-          {...inFlight(action.pending)}
-          onClick={() => {
-            void action.run();
-          }}
-          className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
-        >
-          <PendingLabel
-            label={VERBS[shown].verb}
-            pendingLabel={VERBS[shown].pending}
-            pending={action.pending}
-          />
-        </button>
-        <ControlFailureBand
-          failure={action.failure}
-          onRetry={action.retry}
-          retryRef={action.retryRef}
-        />
-        <button
-          type="button"
-          ref={(node) => {
-            setKeep(node ?? undefined);
-          }}
-          onClick={onClose}
-          className="target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink"
-        >
-          Keep it
-        </button>
-      </div>
-    </Sheet>
+    <ConfirmSheet
+      open={kind !== undefined}
+      state={`confirm-${shown}`}
+      heading={`${VERBS[shown].verb} the ${name}?`}
+      body={body(shown, runCount)}
+      verb={VERBS[shown].verb}
+      pendingVerb={VERBS[shown].pending}
+      action={action}
+      onClose={onClose}
+    />
   );
 }

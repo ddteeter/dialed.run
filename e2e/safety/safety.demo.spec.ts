@@ -2,7 +2,9 @@
  * Covers: W1 (report an entry or a runner), W2 (blocked runners) — one
  * journey, one video. Round 22 (items 21–22): the foot link, W1 from an
  * entry with no block toggle, ✕ discarding, W2's empty line, and Unblock
- * leaving on success.
+ * leaving on success. Task 128: a report hides the entry from the
+ * reporter at once (SAF-13), a block hides the blocked runner's entries
+ * (SAF-12), and unblocking brings them back.
  *
  * Exactly one test() per demo spec. A second here would record a second
  * video beside the one the reviewer is meant to watch.
@@ -17,20 +19,11 @@
 import { newUlid } from "../../src/lib/ids";
 import { outfitEntries, runs, userProfiles } from "../../src/db/schema-core";
 import { storageStateFor } from "../support/accounts";
-import { expect, scene, test } from "../support/demo";
+import { expect, hydrated, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 import { nowSeconds } from "../../src/lib/now";
 
 test.use({ storageState: storageStateFor("safety") });
-
-/**
-Layout stamps html[data-hydrated] once React attaches.
-*/
-async function hydrated(page: import("@playwright/test").Page): Promise<void> {
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
-}
 
 test("report a runner, block them, and take the block back", async ({
   page,
@@ -40,6 +33,8 @@ test("report a runner, block them, and take the block back", async ({
   const strangerName = `stranger_${suffix.slice(-8)}`;
   const runId = newUlid();
   const entryId = newUlid();
+  const reportedRunId = newUlid();
+  const reportedEntryId = newUlid();
   const startedAt = nowSeconds() - 3 * 3600;
 
   // One stranger with one public entry. Scoped to ids generated here —
@@ -70,6 +65,27 @@ test("report a runner, block them, and take the block back", async ({
       isPublic: true,
       createdAt: startedAt,
     });
+    // A second entry, the one this runner will report.
+    await core.insert(runs).values({
+      id: reportedRunId,
+      userId: strangerId,
+      source: "manual",
+      startedAt: startedAt - 86_400,
+      durationS: 1800,
+      distanceM: 5000,
+      lat: 45.52,
+      lng: -122.68,
+      indoor: false,
+      title: "Spammy loop",
+    });
+    await core.insert(outfitEntries).values({
+      id: reportedEntryId,
+      runId: reportedRunId,
+      userId: strangerId,
+      verdict: 0,
+      isPublic: true,
+      createdAt: startedAt - 86_400,
+    });
   });
 
   // W1 from an entry (round 22, item 21): the foot link, reasons and an
@@ -90,6 +106,18 @@ test("report a runner, block them, and take the block back", async ({
     page.getByRole("radio", { name: "It's an ad, or it's spam" }),
   ).not.toBeChecked();
   await page.getByRole("button", { name: "Close" }).click();
+
+  // SAF-13: the report is the hide, for the reporter, straight away.
+  await page.goto(`/feed/entry/${reportedEntryId}`);
+  await hydrated(page);
+  await scene(page, "Report an entry, and it leaves your feed at once");
+  await page.getByRole("button", { name: "Report this entry" }).click();
+  await page.getByRole("radio", { name: "It's an ad, or it's spam" }).click();
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await page.goto(`/feed/entry/${reportedEntryId}`);
+  await scene(page, "Its link now leads back to the feed — for you alone");
+  await expect(page).not.toHaveURL(new RegExp(reportedEntryId));
 
   await page.goto(`/feed/u/${strangerId}`);
   await hydrated(page);
@@ -145,8 +173,23 @@ test("report a runner, block them, and take the block back", async ({
   await scene(page, "They are on the list, and they were never told");
   await expect(page.getByText(strangerName)).toBeVisible();
 
+  // SAF-12: a block hides, both ways — their entry is gone from here.
+  await page.goto(`/feed/entry/${entryId}`);
+  await scene(page, "Blocked, their entries are gone from everywhere you look");
+  await expect(page).not.toHaveURL(new RegExp(entryId));
+  await page.goto("/safety/blocked");
+  await hydrated(page);
+
   await scene(page, "Unblocking is immediate, with nothing to confirm");
   await page.getByRole("button", { name: "Unblock" }).click();
   await expect(page.getByText(strangerName)).toBeHidden();
   await expect(page.getByText("You haven't blocked anyone.")).toBeVisible();
+
+  await scene(page, "Unblocked, their entry is back");
+  await page.goto(`/feed/entry/${entryId}`);
+  await hydrated(page);
+  await expect(page).toHaveURL(new RegExp(`/feed/entry/${entryId}$`));
+  await expect(
+    page.getByRole("button", { name: "Report this entry" }),
+  ).toBeVisible();
 });
