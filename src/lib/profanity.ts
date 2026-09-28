@@ -53,7 +53,13 @@ function partsOf(handle: string): string[] {
     ...readBackDigits(handle.replaceAll("_", "")),
     ...byUnderscore,
     ...byUnderscore.flatMap((part) => readBackDigits(part)),
-    ...handle.split(/[_0-9]+/u),
+    // No `+`: a run of digits/underscores splits identically char-by-char
+    // for this purpose, since every result here is checked by exact match
+    // against `WORDS` and an empty string is never a listed word (the one
+    // entry that would compact to "" is excluded — see the module comment).
+    // So `+` vs no `+` is a mutant no input can distinguish; not written
+    // with it in the first place.
+    ...handle.split(/[_0-9]/u),
   ];
 }
 

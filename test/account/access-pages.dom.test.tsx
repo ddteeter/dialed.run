@@ -4,7 +4,14 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +22,7 @@ import type { AccessRequestResult } from "../../src/modules/account/access";
 import {
   DeskAccess,
   UNDO_WINDOW_MS,
+  UndoRevoke,
   ageLabel,
   codeCounts,
 } from "../../src/modules/account/components/DeskAccess";
@@ -97,9 +105,12 @@ describe("Au5 · Request access", () => {
     expect(
       screen.getByText("How you run, or who sent you. Up to 280 characters."),
     ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "‹ Create an account" }),
-    ).toHaveAttribute("href", "/auth/signup");
+    const bottomLink = screen.getByRole("link", {
+      name: "‹ Create an account",
+    });
+    expect(bottomLink).toHaveAttribute("href", "/auth/signup");
+    // The board's inline link: ink, bold, underlined — never pink.
+    expect(bottomLink).toHaveClass("font-bold", "text-ink", "underline");
   });
 
   it("sends the request with Turnstile's answer and shows the one receipt", async () => {
@@ -132,10 +143,55 @@ describe("Au5 · Request access", () => {
     expect(receipt).toHaveTextContent(
       "When there's room, we'll email a code to sam@example.com. There's nothing else to do until then.",
     );
-    expect(
-      inReceipt.getByRole("link", { name: "Create an account" }),
-    ).toHaveAttribute("href", "/auth/signup");
+    expect(inReceipt.getByText(/Have a code after all\?/)).toBeVisible();
+    const receiptLink = inReceipt.getByRole("link", {
+      name: "Create an account",
+    });
+    expect(receiptLink).toHaveAttribute("href", "/auth/signup");
+    expect(receiptLink).toHaveClass("font-bold", "text-ink", "underline");
     expect(part("form")).toBeNull();
+  });
+
+  it("names both fields by their labels in the summary when both are wrong", async () => {
+    const request = vi.fn<RequestFn>();
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Email"), "nope");
+    fireEvent.change(screen.getByLabelText("A note · optional"), {
+      target: { value: "n".repeat(281) },
+    });
+    await user.click(screen.getByRole("button", { name: "Request access" }));
+    expect(
+      await screen.findByRole("button", { name: /^Email/ }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /A note · optional/ }),
+    ).toBeVisible();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("announces the request was sent before it swaps to the receipt", async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .fn<RequestFn>()
+      .mockResolvedValue({ status: "received" });
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={request} />,
+    );
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "sam@example.com" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Request access" }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Request sent.");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(screen.getByText("On the list")).toBeVisible();
   });
 
   it("says a Turnstile refusal as NOT SENT, and tries again from the band", async () => {
@@ -250,9 +306,16 @@ describe("D7 · Access", () => {
     const sam = within(rowOf("sam@example.com"));
     expect(sam.getByText("3d")).toBeVisible();
     expect(sam.getByText("Winter runner.")).toBeVisible();
+    // A real note is ink; only the absence of one is muted.
+    expect(sam.getByText("Winter runner.")).toHaveClass("text-ink");
     const j = within(rowOf("j@example.com"));
     expect(j.getByText("No note.")).toHaveClass("text-muted");
     expect(j.getByText("2d")).toBeVisible();
+  });
+
+  it("shows nothing in its own status line until something happens", () => {
+    desk();
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent("");
   });
 
   it("sends an invite and declines, each reloading the page", async () => {
@@ -304,10 +367,15 @@ describe("D7 · Access", () => {
     expect(open.getByText("@dee_k, @paulo")).toBeVisible();
     expect(open.getByText("2/8")).toBeVisible();
     expect(open.getByRole("button", { name: "Copy link" })).toBeVisible();
+    // An active code's code and count read in ink; a spent one, muted.
+    expect(open.getByText("DIAL-TR8K")).toHaveClass("text-ink");
+    expect(open.getByText("2/8")).toHaveClass("text-ink");
     const used = within(rowOf("DIAL-7K3P"));
     expect(used.getByText("No label")).toBeVisible();
     expect(used.getByText("maya@example.com")).toBeVisible();
     expect(used.getByText("Used")).toBeVisible();
+    expect(used.getByText("DIAL-7K3P")).toHaveClass("text-muted");
+    expect(used.getByText("1/1")).toHaveClass("text-muted");
     expect(used.queryByRole("button")).toBeNull();
     expect(rowOf("DIAL-7K3P")).toHaveAttribute("data-state", "spent");
     const revoked = within(rowOf("DIAL-H2XN"));
@@ -377,9 +445,25 @@ describe("D7 · Access", () => {
     expect(UNDO_WINDOW_MS).toBe(10_000);
   });
 
+  it("restarts the timer against the newest onExpire when it changes, and clears the old one", () => {
+    vi.useFakeTimers();
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(
+      <UndoRevoke code={code()} onUndo={vi.fn()} onExpire={first} />,
+    );
+    rerender(<UndoRevoke code={code()} onUndo={vi.fn()} onExpire={second} />);
+    act(() => {
+      vi.advanceTimersByTime(UNDO_WINDOW_MS);
+    });
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
   it("creates a code with a label and uses, once per key, and says which", async () => {
     const createCode = vi.fn(() => Promise.resolve({ code: "DIAL-NEW2" }));
     const { props, user } = desk({ createCode });
+    expect(screen.getByLabelText("Uses")).toHaveValue("1");
     await user.type(screen.getByLabelText("Label · for you only"), "Sister");
     await user.clear(screen.getByLabelText("Uses"));
     await user.type(screen.getByLabelText("Uses"), "3");
@@ -387,6 +471,12 @@ describe("D7 · Access", () => {
     await waitFor(() => {
       expect(screen.getAllByRole("status")[0]).toHaveTextContent(
         "Created DIAL-NEW2.",
+      );
+    });
+    // The form's own status region, distinct from the desk-wide one above.
+    await waitFor(() => {
+      expect(screen.getAllByRole("status")[1]).toHaveTextContent(
+        "Code created.",
       );
     });
     expect(createCode).toHaveBeenCalledWith({
@@ -399,10 +489,28 @@ describe("D7 · Access", () => {
     await waitFor(() => {
       expect(createCode).toHaveBeenCalledTimes(2);
     });
-    const keys = createCode.mock.calls.map(
-      (call: unknown[]) => JSON.stringify(call),
+    // Isolated to the key itself: the other fields differ between calls
+    // too (the form reset), which would mask a key that never rotated.
+    const idempotencyKeys = createCode.mock.calls.map((call: unknown[]) => {
+      const [arg] = call as [{ data: { idempotencyKey: string } }];
+      return arg.data.idempotencyKey;
+    });
+    expect(idempotencyKeys[0]).not.toBe(idempotencyKeys[1]);
+  });
+
+  it("names both fields by their labels in the summary when both are wrong", async () => {
+    const { user } = desk();
+    await user.type(
+      screen.getByLabelText("Label · for you only"),
+      "x".repeat(61),
     );
-    expect(keys[0]).not.toBe(keys[1]);
+    await user.clear(screen.getByLabelText("Uses"));
+    await user.type(screen.getByLabelText("Uses"), "0");
+    await user.click(screen.getByRole("button", { name: "Create code" }));
+    expect(
+      await screen.findByRole("button", { name: /Label · for you only/ }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Uses/ })).toBeVisible();
   });
 
   it("refuses a uses limit that is not a whole number from 1 to 100", async () => {

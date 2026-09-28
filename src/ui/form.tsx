@@ -67,7 +67,10 @@ export function FormElement({
   onSubmit,
   children,
 }: Readonly<{
-  form: Pick<FormShell, "formRef" | "status">;
+  form: Pick<
+    FormShell,
+    "formRef" | "status" | "summaryRows" | "focusField" | "summaryRef"
+  >;
   dataPart: string;
   onSubmit: () => void;
   children: ReactNode;
@@ -84,6 +87,11 @@ export function FormElement({
       }}
     >
       <FormStatus>{form.status}</FormStatus>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
       {children}
     </form>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import {
@@ -231,7 +231,7 @@ function NewCodeForm({
  * Revoke's undo, in the status line for ten seconds and then gone. The
  * revoke has already happened; Undo puts the code back.
  */
-function UndoRevoke({
+export function UndoRevoke({
   code,
   onUndo,
   onExpire,
@@ -295,10 +295,11 @@ export function DeskAccess({
   const row = useRowAction(onChanged);
   const [said, setSaid] = useState("");
   const [revoked, setRevoked] = useState<DeskCode>();
-  // Stable, so the undo's ten seconds are not restarted by every render.
-  const forgetRevoked = useCallback(() => {
+  // Made once (a state setter is stable), so the undo's ten seconds are
+  // not restarted by every render.
+  const [forgetRevoked] = useState(() => () => {
     setRevoked(undefined);
-  }, []);
+  });
   return (
     <div className="flex flex-col gap-10">
       <FormStatus>{said}</FormStatus>

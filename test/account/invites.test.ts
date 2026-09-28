@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -90,6 +90,26 @@ async function account(id: string, email: string): Promise<void> {
 function claim(code: string, email = `${newUlid().toLowerCase()}@x.test`) {
   return { code, userId: newUlid(), email };
 }
+
+/**
+ * Forces `mintInviteCode`'s next code, by controlling the bytes its default
+ * `crypto.getRandomValues` source hands back — every byte becomes `byte`,
+ * so the code is `INVITE_ALPHABET[byte % 32]` four times over.
+ */
+function forceCode(byte: number) {
+  return vi.spyOn(globalThis.crypto, "getRandomValues").mockImplementation(
+    (array) => {
+      if (array instanceof Uint8Array) array.fill(byte);
+      return array;
+    },
+  );
+}
+
+describe("CLAIM_HOLD_S", () => {
+  it("is ten minutes in seconds", () => {
+    expect(CLAIM_HOLD_S).toBe(600);
+  });
+});
 
 describe("inviteStanding", () => {
   it("is open for a live code with a use left, and invalid for none or a revoked one", async () => {
@@ -283,6 +303,25 @@ describe("Desk D7", () => {
     expect(rows.every((row) => row.label === null)).toBe(true);
   });
 
+  it("says a code that collided with another was not created, and writes nothing", async () => {
+    await seedCode("DIAL-4444");
+    const random = forceCode(2); // -> "DIAL-4444"
+    try {
+      await expect(
+        createInviteCode(db, {
+          operatorId: "op",
+          label: "Clash",
+          maxUses: 1,
+          idempotencyKey: "fresh-key",
+        }),
+      ).rejects.toThrow("invite code was not created");
+    } finally {
+      random.mockRestore();
+    }
+    const rows = await db.select().from(inviteCodes);
+    expect(rows.map((row) => row.label)).toStrictEqual([NOTHING]);
+  });
+
   it("answers a request with a single-use code labelled for it, once", async () => {
     const requestId = newUlid();
     await db.insert(accessRequests).values({
@@ -310,6 +349,28 @@ describe("Desk D7", () => {
     expect(request).toMatchObject({ status: "invited", updatedAt: 9 });
     const desk = await accessDesk(db);
     expect(desk.requests).toStrictEqual([]);
+  });
+
+  it("does not let a code collision hide behind the request's own conflict target", async () => {
+    // Same shape as `createInviteCode`'s: untargeted, `onConflictDoNothing`
+    // would swallow a `code` collision that belongs to nobody's request and
+    // silently return no code instead of a real error.
+    const random = forceCode(4); // -> "DIAL-6666"
+    try {
+      await seedCode("DIAL-6666");
+      const requestId = newUlid();
+      await db.insert(accessRequests).values({
+        id: requestId,
+        email: "collide@x.test",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await expect(
+        inviteFromRequest(db, { operatorId: "op", requestId }),
+      ).rejects.toThrow();
+    } finally {
+      random.mockRestore();
+    }
   });
 
   it("mints nothing for a request that is not pending", async () => {

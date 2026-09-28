@@ -88,7 +88,7 @@ const socialBodySchema = z.object({ requestSignUp: z.boolean().optional() });
  * sign-up, or a Google attempt from Au2 (the only one that asks to sign
  * up).
  */
-function signUpKind(
+export function signUpKind(
   path: string,
   body: unknown,
 ): "email" | "google" | undefined {

@@ -37,6 +37,15 @@ describe("isProfaneHandle", () => {
     // A listed word that has a digit of its own is matched as written.
     expect(isProfaneHandle("2g1c")).toBe(true);
     expect(isProfaneHandle("run_2g1c")).toBe(true);
+    // The whole-handle spelling, underscore stripped but *not* read back —
+    // "2g1c" is listed as written, and its own "1" would read as "i"/"l" if
+    // this went through readBackDigits, so only the raw stripped form can
+    // match it.
+    expect(isProfaneHandle("2_g1c")).toBe(true);
+    // The whole-handle spelling that needs BOTH: every underscore gone and
+    // the surviving digit read back — "tw_4t" is not "twat" until both
+    // happen together, and no single part alone spells it.
+    expect(isProfaneHandle("tw_4t")).toBe(true);
   });
 
   it("never matches inside a word: a runner is not refused for their town", () => {

@@ -1,3 +1,4 @@
+import * as betterAuthApi from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +16,9 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { accessGate } from "../../src/modules/account";
 import {
+  admitSignUp,
   claimInvite,
+  signUpKind,
   type AccessGate,
 } from "../../src/modules/auth/access-hook";
 import { createAuth } from "../../src/modules/auth/create-auth";
@@ -28,6 +31,12 @@ import { recordingMail } from "./mail-recorder";
  * test is the instance as it loads them — with the account module's real
  * gate and only Turnstile's answer stubbed.
  */
+/**
+ * Better Auth's `null` context (a create outside a request), without a
+ * `null` literal: the parse is what makes it the value.
+ */
+const NO_CONTEXT = z.null().parse(JSON.parse("null"));
+
 const db = drizzle(env.DIALED_CORE);
 const ORIGIN = "http://localhost";
 const PASSWORD = ["a", "long", "enough", "passphrase"].join("-");
@@ -419,5 +428,83 @@ describe("Google sign-up through the gate", () => {
       create({ email: address() }, { path: "/sign-up/email" }),
     ).rejects.toMatchObject({ body: { code: "INVITE_MISSING" } });
     expect(claims).toStrictEqual([]);
+  });
+
+  it("refuses to make an account when the claim itself is refused", async () => {
+    const create = claimInvite({
+      isInviteOnly: true,
+      passesTurnstile: () => Promise.resolve(true),
+      standing: () => Promise.resolve("open"),
+      claim: () => Promise.resolve("used"),
+    });
+    await expect(
+      create(
+        { email: address() },
+        {
+          path: "/sign-up/email",
+          headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+        },
+      ),
+    ).rejects.toMatchObject({ body: { code: "INVITE_USED" } });
+  });
+
+  it("treats a missing request context as no header code, not a thrown error", async () => {
+    // `codeForCreate`'s `context?.path` and `state.data?.serverContext` are
+    // both optional chains a real Better Auth call site can hit with a null
+    // context or a state that fails to parse — `getOAuthState` is stubbed so
+    // the test controls that shape rather than depending on Better Auth's
+    // own behaviour outside a real OAuth round trip.
+    const stateSpy = vi
+      .spyOn(betterAuthApi, "getOAuthState")
+      // No OAuth state at all: what Better Auth answers outside a round trip.
+      .mockResolvedValueOnce(NO_CONTEXT);
+    try {
+      const create = claimInvite({
+        isInviteOnly: true,
+        passesTurnstile: () => Promise.resolve(true),
+        standing: () => Promise.resolve("open"),
+        claim: () => Promise.resolve("redeemed"),
+      });
+      await expect(create({ email: address() }, NO_CONTEXT)).rejects.toMatchObject({
+        body: { code: "INVITE_MISSING" },
+      });
+    } finally {
+      stateSpy.mockRestore();
+    }
+  });
+});
+
+describe("signUpKind", () => {
+  it("names the email form's request \"email\", not just non-undefined", () => {
+    expect(signUpKind("/sign-up/email", {})).toBe("email");
+  });
+
+  it("only treats a social attempt as one on the social path", () => {
+    // isSocial gates on the path, not on the body alone: a request that
+    // asks to sign up from a different path must not read as Google's.
+    expect(signUpKind("/sign-in/email", { requestSignUp: true })).toBeUndefined();
+  });
+});
+
+describe("admitSignUp", () => {
+  it("carries Google's OAuth state only for a Google sign-up attempt", async () => {
+    const contextSpy = vi
+      .spyOn(betterAuthApi, "addOAuthServerContext")
+      .mockResolvedValue(undefined);
+    try {
+      const gate: AccessGate = {
+        isInviteOnly: true,
+        passesTurnstile: () => Promise.resolve(true),
+        standing: () => Promise.resolve("open"),
+        claim: () => Promise.resolve("redeemed"),
+      };
+      await admitSignUp(gate, {
+        path: "/sign-up/email",
+        headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+      });
+      expect(contextSpy).not.toHaveBeenCalled();
+    } finally {
+      contextSpy.mockRestore();
+    }
   });
 });

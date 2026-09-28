@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 /**
  * A form's Turnstile answer, spent once (task 126, ACC-5).
@@ -12,7 +12,9 @@ import { useCallback, useRef, useState } from "react";
  * the widget (`widgetKey`), which asks Cloudflare for a fresh one.
  *
  * `onToken` is the widget's own callback: an answer, or `undefined` when
- * one expired or failed.
+ * one expired or failed. Both functions are made once, on the first
+ * render (a ref and a state setter never change), so a widget handed
+ * `onToken` is never torn down by a re-render.
  */
 export function useTurnstileToken(): {
   onToken: (token: string | undefined) => void;
@@ -21,14 +23,16 @@ export function useTurnstileToken(): {
 } {
   const token = useRef<string | undefined>(undefined);
   const [widgetKey, setWidgetKey] = useState(0);
-  const onToken = useCallback((next: string | undefined) => {
-    token.current = next;
-  }, []);
-  const take = useCallback(() => {
-    const taken = token.current;
-    token.current = undefined;
-    setWidgetKey((key) => key + 1);
-    return taken;
-  }, []);
-  return { onToken, widgetKey, take };
+  const [handlers] = useState(() => ({
+    onToken: (next: string | undefined) => {
+      token.current = next;
+    },
+    take: () => {
+      const taken = token.current;
+      token.current = undefined;
+      setWidgetKey((key) => key + 1);
+      return taken;
+    },
+  }));
+  return { ...handlers, widgetKey };
 }

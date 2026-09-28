@@ -288,9 +288,10 @@ export async function createInviteCode(
         idempotencyKey: input.idempotencyKey,
         createdAt: now,
       })
-      .onConflictDoNothing({
-        target: [inviteCodes.createdBy, inviteCodes.idempotencyKey],
-      }),
+      // Untargeted: a repeat of the form's key writes nothing, and so
+      // does a fresh code that collides with an existing one (one in
+      // 32^4) — which the read then finds missing, and says so.
+      .onConflictDoNothing(),
     codeMadeBy(db, input.operatorId, input.idempotencyKey),
   ]);
   const [row] = results[1];
