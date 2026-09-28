@@ -97,9 +97,12 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
     unmount();
 
     await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
-    // The same tile beside a garment: nothing on it sets a row height.
+    // Beside a garment, the grid's equal rows size it. happy-dom lays
+    // nothing out, so the heights themselves are measured in a real
+    // browser at 390 and 1440, alone on a row and sharing one
+    // (e2e/conformance/closet-empty.conformance.spec.ts).
     expect(tile().closest("li")).toHaveClass("only:min-h-40");
-    expect(tile().closest("li")?.parentElement?.children).toHaveLength(2);
+    expect(tile().closest("ul")).toHaveClass("auto-rows-fr");
   });
 
   it("has no count and no switch about pieces there are none of", async () => {

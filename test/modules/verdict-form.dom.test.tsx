@@ -1536,18 +1536,25 @@ describe("VerdictForm: the run header (round 21)", () => {
       level: 1,
       name: "Did it work?",
     });
-    expect(question).toHaveClass(
-      "wide:order-first",
-      "wide:font-display",
-      "wide:text-title",
-    );
-    // The phone's display line gives way to the run in the mono line.
-    expect(within(header).getByText("6.2 at 41°")).toHaveClass("wide:hidden");
-    const carried = within(header).getByText("· 6.2 at 41°");
-    expect(carried).toHaveClass("hidden", "wide:inline");
-    expect(carried.parentElement).toHaveTextContent(
+    expect(question).toHaveClass("wide:font-display", "wide:text-title");
+    // **In reading order, never reordered** (WCAG 1.3.2): the phone's run
+    // lines come before the question in the markup, the desk's after it,
+    // and each width hides the other's — no `order-*` anywhere.
+    const phoneWhen = within(header).getByText("Sat Aug 29 · 6:04 AM");
+    const phoneHeadline = within(header).getByText("6.2 at 41°");
+    expect(phoneWhen).toHaveClass("wide:hidden");
+    expect(phoneHeadline).toHaveClass("wide:hidden");
+    const deskLine = within(header).getByText(
       "Sat Aug 29 · 6:04 AM · 6.2 at 41°",
     );
+    expect(deskLine).toHaveClass("hidden", "wide:block", "text-dialed-text");
+    expect([...header.children]).toEqual([
+      phoneWhen,
+      phoneHeadline,
+      question,
+      deskLine,
+    ]);
+    expect(header.outerHTML).not.toMatch(/\border-/u);
   });
 
   it("names the unit instead of a temperature when the run has none", async () => {

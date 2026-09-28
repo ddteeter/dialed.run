@@ -149,12 +149,20 @@ const QUESTION_ID = "verdict-question";
  * the question as the TYPE.title heading, and one mono sub-line carrying
  * the run — *"SAT AUG 29 · 6:04 AM · 6.2 AT 41°"* — in `--dialed-text`,
  * which is what the ink block's teal already resolves to on paper.
+ *
+ * **The two widths read in different orders, so each has its own line.**
+ * The phone reads run, then question; the desk reads question, then run.
+ * Reordering one set of elements with `order-*` would show one sequence
+ * and announce the other (WCAG 1.3.2), so the mono line is written twice
+ * — once before the heading for the phone, once after it for the desk —
+ * and `display: none` keeps the one not shown out of the reading order.
  */
 function RunHeader({
   entry,
   units,
 }: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
   const zone = entry.conditions?.timeZone;
+  const when = `${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`;
   const distance = distanceNumber(entry.distanceM, units.distance);
   const headline =
     entry.conditions === undefined
@@ -166,19 +174,21 @@ function RunHeader({
       data-ground="ink-until-wide"
       className="-mx-5 -mt-6 flex flex-col gap-2 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:gap-1 wide:px-0 wide:py-0"
     >
-      <Mono step="xs" className="text-muted wide:text-dialed-text">
-        {dayLabel(entry.startedAt, zone)} · {clockLabel(entry.startedAt, zone)}
-        <span className="hidden wide:inline"> · {headline}</span>
+      <Mono step="xs" className="text-muted wide:hidden">
+        {when}
       </Mono>
       <p className="m-0 font-display text-display uppercase wide:hidden">
         {headline}
       </p>
       <h1
         id={QUESTION_ID}
-        className="m-0 text-body font-normal text-quiet wide:order-first wide:font-display wide:text-title wide:text-ink"
+        className="m-0 text-body font-normal text-quiet wide:font-display wide:text-title wide:text-ink"
       >
         {LABELS.verdict}
       </h1>
+      <Mono step="xs" className="hidden text-dialed-text wide:block">
+        {when} · {headline}
+      </Mono>
     </header>
   );
 }
