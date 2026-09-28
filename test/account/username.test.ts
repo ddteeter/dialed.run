@@ -545,11 +545,24 @@ describe("usernameOf and handleGate", () => {
   });
 
   it("sends a signed-in runner with no handle to O0, and nobody else", async () => {
-    expect(await handleGate(db, await runner())).toBe("needs-handle");
-    expect(await handleGate(db, newUlid())).toBe("needs-handle");
-    expect(await handleGate(db, await runner({ username: "dee" }))).toBe(
-      "has-handle",
-    );
-    expect(await handleGate(db, undefined)).toBe("signed-out");
+    const newcomer = await runner();
+    expect(await handleGate(db, newcomer)).toStrictEqual({
+      gate: "needs-handle",
+      userId: newcomer,
+    });
+    const nobody = newUlid();
+    expect(await handleGate(db, nobody)).toStrictEqual({
+      gate: "needs-handle",
+      userId: nobody,
+    });
+    const dee = await runner({ username: "dee" });
+    expect(await handleGate(db, dee)).toStrictEqual({
+      gate: "has-handle",
+      userId: dee,
+    });
+    expect(await handleGate(db, undefined)).toStrictEqual({
+      gate: "signed-out",
+      userId: undefined,
+    });
   });
 });

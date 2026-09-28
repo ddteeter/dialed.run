@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   forgetSession,
   isRememberedForSession,
+  noteSessionOwner,
 } from "../../src/lib/session-memo";
 
 import { takenMessage } from "../../src/modules/account/handle-copy";
@@ -84,11 +85,16 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
  * counted.
  */
 async function gateOnce(
-  answer: HandleGate,
+  gate: HandleGate,
   isInBrowser: boolean,
   pathname = "/closet",
+  userId = "u1",
 ): Promise<{ thrown: unknown; asked: number }> {
-  const ask = vi.fn(() => Promise.resolve(answer));
+  const ask = vi.fn(() =>
+    Promise.resolve(
+      gate === "signed-out" ? { gate, userId: undefined } : { gate, userId },
+    ),
+  );
   try {
     await gateOnHandle({ ask, pathname, isInBrowser });
   } catch (error: unknown) {
@@ -141,6 +147,31 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
     await gateOnce("has-handle", true);
     const onServer = await gateOnce("has-handle", false);
     expect(onServer.asked).toBe(1);
+  });
+
+  it("keys what it remembers to the runner the server named", async () => {
+    await gateOnce("has-handle", true, "/closet", "u1");
+    expect(isRememberedForSession("has-handle")).toBe(true);
+    // Somebody else signs in from another tab, which names them as the
+    // browser's runner: the first runner's memo is not theirs.
+    noteSessionOwner("u2");
+    const other = await gateOnce("needs-handle", true, "/closet", "u2");
+    expect(other.asked).toBe(1);
+    expect(isRedirect(other.thrown)).toBe(true);
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const again = await gateOnce("needs-handle", true, "/closet", "u2");
+    expect(again.asked).toBe(1);
+    // The first runner back: what was true of them still is.
+    noteSessionOwner("u1");
+    expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("drops the memo when the server says nobody is signed in", async () => {
+    await gateOnce("has-handle", true);
+    noteSessionOwner(undefined);
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const next = await gateOnce("has-handle", true);
+    expect(next.asked).toBe(1);
   });
 
   it("asks afresh after the session is forgotten (sign-in, sign-out)", async () => {

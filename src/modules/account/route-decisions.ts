@@ -3,9 +3,10 @@ import { z } from "zod";
 
 import {
   isRememberedForSession,
+  noteSessionOwner,
   rememberForSession,
 } from "../../lib/session-memo";
-import type { HandleGate } from "./username";
+import type { HandleGateAnswer } from "./username";
 
 /**
  * The pages a signed-in runner with no handle may still reach: O0 itself,
@@ -70,7 +71,8 @@ const HANDLE_CLAIMED = "has-handle";
  * keeps that one and skips the trip afterwards. The other two answers are
  * asked again each time: "signed out" and "no handle yet" both end the
  * moment the runner signs in or claims one. Signing in or out forgets the
- * memo (`auth/credentials`).
+ * memo (`auth/credentials`), and the memo is keyed to the runner the
+ * server named, so a switch of account in another tab is asked about too.
  *
  * `isInBrowser` is the caller's to say, because on the server the memo
  * would be shared by every request the isolate serves.
@@ -80,14 +82,17 @@ export async function gateOnHandle({
   pathname,
   isInBrowser,
 }: Readonly<{
-  ask: () => Promise<HandleGate>;
+  ask: () => Promise<HandleGateAnswer>;
   pathname: string;
   isInBrowser: boolean;
 }>): Promise<void> {
   if (isInBrowser && isRememberedForSession(HANDLE_CLAIMED)) return;
-  const gate = await ask();
-  if (isInBrowser && gate === "has-handle") rememberForSession(HANDLE_CLAIMED);
-  startHandleIfNeeded(gate === "needs-handle", pathname);
+  const answer = await ask();
+  if (isInBrowser) noteSessionOwner(answer.userId);
+  if (isInBrowser && answer.gate === "has-handle") {
+    rememberForSession(answer.userId, HANDLE_CLAIMED);
+  }
+  startHandleIfNeeded(answer.gate === "needs-handle", pathname);
 }
 
 /**

@@ -398,12 +398,23 @@ export async function usernameOf(
  */
 export type HandleGate = "signed-out" | "needs-handle" | "has-handle";
 
+/**
+ * The gate's answer, with whom it is about: the browser keys what it
+ * remembers to that runner (`lib/session-memo`), so a sign-in as someone
+ * else in another tab is never answered from this one's memo.
+ */
+export type HandleGateAnswer =
+  | { readonly gate: "signed-out"; readonly userId: undefined }
+  | {
+      readonly gate: Exclude<HandleGate, "signed-out">;
+      readonly userId: string;
+    };
+
 export async function handleGate(
   db: Db,
   userId: string | undefined,
-): Promise<HandleGate> {
-  if (userId === undefined) return "signed-out";
-  return (await usernameOf(db, userId)) === undefined
-    ? "needs-handle"
-    : "has-handle";
+): Promise<HandleGateAnswer> {
+  if (userId === undefined) return { gate: "signed-out", userId };
+  const hasHandle = (await usernameOf(db, userId)) !== undefined;
+  return { gate: hasHandle ? "has-handle" : "needs-handle", userId };
 }

@@ -86,7 +86,7 @@ describe("signIn", () => {
   });
 
   it("forgets what the browser remembered about the last runner, once it has signed someone in", async () => {
-    rememberForSession("has-handle");
+    rememberForSession("u1", "has-handle");
     client.email.mockResolvedValue({
       data: undefined,
       error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
@@ -286,7 +286,7 @@ describe("changePassword (ACC-7)", () => {
 
 describe("signOutEverywhere (ACC-7)", () => {
   it("ends every session and forgets what the browser kept about this one", async () => {
-    rememberForSession("has-handle");
+    rememberForSession("u1", "has-handle");
     client.revokeSessions.mockResolvedValue({ data: {}, error: undefined });
     await expect(signOutEverywhere()).resolves.toBeUndefined();
     expect(client.revokeSessions).toHaveBeenCalledTimes(1);
@@ -294,7 +294,7 @@ describe("signOutEverywhere (ACC-7)", () => {
   });
 
   it("says still signed in when Better Auth refuses", async () => {
-    rememberForSession("has-handle");
+    rememberForSession("u1", "has-handle");
     client.revokeSessions.mockResolvedValue({
       data: undefined,
       error: { status: 500 },
@@ -350,7 +350,7 @@ describe("signOut", () => {
       data: { success: true },
       error: undefined,
     });
-    rememberForSession("has-handle");
+    rememberForSession("u1", "has-handle");
     await expect(signOut()).resolves.toBeUndefined();
     expect(client.signOut).toHaveBeenCalledTimes(1);
     // The next runner to sign in on this page is asked about afresh.
@@ -362,7 +362,7 @@ describe("signOut", () => {
       data: undefined,
       error: { status: 500 },
     });
-    rememberForSession("has-handle");
+    rememberForSession("u1", "has-handle");
     const error = await caught(signOut());
     expect(isRememberedForSession("has-handle")).toBe(true);
     expect(error).toBeInstanceOf(AuthRejected);

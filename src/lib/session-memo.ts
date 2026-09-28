@@ -7,27 +7,123 @@
  * renamed, never cleared — so remembering it is exact, not a guess that
  * goes stale. Anything that can flip back belongs in a loader.
  *
+ * **Keyed to the runner.** A fact is remembered *for a user id*, and is
+ * only read back while that runner is still the one the browser last
+ * heard was signed in. That last-heard owner lives in `localStorage`,
+ * which every tab shares: the memo itself is per tab, so without it a
+ * sign-in as somebody else in a second tab would leave this tab answering
+ * from the first runner's facts (review of PR #119). Every answer from the
+ * server names its runner (`noteSessionOwner`), and every sign-in and
+ * sign-out clears the owner, so any tab's change of account unkeys every
+ * other tab's memo.
+ *
+ * Where `localStorage` is missing or refused — the Worker isolate, a
+ * browser blocking site data — the owner is kept in this module instead,
+ * which is exactly as good as a single tab can be.
+ *
  * **Browser only.** Module state in a Worker isolate is shared by every
  * request it serves, so a fact remembered during one runner's server
  * render would be read during the next runner's. Callers pass whether they
  * are in the browser and remember nothing when they are not.
- *
- * `forgetSession` is called by every change of who is signed in that does
- * not reload the page — signing in and signing out (`auth/credentials`).
- * A Google sign-in comes back through a full page load, which starts this
- * module empty anyway.
  */
 
-const remembered = new Set<string>();
+/**
+The shared key. Changing it only costs every tab one extra question.
+*/
+const OWNER_KEY = "dialed.run:session-owner";
 
-export function rememberForSession(fact: string): void {
-  remembered.add(fact);
+interface OwnerStore {
+  readonly read: () => string | undefined;
+  readonly write: (owner: string | undefined) => void;
+}
+
+const thisTab: { owner: string | undefined } = { owner: undefined };
+
+const tabStore: OwnerStore = {
+  read: () => thisTab.owner,
+  write: (owner) => {
+    thisTab.owner = owner;
+  },
+};
+
+function sharedStore(storage: Storage): OwnerStore {
+  return {
+    read: () => storage.getItem(OWNER_KEY) ?? undefined,
+    write: (owner) => {
+      if (owner === undefined) storage.removeItem(OWNER_KEY);
+      else storage.setItem(OWNER_KEY, owner);
+    },
+  };
+}
+
+/**
+ * The shared store when there is one. Reading `localStorage` itself throws
+ * in a browser set to block site data, so the probe is guarded too.
+ */
+function ownerStore(): OwnerStore {
+  try {
+    return "localStorage" in globalThis
+      ? sharedStore(globalThis.localStorage)
+      : tabStore;
+  } catch {
+    return tabStore;
+  }
+}
+
+/**
+ * A refused read or write (a full or blocked store) is the same as no
+ * owner: the next navigation asks, which is always correct.
+ */
+function readOwner(): string | undefined {
+  try {
+    return ownerStore().read();
+  } catch {
+    return undefined;
+  }
+}
+
+function writeOwner(owner: string | undefined): void {
+  try {
+    ownerStore().write(owner);
+  } catch {
+    // Nothing is remembered below without a readable owner, so a failed
+    // write only means asking again.
+  }
+}
+
+/**
+ * Each runner's facts, by user id. A fact about a runner stays true while
+ * any session of theirs lasts, so one that signs back in finds theirs
+ * again; what decides whether one is read is who the owner is now.
+ */
+const remembered = new Map<string, Set<string>>();
+
+/**
+The server said who is signed in, or that nobody is.
+*/
+export function noteSessionOwner(userId: string | undefined): void {
+  writeOwner(userId);
+}
+
+export function rememberForSession(userId: string, fact: string): void {
+  writeOwner(userId);
+  const facts = remembered.get(userId) ?? new Set<string>();
+  facts.add(fact);
+  remembered.set(userId, facts);
 }
 
 export function isRememberedForSession(fact: string): boolean {
-  return remembered.has(fact);
+  const owner = readOwner();
+  return owner !== undefined && remembered.get(owner)?.has(fact) === true;
 }
 
+/**
+ * Called by every change of who is signed in that does not reload the
+ * page — signing in and signing out (`auth/credentials`). Clearing the
+ * shared owner is what tells the other tabs. A Google sign-in comes back
+ * through a full page load, which starts this module empty and asks.
+ */
 export function forgetSession(): void {
   remembered.clear();
+  writeOwner(undefined);
 }
