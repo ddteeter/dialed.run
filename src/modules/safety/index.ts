@@ -182,6 +182,7 @@ export {
   takedownInput,
   unbanUserInput,
   type FileReportValues,
+  type ReviewActionValues,
 } from "./inputs";
 
 export {

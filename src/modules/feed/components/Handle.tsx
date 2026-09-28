@@ -23,8 +23,6 @@ export function Handle({
   username,
 }: Readonly<{ username: string | null | undefined }>) {
   return (
-    <span className="font-sans font-semibold">
-      {handleText(username)}
-    </span>
+    <span className="font-sans font-semibold">{handleText(username)}</span>
   );
 }

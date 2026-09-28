@@ -20,7 +20,7 @@ import {
   entryPhotoKeyFor,
   quarantineKeyFor,
 } from "../../src/lib/entry-photo-key";
-import { newUlid } from "../../src/lib/ids";
+import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
   decideReview,
@@ -115,7 +115,7 @@ async function noticesFor(userId: string) {
 async function queued(
   subjectType: "entry" | "photo" | "product" | "profile",
   subjectId: string,
-): Promise<string> {
+): Promise<Ulid> {
   const id = newUlid();
   await core().insert(reviewQueue).values({
     id,
@@ -453,13 +453,10 @@ describe("decideReview: the queue's Remove really deletes", () => {
     const { entryId } = await postedPhoto();
     const queueId = await queued("entry", entryId);
 
-    const outcome = await decideReview(
-      core(),
-      queueId,
-      "rev",
-      "approve",
-      "rules",
-    );
+    const outcome = await decideReview(core(), "rev", {
+      queueId: queueId,
+      action: "approve",
+    });
 
     expect(outcome).toBe("resolved");
     expect(await queueStatus(queueId)).toStrictEqual({
@@ -475,10 +472,18 @@ describe("decideReview: the queue's Remove really deletes", () => {
     const quarantineId = await queued("photo", second.photoId);
 
     expect(
-      await decideReview(core(), removalRow, "rev", "remove", "home"),
+      await decideReview(core(), "rev", {
+        queueId: removalRow,
+        action: "remove",
+        reason: "home",
+      }),
     ).toBe("resolved");
     expect(
-      await decideReview(core(), quarantineId, "rev", "quarantine", "explicit"),
+      await decideReview(core(), "rev", {
+        queueId: quarantineId,
+        action: "quarantine",
+        reason: "explicit",
+      }),
     ).toBe("resolved");
 
     expect(await stored("entries/")).toStrictEqual([]);
@@ -497,11 +502,19 @@ describe("decideReview: the queue's Remove really deletes", () => {
     const goneRow = await queued("entry", newUlid());
 
     expect(
-      await decideReview(core(), productRow, "rev", "remove", "rules"),
+      await decideReview(core(), "rev", {
+        queueId: productRow,
+        action: "remove",
+        reason: "rules",
+      }),
     ).toBe("resolved");
-    expect(await decideReview(core(), goneRow, "rev", "remove", "rules")).toBe(
-      "resolved",
-    );
+    expect(
+      await decideReview(core(), "rev", {
+        queueId: goneRow,
+        action: "remove",
+        reason: "rules",
+      }),
+    ).toBe("resolved");
     const settled = await queueStatus(goneRow);
     expect(settled?.status).toBe("removed");
     expect(
@@ -512,13 +525,25 @@ describe("decideReview: the queue's Remove really deletes", () => {
   it("says what a stale tab needs to hear", async () => {
     const { entryId } = await postedPhoto();
     const queueId = await queued("entry", entryId);
-    await decideReview(core(), queueId, "rev", "remove", "rules");
+    await decideReview(core(), "rev", {
+      queueId: queueId,
+      action: "remove",
+      reason: "rules",
+    });
 
-    expect(await decideReview(core(), queueId, "rev", "remove", "rules")).toBe(
-      "already_resolved",
-    );
     expect(
-      await decideReview(core(), newUlid(), "rev", "quarantine", "rules"),
+      await decideReview(core(), "rev", {
+        queueId: queueId,
+        action: "remove",
+        reason: "rules",
+      }),
+    ).toBe("already_resolved");
+    expect(
+      await decideReview(core(), "rev", {
+        queueId: newUlid(),
+        action: "quarantine",
+        reason: "rules",
+      }),
     ).toBe("not_found");
   });
 });

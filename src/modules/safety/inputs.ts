@@ -71,11 +71,21 @@ export const reviewDecisionInput = z.object({
  * reason is the statement the author is sent, and `quarantine` is the
  * suspected-CSAM Remove, which keeps one copy out of every route's reach.
  */
-export const reviewActionInput = z.object({
-  queueId: ulidSchema,
-  action: z.enum(["approve", "remove", "quarantine"]),
-  reason: removalReasonSchema,
-});
+export const reviewActionInput = z.discriminatedUnion("action", [
+  z.object({ queueId: ulidSchema, action: z.literal("approve") }),
+  z.object({
+    queueId: ulidSchema,
+    action: z.literal("remove"),
+    reason: removalReasonSchema,
+  }),
+  z.object({
+    queueId: ulidSchema,
+    action: z.literal("quarantine"),
+    reason: removalReasonSchema,
+  }),
+]);
+
+export type ReviewActionValues = z.infer<typeof reviewActionInput>;
 
 /**
  * A copyright takedown from the Desk (SAF-6): a named photo or entry, and

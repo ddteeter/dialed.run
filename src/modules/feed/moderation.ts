@@ -39,6 +39,7 @@ import {
   settleOpenReviews,
   type RemovalReason,
   type ResolveOutcome,
+  type ReviewActionValues,
 } from "../safety";
 
 import {
@@ -206,8 +207,6 @@ export async function moderateContent(
   return "removed";
 }
 
-export type ReviewAction = "approve" | "remove" | "quarantine";
-
 /**
  * A review queue decision. Approve is safety's; a Remove or quarantine of
  * an entry or a photo is `moderateContent`, which settles the queue row
@@ -216,12 +215,11 @@ export type ReviewAction = "approve" | "remove" | "quarantine";
  */
 export async function decideReview(
   db: Db,
-  queueId: string,
   reviewerId: string,
-  action: ReviewAction,
-  reason: RemovalReason,
+  decision: ReviewActionValues,
 ): Promise<ResolveOutcome> {
-  if (action === "approve") {
+  const { queueId } = decision;
+  if (decision.action === "approve") {
     return resolveReview(queueId, reviewerId, "approve");
   }
   const row = await openRow(queueId);
@@ -231,10 +229,10 @@ export async function decideReview(
     subjectType === "entry" || subjectType === "photo"
       ? await moderateContent(db, {
           actorId: reviewerId,
-          action,
+          action: decision.action,
           subjectType,
           subjectId,
-          reason,
+          reason: decision.reason,
         })
       : "not_found";
   // Anything moderateContent did not take down — a product, a profile, or

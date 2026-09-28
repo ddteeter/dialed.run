@@ -33,7 +33,7 @@ import {
   unbanUserInput,
 } from "./inputs";
 import { fileReport } from "./reports";
-import { claimForReview, pendingReviewQueue, resolveReview } from "./review";
+import { claimForReview, pendingReviewQueue } from "./review";
 
 export const fileReportAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => fileReportInput.parse(input))
@@ -80,15 +80,6 @@ export const claimReviewAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await requireUserId());
     return { outcome: await claimForReview(data.queueId, reviewerId) };
-  });
-
-export const resolveReviewAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => reviewDecisionInput.parse(input))
-  .handler(async ({ data }) => {
-    const reviewerId = requireAdmin(await requireUserId());
-    return {
-      outcome: await resolveReview(data.queueId, reviewerId, data.decision),
-    };
   });
 
 export const banUserAction = createServerFn({ method: "POST" })

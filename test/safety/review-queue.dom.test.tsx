@@ -72,31 +72,85 @@ describe("what a reviewer is shown", () => {
 });
 
 describe("deciding", () => {
-  it("approves and takes the row off the list", async () => {
+  const QUEUE_ID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
+
+  it("approves without a reason and takes the row off the list", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", decision: "approve" },
+      data: { queueId: QUEUE_ID, action: "approve" },
     });
     await waitFor(() => {
       expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
     });
   });
 
-  it("removes with the other button", async () => {
+  it("removes with the reason the author will read", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([row()]);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it shows where someone lives",
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(resolve).toHaveBeenCalledWith({
+      data: { queueId: QUEUE_ID, action: "remove", reason: "home" },
+    });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("quarantines as suspected CSAM, with its reason", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([row()]);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+
+    expect(resolve).toHaveBeenCalledWith({
+      data: { queueId: QUEUE_ID, action: "quarantine", reason: "explicit" },
+    });
+  });
+
+  it("refuses a Remove with no reason, and says why", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
 
     await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
 
-    // Two buttons, two decisions. A single "resolve" with a hidden default
-    // would make the more destructive one the easier one to hit.
-    expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", decision: "remove" },
+    expect(resolve).not.toHaveBeenCalled();
+    const said = await screen.findAllByText("Pick why it's coming down.");
+    expect(said.length).toBeGreaterThan(0);
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+  });
+
+  it("keeps a row whose decision failed, so it can be tried again", async () => {
+    const user = userEvent.setup();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockRejectedValue(new Error("offline"));
+    render(<ReviewQueue queue={[row()]} resolve={resolve} />);
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(resolve).toHaveBeenCalledTimes(1);
     });
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
   it("only takes the decided row off the list", async () => {

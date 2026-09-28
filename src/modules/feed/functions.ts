@@ -323,13 +323,7 @@ export const decideReviewAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await requireUserId());
     return {
-      outcome: await decideReview(
-        drizzle(env.DIALED_CORE),
-        data.queueId,
-        reviewerId,
-        data.action,
-        data.reason,
-      ),
+      outcome: await decideReview(drizzle(env.DIALED_CORE), reviewerId, data),
     };
   });
 

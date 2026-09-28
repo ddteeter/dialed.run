@@ -50,8 +50,8 @@ export function BandHistory({
         <>
           Your history in this band:{" "}
           <Mono step="md">
-            [{bandLabel(bandFloor, units.temp)}] · {cold} cold · {dialed}{" "}
-            dialed · {warm} warm
+            [{bandLabel(bandFloor, units.temp)}] · {cold} cold · {dialed} dialed
+            · {warm} warm
           </Mono>
         </>
       )}
