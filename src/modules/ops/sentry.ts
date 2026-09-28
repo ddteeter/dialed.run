@@ -1,6 +1,7 @@
 import { Toucan } from "toucan-js";
 
 import { env, waitUntil } from "../../env";
+import { PUBLIC_ORIGIN } from "./og/site-head";
 
 /**
  * Keeps the invocation alive until a promise settles.
@@ -35,6 +36,51 @@ export interface SentryReport {
 }
 
 /**
+ * Which deployment an event came from. Sentry filters and alerts on it, and
+ * without it a local dev server or a CI run holding a real DSN files its
+ * errors alongside production's — which is how the owner got paged by a
+ * laptop.
+ */
+export type SentryEnvironment = "production" | "development";
+
+/**
+ * Where a report goes: the DSN, and the environment every event and
+ * check-in sent there is tagged with. One value, so nothing can hand a
+ * Toucan the one without the other.
+ */
+export interface SentryTarget {
+  readonly dsn: string | undefined;
+  readonly environment: SentryEnvironment;
+}
+
+/**
+ * The environment a Worker serving this origin is.
+ *
+ * Production is recognised, not assumed: `BETTER_AUTH_URL` is
+ * `https://dialed.run` only in `wrangler.jsonc`'s production vars, and dev
+ * and CI set it to their localhost. Anything that is not exactly the
+ * production origin — including an unset var — is development, so a
+ * misconfigured deploy errs towards being filtered out of alerts rather
+ * than a laptop erring into them.
+ */
+export function sentryEnvironmentFor(
+  origin: string | undefined,
+): SentryEnvironment {
+  return origin === PUBLIC_ORIGIN ? "production" : "development";
+}
+
+/**
+ * The target this Worker reports to, read from its bindings. The one place
+ * the reporter reads `env`.
+ */
+export function workerTarget(): SentryTarget {
+  return {
+    dsn: env.SENTRY_DSN,
+    environment: sentryEnvironmentFor(env.BETTER_AUTH_URL),
+  };
+}
+
+/**
  * A Toucan for this DSN, or `undefined` when there is none.
  *
  * An unset secret arrives as an empty string as often as it does
@@ -42,15 +88,15 @@ export interface SentryReport {
  * would turn a missing reporter into a crash in the error path.
  */
 function toucanFor(
-  dsn: string | undefined,
+  { dsn, environment }: SentryTarget,
   keepAlive: KeepAlive,
 ): Toucan | undefined {
   if (dsn === undefined || dsn === "") return undefined;
-  return new Toucan({ dsn, context: { waitUntil: keepAlive } });
+  return new Toucan({ dsn, environment, context: { waitUntil: keepAlive } });
 }
 
 /**
- * The reporting decision, with the DSN and the keep-alive handed in rather
+ * The reporting decision, with the target and the keep-alive handed in rather
  * than read.
  *
  * Split out because both halves matter and only one is reachable through
@@ -61,12 +107,12 @@ function toucanFor(
  * sends" and "the send outlives the invocation" are all testable.
  */
 export function reportException(
-  dsn: string | undefined,
+  target: SentryTarget,
   keepAlive: KeepAlive,
   error: unknown,
   report: SentryReport,
 ): void {
-  const sentry = toucanFor(dsn, keepAlive);
+  const sentry = toucanFor(target, keepAlive);
   if (sentry === undefined) {
     console.error("[sentry-disabled]", report.context, error);
     return;
@@ -88,7 +134,7 @@ export function captureException(
   error: unknown,
   context: Record<string, string>,
 ): void {
-  reportException(env.SENTRY_DSN, waitUntil, error, { context, tags: {} });
+  reportException(workerTarget(), waitUntil, error, { context, tags: {} });
 }
 
 /**
@@ -142,11 +188,11 @@ const NO_CHECK_IN: CheckIn = {
  * can only ever carry the id of a check-in that was actually opened.
  */
 export function openCheckIn(
-  dsn: string | undefined,
+  target: SentryTarget,
   keepAlive: KeepAlive,
   monitor: CronMonitor,
 ): CheckIn {
-  const sentry = toucanFor(dsn, keepAlive);
+  const sentry = toucanFor(target, keepAlive);
   if (sentry === undefined) return NO_CHECK_IN;
   const checkInId = sentry.captureCheckIn(
     { monitorSlug: monitor.slug, status: "in_progress" },
@@ -176,8 +222,8 @@ export interface CronReporter {
 }
 
 export const sentryCronReporter: CronReporter = {
-  checkIn: (monitor) => openCheckIn(env.SENTRY_DSN, waitUntil, monitor),
+  checkIn: (monitor) => openCheckIn(workerTarget(), waitUntil, monitor),
   report: (error, report) => {
-    reportException(env.SENTRY_DSN, waitUntil, error, report);
+    reportException(workerTarget(), waitUntil, error, report);
   },
 };

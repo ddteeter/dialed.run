@@ -196,14 +196,78 @@ export function FieldGroup({
   );
 }
 
+/**
+ * A field with a button beside it — the field and **Find** (round 26 #12)
+ * is the one today.
+ *
+ * **The button sits in the box's row, not in the field's.** Beside the
+ * whole field it had to guess how far down the box starts, which is the
+ * label's height plus the gap — CityFinder guessed `mt-6` against a real
+ * 32px, and the two also grew to different heights, so Find sat 8px high
+ * and 1.5px short on both screens that carry it. In the box's row the
+ * label is above both and `items-stretch` makes the row as tall as the
+ * taller of the two and both of them that tall — the box through its
+ * grid cell, the button directly — so their edges meet whichever one
+ * sets the height. The hint and the message run under the pair, which is
+ * where a sentence about either belongs.
+ */
+function BesideTheBox({
+  action,
+  children,
+}: Readonly<{ action: ReactNode; children: JSX.Element }>): JSX.Element {
+  return (
+    <div data-part="field-row" className="flex items-stretch gap-2">
+      <div className="grid min-w-0 flex-1">{children}</div>
+      {action}
+    </div>
+  );
+}
+
 export function FormField({
   name,
   label,
   hint,
   error,
+  action,
   children,
-}: Readonly<LabelledFieldProps & { label: string }>): JSX.Element {
+}: Readonly<
+  LabelledFieldProps & {
+    label: string;
+    /**
+    A button that belongs beside the box — see `BesideTheBox`.
+    */
+    action?: ReactNode;
+  }
+>): JSX.Element {
   const isInvalid = error !== undefined;
+  // Weight is the signal: 1px rule -> 2px ink, and the box does not grow
+  // when it gains the heavier one.
+  //
+  // That used to be a 1px padding compensation — `px-[13px] py-[11px]`
+  // against `px-[14px] py-[12px]` — which the 4px grid cannot express:
+  // SPACE is "a 4px step, nothing else. 1px and 2px exist only as border
+  // widths." So the second pixel is an inset ring instead. A ring is a
+  // box-shadow, so it occupies no space at all and there is nothing left
+  // to compensate for.
+  const box = (
+    <div
+      data-invalid={isInvalid ? "true" : undefined}
+      // `field-box` (ui/a11y.css) is the focus half: the box is the
+      // control's visible boundary, so the ring lands on it rather than
+      // on the borderless input inset inside it. It also removes the
+      // ring from that input, which is what five `outline-none`
+      // utilities used to do without saying where the ring had gone.
+      //
+      // Which is why a *group* does not get one — see `FieldGroup`.
+      className={
+        isInvalid
+          ? "field-box flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
+          : "field-box flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
+      }
+    >
+      {children}
+    </div>
+  );
   return (
     <div className="flex flex-col gap-2">
       <FieldShell
@@ -220,32 +284,11 @@ export function FormField({
           </label>
         }
       >
-        {/* Weight is the signal: 1px rule -> 2px ink, and the box does not
-            grow when it gains the heavier one.
-
-            That used to be a 1px padding compensation — `px-[13px]
-            py-[11px]` against `px-[14px] py-[12px]` — which the 4px grid
-            cannot express: SPACE is "a 4px step, nothing else. 1px and 2px
-            exist only as border widths." So the second pixel is an inset
-            ring instead. A ring is a box-shadow, so it occupies no space at
-            all and there is nothing left to compensate for. */}
-        <div
-          data-invalid={isInvalid ? "true" : undefined}
-          // `field-box` (ui/a11y.css) is the focus half: the box is the
-          // control's visible boundary, so the ring lands on it rather than
-          // on the borderless input inset inside it. It also removes the
-          // ring from that input, which is what five `outline-none`
-          // utilities used to do without saying where the ring had gone.
-          //
-          // Which is why a *group* does not get one — see `FieldGroup`.
-          className={
-            isInvalid
-              ? "field-box flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
-              : "field-box flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
-          }
-        >
-          {children}
-        </div>
+        {action === undefined ? (
+          box
+        ) : (
+          <BesideTheBox action={action}>{box}</BesideTheBox>
+        )}
       </FieldShell>
     </div>
   );
@@ -274,6 +317,7 @@ export function TextField({
   type = "text",
   autoComplete,
   list,
+  action,
 }: Readonly<{
   name: string;
   label: string;
@@ -297,9 +341,19 @@ export function TextField({
    * the `list` named an element that exists.
    */
   list?: string | undefined;
+  /**
+  A button beside the box, level with it — `FormField`'s `action`.
+  */
+  action?: ReactNode;
 }>): JSX.Element {
   return (
-    <FormField name={name} label={label} error={error} hint={hint}>
+    <FormField
+      name={name}
+      label={label}
+      error={error}
+      hint={hint}
+      action={action}
+    >
       <input
         {...field(name)}
         id={name}

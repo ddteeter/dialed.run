@@ -37,7 +37,7 @@ describe("OG_PALETTE", () => {
     ["muted", "--muted"],
     ["soft", "--ink-hover"],
   ] as const)("%s is the ink block's %s", (role, token) => {
-    const inkBlock = tokens.slice(tokens.indexOf('[data-ground="ink"]'));
+    const inkBlock = tokens.slice(tokens.indexOf("@utility ground-ink"));
 
     expect(valueOf(inkBlock, token)).toBe(OG_PALETTE[role]);
   });

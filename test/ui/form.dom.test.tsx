@@ -351,6 +351,62 @@ describe("the mark, the message and the hint", () => {
   });
 });
 
+describe("a button beside a field sits in the box's row", () => {
+  // The alignment rule: a button right of a field shares the *box's* row,
+  // with the label above both, and the row stretches both to one height.
+  // Beside the whole field it had to guess the label's height — `mt-6`
+  // against a real 32px — so Find sat 8px high and 1.5px short. happy-dom
+  // has no layout, so what is pinned is the structure that makes the
+  // edges meet: same row as the box, stretched, label outside it.
+  it("puts the action and the box in one stretched row, under the label", () => {
+    render(
+      <TextField
+        name="city"
+        label="Your city"
+        value=""
+        onChange={vi.fn()}
+        field={() => ({
+          name: "city",
+          readOnly: false,
+          "aria-invalid": undefined,
+          "aria-describedby": undefined,
+          onInput: vi.fn(),
+        })}
+        hint="Add the state."
+        action={<button type="button">Find</button>}
+      />,
+    );
+
+    const input = screen.getByLabelText("Your city");
+    const box = input.parentElement;
+    const row = box?.parentElement?.parentElement;
+    const find = screen.getByRole("button", { name: "Find" });
+    expect(box).toHaveClass("field-box");
+    expect(row).toHaveAttribute("data-part", "field-row");
+    expect(row).toHaveClass("flex", "items-stretch");
+    // The box's cell is a grid, so the box stretches with the row too —
+    // whichever of the two is taller sets the height for both.
+    expect(box?.parentElement).toHaveClass("grid", "flex-1");
+    expect(find.parentElement).toBe(row);
+    // The label and the hint are outside the row: above it and under it.
+    const label = screen.getByText("Your city").closest("label");
+    expect(row).not.toContainElement(label);
+    expect(row).not.toContainElement(screen.getByText("Add the state."));
+  });
+
+  it("draws no row at all without an action", () => {
+    render(
+      <FormField name="plain" label="Plain">
+        <input id="plain" />
+      </FormField>,
+    );
+    const box = screen.getByLabelText("Plain").parentElement;
+    expect(box).toHaveClass("field-box");
+    expect(document.querySelector('[data-part="field-row"]')).toBeNull();
+    expect(box?.parentElement).not.toHaveClass("grid");
+  });
+});
+
 describe("the summary is a set of controls, not a list of links", () => {
   it("moves focus to the field a row names", async () => {
     // A form is not a document: the target is a control, not a location,
