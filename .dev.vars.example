@@ -27,3 +27,7 @@ BETTER_AUTH_URL=http://localhost:3000
 # wrangler.jsonc, so this file is the only place it can be set locally —
 # which is also why the admin surfaces have no demo video yet (D-72).
 # ADMIN_USER_IDS=
+# Signs public entry photos' short-lived URLs (128, SAF-7). Without it no
+# photo is ever signed: each is served `private` to a signed-in viewer, no
+# shared cache holds one, and /api/health names it as missing.
+PHOTO_URL_SECRET=generate-another-long-random-string

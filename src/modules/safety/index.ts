@@ -85,6 +85,15 @@ export {
   publiclyVisibleEntry,
 } from "./visibility";
 
+export {
+  isSignatureValid,
+  maxSignedLifeSeconds,
+  signedBucketSeconds,
+  signedExpiry,
+  signPhotoKey,
+  type PhotoSignature,
+} from "./photo-signing";
+
 export { classifierFromEnv } from "./classifier/from-env";
 
 export {

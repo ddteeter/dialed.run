@@ -17,8 +17,10 @@ export interface HealthReport {
  * would never notice. `BETTER_AUTH_URL` decides where Better Auth sends
  * callbacks and whether its cookies carry the `__Secure-` prefix (audit
  * finding 0.7); unset, auth half-works, which is worse than not at all.
+ * `PHOTO_URL_SECRET` signs public photos' URLs (128, SAF-7); unset, no
+ * photo reaches a cache, so Cloudflare's CSAM tool scans none (D-46).
  */
-const REQUIRED_CONFIG = ["BETTER_AUTH_URL"] as const;
+const REQUIRED_CONFIG = ["BETTER_AUTH_URL", "PHOTO_URL_SECRET"] as const;
 
 function missingConfig(): string[] {
   return REQUIRED_CONFIG.filter((name) => {

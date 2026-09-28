@@ -57,5 +57,11 @@ declare namespace Cloudflare {
      * `__Secure-` cookie prefix. A var in wrangler.jsonc, set by the
      * owner; `/api/health` names it when absent. */
     BETTER_AUTH_URL?: string;
+    /** The HMAC key for public entry photos' signed URLs (128, SAF-7;
+     * decision D-46). Absent: nothing is signed and every signed URL is
+     * refused (fail closed), so a photo is served `private` through the
+     * session only and no cache ever holds one. `/api/health` names it.
+     * See `modules/safety/photo-signing.ts`. */
+    PHOTO_URL_SECRET?: string;
   }
 }

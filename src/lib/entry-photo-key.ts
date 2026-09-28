@@ -14,8 +14,22 @@ entry photo a runner has.
 */
 export function entryPhotoPrefix(userId: string, entryId?: string): string {
   return entryId === undefined
-    ? `entries/${userId}/`
-    : `entries/${userId}/${entryId}/`;
+    ? `${entryPhotoPrefixRoot}${userId}/`
+    : `${entryPhotoPrefixRoot}${userId}/${entryId}/`;
+}
+
+/**
+Where every entry photo sits, and nothing else does.
+*/
+export const entryPhotoPrefixRoot = "entries/";
+
+/**
+ * Where a quarantined photo is moved to (task 128 · SAF-5): outside
+ * `entries/`, so no route that serves photos can reach it, and named by
+ * the key it had so the preservation record reads back to the entry.
+ */
+export function quarantineKeyFor(photoKey: string): string {
+  return `quarantine/${photoKey}`;
 }
 
 export function entryPhotoKeyFor(

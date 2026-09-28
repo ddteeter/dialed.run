@@ -108,6 +108,22 @@ describe("required configuration (OPS-4)", () => {
     expect(report.ok).toBe(false);
   });
 
+  it("names a missing PHOTO_URL_SECRET beside it (SAF-7)", async () => {
+    const secret: unknown = env.PHOTO_URL_SECRET;
+    Reflect.deleteProperty(env, "BETTER_AUTH_URL");
+    Reflect.deleteProperty(env, "PHOTO_URL_SECRET");
+    try {
+      const report = await checkHealth();
+      expect(report.missing).toStrictEqual([
+        "BETTER_AUTH_URL",
+        "PHOTO_URL_SECRET",
+      ]);
+      expect(report.ok).toBe(false);
+    } finally {
+      Reflect.set(env, "PHOTO_URL_SECRET", secret);
+    }
+  });
+
   it("treats an empty BETTER_AUTH_URL as missing", async () => {
     Reflect.set(env, "BETTER_AUTH_URL", "");
 

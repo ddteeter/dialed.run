@@ -29,6 +29,9 @@
     // An https origin, as production has, so the auth singleton's wiring
     // (base URL, rate limiting, secure cookies) is what the tests exercise.
     "BETTER_AUTH_URL": "https://dialed.test",
+    // A stand-in signing key, so signed photo URLs (SAF-7) are issued and
+    // verified as production does.
+    "PHOTO_URL_SECRET": "test-photo-url-secret",
   },
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "dialed-media" },

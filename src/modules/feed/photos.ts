@@ -6,6 +6,7 @@
  * photon-wasm benchmark rather than duplicating a wasm pipeline here.
  */
 import { and, eq, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
@@ -17,12 +18,24 @@ import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
 import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
-import { entryPhotoIdOf, entryPhotoKeyFor } from "../../lib/entry-photo-key";
+import {
+  entryPhotoIdOf,
+  entryPhotoKeyFor,
+  entryPhotoPrefixRoot,
+} from "../../lib/entry-photo-key";
+import { nowSeconds } from "../../lib/now";
 import { requireOwned } from "../../lib/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 import { isAdmin, publicPhotoStatus, publiclyVisibleEntry } from "../safety";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
+import {
+  isSignatureValid,
+  signedBucketSeconds,
+  signedExpiry,
+  signPhotoKey,
+  type PhotoSignature,
+} from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -178,11 +191,11 @@ async function reencoded(bytes: Uint8Array): Promise<Uint8Array> {
 const ENTRY_PHOTO_QUALITY = 88;
 
 /**
- * Visibility check for the GET route: whether `viewerId` may fetch this
- * photo.
+ * What the GET route may do with this photo for `viewerId`: nothing, serve
+ * it to its owner, or hand a signed-in stranger the shared copy.
  *
- * The owner may, whatever is pending against the photo or its entry —
- * fail open for the owner, closed for everyone else. Anyone else needs
+ * The owner may see it whatever is pending against the photo or its entry
+ * — fail open for the owner, closed for everyone else. Anyone else needs
  * both halves: the entry passes the one visibility rule **as this viewer
  * sees it** (task 128: a banned author, a blocked pair or an entry the
  * viewer reported all refuse), and the photo passed screening. A photo the
@@ -190,7 +203,8 @@ const ENTRY_PHOTO_QUALITY = 88;
  * because nothing read the column `screenPhoto` writes.
  *
  * **Signed out is refused** (SAF-14, D-109): the pages that show these
- * photos require a session, so the bytes do too.
+ * photos require a session, so the bytes do too. A signed URL (SAF-7) is
+ * the one other way in, and only a signed-in viewer is ever handed one.
  *
  * One read, joined, and found by primary key: the photo's id is the key's
  * last segment (`entryPhotoKeyFor`), and `entry_photos` has no index on
@@ -198,27 +212,49 @@ const ENTRY_PHOTO_QUALITY = 88;
  * image a feed page drew. The key is still compared, so a well-formed id
  * under somebody else's prefix finds nothing.
  */
-export async function isPhotoVisible(
+export async function photoAccess(
   photoKey: string,
   viewerId: string | undefined,
-): Promise<boolean> {
-  if (viewerId === undefined) return false;
-  const thisPhoto = and(
-    eq(entryPhotos.id, entryPhotoIdOf(photoKey)),
-    eq(entryPhotos.photoKey, photoKey),
-  );
+): Promise<"none" | "owner" | "shared"> {
+  if (viewerId === undefined) return "none";
   const shownToOthers = and(
     publiclyVisibleEntry(viewerId),
     eq(entryPhotos.screenStatus, publicPhotoStatus),
   );
-  const allowed = or(eq(outfitEntries.userId, viewerId), shownToOthers);
-  const rows = await db()
-    .select({ id: entryPhotos.id })
+  const [row] = await photoRows(
+    photoKey,
+    or(eq(outfitEntries.userId, viewerId), shownToOthers),
+  );
+  if (row === undefined) return "none";
+  return row.ownerId === viewerId ? "owner" : "shared";
+}
+
+/**
+ * Whether `viewerId` may fetch this photo at all — `photoAccess`, as the
+ * yes-or-no the visibility tests ask.
+ */
+export async function isPhotoVisible(
+  photoKey: string,
+  viewerId: string | undefined,
+): Promise<boolean> {
+  return (await photoAccess(photoKey, viewerId)) !== "none";
+}
+
+/**
+ * The photo's row, joined to its entry, where `allowed` holds — at most
+ * one, by primary key.
+ */
+function photoRows(photoKey: string, allowed: SQL | undefined) {
+  const thisPhoto = and(
+    eq(entryPhotos.id, entryPhotoIdOf(photoKey)),
+    eq(entryPhotos.photoKey, photoKey),
+  );
+  return db()
+    .select({ ownerId: outfitEntries.userId })
     .from(entryPhotos)
     .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
     .where(and(thisPhoto, allowed))
     .limit(1);
-  return rows.length > 0;
 }
 
 export async function getPhotoObject(
@@ -260,6 +296,28 @@ export function photoUploadFrom(
 }
 
 /**
+ * The signature half of a photo URL, as the query string carries it.
+ * Absent parameters are absent.
+ */
+export interface SignedQuery {
+  expires?: string | undefined;
+  signature?: string | undefined;
+}
+
+const UNSIGNED: SignedQuery = {};
+
+/**
+The signature a request's URL carries, if any, for the route to hand on.
+*/
+export function signedQueryOf(url: string): SignedQuery {
+  const query = new URL(url).searchParams;
+  return {
+    expires: query.get("e") ?? undefined,
+    signature: query.get("s") ?? undefined,
+  };
+}
+
+/**
  * The cached GET for an entry photo, as one function.
  *
  * It was the body of `routes/feed/photo.$.tsx` — three refusals and a set
@@ -268,10 +326,23 @@ export function photoUploadFrom(
  * photos are never fetchable by anyone but its owner, and a photo that is
  * not visible is *not found* rather than forbidden, because "403" tells a
  * stranger the photo exists.
+ *
+ * **Three ways out** (task 128 · SAF-7, decision D-46):
+ *
+ * - its **owner** gets the bytes, `private`, as before;
+ * - a **signed-in stranger** the rule lets see it is redirected to the
+ *   photo's signed URL, which any cache may hold for as long as the URL
+ *   lives — that is what puts a shared photo where Cloudflare's CSAM tool
+ *   can scan it. With no signing secret nothing is signed (fail closed)
+ *   and the stranger gets the `private` bytes instead;
+ * - a **signed URL** is served to anyone holding one, `public`, after the
+ *   signature and the entry's anonymous visibility both pass.
  */
 export async function photoResponse(
   key: string | undefined,
   viewerId: string | undefined,
+  signed: SignedQuery = UNSIGNED,
+  now: number = nowSeconds(),
 ): Promise<Response> {
   // Absent and blank in one check: the splat is `""` for `/feed/photo/`
   // itself, and neither is a photo. Written as one because an explicit
@@ -279,8 +350,76 @@ export async function photoResponse(
   // to the visibility check, which refuses it too — at the cost of a
   // query.
   if (!key) return notFound();
-  if (!(await isPhotoVisible(key, viewerId))) return notFound();
-  return bytesResponse(key);
+  if (signed.signature !== undefined)
+    return signedPhotoResponse(key, signed, now);
+  const access = await photoAccess(key, viewerId);
+  if (access === "none") return notFound();
+  const signature =
+    access === "shared"
+      ? await signPhotoKey(key, signedExpiry(now))
+      : undefined;
+  if (signature === undefined) return bytesResponse(key, PRIVATE_CACHE);
+  return signedRedirect(key, signature, now);
+}
+
+/**
+`private`: only people the entry is shared with see it.
+*/
+const PRIVATE_CACHE = "private, max-age=3600";
+
+/**
+ * A request that carries a signature: served only if we made it, for this
+ * key, and it is live — and only while the entry would still be shown to
+ * a stranger. The second check is what stops a removed, hidden or
+ * re-privated photo at once for any request that reaches us; a cache
+ * already holding it keeps it until the URL expires, which is the purge
+ * bound (design doc, open question 2).
+ */
+async function signedPhotoResponse(
+  key: string,
+  signed: SignedQuery,
+  now: number,
+): Promise<Response> {
+  if (!(await isSignatureValid(key, signed, now))) return notFound();
+  const [row] = await photoRows(
+    key,
+    and(
+      publiclyVisibleEntry(),
+      eq(entryPhotos.screenStatus, publicPhotoStatus),
+    ),
+  );
+  if (row === undefined) return notFound();
+  // `isSignatureValid` has already bounded this by `maxSignedLifeSeconds`,
+  // so no cache holds the copy longer than the URL it answers lives.
+  return bytesResponse(
+    key,
+    `public, max-age=${String(Number(signed.expires) - now)}`,
+  );
+}
+
+/**
+ * The redirect a signed-in stranger follows to the shared copy. The
+ * redirect itself is `private` — it was issued to one session — and lives
+ * one bucket less than the URL it names, so a browser that reuses it
+ * always lands on a URL with a quarter-hour still to run.
+ */
+function signedRedirect(
+  key: string,
+  signature: PhotoSignature,
+  now: number,
+): Response {
+  const query = new URLSearchParams({
+    e: String(signature.expires),
+    s: signature.signature,
+  });
+  const life = signature.expires - now - signedBucketSeconds;
+  return new Response(undefined, {
+    status: 302,
+    headers: {
+      location: `/feed/photo/${key}?${query.toString()}`,
+      "cache-control": `private, max-age=${String(life)}`,
+    },
+  });
 }
 
 /**
@@ -319,22 +458,27 @@ export async function reviewerPhotoResponse(
   // of what they wanted to know. A throw would also surface as a 500 on a
   // media URL, which says the same thing louder.
   if (!isAdmin(viewerId)) return notFound();
-  return bytesResponse(key);
+  // Only an entry photo's own prefix. A quarantined copy (SAF-5) is kept
+  // for the preservation period and served by no route at all — this one
+  // included, admin or not.
+  if (!key.startsWith(entryPhotoPrefixRoot)) return notFound();
+  return bytesResponse(key, PRIVATE_CACHE);
 }
 
 /**
 The bytes and their headers, once, for both rules above.
 */
-async function bytesResponse(key: string): Promise<Response> {
+async function bytesResponse(
+  key: string,
+  cacheControl: string,
+): Promise<Response> {
   const object = await getPhotoObject(key);
   if (object === null) return notFound();
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
-  // Private: a photo is only ever visible to people the entry is shared
-  // with, so a shared cache must not hold it.
-  headers.set("cache-control", "private, max-age=3600");
+  headers.set("cache-control", cacheControl);
   return new Response(object.body, { headers });
 }
 
