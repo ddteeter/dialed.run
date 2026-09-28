@@ -154,12 +154,6 @@ const NAV: readonly Edge[] = [
   // NAV: "Tab bar → Feed / Closet / Call / You" — "Indicator slides. Content
   // cuts." The tab bar is a destination, not a journey.
   { from: "*", to: TABS, type: "cut" },
-  // Desk · Runners (D8), reached from the Desk rail and re-read with new
-  // search params by its own search and filters. Typed `cut` by analogy to
-  // the tab bar: the Desk rail is a set of destinations, not a journey, and
-  // NAV has no Desk rows. `/desk` itself needs no row — the default is
-  // already `cut`. Added under the header's ownership rule.
-  { from: "*", to: "/desk/runners", type: "cut" },
 
   // NAV: "Strava OAuth return → T2" — "A document load from another origin.
   // There is no outgoing screen; first-paint rules apply." Nothing to
@@ -171,7 +165,11 @@ const NAV: readonly Edge[] = [
   // analogy to the first-paint rows, because the move that matters belongs
   // to the screen it redirects to — animating the shim would play one move
   // over another. Not a NAV row; added under the header's ownership rule.
-  { from: "*", to: "/", type: "cut" },
+  // Desk · Runners (D8) joins it: reached from the Desk rail and re-read
+  // with new search params by its own search and filters, it is a
+  // destination rather than a journey (the tab bar's reasoning), and NAV has
+  // no Desk rows. Added under the header's ownership rule.
+  { from: "*", to: ["/", "/desk/runners"], type: "cut" },
 
   // The pushes. Forward comes from the trailing edge, and back reverses it.
   // NAV, in order: "Closet C → Garment detail", "Garment detail → Edit

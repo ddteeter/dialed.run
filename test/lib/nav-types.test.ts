@@ -97,17 +97,13 @@ describe("which type an edge resolves to", () => {
     }
   });
 
-  it("cuts between the Desk's own pages, as the tab bar does", () => {
-    // The Desk rail is a set of destinations, not a journey (DeskShell),
-    // and a Desk page re-reading itself with new search params stays put.
-    const desk = ["/desk", "/desk/runners"];
-    for (const from of desk) {
-      for (const to of desk) {
-        expect([from, to, typeOf(from, to)]).toEqual([from, to, "cut"]);
-      }
-    }
-    expect(typeOf("/feed", "/desk")).toBe("cut");
-    expect(typeOf("/feed", "/desk/runners")).toBe("cut");
+  it("types Desk · Runners explicitly, as a cut", () => {
+    // Asked of navTypeFor, not typeOf: typeOf falls back to `cut` for an
+    // edge with no row, so it cannot tell an explicit row from none. And not
+    // left to the destinations scan either — under mutation testing the
+    // component it scans is itself instrumented, and the scan misses it.
+    expect(navTypeFor("/feed", "/desk/runners", false)).toBe("cut");
+    expect(navTypeFor("/desk/runners", "/desk/runners", false)).toBe("cut");
   });
 
   it("cuts when the path has not changed", () => {
