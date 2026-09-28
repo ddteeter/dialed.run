@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import {
   ChoiceField,
+  NO_CHOICE,
   SubmitButton,
   TextField,
   useFormSubmit,
@@ -39,7 +40,9 @@ export function takedownMessage(outcome: "removed" | "not_found"): string {
 export function Takedown({
   takeDown,
 }: Readonly<{ takeDown: TakeDown }>): JSX.Element {
-  const [subjectType, setSubjectType] = useState<Subject | "">("");
+  // Nothing chosen is `undefined`, which the schema refuses with its own
+  // message; the select sees it as the "—" option's value.
+  const [subjectType, setSubjectType] = useState<Subject | undefined>();
   const [subjectId, setSubjectId] = useState("");
   const [notice, setNotice] = useState("");
   const [said, setSaid] = useState("");
@@ -69,11 +72,6 @@ export function Takedown({
         form={form}
         className="flex flex-col gap-4"
         onSubmit={() => {
-          // No `subjectType === "" ? undefined : subjectType` here:
-          // `takedownInput`'s enum message ("Pick a photo or an entry.")
-          // reads the same whether the field is missing or holds an
-          // unpicked "", so sending it through unconverted changes nothing
-          // a reviewer can see.
           void form.submit({ subjectType, subjectId, notice });
         }}
         action={
@@ -89,8 +87,12 @@ export function Takedown({
           label="What it is"
           options={["photo", "entry"]}
           optionLabels={SUBJECT_LABELS}
-          value={subjectType}
-          onChange={setSubjectType}
+          value={subjectType ?? NO_CHOICE}
+          onChange={(picked) => {
+            setSubjectType(
+              takedownInput.shape.subjectType.safeParse(picked).data,
+            );
+          }}
           field={form.field}
           error={form.fieldErrors.subjectType}
         />

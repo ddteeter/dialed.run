@@ -384,6 +384,23 @@ describe("Takedown (SAF-6)", () => {
     ).toBeInTheDocument();
   });
 
+  it("treats a kind picked and then taken back as nothing chosen", async () => {
+    const user = userEvent.setup();
+    const takeDown = vi.fn<TakeDown>();
+    render(<Takedown takeDown={takeDown} />);
+    const picker = screen.getByRole("combobox", { name: /What it is/ });
+
+    await user.selectOptions(picker, "A photo");
+    expect(picker).toHaveDisplayValue("A photo");
+    await user.selectOptions(picker, "—");
+    await user.click(screen.getByRole("button", { name: "Take it down" }));
+
+    expect(takeDown).not.toHaveBeenCalled();
+    const said = await screen.findAllByText("Pick a photo or an entry.");
+    expect(said.length).toBeGreaterThan(0);
+    expect(picker).toHaveDisplayValue("—");
+  });
+
   it("tells the operator each outcome", () => {
     expect(takedownMessage("removed")).toBe(
       "Taken down. The runner has been told, and the notice is on record.",

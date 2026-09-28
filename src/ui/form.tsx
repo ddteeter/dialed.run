@@ -702,6 +702,13 @@ interface ChoosableProps<TOption extends string> {
  * choice is a different control and should not reuse this one by adding a
  * flag to it.
  */
+/**
+ * The value of `ChoiceField`'s "—" option: nothing chosen. Exported so a
+ * caller that models "nothing chosen" as `undefined` maps it to the select
+ * with the option's own value, not a second copy of it.
+ */
+export const NO_CHOICE = "";
+
 // fallow-ignore-next-line code-duplication -- two controls that share ChoosableProps must destructure the same prop names; what is left after extracting the shared type is the declaration itself, and merging the components would merge a select with a radio group
 export function ChoiceField<TOption extends string>({
   name,
@@ -729,11 +736,11 @@ export function ChoiceField<TOption extends string>({
           const picked = options.find(
             (option) => option === event.target.value,
           );
-          onChange(picked ?? "");
+          onChange(picked ?? NO_CHOICE);
         }}
         className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
       >
-        <option value="">—</option>
+        <option value={NO_CHOICE}>—</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {optionLabels[option]}

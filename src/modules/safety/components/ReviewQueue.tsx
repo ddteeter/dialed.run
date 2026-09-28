@@ -6,10 +6,12 @@ import {
   ChoiceField,
   ListSection,
   Mono,
+  NO_CHOICE,
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
 import {
+  removalReasonSchema,
   removalReasons,
   removalStatements,
   reportReasonLabels,
@@ -136,7 +138,9 @@ function Decision({
   decide: Decide;
   onSettled: (id: string) => void;
 }>): JSX.Element {
-  const [reason, setReason] = useState<RemovalReason | "">("");
+  // Nothing chosen is `undefined`, which the schema refuses with its own
+  // message; the select sees it as the "—" option's value.
+  const [reason, setReason] = useState<RemovalReason | undefined>();
   const form = useFormSubmit({
     schema: reviewActionInput,
     action: (values) => decide({ data: values }),
@@ -147,11 +151,6 @@ function Decision({
   });
 
   function send(action: "remove" | "quarantine"): void {
-    // No `reason === "" ? undefined : reason` here: this form has exactly
-    // one field, so the error summary (which is the only thing `labels`
-    // or a missing-vs-invalid distinction would ever change) never
-    // renders — `removalReasonSchema`'s own message covers both "nothing
-    // picked" and "not a real reason" identically.
     void form.submit({ queueId: row.id, action, reason });
   }
 
@@ -195,8 +194,10 @@ function Decision({
         label="Why it comes down"
         options={removalReasons}
         optionLabels={REASON_LABELS}
-        value={reason}
-        onChange={setReason}
+        value={reason ?? NO_CHOICE}
+        onChange={(picked) => {
+          setReason(removalReasonSchema.safeParse(picked).data);
+        }}
         field={form.field}
         error={form.fieldErrors.reason}
       />

@@ -158,6 +158,22 @@ describe("deciding", () => {
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
+  it("treats a reason picked and then taken back as nothing chosen", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([row()]);
+    const picker = screen.getByRole("combobox");
+
+    await user.selectOptions(picker, "it's an ad or spam");
+    expect(picker).toHaveDisplayValue("it's an ad or spam");
+    await user.selectOptions(picker, "—");
+    await user.click(screen.getByRole("button", { name: /^Remove$/ }));
+
+    expect(resolve).not.toHaveBeenCalled();
+    const said = await screen.findAllByText("Pick why it's coming down.");
+    expect(said.length).toBeGreaterThan(0);
+    expect(picker).toHaveDisplayValue("—");
+  });
+
   it("keeps a row whose decision failed, so it can be tried again", async () => {
     const user = userEvent.setup();
     const resolve: Props["resolve"] = vi
