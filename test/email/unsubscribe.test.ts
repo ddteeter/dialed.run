@@ -74,6 +74,31 @@ describe("verifiedUnsubscribe", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("answers undefined, never a thrown error, for a signature one character past a multiple of four", async () => {
+    // Every character is in the alphabet, but no byte count encodes to a
+    // length of 4n + 1, so `atob` throws on it. 1 and 5 are the two
+    // lengths a truncated link lands on first.
+    for (const s of ["a", "abcde"]) {
+      await expect(
+        verifiedUnsubscribe(SECRET, { u: "u1", k: "run_reminder", s }),
+      ).resolves.toBeUndefined();
+    }
+  });
+
+  it("still reads a signature two or three past a multiple of four", async () => {
+    // The HMAC's 32 bytes are 43 characters (4n + 3): only 4n + 1 is
+    // refused, not every length that is not a multiple of four.
+    const s = await unsubscribeSignature(SECRET, "u1", "run_reminder");
+    expect(s.length % 4).toBe(3);
+    expect(
+      await verifiedUnsubscribe(SECRET, {
+        u: "u1",
+        k: "run_reminder",
+        s: s.slice(0, 42),
+      }),
+    ).toBeUndefined();
+  });
+
   it("answers undefined for a signature made with a different secret", async () => {
     const s = await unsubscribeSignature("other-secret", "u1", "run_reminder");
     expect(

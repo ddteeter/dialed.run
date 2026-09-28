@@ -44,8 +44,15 @@ function toBase64Url(bytes: ArrayBuffer): string {
     .replaceAll("=", "");
 }
 
+/**
+ * The bytes a url-safe base64 string spells, or undefined for one that
+ * spells none. Two shapes reach `atob` and make it throw: a character
+ * outside the alphabet, and a length one past a multiple of four — no
+ * byte count encodes to that, so it is always a truncated or padded-out
+ * link, never a signature.
+ */
 function fromBase64Url(text: string): Uint8Array<ArrayBuffer> | undefined {
-  if (!/^[\w-]+$/u.test(text)) return undefined;
+  if (!/^[\w-]+$/u.test(text) || text.length % 4 === 1) return undefined;
   const binary = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
   return Uint8Array.from(binary, (char) => char.codePointAt(0) ?? 0);
 }

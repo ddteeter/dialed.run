@@ -52,4 +52,24 @@ describe("oneClickUnsubscribeResponse", () => {
     expect(response.status).toBe(400);
     expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
   });
+
+  it("refuses a signature atob cannot decode with a 400, not a thrown error", async () => {
+    const { userId } = await seedUser();
+    const url = await unsubscribeUrl(
+      ORIGIN,
+      env.BETTER_AUTH_SECRET,
+      userId,
+      "run_reminder",
+    );
+    const truncated = new URL(url);
+    // Five characters, all url-safe: a length no byte count encodes to.
+    truncated.searchParams.set("s", "abcde");
+
+    const response = await oneClickUnsubscribeResponse(
+      new Request(truncated, { method: "POST" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await isEmailWanted(db, userId, "run_reminder")).toBe(true);
+  });
 });
