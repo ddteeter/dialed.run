@@ -46,9 +46,12 @@ const LABEL: Readonly<Record<DeskPage, string>> = {
  * lands. Review is the queue task 106 built, at its own address until 128
  * moves it under `/desk`.
  */
-const BUILT: Readonly<Partial<Record<DeskPage, "/desk" | "/safety/review">>> = {
+const BUILT: Readonly<
+  Partial<Record<DeskPage, "/desk" | "/safety/review" | "/desk/runners">>
+> = {
   today: "/desk",
   review: "/safety/review",
+  runners: "/desk/runners",
 };
 
 /**

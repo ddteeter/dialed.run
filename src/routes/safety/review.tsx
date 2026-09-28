@@ -3,7 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSession } from "../../modules/auth/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
 import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
-import { decideReviewAction } from "../../modules/feed/functions";
+import { Takedown } from "../../modules/safety/components/Takedown";
+import {
+  decideReviewAction,
+  takedownAction,
+} from "../../modules/feed/functions";
 import { reviewQueueQuery } from "../../modules/safety/functions";
 import { Layout, Page } from "../../ui";
 
@@ -26,6 +30,9 @@ function ReviewPage() {
     <Layout>
       <Page title="Review queue" width="column">
         <ReviewQueue queue={queue} resolve={decideReviewAction} />
+        {/* SAF-6: a removal the queue did not raise — a copyright notice
+            naming a photo or an entry. */}
+        <Takedown takeDown={takedownAction} />
       </Page>
     </Layout>
   );

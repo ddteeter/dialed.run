@@ -22,6 +22,7 @@ import { Route as ClosetIndexRouteImport } from './routes/closet/index'
 import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
 import { Route as DeskIndexRouteImport } from './routes/desk/index'
+import { Route as DeskRunnersRouteImport } from './routes/desk/runners'
 import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
@@ -118,6 +119,11 @@ const ClosetNewRoute = ClosetNewRouteImport.update({
 const DeskIndexRoute = DeskIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => DeskRouteRoute,
+} as any)
+const DeskRunnersRoute = DeskRunnersRouteImport.update({
+  id: '/runners',
+  path: '/runners',
   getParentRoute: () => DeskRouteRoute,
 } as any)
 const FeedIndexRoute = FeedIndexRouteImport.update({
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
   '/og/default': typeof OgDefaultRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByTo {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
   '/og/default': typeof OgDefaultRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
   '/og/default': typeof OgDefaultRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
     | '/og/default'
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
     | '/og/default'
@@ -529,6 +540,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
     | '/og/default'
@@ -704,6 +716,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/desk/'
       preLoaderRoute: typeof DeskIndexRouteImport
+      parentRoute: typeof DeskRouteRoute
+    }
+    '/desk/runners': {
+      id: '/desk/runners'
+      path: '/runners'
+      fullPath: '/desk/runners'
+      preLoaderRoute: typeof DeskRunnersRouteImport
       parentRoute: typeof DeskRouteRoute
     }
     '/feed/': {
@@ -934,10 +953,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface DeskRouteRouteChildren {
+  DeskRunnersRoute: typeof DeskRunnersRoute
   DeskIndexRoute: typeof DeskIndexRoute
 }
 
 const DeskRouteRouteChildren: DeskRouteRouteChildren = {
+  DeskRunnersRoute: DeskRunnersRoute,
   DeskIndexRoute: DeskIndexRoute,
 }
 

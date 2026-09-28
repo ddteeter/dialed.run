@@ -4,9 +4,6 @@ import type { JSX } from "react";
 import {
   Bracketed,
   ChoiceField,
-  FormErrorSummary,
-  FormFailureBand,
-  FormStatus,
   ListSection,
   Mono,
   SubmitButton,
@@ -20,6 +17,7 @@ import {
 import type { RemovalReason, ReportReason } from "../contracts";
 import { reviewActionInput, type ReviewActionValues } from "../inputs";
 import type { QueueRow } from "../review";
+import { DeskForm } from "./DeskForm";
 import { useSettled } from "./use-settled";
 
 /**
@@ -167,21 +165,40 @@ function ReviewRow({
       <span className="text-micro text-quiet">
         <Bracketed>{row.source}</Bracketed>
       </span>
-      <form
-        ref={form.formRef}
-        noValidate
+      <DeskForm
+        form={form}
         className="flex flex-col gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
+        onSubmit={() => {
           send("remove");
         }}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="target"
+              type="button"
+              onClick={() => {
+                void form.submit({ queueId: row.id, action: "approve" });
+              }}
+            >
+              <Mono step="xs">Approve</Mono>
+            </button>
+            <SubmitButton
+              label="Remove"
+              pendingLabel="Removing"
+              pending={form.pending}
+            />
+            <button
+              className="target"
+              type="button"
+              onClick={() => {
+                send("quarantine");
+              }}
+            >
+              <Mono step="xs">Remove as suspected CSAM</Mono>
+            </button>
+          </div>
+        }
       >
-        <FormStatus>{form.status}</FormStatus>
-        <FormErrorSummary
-          rows={form.summaryRows}
-          summaryRef={form.summaryRef}
-          onFocusField={form.focusField}
-        />
         <ChoiceField<RemovalReason>
           name="reason"
           label="Why it comes down"
@@ -192,37 +209,7 @@ function ReviewRow({
           field={form.field}
           error={form.fieldErrors.reason}
         />
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="target"
-            type="button"
-            onClick={() => {
-              void form.submit({ queueId: row.id, action: "approve" });
-            }}
-          >
-            <Mono step="xs">Approve</Mono>
-          </button>
-          <SubmitButton
-            label="Remove"
-            pendingLabel="Removing"
-            pending={form.pending}
-          />
-          <button
-            className="target"
-            type="button"
-            onClick={() => {
-              send("quarantine");
-            }}
-          >
-            <Mono step="xs">Remove as suspected CSAM</Mono>
-          </button>
-        </div>
-      </form>
+      </DeskForm>
     </li>
   );
 }
