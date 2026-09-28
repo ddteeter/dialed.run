@@ -184,4 +184,21 @@ describe("UnsubscribeLanding", () => {
       screen.getByRole("heading", { name: "Stop run reminder emails?" }),
     ).toBeVisible();
   });
+
+  it("keeps the browser's own submit from leaving the page", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <UnsubscribeLanding
+        landing={{ ...OFF, state: "ask" }}
+        unsubscribe={vi.fn(() => Promise.resolve<SubscriptionLanding>(OFF))}
+        resubscribe={vi.fn()}
+      />,
+    );
+    let submitted: Event | undefined;
+    document.addEventListener("submit", (event) => {
+      submitted = event;
+    });
+    await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
+    expect(submitted?.defaultPrevented).toBe(true);
+  });
 });

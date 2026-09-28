@@ -259,5 +259,5 @@ export const outboxHandlers: OutboxHandlers = {
     context: (payload) => ({ userId: payload.userId, key: payload.key }),
   },
   // Task 126 (ACC-2): an owed email (`emailHandler`).
-  email: emailHandler(() => emailDepsFromEnv()),
+  email: emailHandler(emailDepsFromEnv),
 };

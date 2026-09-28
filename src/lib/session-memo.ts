@@ -89,16 +89,17 @@ function writeOwner(owner: string | undefined): void {
 }
 
 /**
- * Each runner's facts, by user id. A fact about a runner stays true while
- * any session of theirs lasts, so one that signs back in finds theirs
- * again; what decides whether one is read is who the owner is now.
- *
- * Keyed `string | undefined` rather than `string` so a read's own answer —
- * which is `undefined` for "nobody" — can be looked up directly, with no
- * separate guard: nothing is ever `remembered.set` under the `undefined`
- * key, so that lookup always misses on its own.
+ * Each runner's facts, as `[userId, fact]` pairs. A fact about a runner
+ * stays true while any session of theirs lasts, so one that signs back in
+ * finds theirs again; what decides whether one is read is who the owner
+ * is now. A pair with no owner (`[null, fact]` once serialised) is never
+ * added, so a read for nobody misses on its own, with no guard to write.
  */
-const remembered = new Map<string | undefined, Set<string>>();
+const remembered = new Set<string>();
+
+function pair(owner: string | undefined, fact: string): string {
+  return JSON.stringify([owner, fact]);
+}
 
 /**
 The server said who is signed in, or that nobody is.
@@ -109,9 +110,7 @@ export function noteSessionOwner(userId: string | undefined): void {
 
 export function rememberForSession(userId: string, fact: string): void {
   writeOwner(userId);
-  const facts = remembered.get(userId) ?? new Set<string>();
-  facts.add(fact);
-  remembered.set(userId, facts);
+  remembered.add(pair(userId, fact));
 }
 
 /**
@@ -123,7 +122,7 @@ export function rememberForSession(userId: string, fact: string): void {
  */
 export function isRememberedForSession(fact: string): boolean {
   try {
-    return remembered.get(ownerStore().read())?.has(fact) === true;
+    return remembered.has(pair(ownerStore().read(), fact));
   } catch {
     return false;
   }
