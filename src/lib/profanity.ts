@@ -1,6 +1,7 @@
 /**
  * The instant half of a handle's word check (task 126; owner, 2026-09-27):
- * a vendored open-source list (`./profanity-words.ts`, CC BY 4.0), matched
+ * a vendored open-source list (`./profanity-words.ts`, CC BY 4.0 — its
+ * attribution is in `docs/legal/third-party-notices.md`), matched
  * the moment a handle is claimed. The other half, OpenAI's moderation,
  * lives with the claim (`modules/account`), and this is what is left when
  * it cannot answer.
@@ -27,7 +28,33 @@ function compact(text: string): string {
   return text.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
 }
 
-const WORDS: ReadonlySet<string> = new Set(PROFANE_WORDS.map((word) => compact(word)));
+/**
+ * Listed words that are innocent in a handle far more often than not, and
+ * are refused nowhere (PR #127 review): a bird (`blue_tit`), a name
+ * (`dick`, `hooker`), a car (`escort`), a snack (`twinkie`), kisses
+ * (`maya_xx`), a trail runner's droppings (`scat`), and the everyday
+ * complaint (`hills_suck`, `mondays_sucks`). Slurs and explicit terms are
+ * never here. Kept beside the vendored list, not edited into it, so the
+ * list can still be re-vendored whole; what gets past this, the
+ * moderation check reads in context.
+ */
+export const INNOCENT_IN_HANDLES: ReadonlySet<string> = new Set([
+  "dick",
+  "escort",
+  "hooker",
+  "scat",
+  "suck",
+  "sucks",
+  "tit",
+  "twinkie",
+  "xx",
+]);
+
+const WORDS: ReadonlySet<string> = new Set(
+  PROFANE_WORDS.map((word) => compact(word)).filter(
+    (word) => !INNOCENT_IN_HANDLES.has(word),
+  ),
+);
 
 /**
  * Digits read back as the letters they stand in for. `1` reads as both

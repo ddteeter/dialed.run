@@ -23,6 +23,7 @@ import {
   CLAIM_HOLD_S,
   DESK_LIST_LIMIT,
   accessDesk,
+  confirmRedemption,
   createInviteCode,
   declineRequest,
   inviteFromRequest,
@@ -92,6 +93,13 @@ function claim(code: string, email = `${newUlid().toLowerCase()}@x.test`) {
 }
 
 /**
+Sorts two ids for comparing sets of redemption rows regardless of order.
+*/
+function byId(a: string, b: string) {
+  return a.localeCompare(b);
+}
+
+/**
  * Forces `mintInviteCode`'s next code, by controlling the bytes its default
  * `crypto.getRandomValues` source hands back — every byte becomes `byte`,
  * so the code is `INVITE_ALPHABET[byte % 32]` four times over.
@@ -153,6 +161,7 @@ describe("redeemInvite", () => {
         email: "maya@x.test",
         heldUntil: now + CLAIM_HOLD_S,
         redeemedAt: now,
+        confirmedAt: NOTHING,
       },
     ]);
   });
@@ -177,15 +186,67 @@ describe("redeemInvite", () => {
     expect(await db.select().from(inviteRedemptions)).toStrictEqual([]);
   });
 
-  it("lets a retried sign-up spend the code its failed attempt held", async () => {
+  it("lets a retried sign-up claim the code its earlier attempt holds, as the same use", async () => {
     await seedCode("DIAL-RTRY");
     const email = "retry@x.test";
-    expect(await redeemInvite(db, claim("DIAL-RTRY", email))).toBe("redeemed");
-    // The account never arrived; the same address tries again.
+    const now = 1_000_000;
+    const first = claim("DIAL-RTRY", email);
+    expect(await redeemInvite(db, first, now)).toBe("redeemed");
+    // The account has not arrived; the same address tries again.
     const again = claim("DIAL-RTRY", email);
-    expect(await redeemInvite(db, again)).toBe("redeemed");
+    expect(await redeemInvite(db, again, now + 1)).toBe("redeemed");
+    // Neither claim is cleared: either attempt may be the one that lands.
     const rows = await db.select().from(inviteRedemptions);
-    expect(rows.map((row) => row.userId)).toStrictEqual([again.userId]);
+    expect(rows.map((row) => row.userId).toSorted(byId)).toStrictEqual(
+      [first.userId, again.userId].toSorted(byId),
+    );
+    // One address, one use: another address is refused.
+    expect(await redeemInvite(db, claim("DIAL-RTRY"), now + 2)).toBe("used");
+  });
+
+  it("keeps an in-flight claim's use when a retry runs beside it and the first attempt's account wins", async () => {
+    // The interleaving: A claims; B (the same address, retrying) claims;
+    // A's user insert lands and B's fails on the address.
+    await seedCode("DIAL-RACE");
+    const email = `${newUlid().toLowerCase()}@race.test`;
+    const now = 1_000_000;
+    const a = claim("DIAL-RACE", email);
+    const b = claim("DIAL-RACE", email);
+    expect(await redeemInvite(db, a, now)).toBe("redeemed");
+    expect(await redeemInvite(db, b, now + 1)).toBe("redeemed");
+    await account(a.userId, email);
+    // The account has its redemption row…
+    const [kept] = await db
+      .select({ userId: inviteRedemptions.userId })
+      .from(inviteRedemptions)
+      .where(eq(inviteRedemptions.userId, a.userId));
+    expect(kept?.userId).toBe(a.userId);
+    // …and the code stays spent after every hold has run out.
+    const later = now + 1 + CLAIM_HOLD_S;
+    expect(await inviteStanding(db, "DIAL-RACE", later)).toBe("used");
+    expect(await redeemInvite(db, claim("DIAL-RACE"), later)).toBe("used");
+  });
+
+  it("does not take a retry's shortcut past a hold that has run out, or one confirmed", async () => {
+    await seedCode("DIAL-LATE");
+    const email = "late@x.test";
+    const now = 1_000_000;
+    await redeemInvite(db, claim("DIAL-LATE", email), now - CLAIM_HOLD_S);
+    expect(await redeemInvite(db, claim("DIAL-LATE"), now)).toBe("redeemed");
+    // The address's own claim ran out, and the code's one use is held by
+    // someone else since: no use left for it.
+    expect(await redeemInvite(db, claim("DIAL-LATE", email), now)).toBe("used");
+    await seedCode("DIAL-CONF", { maxUses: 2 });
+    const confirmed = claim("DIAL-CONF", "conf@x.test");
+    await redeemInvite(db, confirmed, now);
+    await confirmRedemption(db, confirmed.userId, now);
+    await redeemInvite(db, claim("DIAL-CONF"), now);
+    // A confirmed claim is a finished sign-up, not one in flight: a new
+    // sign-up from its address (its account since deleted) is a new use,
+    // and there is none left.
+    expect(
+      await redeemInvite(db, claim("DIAL-CONF", "conf@x.test"), now),
+    ).toBe("used");
   });
 
   it("never clears a claim whose account exists", async () => {
@@ -196,6 +257,37 @@ describe("redeemInvite", () => {
     await account(first.userId, email);
     await redeemInvite(db, claim("DIAL-KEEP", email));
     expect(await db.select().from(inviteRedemptions)).toHaveLength(2);
+  });
+});
+
+describe("confirmRedemption", () => {
+  it("makes a use permanent: deleting the account does not free the code", async () => {
+    await seedCode("DIAL-PERM");
+    const now = 1_000_000;
+    const mine = claim("DIAL-PERM", "perm@x.test");
+    await redeemInvite(db, mine, now);
+    await account(mine.userId, mine.email);
+    await confirmRedemption(db, mine.userId, now + 5);
+    await confirmRedemption(db, mine.userId, now + 9);
+    await db.delete(user).where(eq(user.id, mine.userId));
+    const later = now + CLAIM_HOLD_S;
+    expect(await inviteStanding(db, "DIAL-PERM", later)).toBe("used");
+    // Confirmed once, at the first call; a repeat leaves it.
+    const rows = await db
+      .select({ confirmedAt: inviteRedemptions.confirmedAt })
+      .from(inviteRedemptions);
+    expect(rows).toStrictEqual([{ confirmedAt: now + 5 }]);
+  });
+
+  it("frees an unconfirmed use whose account is gone, once the hold runs out", async () => {
+    await seedCode("DIAL-FREE");
+    const now = 1_000_000;
+    const mine = claim("DIAL-FREE", "free@x.test");
+    await redeemInvite(db, mine, now);
+    await confirmRedemption(db, newUlid(), now);
+    expect(await inviteStanding(db, "DIAL-FREE", now + CLAIM_HOLD_S)).toBe(
+      "open",
+    );
   });
 });
 
@@ -587,8 +679,14 @@ describe("accessGate", () => {
     expect(gate.isInviteOnly).toBe(true);
     await seedCode("DIAL-GATE");
     expect(await gate.standing("DIAL-GATE")).toBe("open");
-    expect(await gate.claim(claim("DIAL-GATE"))).toBe("redeemed");
+    const mine = claim("DIAL-GATE");
+    expect(await gate.claim(mine)).toBe("redeemed");
     expect(await gate.standing("DIAL-GATE")).toBe("used");
+    await gate.confirm(mine.userId);
+    const [row] = await db
+      .select({ confirmedAt: inviteRedemptions.confirmedAt })
+      .from(inviteRedemptions);
+    expect(row?.confirmedAt).toBeGreaterThan(0);
   });
 
   it("passes Turnstile only on its verdict, handing it the request's attempt", async () => {
@@ -608,19 +706,14 @@ describe("accessGate", () => {
 });
 
 describe("the claim's account", () => {
-  it("reads the account by id, not by address", async () => {
-    await seedCode("DIAL-BYID", { maxUses: 1 });
-    const mine = claim("DIAL-BYID", "id@x.test");
+  it("reads the account by address, not by id: a retry's account counts for the first claim too", async () => {
+    await seedCode("DIAL-BYAD", { maxUses: 1 });
+    const mine = claim("DIAL-BYAD", "addr@x.test");
     await redeemInvite(db, mine);
-    // An account with this address but another id does not make the hold
-    // permanent: only the account the claim was made for does.
-    await account(newUlid(), "id@x.test");
+    // The account arrived under another attempt's id: the use is still
+    // spent after the hold, because the address holds it.
+    await account(newUlid(), "addr@x.test");
     const later = nowSeconds() + CLAIM_HOLD_S + 1;
-    expect(await inviteStanding(db, "DIAL-BYID", later)).toBe("open");
-    const [row] = await db
-      .select({ userId: inviteRedemptions.userId })
-      .from(inviteRedemptions)
-      .where(eq(inviteRedemptions.email, "id@x.test"));
-    expect(row?.userId).toBe(mine.userId);
+    expect(await inviteStanding(db, "DIAL-BYAD", later)).toBe("used");
   });
 });

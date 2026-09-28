@@ -36,3 +36,13 @@ export function windowedCountUntil(
   const over = rows.find((row) => row.count > limit);
   return over === undefined ? undefined : over.startedAt + windowS;
 }
+
+/**
+ * `windowedCountUntil`'s verdict as SQL — true while `count` is within
+ * `limit`, the complement of its `count > limit` — for a write that must
+ * land in the same batch as the upsert only if it was allowed. A test
+ * pins the two against each other at the boundary.
+ */
+export function windowedCountWithin(count: SQLiteColumn, limit: number): SQL {
+  return sql`${count} <= ${limit}`;
+}

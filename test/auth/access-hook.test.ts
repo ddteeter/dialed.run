@@ -145,6 +145,25 @@ describe("email sign-up through the gate", () => {
     // The id the hook minted is the id Better Auth wrote.
     expect(spent?.userId).toBe(account?.id);
     expect(spent?.email).toBe(email);
+    // …and once it was written, the use is the account's for good.
+    expect(spent?.confirmedAt).toBeGreaterThan(0);
+  });
+
+  it("keeps a single-use code spent after its account is deleted", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await auth.handler(
+      signUpRequest(email, { "x-invite-code": code, "x-turnstile-token": "t" }),
+    );
+    await db.delete(user).where(eq(user.email, email));
+    const other = address();
+    const response = await auth.handler(
+      signUpRequest(other, { "x-invite-code": code, "x-turnstile-token": "t" }),
+    );
+    expect(await refusal(response)).toMatchObject({ code: "INVITE_INVALID" });
+    expect(await accountFor(other)).toBeUndefined();
   });
 
   it.each([
@@ -175,7 +194,7 @@ describe("email sign-up through the gate", () => {
     expect(await refusal(response)).toMatchObject({ code: "INVITE_INVALID" });
   });
 
-  it("refuses a used code the second time", async () => {
+  it("refuses a used code the second time, in the words of an invalid one", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
     const code = freshCode();
     await seedCode(code);
@@ -185,8 +204,8 @@ describe("email sign-up through the gate", () => {
     const second = address();
     const response = await auth.handler(signUpRequest(second, headers));
     expect(await refusal(response)).toStrictEqual({
-      code: "INVITE_USED",
-      message: INVITE_COPY.used,
+      code: "INVITE_INVALID",
+      message: INVITE_COPY.invalid,
     });
     expect(await accountFor(second)).toBeUndefined();
   });
@@ -372,6 +391,44 @@ describe("Google sign-up through the gate", () => {
     expect(spent?.userId).toBe(account?.id);
   });
 
+  it("signs an existing account in from Au2 with no code", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+    vi.restoreAllMocks();
+    const { started, landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-turnstile-token": "token" },
+    );
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/");
+    expect(landing?.searchParams.get("error")).toBeNull();
+  });
+
+  it("refuses a new account from Au2 with no code, after the round trip, and makes none", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const email = address();
+    const { started, landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-turnstile-token": "token" },
+    );
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/auth/signup");
+    expect(landing?.searchParams.get("error")).toBe("INVITE_MISSING");
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
   it("refuses before the redirect when the code is refused", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
     const { started } = await googleRoundTrip(
@@ -423,6 +480,7 @@ describe("Google sign-up through the gate", () => {
         claims.push(claim);
         return Promise.resolve("redeemed");
       },
+      confirm: () => Promise.resolve(),
     });
     await expect(
       create({ email: address() }, { path: "/sign-up/email" }),
@@ -436,6 +494,7 @@ describe("Google sign-up through the gate", () => {
       passesTurnstile: () => Promise.resolve(true),
       standing: () => Promise.resolve("open"),
       claim: () => Promise.resolve("used"),
+      confirm: () => Promise.resolve(),
     });
     await expect(
       create(
@@ -445,7 +504,7 @@ describe("Google sign-up through the gate", () => {
           headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
         },
       ),
-    ).rejects.toMatchObject({ body: { code: "INVITE_USED" } });
+    ).rejects.toMatchObject({ body: { code: "INVITE_INVALID" } });
   });
 
   it("treats a missing request context as no header code, not a thrown error", async () => {
@@ -464,6 +523,7 @@ describe("Google sign-up through the gate", () => {
         passesTurnstile: () => Promise.resolve(true),
         standing: () => Promise.resolve("open"),
         claim: () => Promise.resolve("redeemed"),
+        confirm: () => Promise.resolve(),
       });
       await expect(create({ email: address() }, NO_CONTEXT)).rejects.toMatchObject({
         body: { code: "INVITE_MISSING" },
@@ -497,6 +557,7 @@ describe("admitSignUp", () => {
         passesTurnstile: () => Promise.resolve(true),
         standing: () => Promise.resolve("open"),
         claim: () => Promise.resolve("redeemed"),
+        confirm: () => Promise.resolve(),
       };
       await admitSignUp(gate, {
         path: "/sign-up/email",
@@ -506,5 +567,55 @@ describe("admitSignUp", () => {
     } finally {
       contextSpy.mockRestore();
     }
+  });
+});
+
+describe("admitSignUp without a code", () => {
+  const standings: string[] = [];
+  const gate: AccessGate = {
+    isInviteOnly: true,
+    passesTurnstile: () => Promise.resolve(true),
+    standing: (code) => {
+      standings.push(code);
+      return Promise.resolve("open");
+    },
+    claim: () => Promise.resolve("redeemed"),
+    confirm: () => Promise.resolve(),
+  };
+  const google = { path: "/sign-in/social", body: { requestSignUp: true } };
+
+  it("lets Google from Au2 through with none, asking nothing of it", async () => {
+    await expect(admitSignUp(gate, google)).resolves.toBeUndefined();
+    expect(standings).toStrictEqual([]);
+  });
+
+  it("still refuses an email sign-up with none, before Better Auth", async () => {
+    await expect(
+      admitSignUp(gate, { path: "/sign-up/email" }),
+    ).rejects.toMatchObject({ body: { code: "INVITE_MISSING" } });
+  });
+
+  it("still refuses Google a code of the wrong shape, before the redirect", async () => {
+    await expect(
+      admitSignUp(gate, {
+        ...google,
+        headers: new Headers({ "x-invite-code": "hello" }),
+      }),
+    ).rejects.toMatchObject({ body: { code: "INVITE_INVALID" } });
+    expect(standings).toStrictEqual([]);
+  });
+
+  it("answers a spent code as an invalid one", async () => {
+    await expect(
+      admitSignUp(
+        { ...gate, standing: () => Promise.resolve("used") },
+        {
+          path: "/sign-up/email",
+          headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      body: { code: "INVITE_INVALID", message: INVITE_COPY.invalid },
+    });
   });
 });

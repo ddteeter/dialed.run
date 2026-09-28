@@ -67,7 +67,6 @@ describe("the words", () => {
       missing: "Enter your invite code.",
       invalid:
         "That code doesn't work. Check it against the email or message it came in.",
-      used: "That code has already been used. Ask whoever sent it for another.",
     });
     expect(TURNSTILE_REFUSED).toBe(
       "We couldn't check this browser. Reload the page and try again.",
@@ -83,7 +82,6 @@ describe("the words", () => {
       turnstile: "TURNSTILE_REFUSED",
       missing: "INVITE_MISSING",
       invalid: "INVITE_INVALID",
-      used: "INVITE_USED",
     });
   });
 });

@@ -8,7 +8,12 @@
  * Turnstile token that passes and, with invite-only on, a code that is
  * open. That refuses before Better Auth does anything — before the
  * redirect, for Google, so nobody is sent to Google's consent screen with
- * a code that was never going to work. Then, as the account is created
+ * a code that was never going to work. **Google from Au2 may go with no
+ * code at all**: the press cannot know yet whether the Google address
+ * already has an account, and one that does signs in without a code.
+ * Only a new account needs one, so a Google attempt with none is refused
+ * at the create hook instead, and comes back to Au2 as
+ * `?error=INVITE_MISSING`. Then, as the account is created
  * (`claimInvite`, the user create hook), the code is claimed: this is
  * where "consumed at account creation" is true, and where two sign-ups
  * racing for one single-use code are told apart.
@@ -19,8 +24,9 @@
  * hook on the callback reads a code that was validated before the
  * redirect, carried in the state Better Auth already signs and expires.
  * A Google sign-in to an account that exists makes no account, so it
- * needs no code; one that would make an account from the log-in page is
- * refused by Better Auth itself (`disableImplicitSignUp`).
+ * needs no code — from either page; one that would make an account from
+ * the log-in page is refused by Better Auth itself
+ * (`disableImplicitSignUp`).
  */
 import { APIError, addOAuthServerContext, getOAuthState } from "better-auth/api";
 import { z } from "zod";
@@ -63,6 +69,11 @@ export interface AccessGate {
   claim: (
     claim: Readonly<{ code: string; userId: string; email: string }>,
   ) => Promise<InviteClaim>;
+  /**
+   * The account a claim was for now exists: its use is spent for good,
+   * whatever later happens to the account.
+   */
+  confirm: (userId: string) => Promise<void>;
 }
 
 function refuse(code: keyof typeof ACCESS_CODES): never {
@@ -138,9 +149,14 @@ export async function admitSignUp(
   if (!(await gate.passesTurnstile(token, ctx.request))) refuse("turnstile");
   if (!gate.isInviteOnly) return;
   const typed = codeFrom(ctx.headers);
+  // Google with no code may be an account that exists: see the module
+  // comment. The create hook refuses it if it turns out not to be.
+  if (kind === "google" && !typed.ok && typed.refusal === "missing") return;
   if (!typed.ok) refuse(typed.refusal);
   const standing = await gate.standing(typed.code);
-  if (standing !== "open") refuse(standing);
+  // `used` reads as `invalid`: one sentence for both, so a prober cannot
+  // tell a spent code from one nobody made.
+  if (standing !== "open") refuse("invalid");
   if (kind === "google") await addOAuthServerContext({ inviteCode: typed.code });
 }
 
@@ -186,7 +202,7 @@ export function claimInvite(gate: AccessGate) {
     if (code === undefined) refuse("missing");
     const id = newUlid();
     const claimed = await gate.claim({ code, userId: id, email: user.email });
-    if (claimed !== "redeemed") refuse(claimed);
+    if (claimed !== "redeemed") refuse("invalid");
     return { data: { ...user, id, name: "" } };
   };
 }

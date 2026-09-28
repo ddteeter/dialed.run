@@ -9,6 +9,9 @@
  * no handle can contain) is left out. Nothing else is edited, so the list
  * can be re-vendored by replacing it whole.
  *
+ * The attribution the licence asks for is published in
+ * `docs/legal/third-party-notices.md`; keep the two in step on a re-vendor.
+ *
  * Read only by `./profanity.ts`, which decides how a handle is matched
  * against it (task 126; owner, 2026-09-27).
  */

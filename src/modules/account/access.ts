@@ -4,6 +4,7 @@
  * gate `modules/auth` is built with.
  */
 import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { accessRequests } from "../../db/schema-core";
@@ -11,9 +12,9 @@ import { IS_INVITE_ONLY } from "../../lib/access";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql-null";
-import { claimEmailSend } from "../email";
+import { countSend, sendAllowed, sendClaimOf } from "../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../ops";
-import { inviteStanding, redeemInvite } from "./invites";
+import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -54,6 +55,9 @@ export function accessGate(
     standing: (code: string) => inviteStanding(db, code),
     claim: (claim: Readonly<{ code: string; userId: string; email: string }>) =>
       redeemInvite(db, claim),
+    confirm: async (userId: string) => {
+      await confirmRedemption(db, userId);
+    },
   };
 }
 
@@ -71,9 +75,10 @@ export type AccessRequestResult =
 /**
  * Au5 · Request access. Turnstile first; then, on a real deployment, a
  * limit per visitor address (the email limiter's table, keyed `access:`),
- * so a script cannot fill D7 even with a solved challenge; then one
- * upsert — a repeat updates the note and leaves the request where it was
- * in the queue. A declined address that asks again is pending again.
+ * so a script cannot fill D7 even with a solved challenge, in one batch
+ * with one conditional upsert — a repeat updates the note and leaves the
+ * request where it was in the queue. A declined address that asks again
+ * is pending again.
  *
  * Idempotent without a key (law 8b): the address is the row's identity,
  * so a double submit is the same upsert twice.
@@ -91,23 +96,43 @@ export async function requestAccess(
 ): Promise<AccessRequestResult> {
   const verdict = await verify(input.attempt);
   if (!verdict.ok) return { status: "refused" };
-  if (input.isLimited) {
-    const visitor = input.attempt.remoteIp ?? "unknown";
-    const claim = await claimEmailSend(db, "access", visitor, now);
-    if (!claim.isAllowed) return { status: "limited", until: claim.until };
+  const email = input.email.toLowerCase();
+  if (!input.isLimited) {
+    await upsertRequest(db, { ...input, email }, sql`1`, now);
+    return { status: "received" };
   }
+  // One batch (law 2's "a claim plus the work it authorises"): the count
+  // and the request land together, and the request only if the count it
+  // sits beside allowed it.
+  const visitor = input.attempt.remoteIp ?? "unknown";
+  const [counted] = await db.batch([
+    countSend(db, "access", visitor, now),
+    upsertRequest(db, { ...input, email }, sendAllowed("access", visitor), now),
+  ]);
+  const claim = sendClaimOf(counted);
+  return claim.isAllowed
+    ? { status: "received" }
+    : { status: "limited", until: claim.until };
+}
+
+/**
+ * The request's upsert, written only where `allowed` holds: a repeat
+ * updates the note, and a declined address is pending again.
+ */
+function upsertRequest(
+  db: Db,
+  input: Readonly<{ email: string; note: string }>,
+  allowed: SQL,
+  now: number,
+) {
   // `orSqlNull`: drizzle drops an undefined value from the update's SET,
   // and a repeat with no note must clear the old one, not keep it.
   const note = orSqlNull(input.note === "" ? undefined : input.note);
-  await db
+  return db
     .insert(accessRequests)
-    .values({
-      id: newUlid(),
-      email: input.email.toLowerCase(),
-      note,
-      createdAt: now,
-      updatedAt: now,
-    })
+    .select(
+      sql`SELECT ${newUlid()}, ${input.email}, ${note}, 'pending', ${now}, ${now} WHERE ${allowed}`,
+    )
     .onConflictDoUpdate({
       target: accessRequests.email,
       set: {
@@ -116,5 +141,4 @@ export async function requestAccess(
         status: sql`CASE WHEN ${accessRequests.status} = 'declined' THEN 'pending' ELSE ${accessRequests.status} END`,
       },
     });
-  return { status: "received" };
 }

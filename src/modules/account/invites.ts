@@ -36,24 +36,32 @@ export type InviteStanding = "open" | "used" | "invalid";
 export type InviteClaim = "redeemed" | "used" | "invalid";
 
 /**
- * A redemption that still counts against its code: its account exists,
- * or its hold is live. Correlated on `invite_redemptions`' own columns.
+ * A redemption that still counts against its code: it was confirmed (its
+ * account arrived — and stays counted if that account is later deleted),
+ * an account holds its address, or its hold is live. Correlated on
+ * `invite_redemptions`' own columns.
+ *
+ * By address, not by the claim's own user id: a retried sign-up mints a
+ * new id, so the account that wins may be either attempt's, and the use
+ * is the address's whichever it was.
  */
 function stillCounts(now: number): SQL {
-  return sql`(${inviteRedemptions.heldUntil} > ${now} OR EXISTS (SELECT 1 FROM ${user} WHERE ${user.id} = ${inviteRedemptions.userId}))`;
+  return sql`(${inviteRedemptions.confirmedAt} IS NOT NULL OR ${inviteRedemptions.heldUntil} > ${now} OR EXISTS (SELECT 1 FROM ${user} WHERE ${user.email} = ${inviteRedemptions.email}))`;
 }
 
 /**
-How many of a code's uses are spent (see `stillCounts`).
-*/
+ * How many of a code's uses are spent (see `stillCounts`): one per
+ * address, so an address's second claim — a retry — is not a second use.
+ */
 function usesOf(codeId: SQL | typeof inviteCodes.id, now: number): SQL {
-  return sql`(SELECT count(*) FROM ${inviteRedemptions} WHERE ${inviteRedemptions.codeId} = ${codeId} AND ${stillCounts(now)})`;
+  return sql`(SELECT count(DISTINCT ${inviteRedemptions.email}) FROM ${inviteRedemptions} WHERE ${inviteRedemptions.codeId} = ${codeId} AND ${stillCounts(now)})`;
 }
 
 /**
  * Whether `code` (already normalized) would let an account in: `invalid`
- * for no such code or a revoked one — the two read alike, so a prober
- * learns nothing from which — and `used` when its uses are spent.
+ * for no such code or a revoked one, and `used` when its uses are spent.
+ * The sign-up form answers `used` and `invalid` with the same sentence
+ * (`INVITE_COPY.invalid`), so a prober learns nothing from which.
  */
 export async function inviteStanding(
   db: Db,
@@ -77,12 +85,14 @@ export async function inviteStanding(
  * Spends `code` on the account about to be made as `userId` — the claim
  * the user create hook makes, before Better Auth writes the row.
  *
- * **One batch.** A retried sign-up's own dead claim is cleared first (by
- * address, where no account holds the id), so a second attempt after a
- * failure is not refused by the first; the claim is one conditional
- * insert, so two sign-ups racing for a single-use code cannot both land —
- * D1 runs them one after the other, and the second sees the first's
- * hold; and the read at the end says whether this one did.
+ * **Nothing is deleted.** A retried sign-up (the same address, a new id)
+ * writes a second claim beside its first, and `usesOf` counts the address
+ * once, so the retry is not refused by its own earlier attempt — and an
+ * attempt still in flight keeps its claim, whichever of the two makes the
+ * account. The claim is one conditional insert, so two sign-ups from
+ * different addresses racing for a single-use code cannot both land: D1
+ * runs them one after the other, and the second sees the first's hold.
+ * The read after it, in the same batch, says whether this one did.
  */
 export async function redeemInvite(
   db: Db,
@@ -91,11 +101,10 @@ export async function redeemInvite(
 ): Promise<InviteClaim> {
   const email = claim.email.toLowerCase();
   const results = await db.batch([
-    deadClaimsOf(db, email),
     claimUse(db, { ...claim, email }, now),
     claimFor(db, claim.userId),
   ]);
-  if (results[2].length > 0) return "redeemed";
+  if (results[1].length > 0) return "redeemed";
   const standing = await inviteStanding(db, claim.code, now);
   // Open now but not claimed a moment ago is a hold that ran out in
   // between: it was spent when this claim ran.
@@ -103,19 +112,9 @@ export async function redeemInvite(
 }
 
 /**
- * This address's claims whose account never arrived: a sign-up that
- * failed after its claim, which a retry must not be refused by.
- */
-function deadClaimsOf(db: Db, email: string) {
-  const noAccount = sql`NOT EXISTS (SELECT 1 FROM ${user} WHERE ${user.id} = ${inviteRedemptions.userId})`;
-  return db
-    .delete(inviteRedemptions)
-    .where(and(eq(inviteRedemptions.email, email), noAccount));
-}
-
-/**
  * The claim: one row, written only if the code is live and has a use
- * left — the condition and the write are one statement.
+ * left for this address — a use left, or this address's own live claim
+ * on it already — the condition and the write are one statement.
  */
 function claimUse(
   db: Db,
@@ -123,10 +122,11 @@ function claimUse(
   now: number,
 ) {
   const useLeft = sql`${usesOf(inviteCodes.id, now)} < ${inviteCodes.maxUses}`;
+  const retry = sql`EXISTS (SELECT 1 FROM ${inviteRedemptions} WHERE ${inviteRedemptions.codeId} = ${inviteCodes.id} AND ${inviteRedemptions.email} = ${claim.email} AND ${inviteRedemptions.confirmedAt} IS NULL AND ${inviteRedemptions.heldUntil} > ${now})`;
   return db
     .insert(inviteRedemptions)
     .select(
-      sql`SELECT ${claim.userId}, ${inviteCodes.id}, ${claim.email}, ${now + CLAIM_HOLD_S}, ${now} FROM ${inviteCodes} WHERE ${inviteCodes.code} = ${claim.code} AND ${inviteCodes.revokedAt} IS NULL AND ${useLeft}`,
+      sql`SELECT ${claim.userId}, ${inviteCodes.id}, ${claim.email}, ${now + CLAIM_HOLD_S}, ${now}, NULL FROM ${inviteCodes} WHERE ${inviteCodes.code} = ${claim.code} AND ${inviteCodes.revokedAt} IS NULL AND (${useLeft} OR ${retry})`,
     );
 }
 
@@ -136,6 +136,28 @@ function claimFor(db: Db, userId: string) {
     .from(inviteRedemptions)
     .where(eq(inviteRedemptions.userId, userId))
     .limit(1);
+}
+
+/**
+ * The account a claim was for exists: the claim is a use for good. Called
+ * from the user create hook's `after`, so deleting the account later
+ * (PR 2b-2) never hands a single-use code back. Until it runs, the
+ * account's address is what counts the use (`stillCounts`).
+ */
+export function confirmRedemption(
+  db: Db,
+  userId: string,
+  now = nowSeconds(),
+) {
+  const unconfirmed = and(
+    eq(inviteRedemptions.userId, userId),
+    isNull(inviteRedemptions.confirmedAt),
+  );
+  // Unsent: the caller awaits it (the gate's `confirm`), or batches it.
+  return db
+    .update(inviteRedemptions)
+    .set({ confirmedAt: now })
+    .where(unconfirmed);
 }
 
 /**

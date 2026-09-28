@@ -95,13 +95,13 @@ const NEW_PASSWORD_REFUSALS: FieldRefusals = new Map([
 ]);
 
 /**
- * Sign-up's: a breached password, and the invite code's three refusals on
- * the code's own field (round 26 #20: "the used and invalid messages as
- * drawn", under INVITE CODE).
+ * Sign-up's: a breached password, and the invite code's refusals on the
+ * code's own field (round 26 #20, under INVITE CODE) — a used code reads
+ * as an invalid one.
  */
 const SIGN_UP_REFUSALS: FieldRefusals = new Map([
   [BREACHED_CODE, BREACHED_REFUSAL],
-  ...(["missing", "invalid", "used"] as const).map(
+  ...(["missing", "invalid"] as const).map(
     (refusal) =>
       [
         ACCESS_CODES[refusal],

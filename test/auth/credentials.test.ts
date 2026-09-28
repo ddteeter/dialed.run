@@ -174,7 +174,6 @@ describe("signUp", () => {
   it.each([
     ["INVITE_MISSING", INVITE_COPY.missing],
     ["INVITE_INVALID", INVITE_COPY.invalid],
-    ["INVITE_USED", INVITE_COPY.used],
   ])("lands %s on the invite code, in the board's words", async (code, message) => {
     client.signUp.mockResolvedValue({
       data: undefined,
@@ -419,7 +418,7 @@ describe("googleConsentUrl", () => {
   it("says a refused code in the band, under Au2's kicker", async () => {
     client.social.mockResolvedValue({
       data: undefined,
-      error: { code: "INVITE_USED", status: 400 },
+      error: { code: "INVITE_INVALID", status: 400 },
     });
     const thrown = await caught(
       googleConsentUrl("/", "/auth/signup", {
@@ -430,7 +429,7 @@ describe("googleConsentUrl", () => {
     expect(thrown).toBeInstanceOf(AccessRefused);
     expect(thrown).toMatchObject({
       kicker: "Not signed in",
-      message: INVITE_COPY.used,
+      message: INVITE_COPY.invalid,
     });
   });
 

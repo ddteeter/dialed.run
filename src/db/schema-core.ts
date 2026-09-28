@@ -210,6 +210,12 @@ export const inviteCodes = /*#__PURE__*/ sqliteTable(
  * counts against the code while its account exists *or* its hold is live,
  * so a sign-up that died between the claim and the account frees the
  * code when the hold runs out (`modules/account/invites.ts`).
+ *
+ * **A use is an address, and once made it is permanent.** Uses are
+ * counted by distinct `email`, so a retried sign-up's second claim is the
+ * same use, never a second one; and `confirmed_at` is set by the user
+ * create hook's `after` once the account exists, so deleting that account
+ * later does not hand the use back.
  */
 export const inviteRedemptions = /*#__PURE__*/ sqliteTable(
   "invite_redemptions",
@@ -219,11 +225,12 @@ export const inviteRedemptions = /*#__PURE__*/ sqliteTable(
     email: text("email").notNull(),
     heldUntil: integer("held_until").notNull(),
     redeemedAt: integer("redeemed_at").notNull(),
+    confirmedAt: integer("confirmed_at"),
   },
   (t) => [
     // A code's uses, counted at the claim and listed on D7.
     index("invite_redemptions_code").on(t.codeId),
-    // A retried sign-up clears its own dead claim by address.
+    // A retried sign-up's live claim, found by address.
     index("invite_redemptions_email").on(t.email),
   ],
 );

@@ -21,8 +21,11 @@ export const IS_INVITE_ONLY = true;
 export const INVITE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 /**
-`DIAL-` and four of the alphabet.
-*/
+ * `DIAL-` and four of the alphabet: 32^4, about a million codes (20 bits).
+ * Enough for the friends stage (D-38), where a code is handed to someone
+ * and a guesser must also pass Turnstile and Better Auth's sign-up limit
+ * per attempt; the public gate lengthens it or retires codes altogether.
+ */
 export const INVITE_PREFIX = "DIAL-";
 const INVITE_BODY_LENGTH = 4;
 
@@ -31,15 +34,16 @@ const INVITE_SHAPE = new RegExp(
 );
 
 /**
- * Round 26 #20's two refusals, word for word. A code that is not the
- * right shape reads as `invalid` too: the form's check and the server's
- * say the same thing, so neither tells a prober which it was.
+ * Round 26 #20's refusals. A spent code, a revoked one, one nobody made
+ * and one that is not the right shape all read as `invalid`: the form's
+ * check and the server's say the same thing, so none of them tells a
+ * prober which it was (PR #127 review — the board's separate "already
+ * been used" sentence was that signal, and is retired).
  */
 export const INVITE_COPY = {
   missing: "Enter your invite code.",
   invalid:
     "That code doesn't work. Check it against the email or message it came in.",
-  used: "That code has already been used. Ask whoever sent it for another.",
 } as const;
 
 /**
@@ -110,5 +114,4 @@ export const ACCESS_CODES = {
   turnstile: "TURNSTILE_REFUSED",
   missing: "INVITE_MISSING",
   invalid: "INVITE_INVALID",
-  used: "INVITE_USED",
 } as const;

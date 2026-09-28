@@ -215,25 +215,48 @@ among them). Force-rename is lane 128's, through the account API (#126).
   `requestSignUp`) can make an account; from Au1 an unknown Google address
   comes back `signup_disabled` ("No account uses that Google address.
   Create one first." — placeholder copy). A Google sign-in to an existing
-  account needs neither code nor Turnstile.
+  account needs no code, **from either page** (PR #127 review): Au2's
+  press cannot know whether the Google address has an account, so a
+  Google attempt from Au2 with the field empty is let through (Turnstile
+  still asked), and a *new* account with no code is refused by the create
+  hook after the round trip, landing back on Au2 as
+  `?error=INVITE_MISSING` with the field's own sentence in the band. A
+  typed code is still checked before the redirect.
 - **"Consumed at account creation, in the same batch".** Better Auth makes
   the user row, so no batch of ours can hold it. The user create hook
   (`claimInvite`) mints the account's id itself (Better Auth creates with
   `forceAllowId`) and claims the code against that id *before* the row is
-  written, in one batch: clear this address's dead claims (a claim whose
-  account does not exist — a retried sign-up), then one conditional
-  `INSERT … SELECT` that writes only if the code is live and has a use
-  left, then read it back. A claim counts against its code while its
-  account exists **or** its 10-minute hold is live, so two sign-ups racing
-  for a single-use code cannot both land, and a Worker that dies between
-  the claim and the account frees the code when the hold runs out. A
-  registered address never reaches the create hook, so it spends nothing
-  and answers exactly as a new one.
+  written, in one batch: one conditional `INSERT … SELECT` that writes
+  only if the code is live and has a use left (or this address already
+  holds a live, unconfirmed claim on it — a retry), then read it back.
+  **A use is an address**, counted by distinct email: a claim counts
+  while it is confirmed, an account holds its address, **or** its
+  10-minute hold is live. Nothing is deleted — an earlier version cleared
+  "dead" claims by address on a retry, which also cleared a concurrent
+  attempt still in flight and could reopen a single-use code (PR #127
+  review) — so two sign-ups from different addresses racing for a
+  single-use code cannot both land, a retry is the same use, and a Worker
+  that dies between the claim and the account frees the code when the
+  hold runs out. The create hook's `after` sets `confirmed_at`
+  (`0035_add_invite_redemption_confirmed_at`), so deleting the account
+  later (2b-2) does not hand the use back. A registered address never
+  reaches the create hook, so it spends nothing and answers exactly as a
+  new one.
+- **One refusal for a code that will not work.** A spent code answers
+  exactly as a revoked or unknown one (`INVITE_INVALID`, "That code
+  doesn't work…"): round 26 #20's separate "already been used" sentence
+  told a prober which codes exist, and is retired (PR #127 review).
+  **Codes are 20 bits** (`DIAL-` + 4 of 32 characters, ~1M): acceptable at
+  the friends stage, where each guess must also pass Turnstile and Better
+  Auth's sign-up limit; the public gate (D-38) lengthens them or retires
+  codes.
 - **Au5** upserts by address (a repeat updates the note; a declined address
   that asks again is pending again), Turnstile first, then — on an https
   deployment only, as Better Auth's limiter — five an hour per visitor
   address (`cf-connecting-ip`), in `email_send_limits` under `access:{ip}`.
-  One receipt for everyone.
+  The limiter's count and the request's upsert are one `db.batch()`, the
+  upsert conditional on the count just made (`sendAllowed`). One receipt
+  for everyone.
 - **D7** (`/desk/access`) is the `/desk` layout's not-found plus
   `requireAdmin` on every server function. Send invite mints a single-use
   code labelled "{email} (request)" and moves the request, one batch,
@@ -244,9 +267,11 @@ among them). Force-rename is lane 128's, through the account API (#126).
 - **The owner's account** is a deployment step: one code inserted by
   `wrangler d1 execute` (deployment plan, stage 0). A seeded code in a
   migration would be a public way in.
-- **Usernames** (D-70): the vendored LDNOOBW list (CC BY 4.0) matched on
-  whole parts only — substring matching refused `basement`, `scraping` and
-  `raccoons`; OpenAI moderation asked once, after the list, and failing
+- **Usernames** (D-70): the vendored LDNOOBW list (CC BY 4.0, attributed
+  in `docs/legal/third-party-notices.md`) matched on whole parts only —
+  substring matching refused `basement`, `scraping` and `raccoons` — less
+  the listed words that are innocent in a handle (`INNOCENT_IN_HANDLES`:
+  `tit` in `blue_tit`, `dick` as a name, `sucks`; PR #127 review); OpenAI moderation asked once, after the list, and failing
   open; both read as taken with no suggestion (D-57). Text moderation is
   **not** in `modules/safety` (it screens images only), so the handle's
   request is `account/handle-screen.ts`, reusing safety's model constant.
@@ -256,7 +281,8 @@ among them). Force-rename is lane 128's, through the account API (#126).
   the stored ones.
 
 Migrations (core): `0033_add_invite_codes_and_access_requests` (three new
-tables, additive) and `0034_blank_user_names` (data only).
+tables, additive), `0034_blank_user_names` (data only) and
+`0035_add_invite_redemption_confirmed_at` (one nullable column, additive).
 
 ## Contract touches
 

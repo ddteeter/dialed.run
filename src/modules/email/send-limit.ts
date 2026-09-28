@@ -5,12 +5,18 @@
  * Counted per address whatever the address is: see `email_send_limits`
  * for why an unknown address is counted too.
  */
+import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { emailSendLimits } from "../../db/schema-core";
 import { EMAIL_SENDS_PER_HOUR } from "../../lib/email";
 import { nowSeconds } from "../../lib/now";
-import { windowedCountSet, windowedCountUntil } from "../../lib/window-count";
+import {
+  windowedCountSet,
+  windowedCountUntil,
+  windowedCountWithin,
+} from "../../lib/window-count";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -38,19 +44,28 @@ export type SendClaim =
     };
 
 /**
- * Count one send, and say whether it may go.
+The limiter's row for one kind of send to one address.
+*/
+function sendLimitKey(kind: LimitedSend, address: string): string {
+  return `${kind}:${address.toLowerCase()}`;
+}
+
+/**
+ * Count one send — the statement, unsent, so a caller can put it in a
+ * `db.batch()` with the write it allows (`sendAllowed` reads the verdict
+ * inside the same batch). `sendClaimOf` reads its answer.
  *
  * **One statement** (`windowedCountSet`), so two requests at once cannot
  * both read four and both send a sixth. A window an hour old starts over
  * at one. The count keeps climbing past the limit, which changes nothing — a
  * refused send is still refused until the window ends.
  */
-export async function claimEmailSend(
+export function countSend(
   db: Db,
   kind: LimitedSend,
   address: string,
   now = nowSeconds(),
-): Promise<SendClaim> {
+) {
   const next = windowedCountSet(
     {
       startedAt: emailSendLimits.windowStartedAt,
@@ -59,10 +74,10 @@ export async function claimEmailSend(
     now,
     SEND_WINDOW_S,
   );
-  const rows = await db
+  return db
     .insert(emailSendLimits)
     .values({
-      key: `${kind}:${address.toLowerCase()}`,
+      key: sendLimitKey(kind, address),
       windowStartedAt: now,
       sends: 1,
     })
@@ -74,8 +89,37 @@ export async function claimEmailSend(
       startedAt: emailSendLimits.windowStartedAt,
       count: emailSendLimits.sends,
     });
+}
+
+/**
+What `countSend` returned, as the answer.
+*/
+export function sendClaimOf(
+  rows: readonly Readonly<{ startedAt: number; count: number }>[],
+): SendClaim {
   const until = windowedCountUntil(rows, SENDS_PER_WINDOW, SEND_WINDOW_S);
   return until === undefined
     ? { isAllowed: true }
     : { isAllowed: false, until };
+}
+
+/**
+ * The same verdict as SQL, for a write in the batch after `countSend`:
+ * true while the count it just made is within the limit
+ * (`windowedCountWithin`, the limit `sendClaimOf` applies).
+ */
+export function sendAllowed(kind: LimitedSend, address: string): SQL {
+  return sql`EXISTS (SELECT 1 FROM ${emailSendLimits} WHERE ${emailSendLimits.key} = ${sendLimitKey(kind, address)} AND ${windowedCountWithin(emailSendLimits.sends, SENDS_PER_WINDOW)})`;
+}
+
+/**
+Count one send, and say whether it may go.
+*/
+export async function claimEmailSend(
+  db: Db,
+  kind: LimitedSend,
+  address: string,
+  now = nowSeconds(),
+): Promise<SendClaim> {
+  return sendClaimOf(await countSend(db, kind, address, now));
 }

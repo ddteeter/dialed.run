@@ -519,7 +519,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     connected." "Turn them back on" is the inline link grammar in ink:
     the board's `#C21A6B` is not a T1 role.
 
-35. **Six placeholders task 126 built into the invite stage (PR 2b-1).**
+35. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
     Round 26 #20 drew Au2's code, Au5, its receipt and D7; these are the
     states it did not draw, each built from existing primitives and copy
     in the register:
@@ -528,6 +528,14 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       that failed (Au6), so a refused code on Google is said in Google's
       band — "Not signed in" and the code's own drawn sentence — not on the
       field. A Turnstile refusal on either is `NOT SENT` (round 27 #12).
+    - **Au2 · a used code reads as an invalid one** (PR #127 review): the
+      drawn "That code has already been used…" told a prober which codes
+      exist, so every code that will not work says "That code doesn't
+      work. Check it against the email or message it came in." Design is
+      asked to confirm, or to draw one sentence that serves both.
+    - **Au2 · Google with the code field empty.** An existing account
+      signs in (it needs no code); a new one comes back from Google to
+      Au2 with Google's band saying the field's "Enter your invite code."
     - **Au1 · Google for an address with no account.** Google can make an
       account only from Au2, so Au1 says in its band "No account uses that
       Google address. Create one first."

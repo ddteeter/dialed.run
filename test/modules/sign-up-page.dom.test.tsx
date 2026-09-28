@@ -202,15 +202,15 @@ describe("Au2 · submitting with a code", () => {
     expect(client.signUp).not.toHaveBeenCalled();
   });
 
-  it("lands a used code on the code field, in the board's words", async () => {
+  it("lands a refused code on the code field, in the board's words", async () => {
     client.signUp.mockResolvedValue({
       data: undefined,
-      error: { code: "INVITE_USED", status: 400 },
+      error: { code: "INVITE_INVALID", status: 400 },
     });
     const { user } = await signUpPage();
     await fill(user, "DIAL-7K3P");
     await user.click(screen.getByRole("button", { name: "Create account" }));
-    expect(await screen.findByText(INVITE_COPY.used)).toBeVisible();
+    expect(await screen.findByText(INVITE_COPY.invalid)).toBeVisible();
     expect(screen.getByLabelText("Invite code")).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -296,4 +296,15 @@ describe("Au2 · Google in the invite stage", () => {
       "No account uses that Google address. Create one first.",
     );
   });
+
+  it.each([
+    ["INVITE_MISSING", INVITE_COPY.missing],
+    ["INVITE_INVALID", INVITE_COPY.invalid],
+  ])(
+    "says a new Google account's %s from the round trip in the code field's words",
+    async (error, message) => {
+      await signUpPage({ returnedError: error });
+      expect(part("failure-band")).toHaveTextContent(message);
+    },
+  );
 });

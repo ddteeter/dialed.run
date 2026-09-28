@@ -243,6 +243,10 @@ export function createAuth({
           // No name, and (invite-only) a code spent: `claimInvite`.
           before: claimInvite(access),
           after: async (user) => {
+            // The code's use is the account's for good now, even if the
+            // account is deleted later. Awaited: it is one small write,
+            // and until it lands the address alone holds the use.
+            await access.confirm(user.id);
             if (!user.emailVerified) await later(mail.newAccount(user));
           },
         },

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isProfaneHandle, readBackDigits } from "../../src/lib/profanity";
+import {
+  INNOCENT_IN_HANDLES,
+  isProfaneHandle,
+  readBackDigits,
+} from "../../src/lib/profanity";
 import { PROFANE_WORDS } from "../../src/lib/profanity-words";
 
 /**
@@ -12,11 +16,52 @@ function asHandle(word: string): string {
 }
 
 describe("isProfaneHandle", () => {
-  it("refuses every listed word, as a whole handle", () => {
+  it("refuses every listed word, as a whole handle, but the innocent ones", () => {
     expect(PROFANE_WORDS.length).toBeGreaterThan(400);
     for (const word of PROFANE_WORDS) {
-      expect(isProfaneHandle(asHandle(word)), word).toBe(true);
+      const handle = asHandle(word);
+      expect(isProfaneHandle(handle), word).toBe(
+        !INNOCENT_IN_HANDLES.has(handle),
+      );
     }
+  });
+
+  it("lets the words that are innocent in a handle through, whole or as a part", () => {
+    expect([...INNOCENT_IN_HANDLES]).toStrictEqual([
+      "dick",
+      "escort",
+      "hooker",
+      "scat",
+      "suck",
+      "sucks",
+      "tit",
+      "twinkie",
+      "xx",
+    ]);
+    // Each is on the vendored list — otherwise it has no business here.
+    for (const word of INNOCENT_IN_HANDLES) {
+      expect(
+        PROFANE_WORDS.map((listed) => asHandle(listed)),
+        word,
+      ).toContain(word);
+    }
+    for (const handle of [
+      "blue_tit",
+      "dick",
+      "dick_runs",
+      "hills_sucks",
+      "maya_xx",
+      "ford_escort",
+    ]) {
+      expect(isProfaneHandle(handle), handle).toBe(false);
+    }
+  });
+
+  it("still refuses a clear slur and an explicit term, the innocent ones' neighbours", () => {
+    expect(isProfaneHandle("kike")).toBe(true);
+    expect(isProfaneHandle("run_n1gger")).toBe(true);
+    expect(isProfaneHandle("tits_out")).toBe(true);
+    expect(isProfaneHandle("big_cock")).toBe(true);
   });
 
   it("refuses a listed word as one part of a handle", () => {

@@ -6,6 +6,7 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
+import { ACCESS_CODES, INVITE_COPY } from "../../lib/access";
 import {
   FailureBand,
   PendingLabel,
@@ -36,16 +37,27 @@ export interface GoogleSignIn extends ControlAction<[]> {
 const SIGNUP_DISABLED = "signup_disabled";
 
 /**
+ * The round trip's refusals that have their own words: an address with no
+ * account, told where accounts are made; and, from Au2, a new Google
+ * account with no code (or one spent while the runner was at Google),
+ * told what the code field would have said (ACC-5).
+ */
+const RETURNED_MESSAGES: ReadonlyMap<string | undefined, string> = new Map([
+  [SIGNUP_DISABLED, AUTH_COPY.googleNoAccount],
+  [ACCESS_CODES.missing, INVITE_COPY.missing],
+  [ACCESS_CODES.invalid, INVITE_COPY.invalid],
+]);
+
+/**
  * The band for a failure Google's round trip brought back, rather than one
  * this page saw happen. Same kicker, same sentence — the runner cannot
- * tell the two apart and should not have to — except for an address with
- * no account, which is told where accounts are made.
+ * tell the two apart and should not have to — except for the refusals in
+ * `RETURNED_MESSAGES`.
  */
 function returnedFailure(error: string | undefined): ControlFailure {
   return {
     kicker: AUTH_KICKER,
-    message:
-      error === SIGNUP_DISABLED ? AUTH_COPY.googleNoAccount : AUTH_COPY.google,
+    message: RETURNED_MESSAGES.get(error) ?? AUTH_COPY.google,
   };
 }
 
