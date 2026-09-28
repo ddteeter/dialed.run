@@ -169,22 +169,18 @@ async function liveEntryPhotoKeys(
 
 /**
  * An owed email (task 126, ACC-2). A send is at-least-once like every
- * handler here, and the sender has no idempotency key, so two things stand
- * in for one: the debt's own `Message-ID` on every attempt
- * (`deliverOwedEmail`), and the row marked sent — `sent_at` and the
- * sender's id, in one statement — the moment the send lands. A Worker
- * that dies before the delete leaves a row the drain deletes rather than
- * sends again. `deps` is a parameter so a test hands in a fake sender.
+ * handler here, and the sender has no idempotency key (and sets
+ * `Message-ID` itself, refusing ours), so the row is marked sent —
+ * `sent_at` and the sender's id, in one statement — the moment the send
+ * lands. A Worker that dies before the delete leaves a row the drain
+ * deletes rather than sends again. What no mark can cover is a Worker
+ * that dies between the send and the mark: that email goes twice.
+ * `deps` is a parameter so a test hands in a fake sender.
  */
 export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
   return {
     run: async (db, payload, rowId) => {
-      const sent = await deliverOwedEmail(
-        db,
-        payload.email,
-        payload.dedupeKey,
-        deps(),
-      );
+      const sent = await deliverOwedEmail(db, payload.email, deps());
       if (sent.status === "skipped") return;
       await db
         .update(outbox)

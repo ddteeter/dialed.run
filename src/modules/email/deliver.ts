@@ -133,33 +133,6 @@ async function optionalMail(
 }
 
 /**
- * The left half of a msg-id (RFC 5322 §3.6.4, `dot-atom-text`): letters,
- * digits and the atext symbols, in dot-separated runs.
- */
-const DOT_ATOM = /^[\w!#$%&'*+/=?^`{|}~-]+(?:\.[\w!#$%&'*+/=?^`{|}~-]+)*$/u;
-
-/**
- * The `Message-ID` an owed email carries, the same on every attempt: made
- * from its outbox dedupe key, so a send retried after a Worker died
- * between the send and the row's delete reaches the inbox with the id the
- * first one had, and Gmail and others show one message. Cloudflare's
- * sender has no idempotency key of its own. A key that is not already a
- * valid id-left is hashed — deterministically, so the same debt still
- * builds the same header.
- */
-export async function messageIdFor(dedupeKey: string): Promise<string> {
-  if (DOT_ATOM.test(dedupeKey)) return `<${dedupeKey}@dialed.run>`;
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(dedupeKey),
-  );
-  const hex = [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  return `<${hex}@dialed.run>`;
-}
-
-/**
  * The sender's answer, as far as anything here reads it. The binding
  * types it; a fake or a future binding may not, so it is parsed.
  */
@@ -173,7 +146,6 @@ async function send(
   db: Db,
   payload: EmailPayload,
   deps: EmailDeps,
-  extraHeaders: Readonly<Record<string, string>>,
 ): Promise<Sent> {
   const recipient = await recipientOf(db, payload.to);
   if (recipient === undefined) return { status: "skipped" };
@@ -184,13 +156,10 @@ async function send(
     origin: deps.origin,
     unsubscribe,
   });
-  const headers: Record<string, string> = {
-    ...extraHeaders,
-    ...(unsubscribe !== undefined && {
-      "List-Unsubscribe": `<${unsubscribe}>`,
-      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-    }),
-  };
+  // Only headers Cloudflare's allowlist accepts: `Message-ID`, `Date` and
+  // the other platform headers are refused with `E_HEADER_NOT_ALLOWED`
+  // (developers.cloudflare.com/email-service/reference/headers), so no
+  // header here can make a retried send collapse into the first.
   const result = sendResultSchema.safeParse(
     await deps.send({
       from: EMAIL_FROM,
@@ -198,7 +167,12 @@ async function send(
       subject: email.subject,
       html: email.html,
       text: email.text,
-      ...(Object.keys(headers).length > 0 && { headers }),
+      ...(unsubscribe !== undefined && {
+        headers: {
+          "List-Unsubscribe": `<${unsubscribe}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      }),
     }),
   );
   return {
@@ -220,22 +194,20 @@ export async function deliverEmail(
   payload: EmailPayload,
   deps: EmailDeps = emailDepsFromEnv(),
 ): Promise<"sent" | "skipped"> {
-  const sent = await send(db, payload, deps, {});
+  const sent = await send(db, payload, deps);
   return sent.status;
 }
 
 /**
- * An owed email (the outbox's): sent with the debt's own `Message-ID`, and
- * answering the sender's `messageId`, which the outbox records on the row
- * before deleting it.
+ * An owed email (the outbox's): answering the sender's `messageId`, which
+ * the outbox records on the row — with `sent_at` — before deleting it.
+ * That mark is the only duplicate protection an owed email has: the sender
+ * takes no idempotency key and sets `Message-ID` itself.
  */
 export async function deliverOwedEmail(
   db: Db,
   payload: EmailPayload,
-  dedupeKey: string,
   deps: EmailDeps = emailDepsFromEnv(),
 ): Promise<Sent> {
-  return send(db, payload, deps, {
-    "Message-ID": await messageIdFor(dedupeKey),
-  });
+  return send(db, payload, deps);
 }

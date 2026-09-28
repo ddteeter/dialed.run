@@ -23,11 +23,7 @@ import {
   setEmailPreference,
   isEmailWanted,
 } from "../../src/modules/email";
-import {
-  deliverOwedEmail,
-  EMAIL_FROM,
-  messageIdFor,
-} from "../../src/modules/email/deliver";
+import { deliverOwedEmail, EMAIL_FROM } from "../../src/modules/email/deliver";
 import {
   SEND_WINDOW_S,
   SENDS_PER_WINDOW,
@@ -50,7 +46,15 @@ import {
   type OutboxHandlers,
 } from "../../src/modules/ops/outbox-handlers";
 import { handleScheduled } from "../../src/modules/ops";
-import { core, fakeMail, ORIGIN, SECRET, seedUser } from "./helpers";
+import {
+  CLOUDFLARE_DISALLOWED_HEADERS,
+  core,
+  fakeMail,
+  ORIGIN,
+  refusedHeaders,
+  SECRET,
+  seedUser,
+} from "./helpers";
 
 /**
  * The one sender (ACC-2), on real D1: who it writes to, what it will not
@@ -657,24 +661,52 @@ function handlersSendingTo(mail: ReturnType<typeof fakeMail>): OutboxHandlers {
   return { ...outboxHandlers, email: emailHandler(() => mail) };
 }
 
-describe("an owed email's Message-ID", () => {
-  it("is the same for two sends of one debt, and different for another", async () => {
+describe("an owed email", () => {
+  it("carries no header Cloudflare refuses, Message-ID included", async () => {
     const mail = fakeMail();
-    const payload = {
-      to: { address: "a@example.com" },
-      template: { kind: "existing_account" },
-    } as const;
+    const { userId } = await seedUser();
+    await deliverOwedEmail(
+      db,
+      {
+        to: { address: "a@example.com" },
+        template: { kind: "existing_account" },
+      },
+      mail,
+    );
+    // An optional email is the one with headers at all.
+    await deliverOwedEmail(db, { to: { userId }, template: REMINDER }, mail);
 
-    await deliverOwedEmail(db, payload, "debt-1", mail);
-    await deliverOwedEmail(db, payload, "debt-1", mail);
-    await deliverOwedEmail(db, payload, "debt-2", mail);
-
-    const ids = mail.sent.map((message) => message.headers?.["Message-ID"]);
-    expect(ids).toStrictEqual([
-      "<debt-1@dialed.run>",
-      "<debt-1@dialed.run>",
-      "<debt-2@dialed.run>",
+    expect(mail.sent).toHaveLength(2);
+    expect(mail.sent[0]?.headers).toBeUndefined();
+    expect(Object.keys(mail.sent[1]?.headers ?? {})).toStrictEqual([
+      "List-Unsubscribe",
+      "List-Unsubscribe-Post",
     ]);
+    expect(mail.sent.flatMap((message) => refusedHeaders(message))).toEqual([]);
+  });
+
+  it("is refused by the fake as Cloudflare refuses it, so the rule holds in every test", async () => {
+    expect(CLOUDFLARE_DISALLOWED_HEADERS).toContain("Message-ID");
+    const mail = fakeMail();
+    await expect(
+      mail.send({
+        from: EMAIL_FROM,
+        to: "a@example.com",
+        subject: "s",
+        text: "t",
+        headers: { "message-id": "<x@dialed.run>" },
+      }),
+    ).rejects.toThrow("E_HEADER_NOT_ALLOWED: message-id");
+    await expect(
+      mail.send({
+        from: EMAIL_FROM,
+        to: "a@example.com",
+        subject: "s",
+        text: "t",
+        headers: { "ARC-Seal": "x", "X-Dialed": "ok" },
+      }),
+    ).rejects.toThrow("E_HEADER_NOT_ALLOWED: ARC-Seal");
+    expect(mail.sent).toStrictEqual([]);
   });
 
   it("answers the sender's own id", async () => {
@@ -685,7 +717,6 @@ describe("an owed email's Message-ID", () => {
         to: { address: "a@example.com" },
         template: { kind: "existing_account" },
       },
-      "debt-3",
       mail,
     );
     expect(sent).toStrictEqual({ status: "sent", messageId: mail.ids[0] });
@@ -699,27 +730,12 @@ describe("an owed email's Message-ID", () => {
         to: { address: "a@example.com" },
         template: { kind: "existing_account" },
       },
-      "debt-4",
       { ...mail, send: () => Promise.resolve({}) },
     );
     expect(sent).toStrictEqual({ status: "sent", messageId: undefined });
   });
 
-  it("uses a valid dedupe key as it is, and hashes one with characters a msg-id cannot hold", async () => {
-    expect(await messageIdFor("run.reminder_01J-x")).toBe(
-      "<run.reminder_01J-x@dialed.run>",
-    );
-    const hashed = await messageIdFor("email_changed:u1:1800000000");
-    expect(hashed).toMatch(/^<[0-9a-f]{64}@dialed\.run>$/u);
-    expect(await messageIdFor("email_changed:u1:1800000000")).toBe(hashed);
-    expect(await messageIdFor("email_changed:u1:1800000001")).not.toBe(hashed);
-    // A dot may only join runs: leading, trailing or doubled is hashed.
-    for (const key of [".a", "a.", "a..b", "a b", "a@b", "a<b>"]) {
-      expect(await messageIdFor(key), key).toMatch(/^<[0-9a-f]{64}@/u);
-    }
-  });
-
-  it("is not set on an email sent now, which has no debt to name it", async () => {
+  it("sets no headers on a transactional email sent now", async () => {
     const mail = fakeMail();
     await deliverEmail(
       db,
