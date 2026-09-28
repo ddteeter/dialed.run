@@ -438,6 +438,31 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       ask:** drop the case line or say what it names; and what D4 says
       when it has the reason but no date.
 
+32. **Two sizes the contracts do not give, found in the owner's UI review
+    (PR "UI polish: fields beside buttons, the closet's rows, A2/A3 at
+    width").** Both were measured in the running app, not on a board.
+    - **How tall is a field?** The owner asked whether fields are too
+      tall. The Form Contract gives the field's anatomy (1px rule → 2px
+      ink, padding that never resizes the box) and tokens.js gives
+      "hit targets are ≥ 44px tall", but neither gives a field height.
+      The built box is **50px**: the ported padding (`px-4 py-3`, the
+      design prototype's 12px) plus TYPE.body's 24px line plus two 1px
+      rules. Its `min-h-12` (48) never binds. The pill buttons beside a
+      field (Find) are 48.5px on their own, and now stretch to the box.
+      **The ask:** is 50 right, or should the contract name a field
+      height? A 48px field is 11px of padding, which SPACE has no step
+      for, so a smaller field is a contract change, not a build fix.
+    - **The closet tile has no photo well.** Board C's tile is a photo
+      well (the photo, or the hatch) over the name and two mono lines,
+      and its dashed Add tile is drawn at a full tile's height. The
+      built tile (`closet/components/ClosetGrid.tsx`) is the text half
+      only, so a full-height Add tile ran its row to 160px against 85px
+      for every other row. The row is fixed — the Add tile now takes its
+      row's height, and keeps the minimum only as the only cell — but
+      the tile itself is still short of C. **The ask:** the photo well's
+      height as a token (nothing in tokens.js gives one), or a ruling
+      that v1's tile is text-only.
+
 ## Answered in round 26 (imported 2026-09-25)
 
 Twenty-two asks: round 24's eight, carried in full, F at the desk as round 25

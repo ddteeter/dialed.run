@@ -1512,9 +1512,49 @@ describe("VerdictForm: the run header (round 21)", () => {
 
     const header = screen.getByRole("banner");
     expect(header).toHaveAttribute("data-slot", "header");
-    expect(header).toHaveAttribute("data-ground", "ink");
+    expect(header).toHaveAttribute("data-ground", "ink-until-wide");
     expect(within(header).getByText("Sat Aug 29 · 6:04 AM")).toBeVisible();
     expect(within(header).getByText("6.2 at 41°")).toBeVisible();
+  });
+
+  it("becomes the title line at width: the question, then the run in one mono line", async () => {
+    // Desktop Contract DS0 bend 4, and round 25's A3 desk: "The ink
+    // header becomes the title line" — "Did it work?" as the title over
+    // "SAT AUG 29 · 6:04 AM · 6.2 AT 41°". happy-dom applies no
+    // stylesheet, so what is pinned is the markup each width reads.
+    await renderWithRouter(
+      form({
+        entry: { startedAt: SAT_MORNING, distanceM: 9978, conditions },
+      }),
+    );
+
+    const header = screen.getByRole("banner");
+    // Ink below `wide` only (ui/tokens.css), and flush with the column
+    // from it, since there is no block left to bleed.
+    expect(header).toHaveClass("-mx-5", "-mt-6", "wide:mx-0", "wide:mt-0");
+    const question = within(header).getByRole("heading", {
+      level: 1,
+      name: "Did it work?",
+    });
+    expect(question).toHaveClass("wide:font-display", "wide:text-title");
+    // **In reading order, never reordered** (WCAG 1.3.2): the phone's run
+    // lines come before the question in the markup, the desk's after it,
+    // and each width hides the other's — no `order-*` anywhere.
+    const phoneWhen = within(header).getByText("Sat Aug 29 · 6:04 AM");
+    const phoneHeadline = within(header).getByText("6.2 at 41°");
+    expect(phoneWhen).toHaveClass("wide:hidden");
+    expect(phoneHeadline).toHaveClass("wide:hidden");
+    const deskLine = within(header).getByText(
+      "Sat Aug 29 · 6:04 AM · 6.2 at 41°",
+    );
+    expect(deskLine).toHaveClass("hidden", "wide:block", "text-dialed-text");
+    expect([...header.children]).toEqual([
+      phoneWhen,
+      phoneHeadline,
+      question,
+      deskLine,
+    ]);
+    expect(header.outerHTML).not.toMatch(/\border-/u);
   });
 
   it("names the unit instead of a temperature when the run has none", async () => {

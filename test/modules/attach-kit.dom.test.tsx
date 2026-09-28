@@ -235,7 +235,11 @@ describe("AttachKit: the header", () => {
     await renderWithRouter(attach());
 
     const header = screen.getByRole("banner");
-    expect(header).toHaveAttribute("data-ground", "ink");
+    // Ink on the phone, the title line from `wide` (DS0 bend 4).
+    expect(header).toHaveAttribute("data-ground", "ink-until-wide");
+    expect(
+      within(header).getByRole("heading", { level: 1 }),
+    ).toHaveClass("wide:text-title");
     expect(
       within(header).getByRole("heading", {
         level: 1,

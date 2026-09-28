@@ -157,43 +157,43 @@ export function CityFinder({
 
   return (
     <div data-part="city-finder" className="flex flex-col gap-3">
-      <div className="flex items-start gap-2">
-        {/* The field is the only control inside this box, so any Enter
-            that reaches it came from the field. */}
-        <div
-          className="flex-1"
-          onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            void find();
-          }}
-        >
-          <TextField
-            name={name}
-            label={label}
-            value={value}
-            onChange={onChange}
-            field={own}
-            error={shown}
-            hint={CITY_HINT}
-            autoComplete="address-level2"
-          />
-        </div>
-        <button
-          type="button"
-          data-part="find"
-          {...inFlight(isFinding)}
-          onClick={() => {
-            void find();
-          }}
-          className="target mt-6 cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-3 text-body font-bold text-ink"
-        >
-          <PendingLabel
-            label="Find"
-            pendingLabel="Finding"
-            pending={isFinding}
-          />
-        </button>
+      {/* Enter anywhere in here is Find. The field and Find are the only
+          controls inside, and Enter on Find already meant Find — taking it
+          here as well stops it reaching the surrounding form's submit. */}
+      <div
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          void find();
+        }}
+      >
+        <TextField
+          name={name}
+          label={label}
+          value={value}
+          onChange={onChange}
+          field={own}
+          error={shown}
+          hint={CITY_HINT}
+          autoComplete="address-level2"
+          action={
+            <button
+              type="button"
+              data-part="find"
+              {...inFlight(isFinding)}
+              onClick={() => {
+                void find();
+              }}
+              className="target cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-3 text-body font-bold text-ink"
+            >
+              <PendingLabel
+                label="Find"
+                pendingLabel="Finding"
+                pending={isFinding}
+              />
+            </button>
+          }
+        />
       </div>
       {found === undefined ? undefined : (
         <div
