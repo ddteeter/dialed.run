@@ -340,7 +340,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     when saving has nothing to note (no kit, or no band) the screen still
     goes to the entry, since Noted has no sentence to say.
 
-26. **One failure pattern for a control that isn't a form.** Round 22's
+26. **One failure pattern for a control that isn't a form.** **CLOSED by
+    round 27 (item 24): confirmed, and written into the Form Contract as
+    §02b.** Round 22's
     item 9, which never arrived. A1 upload, A2 attach, run detail's save,
     Strava connect, follow, useful and unblock each fail differently — some
     as pink lines, which the Form Contract forbids, some silently. The ask
@@ -374,7 +376,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 
 28. **The breached-password refusal has placeholder copy (PR #104).**
     **ANSWERED by round 26 (item 17): the placeholder is confirmed, and the
-    screen fails open.** Sign-up
+    screen fails open. CLOSED by round 27: U1's password sheet (item 11)
+    keeps round 26's refusals.** Sign-up
     and a password change now screen the new password against known
     breaches (NIST SP 800-63B §3.1.1.2 — a blocklist, and no composition
     rules). A match lands on Password as "That password has turned up in a
@@ -384,7 +387,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 
 29. **The Google button needs drawing around Google's official "G" (PR
     #104).** **ANSWERED by round 26 (item 13): drawn light and dark; the
-    build is lane 126's.** Google's Sign in with Google branding guidelines forbid a
+    build is lane 126's. CLOSED by round 27 (items 2–3): the label is
+    Archivo, and the exemption is in T1 and `icons.js`.** Google's Sign in with Google branding guidelines forbid a
     custom or monochrome mark ("must be the standard color version"), and
     Au1–Au7 draw a ring-and-letter "G". The build now uses Google's own
     full-colour mark, as a sanctioned brand exception outside the icon
@@ -393,6 +397,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     and failed states.
 
 30. **Two feed words round 26 asks for and does not give (task 129).**
+    **CLOSED by round 27 (item 25): "Most"/"Some", plus "Split" on a tied
+    lead and "All" alone; the bell's name says "more than 9 new" above 9.
+    Not built.**
     - **The consensus bar's word.** Round 26 #9 puts a word on each
       consensus bar so colour is never alone (rule 10). The build reads
       "Most" on the leading bar and "Some" on the rest
@@ -404,7 +411,12 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the badge stops at `9+`. **The ask:** confirm the name says the
       number while the dot does not.
 
-31. **Four surfaces task 128 built without a drawing (PR #118).** Each is
+31. **Four surfaces task 128 built without a drawing (PR #118).** **CLOSED
+    by round 27 (items 26, 27, 30): deletes stay at the foot under YOURS
+    with no overflow, and the photo delete moves onto the photo; the
+    grammar is confirmed and the three bodies worded; the blur cells are
+    redrawn as a 3×3 map of 44px squares; the case line stays out. Not
+    built.** Each is
     composed from existing primitives and copy in the system; none adds a
     glyph, colour or motion.
     - **The delete links.** "Delete this entry", "Delete photo {n}" at the
@@ -441,6 +453,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 32. **Two sizes the contracts do not give, found in the owner's UI review
     (PR "UI polish: fields beside buttons, the closet's rows, A2/A3 at
     width").** Both were measured in the running app, not on a board.
+    **CLOSED by round 27 (item 31): 50px, now in the Form Contract §02b;
+    the tile photo is 4:5. Not built; two of the values disagree with
+    `tokens.js` (see round 27).**
     - **How tall is a field?** The owner asked whether fields are too
       tall. The Form Contract gives the field's anatomy (1px rule → 2px
       ink, padding that never resizes the box) and tokens.js gives
@@ -462,6 +477,370 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the tile itself is still short of C. **The ask:** the photo well's
       height as a token (nothing in tokens.js gives one), or a ruling
       that v1's tile is text-only.
+
+## Answered in round 27 (imported 2026-09-27)
+
+Thirty-one asks in three parts: amend the contracts and boards to match the
+owner's decisions (1–9), draw what the launch sweep needs (10–23), and
+confirm or redraw what it built as placeholders (24–31). **All thirty-one are
+answered.** They are on a new board, `Round 27 Rulings.dc.html`, and
+mirrored in `design/docs/product.md` §Round 27. Design also changed
+`Round 26 Rulings.dc.html` (the Google label is Archivo in every frame, and
+the Roboto font request is gone) and both `Remaining Screens` boards (§AH
+rule 08 amended, light and dark).
+
+**Four contract files changed this time**, unlike round 26. Every change is
+additive text: no T1 role, token value, glyph or motion value changed, and
+the token, contrast, icon, motion and architecture tests pass unchanged
+(`test/ui`, `test/architecture` and the three other test files that read
+`design/`: 48 files, 1145 tests). What
+changed:
+
+- **Accessibility Contract §06** gains a second paragraph: _"One exception,
+  FormField (round 26 #16): the ring sits on the field's own border, 2px
+  ink, offset −1px, so nothing draws outside the field. Error stays distinct
+  from focus: a 2px ink border plus the hi-viz band. With error and focus
+  together the line is the same and the band tells them apart."_ The
+  contract now says what D-48 decided and what `src/ui/a11y.css` already
+  builds (`.field-box:has(:focus-visible)`). _Follow-up:_ none in values.
+  The comments in `a11y.css` and D-48's "overrides §06" wording are now
+  stale.
+- **Theme T1** gains a block, `data-part="palette-exemptions"`, headed
+  "EXEMPT FROM THIS TABLE · TWO PARTS, NO OTHERS":
+  - `google-button`: Google's fill, border and label colours (light
+    `#FFFFFF` / `#747775` / `#1F1F1F`, dark `#131314` / `#8E918F` /
+    `#E3E3E3`) and the official four-colour G. The label is Archivo 500. It
+    swaps by Google's own light/dark pair, not by T1.
+  - `strava-button`: Strava's official orange "Connect with Strava" asset,
+    48 tall, unaltered, the same on both themes, and only on the connect
+    action.
+  - _"Anything else carrying a colour outside this table is a bug,
+    including Strava orange on a disconnect or status row."_
+
+  The eighteen roles are unchanged. _Follow-up:_ `src/ui/tokens.css` and
+  `styles.css`'s `@theme` need nothing. `test/architecture/palette-only.test.ts`
+  hard-codes the Google exemption by path; it could read the two parts
+  from the contract instead.
+
+- **`icons.js`** gains a FOREIGN MARKS paragraph in its header (brand
+  assets, not icons: never in `ICONS`, never recoloured, never used
+  elsewhere) and a new export, `FOREIGN_MARK_PARTS = ['google-button',
+'strava-button']`. `ICONS` is byte-identical, so the 77-glyph manifest is
+  unchanged. _Follow-up:_ `src/ui/icons.tsx` can port `FOREIGN_MARK_PARTS`
+  as the one list the palette test and the two buttons' `data-part`s read.
+- **Form Contract** gains §02b, "Height · controls that aren't forms":
+  - _"FormField is 50px tall (min-height), 16px type, content centred,
+    radius 10. The 2px error border draws inward and never changes the
+    height. Focus: the ring sits on the border, 2px ink, offset −1px."_
+  - _"A control that isn't a form fails one way: the §4a band, sized to
+    the thing that failed, directly under it. The kicker names the state
+    that's still true; it offers one retry verb when retrying can work, and
+    none when it can't. No field is marked, and no summary block appears."_
+
+  _Follow-up:_ `ui/form.tsx`'s field box is `min-h-12` (48), which never
+  binds, and reaches 50 through its padding. The 50 should become the real
+  minimum. **"16px type" and "radius 10" are not contract values**; see the
+  list at the end of this section.
+
+Lanes are the launch plan's: 125 ops/platform, 126 accounts, 127
+Strava/logging, 128 content & safety (which owns the closet this sweep), 129
+feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
+
+**A · Amendments to match owner decisions**
+
+1. **Focus on a field.** _Done on the contract:_ Accessibility §06 carries
+   the FormField exception (above). _Build:_ none. D-48 is now what the
+   contract says.
+2. **The Google and Strava exemptions.** _Done on the contracts:_ T1's
+   exemption block and `icons.js`'s `FOREIGN_MARK_PARTS` (above). _Build:_
+   none required. Optionally, port the list and derive the palette test's
+   exemption from it (ui/shared, 125).
+3. **The Google label.** _Drawn:_ "Google button light r27" and "Google
+   button dark r27". Archivo 500, 15px, in Google's label colour. The G,
+   fill, stroke and pill stay Google's. Round 26 #13's frames, Au2 and the
+   invite stage now say Archivo, and the Roboto request is gone from every
+   board. _Build:_ none. It is D-49 and D-55, and the build already matches.
+4. **Unverified saves private.** _Drawn:_ "A3 share unverified" and "A3
+   share verified", and the link landing. The share switch shows off (full
+   strength, never disabled) with "Confirm your email to share. This run
+   saves private."; pressing it opens #17's sheet. Verified, the sub-line is
+   "Signed-in runners can see it. Search engines and link previews can't."
+   The confirm landing now reads "Email confirmed" · "New runs follow your
+   sharing setting. Runs you logged before today stay private; share any of
+   them from the run." · Open dialed.run. "Shares when you confirm your
+   email." and "3 runs shared." are gone. The WAITS list is share (saves
+   private), Useful, report and email change. _Build:_ 126 (D-50), with the
+   A3 switch copy in 127's logging flow.
+5. **Legal page type.** _Ruling:_ the contract's 620 measure and `lead`
+   step on /privacy, /terms and /copyright. 680 and 17/1.65 are struck
+   from product.md. _Build:_ none new. D-52 and 126's ACC-13 already say
+   this.
+6. **§AH rule 08.** _Done on the board:_ both `Remaining Screens` boards
+   read "…and no swatch unless the shade is exact (amended round 26 #5): a
+   named colour alone gets no square." _Build:_ none.
+7. **"Public" is retired from the copy.** _Drawn:_ a WHERE / WAS / NOW
+   table:
+   - A3's share switch: "Share publicly" becomes "Share with runners on
+     dialed.run".
+   - The settings default: "New runs are public" becomes "Share new runs
+     with runners on dialed.run".
+   - F and A3's state label: `PUBLIC · PRIVATE` becomes `SHARED · PRIVATE`.
+   - D's owner meta line: "Public entry" becomes "Shared with runners on
+     dialed.run".
+   - The nag band: "Confirm your email to share runs with other runners." ·
+     Resend link.
+   - /privacy §4's heading: "What's public" becomes "What other runners
+     see".
+
+   Stored values can stay `PUBLIC`. **Only the default share card ships**
+   (wordmark, "Log runs, see what worked", ink ground, og:title "dialed.run"
+   on every URL), and round 26 #22's per-entry card is struck. **Indexing:**
+   until public launch every response sends `X-Robots-Tag: noindex` and
+   robots.txt disallows all. After launch only `/` is indexable. /privacy,
+   /terms and /copyright stay noindex but reachable, and the invite flag
+   flips it. **Signed-out `/@handle` and entry URLs go to Au1 with "Log in
+   to see this run."** _Build:_ the copy across 127 (A3), 129 (D, the
+   settings default) and 126 (the nag, /privacy). The default card, the
+   header and robots.txt belong to 125. The signed-out redirect belongs to 129. **This supersedes D-51, and differs from D-53**; see below.
+
+8. **Unsubscribe is one press.** _Drawn:_ "Unsubscribe landing" and
+   "Unsubscribe done". The body link opens a signed-out page, "Stop run
+   reminder emails?", with the address masked ("ma•••@example.com") and one
+   ink **Unsubscribe** button that POSTs. The done state on the same URL is
+   "Run reminder emails are off" · Turn them back on (also a POST). A
+   failure is a §4a band, `STILL SUBSCRIBED` · "That didn't go through. Try
+   again?". The link is signed and never expires, and a second visit shows
+   the done state. The mail client's List-Unsubscribe-Post stays one click.
+   **The same rule covers every state-changing link**, including "This
+   wasn't me" (#15). This overrides round 26 #19. _Build:_ 125 (the signed
+   link and the page), 126 ("This wasn't me").
+9. **Reset confirms the email.** _Ruling:_ yes. Password reset moves from
+   WAITS to CAN, and saving a new password from the link marks the address
+   confirmed. _Build:_ 126, drawn in #10.
+
+**B · Drawn**
+
+10. **Password reset.** _Drawn:_ "Au1 Forgot it", "Au6 Reset request", "Au6
+    Check inbox", "Au7 New password" and "Au7 Link expired".
+    - "Forgot it?" sits right-aligned on Au1's PASSWORD label line and
+      carries the typed email into Au6.
+    - Au6 is "Reset your password" · Send reset link. "Check your inbox"
+      reads the same for any address: "If {email} has an account, a reset
+      link is on its way. It works once, for one hour."
+    - Au7 is "Set a new password", with "Saving confirms this email and
+      signs out your other devices." · Save and log in.
+    - An expired or used link reads "That link has run out" · Send a new
+      link.
+    - A new request kills the old link. The rate limit reads `NOT SENT` ·
+      "That's 5 links this hour. You can send another at 7:42 PM.", shown
+      only to the same browser.
+    - Google-only accounts get the email with "Set a password".
+    - After saving, the runner lands on Closet with "Password changed.
+      Other devices are signed out." A banned account's link lands on D4.
+
+    _Build:_ 126.
+
+11. **U1 · Account.** _Drawn:_ "U1 · Settings › Account · email change
+    pending", plus sheets for "U1 Change email", "U1 Change password" and
+    "U1 Sign out everywhere". U1 is one list: Email, Password, Sign out
+    everywhere, Export your data, then Delete account, set apart. Every
+    takeover-grade change asks for the current password, and Google-only
+    accounts re-authenticate with Google instead.
+    - **Email:** the new address gets a confirm link, and the old one a
+      notice with "This wasn't me". The old address stays live until
+      confirmed, and only one change can be pending. A wrong password reads
+      "That's not your current password.". An address already in use runs
+      the same flow, and its owner gets round 26's existing-account email.
+    - **Password:** "Your other devices will be signed out."
+    - **Sign out everywhere:** the retire-confirm grammar, landing on Au1
+      with "Signed out everywhere."
+
+    _Build:_ 126.
+
+12. **Legal lines and pages.** _Drawn:_ "Au2 legal lines", "Au5 Turnstile",
+    "Terms desk" and "Copyright desk". Under Au2's form: "By creating an
+    account you agree to the Terms and have read the Privacy policy." and
+    "dialed.run is for runners 16 and over." There is no checkbox, and the
+    server stores the terms version and time. **Turnstile runs managed,
+    directly above the primary**, on Au2 (it covers Google too, before the
+    redirect) and Au5. It is not on Au1 or Au6. A Turnstile failure reads
+    `NOT SENT` · "We couldn't check this browser. Reload the page and try
+    again." /terms and /copyright use /privacy's layout at the contract's
+    type. The footer order is Privacy · Terms · Copyright, and Copyright
+    carries the takedown address. _Build:_ 126 (ACC-6, ACC-13). **The age,
+    16, is an owner call**; see below.
+13. **Export.** _Drawn:_ U1's row and the "Email export". "Get a copy"
+    becomes `[ Preparing ]`, with "We'll email a link when it's ready." It
+    is limited to one a day. The ZIP holds runs.csv, entries.csv,
+    garments.csv, the original run files and photos, and a README naming
+    each column. The link works for 7 days, only while logged in. _Build:_
+    126, with 125 for the queued job and R2.
+14. **Delete account.** _Drawn:_ "U1 Delete account", "Delete pending" and
+    "Delete pending sign in". The confirm takes the current password (or a
+    Google re-auth) and reads "Log in before Sat, Oct 4 to keep
+    everything.". During the 7 days every device is signed out, shared runs
+    leave the feed and the Call at once, and the handle stays reserved.
+    Logging in shows "Keep your account?" · Keep my account / Log out, and
+    never cancels silently. At day 7 everything goes, **the handle is
+    released**, and no further email is sent. _Build:_ 126, with 125 for
+    the purge cron. It also needs the "retire, don't delete" exception the
+    audit named (§2.1). **Releasing the handle contradicts D-56**; see
+    below.
+15. **The remaining emails.** _Drawn:_ "Email reset", "Email change new",
+    "Email change old", "Email Strava disconnected", "Email content removed",
+    "Email ban", "Email export" and "Email delete scheduled", all in round
+    26's template. All are account mail: always sent, with no unsubscribe.
+    The ban email carries no case number, and appeals are by replying within
+    30 days, when a different moderator looks. _Build:_ 125 (sending), 126
+    (reset, change, export, delete), 127 (Strava), 128 (removed, ban).
+16. **Moderator force-rename.** _Drawn:_ in D8 Runners' right column
+    (Rename above D3's ban panel), and "What the renamed runner sees".
+    - A reason comes from a fixed list: Offensive or sexual · Pretends to
+      be someone else · Contains personal information · Advertising.
+    - The handle becomes `@runner_NNNN`, and the old handle is blocked for
+      everyone.
+    - On their next load the runner sees O0's field once: "USERNAME CHANGED
+      BY A MODERATOR" · "Pick a new username" · "@x broke the rules on
+      names: {reason}. For now you're @runner_4821." · Save username / Keep
+      @runner_4821 for now.
+    - No email is sent.
+
+    _Build:_ 128 (the desk control), 126 (the screen). Remembering that a
+    re-pick is owed is likely an additive column.
+
+17. **"Confirm your email first" sheet.** _Drawn:_ Body: "Sharing, marking
+    runs Useful and reporting need a confirmed address. We sent a link to
+    {email}." Buttons: Resend link / **Not now** (focused). The first word
+    follows the trigger. _Build:_ 126, opened by 129 (Useful), 128 (report)
+    and A3's switch (#4).
+18. **Strava is full.** _Drawn:_ "T1 Strava full". The build's copy stands,
+    with contractions ("while it's reviewed"). The band replaces the button
+    for that attempt, and the button returns on the next visit. In
+    onboarding, Skip becomes Next. _Build:_ 127, a copy tweak.
+19. **Disconnected on Strava's side.** _Drawn:_ "S1 Strava revoked" and the
+    email. The band reads `NOT CONNECTED` · "You disconnected dialed.run on
+    Strava, so run reminders have stopped." · "Runs you already added stay."
+    Strava's official Connect asset sits beside it. When Strava ends the
+    connection itself: "Strava ended the connection, so run reminders have
+    stopped." The email is sent once per disconnect. _Build:_ 127.
+20. **Content removed.** _Drawn:_ "Content removed notice" and the email.
+    Where the thing was, the band reads `PHOTO REMOVED` · "A moderator
+    removed this photo: it shows where someone lives." · "Your run and
+    verdict stay." · See the community rules. The kicker is `NOTE REMOVED`
+    or `REMOVED FROM THE FEED` for a note or a whole entry, and the bell
+    gets one row. _Build:_ 128, with the bell row in 129.
+21. **A garment photo being checked (D-69).** _Drawn:_ "Garment photo
+    checking". The band reads `BEING CHECKED` · "Only you can see this photo
+    until it's checked, usually within a day." The photo and its closet
+    tile carry an `ONLY YOU` tag. If the photo is refused, #20's band says
+    why. _Build:_ 128 (the closet this sweep).
+22. **Desk › Runners.** _Drawn:_ "D8 Runners" (412 ACCOUNTS). A search
+    ("Handle or email") with All / Reported / Closed. The table has HANDLE,
+    EMAIL, JOINED, RUNS, REPORTS and STATE (`ACTIVE`, `PENDING DELETE`,
+    `CLOSED`). The selected runner's right column holds Rename, then Close
+    account (D3, moved here from the entry view). A row click selects;
+    **there is no separate runner page**. Reports here count only reports
+    on the name or profile. _Build:_ 128. It revises D-35's "banning lives
+    on a runner's page".
+23. **Banned, via Google.** _Confirmed and drawn:_ "Au1 account closed
+    Google". D4's band sits on Au1 over the empty form: `ACCOUNT CLOSED` ·
+    "This account was closed for breaking the community rules." · "Think we
+    got it wrong? Reply to the email we sent you." There is no case line.
+    The same applies to a password log-in, and it never says whether the
+    password was right. _Build:_ 126, as built.
+
+**C · Placeholders confirmed or redrawn**
+
+24. **Failure on a control that isn't a form.** _Confirmed as the rule_ and
+    written into the Form Contract as §02b (above). _Build:_ none. Open item
+    26 closes.
+25. **Two feed words.** _Ruling:_ the leading consensus bar reads "Most" and
+    the rest "Some". **New:** a tie for the lead reads "Split" on each tied
+    bar, and a single bar reads "All". The bell reads "Notifications, 3
+    new", and above 9, "Notifications, more than 9 new", not "9+". The dot
+    never draws a digit. _Build:_ 129 (`BAR_WORD` gains Split and All; the
+    bell's name above 9).
+26. **Deletes.** _Drawn:_ "Delete entry sheet", "Delete run sheet", "Delete
+    photo sheet" and the D owner foot. Entry and run deletes are text links
+    at the foot under a `YOURS` kicker (with "Edit this entry" above), for
+    the owner only. **There is no overflow menu.** "Delete photo {n}" moves
+    onto the photo as a 44×44 icon button, top right, named "Delete photo
+    2". The confirm grammar is confirmed. The bodies:
+    - Entry: "Your verdict, kit and note for this run go, and it leaves the
+      feed and your Call's record. The run stays. This can't be undone."
+    - Run: "The run, its weather and its entry go, and your pieces lose
+      this wear. This can't be undone."
+    - Photo: "It comes off this entry for everyone. The entry and its other
+      photos stay. This can't be undone."
+
+    _Build:_ 128 (`RetractEntry`, the photo button), 127 (`DeleteRun`), and
+    ui/shared (`ConfirmSheet` copy slots). **The board names no glyph for
+    the photo button**; the pack has `remove` and `close`.
+
+27. **W3's keyboard blur cells.** _Redrawn:_ a 3×3 grid of 44px square
+    cells that maps the photo, not a row of pills. A pressed cell is ink
+    with "✓", and the names stay "Blur top-left"…. Focus outlines the
+    matching ninth on the canvas. _Build:_ 128 (`PhotoBlur`'s `BlurCells`).
+    The "✓" should be the pack's `check`, not a text character.
+28. **Own entry under review (D-62).** _Drawn:_ a hi-viz `UNDER REVIEW` tag
+    on the card, and a §4a band on the detail: `HIDDEN WHILE WE CHECK` · "A
+    runner reported this entry. Other runners can't see it until a
+    moderator has looked, usually within a day." · "You can still edit or
+    delete it." Neither says who reported it or why. _Build:_ 129 (card and
+    detail) on 128's review state. D-62 closes once it is built.
+29. **"Photo not added."** _Ruling:_ the kicker stays. The body becomes
+    "This photo couldn't be prepared without blur. Turn blur on, or pick
+    another photo." _Build:_ 128 (`PhotoBlur.tsx`).
+30. **D4 without a case number.** _Confirmed:_ the case line is omitted, and
+    the board's `CASE [B-0031]` is struck. Appeals go by replying to the ban
+    email. _Build:_ none.
+31. **Three measurements.**
+    - **Field height:** 50px, now in the Form Contract (§02b) as
+      FormField's min-height. _Build:_ ui/shared (`form.tsx`).
+    - **Closet tile:** the photo is `aspect-ratio: 4 / 5`, full tile width,
+      with rounded top corners, and the hatch when there is no photo. It has
+      no fixed height. _Build:_ 128 (`ClosetGrid`).
+    - **The desk primary:** sized to its label, left-aligned in the primary
+      column, at desk (≥1040). Full width is phone only. Round 25 wins.
+      _Build:_ ui/shared (`SubmitButton` at `desk`).
+
+**Where a ruling and a contract, or an owner decision, disagree.** None of
+these is resolved by this import. Each needs design to amend the contract
+file or the owner to decide.
+
+- **Form Contract §02b vs `tokens.js`.** "16px type" is not a TYPE step
+  (`body`, 15, is the one tokens.js assigns to inputs), and "radius 10" is
+  not a RADIUS step (`field` is 8, "boards: 9 → 8"). Both are contracts.
+  Under the collapse rule the build keeps `text-body` and `rounded-field`,
+  and takes only the 50px minimum and the behaviour.
+- **The closet tile's "radius 10 on top" (31b)** is also not a RADIUS step.
+  `card`, 12, is the one tokens.js names for photo wells.
+- **Per-entry OG cards (7) vs D-51**, which says they are generated now.
+  The round 27 ask itself ("link previews never show entry data") and D-58
+  point the other way. D-51 needs superseding by the owner.
+- **Indexing after launch (7) vs D-53.** D-53 flips "the landing page and
+  other public marketing pages" to index. Design keeps /privacy, /terms and
+  /copyright noindex, so only `/` is indexed.
+- **Deleted accounts release their handle (14) vs D-56**, which says a
+  handle a runner leaves "stays in `username_history` for good" and is
+  never reclaimable by another runner.
+- **The minimum age, 16 (12).** The audit (§1.3) lists the minimum age as
+  undecided, and ACC-6 says the owner's terms set it. Design chose it.
+- **Desk › Runners (22) vs D-35.** D-35 has banning live "on a runner's
+  page". D8 has no runner page. This is design revising its own round 8
+  call, and needs noting in D-35.
+- **The ban email's appeal (15)**: "Reply within 30 days and a different
+  moderator will look" is a moderation-process commitment for the owner.
+- **The Strava disconnect email (19)** is another effect of Strava's side
+  of the connection. CLAUDE.md's product rule says the webhook's only
+  effect is a notification row. D-43 already lists "Strava broken or
+  revoked" mail, so this is wording to update, not a conflict of substance.
+
+**Round 26's disagreements this round resolves:** field focus vs §06 (§06
+amended); the exemptions on a board only (now in T1 and `icons.js`);
+Roboto (gone); privacy page type (the contract); queued shares (dropped,
+matching D-50); and §AH 08 (amended on its board). The privacy link under
+Au1 stays declined, as D-52 accepted.
 
 ## Answered in round 26 (imported 2026-09-25)
 
