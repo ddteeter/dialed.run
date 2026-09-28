@@ -43,6 +43,11 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // all gate on the same column.
     bannedAt: integer("banned_at"),
     banReason: text("ban_reason"),
+    // Set when a moderator force-renames the runner (task 128, round 27
+    // #16): the reason from the fixed list, which O0's "USERNAME CHANGED BY
+    // A MODERATOR" field quotes on their next load. Null means no re-pick
+    // is owed; 126's screen clears it on Save or Keep.
+    usernameResetReason: text("username_reset_reason"),
   },
   (t) => [
     // One index, two jobs. **Uniqueness regardless of case**: a handle is
@@ -783,5 +788,41 @@ export const blocks = /*#__PURE__*/ sqliteTable(
     // The reverse direction is a query too: "who has blocked me" filters
     // my content out of their feed, and without this it is a table scan.
     index("blocks_blocked").on(t.blockedId),
+  ],
+);
+
+/**
+ * What a person at the Desk did to someone's content, and why (task 128 ·
+ * SAF-5, SAF-6, SAF-4): the audit a DMCA takedown needs ("who, what and
+ * why"), the record the EU DSA's statement of reasons is written from, and
+ * the only place a quarantine's preserved object is named.
+ *
+ * Append-only. A subject can be acted on more than once (banned, unbanned,
+ * banned again), so nothing here is unique but the id. `subjectOwnerId`
+ * is the runner the action was taken against, kept so their notice and any
+ * later appeal can find it after the subject itself is gone.
+ */
+export const moderationActions = /*#__PURE__*/ sqliteTable(
+  "moderation_actions",
+  {
+    id: text("id").primaryKey(),
+    actorId: text("actor_id").notNull(),
+    action: text("action", {
+      enum: ["remove", "quarantine", "takedown", "ban", "unban", "rename"],
+    }).notNull(),
+    subjectType: text("subject_type", {
+      enum: ["entry", "photo", "profile"],
+    }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    subjectOwnerId: text("subject_owner_id"),
+    // The operator's words, word for word — what the runner is told.
+    reason: text("reason").notNull(),
+    // Where a quarantined object was moved to; null for everything else.
+    preservedKey: text("preserved_key"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    index("moderation_actions_subject").on(t.subjectType, t.subjectId),
+    index("moderation_actions_owner").on(t.subjectOwnerId, t.createdAt),
   ],
 );
