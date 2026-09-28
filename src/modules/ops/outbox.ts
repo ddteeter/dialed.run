@@ -13,18 +13,7 @@
  * - **the digest** (`checkOutboxBacklog`) reports rows that have exhausted
  *   their attempts, and rows of a kind this build cannot read (law 6).
  */
-import {
-  and,
-  asc,
-  count,
-  eq,
-  gte,
-  isNotNull,
-  lte,
-  notInArray,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, eq, gte, lte, notInArray, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { outbox } from "../../db/schema-core";
@@ -190,27 +179,31 @@ type ClaimedRow = typeof outbox.$inferSelect;
  * One batch for one round trip; each claim stands alone, so nothing
  * depends on them landing together.
  */
-async function claimDue(
-  db: Db,
-  kind: OutboxKind,
-  now: number,
-): Promise<ClaimedRow[]> {
-  // Due, or already sent: a row whose send landed and whose delete did
-  // not is cleared at once, whenever it would next have been due.
-  const dueOrSent = or(
-    lte(outbox.nextAttemptAt, now),
-    isNotNull(outbox.sentAt),
-  );
-  const due = await db
+/**
+ * The drainer's read: one kind's due rows, oldest first. A row whose send
+ * landed is due too — marking it sent moves `next_attempt_at` to the send
+ * (`emailHandler`) — so this is one range on `outbox_kind_due` and never
+ * an OR the index cannot narrow. Exported for the test that reads its plan.
+ */
+export function dueRowsOf(db: Db, kind: OutboxKind, now: number) {
+  return db
     .select({
       id: outbox.id,
       attempts: outbox.attempts,
       nextAttemptAt: outbox.nextAttemptAt,
     })
     .from(outbox)
-    .where(and(eq(outbox.kind, kind), dueOrSent))
+    .where(and(eq(outbox.kind, kind), lte(outbox.nextAttemptAt, now)))
     .orderBy(asc(outbox.nextAttemptAt))
     .limit(OUTBOX_DRAIN_CAP);
+}
+
+async function claimDue(
+  db: Db,
+  kind: OutboxKind,
+  now: number,
+): Promise<ClaimedRow[]> {
+  const due = await dueRowsOf(db, kind, now);
   const [first, ...rest] = due.map((row) =>
     db
       .update(outbox)

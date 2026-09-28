@@ -466,6 +466,8 @@ describe("the email outbox kind", () => {
     expect(mail.sent).toHaveLength(1);
     const [row] = await db.select().from(outbox);
     expect(row?.sentAt).toBeTypeOf("number");
+    // Due the moment it was sent, so the drain's index range finds it.
+    expect(row?.nextAttemptAt).toBe(row?.sentAt);
     expect(row?.messageId).toBe(mail.ids[0]);
 
     // The next drain — before the row would even be due — clears it and

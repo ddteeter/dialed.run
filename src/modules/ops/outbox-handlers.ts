@@ -182,9 +182,12 @@ export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
     run: async (db, payload, rowId) => {
       const sent = await deliverOwedEmail(db, payload.email, deps());
       if (sent.status === "skipped") return;
+      const sentAt = nowSeconds();
+      // Due at once, too: the drain's one index range then finds a row
+      // whose delete never landed, and deletes it rather than sending.
       await db
         .update(outbox)
-        .set({ sentAt: nowSeconds(), messageId: sent.messageId })
+        .set({ sentAt, nextAttemptAt: sentAt, messageId: sent.messageId })
         .where(eq(outbox.id, rowId));
     },
     // Ids only (law 7): never the address, which is what a report would

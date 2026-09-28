@@ -18,6 +18,7 @@ import {
   backoffSeconds,
   checkOutboxBacklog,
   drainOutbox,
+  dueRowsOf,
   OUTBOX_DRAIN_CAP,
   OUTBOX_FAST_PATH_GRACE_S,
   OUTBOX_TERMINAL_ATTEMPTS,
@@ -419,6 +420,18 @@ describe("drainOutbox", () => {
       attempts: 0,
       nextAttemptAt: NOW,
     });
+  });
+});
+
+describe("the drain's read (D1 bills rows scanned)", () => {
+  it("is one range on outbox_kind_due: kind, then due by", async () => {
+    const { sql, params } = dueRowsOf(db(), "email", NOW).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    expect(plan.results.map((row) => row.detail)).toStrictEqual([
+      "SEARCH outbox USING INDEX outbox_kind_due (kind=? AND next_attempt_at<?)",
+    ]);
   });
 });
 
