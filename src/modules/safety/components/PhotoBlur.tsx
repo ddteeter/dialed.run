@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ControlFailureBand, Mono, ToggleField } from "../../../ui";
+import { ControlFailureBand, Icon, Mono, ToggleField } from "../../../ui";
 import type { ControlFailure, PhotoStep } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
@@ -58,11 +58,13 @@ const CHECKING = "Checking this photo";
  * Said rather than swallowed: with no file there is nothing to hand the
  * uploader, and a step that simply never calls `onReady` leaves the form
  * waiting on a photo that is not coming. The kicker names what is still
- * true — the round 23 control-failure pattern (`ui/ControlFailureBand`).
+ * true — the round 23 control-failure pattern (`ui/ControlFailureBand`) —
+ * and the body is round 27 #29's, which names the two ways out.
  */
 const REDRAW_FAILED: ControlFailure = {
   kicker: "Photo not added",
-  message: "This photo couldn't be prepared for upload.",
+  message:
+    "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
 };
 
 export function PhotoBlur({
@@ -142,6 +144,12 @@ export function PhotoBlur({
    */
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState({});
+  /**
+   * The keyboard cell that has focus, if one does: round 27 #27's "focus
+   * outlines the matching ninth on the canvas", so a runner tabbing
+   * through the cells can see which part of the photo each one means.
+   */
+  const [focusedCell, setFocusedCell] = useState<number | undefined>();
 
   /**
    * Repaints and hands the caller the bytes that should be uploaded.
@@ -315,31 +323,34 @@ export function PhotoBlur({
               that used to catch that lived inside the handler, where a
               throw is swallowed and no test can see it. */}
           {ready === undefined ? undefined : (
-            <canvas
-              ref={(node) => {
-                setCanvas(node ?? undefined);
-              }}
-              aria-label="Outfit photo. Tap a spot to blur it."
-              className="h-auto w-full cursor-crosshair"
-              onClick={(event) => {
-                const point = toImageCoordinates(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget.getBoundingClientRect(),
-                  ready.width,
-                  ready.height,
-                );
-                setRegions((current) =>
-                  afterTap(
-                    current,
-                    point.x,
-                    point.y,
+            <div className="relative">
+              <canvas
+                ref={(node) => {
+                  setCanvas(node ?? undefined);
+                }}
+                aria-label="Outfit photo. Tap a spot to blur it."
+                className="block h-auto w-full cursor-crosshair"
+                onClick={(event) => {
+                  const point = toImageCoordinates(
+                    event.clientX,
+                    event.clientY,
+                    event.currentTarget.getBoundingClientRect(),
                     ready.width,
                     ready.height,
-                  ),
-                );
-              }}
-            />
+                  );
+                  setRegions((current) =>
+                    afterTap(
+                      current,
+                      point.x,
+                      point.y,
+                      ready.width,
+                      ready.height,
+                    ),
+                  );
+                }}
+              />
+              <Ninths focused={focusedCell} />
+            </div>
           )}
           <p className="m-0 text-muted">
             <Mono step="sm">Tap to blur</Mono>
@@ -354,10 +365,36 @@ export function PhotoBlur({
                   afterCell(current, cell, ready.width, ready.height),
                 );
               }}
+              onFocusCell={setFocusedCell}
             />
           )}
         </>
       ) : undefined}
+    </div>
+  );
+}
+
+/**
+ * The photo's nine parts, drawn over the canvas and seen, never heard:
+ * the ninth the focused cell means wears the hi-viz outline (round 27
+ * #27). Blurring shows on the canvas itself; this only says where.
+ */
+function Ninths({
+  focused,
+}: Readonly<{ focused: number | undefined }>): JSX.Element {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3"
+    >
+      {BLUR_CELLS.map((name, cell) => (
+        <span
+          key={name}
+          data-ninth={name}
+          data-focused={cell === focused ? "true" : undefined}
+          className="data-focused:outline-2 data-focused:-outline-offset-2 data-focused:outline-hi-viz"
+        />
+      ))}
     </div>
   );
 }
@@ -368,40 +405,60 @@ export function PhotoBlur({
  * grid, one button a cell, each blurring its whole cell and pressed while
  * it does. A tap on a canvas has no keyboard equivalent; these are it.
  *
- * **Undrawn** — "what focusable blur targets look like" is a design ask.
- * Until it is answered they are text buttons in the pill grammar,
- * listed as a design delta.
+ * **Round 27 #27's map of the photo, not a row of pills**: 44px square
+ * cells laid out as the photo is, a pressed one ink with the pack's
+ * `check`, and focus telling the canvas which ninth to outline. The name
+ * says the position, because the cell itself shows only whether it is
+ * blurred.
  */
 function BlurCells({
   regions,
   width,
   height,
   onToggle,
+  onFocusCell,
 }: Readonly<{
   regions: readonly BlurRegion[];
   width: number;
   height: number;
   onToggle: (cell: number) => void;
+  onFocusCell: (cell: number | undefined) => void;
 }>): JSX.Element {
   return (
     <div
       role="group"
-      aria-label="Blur part of the photo"
-      className="grid grid-cols-3 gap-2"
+      aria-label="Blur by area"
+      className="flex items-start gap-3"
     >
-      {BLUR_CELLS.map((name, cell) => (
-        <button
-          key={name}
-          type="button"
-          aria-pressed={isCellBlurred(regions, cell, width, height)}
-          onClick={() => {
-            onToggle(cell);
-          }}
-          className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-2 py-2 text-small text-ink aria-pressed:border-ink aria-pressed:font-semibold"
-        >
-          Blur {name}
-        </button>
-      ))}
+      <div className="grid shrink-0 grid-cols-3 gap-1">
+        {BLUR_CELLS.map((name, cell) => {
+          const isBlurred = isCellBlurred(regions, cell, width, height);
+          return (
+            <button
+              key={name}
+              type="button"
+              aria-label={`Blur ${name}`}
+              aria-pressed={isBlurred}
+              onClick={() => {
+                onToggle(cell);
+              }}
+              onFocus={() => {
+                onFocusCell(cell);
+              }}
+              onBlur={() => {
+                onFocusCell(undefined);
+              }}
+              className="target flex size-11 cursor-pointer items-center justify-center rounded-tight border border-ink bg-panel text-ground aria-pressed:bg-ink"
+            >
+              {isBlurred ? <Icon name="check" /> : undefined}
+            </button>
+          );
+        })}
+      </div>
+      <p className="m-0 text-small text-label">
+        Blur by area. Ink = blurred. The focused cell outlines its ninth of the
+        photo.
+      </p>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
 import {
   classifierFromEnv,
   pendingReviewCount,
+  purgeExpiredQuarantine,
   reconcileUnhiddenReports,
   releaseStaleClaims,
   retryPendingScreenings,
@@ -548,6 +549,17 @@ async function runDailyDigest(reporter: CronReporter): Promise<string[]> {
   // STR-10). Rides this firing rather than a cron of its own; it is upkeep,
   // not a check, so it reports nothing.
   await pruneStravaIds(db);
+  // The suspected-CSAM quarantine's year (task 128, D-70): upkeep like the
+  // prune, and silent to everyone but Sentry, which hears of each record
+  // this firing claimed and could not purge (law 6). Each one stays, due
+  // again tomorrow.
+  const purge = await purgeExpiredQuarantine(db);
+  for (const failure of purge.failed) {
+    captureException(failure.error, {
+      surface: "quarantine-purge",
+      quarantineId: failure.id,
+    });
+  }
   return everything;
 }
 

@@ -7,6 +7,7 @@ import {
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import { ClosetGrid } from "../../src/modules/closet/components/ClosetGrid";
@@ -156,7 +157,7 @@ describe("ClosetGrid: the heading row", () => {
     );
     if (header === null) throw new Error("no heading row");
     const toggle = within(header).getByRole("switch", {
-      name: "Show retired",
+      name: "Show retired (1)",
     });
     expect(toggle).not.toBeChecked();
 
@@ -433,11 +434,11 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
     );
 
     expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
-    await user.click(screen.getByRole("switch", { name: "Show retired" }));
+    await user.click(screen.getByRole("switch", { name: "Show retired (1)" }));
     expect(screen.getByRole("link", { name: /Old tee/ })).toBeVisible();
 
     // And back. Awaited, because the tile collapses before it goes.
-    await user.click(screen.getByRole("switch", { name: "Show retired" }));
+    await user.click(screen.getByRole("switch", { name: "Show retired (1)" }));
     await waitFor(() => {
       expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
     });
@@ -452,7 +453,7 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
       />,
     );
 
-    await user.click(screen.getByRole("switch", { name: "Show retired" }));
+    await user.click(screen.getByRole("switch", { name: "Show retired (1)" }));
 
     const leaving = screen.getByRole("link", { name: /Old tee/ }).closest("li");
     expect(leaving).toHaveClass("collapsing-row");
@@ -470,6 +471,82 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
     );
 
     expect(screen.getByRole("link", { name: /Old tee/ })).toBeVisible();
-    expect(screen.getByRole("switch", { name: "Show retired" })).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Show retired (1)" }),
+    ).toBeChecked();
+  });
+});
+
+/**
+ * A closet that learns of two deletes in turn, without remounting: the
+ * only way to see that the grid follows a changed `deleted`.
+ */
+function TwoDeletes() {
+  const [deleted, setDeleted] = useState("Pegasus 40");
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setDeleted("Vaporfly");
+        }}
+      >
+        Next delete
+      </button>
+      <ClosetGrid listing={listing([harrier])} deleted={deleted} />
+    </>
+  );
+}
+
+describe("ClosetGrid: round 26's confirms", () => {
+  it("counts the retired pieces on the switch", async () => {
+    const otherRetired = itemView({
+      item: wardrobeItem({ id: "01RT2", name: "Old shorts", retired: true }),
+      isGeneric: false,
+      uiGroup: "bottoms",
+    });
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, retiredTee, otherRetired])} />,
+    );
+    expect(
+      screen.getByRole("switch", { name: "Show retired (2)" }),
+    ).toBeVisible();
+  });
+
+  it("says which piece a delete took, in the status line", async () => {
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier])} deleted="Pegasus 40" />,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Pegasus 40 deleted.",
+      );
+    });
+  });
+
+  it("says nothing when nothing was deleted", async () => {
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("announces a second delete without a remount, not just the first", async () => {
+    // `deleted` is a prop, not internal state, so the only way to observe
+    // the effect's dependency array is to change it on an already-mounted
+    // ClosetGrid — a harness that holds it in state and hands down a new
+    // value does that; recreating the whole tree would run the effect on
+    // mount either way and prove nothing about its deps.
+    const user = userEvent.setup();
+    await renderWithRouter(<TwoDeletes />);
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Pegasus 40 deleted.",
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "Next delete" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Vaporfly deleted.");
+    });
   });
 });

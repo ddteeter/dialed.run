@@ -416,7 +416,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     with no overflow, and the photo delete moves onto the photo; the
     grammar is confirmed and the three bodies worded; the blur cells are
     redrawn as a 3×3 map of 44px squares; the case line stays out. Not
-    built.** Each is
+    built.** **The blur cells are built (PR #129, SAF-11), and W3's bullet
+    is open again with a new ask for design round 28 (decision D-76).**
+    Each is
     composed from existing primitives and copy in the system; none adds a
     glyph, colour or motion.
     - **The delete links.** "Delete this entry", "Delete photo {n}" at the
@@ -434,12 +436,17 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       saying what goes and ending "This can't be undone." — are
       placeholder copy. **The ask:** confirm the borrowed grammar for a
       delete, and word the three bodies.
-    - **W3's keyboard blur cells.** Tap-to-blur's keyboard path (D-84(b),
-      the Accessibility Contract's "buttons named by position ('Blur
-      top-left')"): a 3 × 3 group of pill-grammar text buttons under the
-      canvas, one a cell, `aria-pressed` while that cell is blurred
-      (`safety/components/PhotoBlur.tsx`, `BlurCells`). **The ask:** what
-      focusable blur targets look like.
+    - **W3's keyboard blur cells, and how long W3 stays open.** The
+      cells are answered: round 27 #27 redrew them as a 3×3 map of 44px
+      squares, and PR #129 built that (`safety/components/PhotoBlur.tsx`,
+      `BlurCells`). What is open is the step's lifetime. W3 closes on its
+      first `onReady`, which `PhotoBlur` calls as soon as the detector's
+      blur is painted, so tap-to-blur and the cells are on screen for a
+      moment rather than until the runner is done (register D-113; it
+      pre-dates PR #129). **The ask (design round 28, decision D-76):** a
+      "use this photo" confirm that keeps W3 open until the runner says
+      so — where it sits, what it says, and what Cancel or a new pick
+      does from there.
     - **D4 · AccountClosed.** Built to Operator Screens D4
       (`safety/components/AccountClosed.tsx`) but without the board's
       `CASE [B-0031]` line: bans carry no case number, and inventing one
@@ -574,6 +581,40 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       not copied. Your browser refused."; a new code says "Created
       DIAL-XXXX." Ages are mono `5h` / `3d` (the board's `5H`, in the
       contract's lowercase mono).
+
+37. **Task 128 PR 2b's deltas and undesigned surfaces (PR #129), for
+    design round 28.** Six the PR shipped, and two its review added. The
+    first three ship as built by the owner's decision (D-77); each is the
+    build's reading of a board against a contract or an existing pattern,
+    and nothing waits on the answers.
+    - **Hues on the delete sheet and F.** GOES and SAME NAME are in
+      `cold-text`, STAYS and SAVED TO CLOSET in `dialed-text`, as round 26
+      draws them. `ink.css` says hue means verdict. **The ask:** confirm
+      these words may wear verdict hues, or give them ink.
+    - **The PHOTO NOT ADDED band** (`closet/components/PhotoRefused.tsx`)
+      keeps `ui/FailureBand`'s grammar: a mono kicker with no hi-viz
+      ground. Round 26 draws the kicker on hi-viz. **The ask:** which.
+    - **The rail's retired date** reads "Retired Mar 12", the closet's own
+      format; the board has "RETIRED MAR 2026". **The ask:** which.
+    - **F's rail card by category alone.** "Already in your closet · Top",
+      not "· TOP · HALF-ZIP", with "No tops yet." when empty, because F
+      asks no type yet (D-75, register D-112) and its category is a select
+      that always holds one, so the "no card before a category" state
+      never occurs. Expected to resolve itself once the TYPE picker lands.
+    - **W3's cell caption.** "Blur by area. Ink = blurred. The focused cell
+      outlines its ninth of the photo." is rendered as drawn and the group
+      is named "Blur by area"; the middle cell's name keeps "middle" where
+      the board's data says "centre". **The ask:** confirm "middle".
+    - **A rail thumbnail with no photo** uses the photo ground, not the
+      board's hatch. **The ask:** which.
+    - **Edit's saved-photo-refused state** (register D-115). Round 26 #4
+      draws "F Photo failed" for adding; Edit uses the same state when a
+      replacement photo is refused. **The ask:** confirm, or draw Edit's.
+    - **A failed photo removal on Edit** (PR #129 review). Not the
+      PHOTO NOT ADDED state, which offers a photo nobody was adding: the
+      fields stay, and round 23's control failure band sits under the
+      well with Y's own Remove kicker, "Photo kept", the cause line and
+      Try again. **The ask:** confirm the borrowed band here.
 
 ## Answered in round 27 (imported 2026-09-27)
 
@@ -788,7 +829,8 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     "Email ban", "Email export" and "Email delete scheduled", all in round
     26's template. All are account mail: always sent, with no unsubscribe.
     The ban email carries no case number, and appeals are by replying within
-    30 days, when a different moderator looks. _Build:_ 125 (sending), 126
+    30 days, when a different moderator looks (superseded by D-73: no
+    deadline and no second moderator). _Build:_ 125 (sending), 126
     (reset, change, export, delete), 127 (Strava), 128 (removed, ban).
 16. **Moderator force-rename.** _Drawn:_ in D8 Runners' right column
     (Rename above D3's ban panel), and "What the renamed runner sees".
@@ -928,6 +970,10 @@ file or the owner to decide.
   call, and needs noting in D-35.
 - **The ban email's appeal (15)**: "Reply within 30 days and a different
   moderator will look" is a moderation-process commitment for the owner.
+  **Decided: D-73** (owner, 2026-09-29). An appeal carries no deadline, no
+  timeframe and no "different moderator" — the service has one operator.
+  The ban email reads "Think we got it wrong? Reply to this email to
+  appeal and we'll look again.", and D4 drops "answers within a week".
 - **The Strava disconnect email (19)** is another effect of Strava's side
   of the connection. CLAUDE.md's product rule says the webhook's only
   effect is a notification row. D-43 already lists "Strava broken or

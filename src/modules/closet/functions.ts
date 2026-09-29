@@ -15,6 +15,7 @@ import {
   requireFormData,
   updateItemInput,
 } from "./inputs";
+import { closetNearby } from "./nearby";
 import { removeItemPhoto, uploadPhotoFromForm } from "./photos";
 import {
   createItem,
@@ -38,6 +39,16 @@ export const listItemsFn = createServerFn({ method: "GET" })
     const userId = await requireUserId();
     return listItems(db(), userId, data);
   });
+
+/**
+F at the desk's rail card (round 26 #10): each category's newest five.
+*/
+export const closetNearbyFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const userId = await requireUserId();
+    return closetNearby(db(), userId);
+  },
+);
 
 export const getItemFn = createServerFn({ method: "GET" })
   .validator((data: unknown) => itemIdInput.parse(data))
