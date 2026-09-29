@@ -175,6 +175,35 @@ export const passwordAttempts = /*#__PURE__*/ sqliteTable("password_attempts", {
 });
 
 /**
+ * An account its runner asked to delete (task 126, ACC-9; round 27 #14):
+ * the claim, and the one fact every part of the deletion reads.
+ *
+ * **While the row exists the runner is leaving**: their entries and
+ * profile are hidden through safety's one visibility rule, and signing in
+ * lands on "Keep your account?" rather than the app. Keep deletes the row,
+ * which is the whole of the undo — nothing about the entries was changed.
+ *
+ * **The purge's reconciliation marker** (law 8c). From `purge_after` the
+ * daily firing claims the row (`purge_started_at`, law 2) and deletes the
+ * account across both databases and R2; a purge that stops part way is
+ * finished by the next firing, because the row is deleted only in the
+ * same batch as the `user` row, last. Once claimed, Keep no longer can.
+ */
+export const accountDeletions = /*#__PURE__*/ sqliteTable(
+  "account_deletions",
+  {
+    userId: text("user_id").primaryKey(),
+    requestedAt: integer("requested_at").notNull(),
+    purgeAfter: integer("purge_after").notNull(),
+    purgeStartedAt: integer("purge_started_at"),
+  },
+  (t) => [
+    // The purge's read: rows past their date, oldest first.
+    index("account_deletions_due").on(t.purgeAfter),
+  ],
+);
+
+/**
  * Invite codes (task 126, ACC-5; decision D-39; round 26 #20). `DIAL-XXXX`,
  * stored as `lib/access.ts` normalizes it, minted on Desk D7 — by hand,
  * or by answering an access request — or seeded for the owner as a
