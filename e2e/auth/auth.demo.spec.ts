@@ -63,7 +63,13 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await expect(page).toHaveURL(/\/account\/request-access/u, {
     timeout: 15_000,
   });
-  await hydrated(page);
+  // A client-side navigation: the URL moves before Au5 renders, and the
+  // layout's hydration stamp is already set from Au2. Until Au5's heading
+  // is up, "Email" is still Au2's field — the fill lands there and is
+  // unmounted with it, and the request goes out with no address.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Request access" }),
+  ).toBeVisible();
   await page.getByLabel("Email").fill(email);
   await page
     .getByLabel("A note · optional")
