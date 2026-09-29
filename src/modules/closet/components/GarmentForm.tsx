@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+
+import type { JSX } from "react";
 
 import type {
   ColorName,
@@ -22,9 +25,12 @@ import {
 import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
+  causeLine,
   ChoiceField,
   ChoiceList,
-  FailureBand,
+  classifyFailure,
+  ControlFailureBand,
+  DeskSplit,
   FileWell,
   FormErrorSummary,
   FormFailureBand,
@@ -34,12 +40,21 @@ import {
   SubmitButton,
   TextField,
   ToggleField,
+  useControlAction,
   useFormSubmit,
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import type { PhotoStep } from "../../../ui";
 import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
+import { garmentLabel } from "../label";
+import type { ClosetNearby } from "../nearby";
+import { AlreadyInCloset } from "./AlreadyInCloset";
 import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
+import {
+  PHOTO_NOT_SAVED,
+  PhotoRefused,
+  type PhotoRefusal,
+} from "./PhotoRefused";
 import { ShadeSheet } from "./ShadeSheet";
 
 type Category = (typeof garmentCategories)[number];
@@ -176,6 +191,15 @@ const EMPTY_VALUES: GarmentFormValues = {
 };
 
 export interface GarmentFormProps {
+  /**
+  The page's heading — "Add a garment", "Edit Harrier".
+  */
+  heading: string;
+  /**
+   * The way back to C (round 26 #9), handed in as the route's
+   * `BackToCloset` so this form needs no router of its own.
+   */
+  back?: ReactNode;
   initial?: Partial<GarmentFormValues> | undefined;
   brandOptions?: readonly string[] | undefined;
   onBrandInput?: ((value: string) => void) | undefined;
@@ -189,17 +213,6 @@ export interface GarmentFormProps {
    * which one it is.
    */
   save: (garment: Garment) => Promise<{ id: string }>;
-  /**
-   * Writes the fields onto a row this form already saved. The add form
-   * passes it: once a create has succeeded and only the photo failed, the
-   * next submit must *update* that row — resending the create returns the
-   * first row unchanged (it is idempotent on the form's key), so a runner
-   * who fixed the name while picking another photo lost the fix while
-   * being told "Added to your closet". The edit form's `save` is already
-   * an update, so it passes nothing.
-   */
-  updateSaved?:
-    ((itemId: string, garment: Garment) => Promise<{ id: string }>) | undefined;
   onSaved: (result: { id: string }) => Promise<void>;
   submitLabel: string;
   pendingLabel: string;
@@ -209,6 +222,11 @@ export interface GarmentFormProps {
    * is stored, the two writes, and the step a picked photo goes through.
    */
   photo: GarmentPhoto;
+  /**
+   * The runner's closet by category, for F at the desk's rail card (round
+   * 26 #10). The add form passes it; given it, the form is DS1's split.
+   */
+  nearby?: ClosetNearby | undefined;
 }
 
 interface GarmentPhoto {
@@ -237,12 +255,13 @@ interface GarmentPhoto {
 }
 
 /**
- * What the runner is told when the garment saved and its photo did not —
- * the owner's words (task 122). Both halves are true at once, so the
- * sentence says both: the save is not undone, and only the photo is tried
- * again.
+ * F's column. Alone (Edit), the panel it always was; beside the rail (F at
+ * the desk, round 26 #10), DS1's primary column, 620 at most and set to
+ * the left as the log flow's desk pages are.
  */
-const PHOTO_NOT_SAVED = "Garment saved, photo didn't. Try again?";
+const PRIMARY_ALONE =
+  "mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 wide:px-6";
+const PRIMARY_SPLIT = `${PRIMARY_ALONE} wide:mx-0 wide:max-w-column`;
 
 /**
  * A blob URL for the held photo, revoked when it is replaced or dropped.
@@ -284,16 +303,18 @@ function useObjectUrl(file: File | undefined): string | undefined {
  */
 // fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
 export function GarmentForm({
+  heading,
+  back,
   initial,
   brandOptions,
   onBrandInput,
   save,
-  updateSaved,
   onSaved,
   submitLabel,
   pendingLabel,
   successMessage,
   photo,
+  nearby,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
@@ -309,69 +330,83 @@ export function GarmentForm({
   const [held, setHeld] = useState<File | undefined>();
   const [removed, setRemoved] = useState(false);
   /**
-  The row a submit already saved, when a later step of that submit failed.
-  */
-  const [savedId, setSavedId] = useState<string | undefined>();
-  /**
-   * The saved garment whose photo did not go up, when that is the state:
-   * what the band's Try again writes the photo against. Holding the id
-   * rather than a flag means the retry cannot be offered without one.
+   * The saved garment whose photo did not go up, and why, when that is the
+   * state (round 26 #4). The form has done its job — the row exists — so
+   * its fields go and the screen becomes the saved garment's: what the
+   * band's Try again and Pick another write against. Holding the id
+   * rather than a flag means neither can be offered without one.
    */
-  const [photoFailedFor, setPhotoFailedFor] = useState<string | undefined>();
-  const [photoError, setPhotoError] = useState<string | undefined>();
+  const [refused, setRefused] = useState<
+    (PhotoRefusal & { itemId: string }) | undefined
+  >();
   const [photoPending, setPhotoPending] = useState(false);
   const photoInFlight = useRef(false);
   const heldUrl = useObjectUrl(held);
   const preview = heldUrl ?? (removed ? undefined : photo.url);
   const pick = usePhotoPick({
     renderPhotoStep: photo.renderStep,
-    onReady: setHeld,
+    onReady: (file) => {
+      setHeld(file);
+      // Once saved, a new photo has no form to wait for: it goes to the
+      // saved garment as soon as it is ready.
+      if (refused !== undefined) void finishWithPhoto(refused.itemId, file);
+    },
   });
 
   const form = useFormSubmit({
     schema: garmentFormSchema,
-    action: async (garment: Garment) => {
-      const saved =
-        savedId === undefined || updateSaved === undefined
-          ? await save(garment)
-          : await updateSaved(savedId, garment);
-      setSavedId(saved.id);
-      return saved;
-    },
+    action: save,
     successMessage,
     labels: LABELS,
     onSuccess: async (saved) => {
-      await finishWithPhoto(saved.id);
+      await finishWithPhoto(saved.id, held);
     },
   });
 
   /**
-   * The photo's write, after the row it belongs to exists — the add form
-   * has no id before then. A refusal (type, size) marks the well, because
-   * the fix is another file; any failure raises the band, because the
-   * garment is saved and only the photo is owed. Returns whether the photo
-   * is now as the runner left it.
+   * Edit's Remove, once the row is saved. A removal that fails is not
+   * round 26 #4's state — there is no photo to add and nothing to pick —
+   * so it is the control failure band under the well, in the words Y's
+   * own Remove uses ("Photo kept"), with the fields left as they are.
+   * Try again removes it and moves on; so does saving again.
    */
-  async function didWritePhoto(itemId: string): Promise<boolean> {
-    setPhotoError(undefined);
-    setPhotoFailedFor(undefined);
+  const photoRemoval = useControlAction({
+    action: async (itemId: string) => {
+      await photo.remove({ data: { itemId } });
+    },
+    onSuccess: async (itemId) => {
+      await onSaved({ id: itemId });
+    },
+    kicker: "Photo kept",
+  });
+
+  /**
+   * The upload, after the row it belongs to exists — the add form has no
+   * id before then. Any failure turns the screen into round 26 #4's saved
+   * state, because the garment is saved and only the photo is owed: a
+   * refusal carries the server's reason and offers another file, a throw
+   * carries its cause and, if it was the connection, Try again. The cause
+   * is the control's (`causeLine`), not the form's: the form's server line
+   * ends "Nothing changed.", and the garment did change.
+   * Returns whether the photo is now as the runner left it.
+   */
+  async function didUploadPhoto(itemId: string, file: File): Promise<boolean> {
     setPhotoPending(true);
     try {
-      if (held !== undefined) {
-        const data = new FormData();
-        data.set("itemId", itemId);
-        data.set("photo", held);
-        const result = await photo.upload({ data });
-        if (!result.ok) {
-          setPhotoError(result.error);
-          throw new Error(result.error);
-        }
-      } else if (removed && photo.url !== undefined) {
-        await photo.remove({ data: { itemId } });
-      }
-      return true;
-    } catch {
-      setPhotoFailedFor(itemId);
+      const data = new FormData();
+      data.set("itemId", itemId);
+      data.set("photo", file);
+      const result = await photo.upload({ data });
+      if (result.ok) return true;
+      setRefused({ itemId, reason: result.error, canRetry: false });
+      form.announce(PHOTO_NOT_SAVED);
+      return false;
+    } catch (error) {
+      setRefused({
+        itemId,
+        reason: causeLine(error),
+        canRetry: classifyFailure(error).kind === "network",
+      });
       form.announce(PHOTO_NOT_SAVED);
       return false;
     } finally {
@@ -382,16 +417,36 @@ export function GarmentForm({
   /**
    * Write the photo, and move on only if it landed. One at a time: the
    * guard is a ref because two presses inside one render would both read
-   * `photoPending` as false.
+   * `photoPending` as false. A removal is its own control, with its own
+   * guard.
    */
-  async function finishWithPhoto(itemId: string): Promise<void> {
+  async function finishWithPhoto(
+    itemId: string,
+    file: File | undefined,
+  ): Promise<void> {
+    if (file === undefined) {
+      if (removed && photo.url !== undefined) await photoRemoval.run(itemId);
+      else await onSaved({ id: itemId });
+      return;
+    }
     if (photoInFlight.current) return;
     photoInFlight.current = true;
     try {
-      if (await didWritePhoto(itemId)) await onSaved({ id: itemId });
+      if (await didUploadPhoto(itemId, file)) await onSaved({ id: itemId });
     } finally {
       photoInFlight.current = false;
     }
+  }
+
+  /**
+   * A file from the well, or from Pick another, into W3's step. Once
+   * saved, what the step hands back goes straight to the garment.
+   */
+  function pickFrom(files: FileList | null): void {
+    if (files === null) return;
+    const file = files[0];
+    if (file === undefined) return;
+    pick.pick(file);
   }
 
   const estimate = useMemo(
@@ -421,7 +476,7 @@ export function GarmentForm({
     setValues((current) => ({ ...current, [key]: value }));
   }
 
-  return (
+  const fieldsView = (
     <form
       ref={form.formRef}
       noValidate
@@ -431,7 +486,6 @@ export function GarmentForm({
         void form.submit(values);
       }}
     >
-      <FormStatus>{form.status}</FormStatus>
       <FormErrorSummary
         rows={form.summaryRows}
         onFocusField={form.focusField}
@@ -684,9 +738,8 @@ export function GarmentForm({
       <FileWell
         part="photo-well"
         copy={GARMENT_PHOTO_COPY}
-        pending={pick.stepping || (photoPending && held !== undefined)}
+        pending={pick.stepping || photoPending}
         accept={photoAcceptAttribute}
-        error={photoError}
         preview={
           preview === undefined ? undefined : { src: preview, alt: values.name }
         }
@@ -694,24 +747,14 @@ export function GarmentForm({
           setHeld(undefined);
           setRemoved(true);
         }}
-        onFiles={(files) => {
-          if (files === null) return;
-          const file = files[0];
-          if (file === undefined) return;
-          setPhotoError(undefined);
-          pick.pick(file);
-        }}
+        onFiles={pickFrom}
       />
       {pick.step(form.announce)}
-      {photoFailedFor === undefined ? undefined : (
-        <FailureBand
-          kicker="Photo not saved"
-          message={PHOTO_NOT_SAVED}
-          onRetry={() => {
-            void finishWithPhoto(photoFailedFor);
-          }}
-        />
-      )}
+      <ControlFailureBand
+        failure={photoRemoval.failure}
+        onRetry={photoRemoval.retry}
+        retryRef={photoRemoval.retryRef}
+      />
 
       <FormFailureBand
         failure={form.failure}
@@ -724,5 +767,155 @@ export function GarmentForm({
         pending={form.pending}
       />
     </form>
+  );
+
+  const primary = (
+    <>
+      {/* The one status region, outside both views: the sentence that
+          says the photo did not go up is written as the fields leave. */}
+      <FormStatus>{photoRemoval.status || form.status}</FormStatus>
+      {back}
+      <FormHeading
+        heading={heading}
+        saved={refused === undefined ? undefined : values}
+      />
+      {refused === undefined ? (
+        fieldsView
+      ) : (
+        <SavedPhotoRefused
+          onDone={() => {
+            void onSaved({ id: refused.itemId });
+          }}
+        >
+          <FileWell
+            part="photo-well"
+            copy={GARMENT_PHOTO_COPY}
+            pending={pick.stepping || photoPending}
+            accept={photoAcceptAttribute}
+            onFiles={pickFrom}
+          />
+          {pick.step(form.announce)}
+          <PhotoRefused
+            refusal={refused}
+            onRetry={() => {
+              void finishWithPhoto(refused.itemId, held);
+            }}
+            onFiles={pickFrom}
+          />
+        </SavedPhotoRefused>
+      )}
+    </>
+  );
+
+  return (
+    <FormFrame nearby={nearby} values={values}>
+      {primary}
+    </FormFrame>
+  );
+}
+
+/**
+ * F's frame: its column alone (Edit), or DS1's split at the desk with the
+ * one rail card beside it when the runner's closet is handed in (round 26
+ * #10) — which follows the category and the name as they are typed.
+ */
+function FormFrame({
+  nearby,
+  values,
+  children,
+}: Readonly<{
+  nearby: ClosetNearby | undefined;
+  values: GarmentFormValues;
+  children: ReactNode;
+}>): JSX.Element {
+  if (nearby === undefined) {
+    return (
+      <div data-part="primary" className={PRIMARY_ALONE}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <DeskSplit
+      rail={
+        <AlreadyInCloset
+          category={values.category}
+          pieces={nearby[values.category] ?? []}
+          typed={{ brand: values.brand, name: values.name }}
+        />
+      }
+    >
+      <div data-part="primary" className={PRIMARY_SPLIT}>
+        {children}
+      </div>
+    </DeskSplit>
+  );
+}
+
+/**
+ * F's one heading, whichever view (Accessibility Contract rule 04): the
+ * page's own while there is a form; once the garment is saved, the
+ * piece's name in its own case under `SAVED TO CLOSET · {CATEGORY}`.
+ */
+function FormHeading({
+  heading,
+  saved,
+}: Readonly<{
+  heading: string;
+  saved: GarmentFormValues | undefined;
+}>): JSX.Element {
+  // One `<h1>` in the source as well as on the screen, which is what the
+  // one-heading check reads; the saved name keeps its own case.
+  return (
+    <div className="flex flex-col gap-1">
+      {saved === undefined ? undefined : (
+        <Mono step="xs" className="text-dialed-text">
+          {`Saved to closet · ${garmentCategoryLabels[saved.category]}`}
+        </Mono>
+      )}
+      <h1
+        data-state={saved === undefined ? undefined : "saved"}
+        className="m-0 font-display text-title uppercase data-[state=saved]:normal-case"
+      >
+        {saved === undefined
+          ? heading
+          : garmentLabel({
+              name: saved.name,
+              brand: saved.brand,
+              // A piece saved with no brand is called by its name alone.
+              isGeneric: saved.brand === "",
+            })}
+      </h1>
+    </div>
+  );
+}
+
+/**
+ * Round 26 #4, "F Photo failed": the garment is saved, so the fields have
+ * gone — F is the saved garment's page now, not a form to submit twice.
+ * Under `SAVED TO CLOSET` and the piece's name (the page's one heading):
+ * the empty well, the band under it, and **Done**, to the garment (Y).
+ */
+function SavedPhotoRefused({
+  children,
+  onDone,
+}: Readonly<{
+  /**
+  The empty well, W3's step, and the band under them.
+  */
+  children: ReactNode;
+  onDone: () => void;
+}>): JSX.Element {
+  return (
+    <div data-part="saved" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">{children}</div>
+      <button
+        type="button"
+        onClick={onDone}
+        className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
+      >
+        Done
+      </button>
+    </div>
   );
 }

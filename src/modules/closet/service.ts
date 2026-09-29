@@ -817,6 +817,37 @@ export function shouldIncludeByPerformanceFilter(
   return buckets.includes(filters.performance);
 }
 
+/**
+ * Rows as the closet shows them: each with its product's defaults merged
+ * in, its working range, and its record. One read of the defaults for
+ * every linked product and one of the runner's history, however many rows.
+ * Shared by C's listing and F's "Already in your closet".
+ */
+export async function viewsOf(
+  db: Db,
+  userId: string,
+  rows: readonly WardrobeItemRow[],
+): Promise<ClosetItemView[]> {
+  // Stryker disable next-line MethodExpression
+  const linkedProductIds = rows.map((row) => row.productId).filter(isLinked);
+  const productIds = [...new Set(linkedProductIds)];
+  const [defaultsByProduct, performanceByItem] = await Promise.all([
+    getProductAttributeDefaultsBulk(db, productIds),
+    computeUserPerformance(db, userId),
+  ]);
+  return rows.map((row) =>
+    toItemView(
+      row,
+      // Equivalent mutant: `Map#get` of a null key answers undefined, so
+      // both arms agree. The check says the intent — an unlinked item has
+      // no defaults to look up — rather than relying on that.
+      // Stryker disable next-line ConditionalExpression
+      row.productId === null ? undefined : defaultsByProduct.get(row.productId),
+      performanceByItem.get(row.id),
+    ),
+  );
+}
+
 export async function listItems(
   db: Db,
   userId: string,
@@ -835,35 +866,15 @@ export async function listItems(
       ),
     );
 
-  // Stryker disable next-line MethodExpression
-  const linkedProductIds = rows.map((row) => row.productId).filter(isLinked);
-  const productIds = [...new Set(linkedProductIds)];
-  const [defaultsByProduct, performanceByItem] = await Promise.all([
-    getProductAttributeDefaultsBulk(db, productIds),
-    computeUserPerformance(db, userId),
-  ]);
   const genericCount = rows.filter((row) => row.productId === null).length;
 
-  const views = rows
-    .map((row) =>
-      toItemView(
-        row,
-        // Equivalent mutant: `Map#get` of a null key answers undefined, so
-        // both arms agree. The check says the intent — an unlinked item has
-        // no defaults to look up — rather than relying on that.
-        // Stryker disable next-line ConditionalExpression
-        row.productId === null
-          ? undefined
-          : defaultsByProduct.get(row.productId),
-        performanceByItem.get(row.id),
-      ),
-    )
-    .filter(
-      (view) =>
-        shouldIncludeByConditionFilters(view.effective, filters) &&
-        shouldIncludeByPerformanceFilter(view, filters) &&
-        shouldIncludeByTempFilter(view.tempRange, filters),
-    );
+  const all = await viewsOf(db, userId, rows);
+  const views = all.filter(
+    (view) =>
+      shouldIncludeByConditionFilters(view.effective, filters) &&
+      shouldIncludeByPerformanceFilter(view, filters) &&
+      shouldIncludeByTempFilter(view.tempRange, filters),
+  );
 
   return { items: views, totalCount: rows.length, genericCount };
 }

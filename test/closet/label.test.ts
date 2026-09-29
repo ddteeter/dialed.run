@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { garmentLabel } from "../../src/modules/closet/label";
+import { garmentLabel, runsLabel } from "../../src/modules/closet/label";
 
 /**
  * The stored `brand` column is nullable and `null` is the value under
@@ -54,5 +54,13 @@ describe("garmentLabel", () => {
     expect(
       garmentLabel({ name: "Wind jacket", brand: NO_BRAND, isGeneric: true }),
     ).toBe("Wind jacket");
+  });
+});
+
+describe("runsLabel", () => {
+  it("says one run in the singular and every other count in the plural", () => {
+    expect(runsLabel(0)).toBe("0 runs");
+    expect(runsLabel(1)).toBe("1 run");
+    expect(runsLabel(38)).toBe("38 runs");
   });
 });

@@ -128,7 +128,7 @@ describe("emailContent", () => {
       {
         subject: "Your dialed.run account is closed",
         body: "We closed your account for breaking the community rules: repeated harassment. You can't log in, and your shared runs are gone from the feed.",
-        foot: "Think we got it wrong? Reply within 30 days and a different moderator will look.",
+        foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
         footer: [PRIVACY],
       },
     ],
@@ -354,6 +354,25 @@ describe("renderEmail", () => {
     expect(verify.html.split(footerStyle).length - 1, verify.html).toBe(1);
     // The reminder genuinely has a reason, so it carries two.
     expect(reminder.html.split(footerStyle).length - 1).toBe(2);
+  });
+
+  it("sets no appeal deadline and promises no second moderator (round 27)", () => {
+    // The owner's call: an appeal has no deadline, and there is one
+    // moderator, so neither notice may say otherwise.
+    const notices = [
+      emailContent(
+        { kind: "account_closed", reason: "spam" },
+        { origin: ORIGIN, unsubscribe: UNSUBSCRIBE },
+      ),
+      emailContent(
+        { kind: "content_removed", subject: "photo", reason: "spam" },
+        { origin: ORIGIN, unsubscribe: UNSUBSCRIBE },
+      ),
+    ];
+    for (const notice of notices) {
+      const words = `${notice.body} ${notice.foot}`;
+      expect(words).not.toMatch(/\bdays?\b|\bwithin\b|different moderator/iu);
+    }
   });
 
   it("draws no button where the board draws none (the ban email)", () => {

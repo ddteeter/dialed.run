@@ -62,6 +62,8 @@ export {
   quarantinedContentFor,
   quarantineInsert,
   type QuarantineRecord,
+  // The year-end purge (D-70), which rides the daily digest's firing.
+  purgeExpiredQuarantine,
 } from "./quarantine";
 
 export {

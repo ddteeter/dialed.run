@@ -10,6 +10,7 @@ import {
   unretireItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
+import { garmentBandCountQuery } from "../../modules/feed/functions";
 import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { Layout } from "../../ui";
@@ -27,6 +28,9 @@ function GarmentDetailPage() {
     <Layout>
       <GarmentDetail
         detail={Route.useLoaderData().detail}
+        // Feed's (the band is the run's weather), asked for by round 26's
+        // delete sheet when it opens — never with the page (task 128).
+        bandCount={garmentBandCountQuery}
         retire={retireItemFn}
         unretire={unretireItemFn}
         remove={deleteItemFn}

@@ -190,8 +190,10 @@ as a var, secret as a secret. Free.
   suspected CSAM sends the uploader nothing, hides the content at once,
   and keeps the rows (entry, items, tags, photos, uploader, upload time)
   in `quarantined_content` and the bytes under `quarantine/` for 365 days,
-  readable only by an admin. Nothing purges on `retain_until` yet; the
-  owner deletes by hand after it until a purge exists.
+  readable only by an admin. The daily digest's firing purges each record
+  and its copies once `retain_until` passes (task 128 PR 2b), silently. A
+  record that must be kept longer (a legal hold) needs its `retain_until`
+  moved on by hand before then.
 - **The owner reports to NCMEC's CyberTipline by hand**, following the
   procedure below. 18 U.S.C. §2258A requires a report on actual knowledge,
   and preservation.

@@ -14,6 +14,7 @@ import {
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 
 const formProps = {
+  heading: "Add a garment",
   save: vi.fn(() => Promise.resolve({ id: "01ITEM" })),
   onSaved: () => Promise.resolve(),
   submitLabel: "Save",

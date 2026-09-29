@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { uiGroups } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
@@ -161,7 +161,12 @@ export interface ClosetGridProps {
   lands on the piece still present and marked, rather than on a grid it
   has just vanished from.
   */
-  initialShowRetired?: boolean;
+  initialShowRetired?: boolean | undefined;
+  /**
+   * The piece a delete just took away, for round 26 #3's landing:
+   * "{name} deleted." in the screen's status line.
+   */
+  deleted?: string | undefined;
 }
 
 /**
@@ -183,8 +188,16 @@ export interface ClosetGridProps {
 export function ClosetGrid({
   listing,
   initialShowRetired = false,
+  deleted,
 }: Readonly<ClosetGridProps>) {
   const [showRetired, setShowRetired] = useState(initialShowRetired);
+  // Written after mount rather than rendered with the page: a status
+  // region announces what changes in it, and a sentence that arrives with
+  // the region itself is never read out.
+  const [said, setSaid] = useState("");
+  useEffect(() => {
+    if (deleted !== undefined) setSaid(`${deleted} deleted.`);
+  }, [deleted]);
 
   const visible = gridOrder(
     listing.items.filter((view) => showRetired || !view.item.retired),
@@ -197,6 +210,12 @@ export function ClosetGrid({
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 wide:px-6">
+      {/* `sr-only` while empty rather than hidden: out of the column's
+          gap, and still in the accessibility tree, so the sentence that
+          arrives is announced. */}
+      <p role="status" className="m-0 text-body empty:sr-only">
+        {said}
+      </p>
       <div className="flex flex-col gap-2">
         <div
           data-part="grid-header"
@@ -213,7 +232,7 @@ export function ClosetGrid({
               nothing is a dead control. */}
           {retiredCount > 0 ? (
             <label className="target flex cursor-pointer items-center gap-2 text-body font-semibold">
-              Show retired
+              {`Show retired (${String(retiredCount)})`}
               <input
                 type="checkbox"
                 role="switch"

@@ -33,6 +33,10 @@ function closedOn(epochSeconds: number): string {
  * The board's `CASE [B-0031]` is not drawn here: bans carry no case
  * number in the schema, and inventing one would be a reference nobody at
  * the desk could look up. Listed as a design delta.
+ *
+ * Nor is the board's "answers within a week": an appeal promises no
+ * timeframe (decision D-73 — the service has one operator), so the line
+ * says a person reads every message and stops there.
  */
 export function AccountClosed({
   reason,
@@ -76,7 +80,7 @@ export function AccountClosed({
           >
             {APPEAL_ADDRESS}
           </a>
-          . A person reads every message and answers within a week.
+          . A person reads every message.
         </p>
       </section>
     </Page>

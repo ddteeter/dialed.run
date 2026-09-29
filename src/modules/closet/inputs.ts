@@ -34,6 +34,24 @@ export const closetFiltersInput = z.object({
 export const itemIdInput = z.object({ itemId: ulidSchema });
 
 /**
+ * Screen C's search: `retired=true` opens with retired pieces shown (set
+ * after a retire, so the piece is visibly still there). TanStack parses
+ * search values as JSON, so the boolean we navigate with round-trips as a
+ * boolean. Anything else is dropped rather than refused: a hand-edited URL
+ * still opens the closet.
+ *
+ * **What a delete took away is not in here** (PR #129 review). It rides
+ * the navigation's history state (`deletedGarment`), which only the app
+ * can write: a search param echoed as "{name} deleted." was a sentence
+ * anyone could put on a runner's screen with a crafted link.
+ */
+export function closetSearch(search: Record<string, unknown>): {
+  retired?: true;
+} {
+  return search.retired === true ? { retired: true } : {};
+}
+
+/**
  * The garment plus the key that identifies *this* submission of it.
  *
  * A separate wrapper rather than a field on `garmentSchema`, because the

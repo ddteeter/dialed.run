@@ -41,6 +41,7 @@ import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
+import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
 import { decideReview, moderateContent } from "./moderation";
 import { requireAdmin, reviewActionInput, takedownInput } from "../safety";
 import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
@@ -312,6 +313,23 @@ export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await deleteEntryPhoto(drizzle(env.DIALED_CORE), userId, data.photoId);
+  });
+
+/**
+ * The bands a garment has a record in, for round 26's delete sheet (task
+ * 128 · SAF-16), asked for when the sheet opens — `undefined` when the
+ * count failed, which the sheet reads as "leave the row out". Feed's because the
+ * band is the run's weather; the closet route hands it to the sheet.
+ */
+export const garmentBandCountQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => garmentBandsInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return garmentBandCountOrNone(
+      drizzle(env.DIALED_CORE),
+      userId,
+      data.itemId,
+    );
   });
 
 /**
