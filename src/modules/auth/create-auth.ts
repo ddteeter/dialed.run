@@ -12,6 +12,12 @@ import type { drizzle } from "drizzle-orm/d1";
 import * as authSchema from "../../db/schema-auth";
 import type { AuthMail } from "../account";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
+import {
+  admitSignUp,
+  claimInvite,
+  type AccessGate,
+  type HookRequest,
+} from "./access-hook";
 import { AUTH_COPY } from "./auth-copy";
 import {
   BREACHED_CODE,
@@ -56,10 +62,17 @@ export interface AuthConfig {
    * test), the sends are awaited.
    */
   background?: ((work: Promise<unknown>) => void) | undefined;
+  /**
+   * The way in (ACC-5): Turnstile and the invite code on sign-up, email
+   * and Google, and the code spent as the account is made. Required for
+   * the breach screen's reason: no construction can leave the door open
+   * by forgetting it. See `./access-hook.ts`.
+   */
+  access: AccessGate;
 }
 
 /**
- * The before-hook that screens a new password on sign-up and on a
+ * The before-hook's half that screens a new password on sign-up and on a
  * password change.
  *
  * **Fails open** (law 5): a screen that times out or errors lets the
@@ -67,23 +80,24 @@ export interface AuthConfig {
  * screen is secondary. Only a positive match refuses, as a 400 carrying
  * `BREACHED_CODE`, which the form lands on the Password field.
  */
-export function passwordScreenHook(screen: AuthConfig["passwordScreen"]) {
-  return createAuthMiddleware(async (ctx) => {
-    const password = newPasswordIn(ctx.path, ctx.body);
-    if (password === undefined) return;
-    const verdict = await screen.verdict(password);
-    if (verdict === "breached") {
-      throw new APIError("BAD_REQUEST", {
-        code: BREACHED_CODE,
-        message: AUTH_COPY.passwordBreached,
-      });
-    }
-    if (verdict === "unknown") {
-      screen.report(new Error("password breach screen did not answer"), {
-        path: ctx.path,
-      });
-    }
-  });
+async function screenPassword(
+  screen: AuthConfig["passwordScreen"],
+  ctx: HookRequest,
+): Promise<void> {
+  const password = newPasswordIn(ctx.path, ctx.body);
+  if (password === undefined) return;
+  const verdict = await screen.verdict(password);
+  if (verdict === "breached") {
+    throw new APIError("BAD_REQUEST", {
+      code: BREACHED_CODE,
+      message: AUTH_COPY.passwordBreached,
+    });
+  }
+  if (verdict === "unknown") {
+    screen.report(new Error("password breach screen did not answer"), {
+      path: ctx.path,
+    });
+  }
 }
 
 /**
@@ -141,6 +155,7 @@ export function createAuth({
   passwordScreen,
   mail,
   background,
+  access,
 }: AuthConfig) {
   const posture = deploymentPosture(baseUrl);
   // Better Auth's own sends go through `backgroundTasks`; the one it
@@ -225,14 +240,32 @@ export function createAuth({
     databaseHooks: {
       user: {
         create: {
+          // No name, and (invite-only) a code spent: `claimInvite`.
+          before: claimInvite(access),
           after: async (user) => {
+            // The code's use is the account's for good now, even if the
+            // account is deleted later. Awaited: it is one small write,
+            // and until it lands the address alone holds the use.
+            await access.confirm(user.id);
             if (!user.emailVerified) await later(mail.newAccount(user));
           },
         },
       },
     },
-    ...(google !== undefined && { socialProviders: { google } }),
-    hooks: { before: passwordScreenHook(passwordScreen) },
+    // Google makes an account only when Au2 asks it to (`requestSignUp`),
+    // which is where Turnstile and the code are checked; from the log-in
+    // page an unknown Google address is refused, not signed up.
+    ...(google !== undefined && {
+      socialProviders: { google: { ...google, disableImplicitSignUp: true } },
+    }),
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        // The password first: a breached one is the form's to fix
+        // whatever the code says. Then the way in.
+        await screenPassword(passwordScreen, ctx);
+        await admitSignUp(access, ctx);
+      }),
+    },
     plugins: plugins ?? [],
   });
 }

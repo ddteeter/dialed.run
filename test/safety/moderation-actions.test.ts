@@ -41,6 +41,7 @@ import {
   listAccounts,
   prefixPattern,
 } from "../../src/modules/account";
+import type { ScreenHandle } from "../../src/modules/account/handle-screen";
 import {
   AdminRequiredError,
   banUser,
@@ -63,6 +64,9 @@ import {
 } from "../../src/modules/safety";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+
+// The handle screen (D-72) answers "clear": these tests are about retirement.
+const CLEAR: ScreenHandle = () => Promise.resolve("clear");
 
 /**
  * SAF-5, SAF-6 and SAF-8: what the Desk does to content, and what it
@@ -1133,20 +1137,28 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     const other = await makeUser({ username: "someone_else" });
     await rename(runner, "runner_0100");
 
-    expect(await claimUsername(core(), runner, "rudename")).toMatchObject({
+    expect(
+      await claimUsername(core(), runner, "rudename", CLEAR),
+    ).toMatchObject({
       kind: "taken",
     });
-    expect(await claimUsername(core(), other, "rudename")).toMatchObject({
-      kind: "taken",
-    });
+    expect(await claimUsername(core(), other, "rudename", CLEAR)).toMatchObject(
+      {
+        kind: "taken",
+      },
+    );
     const renamed = await profileOf(runner);
     expect(renamed?.username).toBe("runner_0100");
     // The lock outlives the runner's later changes of their own.
-    expect(await claimUsername(core(), runner, "fresh_pick")).toStrictEqual({
+    expect(
+      await claimUsername(core(), runner, "fresh_pick", CLEAR),
+    ).toStrictEqual({
       kind: "claimed",
       username: "fresh_pick",
     });
-    expect(await claimUsername(core(), runner, "rudename")).toMatchObject({
+    expect(
+      await claimUsername(core(), runner, "rudename", CLEAR),
+    ).toMatchObject({
       kind: "taken",
     });
     expect(await historyOf("rudename")).toHaveLength(1);
@@ -1154,9 +1166,9 @@ describe("forceRename (round 27 #16), through account's rules", () => {
 
   it("still lets a runner take back a handle they gave up themselves", async () => {
     const runner = await makeUser({ username: "first" });
-    await claimUsername(core(), runner, "second");
+    await claimUsername(core(), runner, "second", CLEAR);
 
-    expect(await claimUsername(core(), runner, "first")).toStrictEqual({
+    expect(await claimUsername(core(), runner, "first", CLEAR)).toStrictEqual({
       kind: "claimed",
       username: "first",
     });
@@ -1165,7 +1177,7 @@ describe("forceRename (round 27 #16), through account's rules", () => {
 
   it("can hand the runner one of their own unlocked old handles", async () => {
     const runner = await makeUser({ username: "first" });
-    await claimUsername(core(), runner, "rudename");
+    await claimUsername(core(), runner, "rudename", CLEAR);
 
     expect(await rename(runner, "first")).toStrictEqual({
       kind: "renamed",

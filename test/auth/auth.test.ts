@@ -6,6 +6,7 @@ import { env } from "../../src/env";
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../src/lib/contracts";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import { recordingMail } from "./mail-recorder";
+import { OPEN_ACCESS } from "./open-access";
 
 /**
 A breach screen that finds nothing, so these cases are about auth itself.
@@ -26,6 +27,7 @@ const auth = createAuth({
   baseUrl: "http://localhost",
   passwordScreen: CLEAN_SCREEN,
   mail: recordingMail(),
+  access: OPEN_ACCESS,
 });
 
 const credentials = {
@@ -78,7 +80,7 @@ describe("auth (better-auth on real D1)", () => {
     expect(context.password.config.minPasswordLength).toBe(PASSWORD_MIN_LENGTH);
     expect(
       signUpSchema.safeParse({
-        name: "Floor",
+        inviteCode: "DIAL-7K3P",
         email: "floor-9@example.com",
         password: short,
       }).success,
@@ -90,7 +92,7 @@ describe("auth (better-auth on real D1)", () => {
     expect(taken.user.email).toBe("floor-10@example.com");
     expect(
       signUpSchema.safeParse({
-        name: "Floor",
+        inviteCode: "DIAL-7K3P",
         email: "floor-10@example.com",
         password: enough,
       }).success,
@@ -103,6 +105,7 @@ describe("auth (better-auth on real D1)", () => {
       secret: "test-secret-not-for-production",
       passwordScreen: CLEAN_SCREEN,
       mail: recordingMail(),
+      access: OPEN_ACCESS,
       google: {
         clientId: "test-client-id.apps.googleusercontent.com",
         clientSecret: "test-client-secret",

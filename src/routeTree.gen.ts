@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
 import { Route as AccountForgotRouteImport } from './routes/account/forgot'
+import { Route as AccountRequestAccessRouteImport } from './routes/account/request-access'
 import { Route as AccountResetRouteImport } from './routes/account/reset'
 import { Route as AccountUnsubscribeRouteImport } from './routes/account/unsubscribe'
 import { Route as AccountUsernameRouteImport } from './routes/account/username'
@@ -28,6 +30,7 @@ import { Route as ClosetIndexRouteImport } from './routes/closet/index'
 import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
 import { Route as DeskIndexRouteImport } from './routes/desk/index'
+import { Route as DeskAccessRouteImport } from './routes/desk/access'
 import { Route as DeskRunnersRouteImport } from './routes/desk/runners'
 import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
@@ -77,6 +80,11 @@ const DeskRouteRoute = DeskRouteRouteImport.update({
   path: '/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountSectionRoute = AccountSectionRouteImport.update({
   id: '/account/$section',
   path: '/account/$section',
@@ -90,6 +98,11 @@ const AccountCheckEmailRoute = AccountCheckEmailRouteImport.update({
 const AccountForgotRoute = AccountForgotRouteImport.update({
   id: '/account/forgot',
   path: '/account/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRequestAccessRoute = AccountRequestAccessRouteImport.update({
+  id: '/account/request-access',
+  path: '/account/request-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountResetRoute = AccountResetRouteImport.update({
@@ -155,6 +168,11 @@ const ClosetNewRoute = ClosetNewRouteImport.update({
 const DeskIndexRoute = DeskIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => DeskRouteRoute,
+} as any)
+const DeskAccessRoute = DeskAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
   getParentRoute: () => DeskRouteRoute,
 } as any)
 const DeskRunnersRoute = DeskRunnersRouteImport.update({
@@ -328,9 +346,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
+  '/join': typeof JoinRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
@@ -341,6 +361,7 @@ export interface FileRoutesByFullPath {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/desk/access': typeof DeskAccessRoute
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
@@ -381,9 +402,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/@{$handle}': typeof AtChar123handleChar125Route
+  '/join': typeof JoinRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
@@ -394,6 +417,7 @@ export interface FileRoutesByTo {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/desk/access': typeof DeskAccessRoute
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
@@ -436,9 +460,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
+  '/join': typeof JoinRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
@@ -449,6 +475,7 @@ export interface FileRoutesById {
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
+  '/desk/access': typeof DeskAccessRoute
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
@@ -492,9 +519,11 @@ export interface FileRouteTypes {
     | '/'
     | '/desk'
     | '/@{$handle}'
+    | '/join'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
+    | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
     | '/account/username'
@@ -505,6 +534,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/desk/access'
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
@@ -545,9 +575,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/@{$handle}'
+    | '/join'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
+    | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
     | '/account/username'
@@ -558,6 +590,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/desk/access'
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
@@ -599,9 +632,11 @@ export interface FileRouteTypes {
     | '/'
     | '/desk'
     | '/@{$handle}'
+    | '/join'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
+    | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
     | '/account/username'
@@ -612,6 +647,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/closet/$itemId'
     | '/closet/new'
+    | '/desk/access'
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
@@ -654,9 +690,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
   AtChar123handleChar125Route: typeof AtChar123handleChar125Route
+  JoinRoute: typeof JoinRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
   AccountForgotRoute: typeof AccountForgotRoute
+  AccountRequestAccessRoute: typeof AccountRequestAccessRoute
   AccountResetRoute: typeof AccountResetRoute
   AccountUnsubscribeRoute: typeof AccountUnsubscribeRoute
   AccountUsernameRoute: typeof AccountUsernameRoute
@@ -726,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeskRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/$section': {
       id: '/account/$section'
       path: '/account/$section'
@@ -745,6 +790,13 @@ declare module '@tanstack/react-router' {
       path: '/account/forgot'
       fullPath: '/account/forgot'
       preLoaderRoute: typeof AccountForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/request-access': {
+      id: '/account/request-access'
+      path: '/account/request-access'
+      fullPath: '/account/request-access'
+      preLoaderRoute: typeof AccountRequestAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/reset': {
@@ -836,6 +888,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/desk/'
       preLoaderRoute: typeof DeskIndexRouteImport
+      parentRoute: typeof DeskRouteRoute
+    }
+    '/desk/access': {
+      id: '/desk/access'
+      path: '/access'
+      fullPath: '/desk/access'
+      preLoaderRoute: typeof DeskAccessRouteImport
       parentRoute: typeof DeskRouteRoute
     }
     '/desk/runners': {
@@ -1073,11 +1132,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface DeskRouteRouteChildren {
+  DeskAccessRoute: typeof DeskAccessRoute
   DeskRunnersRoute: typeof DeskRunnersRoute
   DeskIndexRoute: typeof DeskIndexRoute
 }
 
 const DeskRouteRouteChildren: DeskRouteRouteChildren = {
+  DeskAccessRoute: DeskAccessRoute,
   DeskRunnersRoute: DeskRunnersRoute,
   DeskIndexRoute: DeskIndexRoute,
 }
@@ -1090,9 +1151,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRouteRoute: DeskRouteRouteWithChildren,
   AtChar123handleChar125Route: AtChar123handleChar125Route,
+  JoinRoute: JoinRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
   AccountForgotRoute: AccountForgotRoute,
+  AccountRequestAccessRoute: AccountRequestAccessRoute,
   AccountResetRoute: AccountResetRoute,
   AccountUnsubscribeRoute: AccountUnsubscribeRoute,
   AccountUsernameRoute: AccountUsernameRoute,

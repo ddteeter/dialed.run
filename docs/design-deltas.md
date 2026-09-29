@@ -543,6 +543,37 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the board's "See the community rules" has no page yet. The ban email
       names no handle ("We closed your account…") and drops the board's
       "No case number." from its foot; it has no button, as drawn.
+36. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
+    Round 26 #20 drew Au2's code, Au5, its receipt and D7; these are the
+    states it did not draw, each built from existing primitives and copy
+    in the register:
+    - **Au2 · an empty code** reads "Enter your invite code." on the field.
+    - **Au2 · Google with a refused code.** The band belongs to the button
+      that failed (Au6), so a refused code on Google is said in Google's
+      band — "Not signed in" and the code's own drawn sentence — not on the
+      field. A Turnstile refusal on either is `NOT SENT` (round 27 #12).
+    - **Au2 · a used code reads as an invalid one** (PR #127 review): the
+      drawn "That code has already been used…" told a prober which codes
+      exist, so every code that will not work says "That code doesn't
+      work. Check it against the email or message it came in." Design is
+      asked to confirm, or to draw one sentence that serves both.
+    - **Au2 · Google with the code field empty.** An existing account
+      signs in (it needs no code); a new one comes back from Google to
+      Au2 with Google's band saying the field's "Enter your invite code."
+    - **Au1 · Google for an address with no account.** Google can make an
+      account only from Au2, so Au1 says in its band "No account uses that
+      Google address. Create one first."
+    - **Au5 · the limit** (five an hour per visitor on a real deployment):
+      `NOT SENT` · "Too many requests from here. Try again at {time}."
+    - **Au5's note is one line**, a `TextField` with the drawn label and
+      hint; the board's box looks taller. And the way back reads
+      "‹ Create an account" — the board's ← is not a glyph the product has.
+    - **D7's small states**: a row action that fails is a band opening
+      `NOT CHANGED`; Revoke's undo is "Revoked DIAL-XXXX. Undo" in the
+      status line for 10 s; Copy link that the browser refuses says "Link
+      not copied. Your browser refused."; a new code says "Created
+      DIAL-XXXX." Ages are mono `5h` / `3d` (the board's `5H`, in the
+      contract's lowercase mono).
 
 ## Answered in round 27 (imported 2026-09-27)
 

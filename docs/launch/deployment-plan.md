@@ -254,6 +254,14 @@ items each gate depends on if that ever slips.
   (127's STR-1/2).
 - Spend caps set; Visual Crossing plan chosen.
 - A Time Travel restore drill done once.
+- **The owner's account, through the invite gate** (126 · ACC-5). Sign-up
+  needs a code from the start, and there is no Desk before there is an
+  operator, so the first code is a deployment step, not a migration (a
+  code in the repo would be a public way in). Pick four characters with
+  no 0/O/1/I and run, once:
+  `npx wrangler d1 execute dialed-core --remote --command "INSERT INTO invite_codes (id, code, label, max_uses, created_at) VALUES ('owner-seed', 'DIAL-XXXX', 'owner', 1, unixepoch())"`.
+  Sign up with it, then put the new account's id in `ADMIN_USER_IDS`;
+  every later code comes from Desk D7.
 
 ### Stage 1 — invited friends
 

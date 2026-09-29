@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 
+import { ACCESS_NOTE_MAX, IS_INVITE_ONLY, inviteCodeField } from "./access";
 import { isTimeZone } from "./dates";
 
 // ---- Common ---------------------------------------------------------------
@@ -265,9 +266,34 @@ const newPasswordField = z
     `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
   );
 
-export const signUpSchema = z.object({
+/**
+ * With invite-only on (D-39), the code is the form's first field; off, it
+ * is not asked for and whatever arrives is ignored. A function so both
+ * halves of the flag are testable, the schema below its one reading.
+ */
+export function signUpSchemaFor(isInviteOnly: boolean) {
+  return z.object({
+    inviteCode: isInviteOnly ? inviteCodeField : z.string().optional(),
+    email: emailField,
+    password: newPasswordField,
+  });
+}
+
+export const signUpSchema = signUpSchemaFor(IS_INVITE_ONLY);
+
+/**
+ * Au5 · Request access (round 26 #20): an address, and a note if they
+ * want to say why. The Turnstile token rides alongside, checked by the
+ * server.
+ */
+export const requestAccessSchema = z.object({
   email: emailField,
-  password: newPasswordField,
+  note: z
+    .string()
+    .max(
+      ACCESS_NOTE_MAX,
+      `Keep the note under ${String(ACCESS_NOTE_MAX)} characters.`,
+    ),
 });
 
 /**

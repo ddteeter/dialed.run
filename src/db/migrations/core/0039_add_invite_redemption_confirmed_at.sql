@@ -1,0 +1,1 @@
+ALTER TABLE `invite_redemptions` ADD `confirmed_at` integer;

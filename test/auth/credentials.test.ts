@@ -5,7 +5,12 @@ import {
   isRememberedForSession,
   rememberForSession,
 } from "../../src/lib/session-memo";
-import { AUTH_COPY, AuthRejected } from "../../src/modules/auth/auth-copy";
+import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/access";
+import {
+  AUTH_COPY,
+  AccessRefused,
+  AuthRejected,
+} from "../../src/modules/auth/auth-copy";
 import {
   AuthFieldError,
   changePassword,
@@ -137,13 +142,59 @@ describe("signIn", () => {
 
 describe("signUp", () => {
   const account = person;
+  const TOKEN = "turnstile-token";
 
   it("resolves when the account is made, sending Better Auth an empty name", async () => {
     // Sign-up asks email and password only (round 26 #7); Better Auth's
     // endpoint requires a `name`, which nothing reads.
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
-    await expect(signUp(account)).resolves.toBeUndefined();
-    expect(client.signUp).toHaveBeenCalledWith({ ...person, name: "" });
+    await expect(
+      signUp({ ...account, inviteCode: "DIAL-7K3P" }, TOKEN),
+    ).resolves.toBeUndefined();
+    expect(client.signUp).toHaveBeenCalledWith(
+      { ...person, name: "" },
+      {
+        headers: {
+          "x-invite-code": "DIAL-7K3P",
+          "x-turnstile-token": TOKEN,
+        },
+      },
+    );
+  });
+
+  it("sends empty headers rather than none when there is no code or token", async () => {
+    client.signUp.mockResolvedValue({ data: {}, error: undefined });
+    await signUp(account, undefined);
+    expect(client.signUp).toHaveBeenCalledWith(
+      { ...person, name: "" },
+      { headers: { "x-invite-code": "", "x-turnstile-token": "" } },
+    );
+  });
+
+  it.each([
+    ["INVITE_MISSING", INVITE_COPY.missing],
+    ["INVITE_INVALID", INVITE_COPY.invalid],
+  ])("lands %s on the invite code, in the board's words", async (code, message) => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code, status: 400 },
+    });
+    expect(await caught(signUp(account, TOKEN))).toMatchObject({
+      issues: [{ path: ["inviteCode"], message }],
+    });
+  });
+
+  it("puts a Turnstile refusal in the band as NOT SENT (round 27 #12)", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "TURNSTILE_REFUSED", status: 403 },
+    });
+    const thrown = await caught(signUp(account, TOKEN));
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: "Not sent",
+      message: TURNSTILE_REFUSED,
+    });
   });
 
   it("no longer lands a taken email on Email — Au3's exception is retired (round 26 #11)", async () => {
@@ -153,7 +204,7 @@ describe("signUp", () => {
       data: undefined,
       error: { code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", status: 422 },
     });
-    const thrown = await caught(signUp(account));
+    const thrown = await caught(signUp(account, TOKEN));
     expect(thrown).toBeInstanceOf(AuthRejected);
   });
 
@@ -162,7 +213,7 @@ describe("signUp", () => {
       data: undefined,
       error: { code: "PASSWORD_BREACHED", status: 400 },
     });
-    const thrown = await caught(signUp(account));
+    const thrown = await caught(signUp(account, TOKEN));
     expect(thrown).toMatchObject({
       issues: [{ path: ["password"], message: AUTH_COPY.passwordBreached }],
     });
@@ -173,7 +224,7 @@ describe("signUp", () => {
       data: undefined,
       error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 500 },
     });
-    const thrown = await caught(signUp(account));
+    const thrown = await caught(signUp(account, TOKEN));
     expect(thrown).toBeInstanceOf(AuthRejected);
     expect(thrown).toMatchObject({ status: 500 });
   });
@@ -314,13 +365,98 @@ describe("googleConsentUrl", () => {
     await expect(googleConsentUrl("/closet", "/auth/signup")).resolves.toBe(
       "https://accounts.example/consent",
     );
-    expect(client.social).toHaveBeenCalledWith({
-      provider: "google",
-      callbackURL: "/closet",
-      // Back to the page it left from — sign-up stays sign-up.
-      errorCallbackURL: "/auth/signup",
-      disableRedirect: true,
+    expect(client.social).toHaveBeenCalledWith(
+      {
+        provider: "google",
+        callbackURL: "/closet",
+        // Back to the page it left from — sign-up stays sign-up.
+        errorCallbackURL: "/auth/signup",
+        disableRedirect: true,
+      },
+      {},
+    );
+  });
+
+  it("asks to sign up, carrying the code and token, only when admitted (Au2)", async () => {
+    client.social.mockResolvedValue({
+      data: { url: "https://accounts.example/consent", redirect: false },
+      error: undefined,
     });
+    await googleConsentUrl("/", "/auth/signup", {
+      inviteCode: "DIAL-7K3P",
+      turnstileToken: "t",
+    });
+    expect(client.social).toHaveBeenCalledWith(
+      {
+        provider: "google",
+        callbackURL: "/",
+        errorCallbackURL: "/auth/signup",
+        disableRedirect: true,
+        requestSignUp: true,
+      },
+      { headers: { "x-invite-code": "DIAL-7K3P", "x-turnstile-token": "t" } },
+    );
+  });
+
+  it("sends no sign-up request and no headers from the log-in page", async () => {
+    client.social.mockResolvedValue({
+      data: { url: "https://accounts.example/consent", redirect: false },
+      error: undefined,
+    });
+    await googleConsentUrl("/", "/auth/login");
+    expect(client.social).toHaveBeenCalledWith(
+      {
+        provider: "google",
+        callbackURL: "/",
+        errorCallbackURL: "/auth/login",
+        disableRedirect: true,
+      },
+      {},
+    );
+  });
+
+  it("says a refused code in the band, under Au2's kicker", async () => {
+    client.social.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVITE_INVALID", status: 400 },
+    });
+    const thrown = await caught(
+      googleConsentUrl("/", "/auth/signup", {
+        inviteCode: "DIAL-7K3P",
+        turnstileToken: "t",
+      }),
+    );
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: "Not signed in",
+      message: INVITE_COPY.invalid,
+    });
+  });
+
+  it("says a Turnstile refusal as NOT SENT", async () => {
+    client.social.mockResolvedValue({
+      data: undefined,
+      error: { code: "TURNSTILE_REFUSED", status: 403 },
+    });
+    expect(
+      await caught(
+        googleConsentUrl("/", "/auth/signup", {
+          inviteCode: "DIAL-7K3P",
+          turnstileToken: undefined,
+        }),
+      ),
+    ).toMatchObject({ kicker: "Not sent", message: TURNSTILE_REFUSED });
+  });
+
+  it("reads a breach code as the status, not a field (Google has no password)", async () => {
+    client.social.mockResolvedValue({
+      data: undefined,
+      error: { code: "PASSWORD_BREACHED", status: 400 },
+    });
+    const thrown = await caught(googleConsentUrl("/", "/auth/signup", {
+      turnstileToken: "t",
+    }));
+    expect(thrown).toBeInstanceOf(AuthRejected);
   });
 
   it("fails with the status when Better Auth refuses", async () => {

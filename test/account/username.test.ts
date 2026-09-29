@@ -13,6 +13,7 @@ import {
   handleGate,
   usernameOf,
 } from "../../src/modules/account/username";
+import type { ScreenHandle } from "../../src/modules/account/handle-screen";
 
 /**
  * The handle (task 126, ACC-1; round 26 #7), through the one writer on
@@ -26,6 +27,21 @@ const db = drizzle(env.DIALED_CORE);
 beforeEach(async () => {
   await db.batch([db.delete(userProfiles), db.delete(usernameHistory)]);
 });
+
+/**
+The moderation check, answering clear without a call.
+*/
+const CLEAR: ScreenHandle = () => Promise.resolve("clear");
+
+/**
+The moderation check, answering flagged without a call.
+*/
+const FLAGGED: ScreenHandle = () => Promise.resolve("flagged");
+
+/**
+The moderation check, answering unknown (fails open) without a call.
+*/
+const UNKNOWN: ScreenHandle = () => Promise.resolve("unknown");
 
 async function runner(profile?: {
   username?: string;
@@ -102,7 +118,7 @@ async function historyOf(userId: string) {
 describe("claimUsername", () => {
   it("claims a free handle, creating the profile row when O0 is the first write", async () => {
     const userId = newUlid();
-    expect(await claimUsername(db, userId, "maya_runs")).toStrictEqual({
+    expect(await claimUsername(db, userId, "maya_runs", CLEAR)).toStrictEqual({
       kind: "claimed",
       username: "maya_runs",
     });
@@ -113,7 +129,7 @@ describe("claimUsername", () => {
   it("changes a handle, keeping the old one in the history", async () => {
     const userId = await runner({ username: "maya_runs" });
     const before = nowSeconds();
-    expect(await claimUsername(db, userId, "maya_trails")).toMatchObject({
+    expect(await claimUsername(db, userId, "maya_trails", CLEAR)).toMatchObject({
       kind: "claimed",
     });
     expect(await handleOf(userId)).toBe("maya_trails");
@@ -128,7 +144,7 @@ describe("claimUsername", () => {
 
   it("keeps the rest of the profile when the handle changes", async () => {
     const userId = await runner({ username: "dee_k", cityLabel: "Duluth, MN" });
-    await claimUsername(db, userId, "dee_runs");
+    await claimUsername(db, userId, "dee_runs", CLEAR);
     const [row] = await db
       .select({ cityLabel: userProfiles.cityLabel })
       .from(userProfiles)
@@ -139,7 +155,7 @@ describe("claimUsername", () => {
   it("claiming the handle you have is a success that writes nothing new", async () => {
     const userId = await runner({ username: "dee_k" });
     const { db: tracked, sizes } = trackBatches();
-    expect(await claimUsername(tracked, userId, "dee_k")).toStrictEqual({
+    expect(await claimUsername(tracked, userId, "dee_k", CLEAR)).toStrictEqual({
       kind: "claimed",
       username: "dee_k",
     });
@@ -155,10 +171,10 @@ describe("claimUsername", () => {
     await runner({ username: "maya_runs" });
     const userId = await runner({ cityLabel: "Portland, OR" });
     const { db: tracked, sizes } = trackBatches();
-    expect(await claimUsername(tracked, userId, "maya_runs")).toStrictEqual({
+    expect(await claimUsername(tracked, userId, "maya_runs", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "maya_runs",
-      suggestion: "maya_runs_portland",
+      suggestion: "maya_runs_runs",
     });
     expect(await handleOf(userId)).toBeNull();
     // Every batch this claim made was a read (two statements) — the
@@ -172,10 +188,10 @@ describe("claimUsername", () => {
 
   it("refuses a handle another runner gave up, before any write is tried (D-56)", async () => {
     const previous = await runner({ username: "maya_runs" });
-    await claimUsername(db, previous, "maya_trails");
+    await claimUsername(db, previous, "maya_trails", CLEAR);
     const userId = await runner();
     const { db: tracked, sizes } = trackBatches();
-    expect(await claimUsername(tracked, userId, "maya_runs")).toMatchObject({
+    expect(await claimUsername(tracked, userId, "maya_runs", CLEAR)).toMatchObject({
       kind: "taken",
       username: "maya_runs",
     });
@@ -191,63 +207,64 @@ describe("claimUsername", () => {
     // A writer that forgot to lowercase: NOCASE still finds it.
     await runner({ username: "Maya" });
     const userId = await runner();
-    expect(await claimUsername(db, userId, "maya")).toMatchObject({
+    expect(await claimUsername(db, userId, "maya", CLEAR)).toMatchObject({
       kind: "taken",
     });
   });
 
-  it("suggests a digit when there is no city, skipping the ones taken", async () => {
+  it("suggests a running word first", async () => {
     await runner({ username: "dee" });
-    await runner({ username: "dee2" });
     const userId = await runner();
-    expect(await claimUsername(db, userId, "dee")).toStrictEqual({
+    expect(await claimUsername(db, userId, "dee", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "dee",
-      suggestion: "dee3",
+      suggestion: "dee_runs",
     });
   });
 
   it("answers taken for a runner who has no profile row yet", async () => {
     await runner({ username: "dee" });
-    expect(await claimUsername(db, newUlid(), "dee")).toStrictEqual({
+    expect(await claimUsername(db, newUlid(), "dee", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "dee",
-      suggestion: "dee2",
+      suggestion: "dee_runs",
     });
   });
 
-  it("slugs the city's first word, whatever follows it", async () => {
+  it("never suggests the city (owner, 2026-09-27)", async () => {
     await runner({ username: "dee" });
-    const paul = await runner({ cityLabel: "St. Paul, MN" });
-    expect(await claimUsername(db, paul, "dee")).toMatchObject({
-      suggestion: "dee_st",
-    });
     const duluth = await runner({ cityLabel: "Duluth" });
-    expect(await claimUsername(db, duluth, "dee")).toMatchObject({
-      suggestion: "dee_duluth",
-    });
+    const result = await claimUsername(db, duluth, "dee", CLEAR);
+    expect(result).toMatchObject({ suggestion: "dee_runs" });
+    expect(JSON.stringify(result)).not.toContain("duluth");
   });
 
-  it("suggests a digit when the city suggestion is itself taken", async () => {
+  it("suggests miles when runs is taken, then a digit", async () => {
     await runner({ username: "dee" });
-    await runner({ username: "dee_duluth" });
-    const userId = await runner({ cityLabel: "Duluth" });
-    expect(await claimUsername(db, userId, "dee")).toMatchObject({
+    await runner({ username: "dee_runs" });
+    const userId = await runner();
+    expect(await claimUsername(db, userId, "dee", CLEAR)).toMatchObject({
+      suggestion: "dee_miles",
+    });
+    await runner({ username: "dee_miles" });
+    expect(await claimUsername(db, userId, "dee", CLEAR)).toMatchObject({
       suggestion: "dee2",
     });
   });
 
   it("walks every digit, 2 to 9, before giving up", async () => {
-    await runner({ username: "ana" });
+    for (const taken of ["ana", "ana_runs", "ana_miles"]) {
+      await runner({ username: taken });
+    }
     for (const digit of ["2", "3", "4", "5", "6", "7", "8"]) {
       await runner({ username: `ana${digit}` });
     }
-    const userId = await runner({ cityLabel: "!!!" });
-    expect(await claimUsername(db, userId, "ana")).toMatchObject({
+    const userId = await runner();
+    expect(await claimUsername(db, userId, "ana", CLEAR)).toMatchObject({
       suggestion: "ana9",
     });
     await runner({ username: "ana9" });
-    expect(await claimUsername(db, userId, "ana")).toStrictEqual({
+    expect(await claimUsername(db, userId, "ana", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "ana",
       suggestion: undefined,
@@ -257,12 +274,13 @@ describe("claimUsername", () => {
   it("keeps a suggestion inside 20 characters by cutting the handle short", async () => {
     const long = "abcdefghijklmnopqrst";
     await runner({ username: long });
-    const userId = await runner({ cityLabel: "Portland, OR" });
-    const result = await claimUsername(db, userId, long);
-    expect(result).toMatchObject({ suggestion: "abcdefghijk_portland" });
+    const userId = await runner();
+    const result = await claimUsername(db, userId, long, CLEAR);
+    expect(result).toMatchObject({ suggestion: "abcdefghijklmno_runs" });
 
-    const other = await runner();
-    expect(await claimUsername(db, other, long)).toMatchObject({
+    await runner({ username: "abcdefghijklmno_runs" });
+    await runner({ username: "abcdefghijklmn_miles" });
+    expect(await claimUsername(db, userId, long, CLEAR)).toMatchObject({
       suggestion: "abcdefghijklmnopqrs2",
     });
   });
@@ -270,7 +288,7 @@ describe("claimUsername", () => {
   it("refuses every reserved name in any case, and suggests nothing built on one", async () => {
     const userId = await runner();
     for (const reserved of ["admin", "dialed", "strava", "moderator"]) {
-      expect(await claimUsername(db, userId, reserved)).toStrictEqual({
+      expect(await claimUsername(db, userId, reserved, CLEAR)).toStrictEqual({
         kind: "taken",
         username: reserved,
         suggestion: undefined,
@@ -284,17 +302,17 @@ describe("claimUsername", () => {
     // `support2` is free — and offering it would say `support` is on the
     // list rather than merely held.
     const userId = await runner({ cityLabel: "Portland, OR" });
-    expect(await claimUsername(db, userId, "support2")).toMatchObject({
+    expect(await claimUsername(db, userId, "support2", CLEAR)).toMatchObject({
       kind: "claimed",
     });
     const other = await runner({ cityLabel: "Portland, OR" });
-    expect(await claimUsername(db, other, "support")).toStrictEqual({
+    expect(await claimUsername(db, other, "support", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "support",
       suggestion: undefined,
     });
     const third = await runner();
-    expect(await claimUsername(db, third, "team")).toStrictEqual({
+    expect(await claimUsername(db, third, "team", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "team",
       suggestion: undefined,
@@ -303,32 +321,88 @@ describe("claimUsername", () => {
   });
 
   it("skips a suggestion candidate that would itself be a reserved name", async () => {
-    // "joe_adminville" contains "admin" and must never be offered, even
-    // though nobody holds it — the candidate's own reserved check, not just
-    // claimUsername's top-level one, has to reject it before the suggester
-    // ever asks the database, or falls through to a digit.
-    await runner({ username: "joe" });
-    const userId = await runner({ cityLabel: "Adminville" });
-    expect(await claimUsername(db, userId, "joe")).toStrictEqual({
+    // "suppor7" reads back as "support", which is reserved — the
+    // candidate's own reserved check, not just claimUsername's top-level
+    // one, has to reject it before the suggester asks the database.
+    for (const taken of ["suppor", "suppor_runs", "suppor_miles"]) {
+      await runner({ username: taken });
+    }
+    for (const digit of ["2", "3", "4", "5", "6"]) {
+      await runner({ username: `suppor${digit}` });
+    }
+    const userId = await runner();
+    expect(await claimUsername(db, userId, "suppor", CLEAR)).toStrictEqual({
       kind: "taken",
-      username: "joe",
-      suggestion: "joe2",
+      username: "suppor",
+      suggestion: "suppor8",
     });
+  });
+
+  it("refuses a handle on the word list as taken, with no suggestion", async () => {
+    const userId = await runner();
+    const screened: string[] = [];
+    const screen: ScreenHandle = (handle) => {
+      screened.push(handle);
+      return Promise.resolve("clear");
+    };
+    expect(await claimUsername(db, userId, "big_shit", screen)).toStrictEqual({
+      kind: "taken",
+      username: "big_shit",
+      suggestion: undefined,
+    });
+    expect(await handleOf(userId)).toBeNull();
+    // The list answers first; moderation is not asked about a handle the
+    // list has already refused.
+    expect(screened).toStrictEqual([]);
+  });
+
+  it("refuses a handle moderation flags, as taken and with no suggestion", async () => {
+    const userId = await runner();
+    const { db: tracked, sizes } = trackBatches();
+    expect(
+      await claimUsername(tracked, userId, "quiet_menace", FLAGGED),
+    ).toStrictEqual({
+      kind: "taken",
+      username: "quiet_menace",
+      suggestion: undefined,
+    });
+    expect(await handleOf(userId)).toBeNull();
+    expect(sizes()).toStrictEqual([]);
+  });
+
+  it("claims the handle when moderation cannot answer (fails open)", async () => {
+    const userId = await runner();
+    expect(await claimUsername(db, userId, "maya_runs", UNKNOWN)).toStrictEqual(
+      { kind: "claimed", username: "maya_runs" },
+    );
+  });
+
+  it("asks moderation about the handle as typed, and not about the one already held", async () => {
+    const userId = await runner({ username: "dee_k" });
+    const screened: string[] = [];
+    const screen: ScreenHandle = (handle) => {
+      screened.push(handle);
+      return Promise.resolve("clear");
+    };
+    await claimUsername(db, userId, "dee_k", screen);
+    expect(screened).toStrictEqual([]);
+    await claimUsername(db, userId, "dee_runs", screen);
+    expect(screened).toStrictEqual(["dee_runs"]);
   });
 
   it("never lets another runner take a handle someone gave up", async () => {
     const maya = await runner({ username: "maya_runs" });
-    await claimUsername(db, maya, "maya_trails");
+    await claimUsername(db, maya, "maya_trails", CLEAR);
     const other = await runner();
-    expect(await claimUsername(db, other, "maya_runs")).toMatchObject({
+    expect(await claimUsername(db, other, "maya_runs", CLEAR)).toMatchObject({
       kind: "taken",
     });
   });
 
   it("lets a runner take their own old handle back, and forgets it was retired", async () => {
     const maya = await runner({ username: "maya_runs" });
-    await claimUsername(db, maya, "maya_trails");
-    expect(await claimUsername(db, maya, "maya_runs")).toMatchObject({
+    await claimUsername(db, maya, "maya_trails", CLEAR);
+    expect(await claimUsername(db, maya, "maya_runs", CLEAR)).toMatchObject({
       kind: "claimed",
     });
     expect(await handleOf(maya)).toBe("maya_runs");
@@ -338,10 +412,10 @@ describe("claimUsername", () => {
 
   it("does not touch another runner's history when taking a handle back", async () => {
     const maya = await runner({ username: "maya_runs" });
-    await claimUsername(db, maya, "maya_trails");
+    await claimUsername(db, maya, "maya_trails", CLEAR);
     const dee = await runner({ username: "dee" });
-    await claimUsername(db, dee, "dee_k");
-    await claimUsername(db, maya, "maya_runs");
+    await claimUsername(db, dee, "dee_k", CLEAR);
+    await claimUsername(db, maya, "maya_runs", CLEAR);
     const history = await historyOf(dee);
     expect(history.map((row) => row.username)).toStrictEqual(["dee"]);
   });
@@ -353,10 +427,10 @@ describe("claimUsername", () => {
     const racing = beforeBatch(2, async () => {
       await runner({ username: "sam_runs" });
     });
-    expect(await claimUsername(racing, userId, "sam_runs")).toStrictEqual({
+    expect(await claimUsername(racing, userId, "sam_runs", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "sam_runs",
-      suggestion: "sam_runs2",
+      suggestion: "sam_runs_runs",
     });
     expect(await handleOf(userId)).toBeNull();
   });
@@ -367,12 +441,12 @@ describe("claimUsername", () => {
     // before our write: the read said free, the batch must still refuse.
     const racing = beforeBatch(2, async () => {
       const rival = await runner({ username: "sam_runs" });
-      await claimUsername(db, rival, "sam_trails");
+      await claimUsername(db, rival, "sam_trails", CLEAR);
     });
-    expect(await claimUsername(racing, userId, "sam_runs")).toStrictEqual({
+    expect(await claimUsername(racing, userId, "sam_runs", CLEAR)).toStrictEqual({
       kind: "taken",
       username: "sam_runs",
-      suggestion: "sam_runs2",
+      suggestion: "sam_runs_runs",
     });
     // Nothing of the refused claim landed: the handle, and no history row
     // for the handle it would have replaced.
@@ -384,9 +458,9 @@ describe("claimUsername", () => {
     const userId = newUlid();
     const racing = beforeBatch(2, async () => {
       const rival = await runner({ username: "sam_runs" });
-      await claimUsername(db, rival, "sam_trails");
+      await claimUsername(db, rival, "sam_trails", CLEAR);
     });
-    expect(await claimUsername(racing, userId, "sam_runs")).toMatchObject({
+    expect(await claimUsername(racing, userId, "sam_runs", CLEAR)).toMatchObject({
       kind: "taken",
     });
     expect(await handleOf(userId)).toBeNull();
@@ -396,9 +470,9 @@ describe("claimUsername", () => {
     const userId = await runner({ username: "maya_runs" });
     // The first submit lands between the second's read and its write.
     const doubled = beforeBatch(2, async () => {
-      await claimUsername(db, userId, "maya_trails");
+      await claimUsername(db, userId, "maya_trails", CLEAR);
     });
-    expect(await claimUsername(doubled, userId, "maya_trails")).toStrictEqual({
+    expect(await claimUsername(doubled, userId, "maya_trails", CLEAR)).toStrictEqual({
       kind: "claimed",
       username: "maya_trails",
     });
@@ -412,9 +486,9 @@ describe("claimUsername", () => {
     // Two different changes racing: the first lands between the second's
     // read (which saw maya_runs) and its write.
     const racing = beforeBatch(2, async () => {
-      await claimUsername(db, userId, "maya_trails");
+      await claimUsername(db, userId, "maya_trails", CLEAR);
     });
-    expect(await claimUsername(racing, userId, "maya_roads")).toMatchObject({
+    expect(await claimUsername(racing, userId, "maya_roads", CLEAR)).toMatchObject({
       kind: "claimed",
     });
     expect(await handleOf(userId)).toBe("maya_roads");
@@ -431,7 +505,7 @@ describe("claimUsername", () => {
         "D1_ERROR: UNIQUE constraint failed: username_history.username: SQLITE_CONSTRAINT",
       );
     });
-    await expect(claimUsername(failing, userId, "fine_handle")).rejects.toThrow(
+    await expect(claimUsername(failing, userId, "fine_handle", CLEAR)).rejects.toThrow(
       "username_history.username",
     );
   });
@@ -441,7 +515,7 @@ describe("claimUsername", () => {
     const failing = beforeBatch(2, () => {
       throw new Error("D1_ERROR: the database is unavailable");
     });
-    await expect(claimUsername(failing, userId, "fine_handle")).rejects.toThrow(
+    await expect(claimUsername(failing, userId, "fine_handle", CLEAR)).rejects.toThrow(
       "the database is unavailable",
     );
   });
@@ -525,7 +599,7 @@ describe("lookUpHandle", () => {
 
   it("says an old handle changed, and never who it became", async () => {
     const userId = await runner({ username: "maya_runs" });
-    await claimUsername(db, userId, "maya_trails");
+    await claimUsername(db, userId, "maya_trails", CLEAR);
     expect(await lookUpHandle(db, "maya_runs")).toStrictEqual({
       kind: "changed",
     });

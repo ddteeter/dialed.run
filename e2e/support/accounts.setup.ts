@@ -4,6 +4,7 @@ import { expect, test as setup } from "@playwright/test";
 
 import { DEMO_ACCOUNTS, storageStateFor } from "./accounts";
 import { confirmLinkFor } from "./email-links";
+import { ensureInviteCode, turnstileAnswered } from "./invites";
 
 /**
  * Creates every demo's account and saves its session, before any demo runs.
@@ -44,6 +45,8 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
   mkdirSync(AUTH_DIR, { recursive: true });
   const suffix = String(Date.now());
   const accounts: Record<string, string> = {};
+  // Sign-up is invite-only (task 126, ACC-5): the harness's own code.
+  const inviteCode = await ensureInviteCode();
 
   for (const account of DEMO_ACCOUNTS) {
     const email = `${account}-${suffix}@example.com`;
@@ -60,6 +63,10 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
       await page
         .locator('html[data-hydrated="true"]')
         .waitFor({ state: "attached" });
+      if (path === "/auth/signup") {
+        await page.getByLabel("Invite code").fill(inviteCode);
+        await turnstileAnswered(page);
+      }
       await page.getByLabel("Email").fill(email);
       await page.getByLabel("Password").fill("a-long-enough-password");
       await page.getByRole("button", { name: submit }).click();

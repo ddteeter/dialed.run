@@ -1,3 +1,4 @@
+import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
 /**
@@ -69,9 +70,19 @@ const returnPathSchema = z
  */
 const googleErrorSchema = z.string().max(100);
 
+/**
+ * An invite code from `/join?code=` (ACC-5), kept only if it is short
+ * enough to be one; the form parses it properly.
+ */
+const inviteSearchSchema = z.string().max(20);
+
 export interface SignInSearch {
   redirect?: string | undefined;
   carried?: CarriedForm | undefined;
+  /**
+  Au2's invite code, filled in from an invite link.
+  */
+  code?: string | undefined;
   /**
   Google's round trip came back refused (see `didGoogleFail`).
   */
@@ -101,7 +112,29 @@ export function parseSignInSearch(
     redirect: kept(returnPathSchema, search.redirect),
     carried: kept(carriedFormSchema, search.carried),
     error: kept(googleErrorSchema, search.error),
+    code: kept(inviteSearchSchema, search.code),
   };
+}
+
+/**
+ * `/join`'s answer: on to Au2 with the code filled in — the invite
+ * email's "Create your account" and D7's Copy link both land here.
+ */
+export function onToSignUp(search: { code?: string | undefined }): void {
+  redirect({
+    to: "/auth/signup",
+    search: { code: search.code },
+    throw: true,
+  });
+}
+
+/**
+`/join`'s search: the code, and nothing else.
+*/
+export function joinSearch(
+  search: Readonly<Record<string, unknown>>,
+): { code?: string | undefined } {
+  return { code: kept(inviteSearchSchema, search.code) };
 }
 
 /**
@@ -128,6 +161,9 @@ export function googleReturn(
   const back = new URLSearchParams();
   if (search.redirect !== undefined) back.set("redirect", search.redirect);
   if (search.carried !== undefined) back.set("carried", search.carried);
+  // A refused Google attempt from Au2 comes back with its code still in
+  // the field.
+  if (search.code !== undefined) back.set("code", search.code);
   const query = back.toString();
   return {
     callbackURL: search.redirect ?? "/",

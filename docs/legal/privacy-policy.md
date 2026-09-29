@@ -38,17 +38,22 @@ Questions about this policy or your data: [OWNER: contact email].
 
 ### Your account
 
-- **Email address and the name you sign up with.** To sign you in and to
-  tell accounts apart.
+- **Email address.** To sign you in and to tell accounts apart. We keep no
+  name: on dialed.run you are your username.
+- **The invite code you signed up with**, while sign-up is invite-only, so
+  we can see who each code let in.
+- **A request for access**, if you make one: the email address and the
+  note you leave, until we answer it.
 - **Your password, hashed.** We store a scrypt hash, never the password
   itself. [OWNER: pending PR #104] When you set a password we check it
   against Have I Been Pwned's list of leaked passwords. Only the first five
   characters of the password's SHA-1 hash leave our servers; the password and
   the full hash never do.
 - **If you sign in with Google:** Google gives us your name, email address,
-  profile picture link and Google account id. We ask for the `openid`,
-  `email` and `profile` permissions only. We also store the tokens Google
-  issues at sign-in.
+  profile picture link and Google account id. We keep the email address,
+  the picture link and the account id; we do not keep your name. We ask
+  for the `openid`, `email` and `profile` permissions only. We also store
+  the tokens Google issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
   (7 days), the browser that signed in, and its IP address (as Cloudflare
   reports it). To slow down password guessing we also count sign-in and
@@ -60,8 +65,11 @@ Questions about this policy or your data: [OWNER: contact email].
 
 ### Your profile
 
-- **Display name** and **the place you run**, if you set them. Both show on
+- **Username** and **the place you run**, if you set it. Both show on
   your public profile.
+- **Username screening.** When you pick a username we check it against a
+  list of offensive words and send it, alone, to **OpenAI's** moderation
+  service. Nothing else about you goes with it.
 - **Coordinates for that place**, if you let your browser share your
   location during setup. These are stored as your browser reports them, at
   full precision, and are never shown to anyone. They stand in for a run's
@@ -157,12 +165,12 @@ visitors. [OWNER: decide whether shared means "any runner on [dialed.run]"
 or "anyone on the web", and say which. The data behind the kit and profile
 pages is also served to signed-out requests today.]
 
-**A shared kit** shows your display name, the run's title, date and start time, distance,
+**A shared kit** shows your username, the run's title, date and start time, distance,
 duration, whether it was indoors, its conditions, the garments you wore
 (name, brand, category, layer), your verdict, caption, tags, screened photos,
 and how many people marked it useful.
 
-**Your profile** shows your display name, the place you run, and your recent
+**Your profile** shows your username, the place you run, and your recent
 shared kits.
 
 **Never shown to anyone else:** your email, your closet as a whole, your
@@ -246,7 +254,7 @@ to anyone.
 | Google                             | "Sign in with Google", if you use it                                    | The sign-in request; returns your name, email and picture                                                 |
 | Strava                             | Run reminders, if you connect                                           | The connect and revoke requests                                                                           |
 | Visual Crossing                    | Weather                                                                 | Run start coordinates and date; the place you set during setup                                            |
-| OpenAI                             | Photo screening; reading product pages                                  | Your photos; the text and address of product pages                                                        |
+| OpenAI                             | Photo screening; username screening; reading product pages              | Your photos; the username you pick; the text and address of product pages                                 |
 | Firecrawl                          | Fetching product pages that block us                                    | The product link                                                                                          |
 | Sentry                             | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents |
 | Have I Been Pwned [OWNER: PR #104] | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash                                                   |

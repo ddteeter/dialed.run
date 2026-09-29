@@ -4,6 +4,7 @@
  * in the vitest workers pool with no TanStack virtual entries.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env, waitUntil } from "../../env";
@@ -11,13 +12,37 @@ import { usernameInput } from "../../lib/contracts";
 import {
   checkCurrentPassword,
   currentSessionId,
+  deploymentPosture,
   optionalUserId,
   requireUserId,
 } from "../auth";
 import { emailDepsFromEnv } from "../email";
-import { captureException, settleOutbox } from "../ops";
+import {
+  captureException,
+  settleOutbox,
+  turnstileSiteKey,
+  verifyTurnstileToken,
+} from "../ops";
+import { requireAdmin } from "../safety";
+import { requestAccess, turnstileAttempt } from "./access";
 import { accountPage, accountView } from "./account-view";
-import { changeEmailInput, confirmInput, resendInput } from "./inputs";
+import {
+  changeEmailInput,
+  confirmInput,
+  deskRowInput,
+  newInviteInput,
+  requestAccessInput,
+  resendInput,
+} from "./inputs";
+import {
+  accessDesk,
+  createInviteCode,
+  declineRequest,
+  inviteFromRequest,
+  restoreInviteCode,
+  revokeInviteCode,
+} from "./invites";
+import { handleScreenFromEnv } from "./handle-screen";
 import { claimUsername, handleGate, usernameOf } from "./username";
 import {
   confirmEmail,
@@ -36,7 +61,12 @@ function db() {
 export const claimUsernameFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => usernameInput.parse(data))
   .handler(async ({ data }) =>
-    claimUsername(db(), await requireUserId(), data.username),
+    claimUsername(
+      db(),
+      await requireUserId(),
+      data.username,
+      handleScreenFromEnv(captureException),
+    ),
   );
 
 /**
@@ -117,3 +147,96 @@ export const requestEmailChangeFn = createServerFn({ method: "POST" })
       { keepAlive: waitUntil, report: captureException, settle: settleOutbox },
     ),
   );
+
+/**
+ * Turnstile's public site key for Au2 and Au5's widget, or nothing when
+ * the deployment has none (the widget then renders nothing).
+ */
+export const turnstileSiteKeyQuery = createServerFn({ method: "GET" }).handler(
+  () => ({ siteKey: turnstileSiteKey() }),
+);
+
+/**
+ * Au5 · Request access (ACC-5). No session: the visitor has no account.
+ * The limit applies where Better Auth's does — a real, https deployment.
+ */
+export const requestAccessFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => requestAccessInput.parse(data))
+  .handler(async ({ data }) =>
+    requestAccess(
+      db(),
+      {
+        email: data.email,
+        note: data.note,
+        attempt: turnstileAttempt(data.turnstileToken, getRequest()),
+        isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+      },
+      verifyTurnstileToken,
+    ),
+  );
+
+/**
+Desk D7 · Access: requests and codes, for an operator only.
+*/
+export const accessDeskQuery = createServerFn({ method: "GET" }).handler(
+  async () => {
+    requireAdmin(await requireUserId());
+    return accessDesk(db());
+  },
+);
+
+/**
+D7's New code.
+*/
+export const createInviteCodeFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => newInviteInput.parse(data))
+  .handler(async ({ data }) =>
+    createInviteCode(db(), {
+      operatorId: requireAdmin(await requireUserId()),
+      label: data.label,
+      maxUses: data.maxUses,
+      idempotencyKey: data.idempotencyKey,
+    }),
+  );
+
+/**
+D7's Send invite, on a request.
+*/
+export const inviteFromRequestFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => deskRowInput.parse(data))
+  .handler(async ({ data }) =>
+    inviteFromRequest(db(), {
+      operatorId: requireAdmin(await requireUserId()),
+      requestId: data.id,
+    }),
+  );
+
+/**
+D7's Decline, on a request.
+*/
+export const declineRequestFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => deskRowInput.parse(data))
+  .handler(async ({ data }) => {
+    requireAdmin(await requireUserId());
+    await declineRequest(db(), data.id);
+  });
+
+/**
+D7's Revoke, on a code.
+*/
+export const revokeInviteCodeFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => deskRowInput.parse(data))
+  .handler(async ({ data }) => {
+    requireAdmin(await requireUserId());
+    await revokeInviteCode(db(), data.id);
+  });
+
+/**
+Revoke's undo.
+*/
+export const restoreInviteCodeFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => deskRowInput.parse(data))
+  .handler(async ({ data }) => {
+    requireAdmin(await requireUserId());
+    await restoreInviteCode(db(), data.id);
+  });

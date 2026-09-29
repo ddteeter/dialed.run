@@ -25,6 +25,7 @@ export {
 } from "./accounts";
 export type { AccountRow, AccountsQuery } from "./accounts";
 export { isUnconfirmed, isVerified } from "./email-links";
+export { accessGate } from "./access";
 export {
   authMail,
   confirmEmail,

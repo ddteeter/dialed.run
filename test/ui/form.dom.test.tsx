@@ -1,12 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
   ChoiceField,
   ChoiceList,
+  FormElement,
   FormErrorSummary,
   FormFailureBand,
   FormField,
@@ -148,6 +149,33 @@ async function submitAndReject(reason: unknown) {
   await fillValid(user);
   await user.click(screen.getByRole("button", { name: /save/i }));
 }
+
+describe("FormElement", () => {
+  it("prevents the browser's own submit, so only the handler runs", () => {
+    // `noValidate` plus this is what keeps the browser's unstyled bubble
+    // validation from pre-empting the schema, and from reloading the page.
+    const onSubmit = vi.fn();
+    const formRef = createRef<HTMLFormElement>();
+    const form = {
+      formRef,
+      status: "",
+      summaryRows: [],
+      focusField: vi.fn(),
+      summaryRef: createRef<HTMLDivElement>(),
+    };
+    render(
+      <FormElement form={form} dataPart="test" onSubmit={onSubmit}>
+        <button type="submit">Go</button>
+      </FormElement>,
+    );
+    const element = formRef.current;
+    if (element === null) throw new Error("the form's ref was not attached");
+    expect(element).toHaveAttribute("data-part", "test");
+    const isNotCancelled = fireEvent.submit(element);
+    expect(isNotCancelled).toBe(false);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("the submit button is never disabled", () => {
   it("marks itself busy with aria, and keeps focus and its accessible name", async () => {

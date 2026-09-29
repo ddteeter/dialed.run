@@ -2,9 +2,9 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env, waitUntil } from "../../env";
-import { authMail } from "../account";
+import { accessGate, authMail } from "../account";
 import { emailDepsFromEnv } from "../email";
-import { captureException } from "../ops";
+import { captureException, verifyTurnstileToken } from "../ops";
 import { banGate } from "../safety";
 import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
@@ -32,4 +32,7 @@ export const auth = createAuth({
   // Every email above leaves the request path, so no answer is slower for
   // an address that has an account (review of PR #119).
   background: waitUntil,
+  // Task 126 (ACC-5): Turnstile and the invite code on sign-up, email and
+  // Google, and the code spent as the account is made.
+  access: accessGate(drizzle(env.DIALED_CORE), verifyTurnstileToken),
 });

@@ -10,6 +10,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import { recordingMail } from "../auth/mail-recorder";
+import { OPEN_ACCESS } from "../auth/open-access";
 import {
   ACCOUNT_CLOSED_CODE,
   banGate,
@@ -43,6 +44,7 @@ const auth = createAuth({
   baseUrl: "http://localhost",
   passwordScreen: CLEAN_SCREEN,
   mail: recordingMail(),
+  access: OPEN_ACCESS,
   plugins: [banGate()],
 });
 
@@ -142,6 +144,7 @@ describe("a banned runner signing in (SAF-4)", () => {
       secret: "test-secret-not-for-production",
       passwordScreen: CLEAN_SCREEN,
       mail: recordingMail(),
+      access: OPEN_ACCESS,
       plugins: [gate],
     });
     const context = await gated.$context;
@@ -201,6 +204,7 @@ describe("a banned runner signing in with Google (SAF-4)", () => {
     google: { clientId: "test-client", clientSecret: "test-client-secret" },
     passwordScreen: CLEAN_SCREEN,
     mail: recordingMail(),
+    access: OPEN_ACCESS,
     plugins: [
       banGate(() =>
         Promise.resolve({ banned: true, reason: REASON, bannedAt: 1 }),
@@ -221,6 +225,9 @@ describe("a banned runner signing in with Google (SAF-4)", () => {
           provider: "google",
           callbackURL: "/",
           errorCallbackURL: "/auth/login",
+          // Google makes an account only when sign-up asks it to (task
+          // 126, ACC-5); this runner's first sign-in is that sign-up.
+          requestSignUp: true,
         }),
       }),
     );

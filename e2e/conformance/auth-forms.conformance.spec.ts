@@ -125,12 +125,24 @@ test.describe("Au · phone", () => {
     ]);
     await builtAt390(page, "/auth/signup");
 
-    expect(await partsIn(page, PANEL)).toEqual(board.order);
+    // Round 26 #20 (the invite stage) adds two regions round 22's board
+    // predates, and its own board carries no region marks: Turnstile above
+    // the primary (round 27 #12) and "No code? Request access" under
+    // Google. Everything round 22 drew is still in its order around them.
+    expect(
+      await partsExcept(page, PANEL, ["turnstile", "request-access"]),
+    ).toEqual(board.order);
+    const parts = await partsIn(page, PANEL);
+    expect(parts.indexOf("request-access")).toBe(
+      parts.indexOf("google-button") + 1,
+    );
     await expectSameWords(page, board.words, {});
     // No tab bar and no product bar: "every tab is a signed-in place".
     await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
-    // Round 26 #7: sign-up asks email and password only; the handle is O0's.
+    // Round 26 #7: sign-up asks email and password only; the handle is
+    // O0's. Round 26 #20: the invite code comes first.
     await expect(page.getByLabel("Name")).toHaveCount(0);
+    await expect(page.getByLabel("Invite code")).toBeVisible();
   });
 
   test("Au2 log in, at rest", async ({ page, baseURL }) => {

@@ -260,6 +260,27 @@
       "when": 1790602459035,
       "tag": "0036_add_quarantined_content",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1790602705699,
+      "tag": "0037_add_invite_codes_and_access_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1790602714176,
+      "tag": "0038_blank_user_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1790633180371,
+      "tag": "0039_add_invite_redemption_confirmed_at",
+      "breakpoints": true
     }
   ]
 }

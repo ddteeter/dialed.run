@@ -14,7 +14,12 @@ export {
   setEmailPreference,
   isEmailWanted,
 } from "./preferences";
-export { claimEmailSend } from "./send-limit";
+export {
+  claimEmailSend,
+  countSend,
+  sendAllowed,
+  sendClaimOf,
+} from "./send-limit";
 export type { LimitedSend, SendClaim } from "./send-limit";
 export { notificationSettings } from "./settings";
 export type { NotificationSettings } from "./settings";

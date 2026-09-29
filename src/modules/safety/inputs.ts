@@ -13,7 +13,7 @@
  */
 import { z } from "zod";
 
-import { ulidSchema } from "../../lib/ids";
+import { rowIdSchema, ulidSchema } from "../../lib/ids";
 
 import {
   removalReasonSchema,
@@ -44,7 +44,7 @@ export const fileReportInput = z.object({
    * user ids come from Better Auth rather than from `newUlid`. Bounded
    * instead, since the only thing downstream does with it is match a row.
    */
-  subjectId: z.string().min(1).max(64),
+  subjectId: rowIdSchema,
   reason: reportReasonSchema,
   note: reportNoteSchema,
   /**
@@ -58,7 +58,7 @@ export const fileReportInput = z.object({
 export type FileReportValues = z.infer<typeof fileReportInput>;
 
 export const blockRunnerInput = z.object({
-  userId: z.string().min(1).max(64),
+  userId: rowIdSchema,
 });
 
 export const reviewDecisionInput = z.object({
@@ -107,7 +107,7 @@ export const takedownInput = z.object({
 A moderator's force-rename (round 27 #16).
 */
 export const forceRenameInput = z.object({
-  userId: z.string().min(1).max(64),
+  userId: rowIdSchema,
   // Not `reason`: D8 draws Rename beside Close account, whose field is
   // `reason`, and a field's name is its id.
   nameReason: renameReasonSchema,
@@ -117,7 +117,7 @@ export const forceRenameInput = z.object({
 Reopening a closed account from D8.
 */
 export const unbanUserInput = z.object({
-  userId: z.string().min(1).max(64),
+  userId: rowIdSchema,
 });
 
 /**
@@ -130,7 +130,7 @@ export const runnersFilterInput = z.object({
 });
 
 export const banUserInput = z.object({
-  userId: z.string().min(1).max(64),
+  userId: rowIdSchema,
   /**
    * Required, unlike a report's note. A ban is the heaviest thing this app
    * does to a person and the notice quotes this back to them, so "no

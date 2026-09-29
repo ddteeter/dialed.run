@@ -13,6 +13,7 @@ import {
   RESET_LINK_TTL_S,
 } from "../../src/modules/auth/create-auth";
 import { recordingMail } from "./mail-recorder";
+import { OPEN_ACCESS } from "./open-access";
 
 /**
  * The auth factory's configuration, which nothing asserted.
@@ -32,6 +33,7 @@ const BASE = {
   db: drizzle(env.DIALED_CORE),
   secret: "test-secret-not-for-production",
   mail: recordingMail(),
+  access: OPEN_ACCESS,
   passwordScreen: {
     verdict: () => Promise.resolve("clean" as const),
     report: () => {
@@ -122,9 +124,10 @@ describe("createAuth", () => {
 
   it("configures Google only when credentials exist", () => {
     // Law 5: no credentials is a degraded deployment, not a broken one.
+    // And Google never makes an account unless sign-up asks (ACC-5).
     const google = { clientId: "id", clientSecret: "secret" };
     expect(auth({ ...BASE, google }).options.socialProviders).toStrictEqual({
-      google,
+      google: { ...google, disableImplicitSignUp: true },
     });
     expect(auth(BASE).options.socialProviders).toBeUndefined();
   });
