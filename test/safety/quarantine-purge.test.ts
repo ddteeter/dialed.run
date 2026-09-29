@@ -12,6 +12,8 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import {
+  claimQuarantine,
+  dueQuarantine,
   preservedKeysOf,
   purgeExpiredQuarantine,
   QUARANTINE_PURGE_CAP,
@@ -107,8 +109,8 @@ afterEach(() => {
 });
 
 describe("QUARANTINE_PURGE_LEASE_SECONDS", () => {
-  it("is a full day, in seconds", () => {
-    expect(QUARANTINE_PURGE_LEASE_SECONDS).toBe(86_400);
+  it("is half a day, in seconds: shorter than the daily firing's interval", () => {
+    expect(QUARANTINE_PURGE_LEASE_SECONDS).toBe(43_200);
   });
 });
 
@@ -237,18 +239,67 @@ describe("purgeExpiredQuarantine", () => {
     for (const key of record.keys) expect(await isStored(key)).toBe(true);
   });
 
-  it("gives an overlapping purge nothing to claim", async () => {
+  it("claims nothing for a purge that read a record before another claimed it", async () => {
+    // The compare-and-swap itself: two purges read the same record at the
+    // same `retain_until`, and only the first claim may take it.
     const now = nowSeconds();
-    await quarantined({ retainUntil: now - DAY });
+    const record = await quarantined({ retainUntil: now - DAY });
+    const [readByOne, readByOther] = await Promise.all([
+      dueQuarantine(core(), now),
+      dueQuarantine(core(), now),
+    ]);
+    expect(readByOne).toStrictEqual([
+      { id: record.id, retainUntil: now - DAY },
+    ]);
+    expect(readByOther).toStrictEqual(readByOne);
+
+    const byOne = await claimQuarantine(core(), readByOne, now);
+    const byOther = await claimQuarantine(core(), readByOther, now);
+
+    expect(byOne.map((claimed) => claimed.id)).toStrictEqual([record.id]);
+    expect(byOther).toStrictEqual([]);
+    expect(await recordOf(record.id)).toMatchObject({
+      retainUntil: now + QUARANTINE_PURGE_LEASE_SECONDS,
+    });
+  });
+
+  it("gives a second purge at the same moment nothing, once the first has moved the record on", async () => {
+    const now = nowSeconds();
+    const record = await quarantined({ retainUntil: now - DAY });
+    const refusing = { delete: vi.fn().mockRejectedValue(new Error("R2")) };
     const deletes = vi.fn().mockResolvedValue(undefined);
 
-    const [one, other] = await Promise.all([
-      purgeExpiredQuarantine(core(), { delete: deletes }, now),
-      purgeExpiredQuarantine(core(), { delete: deletes }, now),
-    ]);
+    const first = await purgeExpiredQuarantine(core(), refusing, now);
+    const second = await purgeExpiredQuarantine(
+      core(),
+      { delete: deletes },
+      now,
+    );
 
-    expect(one.purged + other.purged).toBe(1);
-    expect(deletes).toHaveBeenCalledTimes(1);
+    expect(first.failed.map((failure) => failure.id)).toStrictEqual([
+      record.id,
+    ]);
+    expect(second).toStrictEqual({ purged: 0, failed: [] });
+    expect(deletes).not.toHaveBeenCalled();
+    expect(await recordOf(record.id)).toBeDefined();
+  });
+
+  it("retries a failed record at the next day's firing, however late today's reached it", async () => {
+    // Today's firing reached the purge an hour in; tomorrow's reaches it
+    // at once. The lease must be over by then, or a failure waits two days.
+    const firing = nowSeconds();
+    const record = await quarantined({ retainUntil: firing - DAY });
+    const refusing = { delete: vi.fn().mockRejectedValue(new Error("R2")) };
+    await purgeExpiredQuarantine(core(), refusing, firing + 60 * 60);
+
+    const tomorrow = await purgeExpiredQuarantine(
+      core(),
+      env.MEDIA,
+      firing + DAY,
+    );
+
+    expect(tomorrow).toStrictEqual({ purged: 1, failed: [] });
+    expect(await recordOf(record.id)).toBeUndefined();
   });
 
   it("takes the oldest first, and no more than the cap", async () => {

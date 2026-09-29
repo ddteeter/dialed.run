@@ -71,11 +71,18 @@ export const QUARANTINE_PURGE_CAP = 50;
 
 /**
  * How far a claim moves a record's `retain_until` on: the lease that keeps
- * an overlapping purge off it, and — if this one fails — when the next
- * daily firing may try again. Retention only ever lengthens, so a claim
- * can never make evidence go early.
+ * an overlapping purge off it, and — if this one fails — when a later
+ * firing may try again. Retention only ever lengthens, so a claim can
+ * never make evidence go early.
+ *
+ * **Half the daily interval, not a whole one** (PR #129 review). The purge
+ * reads `now` when the digest reaches it, which is some way into the
+ * firing and never at the same moment twice. A 24h lease taken late one
+ * day ran past the next day's firing if that one reached the purge any
+ * earlier, so a failed record was retried every other day. Twelve hours
+ * is still far longer than any purge runs, and ends well before the next.
  */
-export const QUARANTINE_PURGE_LEASE_SECONDS = 24 * 60 * 60;
+export const QUARANTINE_PURGE_LEASE_SECONDS = 12 * 60 * 60;
 
 /**
  * What `photos_snapshot` must say for a purge to know which copies are
@@ -132,14 +139,11 @@ export interface QuarantinePurge {
 }
 
 /**
- * Claim, then work (law 2): each due record is claimed by a
- * compare-and-swap on the `retain_until` this run read, moving it a lease
- * on, so a purge that overlaps this one read the same value, finds it
- * moved, and claims nothing. One batch for one round trip; each claim
- * stands alone.
+ * The records whose year is up, oldest first, with the `retain_until`
+ * each was read at — the value its claim compares against.
  */
-async function claimExpired(db: Db, now: number) {
-  const due = await db
+export async function dueQuarantine(db: Db, now: number) {
+  return db
     .select({
       id: quarantinedContent.id,
       retainUntil: quarantinedContent.retainUntil,
@@ -148,6 +152,20 @@ async function claimExpired(db: Db, now: number) {
     .where(lte(quarantinedContent.retainUntil, now))
     .orderBy(asc(quarantinedContent.retainUntil))
     .limit(QUARANTINE_PURGE_CAP);
+}
+
+/**
+ * Claim, then work (law 2): each due record is claimed by a
+ * compare-and-swap on the `retain_until` it was read at, moving it a lease
+ * on, so a purge that overlaps this one — having read the same value —
+ * finds it moved and claims nothing. One batch for one round trip; each
+ * claim stands alone. Returns the records this call claimed.
+ */
+export async function claimQuarantine(
+  db: Db,
+  due: readonly { id: string; retainUntil: number }[],
+  now: number,
+) {
   const [first, ...rest] = due.map((row) =>
     db
       .update(quarantinedContent)
@@ -191,7 +209,7 @@ export async function purgeExpiredQuarantine(
   media: Pick<R2Bucket, "delete"> = env.MEDIA,
   now = nowSeconds(),
 ): Promise<QuarantinePurge> {
-  const claimed = await claimExpired(db, now);
+  const claimed = await claimQuarantine(db, await dueQuarantine(db, now), now);
   const failed: { id: string; error: unknown }[] = [];
   for (const record of claimed) {
     const read = preservedKeysOf(record.photosSnapshot);
