@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -27,20 +33,35 @@ function action(overrides: Partial<ControlAction<[]>> = {}): ControlAction<[]> {
 }
 
 type Props = ComponentProps<typeof DeleteWithRuns>;
+type CountBands = Props["countBands"];
+
+function counted(bands: number | undefined): CountBands {
+  return () => Promise.resolve(bands);
+}
 
 function sheet(props: Partial<Props> = {}) {
   return render(
     <DeleteWithRuns
       open
+      itemId="01ITEM"
       name="Pegasus 40"
       runCount={38}
-      bandCount={4}
+      countBands={counted(4)}
       retire={action()}
       remove={action()}
       onClose={ignore}
       {...props}
     />,
   );
+}
+
+/**
+Lets the count the sheet asked for on opening arrive.
+*/
+async function afterTheCount(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
 }
 
 /**
@@ -51,8 +72,9 @@ function rows(): string[] {
 }
 
 describe("DeleteWithRuns: what it says", () => {
-  it("draws round 26's sheet for a piece with 38 runs in 4 bands", () => {
+  it("draws round 26's sheet for a piece with 38 runs in 4 bands", async () => {
     sheet();
+    await afterTheCount();
 
     expect(
       screen.getByRole("heading", {
@@ -77,8 +99,9 @@ describe("DeleteWithRuns: what it says", () => {
     );
   });
 
-  it("says one run and one band in the singular", () => {
-    sheet({ runCount: 1, bandCount: 1 });
+  it("says one run and one band in the singular", async () => {
+    sheet({ runCount: 1, countBands: counted(1) });
+    await afterTheCount();
 
     expect(screen.getByText(/^It's on 1 run\./)).toBeVisible();
     expect(rows()).toStrictEqual([
@@ -88,8 +111,9 @@ describe("DeleteWithRuns: what it says", () => {
     ]);
   });
 
-  it("leaves out the band row when the piece has a record in none", () => {
-    sheet({ runCount: 2, bandCount: 0 });
+  it("leaves out the band row when the piece has a record in none", async () => {
+    sheet({ runCount: 2, countBands: counted(0) });
+    await afterTheCount();
 
     expect(rows()).toStrictEqual([
       "GoesIt comes off the kit of all 2 runs",
@@ -97,12 +121,89 @@ describe("DeleteWithRuns: what it says", () => {
     ]);
   });
 
-  it("marks what goes in the cold hue and what stays in the dialed one", () => {
+  it("marks what goes in the cold hue and what stays in the dialed one", async () => {
     sheet();
+    await afterTheCount();
 
     const [goes, , stays] = document.querySelectorAll("li > span:first-child");
     expect(goes).toHaveClass("text-cold-text");
     expect(stays).toHaveClass("text-dialed-text");
+  });
+});
+
+describe("DeleteWithRuns: the band count, asked for on opening (law 5)", () => {
+  const WITHOUT_BANDS = [
+    "GoesIt comes off the kit of all 38 runs",
+    "StaysEvery entry and verdict, and the rest of each kit",
+  ];
+
+  it("asks for this garment's count only once the sheet opens", async () => {
+    const countBands = vi.fn(counted(4));
+    const { rerender } = sheet({ open: false, countBands });
+
+    expect(countBands).not.toHaveBeenCalled();
+
+    rerender(
+      <DeleteWithRuns
+        open
+        itemId="01ITEM"
+        name="Pegasus 40"
+        runCount={38}
+        countBands={countBands}
+        retire={action()}
+        remove={action()}
+        onClose={ignore}
+      />,
+    );
+
+    expect(await screen.findByText("Its record in 4 bands")).toBeVisible();
+    expect(countBands).toHaveBeenCalledExactlyOnceWith({
+      data: { itemId: "01ITEM" },
+    });
+  });
+
+  it("opens without the band row while the count is on its way", () => {
+    sheet({ countBands: () => new Promise(ignore) });
+
+    expect(rows()).toStrictEqual(WITHOUT_BANDS);
+    expect(screen.getByRole("button", { name: "Retire it" })).toBeVisible();
+  });
+
+  it("leaves the band row out when the count could not be had", async () => {
+    sheet({ countBands: counted(undefined) });
+    await afterTheCount();
+
+    expect(rows()).toStrictEqual(WITHOUT_BANDS);
+  });
+
+  it("drops a count an earlier opening had when asking fails this time", async () => {
+    const countBands = vi
+      .fn<CountBands>()
+      .mockResolvedValueOnce(4)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const view = (isOpen: boolean) => (
+      <DeleteWithRuns
+        open={isOpen}
+        itemId="01ITEM"
+        name="Pegasus 40"
+        runCount={38}
+        countBands={countBands}
+        retire={action()}
+        remove={action()}
+        onClose={ignore}
+      />
+    );
+    const { rerender } = render(view(true));
+    expect(await screen.findByText("Its record in 4 bands")).toBeVisible();
+
+    rerender(view(false));
+    rerender(view(true));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Its record in 4 bands")).toBeNull();
+    });
+    expect(countBands).toHaveBeenCalledTimes(2);
+    expect(rows()).toStrictEqual(WITHOUT_BANDS);
   });
 });
 
@@ -147,6 +248,54 @@ describe("DeleteWithRuns: the two actions", () => {
     const [retiring, deleting] = screen.getAllByRole("button", { busy: true });
     expect(retiring).toHaveAttribute("aria-disabled", "true");
     expect(deleting).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("holds the delete off while a retire is in flight", async () => {
+    const user = userEvent.setup();
+    const remove = vi.fn(() => Promise.resolve());
+    sheet({
+      retire: action({ pending: true }),
+      remove: action({ run: remove }),
+    });
+
+    const deleting = screen.getByRole("button", {
+      name: "Delete it and its record",
+    });
+    expect(deleting).toHaveAttribute("aria-disabled", "true");
+    expect(deleting).toHaveAttribute("aria-busy", "true");
+    expect(deleting).not.toHaveAttribute("disabled");
+    // Only the action in flight says so.
+    expect(screen.getByText("Retiring")).toBeVisible();
+    expect(screen.getByText("Deleting")).not.toBeVisible();
+
+    await user.click(deleting);
+
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("holds the retire off while a delete is in flight", async () => {
+    const user = userEvent.setup();
+    const retire = vi.fn(() => Promise.resolve());
+    sheet({
+      retire: action({ run: retire }),
+      remove: action({ pending: true }),
+    });
+
+    const retiring = screen.getByRole("button", { name: "Retire it" });
+    expect(retiring).toHaveAttribute("aria-disabled", "true");
+
+    await user.click(retiring);
+
+    expect(retire).not.toHaveBeenCalled();
+  });
+
+  it("claims nothing busy while neither is in flight", () => {
+    sheet();
+
+    expect(screen.queryAllByRole("button", { busy: true })).toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: "Retire it" }),
+    ).not.toHaveAttribute("aria-disabled");
   });
 
   it("shows each failure under its own button", () => {

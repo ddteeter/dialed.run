@@ -133,22 +133,20 @@ describe("requireFormData", () => {
 });
 
 describe("closetSearch", () => {
-  it("keeps retired=true and the name a delete landed with", () => {
-    expect(
-      closetSearch({ retired: true, deleted: "Pegasus 40" }),
-    ).toStrictEqual({ retired: true, deleted: "Pegasus 40" });
+  it("keeps retired=true", () => {
+    expect(closetSearch({ retired: true })).toStrictEqual({ retired: true });
   });
 
   it("drops anything else rather than refusing the page", () => {
     expect(closetSearch({})).toStrictEqual({});
-    expect(closetSearch({ retired: "true", deleted: 7 })).toStrictEqual({});
-    expect(closetSearch({ retired: false, deleted: "" })).toStrictEqual({});
+    expect(closetSearch({ retired: "true" })).toStrictEqual({});
+    expect(closetSearch({ retired: false })).toStrictEqual({});
   });
 
-  it("drops a name longer than any garment's", () => {
-    expect(closetSearch({ deleted: "x".repeat(200) })).toStrictEqual({
-      deleted: "x".repeat(200),
-    });
-    expect(closetSearch({ deleted: "x".repeat(201) })).toStrictEqual({});
+  it("never carries a deleted garment's name, which only history state may", () => {
+    expect(
+      closetSearch({ retired: true, deleted: "Pegasus 40" }),
+    ).toStrictEqual({ retired: true });
+    expect(closetSearch({ deleted: "Pegasus 40" })).toStrictEqual({});
   });
 });

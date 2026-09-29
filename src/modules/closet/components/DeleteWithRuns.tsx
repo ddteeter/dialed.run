@@ -15,11 +15,13 @@ import { runsLabel } from "../label";
  * What a delete takes and what it leaves, as round 26 #3 lists them
  * under `IF YOU DELETE IT`. The band row is absent when the piece has no
  * record in any band — a run with no verdict, or no weather, is in none —
- * because "Its record in 0 bands" is a cost of nothing.
+ * because "Its record in 0 bands" is a cost of nothing. It is absent too
+ * while the count is on its way, and when it could not be had: the sheet
+ * never waits on it, and never fails for it (law 5).
  */
 function costRows(
   runCount: number,
-  bandCount: number,
+  bandCount: number | undefined,
 ): { kind: "goes" | "stays"; text: string }[] {
   const kit =
     runCount === 1
@@ -31,7 +33,8 @@ function costRows(
       : `Its record in ${String(bandCount)} bands`;
   return [
     { kind: "goes", text: kit },
-    ...(bandCount > 0 ? [{ kind: "goes" as const, text: record }] : []),
+    // Not yet counted, or not countable, reads as no record at all.
+    ...((bandCount ?? 0) > 0 ? [{ kind: "goes" as const, text: record }] : []),
     {
       kind: "stays",
       text: "Every entry and verdict, and the rest of each kit",
@@ -47,6 +50,41 @@ const ROW_WORD = {
   goes: { word: "Goes", className: "text-cold-text" },
   stays: { word: "Stays", className: "text-dialed-text" },
 } as const;
+
+/**
+ * How many 5 °C bands the piece has a verdicted run in, asked for each
+ * time the sheet opens rather than with the garment page (PR #129
+ * review): the count walks every run in the piece and then the weather,
+ * for one line of a sheet most views never open.
+ *
+ * `undefined` until it arrives, and again if the asking fails — the
+ * server already turns a failed count into `undefined` and reports it, so
+ * a rejection here is the connection, and the row simply stays out.
+ */
+function useBandCount(
+  isOpen: boolean,
+  itemId: string,
+  countBands: BandCount,
+): number | undefined {
+  const [count, setCount] = useState<number | undefined>();
+  useEffect(() => {
+    if (!isOpen) return;
+    void countBands({ data: { itemId } })
+      .then(setCount)
+      .catch(() => {
+        setCount(undefined);
+      });
+  }, [isOpen, itemId, countBands]);
+  return count;
+}
+
+/**
+ * Feed's band count, in the server function's own shape so the route
+ * hands it over as it is: `undefined` when the count failed.
+ */
+export type BandCount = (input: {
+  data: { itemId: string };
+}) => Promise<number | undefined>;
 
 /**
  * Round 26 draws retire as the pink primary — pink is the action, and
@@ -73,28 +111,35 @@ const DELETE_LOOK =
  */
 export function DeleteWithRuns({
   open,
+  itemId,
   name,
   runCount,
-  bandCount,
+  countBands,
   retire,
   remove,
   onClose,
 }: Readonly<{
   open: boolean;
+  itemId: string;
   /**
   The garment's own name — "Delete the Pegasus 40?".
   */
   name: string;
   runCount: number;
   /**
-  How many 5 °C bands the piece has a verdicted run in.
+  Asked, on opening, how many 5 °C bands the piece has a record in.
   */
-  bandCount: number;
+  countBands: BandCount;
   retire: ControlAction<[]>;
   remove: ControlAction<[]>;
   onClose: () => void;
 }>): JSX.Element {
   const heading = `Delete the ${name}? Retire it instead.`;
+  const bandCount = useBandCount(open, itemId, countBands);
+  // One guard for both: a retire in flight is no moment to start a
+  // delete, nor the other way round. Held off by `aria-disabled` and the
+  // handler, never `disabled`, which drops focus and stops announcing.
+  const isBusy = retire.pending || remove.pending;
   // Cancel, once it exists and the sheet is open. Held as state so the
   // effect runs again when the button arrives: the sheet's own effect,
   // which opens the dialog, runs after this one on the first pass.
@@ -151,8 +196,9 @@ export function DeleteWithRuns({
           <Fragment key={choice.label}>
             <button
               type="button"
-              {...inFlight(choice.action.pending)}
+              {...inFlight(isBusy)}
               onClick={() => {
+                if (isBusy) return;
                 void choice.action.run();
               }}
               // `target` at the site, where the hit-area check reads it.

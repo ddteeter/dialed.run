@@ -1,10 +1,11 @@
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   garmentBandCount,
+  garmentBandCountOrNone,
   garmentBandsInput,
 } from "../../src/modules/feed/garment-bands";
 import {
@@ -87,6 +88,46 @@ describe("garmentBandCount", () => {
     expect(await garmentBandCount(core(), userId, itemId)).toBe(1);
     expect(await garmentBandCount(core(), stranger, itemId)).toBe(1);
     expect(await garmentBandCount(core(), newUlid(), itemId)).toBe(0);
+  });
+});
+
+describe("garmentBandCountOrNone", () => {
+  it("is the count when it can be had, and reports nothing", async () => {
+    const userId = await makeUser();
+    const itemId = await makeItem({ userId });
+    await wornAt(userId, [itemId], 6);
+    const report = vi.fn();
+
+    expect(
+      await garmentBandCountOrNone(
+        core(),
+        userId,
+        itemId,
+        garmentBandCount,
+        report,
+      ),
+    ).toBe(1);
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("is undefined when the count fails, and reports it with the garment and runner (law 5)", async () => {
+    const weather = new Error("DIALED_WEATHER unavailable");
+    const report = vi.fn();
+
+    expect(
+      await garmentBandCountOrNone(
+        core(),
+        "01USER",
+        "01ITEM",
+        () => Promise.reject(weather),
+        report,
+      ),
+    ).toBeUndefined();
+    expect(report).toHaveBeenCalledExactlyOnceWith(weather, {
+      surface: "garment-band-count",
+      userId: "01USER",
+      itemId: "01ITEM",
+    });
   });
 });
 

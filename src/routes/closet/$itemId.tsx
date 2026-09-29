@@ -18,24 +18,19 @@ import { Layout } from "../../ui";
 export const Route = createFileRoute("/closet/$itemId")({
   loader: async ({ params }) => {
     await requireSession();
-    // The band count is feed's (the band is the run's weather), so it is
-    // composed here for round 26's delete sheet (task 128 · SAF-16).
-    const [detail, bandCount] = await Promise.all([
-      getItemFn({ data: { itemId: params.itemId } }),
-      garmentBandCountQuery({ data: { itemId: params.itemId } }),
-    ]);
-    return { detail, bandCount };
+    return { detail: await getItemFn({ data: { itemId: params.itemId } }) };
   },
   component: GarmentDetailPage,
 });
 
 function GarmentDetailPage() {
-  const { detail, bandCount } = Route.useLoaderData();
   return (
     <Layout>
       <GarmentDetail
-        detail={detail}
-        bandCount={bandCount}
+        detail={Route.useLoaderData().detail}
+        // Feed's (the band is the run's weather), asked for by round 26's
+        // delete sheet when it opens — never with the page (task 128).
+        bandCount={garmentBandCountQuery}
         retire={retireItemFn}
         unretire={unretireItemFn}
         remove={deleteItemFn}

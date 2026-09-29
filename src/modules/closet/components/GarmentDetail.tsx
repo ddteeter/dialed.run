@@ -23,7 +23,7 @@ import { retiredLabel } from "../retired-label";
 import { useRunnerZone } from "./use-runner-zone";
 import { CompositionBlock } from "./Composition";
 import { BackToCloset } from "./BackToCloset";
-import { DeleteWithRuns } from "./DeleteWithRuns";
+import { DeleteWithRuns, type BandCount } from "./DeleteWithRuns";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
 import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
 import type {
@@ -33,6 +33,28 @@ import type {
 } from "../service";
 
 type Detail = Awaited<ReturnType<typeof getItemDetailWithPairs>>;
+
+/**
+ * No count to ask for: a page composed without feed's (a test, or a
+ * render of Y alone) says nothing about bands, which is what the sheet
+ * does with a count that failed.
+ */
+async function noBandCount(): Promise<undefined> {
+  // Nothing to count.
+}
+
+/**
+ * What a delete hands the closet it lands on: the piece's name, for round
+ * 26 #3's "{name} deleted." **History state, never the URL** (PR #129
+ * review) — a search param would be free text anyone could put on a
+ * runner's screen with a link, and would say it again on every reload of
+ * a shared address. State is written only by the app's own navigation.
+ */
+declare module "@tanstack/react-router" {
+  interface HistoryState {
+    deletedGarment?: string;
+  }
+}
 
 const VISIBILITY_WORDS = {
   reflective: "reflective trim",
@@ -233,7 +255,7 @@ export function GarmentDetail({
   removePhoto,
   renderPhotoStep,
   photoChecking,
-  bandCount = 0,
+  bandCount = noBandCount,
 }: Readonly<{
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -255,10 +277,12 @@ export function GarmentDetail({
    */
   photoChecking?: ReactNode;
   /**
-   * How many 5 °C bands the piece has a verdicted run in — feed's count,
-   * composed by the route — for round 26's "Its record in {b} bands".
+   * Feed's count of the 5 °C bands the piece has a verdicted run in, for
+   * round 26's "Its record in {b} bands" — handed over by the route and
+   * asked only when the delete sheet opens, so the page never waits on
+   * it or fails with it.
    */
-  bandCount?: number | undefined;
+  bandCount?: BandCount | undefined;
 }>) {
   const navigate = useNavigate();
   const router = useRouter();
@@ -346,7 +370,7 @@ export function GarmentDetail({
     action: async () => {
       await remove({ data: { itemId } });
       // Round 26 #3: "On success: C, with a status line '{name} deleted.'"
-      await navigate({ to: "/closet", search: { deleted: item.name } });
+      await navigate({ to: "/closet", state: { deletedGarment: item.name } });
     },
     kicker: "Not deleted",
   });
@@ -508,9 +532,10 @@ export function GarmentDetail({
       {runCount > 0 ? (
         <DeleteWithRuns
           open={isDeletingWorn}
+          itemId={itemId}
           name={item.name}
           runCount={runCount}
-          bandCount={bandCount}
+          countBands={bandCount}
           retire={retiring}
           remove={deleting}
           onClose={() => {

@@ -11,6 +11,11 @@
  * and the walk from an entry to its observation (`observationsForEntries`,
  * `judgedFeelsLikeC`) is feed's. The arrow runs feed → closet, so the
  * closet route composes this count rather than closet importing it.
+ *
+ * **Asked for when the sheet opens, never with the page** (PR #129
+ * review). The count walks every verdicted run in the piece and then the
+ * weather, and it is a line in a sheet most views never open — so it is
+ * not the garment page's to pay for, and not the page's to fail with.
  */
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
@@ -19,6 +24,7 @@ import { z } from "zod";
 import { outfitEntries, outfitEntryItems } from "../../db/schema-core";
 import { ulidSchema } from "../../lib/ids";
 import { bandFloorC } from "../../lib/temperature";
+import { captureException } from "../ops";
 import { observationsForEntries } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 
@@ -68,4 +74,26 @@ export async function garmentBandCount(
     }
   }
   return bands.size;
+}
+
+/**
+ * The count, or `undefined` when it could not be had (law 5): the band row is
+ * one line of what a delete costs, and a weather lookup that fails must
+ * not take the sheet — let alone the delete — down with it. The failure
+ * goes to Sentry with the garment and runner, and the sheet leaves the
+ * row out.
+ */
+export async function garmentBandCountOrNone(
+  db: Db,
+  userId: string,
+  itemId: string,
+  count: typeof garmentBandCount = garmentBandCount,
+  report: typeof captureException = captureException,
+): Promise<number | undefined> {
+  try {
+    return await count(db, userId, itemId);
+  } catch (error) {
+    report(error, { surface: "garment-band-count", userId, itemId });
+    return undefined;
+  }
 }
