@@ -156,7 +156,7 @@ describe("ClosetGrid: the heading row", () => {
     );
     if (header === null) throw new Error("no heading row");
     const toggle = within(header).getByRole("switch", {
-      name: "Show retired",
+      name: "Show retired (1)",
     });
     expect(toggle).not.toBeChecked();
 
@@ -433,11 +433,11 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
     );
 
     expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
-    await user.click(screen.getByRole("switch", { name: "Show retired" }));
+    await user.click(screen.getByRole("switch", { name: "Show retired (1)" }));
     expect(screen.getByRole("link", { name: /Old tee/ })).toBeVisible();
 
     // And back. Awaited, because the tile collapses before it goes.
-    await user.click(screen.getByRole("switch", { name: "Show retired" }));
+    await user.click(screen.getByRole("switch", { name: "Show retired (1)" }));
     await waitFor(() => {
       expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
     });
@@ -452,7 +452,7 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
       />,
     );
 
-    await user.click(screen.getByRole("switch", { name: "Show retired" }));
+    await user.click(screen.getByRole("switch", { name: "Show retired (1)" }));
 
     const leaving = screen.getByRole("link", { name: /Old tee/ }).closest("li");
     expect(leaving).toHaveClass("collapsing-row");
@@ -470,6 +470,40 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
     );
 
     expect(screen.getByRole("link", { name: /Old tee/ })).toBeVisible();
-    expect(screen.getByRole("switch", { name: "Show retired" })).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Show retired (1)" }),
+    ).toBeChecked();
+  });
+});
+
+describe("ClosetGrid: round 26's confirms", () => {
+  it("counts the retired pieces on the switch", async () => {
+    const otherRetired = itemView({
+      item: wardrobeItem({ id: "01RT2", name: "Old shorts", retired: true }),
+      isGeneric: false,
+      uiGroup: "bottoms",
+    });
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier, retiredTee, otherRetired])} />,
+    );
+    expect(
+      screen.getByRole("switch", { name: "Show retired (2)" }),
+    ).toBeVisible();
+  });
+
+  it("says which piece a delete took, in the status line", async () => {
+    await renderWithRouter(
+      <ClosetGrid listing={listing([harrier])} deleted="Pegasus 40" />,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Pegasus 40 deleted.",
+      );
+    });
+  });
+
+  it("says nothing when nothing was deleted", async () => {
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    expect(screen.getByRole("status")).toHaveTextContent("");
   });
 });

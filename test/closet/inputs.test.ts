@@ -4,6 +4,7 @@ import { garmentCategories } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import {
   closetFiltersInput,
+  closetSearch,
   itemIdInput,
   newItemInput,
   requireFormData,
@@ -128,5 +129,26 @@ describe("requireFormData", () => {
     // to fail as one rather than as a null dereference further in.
     expect(() => requireFormData({ itemId: "x" })).toThrow(TypeError);
     expect(() => requireFormData(undefined)).toThrow(/multipart/);
+  });
+});
+
+describe("closetSearch", () => {
+  it("keeps retired=true and the name a delete landed with", () => {
+    expect(
+      closetSearch({ retired: true, deleted: "Pegasus 40" }),
+    ).toStrictEqual({ retired: true, deleted: "Pegasus 40" });
+  });
+
+  it("drops anything else rather than refusing the page", () => {
+    expect(closetSearch({})).toStrictEqual({});
+    expect(closetSearch({ retired: "true", deleted: 7 })).toStrictEqual({});
+    expect(closetSearch({ retired: false, deleted: "" })).toStrictEqual({});
+  });
+
+  it("drops a name longer than any garment's", () => {
+    expect(closetSearch({ deleted: "x".repeat(200) })).toStrictEqual({
+      deleted: "x".repeat(200),
+    });
+    expect(closetSearch({ deleted: "x".repeat(201) })).toStrictEqual({});
   });
 });

@@ -239,7 +239,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();
   await expect(page.getByText("[Retired]", { exact: true })).toBeVisible();
-  const toggle = page.getByRole("switch", { name: "Show retired" });
+  const toggle = page.getByRole("switch", { name: "Show retired (1)" });
   await expect(toggle).toBeChecked();
 
   // The switch off: the retired tile collapses its own height rather than
