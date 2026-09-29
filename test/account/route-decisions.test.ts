@@ -14,6 +14,7 @@ import {
   checkEmailSearch,
   checkEmailView,
   gateOnHandle,
+  legalDocOrNotFound,
   startHandleIfNeeded,
   startOverIfNoAddress,
   tokenSearch,
@@ -55,6 +56,7 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
       "/account/verify",
       "/account/reset",
       "/account/unsubscribe",
+      "/privacy",
     ]) {
       expect(gateAt(true, pathname), pathname).toBeUndefined();
     }
@@ -293,6 +295,23 @@ describe("the account's sections (ACC-7, ACC-8, ACC-11)", () => {
     expect(thrown).toMatchObject({
       isNotFound: true,
       message: 'no account section "export"',
+    });
+  });
+});
+
+describe("legalDocOrNotFound (ACC-13)", () => {
+  it("passes a finished text through and makes an unfinished one X1", () => {
+    const doc = { title: "Privacy policy", blocks: [], contents: [] };
+    expect(legalDocOrNotFound(doc)).toBe(doc);
+    let thrown: unknown;
+    try {
+      legalDocOrNotFound(undefined);
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({
+      isNotFound: true,
+      message: "no published legal text",
     });
   });
 });

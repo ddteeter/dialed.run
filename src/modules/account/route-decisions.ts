@@ -6,6 +6,7 @@ import {
   noteSessionOwner,
   rememberForSession,
 } from "../../lib/session-memo";
+import type { LegalDoc } from "./legal-markdown";
 import type { HandleGateAnswer } from "./username";
 
 /**
@@ -21,6 +22,7 @@ const OPEN_WITHOUT_HANDLE: ReadonlySet<string> = new Set([
   "/account/verify",
   "/account/reset",
   "/account/unsubscribe",
+  "/privacy",
 ]);
 
 /**
@@ -174,9 +176,7 @@ export type AccountSection = z.infer<typeof accountSectionSchema>;
 export function accountSectionOrNotFound(section: string): AccountSection {
   const parsed = accountSectionSchema.safeParse(section);
   if (parsed.success) return parsed.data;
-  throw Object.assign(new Error(`no account section "${section}"`), {
-    isNotFound: true,
-  });
+  throw notFound(`no account section "${section}"`);
 }
 
 /**
@@ -189,3 +189,21 @@ export const ACCOUNT_SECTION_TITLES: Readonly<Record<AccountSection, string>> =
     password: "Password",
     notifications: "Notifications",
   };
+
+/**
+ * X1 for a page with nothing to show, by the same marker
+ * `accountSectionOrNotFound` throws.
+ */
+function notFound(what: string): Error {
+  return Object.assign(new Error(what), { isNotFound: true });
+}
+
+/**
+ * A legal page's text, or X1 while the text is unfinished (`legal.ts`): a
+ * page with a placeholder where the policy should be is worse than no
+ * page.
+ */
+export function legalDocOrNotFound(doc: LegalDoc | undefined): LegalDoc {
+  if (doc === undefined) throw notFound("no published legal text");
+  return doc;
+}

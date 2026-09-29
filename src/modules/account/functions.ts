@@ -30,6 +30,7 @@ import {
   changeEmailInput,
   confirmInput,
   deskRowInput,
+  legalPageInput,
   newInviteInput,
   requestAccessInput,
   resendInput,
@@ -43,6 +44,7 @@ import {
   revokeInviteCode,
 } from "./invites";
 import { handleScreenFromEnv } from "./handle-screen";
+import { legalPage } from "./legal";
 import { claimUsername, handleGate, usernameOf } from "./username";
 import {
   confirmEmail,
@@ -230,6 +232,16 @@ export const revokeInviteCodeFn = createServerFn({ method: "POST" })
     requireAdmin(await requireUserId());
     await revokeInviteCode(db(), data.id);
   });
+
+/**
+ * A legal page (ACC-13): its text if it is finished, and the bell's count
+ * for a signed-in reader. No session needed — the policy is for anyone.
+ */
+export const legalPageQuery = createServerFn({ method: "GET" })
+  .validator((data: unknown) => legalPageInput.parse(data))
+  .handler(async ({ data }) =>
+    legalPage(db(), data.slug, await optionalUserId()),
+  );
 
 /**
 Revoke's undo.

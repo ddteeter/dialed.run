@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
 import { Route as AccountForgotRouteImport } from './routes/account/forgot'
@@ -83,6 +84,11 @@ const DeskRouteRoute = DeskRouteRouteImport.update({
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountSectionRoute = AccountSectionRouteImport.update({
@@ -347,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
@@ -403,6 +410,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
@@ -461,6 +469,7 @@ export interface FileRoutesById {
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
@@ -520,6 +529,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/@{$handle}'
     | '/join'
+    | '/privacy'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/'
     | '/@{$handle}'
     | '/join'
+    | '/privacy'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
@@ -633,6 +644,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/@{$handle}'
     | '/join'
+    | '/privacy'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
@@ -691,6 +703,7 @@ export interface RootRouteChildren {
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
   AtChar123handleChar125Route: typeof AtChar123handleChar125Route
   JoinRoute: typeof JoinRoute
+  PrivacyRoute: typeof PrivacyRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
   AccountForgotRoute: typeof AccountForgotRoute
@@ -769,6 +782,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/$section': {
@@ -1152,6 +1172,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeskRouteRoute: DeskRouteRouteWithChildren,
   AtChar123handleChar125Route: AtChar123handleChar125Route,
   JoinRoute: JoinRoute,
+  PrivacyRoute: PrivacyRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
   AccountForgotRoute: AccountForgotRoute,

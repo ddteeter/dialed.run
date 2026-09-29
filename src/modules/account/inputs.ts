@@ -54,3 +54,11 @@ export const newInviteInput = newInviteSchema.extend({
 One request or one code, by id — D7's row actions.
 */
 export const deskRowInput = z.object({ id: rowIdSchema });
+
+/**
+ * Which legal text a page reads (ACC-13). Only the texts that exist:
+ * `/terms` and `/copyright` join when the owner's texts do.
+ */
+const legalSlugSchema = z.enum(["privacy"]);
+export type LegalSlug = z.infer<typeof legalSlugSchema>;
+export const legalPageInput = z.object({ slug: legalSlugSchema });

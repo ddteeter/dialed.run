@@ -191,6 +191,16 @@ export function SettingsIndex({
           value="Strava"
         />
       </SettingsGroup>
+      {/* Settings › About (ACC-13; round 26 #14, D-52): the legal texts.
+          Terms and Copyright join when the owner's texts exist. */}
+      <SettingsGroup title="About">
+        <SettingsRow
+          to="/privacy"
+          params={{}}
+          label="Privacy policy"
+          value="What we keep, and who sees it"
+        />
+      </SettingsGroup>
       {signOut}
     </div>
   );
