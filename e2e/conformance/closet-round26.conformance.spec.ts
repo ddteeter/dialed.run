@@ -34,6 +34,10 @@ import { closetUserId } from "./closet-seed";
  *   connection dropped." — and Try again is offered, as the board draws.
  * - **`RETIRED MAR 2026`** on the rail is month and year; the build
  *   dates a retirement as the closet does everywhere, month and day.
+ *
+ * A named piece is linked to a product (any id will do: nothing here reads
+ * the product), because that is what makes the closet call it by brand
+ * and name — as a save through F does.
  */
 test.use({ storageState: storageStateFor("closet") });
 
@@ -255,6 +259,7 @@ test("F at the desk · the rail card is round 26's, newest first, marked", async
   const rover = await seedPiece({
     category: "top",
     brand: "Janji",
+    productId: newUlid(),
     name: "Rover Half-zip",
     retired: true,
     retiredAt: now - 86_400,
@@ -264,6 +269,7 @@ test("F at the desk · the rail card is round 26's, newest first, marked", async
   const harrier = await seedPiece({
     category: "top",
     brand: "Tracksmith",
+    productId: newUlid(),
     name: "Harrier",
     estTempLowC: 38,
     estTempHighC: 46,
