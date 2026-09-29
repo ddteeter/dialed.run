@@ -159,7 +159,7 @@ export function emailContent(
       return {
         subject: "Your dialed.run account is closed",
         body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
-        foot: "Think we got it wrong? Reply within 30 days and a different moderator will look.",
+        foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
         footer,
       };
     }
