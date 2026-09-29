@@ -186,7 +186,7 @@ owing you anything.
 
 If you think we got a moderation decision wrong, write to desk@dialed.run,
 or reply to the email that told you about it. **There is no deadline.** A
-person reads every appeal, and we aim to answer within a week. If we were
+person reads every appeal. If we were
 wrong, we undo what we can: a reopened account's kits come back as they
 were. A kit or photo we removed has been deleted and cannot be brought back,
 so we will tell you, and you are free to post it again.

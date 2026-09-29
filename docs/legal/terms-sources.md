@@ -99,7 +99,7 @@ read.
 | Told what and why, in the app and by email                                | `safety/contracts.ts` `removalSentence`, `removalStatements` (SAF-8, the DSA statement of reasons, D-40); `lib/email.ts` `content_removed`; `moderation.ts` (bell row and email in one batch) |
 | Closure: reason by email and on sign-in                                   | `bans.ts` `banEmail` (`account_closed`); `src/modules/safety/components/AccountClosed.tsx` (D4)                                                                                               |
 | Closed account: no sign-in, content hidden                                | `bans.ts` (sessions deleted); `safety/ban-gate.ts` (`banStateOf` at sign-in); `safety/visibility.ts` `authorNotBanned` in `publiclyVisibleEntry` (SAF-4)                                      |
-| Appeals to desk@dialed.run or a reply; a person; about a week             | `AccountClosed.tsx` `APPEAL_ADDRESS` ("A person reads every message and answers within a week"); `src/modules/email/content.ts` `content_removed` foot ("Reply to this email"); D-62          |
+| Appeals to desk@dialed.run or a reply; a person; no timeframe             | `AccountClosed.tsx` `APPEAL_ADDRESS` ("A person reads every message and answers within a week"); `src/modules/email/content.ts` `content_removed` foot ("Reply to this email"); D-62          |
 | Reopened account's kits come back                                         | `bans.ts` `unbanUser` clears `banned_at`; content was hidden by the rule, not deleted                                                                                                         |
 | Removed kit or photo is deleted                                           | `feed/moderation.ts` header ("Removal deletes"), same outbox path as `feed/retract.ts`                                                                                                        |
 | EU out-of-court settlement                                                | DSA (Regulation (EU) 2022/2065) Art. 21. See "Judgment calls"                                                                                                                                 |
@@ -111,8 +111,9 @@ of scope here):**
   Reply within 30 days and a different moderator will look." Both halves
   disagree with the terms: appeals have no deadline, and with one operator
   there is no "different moderator".
-- `AccountClosed.tsx` (D4) promises an answer "within a week"; the terms say
-  "we aim to", which the owner may want to match or drop.
+- `AccountClosed.tsx` (D4) promises an answer "within a week". The owner
+  dropped any timeframe (2026-09-29): the terms make no time promise, and
+  PR #129 removes it from D4 and the ban email and records the decision.
 
 ## Terms: suspected illegal content
 
@@ -246,6 +247,7 @@ same set.
 10. **Garments:** the terms describe what the code does (retire by default,
     delete with record on the runner's choice), which is wider than the
     "retire, don't delete" rule as stated.
-11. **"We aim to answer within a week"**, softened from D4's flat promise.
+11. **No appeal timeframe** (owner, 2026-09-29): the terms promise that a
+    person reads every appeal, and nothing about when.
 12. **Version line** is "Version 1", an integer ACC-6 can store; the
     effective date is the owner's.
