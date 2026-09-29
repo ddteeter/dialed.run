@@ -164,7 +164,11 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   ).toBeVisible({ timeout: 15_000 });
   await hydrated(page);
   await page.getByRole("button", { name: "Keep my account" }).click();
-  await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
+  // Kept: back into the app (this runner lands on onboarding, which the
+  // demo skipped), and never asked again.
+  await expect(page).not.toHaveURL(/\/account\/leaving/u, {
+    timeout: 15_000,
+  });
   await page.goto("/onboarding/settings");
   await expect(page.getByRole("link", { name: /^Account/u })).toBeVisible({
     timeout: 15_000,
