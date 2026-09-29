@@ -75,6 +75,9 @@ describe("GarmentForm: its frame", () => {
       name: "Add a garment",
     });
     expect(heading).toBeVisible();
+    // The form's own heading carries no saved-state marker — that is the
+    // saved view's alone (test/modules/garment-form-photo.dom.test.tsx).
+    expect(heading).not.toHaveAttribute("data-state");
     const back = screen.getByRole("link", { name: "Closet" });
     expect(
       back.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,

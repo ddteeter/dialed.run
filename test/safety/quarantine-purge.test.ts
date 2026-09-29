@@ -106,6 +106,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("QUARANTINE_PURGE_LEASE_SECONDS", () => {
+  it("is a full day, in seconds", () => {
+    expect(QUARANTINE_PURGE_LEASE_SECONDS).toBe(86_400);
+  });
+});
+
 describe("purgeExpiredQuarantine", () => {
   it("deletes an expired record and every copy it names", async () => {
     const expired = await quarantined({ retainUntil: nowSeconds() - DAY });
@@ -223,7 +229,7 @@ describe("purgeExpiredQuarantine", () => {
     expect(purge.failed).toHaveLength(1);
     expect(purge.failed[0]?.id).toBe(record.id);
     expect(String(purge.failed[0]?.error)).toContain(
-      "quarantine snapshot unreadable",
+      "quarantine snapshot unreadable: not JSON",
     );
     expect(await recordOf(record.id)).toMatchObject({
       retainUntil: now + QUARANTINE_PURGE_LEASE_SECONDS,
@@ -276,17 +282,20 @@ describe("preservedKeysOf", () => {
     const key = quarantineKeyFor("entries/u/e/p");
     expect(
       preservedKeysOf(JSON.stringify([{ preservedKey: key }, { id: "p2" }])),
-    ).toStrictEqual([key]);
+    ).toStrictEqual({ ok: true, keys: [key] });
   });
 
-  it("refuses a snapshot that is not a list of photos", () => {
-    expect(preservedKeysOf("{")).toBeUndefined();
-    expect(
-      preservedKeysOf(JSON.stringify({ preservedKey: "x" })),
-    ).toBeUndefined();
-    expect(
-      preservedKeysOf(JSON.stringify([{ preservedKey: 7 }])),
-    ).toBeUndefined();
+  it("names a snapshot that is not JSON apart from one of the wrong shape", () => {
+    expect(preservedKeysOf("{")).toStrictEqual({
+      ok: false,
+      problem: "not JSON",
+    });
+    for (const wrong of [{ preservedKey: "x" }, [{ preservedKey: 7 }]]) {
+      expect(preservedKeysOf(JSON.stringify(wrong))).toStrictEqual({
+        ok: false,
+        problem: "not a list of photos",
+      });
+    }
   });
 
   it("drops a key that only contains the prefix rather than starting with it", () => {
@@ -294,7 +303,7 @@ describe("preservedKeysOf", () => {
       preservedKeysOf(
         JSON.stringify([{ preservedKey: "entries/quarantine/u/e/p" }]),
       ),
-    ).toStrictEqual([]);
+    ).toStrictEqual({ ok: true, keys: [] });
   });
 });
 

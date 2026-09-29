@@ -340,9 +340,18 @@ describe("GarmentForm: a picked photo", () => {
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Harrier" }),
-    ).toBeVisible();
+    const heading = await screen.findByRole("heading", {
+      level: 1,
+      name: "Harrier",
+    });
+    expect(heading).toBeVisible();
+    // Raw text, not the accessible name: the accessible-name algorithm
+    // normalises whitespace, so a leading space from a wrongly-generic
+    // label (`" Harrier"`, brand joined to an empty string) would still
+    // read as "Harrier" to `getByRole` and hide the bug.
+    expect(heading.textContent).toBe("Harrier");
+    // The saved view's own heading state — never the form's.
+    expect(heading).toHaveAttribute("data-state", "saved");
   });
 
   it("offers Try again for a dropped connection, and it re-sends the same file", async () => {
@@ -386,6 +395,13 @@ describe("GarmentForm: a picked photo", () => {
       "Our end failed. Nothing changed.",
     );
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    // The caught-error path announces the same sentence the band shows,
+    // through the screen's one status region — not just the visible band.
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Garment saved, photo didn't. Try again?",
+      );
+    });
   });
 
   it("sends another photo straight to the saved garment, and moves on", async () => {

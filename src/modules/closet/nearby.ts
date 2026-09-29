@@ -8,11 +8,11 @@
  * form after the page has loaded and the card follows it without a round
  * trip. That is at most forty rows.
  */
-import { desc, eq, getTableColumns, lte, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
-import type { garmentCategories } from "../../lib/contracts";
+import { garmentCategories } from "../../lib/contracts";
 import { viewsOf, type ClosetItemView } from "./service";
 
 type Db = ReturnType<typeof drizzle>;
@@ -30,31 +30,39 @@ The pieces the card may list, by category; a category with none is absent.
 export type ClosetNearby = Partial<Record<Category, ClosetItemView[]>>;
 
 /**
- * Up to five per category in one statement: each row ranked within its
- * category, newest first, and only the first five kept — in SQL, so the
- * limit is per category and not over the closet as a whole. The runner's
- * rows are found by `wardrobe_user_category`.
+ * The newest five of one category, found by `wardrobe_user_category` —
+ * in SQL, so the limit is the category's and not the closet's.
+ */
+function newestIn(db: Db, userId: string, category: Category) {
+  return db
+    .select()
+    .from(wardrobeItems)
+    .where(
+      and(
+        eq(wardrobeItems.userId, userId),
+        eq(wardrobeItems.category, category),
+      ),
+    )
+    .orderBy(desc(wardrobeItems.createdAt), desc(wardrobeItems.id))
+    .limit(NEARBY_LIMIT);
+}
+
+/**
+ * Every category's newest five, one statement a category, in one batch
+ * — one round trip. Split from the tuple rather than mapped whole, so the
+ * batch is given the non-empty list it asks for without a check that no
+ * input could fail.
  */
 export async function closetNearby(
   db: Db,
   userId: string,
 ): Promise<ClosetNearby> {
-  const ranked = db
-    .select({
-      ...getTableColumns(wardrobeItems),
-      rank: sql<number>`row_number() over (partition by ${wardrobeItems.category} order by ${wardrobeItems.createdAt} desc, ${wardrobeItems.id} desc)`.as(
-        "rank",
-      ),
-    })
-    .from(wardrobeItems)
-    .where(eq(wardrobeItems.userId, userId))
-    .as("ranked");
-  const rows = await db
-    .select()
-    .from(ranked)
-    .where(lte(ranked.rank, NEARBY_LIMIT))
-    .orderBy(desc(ranked.createdAt), desc(ranked.id));
-  const views = await viewsOf(db, userId, rows);
+  const [first, ...rest] = garmentCategories;
+  const found = await db.batch([
+    newestIn(db, userId, first),
+    ...rest.map((category) => newestIn(db, userId, category)),
+  ]);
+  const views = await viewsOf(db, userId, found.flat());
   const nearby: ClosetNearby = {};
   for (const view of views) {
     const listed = nearby[view.item.category] ?? [];

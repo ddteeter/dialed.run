@@ -87,24 +87,39 @@ const photosSnapshotSchema = z.array(
 );
 
 /**
- * The copies a record's snapshot names, or `undefined` when it cannot be
- * read. Only keys under the quarantine prefix: the snapshot is JSON in a
- * table, and a purge that trusted it could be pointed at a runner's live
- * photo.
+ * A record's snapshot read back: the copies it names, or what is wrong
+ * with it. The two failures are named apart, as the outbox's rows are,
+ * because they point at different culprits — a snapshot that is not JSON
+ * was written wrong, a well-formed one of the wrong shape was written by
+ * another build — and the name is what reaches Sentry.
  */
-export function preservedKeysOf(snapshot: string): string[] | undefined {
+export type SnapshotKeys =
+  | { readonly ok: true; readonly keys: string[] }
+  | { readonly ok: false; readonly problem: string };
+
+/**
+ * The copies a record's snapshot names. Only keys under the quarantine
+ * prefix: the snapshot is JSON in a table, and a purge that trusted it
+ * could be pointed at a runner's live photo. Never throws.
+ */
+export function preservedKeysOf(snapshot: string): SnapshotKeys {
   let decoded: unknown;
   try {
     decoded = JSON.parse(snapshot);
   } catch {
-    return undefined;
+    return { ok: false, problem: "not JSON" };
   }
   const parsed = photosSnapshotSchema.safeParse(decoded);
-  if (!parsed.success) return undefined;
+  if (!parsed.success) return { ok: false, problem: "not a list of photos" };
   const prefix = quarantineKeyFor("");
-  return parsed.data.flatMap((photo) =>
-    photo.preservedKey?.startsWith(prefix) === true ? [photo.preservedKey] : [],
-  );
+  return {
+    ok: true,
+    keys: parsed.data.flatMap((photo) =>
+      photo.preservedKey?.startsWith(prefix) === true
+        ? [photo.preservedKey]
+        : [],
+    ),
+  };
 }
 
 export interface QuarantinePurge {
@@ -179,12 +194,12 @@ export async function purgeExpiredQuarantine(
   const claimed = await claimExpired(db, now);
   const failed: { id: string; error: unknown }[] = [];
   for (const record of claimed) {
-    const keys = preservedKeysOf(record.photosSnapshot);
+    const read = preservedKeysOf(record.photosSnapshot);
     try {
-      if (keys === undefined) {
-        throw new Error("quarantine snapshot unreadable");
+      if (!read.ok) {
+        throw new Error(`quarantine snapshot unreadable: ${read.problem}`);
       }
-      await media.delete(keys);
+      await media.delete(read.keys);
       await db
         .delete(quarantinedContent)
         .where(eq(quarantinedContent.id, record.id));

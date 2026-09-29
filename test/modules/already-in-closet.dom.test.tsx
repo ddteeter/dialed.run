@@ -149,6 +149,16 @@ describe("AlreadyInCloset", () => {
     expect(screen.queryByText("Same name")).toBeNull();
   });
 
+  it("does not match on the brand alone when the name differs", () => {
+    // Pairs with the brand-differs case above: brand matches (both
+    // empty), but the typed name is a real, non-empty string that does
+    // not match the piece's own name. A guard that stopped comparing
+    // names once something was typed would call this a match.
+    card([quarterZip], { brand: "", name: "something else entirely" });
+
+    expect(screen.queryByText("Same name")).toBeNull();
+  });
+
   it("matches a piece with no brand when none is typed", () => {
     card([quarterZip], { brand: "", name: "uniqlo quarter zip" });
 
@@ -157,6 +167,16 @@ describe("AlreadyInCloset", () => {
 
   it("matches nothing before a name is typed", () => {
     card([quarterZip], { brand: "", name: " ".repeat(3) });
+
+    expect(screen.queryByText("Same name")).toBeNull();
+  });
+
+  it("matches nothing when the piece itself has no name to compare", () => {
+    // Both the typed name and the piece's own name normalise to "" here.
+    // The "nothing typed" guard must still block a match on its own,
+    // rather than leaning on the name comparison to do it (which this
+    // input defeats: "" === "").
+    card([itemView({ item: wardrobeItem({ name: "" }) })], NOTHING_TYPED);
 
     expect(screen.queryByText("Same name")).toBeNull();
   });
@@ -171,6 +191,16 @@ describe("AlreadyInCloset", () => {
     const photo = second?.querySelector("[data-part='thumb']");
     expect(photo).toHaveAttribute("src", "/closet/photo/01ROV/card?v=01V1");
     expect(photo).toHaveAttribute("alt", "");
+  });
+
+  it("renders no flag mono at all when a piece has neither flag", () => {
+    // Not just "no flag text" — no element for it. A ternary that always
+    // took the flagged branch would render an empty, classed span that no
+    // text assertion alone would ever notice.
+    card([quarterZip]);
+
+    const [row] = rows();
+    expect(row?.querySelector(".text-cold-text")).toBeNull();
   });
 
   it("links nowhere: a link would lead away from a half-filled form", () => {

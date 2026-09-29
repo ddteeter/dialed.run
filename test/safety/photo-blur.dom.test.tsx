@@ -920,6 +920,12 @@ describe("the keyboard path (D-84(b))", () => {
     await waitFor(() => {
       expect(focusedNinths()).toStrictEqual(["bottom-right"]);
     });
+    // The value, not just the attribute's presence: `[data-ninth][data-focused]`
+    // above matches an empty `data-focused=""` too, which is what React
+    // renders for an empty-string value, so only checking the value tells
+    // "true" apart from a blank marker.
+    const focusedNinth = document.querySelector('[data-ninth="bottom-right"]');
+    expect(focusedNinth).toHaveAttribute("data-focused", "true");
     await user.tab({ shift: true });
     await waitFor(() => {
       expect(focusedNinths()).toStrictEqual(["bottom"]);

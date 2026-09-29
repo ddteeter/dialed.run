@@ -39,9 +39,14 @@ function recordLine(view: ClosetItemView, zone: string | undefined): string {
   if (view.item.retired) {
     return `${worn} · ${retiredLabel(view.item.retiredAt, zone)}`;
   }
-  const verdicts = summary?.verdictCount ?? 0;
-  if (verdicts === 0) return `${worn} · No verdict yet`;
-  const dialed = `${String(summary?.dialedCount ?? 0)}/${String(verdicts)} dialed`;
+  // `summary === undefined` folded into this guard (rather than checked
+  // via `summary?.verdictCount ?? 0 === 0` as before) narrows `summary` to
+  // defined for the rest of the function, so `summary.dialedCount` below
+  // needs no `?.` of its own.
+  if (summary === undefined || summary.verdictCount === 0) {
+    return `${worn} · No verdict yet`;
+  }
+  const dialed = `${String(summary.dialedCount)}/${String(summary.verdictCount)} dialed`;
   const range =
     view.tempRange === undefined ? undefined : formatTempRange(view.tempRange);
   return range === undefined

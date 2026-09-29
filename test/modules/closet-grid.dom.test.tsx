@@ -7,6 +7,7 @@ import {
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import { ClosetGrid } from "../../src/modules/closet/components/ClosetGrid";
@@ -476,6 +477,27 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
   });
 });
 
+/**
+ * A closet that learns of two deletes in turn, without remounting: the
+ * only way to see that the grid follows a changed `deleted`.
+ */
+function TwoDeletes() {
+  const [deleted, setDeleted] = useState("Pegasus 40");
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setDeleted("Vaporfly");
+        }}
+      >
+        Next delete
+      </button>
+      <ClosetGrid listing={listing([harrier])} deleted={deleted} />
+    </>
+  );
+}
+
 describe("ClosetGrid: round 26's confirms", () => {
   it("counts the retired pieces on the switch", async () => {
     const otherRetired = itemView({
@@ -505,5 +527,26 @@ describe("ClosetGrid: round 26's confirms", () => {
   it("says nothing when nothing was deleted", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
     expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("announces a second delete without a remount, not just the first", async () => {
+    // `deleted` is a prop, not internal state, so the only way to observe
+    // the effect's dependency array is to change it on an already-mounted
+    // ClosetGrid — a harness that holds it in state and hands down a new
+    // value does that; recreating the whole tree would run the effect on
+    // mount either way and prove nothing about its deps.
+    const user = userEvent.setup();
+    await renderWithRouter(<TwoDeletes />);
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Pegasus 40 deleted.",
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "Next delete" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Vaporfly deleted.");
+    });
   });
 });
