@@ -469,6 +469,15 @@ describe("accountExport", () => {
     });
   });
 
+  it("leaves the account's fields out, rather than failing, when its row is already gone", async () => {
+    const file = await accountExport(db, newUlid(), ORIGIN, NOW);
+    expect(file.account).toStrictEqual({
+      email: undefined,
+      joinedAt: undefined,
+    });
+    expect(await asFile(file)).toMatchObject({ account: {}, closet: [] });
+  });
+
   it("gives every run its conditions past one chunk of observation reads", async () => {
     const userId = await seedRunner(`many-${newUlid()}@example.test`);
     const count = 85;

@@ -127,6 +127,21 @@ describe("LegalPage", () => {
     expect(before.closest("article")).toHaveClass("max-w-column", "text-lead");
   });
 
+  it("puts each H2's blocks in its own section, and no other", async () => {
+    await renderWithRouter(
+      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+    );
+    const sectionOf = (name: string) =>
+      screen.getByRole("heading", { level: 2, name }).closest("section");
+    const first = sectionOf("Who we are");
+    const second = sectionOf("Your choices");
+    expect(first).toContainElement(screen.getByText("dialed.run"));
+    expect(first).toContainElement(screen.getByText("us"));
+    expect(second).toContainElement(screen.getByText("A note."));
+    expect(second).toContainElement(screen.getByRole("table"));
+    expect(first).not.toContainElement(screen.getByText("A note."));
+  });
+
   it("renders bold, code, links, the H3, lists, quotes and tables", async () => {
     await renderWithRouter(
       <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,

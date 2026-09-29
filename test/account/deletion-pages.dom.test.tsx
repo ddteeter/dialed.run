@@ -4,7 +4,13 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -140,6 +146,22 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(request).toHaveBeenCalledWith({
       data: { currentPassword: "pw-1" },
     });
+    expect(within(sheet).getByRole("status")).toHaveTextContent(
+      "Deletion scheduled.",
+    );
+  });
+
+  it("keeps the sheet in the page when it is submitted", async () => {
+    const { view, user } = deleteRow();
+    await view;
+    const sheet = await openSheet(user);
+    const form = sheet.querySelector("form");
+    if (form === null) throw new Error("no form");
+    expect(fireEvent.submit(form)).toBe(false);
+    // …and the submit it stopped is the sheet's own, refusing the empty field.
+    expect(
+      await within(sheet).findAllByText("Enter your current password."),
+    ).not.toHaveLength(0);
   });
 
   it("lands a wrong password on the field", async () => {
@@ -245,6 +267,20 @@ describe("Leaving (round 27 #14)", () => {
     expect(
       screen.getByRole("link", { name: "Open dialed.run" }),
     ).toHaveAttribute("href", "/");
+    // Log in is the primary way back, Open dialed.run the secondary one.
+    expect(screen.getByRole("link", { name: "Log in" })).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(screen.getByRole("link", { name: "Open dialed.run" })).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      "text-ink",
+    );
     expect(document.querySelector("[data-part='landing']")).toHaveAttribute(
       "data-state",
       "scheduled",
@@ -265,6 +301,22 @@ describe("Leaving (round 27 #14)", () => {
         "It's set to be deleted on Sat, Oct 4, with everything in it. Keep it and it all comes back as it was.",
       ),
     ).toBeInTheDocument();
+    // Nothing is too late until Keep has been pressed and said so.
+    expect(screen.queryByText(TOO_LATE)).toBeNull();
+    // Keep is the primary answer, Log out the secondary one.
+    expect(screen.getByRole("button", { name: "Keep my account" })).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(screen.getByRole("button", { name: "Log out" })).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      "text-ink",
+    );
     await user.click(screen.getByRole("button", { name: "Keep my account" }));
     await waitFor(() => {
       expect(onKept).toHaveBeenCalledTimes(1);
@@ -319,6 +371,10 @@ describe("Leaving (round 27 #14)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Keep my account" }));
     expect(await screen.findByText("Still scheduled")).toBeInTheDocument();
+    // The one status region says what failed.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Still scheduled\. /u,
+    );
     await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
       expect(onKept).toHaveBeenCalledTimes(1);
@@ -337,6 +393,9 @@ describe("Leaving (round 27 #14)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Log out" }));
     expect(await screen.findByText("Still logged in")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Still logged in\. /u,
+    );
   });
 
   it("draws nothing when there is nothing to say", async () => {

@@ -108,8 +108,17 @@ describe("headingId", () => {
     expect(headingId("Opt-in  twice")).toBe("opt-in-twice");
     expect(headingId("Year 2026")).toBe("year-2026");
     expect(headingId("Café")).toBe("café");
+    // A heading line's trailing spaces are not part of it.
+    expect(headingId("Who we are  ")).toBe("who-we-are");
   });
 });
+
+/**
+One cell's words, as a table reads them.
+*/
+function text(value: string) {
+  return [{ kind: "text", text: value }];
+}
 
 describe("parseLegalDoc", () => {
   it("takes the first # as the title and the rest as blocks", () => {
@@ -197,6 +206,61 @@ describe("parseLegalDoc", () => {
     expect(doc.contents).toEqual([
       { id: "the-short-version", title: "The short version" },
       { id: "code-too", title: "Code too" },
+    ]);
+  });
+
+  it("ends a block at a line of only spaces, which belongs to neither", () => {
+    const doc = parseLegalDoc("# T\n\nOne\n   \nTwo\n");
+    expect(doc.blocks).toEqual([
+      { kind: "paragraph", inlines: [{ kind: "text", text: "One" }] },
+      { kind: "paragraph", inlines: [{ kind: "text", text: "Two" }] },
+    ]);
+  });
+
+  it("reads a quote's > with or without its space, and only at the start of a line", () => {
+    const doc = parseLegalDoc("# T\n\n> One\n>two\nthree > four\n");
+    expect(doc.blocks).toEqual([
+      {
+        kind: "quote",
+        inlines: [{ kind: "text", text: "One two three > four" }],
+      },
+    ]);
+  });
+
+  it("is a table only when the block starts with a pipe, not when it ends with one", () => {
+    const doc = parseLegalDoc("# T\n\nEither a | b |\n");
+    expect(doc.blocks).toEqual([
+      {
+        kind: "paragraph",
+        inlines: [{ kind: "text", text: "Either a | b |" }],
+      },
+    ]);
+  });
+
+  it("keeps a row that only looks like a rule at one end, and reads rows with loose pipes", () => {
+    const doc = parseLegalDoc(
+      [
+        "# T",
+        "",
+        "| A | B |",
+        "| - | - |",
+        "| Runs | - |",
+        "| - | Kept |",
+        "| Files | 30 days |  ",
+        "Photos | 30 days |",
+      ].join("\n"),
+    );
+    expect(doc.blocks).toEqual([
+      {
+        kind: "table",
+        head: [text("A"), text("B")],
+        rows: [
+          [text("Runs"), text("-")],
+          [text("-"), text("Kept")],
+          [text("Files"), text("30 days")],
+          [text("Photos"), text("30 days")],
+        ],
+      },
     ]);
   });
 

@@ -142,7 +142,9 @@ export async function requestAccountDeletion(
     db
       .insert(accountDeletions)
       .values({ userId, requestedAt: now, purgeAfter })
-      .onConflictDoNothing({ target: accountDeletions.userId }),
+      // Untargeted: the primary key is the table's only unique constraint,
+      // so the one conflict there can be is this runner's earlier claim.
+      .onConflictDoNothing(),
     // "You're signed out on every device" — deleted rather than expired,
     // as a ban does: a deleted session cannot be got wrong by anybody.
     db.delete(session).where(eq(session.userId, userId)),
@@ -182,19 +184,18 @@ export type KeepResult = "kept" | "too-late";
  * it). No claim at all is kept already.
  */
 export async function keepAccount(db: Db, userId: string): Promise<KeepResult> {
-  const deleted = await db
-    .delete(accountDeletions)
-    .where(
-      and(
-        eq(accountDeletions.userId, userId),
-        isNull(accountDeletions.purgeStartedAt),
-      ),
-    )
-    .returning({ userId: accountDeletions.userId });
-  if (deleted.length > 0) return "kept";
-  return (await pendingDeletionOf(db, userId)) === undefined
-    ? "kept"
-    : "too-late";
+  const mine = eq(accountDeletions.userId, userId);
+  const unclaimed = and(mine, isNull(accountDeletions.purgeStartedAt));
+  // One batch: the read sees exactly what the delete left, so a claim
+  // still there is one the purge had already started on.
+  const [, left] = await db.batch([
+    db.delete(accountDeletions).where(unclaimed),
+    db
+      .select({ userId: accountDeletions.userId })
+      .from(accountDeletions)
+      .where(mine),
+  ]);
+  return left.length === 0 ? "kept" : "too-late";
 }
 
 /**

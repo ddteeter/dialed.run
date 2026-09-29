@@ -111,7 +111,10 @@ export function parseInline(line: string): Inline[] {
   const inlines: Inline[] = [];
   let text = "";
   let at = 0;
-  while (at < line.length) {
+  // `!==`, not `<`: `at` only ever lands on a character or exactly on the
+  // end (a mark's `end` is at most `line.length`), so the two say the same
+  // thing — and `<` admits a `<=` mutant no input can tell apart.
+  while (at !== line.length) {
     const mark = markAt(line, at);
     if (mark === undefined) {
       text += line.charAt(at);

@@ -242,6 +242,19 @@ describe("emailContent", () => {
         { origin: ORIGIN },
       ).subject,
     ).toBe("Fri Sep 19 — 1 waiting, 0 photos need eyes");
+    // …and so is an unfinished photo alone.
+    expect(
+      emailContent(
+        {
+          kind: "digest",
+          day: "Sat Sep 20",
+          waiting: 0,
+          screenerUnfinished: 1,
+          bansThisWeek: 0,
+        },
+        { origin: ORIGIN },
+      ).subject,
+    ).toBe("Sat Sep 20 — 0 waiting, 1 photo needs eyes");
   });
 
   it("counts every run the one-a-day reminder covers", () => {

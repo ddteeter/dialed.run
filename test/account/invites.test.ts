@@ -546,13 +546,57 @@ describe("Desk D7", () => {
     });
     const mail = fakeMail();
     const later = owedTo(mail);
-    expect(
-      await inviteFromRequest(db, { operatorId: "op", requestId }, later.owed),
-    ).toBeUndefined();
+    const random = vi.spyOn(globalThis.crypto, "getRandomValues");
+    try {
+      expect(
+        await inviteFromRequest(
+          db,
+          { operatorId: "op", requestId },
+          later.owed,
+        ),
+      ).toBeUndefined();
+      // Not even drawn: a code is only minted for a request still waiting.
+      expect(random).not.toHaveBeenCalled();
+    } finally {
+      random.mockRestore();
+    }
     await later.settled();
     expect(await db.select().from(inviteCodes)).toStrictEqual([]);
     expect(await db.select().from(outbox)).toStrictEqual([]);
     expect(mail.sent).toStrictEqual([]);
+  });
+
+  it("answers nothing and emails nothing when the request's code does not land", async () => {
+    // The request was waiting when it was read, and was answered some
+    // other way before this press's batch ran — so the batch stores no
+    // code for it. A trigger stands in for that: it drops the insert.
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "gone@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await env.DIALED_CORE.exec(
+      "CREATE TRIGGER invite_code_lost BEFORE INSERT ON invite_codes BEGIN SELECT RAISE(IGNORE); END",
+    );
+    try {
+      const mail = fakeMail();
+      const later = owedTo(mail);
+      expect(
+        await inviteFromRequest(
+          db,
+          { operatorId: "op", requestId },
+          later.owed,
+        ),
+      ).toBeUndefined();
+      await later.settled();
+      expect(await db.select().from(inviteCodes)).toStrictEqual([]);
+      expect(await db.select().from(outbox)).toStrictEqual([]);
+      expect(mail.sent).toStrictEqual([]);
+    } finally {
+      await env.DIALED_CORE.exec("DROP TRIGGER invite_code_lost");
+    }
   });
 
   it("declines silently, and only a pending request", async () => {

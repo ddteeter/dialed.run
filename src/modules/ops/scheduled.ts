@@ -60,7 +60,7 @@ export interface ScheduledOutcome {
 export async function handleScheduled(
   controller: ScheduledController,
   reporter: CronReporter = sentryCronReporter,
-  upkeep: Partial<DailyUpkeep> = {},
+  upkeep: DailyUpkeep = {},
 ): Promise<ScheduledOutcome> {
   const db = drizzle(env.DIALED_CORE);
   const cronName = cronNameFor(controller.cron);
@@ -88,10 +88,7 @@ export async function handleScheduled(
     schedule: controller.cron,
   });
   try {
-    const anomalies = await runCron(cronName, reporter, {
-      ...DEFAULT_UPKEEP,
-      ...upkeep,
-    });
+    const anomalies = await runCron(cronName, reporter, upkeep);
     checkIn.finish("ok");
     return { cronName, anomalies };
   } catch (error) {
@@ -112,16 +109,14 @@ export async function handleScheduled(
  *
  * **The digest's email** (OPS-11) is ops' own; it is a field here so a
  * test can name the operators it goes to.
+ *
+ * Both are optional: a firing handed neither purges nothing and mails
+ * the digest the live way (`oweDigestEmail`'s default).
  */
 export interface DailyUpkeep {
-  readonly purgeAccounts: (anomalies: string[]) => Promise<void>;
-  readonly digestMail: DigestMail | undefined;
+  readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
+  readonly digestMail?: DigestMail | undefined;
 }
-
-const DEFAULT_UPKEEP: DailyUpkeep = {
-  purgeAccounts: () => Promise.resolve(),
-  digestMail: undefined,
-};
 
 async function runCron(
   cronName: CronName,
@@ -563,7 +558,9 @@ async function runDailyDigest(
     },
     "stalled-import": redispatchStalledImports,
     "review-queue": checkReviewQueueDepth,
-    "account-deletion": upkeep.purgeAccounts,
+    "account-deletion": async (anomalies) => {
+      await upkeep.purgeAccounts?.(anomalies);
+    },
   };
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)

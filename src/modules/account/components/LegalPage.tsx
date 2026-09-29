@@ -161,7 +161,9 @@ function BlockView({ block }: Readonly<{ block: BodyBlock }>): JSX.Element {
         </ul>
       );
     }
-    case "table": {
+    // The last kind is the default, so a block of no kind at all is drawn
+    // as a table and fails loudly, rather than rendering as nothing.
+    default: {
       return <TableView head={block.head} rows={block.rows} />;
     }
   }

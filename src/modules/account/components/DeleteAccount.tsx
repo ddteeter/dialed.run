@@ -150,7 +150,8 @@ function DeleteSheet({
     },
   });
 
-  // "Keep it" is focused, as every destructive confirm's safe answer is.
+  // "Keep it" is focused, as every destructive confirm's safe answer is
+  // (ConfirmSheet's pattern: state, so this runs once the button exists).
   useEffect(() => {
     keep?.focus();
   }, [keep]);

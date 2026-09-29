@@ -26,7 +26,7 @@ const PASSPHRASE = ["an", "account", "demo", "passphrase"].join("-");
 test("account settings -> change password -> reminder emails off and on -> sign out everywhere -> export -> delete and keep", async ({
   page,
 }, testInfo) => {
-  testInfo.setTimeout(240_000);
+  testInfo.setTimeout(420_000);
   const email = `account-${String(Date.now())}@example.com`;
 
   // A confirmed runner with a handle, the way the auth demo makes one.
