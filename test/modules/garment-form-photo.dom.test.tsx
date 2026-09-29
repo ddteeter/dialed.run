@@ -147,7 +147,7 @@ describe("GarmentForm: a picked photo", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(onSaved).toHaveBeenCalled();
+      expect(onSaved).toHaveBeenCalledWith({ id: "01SAVED" });
     });
     expect(calls).toStrictEqual(["save"]);
   });
