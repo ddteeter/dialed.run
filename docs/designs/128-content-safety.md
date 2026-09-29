@@ -238,3 +238,23 @@ audit row stays: it holds who, when and why, not the content.
 - Schema: none. Migrations: none.
 - Bindings/queues/crons: none; the purge rides `daily-digest`.
 - New cross-module edge: none — the closet route composes feed's count.
+
+### As built (2b)
+
+- **SAF-16.** `DeleteWithRuns` is its own sheet on `ui/Sheet` (not a change
+  to `ConfirmSheet`, which is not this lane's). A piece with no runs never
+  mounts it. A band row with 0 bands is left out.
+- **SAF-17** applies to Edit as well as F: the component does not branch on
+  which one it is. `updateSaved` is gone — with the fields gone there is no
+  second submit to update. The rail does not yet list the piece the save
+  just made (the loader's rows predate it); the board says it should.
+- **SAF-18/19.** F's heading and "← Closet" moved from the routes into the
+  form, so the saved state can replace the heading with the piece's name;
+  the way back is `closet/components/BackToCloset`, shared with Y.
+- **Found, not fixed: W3's cells can hardly be used.** Every photo step's
+  host (`usePhotoPick` here, `AttachKit` in 127's lane) closes the step on
+  the first `onReady`, and `PhotoBlur` calls `onReady` as soon as the
+  detector's blur is painted. So the canvas, tap-to-blur and the keyboard
+  cells are on screen for a moment, not until the runner is done. Keeping
+  the step open needs a "use this photo" moment the W3 board would have to
+  say how to draw; it is a question for the owner, not a 2b change.
