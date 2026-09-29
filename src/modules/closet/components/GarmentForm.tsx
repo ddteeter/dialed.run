@@ -752,39 +752,34 @@ export function GarmentForm({
           says the photo did not go up is written as the fields leave. */}
       <FormStatus>{form.status}</FormStatus>
       {back}
+      <FormHeading
+        heading={heading}
+        saved={refused === undefined ? undefined : values}
+      />
       {refused === undefined ? (
-        <>
-          <h1 className="m-0 font-display text-title uppercase">{heading}</h1>
-          {fieldsView}
-        </>
+        fieldsView
       ) : (
         <SavedPhotoRefused
-          category={values.category}
-          label={garmentLabel({
-            name: values.name,
-            brand: values.brand,
-            // A piece saved with no brand is called by its name alone.
-            isGeneric: values.brand === "",
-          })}
-          refusal={refused}
-          well={
-            <FileWell
-              part="photo-well"
-              copy={GARMENT_PHOTO_COPY}
-              pending={pick.stepping || photoPending}
-              accept={photoAcceptAttribute}
-              onFiles={pickFrom}
-            />
-          }
-          step={pick.step(form.announce)}
-          onRetry={() => {
-            void finishWithPhoto(refused.itemId, held);
-          }}
-          onFiles={pickFrom}
           onDone={() => {
             void onSaved({ id: refused.itemId });
           }}
-        />
+        >
+          <FileWell
+            part="photo-well"
+            copy={GARMENT_PHOTO_COPY}
+            pending={pick.stepping || photoPending}
+            accept={photoAcceptAttribute}
+            onFiles={pickFrom}
+          />
+          {pick.step(form.announce)}
+          <PhotoRefused
+            refusal={refused}
+            onRetry={() => {
+              void finishWithPhoto(refused.itemId, held);
+            }}
+            onFiles={pickFrom}
+          />
+        </SavedPhotoRefused>
       )}
     </>
   );
@@ -835,43 +830,62 @@ function FormFrame({
 }
 
 /**
+ * F's one heading, whichever view (Accessibility Contract rule 04): the
+ * page's own while there is a form; once the garment is saved, the
+ * piece's name in its own case under `SAVED TO CLOSET · {CATEGORY}`.
+ */
+function FormHeading({
+  heading,
+  saved,
+}: Readonly<{
+  heading: string;
+  saved: GarmentFormValues | undefined;
+}>): JSX.Element {
+  // One `<h1>` in the source as well as on the screen, which is what the
+  // one-heading check reads; the saved name keeps its own case.
+  return (
+    <div className="flex flex-col gap-1">
+      {saved === undefined ? undefined : (
+        <Mono step="xs" className="text-dialed-text">
+          {`Saved to closet · ${garmentCategoryLabels[saved.category]}`}
+        </Mono>
+      )}
+      <h1
+        data-state={saved === undefined ? undefined : "saved"}
+        className="m-0 font-display text-title uppercase data-[state=saved]:normal-case"
+      >
+        {saved === undefined
+          ? heading
+          : garmentLabel({
+              name: saved.name,
+              brand: saved.brand,
+              // A piece saved with no brand is called by its name alone.
+              isGeneric: saved.brand === "",
+            })}
+      </h1>
+    </div>
+  );
+}
+
+/**
  * Round 26 #4, "F Photo failed": the garment is saved, so the fields have
  * gone — F is the saved garment's page now, not a form to submit twice.
- * `SAVED TO CLOSET` and the piece's name, the empty well, the band under
- * it, and **Done**, to the garment (Y).
+ * Under `SAVED TO CLOSET` and the piece's name (the page's one heading):
+ * the empty well, the band under it, and **Done**, to the garment (Y).
  */
 function SavedPhotoRefused({
-  category,
-  label,
-  refusal,
-  well,
-  step,
-  onRetry,
-  onFiles,
+  children,
   onDone,
 }: Readonly<{
-  category: Category;
-  label: string;
-  refusal: PhotoRefusal;
-  well: ReactNode;
-  step: ReactNode;
-  onRetry: () => void;
-  onFiles: (files: FileList | null) => void;
+  /**
+  The empty well, W3's step, and the band under them.
+  */
+  children: ReactNode;
   onDone: () => void;
 }>): JSX.Element {
   return (
     <div data-part="saved" className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <Mono step="xs" className="text-dialed-text">
-          {`Saved to closet · ${garmentCategoryLabels[category]}`}
-        </Mono>
-        <h1 className="m-0 font-display text-title">{label}</h1>
-      </div>
-      <div className="flex flex-col gap-2">
-        {well}
-        {step}
-        <PhotoRefused refusal={refusal} onRetry={onRetry} onFiles={onFiles} />
-      </div>
+      <div className="flex flex-col gap-2">{children}</div>
       <button
         type="button"
         onClick={onDone}

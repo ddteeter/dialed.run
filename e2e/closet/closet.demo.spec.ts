@@ -2,7 +2,9 @@
  * Covers: C (the closet, round 22 ruling 16), F (add a garment, ruling
  * 17), Y (garment detail, round 22 `#y`: the photo well, Remove, the
  * retire confirm), §AG (what a garment is made of), §AH (colour as a
- * constraint) — one journey, one video.
+ * constraint), round 26 #3 (Y · delete with runs), #4 (F · saved, photo
+ * refused), #9 (Show retired (N), "← Closet") and #10 (F at the desk) —
+ * one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -14,7 +16,10 @@
  * screen is for), the second with its photo taken in F's well; detail in
  * round 22's order, the photo removed; then one retired through the
  * confirm sheet, landing on the closet where it is still there, last and
- * marked (CLAUDE.md: retire, don't delete).
+ * marked (CLAUDE.md: retire, don't delete). Then round 26's closet: F at
+ * the desk beside what is already in the closet, a save whose photo is
+ * lost to a dropped connection, and deleting a piece that has runs from
+ * the sheet that asks to retire it instead.
  *
  * Round 11's colour rides on the second piece, because that is where it
  * lives on screen: the fifth attribute inside F's already-collapsed group,
@@ -25,7 +30,16 @@
  */
 import { eq } from "drizzle-orm";
 
-import { products } from "../../src/db/schema-core";
+import {
+  outfitEntries,
+  outfitEntryItems,
+  products,
+  runs,
+} from "../../src/db/schema-core";
+import { manualConditions } from "../../src/db/schema-weather";
+import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { userIdOf } from "../conformance/logging-fixtures";
 import { storageStateFor } from "../support/accounts";
 import { bar } from "../support/bars";
 import { expect, scene, test } from "../support/demo";
@@ -52,6 +66,14 @@ const PNG_1X1 = Buffer.from(
   "base64",
 );
 
+/**
+ * Whether a server-function request is the photo's upload: the only one
+ * sent as multipart form data, so the demo can drop that one alone.
+ */
+function isPhotoUpload(contentType: string | undefined): boolean {
+  return contentType?.includes("multipart/form-data") === true;
+}
+
 test("add garments with product identity -> detail in round 22's order -> retire through the confirm", async ({
   page,
 }, testInfo) => {
@@ -71,7 +93,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
     page.getByRole("heading", { name: /Nothing in here yet/ }),
   ).toBeVisible();
   await expect(
-    page.getByText("Add what you run in most. Three pieces is enough to start."),
+    page.getByText(
+      "Add what you run in most. Three pieces is enough to start.",
+    ),
   ).toBeVisible();
 
   // First piece: real product identity, not a generic placeholder — brand
@@ -152,7 +176,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(well).toHaveAttribute("data-state", "filled");
   await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
   await expect(page.getByText("Replace")).toBeVisible();
-  await expect(page.getByText("light · wind resistant · reflective trim")).toBeVisible();
+  await expect(
+    page.getByText("light · wind resistant · reflective trim"),
+  ).toBeVisible();
 
   // §AG. Composition belongs to the product, not to the runner's copy —
   // enrichment writes it from a brand's page, so the demo writes the row
@@ -233,7 +259,10 @@ test("add garments with product identity -> detail in round 22's order -> retire
 
   // Retiring lands back on the closet with retired pieces shown, so the
   // shoes are visibly still there — last, and marked in the kicker.
-  await scene(page, "Retired: still here, sorted last, [RETIRED] in the kicker");
+  await scene(
+    page,
+    "Retired: still here, sorted last, [RETIRED] in the kicker",
+  );
   await sheet.getByRole("button", { name: "Retire" }).click();
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
@@ -259,4 +288,150 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();
+
+  // ---- Round 26 #10 · F at the desk --------------------------------------
+  // The rail holds one card: what is already in the closet in the category
+  // being added, newest first, read-only. It follows the category, and
+  // marks a piece whose brand and name match what is typed.
+  await scene(page, "F at the desk · already in your closet, beside the form");
+  await page.getByRole("link", { name: "Add garment" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Add a garment" }),
+  ).toBeVisible();
+  await hydrated(page);
+  // Round 26 #9: the way back reads "← Closet".
+  await expect(
+    page.getByRole("link", { name: "Closet" }).first(),
+  ).toBeVisible();
+  const rail = page.locator("[data-part='rail']");
+  await expect(
+    rail.getByRole("heading", { name: "Already in your closet · Top" }),
+  ).toBeVisible();
+  await expect(rail.getByText("Patagonia Houdini Jacket")).toBeVisible();
+  await page.getByLabel("Brand").fill("Patagonia");
+  await page.getByLabel("Model / name").fill("Houdini Jacket");
+  await expect(rail.getByText("Same name")).toBeVisible();
+  await page.getByLabel("Category").selectOption("shoes");
+  await expect(
+    rail.getByRole("heading", { name: "Already in your closet · Shoes" }),
+  ).toBeVisible();
+  await expect(rail.getByText("Retired", { exact: true })).toBeVisible();
+
+  // ---- Round 26 #4 · saved, photo refused ---------------------------------
+  // A new piece, and its photo lost to a dropped connection: the save is
+  // not undone, the fields go, and Try again re-sends the same file.
+  await scene(
+    page,
+    "F · the connection drops under the photo, not the garment",
+  );
+  await page.getByLabel("Category").selectOption("top");
+  await page.getByLabel("Model / name").fill("Houdini Air");
+  await expect(rail.getByText("Same name")).toHaveCount(0);
+  await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
+    name: "houdini-air.png",
+    mimeType: "image/png",
+    buffer: PNG_1X1,
+  });
+  await expect(well).toHaveAttribute("data-state", "filled", {
+    timeout: 20_000,
+  });
+  let hasDropped = false;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (
+      !hasDropped &&
+      isPhotoUpload(route.request().headers()["content-type"])
+    ) {
+      hasDropped = true;
+      await route.abort("internetdisconnected");
+      return;
+    }
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Add to closet" }).click();
+
+  const band = page.locator("[data-part='failure-band']");
+  await expect(band).toContainText("Photo not added");
+  await expect(band).toContainText("Garment saved, photo didn't. Try again?");
+  await expect(band).toContainText("Your connection dropped.");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Patagonia Houdini Air" }),
+  ).toBeVisible();
+  await expect(page.getByText("Saved to closet · Top")).toBeVisible();
+  await expect(page.getByLabel("Model / name")).toHaveCount(0);
+  await expect(page.getByLabel("Pick another")).toBeAttached();
+  await expect(page.getByRole("button", { name: "Done" })).toBeVisible();
+
+  await scene(page, "Try again sends the same photo, and lands on the piece");
+  await page.unroute("**/_serverFn/**");
+  await band.getByRole("button", { name: "Try again" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Patagonia Houdini Air" }),
+  ).toBeVisible();
+  await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
+
+  // ---- Round 26 #3 · deleting a piece with runs ---------------------------
+  // Three runs in the Houdini Air, two of them in one 5 °C band and one in
+  // the next: seeded as rows, with the bands the runner set, because what
+  // the sheet counts is history and history is not typed into a form.
+  const itemId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
+  const userId = await userIdOf("closet");
+  await withLocalDb(async ({ core, weather }) => {
+    const startedAt = nowSeconds() - 3 * 86_400;
+    for (const [index, tempC] of [6, 8, 12].entries()) {
+      const runId = newUlid();
+      const entryId = newUlid();
+      await core.insert(runs).values({
+        id: runId,
+        userId,
+        title: "Demo run",
+        startedAt: startedAt + index * 86_400,
+        durationS: 2400,
+        distanceM: 8000,
+        lat: 44.98,
+        lng: -93.27,
+        source: "manual",
+        indoor: false,
+      });
+      await weather
+        .insert(manualConditions)
+        .values({ runId, tempC, setAt: startedAt });
+      await core.insert(outfitEntries).values({
+        id: entryId,
+        userId,
+        runId,
+        verdict: 0,
+        isPublic: false,
+        createdAt: startedAt + index * 86_400,
+      });
+      await core.insert(outfitEntryItems).values({ entryId, itemId });
+    }
+  });
+
+  await scene(page, "Y · a piece with runs: delete asks to retire it instead");
+  await page.reload();
+  await hydrated(page);
+  await page.getByRole("button", { name: "Delete" }).click();
+  const worn = page.locator(
+    "[data-part='sheet'][data-state='delete-with-runs']",
+  );
+  await expect(
+    worn.getByRole("heading", {
+      name: "Delete the Houdini Air? Retire it instead.",
+    }),
+  ).toBeVisible();
+  await expect(worn.getByText(/^It's on 3 runs\./u)).toBeVisible();
+  await expect(
+    worn.getByText("It comes off the kit of all 3 runs"),
+  ).toBeVisible();
+  await expect(worn.getByText("Its record in 2 bands")).toBeVisible();
+  await expect(worn.getByRole("button", { name: "Cancel" })).toBeFocused();
+
+  await scene(page, "Delete it and its record: straight through, back to C");
+  await worn.getByRole("button", { name: "Delete it and its record" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "deleted" }),
+  ).toHaveText("Houdini Air deleted.");
+  await expect(
+    page.getByRole("link", { name: /Patagonia Houdini Air/ }),
+  ).toHaveCount(0);
 });
