@@ -169,6 +169,11 @@ test("Y · deleting a piece with runs is round 26's sheet, word for word", async
   await page.getByRole("button", { name: "Delete" }).click();
   const sheet = '[data-part="sheet"][data-state="delete-with-runs"]';
   await expect(page.locator(sheet)).toBeVisible();
+  // The band count is asked for when the sheet opens, not with the page,
+  // so its row arrives a moment after the sheet does.
+  await expect(
+    page.locator(sheet).getByText("Its record in 4 bands"),
+  ).toBeVisible();
 
   // `PendingLabel` keeps each action's in-flight label in the DOM, hidden
   // until needed, so it is taken off before the words are compared.
