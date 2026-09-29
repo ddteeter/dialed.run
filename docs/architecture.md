@@ -172,6 +172,8 @@ flowchart TD
     ACCT -->|index.ts only| OPS
     OPS -->|index.ts only| MAIL
     FEED -->|index.ts only| ACCT
+    FEED -->|index.ts only: the removal email| MAIL
+    SAFE -->|index.ts only: D8's run counts| RUNS
 
     CLOSET --> UI[ui]
     RUNS --> UI

@@ -16,3 +16,10 @@ export const ulidSchema = z
   .string()
   .regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, "not a ULID")
   .transform((value) => value as Ulid);
+
+/**
+ * An id this app did not mint, so not a ULID: Better Auth's user ids, and
+ * rows named by one — a report's subject, a Desk row. Bounded instead,
+ * since all downstream does with it is match a row.
+ */
+export const rowIdSchema = z.string().min(1).max(64);

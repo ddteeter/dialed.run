@@ -236,22 +236,50 @@
     {
       "idx": 33,
       "version": "6",
-      "when": 1790602705699,
-      "tag": "0033_add_invite_codes_and_access_requests",
+      "when": 1790602457980,
+      "tag": "0033_add_moderation_actions",
       "breakpoints": true
     },
     {
       "idx": 34,
       "version": "6",
-      "when": 1790602714176,
-      "tag": "0034_blank_user_names",
+      "when": 1790602458326,
+      "tag": "0034_add_username_reset_reason",
       "breakpoints": true
     },
     {
       "idx": 35,
       "version": "6",
+      "when": 1790602458684,
+      "tag": "0035_add_username_history_locked_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1790602459035,
+      "tag": "0036_add_quarantined_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1790602705699,
+      "tag": "0037_add_invite_codes_and_access_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1790602714176,
+      "tag": "0038_blank_user_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
       "when": 1790633180371,
-      "tag": "0035_add_invite_redemption_confirmed_at",
+      "tag": "0039_add_invite_redemption_confirmed_at",
       "breakpoints": true
     }
   ]

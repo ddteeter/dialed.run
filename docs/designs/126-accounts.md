@@ -238,7 +238,7 @@ among them). Force-rename is lane 128's, through the account API (#126).
   single-use code cannot both land, a retry is the same use, and a Worker
   that dies between the claim and the account frees the code when the
   hold runs out. The create hook's `after` sets `confirmed_at`
-  (`0035_add_invite_redemption_confirmed_at`), so deleting the account
+  (`0039_add_invite_redemption_confirmed_at`), so deleting the account
   later (2b-2) does not hand the use back. A registered address never
   reaches the create hook, so it spends nothing and answers exactly as a
   new one.
@@ -267,7 +267,7 @@ among them). Force-rename is lane 128's, through the account API (#126).
 - **The owner's account** is a deployment step: one code inserted by
   `wrangler d1 execute` (deployment plan, stage 0). A seeded code in a
   migration would be a public way in.
-- **Usernames** (D-70): the vendored LDNOOBW list (CC BY 4.0, attributed
+- **Usernames** (D-72): the vendored LDNOOBW list (CC BY 4.0, attributed
   in `docs/legal/third-party-notices.md`) matched on whole parts only —
   substring matching refused `basement`, `scraping` and `raccoons` — less
   the listed words that are innocent in a handle (`INNOCENT_IN_HANDLES`:
@@ -277,12 +277,12 @@ among them). Force-rename is lane 128's, through the account API (#126).
   request is `account/handle-screen.ts`, reusing safety's model constant.
   Suggestions are `_runs`, `_miles`, then a digit; never the city.
 - **No name**: every account is created with `name: ""` (the create hook,
-  so Google's profile name is dropped too); `0034_blank_user_names` clears
+  so Google's profile name is dropped too); `0038_blank_user_names` clears
   the stored ones.
 
-Migrations (core): `0033_add_invite_codes_and_access_requests` (three new
-tables, additive), `0034_blank_user_names` (data only) and
-`0035_add_invite_redemption_confirmed_at` (one nullable column, additive).
+Migrations (core): `0037_add_invite_codes_and_access_requests` (three new
+tables, additive), `0038_blank_user_names` (data only) and
+`0039_add_invite_redemption_confirmed_at` (one nullable column, additive).
 
 ## Contract touches
 

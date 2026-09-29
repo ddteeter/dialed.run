@@ -13,7 +13,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireUserId } from "../auth";
 
 import { requireAdmin } from "./admin";
-import { banUser } from "./bans";
+import { drizzle } from "drizzle-orm/d1";
+
+import { env } from "../../env";
+import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
+
+import { banEmail, banUser, unbanUser } from "./bans";
+import { accountCount, forceRename, listAccounts } from "../account";
+import { placeholderHandle, renameRecord } from "./rename";
+import { deskRunners, runnersWhere } from "./runners";
 import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
 import { denyDomain } from "./denylist";
 import {
@@ -21,10 +29,13 @@ import {
   blockRunnerInput,
   denyDomainInput,
   fileReportInput,
+  forceRenameInput,
   reviewDecisionInput,
+  runnersFilterInput,
+  unbanUserInput,
 } from "./inputs";
 import { fileReport } from "./reports";
-import { claimForReview, pendingReviewQueue, resolveReview } from "./review";
+import { claimForReview, pendingReviewQueue } from "./review";
 
 export const fileReportAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => fileReportInput.parse(input))
@@ -73,20 +84,15 @@ export const claimReviewAction = createServerFn({ method: "POST" })
     return { outcome: await claimForReview(data.queueId, reviewerId) };
   });
 
-export const resolveReviewAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => reviewDecisionInput.parse(input))
-  .handler(async ({ data }) => {
-    const reviewerId = requireAdmin(await requireUserId());
-    return {
-      outcome: await resolveReview(data.queueId, reviewerId, data.decision),
-    };
-  });
-
 export const banUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => banUserInput.parse(input))
   .handler(async ({ data }) => {
     const bannedBy = requireAdmin(await requireUserId());
-    await banUser({ userId: data.userId, reason: data.reason, bannedBy });
+    const ban = { userId: data.userId, reason: data.reason, bannedBy };
+    // The ban's email, owed in the ban's batch, then the fast path.
+    const debt = oweOutbox(banEmail(ban));
+    await banUser(ban, (database) => [outboxInsert(database, debt)]);
+    await settleOutbox(drizzle(env.DIALED_CORE), debt);
     return { banned: true };
   });
 
@@ -96,4 +102,50 @@ export const denyDomainAction = createServerFn({ method: "POST" })
     const addedBy = requireAdmin(await requireUserId());
     await denyDomain(data.domain, addedBy, data.reason);
     return { denied: true };
+  });
+
+export const unbanUserAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => unbanUserInput.parse(input))
+  .handler(async ({ data }) => {
+    const unbannedBy = requireAdmin(await requireUserId());
+    await unbanUser(data.userId, unbannedBy);
+    return { banned: false };
+  });
+
+/**
+Round 27 #16: the handle becomes `@runner_NNNN`, with a reason.
+*/
+export const forceRenameAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => forceRenameInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await requireUserId());
+    const db = drizzle(env.DIALED_CORE);
+    return forceRename(db, {
+      userId: data.userId,
+      typed: placeholderHandle(),
+      reason: data.nameReason,
+      recordedAs: renameRecord(db, {
+        userId: data.userId,
+        actorId,
+        reason: data.nameReason,
+      }),
+    });
+  });
+
+/**
+Desk · Runners, "D8" (round 27 #22).
+*/
+export const deskRunnersQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => runnersFilterInput.parse(input))
+  .handler(async ({ data }) => {
+    requireAdmin(await requireUserId());
+    const db = drizzle(env.DIALED_CORE);
+    const accounts = await listAccounts(db, {
+      query: data.query,
+      only: runnersWhere(data.filter),
+    });
+    return {
+      runners: await deskRunners(db, accounts),
+      total: await accountCount(db),
+    };
   });

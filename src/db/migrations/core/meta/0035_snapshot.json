@@ -1,78 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c1766430-47b3-4efd-a867-65468c7ce3b2",
-  "prevId": "b5a41e2a-627d-4e41-aca5-2f64cee89fda",
+  "id": "43df9217-4d62-4f00-b586-88764b18af47",
+  "prevId": "7cc1c7ac-95c3-426a-9965-f75c97e9eded",
   "tables": {
-    "access_requests": {
-      "name": "access_requests",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'pending'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "access_requests_email": {
-          "name": "access_requests_email",
-          "columns": [
-            "email"
-          ],
-          "isUnique": true
-        },
-        "access_requests_status_created": {
-          "name": "access_requests_status_created",
-          "columns": [
-            "status",
-            "created_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "blocks": {
       "name": "blocks",
       "columns": {
@@ -540,8 +471,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "invite_codes": {
-      "name": "invite_codes",
+    "moderation_actions": {
+      "name": "moderation_actions",
       "columns": {
         "id": {
           "name": "id",
@@ -550,44 +481,50 @@
           "notNull": true,
           "autoincrement": false
         },
-        "code": {
-          "name": "code",
+        "actor_id": {
+          "name": "actor_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "label": {
-          "name": "label",
+        "action": {
+          "name": "action",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "max_uses": {
-          "name": "max_uses",
-          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": 1
+          "autoincrement": false
         },
-        "created_by": {
-          "name": "created_by",
+        "subject_type": {
+          "name": "subject_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_owner_id": {
+          "name": "subject_owner_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "idempotency_key": {
-          "name": "idempotency_key",
+        "reason": {
+          "name": "reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "request_id": {
-          "name": "request_id",
+        "preserved_key": {
+          "name": "preserved_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -599,109 +536,22 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
-        "invite_codes_code": {
-          "name": "invite_codes_code",
+        "moderation_actions_subject": {
+          "name": "moderation_actions_subject",
           "columns": [
-            "code"
+            "subject_type",
+            "subject_id"
           ],
-          "isUnique": true
+          "isUnique": false
         },
-        "invite_codes_idempotency": {
-          "name": "invite_codes_idempotency",
+        "moderation_actions_owner": {
+          "name": "moderation_actions_owner",
           "columns": [
-            "created_by",
-            "idempotency_key"
-          ],
-          "isUnique": true
-        },
-        "invite_codes_request": {
-          "name": "invite_codes_request",
-          "columns": [
-            "request_id"
-          ],
-          "isUnique": true
-        },
-        "invite_codes_created": {
-          "name": "invite_codes_created",
-          "columns": [
+            "subject_owner_id",
             "created_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "invite_redemptions": {
-      "name": "invite_redemptions",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "code_id": {
-          "name": "code_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "held_until": {
-          "name": "held_until",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "redeemed_at": {
-          "name": "redeemed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "confirmed_at": {
-          "name": "confirmed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "invite_redemptions_code": {
-          "name": "invite_redemptions_code",
-          "columns": [
-            "code_id"
-          ],
-          "isUnique": false
-        },
-        "invite_redemptions_email": {
-          "name": "invite_redemptions_email",
-          "columns": [
-            "email"
           ],
           "isUnique": false
         }
@@ -1954,6 +1804,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "username_reset_reason": {
+          "name": "username_reset_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -1992,6 +1849,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },

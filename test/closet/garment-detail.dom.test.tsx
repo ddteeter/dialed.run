@@ -85,6 +85,41 @@ function populated(uploadPhoto = vi.fn()): ReactElement {
   );
 }
 
+function withVisibility(
+  visibility: typeof item.visibility,
+  photoKey: string | null = item.photoKey,
+): ReactElement {
+  return (
+    <GarmentDetail
+      detail={{ ...detail, item: { ...item, visibility, photoKey } }}
+      retire={vi.fn()}
+      unretire={vi.fn()}
+      remove={vi.fn()}
+      uploadPhoto={vi.fn()}
+      removePhoto={vi.fn()}
+      photoChecking={<p>checking notice</p>}
+    />
+  );
+}
+
+describe("GarmentDetail: a photo being checked (D-69, round 27 #21)", () => {
+  it.each(["pending", "flagged", "hidden_pending_review"] as const)(
+    "shows the route's notice under the photo while it is %s",
+    async (visibility) => {
+      await renderWithRouter(withVisibility(visibility));
+      expect(screen.getByText("checking notice")).toBeInTheDocument();
+    },
+  );
+
+  it.each(["ok", "pass"] as const)(
+    "says nothing once it is %s",
+    async (visibility) => {
+      await renderWithRouter(withVisibility(visibility));
+      expect(screen.queryByText("checking notice")).not.toBeInTheDocument();
+    },
+  );
+});
+
 describe("GarmentDetail: no product link (round 22)", () => {
   it("draws no link for a garment that has one stored", async () => {
     // Round 22's Y: "Order is fixed" — identity, photo, stats,

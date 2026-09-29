@@ -54,7 +54,7 @@ them twice:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | Workers Paid plan on the account (Email Sending requires it).                                                                                                       | owner                                                                                                                                             | decision D-42 |
 | Route the Worker to `dialed.run`: a `routes` entry with `custom_domain: true` in `wrangler.jsonc` (the zone is already on Cloudflare DNS).                          | **the sweep**: a `wrangler.jsonc` edit, which is human-managed; no lane touches it. Rename the CI job "Deploy to workers.dev" in the same change. | §3.3          |
-| Decide whether `workers.dev` stays enabled. Recommend off once the domain works, so there is one origin for cookies and signed photo URLs.                          | owner                                                                                                                                             | §3.3          |
+| Decide whether `workers.dev` stays enabled. Recommend off once the domain works, so there is one origin for cookies.                                                | owner                                                                                                                                             | §3.3          |
 | Zone settings: Always Use HTTPS; HSTS at the zone if not sent by the Worker (125's OPS-8 sends it; do not double-set with conflicting values).                      | owner                                                                                                                                             | §3.9          |
 | Create the D1 databases, R2 buckets and queues, replace the placeholder D1 ids, set the `dialed-imports` 30-day lifecycle rule.                                     | owner, per `docs/deployment.md` §1–3                                                                                                              | §3.1          |
 | Observability: tracing **off** (billable); logs at full sample (`head_sampling_rate: 1` is fine at launch volume). Carried over from the old launch-gate checklist. | owner                                                                                                                                             | workflow.md   |
@@ -76,13 +76,11 @@ is written by the named lane.
 | `OPENAI_API_KEY`                                         | secret | **yes**        | screening, extraction | Every photo stays `pending`, so **no entry photo is ever public** (§3.1).                                        |
 | `ADMIN_USER_IDS`                                         | secret | **yes**        | admin check           | The Desk and the review queue are unreachable.                                                                   |
 | `TURNSTILE_SECRET_KEY`                                   | secret | yes            | 125 · OPS-5           | Sign-up and request access refuse (fail closed).                                                                 |
-| `PHOTO_URL_SECRET` (name per 128's design doc)           | secret | before public  | 128 · SAF-7           | Public photos cannot be signed.                                                                                  |
 | `UNSUBSCRIBE_SECRET`                                     | secret | before friends | 126 · ACC-2           | Fails closed: no reminder email goes, every unsubscribe link is refused. `/api/health` reports it.               |
 | `STRAVA_CLIENT_ID` / `_SECRET` / `_WEBHOOK_VERIFY_TOKEN` | secret | for Strava     | runs                  | T1 shows "not configured".                                                                                       |
 | `GOOGLE_CLIENT_ID` / `_SECRET`                           | secret | optional       | auth                  | No Google sign-in; set both or neither.                                                                          |
 | `SENTRY_DSN`                                             | secret | strongly       | ops                   | Terminal failures go nowhere.                                                                                    |
 | `FIRECRAWL_API_KEY`                                      | secret | optional       | enrichment            | Shops that refuse a Worker (11 of 14) enrich from nothing.                                                       |
-| Cache-purge token (if 128 uses purge; see §8)            | secret | before public  | 128 · SAF-5, SAF-7    | Removed public photos stay cached until their TTL ends.                                                          |
 
 **GitHub**: secret `CLOUDFLARE_API_TOKEN` (Workers, D1, R2 edit), secret
 **`CLOUDFLARE_ACCOUNT_ID`** (the deploy step reads it; missing from the
@@ -166,28 +164,46 @@ as a var, secret as a secret. Free.
   Limiting binding, that is a `wrangler.jsonc` binding and a lane change.
 - Better Auth's own limiter is turned on in code by 125 (OPS-4).
 
-## 8. CSAM and moderation (decision D-46)
+## 8. CSAM and moderation (decisions D-69, D-70)
 
-- **Turn on Cloudflare's CSAM Scanning Tool** for the `dialed.run` zone,
-  with the notification email set. It only scans what the cache serves,
-  which is why 128 (SAF-7) serves public-entry photos through signed,
-  cacheable URLs; with that landed, the toggle covers public photos.
-  Private and closet photos are not cached and are not scanned by it;
-  upload-time screening covers them (register D-71).
-- **Write the NCMEC reporting procedure** (owner, about 2 h; §1.10). 18
-  U.S.C. §2258A requires a report to NCMEC's CyberTipline on actual
-  knowledge, and preservation. It should say:
-  - who may look at a flagged image, and that it is never forwarded or
-    downloaded;
+- **Photos are private behind sign-in, and none reaches Cloudflare's
+  cache** (D-69). Cloudflare's CSAM Scanning Tool compares only "content
+  served for your website through the Cloudflare cache"
+  ([docs](https://developers.cloudflare.com/cache/reference/csam-scanning/)),
+  and a response a Worker builds never enters it, so turning the tool on
+  today scans nothing of ours. What every photo has is upload-time
+  screening (task 106) and the quarantine below.
+- **Open item, before the public launch: decide CSAM coverage.** Two
+  candidates:
+  - **A separate public R2 bucket on a custom domain, with caching on**
+    ([R2 public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/)),
+    so public-entry photos are served from Cloudflare's cache where the
+    tool can scan them, with access kept to signed-in viewers by a WAF
+    token-authentication rule
+    ([WAF token authentication](https://developers.cloudflare.com/waf/custom-rules/use-cases/configure-token-authentication/));
+    a bucket, a domain and a zone rule, so a `wrangler.jsonc` and dashboard
+    change.
+  - **PhotoDNA**, by application to Microsoft
+    ([PhotoDNA](https://www.microsoft.com/en-us/photodna)), matched at
+    upload beside the classifier.
+- **Quarantine is silent and preserves for a year** (D-70). Remove as
+  suspected CSAM sends the uploader nothing, hides the content at once,
+  and keeps the rows (entry, items, tags, photos, uploader, upload time)
+  in `quarantined_content` and the bytes under `quarantine/` for 365 days,
+  readable only by an admin. Nothing purges on `retain_until` yet; the
+  owner deletes by hand after it until a purge exists.
+- **The owner reports to NCMEC's CyberTipline by hand**, following the
+  procedure below. 18 U.S.C. §2258A requires a report on actual knowledge,
+  and preservation.
+- **Write the NCMEC reporting procedure** (owner, about 2 h; §1.10). It
+  should say:
+  - who may look at a flagged image (an admin, through the review route
+    only), and that it is never forwarded or downloaded;
   - how to register as an electronic service provider with NCMEC and file a
-    CyberTipline report;
-  - how to **quarantine rather than delete** using 128's SAF-5 control, and
-    for how long (the preservation period was lengthened in 2024 — confirm
-    the current figure with counsel);
-  - that the account is banned (SAF-4) and the content purged from the cache.
-- **Cache purge**: if 128's design needs a purge on removal (a moderator
-  Remove or a takedown should not wait out the TTL), create a zone-scoped
-  API token with cache-purge permission and store it as a secret.
+    CyberTipline report, from the `quarantined_content` record;
+  - that quarantine rather than delete is the control (SAF-5, D-70), kept a
+    year — confirm the figure with counsel;
+  - that the account is banned (SAF-4).
 
 ## 9. Legal
 
@@ -271,7 +287,7 @@ Everything in stage 1, plus:
 - **Strava review approved** for the capacity you expect. This is the gate
   most likely to hold the date.
 - Google consent screen In production; brand verification done.
-- CSAM tool on; public-entry photos served cacheable and signed; the NCMEC
+- CSAM coverage decided and in place (§8's open item); the NCMEC
   procedure written and read.
 - DMCA agent registered and the contact published.
 - **Flip the landing page (and other public marketing pages) to index;

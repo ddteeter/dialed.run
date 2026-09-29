@@ -44,6 +44,32 @@ function renderSheet(overrides: Partial<SheetProps> = {}) {
   return { fileReport, onFiled, onClose };
 }
 
+describe("the sheet names whose entry it is (round 26 #7)", () => {
+  it("asks about the author by handle", () => {
+    renderSheet();
+    expect(
+      screen.getByRole("heading", { name: "Report @mark_t's entry?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Report @mark_t's entry?" }),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to the entry when there is no handle", () => {
+    renderSheet({
+      subject: {
+        type: "entry",
+        id: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+        label: "yesterday",
+      },
+      canBlock: false,
+    });
+    expect(
+      screen.getByRole("heading", { name: "Report this entry" }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("W1's reasons", () => {
   it("offers the artboard's sentences, not policy categories", () => {
     renderSheet();

@@ -1,12 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import {
-  Bracketed,
-  Icon,
-  ListSection,
-  Mono,
-  VerdictMark,
-} from "../../../ui";
+import { Bracketed, Icon, ListSection, Mono, VerdictMark } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
 import { bandVerdict } from "../coverage";
 import type { ownProfile } from "../profiles";

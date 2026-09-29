@@ -23,3 +23,21 @@ export function photoUrlFor(
   const version = item.photoKey.split("/").at(-1);
   return `/closet/photo/${item.id}/card?v=${String(version)}`;
 }
+
+/**
+ * Whether a garment's photo is still waiting on screening or a person
+ * (D-69, round 27 #21): its owner sees it, nobody else does, and both the
+ * detail and the closet tile say so. `ok` is "never screened" from before
+ * screening existed and `pass` is cleared, so neither is being checked.
+ */
+export function isPhotoBeingChecked(
+  item: Pick<WardrobeItemRow, "photoKey" | "visibility">,
+): boolean {
+  return item.photoKey !== null && CHECKING.has(item.visibility);
+}
+
+const CHECKING: ReadonlySet<WardrobeItemRow["visibility"]> = new Set([
+  "pending",
+  "flagged",
+  "hidden_pending_review",
+]);

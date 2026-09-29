@@ -24,7 +24,10 @@ export interface EmailContent {
   The body: one or two sentences, above the button.
   */
   readonly body: string;
-  readonly button: EmailLink;
+  /**
+  Absent only where the board draws none — the ban email.
+  */
+  readonly button?: EmailLink | undefined;
   /**
   A quiet line under the button: how long the link works, what to ignore.
   */
@@ -72,6 +75,24 @@ function reminderBody(landedAt: string, runs: number): string {
     ? `A run landed on Strava at ${landedAt}. Upload its file, then add what you wore.`
     : `${String(runs)} runs landed on Strava yesterday and today. Upload the files, then add what you wore.`;
 }
+
+/**
+ * "Email content removed"'s first sentence (round 27 #15), for what went.
+ * The board names the run's date; the email does not know it yet, so it
+ * says "one of your runs" (a design delta).
+ */
+const REMOVED = {
+  photo: "We removed a photo from one of your runs.",
+  entry: "We removed one of your runs from the feed.",
+} as const;
+
+/**
+What is left, after the reason.
+*/
+const STAYS = {
+  photo: "Your run and verdict stay.",
+  entry: "The run itself stays.",
+} as const;
 
 export function emailContent(
   template: EmailTemplate,
@@ -122,6 +143,23 @@ export function emailContent(
         body: `Your account's email is now ${template.newEmail}. Emails go there from now on.`,
         button: logIn(origin),
         foot: "Didn't change it? Write to hello@dialed.run.",
+        footer,
+      };
+    }
+    case "content_removed": {
+      return {
+        subject: "We removed something from your run",
+        body: `${REMOVED[template.subject]} Reason: ${template.reason}. ${STAYS[template.subject]}`,
+        button: logIn(origin),
+        foot: "Think we got it wrong? Reply to this email.",
+        footer,
+      };
+    }
+    case "account_closed": {
+      return {
+        subject: "Your dialed.run account is closed",
+        body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
+        foot: "Think we got it wrong? Reply within 30 days and a different moderator will look.",
         footer,
       };
     }

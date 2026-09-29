@@ -6,6 +6,7 @@
 import { z } from "zod";
 
 import { requestAccessSchema } from "../../lib/contracts";
+import { rowIdSchema } from "../../lib/ids";
 
 /**
  * Au4's Resend and the nag's: the address the link goes to. Parsed loosely
@@ -52,4 +53,4 @@ export const newInviteInput = newInviteSchema.extend({
 /**
 One request or one code, by id — D7's row actions.
 */
-export const deskRowInput = z.object({ id: z.string().min(1).max(64) });
+export const deskRowInput = z.object({ id: rowIdSchema });

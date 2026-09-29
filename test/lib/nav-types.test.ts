@@ -97,6 +97,15 @@ describe("which type an edge resolves to", () => {
     }
   });
 
+  it("types Desk · Runners explicitly, as a cut", () => {
+    // Asked of navTypeFor, not typeOf: typeOf falls back to `cut` for an
+    // edge with no row, so it cannot tell an explicit row from none. And not
+    // left to the destinations scan either — under mutation testing the
+    // component it scans is itself instrumented, and the scan misses it.
+    expect(navTypeFor("/feed", "/desk/runners", false)).toBe("cut");
+    expect(navTypeFor("/desk/runners", "/desk/runners", false)).toBe("cut");
+  });
+
   it("cuts when the path has not changed", () => {
     // A new search param or hash on the screen you are already on. Nothing
     // moved, so nothing should move.

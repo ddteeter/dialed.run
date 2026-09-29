@@ -7,8 +7,18 @@
  * form. What is here is what only the server can know: whether a handle is
  * free, and whether it is one nobody may have.
  */
-import { and, eq, getTableName, ne, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  getTableName,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { userProfiles, usernameHistory } from "../../db/schema-core";
@@ -74,8 +84,9 @@ export function isReservedHandle(handle: string): boolean {
 /**
  * Whether `handle` is held by someone other than `userId`: as a current
  * handle, or as one they gave up (an old handle is never reclaimable by
- * anyone else — the design doc's reason). Both reads compare as the unique
- * index does, NOCASE.
+ * anyone else — the design doc's reason) — or as one a moderator locked,
+ * which nobody may take, its former holder included. Both reads compare as
+ * the unique index does, NOCASE.
  */
 async function isHeldByAnother(
   db: Db,
@@ -85,7 +96,7 @@ async function isHeldByAnother(
   const heldNow = and(sameHandle(handle), ne(userProfiles.userId, userId));
   const heldBefore = and(
     eq(usernameHistory.username, handle),
-    ne(usernameHistory.userId, userId),
+    or(ne(usernameHistory.userId, userId), isNotNull(usernameHistory.lockedAt)),
   );
   const [current, retired] = await db.batch([
     holdersNow(db, heldNow),
@@ -224,13 +235,13 @@ async function profileOf(
 }
 
 /**
- * **D-56 as SQL**: nobody but `userId` ever gave `handle` up. Every write
- * in the claim's batch carries it, so a handle retired between the read
- * that decided and the batch that writes is refused by the database, not
- * by a read that is already stale.
+ * **D-56 as SQL**: nobody but `userId` ever gave `handle` up, and no
+ * moderator locked it. Every write in the claim's batch carries it, so a
+ * handle retired between the read that decided and the batch that writes
+ * is refused by the database, not by a read that is already stale.
  */
 function notRetiredByAnother(userId: string, handle: string): SQL {
-  return sql`NOT EXISTS (SELECT 1 FROM ${usernameHistory} WHERE ${usernameHistory.username} = ${handle} AND ${usernameHistory.userId} <> ${userId})`;
+  return sql`NOT EXISTS (SELECT 1 FROM ${usernameHistory} WHERE ${usernameHistory.username} = ${handle} AND (${usernameHistory.userId} <> ${userId} OR ${usernameHistory.lockedAt} IS NOT NULL))`;
 }
 
 /**
@@ -245,7 +256,7 @@ function retireCurrent(db: Db, userId: string, typed: string, at: number) {
   return db
     .insert(usernameHistory)
     .select(
-      sql`SELECT ${userProfiles.username}, ${userProfiles.userId}, ${at} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${userProfiles.username} <> ${typed} AND ${notRetiredByAnother(userId, typed)}`,
+      sql`SELECT ${userProfiles.username}, ${userProfiles.userId}, ${at}, NULL FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${userProfiles.username} <> ${typed} AND ${notRetiredByAnother(userId, typed)}`,
     );
 }
 
@@ -301,10 +312,7 @@ export async function claimUsername(
   });
   if (await isHeldByAnother(db, userId, typed)) return taken();
 
-  const ownHistoryRow = and(
-    eq(usernameHistory.username, typed),
-    eq(usernameHistory.userId, userId),
-  );
+  const ownHistoryRow = ownUnlocked(userId, typed);
   // The handle is set only where D-56 still allows it; a refusal writes
   // nothing, and the read at the end of the batch is what notices.
   const mayTake = and(
@@ -330,6 +338,92 @@ export async function claimUsername(
     if (isHandleIndexViolation(error)) return taken();
     throw error;
   }
+}
+
+/**
+ * What a moderator's rename came to: the new handle, no runner, or a
+ * handle nobody may take (reserved, held, given up, or locked) — the
+ * placeholder is random, so the operator presses Rename again.
+ */
+export type ForcedRename =
+  | { readonly kind: "renamed"; readonly username: string }
+  | { readonly kind: "not_found" }
+  | { readonly kind: "taken" };
+
+export interface ForceRenameRequest {
+  readonly userId: string;
+  /**
+  The new handle, as drawn or typed; parsed here like any other.
+  */
+  readonly typed: string;
+  /**
+  Why, from the fixed list — O0's "USERNAME CHANGED BY A MODERATOR" quotes it.
+  */
+  readonly reason: string;
+  /**
+   * The caller's record of it (safety's audit row), given the handle that
+   * was taken away, so it lands in the same batch as the rename.
+   */
+  readonly recordedAs: (previous: string) => BatchItem<"sqlite">;
+}
+
+/**
+ * The runner's own history row for `handle`, unless a moderator locked it.
+ */
+function ownUnlocked(userId: string, handle: string) {
+  return and(
+    eq(usernameHistory.username, handle),
+    eq(usernameHistory.userId, userId),
+    isNull(usernameHistory.lockedAt),
+  );
+}
+
+/**
+ * A moderator's force-rename (task 128, round 27 #16), under the same
+ * rules as `claimUsername`: the new handle is parsed by `usernameSchema`,
+ * refused if reserved (D-57), held, or given up by anyone (D-56). The old
+ * handle goes into the history **locked**, so nobody may take it — the
+ * runner who held it included — and the re-pick is owed.
+ *
+ * One batch with the caller's audit row. The read decides; the unique
+ * index settles a race with a runner claiming the same handle now.
+ */
+export async function forceRename(
+  db: Db,
+  request: ForceRenameRequest,
+): Promise<ForcedRename> {
+  const { userId, reason } = request;
+  const profile = await profileOf(db, userId);
+  const previous = profile?.username ?? undefined;
+  if (previous === undefined) return { kind: "not_found" };
+  const parsed = usernameSchema.safeParse(request.typed);
+  if (!parsed.success) return { kind: "taken" };
+  const username = parsed.data;
+  if (username === previous || !(await isFreeFor(db, userId, username))) {
+    return { kind: "taken" };
+  }
+  const now = nowSeconds();
+  try {
+    await db.batch([
+      db
+        .insert(usernameHistory)
+        .values({ username: previous, userId, retiredAt: now, lockedAt: now })
+        .onConflictDoUpdate({
+          target: usernameHistory.username,
+          set: { lockedAt: now },
+        }),
+      db
+        .update(userProfiles)
+        .set({ username, usernameResetReason: reason })
+        .where(eq(userProfiles.userId, userId)),
+      db.delete(usernameHistory).where(ownUnlocked(userId, username)),
+      request.recordedAs(previous),
+    ]);
+  } catch (error: unknown) {
+    if (isHandleIndexViolation(error)) return { kind: "taken" };
+    throw error;
+  }
+  return { kind: "renamed", username };
 }
 
 /**

@@ -106,11 +106,12 @@ describe("DeskShell", () => {
     ).toStrictEqual([
       ["Today", "/desk"],
       ["Review", "/safety/review"],
+      ["Runners", "/desk/runners"],
       // D7, task 126 (ACC-5).
       ["Access", "/desk/access"],
     ]);
     // Not yet built: text, not a link that goes nowhere.
-    expect(within(rail()).getByText("Runners").closest("li")).toHaveClass(
+    expect(within(rail()).getByText("Duplicates").closest("li")).toHaveClass(
       "text-muted",
     );
   });

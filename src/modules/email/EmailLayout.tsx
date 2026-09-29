@@ -116,9 +116,11 @@ export function EmailLayout({
             <span style={BRACKET_STYLE}>]</span>
           </Text>
           <Text style={TEXT_STYLE}>{content.body}</Text>
-          <Button href={content.button.href} style={BUTTON_STYLE}>
-            {content.button.label}
-          </Button>
+          {content.button === undefined ? undefined : (
+            <Button href={content.button.href} style={BUTTON_STYLE}>
+              {content.button.label}
+            </Button>
+          )}
           <Text style={FOOT_STYLE}>{content.foot}</Text>
           <Hr style={RULE_STYLE} />
           {content.reason === undefined ? undefined : (

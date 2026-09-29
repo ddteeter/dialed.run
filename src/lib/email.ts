@@ -88,6 +88,28 @@ const runReminder = z.object({
   runs: z.int().min(1),
 });
 
+/**
+ * Round 27 #15/#20's "Email content removed": a moderator's Remove or a
+ * copyright takedown (task 128 · SAF-8), telling the author what went and
+ * the reason from the removal list, word for word. Account mail, so always
+ * sent. A suspected-CSAM quarantine sends nothing (decision D-70).
+ */
+const contentRemoved = z.object({
+  kind: z.literal("content_removed"),
+  subject: z.enum(["entry", "photo"]),
+  reason: z.string().min(1),
+});
+
+/**
+ * Round 27 #15's "Email ban": a moderator closed the account (task 128 ·
+ * SAF-4), with the reason the notice quotes. Account mail, so always sent,
+ * and no button — there is nothing to log in to.
+ */
+const accountClosed = z.object({
+  kind: z.literal("account_closed"),
+  reason: z.string().min(1),
+});
+
 export const emailTemplateSchema = z.discriminatedUnion("kind", [
   verifyEmail,
   existingAccount,
@@ -95,6 +117,8 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   emailChange,
   emailChanged,
   runReminder,
+  contentRemoved,
+  accountClosed,
 ]);
 
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
@@ -135,6 +159,8 @@ const PREFERENCE_OF: Readonly<
   email_change: undefined,
   email_changed: undefined,
   run_reminder: "run_reminder",
+  content_removed: undefined,
+  account_closed: undefined,
 };
 
 /**

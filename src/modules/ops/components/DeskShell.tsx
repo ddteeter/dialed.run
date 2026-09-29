@@ -47,10 +47,16 @@ const LABEL: Readonly<Record<DeskPage, string>> = {
  * moves it under `/desk`.
  */
 const BUILT: Readonly<
-  Partial<Record<DeskPage, "/desk" | "/safety/review" | "/desk/access">>
+  Partial<
+    Record<
+      DeskPage,
+      "/desk" | "/safety/review" | "/desk/runners" | "/desk/access"
+    >
+  >
 > = {
   today: "/desk",
   review: "/safety/review",
+  runners: "/desk/runners",
   access: "/desk/access",
 };
 

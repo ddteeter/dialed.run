@@ -519,7 +519,31 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     connected." "Turn them back on" is the inline link grammar in ink:
     the board's `#C21A6B` is not a T1 role.
 
-35. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
+35. **Task 128 PR 2a's Desk and notice placeholders.** Built from existing
+    `ui/` primitives, bracket text and no new glyph; each wants a drawing.
+    - **Review queue decisions.** Each row picks a reason from the removal
+      list (the sentence the author is sent, round 27 #20) and offers
+      Approve · Remove · Remove as suspected CSAM. Only one row carries the
+      decision at a time — the oldest, or the one picked with "Decide this
+      one" — because `ChoiceField` takes its name as its id. The CSAM
+      button's name and the reason list's wording are the owner's too.
+    - **The takedown form** (SAF-6), under the review queue: what it is
+      (photo or entry), its id, and the notice.
+    - **D8's search** is a plain search box with the "Handle or email"
+      label, and the filters are three text links; D8's board draws both
+      but not their states. JOINED is `YYYY-MM-DD` mono.
+    - **Reopen account** on a closed runner's column: D3 draws Close, not
+      its undo.
+    - **The notice band** (round 27 #20, #21) is the §4a band's shape
+      without its retry. #20's "See the community rules" link is left out
+      until the rules page exists.
+    - **"Email content removed" and "Email ban"** (round 27 #15) are
+      built from round 26's template. Content removed says "one of your
+      runs" rather than the run's date, and its button is Log in, since
+      the board's "See the community rules" has no page yet. The ban email
+      names no handle ("We closed your account…") and drops the board's
+      "No case number." from its foot; it has no button, as drawn.
+36. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
     Round 26 #20 drew Au2's code, Au5, its receipt and D7; these are the
     states it did not draw, each built from existing primitives and copy
     in the register:

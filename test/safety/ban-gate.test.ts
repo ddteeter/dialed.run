@@ -123,7 +123,7 @@ describe("a banned runner signing in (SAF-4)", () => {
   it("signs in again once unbanned", async () => {
     const { userId, email } = await runner();
     await banUser({ userId, reason: "mistake", bannedBy: newUlid() });
-    await unbanUser(userId);
+    await unbanUser(userId, "desk-operator");
 
     const signedIn = await signIn(email);
     expect(signedIn.status).toBe(200);

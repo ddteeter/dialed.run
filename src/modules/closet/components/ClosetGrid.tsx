@@ -6,6 +6,7 @@ import { uiGroups } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
 import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
 import { garmentLabel } from "../label";
+import { isPhotoBeingChecked } from "../photo-url";
 import type { ClosetItemView, ClosetListing } from "../service";
 
 function itemLabel(view: ClosetItemView): string {
@@ -88,7 +89,7 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
       className="target row-press flex h-full flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
     >
       <span className="text-body font-semibold">{itemLabel(view)}</span>
-      {view.isGeneric || view.item.retired ? (
+      {view.isGeneric || view.item.retired || isPhotoBeingChecked(view.item) ? (
         <span className="order-first flex gap-2">
           {view.isGeneric ? (
             <Bracketed step="xs" className="text-muted">
@@ -98,6 +99,11 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
           {view.item.retired ? (
             <Bracketed step="xs" className="font-semibold text-ink">
               Retired
+            </Bracketed>
+          ) : undefined}
+          {isPhotoBeingChecked(view.item) ? (
+            <Bracketed step="xs" className="text-muted">
+              Only you
             </Bracketed>
           ) : undefined}
         </span>

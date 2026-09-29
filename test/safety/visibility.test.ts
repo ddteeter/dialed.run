@@ -106,7 +106,7 @@ describe("a banned author (SAF-4)", () => {
     const refused = await photoResponse(photoKey, viewer);
     expect(refused.status).toBe(404);
 
-    await unbanUser(author);
+    await unbanUser(author, viewer);
     expect(await sightings(viewer, entryId, photoKey)).toEqual(SEEN);
   });
 
