@@ -9,13 +9,7 @@ import {
   Sheet,
 } from "../../../ui";
 import type { ControlAction } from "../../../ui";
-
-/**
-"1 run", "38 runs" — the one noun this sheet counts twice.
-*/
-function runs(count: number): string {
-  return count === 1 ? "1 run" : `${String(count)} runs`;
-}
+import { runsLabel } from "../label";
 
 /**
  * What a delete takes and what it leaves, as round 26 #3 lists them
@@ -30,7 +24,7 @@ function costRows(
   const kit =
     runCount === 1
       ? "It comes off the kit of its 1 run"
-      : `It comes off the kit of all ${runs(runCount)}`;
+      : `It comes off the kit of all ${runsLabel(runCount)}`;
   const record =
     bandCount === 1
       ? "Its record in 1 band"
@@ -133,7 +127,7 @@ export function DeleteWithRuns({
       >
         <h2 className="m-0 font-display text-heading">{heading}</h2>
         <p className="m-0 text-body">
-          {`It's on ${runs(runCount)}. Retiring takes it out of the picker and keeps everything it taught you.`}
+          {`It's on ${runsLabel(runCount)}. Retiring takes it out of the picker and keeps everything it taught you.`}
         </p>
         <div className="flex flex-col gap-2 border-t border-hairline pt-3">
           <Mono step="xs" className="text-muted">

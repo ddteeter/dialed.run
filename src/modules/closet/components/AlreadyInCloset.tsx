@@ -5,7 +5,7 @@ import type { garmentCategories } from "../../../lib/contracts";
 import { normalizeIdentity } from "../../../lib/normalize";
 import { formatTempRange } from "../../../lib/thermal";
 import { Mono, RailCard } from "../../../ui";
-import { garmentLabel } from "../label";
+import { garmentLabel, runsLabel } from "../label";
 import { photoUrlFor } from "../photo-url";
 import { retiredLabel } from "../retired-label";
 import type { ClosetItemView } from "../service";
@@ -28,10 +28,6 @@ const CATEGORY_PLURALS = {
   accessory: "accessories",
 } as const satisfies Record<Category, string>;
 
-function runs(count: number): string {
-  return count === 1 ? "1 run" : `${String(count)} runs`;
-}
-
 /**
  * The mono line under a row's name (round 26 #10): how often it has been
  * worn, then its standing — retired, not judged yet, or how often it was
@@ -39,7 +35,7 @@ function runs(count: number): string {
  */
 function recordLine(view: ClosetItemView, zone: string | undefined): string {
   const summary = view.performance?.summary;
-  const worn = runs(summary?.runCount ?? 0);
+  const worn = runsLabel(summary?.runCount ?? 0);
   if (view.item.retired) {
     return `${worn} · ${retiredLabel(view.item.retiredAt, zone)}`;
   }
