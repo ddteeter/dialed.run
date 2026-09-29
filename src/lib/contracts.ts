@@ -339,6 +339,33 @@ export const changePasswordSchema = z.object({
 });
 
 /**
+ * ACC-9 (round 27 #14): deleting the account asks for the current
+ * password, as every change to the account does. An account with no
+ * password proves itself with a fresh Google sign-in instead, and sends
+ * none — so the server takes it as optional.
+ */
+export const accountDeletionInput = z.object({
+  currentPassword: z.string().max(1024).optional(),
+});
+
+/**
+ * `accountDeletionInput`, with the field required — an account with a
+ * password proves itself with it, as every change to the account does.
+ * Extended rather than a second `z.object()` restating the same key
+ * ("derive, don't mirror"): the two floors for one field are the
+ * server-side "at most this long" and the client-side "you must type one".
+ */
+export const accountDeletionSchema = accountDeletionInput.extend({
+  currentPassword: currentPasswordField,
+});
+
+/**
+ * How long a deleted account waits before it is purged (ACC-9; round 27
+ * #14: "Deleted after 7 days. Log in before then to keep it.").
+ */
+export const DELETION_GRACE_S = 7 * 24 * 60 * 60;
+
+/**
  * ACC-8: the address the account moves to, once its link is opened, and
  * the current password that proves it is the runner asking.
  */

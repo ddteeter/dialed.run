@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
+import type { OutboxMessage } from "../../lib/outbox";
 import {
   extractionModelFromEnv,
   handleEnrichmentBatch,
@@ -11,6 +12,7 @@ import {
   handleImportsDlqBatch,
   stravaApiFromEnv,
 } from "../runs";
+import { outboxInsert, oweOutbox } from "./outbox";
 import { captureException } from "./sentry";
 
 /**
@@ -45,6 +47,15 @@ function enrichmentDeps() {
 }
 
 /**
+ * An outbox row for the imports consumer's batches (task 126: the Strava
+ * deauthorization's email). Handed in rather than imported there: `runs`
+ * is imported by this module, so it cannot import `ops` back.
+ */
+function oweInCore(message: OutboxMessage) {
+  return outboxInsert(drizzle(env.DIALED_CORE), oweOutbox(message));
+}
+
+/**
  * Queue consumer entry (000 §10): lane 102 owns the dialed-imports consumer
  * + DLQ user-notification; lane 107 owns dialed-enrichment. Every consumer
  * acks or retries per message, so one bad message never blocks a batch.
@@ -57,6 +68,7 @@ export async function handleQueueBatch(batch: MessageBatch): Promise<void> {
         importBucket: env.IMPORTS,
         captureException,
         stravaApi: stravaApiFromEnv(),
+        owe: oweInCore,
       });
       break;
     }
@@ -69,6 +81,7 @@ export async function handleQueueBatch(batch: MessageBatch): Promise<void> {
         db: drizzle(env.DIALED_CORE),
         importBucket: env.IMPORTS,
         captureException,
+        owe: oweInCore,
       });
       break;
     }

@@ -27,6 +27,7 @@ export {
   checkCurrentPassword,
   currentSessionId,
   optionalUserId,
+  requireSignedInSince,
   requireUserId,
 } from "./require-user";
 export type { PasswordCheck } from "./password-check";

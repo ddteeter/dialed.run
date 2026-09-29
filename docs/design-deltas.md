@@ -575,6 +575,46 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       DIAL-XXXX." Ages are mono `5h` / `3d` (the board's `5H`, in the
       contract's lowercase mono).
 
+37. **What task 126 PR 2b-2 built beside or without a drawing.** Legal
+    pages, export, deletion and the email hookups, from existing
+    primitives and the register's copy:
+    - **The legal footer** on the signed-out shell reads only "Privacy":
+      Terms and Copyright join (round 27 #12's order) when the owner's
+      texts exist. Settings gets an **About** group with one row, "Privacy
+      policy · What we keep, and who sees it" (the sub-line is ours).
+    - **Au2's lines** are round 26 #14's privacy line and round 27 #12's
+      age line; round 27's "you agree to the Terms" waits for the terms.
+    - **The reading page** takes round 26 #14's composition with the
+      contract's type (round 27 #5). Two choices of ours: the contents'
+      title is mono `CONTENTS`, and "↑ Contents" is a small muted link at
+      each section's foot. The page draws no "LAST UPDATED" line of its
+      own — the owner's text says its date.
+    - **Export** is a JSON file downloaded at once (the packet's ACC-10),
+      not round 27 #13's emailed ZIP — an owner question. The row's
+      sub-line says what the file holds: "Runs, closet, entries and photo
+      links, as one file"; "Get a copy" downloads rather than preparing.
+    - **Delete account's sheet** follows round 27 #14. For an account made
+      with Google, the sheet asks nothing; if the Google sign-in is more
+      than ten minutes old, it says "Sign in with Google again to confirm
+      it's you." above the Google button, and the way back reopens the
+      sheet. "Keep my account" pressed after the purge has begun says
+      "Your account is already being deleted." Both pages wear the
+      signed-out panel, with the kicker `DELETION SCHEDULED` in the cold
+      text cut.
+    - **The handle is not released** at day 7 (D-56, D-72(6); round 27
+      #14 said it would be).
+    - **The deletion email** is round 27's "Email delete scheduled"; its
+      date is the day the week ends, in UTC.
+    - **The invite email**'s foot is ours: "You asked for an invite.
+      Didn't? Ignore this and nothing happens."
+    - **The Strava disconnected email** opens with 127's neutral line —
+      "Strava says dialed.run was disconnected…" — because the event can
+      be forged; its foot is S1's "Runs you already added stay."
+    - **The digest email** (D5) is sent from `hello@dialed.run`, not the
+      board's `desk@`, and D5's three rows read as three sentences in the
+      one-paragraph template. Its third number is Today's "bans this week",
+      not D5's "since yesterday", so the email and the Desk agree.
+
 ## Answered in round 27 (imported 2026-09-27)
 
 Thirty-one asks in three parts: amend the contracts and boards to match the

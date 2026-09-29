@@ -34,7 +34,7 @@ import {
   type RevokeJob,
 } from "./queue-messages";
 import type { StravaApi } from "./strava/api";
-import { deauthorizeAthlete } from "./strava/deauthorize";
+import { deauthorizeAthlete, type Owe } from "./strava/deauthorize";
 import {
   pairRunWith,
   pairWithReminder,
@@ -61,6 +61,12 @@ export interface ConsumerDeps {
   no-op without them.
   */
   stravaApi?: Pick<StravaApi, "revoke"> | undefined;
+  /**
+   * Owes an outbox row in the caller's batch — the deauthorization's email
+   * (task 126). ops' `outboxInsert`, handed in by the queue entry, since
+   * `ops` imports this module and so cannot be imported by it.
+   */
+  owe: Owe;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -339,7 +345,7 @@ async function processJob(
 ): Promise<void> {
   switch (job.type) {
     case "strava_deauthorize": {
-      await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+      await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime, deps.owe);
       return;
     }
     case "import": {
@@ -386,7 +392,12 @@ export async function handleImportsDlqBatch(
   await deadLetterEach(batch, importsQueueMessageSchema, {
     onJob: async (job) => {
       if (job.type === "strava_deauthorize") {
-        await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime);
+        await deauthorizeAthlete(
+          deps.db,
+          job.athleteId,
+          job.eventTime,
+          deps.owe,
+        );
         return;
       }
       if (job.type !== "import") return;

@@ -16,7 +16,9 @@ import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
+import { Route as AccountExportRouteImport } from './routes/account/export'
 import { Route as AccountForgotRouteImport } from './routes/account/forgot'
+import { Route as AccountLeavingRouteImport } from './routes/account/leaving'
 import { Route as AccountRequestAccessRouteImport } from './routes/account/request-access'
 import { Route as AccountResetRouteImport } from './routes/account/reset'
 import { Route as AccountUnsubscribeRouteImport } from './routes/account/unsubscribe'
@@ -101,9 +103,19 @@ const AccountCheckEmailRoute = AccountCheckEmailRouteImport.update({
   path: '/account/check-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountExportRoute = AccountExportRouteImport.update({
+  id: '/account/export',
+  path: '/account/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountForgotRoute = AccountForgotRouteImport.update({
   id: '/account/forgot',
   path: '/account/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountLeavingRoute = AccountLeavingRouteImport.update({
+  id: '/account/leaving',
+  path: '/account/leaving',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRequestAccessRoute = AccountRequestAccessRouteImport.update({
@@ -356,7 +368,9 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/export': typeof AccountExportRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
@@ -413,7 +427,9 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/export': typeof AccountExportRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
@@ -472,7 +488,9 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/export': typeof AccountExportRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
@@ -532,7 +550,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/account/$section'
     | '/account/check-email'
+    | '/account/export'
     | '/account/forgot'
+    | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
@@ -589,7 +609,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/account/$section'
     | '/account/check-email'
+    | '/account/export'
     | '/account/forgot'
+    | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
@@ -647,7 +669,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/account/$section'
     | '/account/check-email'
+    | '/account/export'
     | '/account/forgot'
+    | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
@@ -706,7 +730,9 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
+  AccountExportRoute: typeof AccountExportRoute
   AccountForgotRoute: typeof AccountForgotRoute
+  AccountLeavingRoute: typeof AccountLeavingRoute
   AccountRequestAccessRoute: typeof AccountRequestAccessRoute
   AccountResetRoute: typeof AccountResetRoute
   AccountUnsubscribeRoute: typeof AccountUnsubscribeRoute
@@ -805,11 +831,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountCheckEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/export': {
+      id: '/account/export'
+      path: '/account/export'
+      fullPath: '/account/export'
+      preLoaderRoute: typeof AccountExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/forgot': {
       id: '/account/forgot'
       path: '/account/forgot'
       fullPath: '/account/forgot'
       preLoaderRoute: typeof AccountForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/leaving': {
+      id: '/account/leaving'
+      path: '/account/leaving'
+      fullPath: '/account/leaving'
+      preLoaderRoute: typeof AccountLeavingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/request-access': {
@@ -1175,7 +1215,9 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
+  AccountExportRoute: AccountExportRoute,
   AccountForgotRoute: AccountForgotRoute,
+  AccountLeavingRoute: AccountLeavingRoute,
   AccountRequestAccessRoute: AccountRequestAccessRoute,
   AccountResetRoute: AccountResetRoute,
   AccountUnsubscribeRoute: AccountUnsubscribeRoute,

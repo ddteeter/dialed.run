@@ -17,6 +17,7 @@ export {
 export {
   claimEmailSend,
   countSend,
+  forgetSendLimits,
   sendAllowed,
   sendClaimOf,
 } from "./send-limit";

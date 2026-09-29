@@ -41,6 +41,7 @@ describe("AccountIndex (U1 Account)", () => {
         username="maya_runs"
         confirmBand={<p>the band</p>}
         signOutEverywhere={<button type="button">everywhere</button>}
+        deletion={<button type="button">delete</button>}
       />,
     );
     const email = screen.getByRole("link", { name: /^Email/u });
@@ -56,13 +57,42 @@ describe("AccountIndex (U1 Account)", () => {
     const password = screen.getByRole("link", { name: /^Password/u });
     expect(password).toHaveAttribute("href", "/account/password");
     expect(password).toHaveTextContent("Change the password you log in with");
-    // The nag sits first, then the rows, then signing out everywhere.
+    // The nag sits first, then the rows, then signing out everywhere, the
+    // export and — last, round 27 #14 — deleting the account.
     const order = Array.from(
       document.querySelectorAll("p, a, button"),
       (node) => node.textContent,
     );
     expect(order[0]).toBe("the band");
-    expect(order.at(-1)).toBe("everywhere");
+    expect(order.slice(-3)).toStrictEqual([
+      "everywhere",
+      "Export your dataRuns, closet, entries and photo links, as one fileGet a copy",
+      "delete",
+    ]);
+  });
+
+  it("offers the export as a download, never a page the router draws (ACC-10)", async () => {
+    await renderWithRouter(
+      <AccountIndex
+        account={{
+          email: "maya@example.com",
+          isVerified: true,
+          hasPassword: true,
+        }}
+        username="maya_runs"
+        confirmBand={undefined}
+        signOutEverywhere={undefined}
+        deletion={undefined}
+      />,
+    );
+    const exporting = screen.getByRole("link", { name: /^Export your data/u });
+    expect(exporting).toHaveAttribute("href", "/account/export");
+    expect(exporting).toHaveAttribute("download");
+    expect(exporting).toHaveAttribute("data-part", "settings-row");
+    expect(exporting).toHaveClass("target");
+    expect(
+      screen.getByRole("heading", { name: "Your data" }).closest("section"),
+    ).toContainElement(exporting);
   });
 
   it("says an unconfirmed address is not confirmed yet, and a Google account has no password row", async () => {
@@ -76,6 +106,7 @@ describe("AccountIndex (U1 Account)", () => {
         username={undefined}
         confirmBand={undefined}
         signOutEverywhere={undefined}
+        deletion={undefined}
       />,
     );
     expect(screen.getByRole("link", { name: /^Email/u })).toHaveTextContent(

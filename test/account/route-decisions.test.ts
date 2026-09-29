@@ -13,7 +13,11 @@ import {
   accountSectionOrNotFound,
   checkEmailSearch,
   checkEmailView,
+  accountSectionSearch,
+  DELETE_REAUTH_RETURN,
   gateOnHandle,
+  homeIfNothingToSay,
+  leavingSearch,
   legalDocOrNotFound,
   startHandleIfNeeded,
   startOverIfNoAddress,
@@ -104,6 +108,91 @@ async function gateOnce(
   }
   return { thrown: undefined, asked: ask.mock.calls.length };
 }
+
+describe("the leaving gate (ACC-9; round 27 #14)", () => {
+  beforeEach(() => {
+    forgetSession();
+  });
+
+  it("sends a runner whose account is being deleted to Keep your account? from any page", async () => {
+    for (const pathname of ["/", "/closet", "/feed", "/onboarding/handle"]) {
+      const leaving = await gateOnce("leaving", true, pathname);
+      expect(isRedirect(leaving.thrown), pathname).toBe(true);
+      expect(leaving.thrown).toMatchObject({
+        options: { to: "/account/leaving" },
+      });
+    }
+    // Never remembered: Keep changes the answer.
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const again = await gateOnce("leaving", true);
+    expect(again.asked).toBe(1);
+  });
+
+  it("lets them stay on the page itself, the auth pages and the privacy policy", async () => {
+    for (const pathname of [
+      "/account/leaving",
+      "/auth/login",
+      "/auth/signup",
+      "/privacy",
+    ]) {
+      const { thrown } = await gateOnce("leaving", true, pathname);
+      expect(thrown).toBeUndefined();
+    }
+  });
+
+  it("stands alone: nobody else is sent there", async () => {
+    // Asked before "has-handle", which the browser would then remember.
+    const needs = await gateOnce("needs-handle", true, "/closet");
+    expect(needs.thrown).toMatchObject({
+      options: { to: "/onboarding/handle" },
+    });
+    for (const gate of ["signed-out", "has-handle"] as const) {
+      const { thrown } = await gateOnce(gate, true, "/closet");
+      expect(thrown).toBeUndefined();
+    }
+  });
+});
+
+describe("leavingSearch and homeIfNothingToSay", () => {
+  it("reads the date a request answered, and drops anything else", () => {
+    expect(leavingSearch.parse({ on: "1760000000" })).toStrictEqual({
+      on: 1_760_000_000,
+    });
+    expect(leavingSearch.parse({ on: 1_760_000_000 })).toStrictEqual({
+      on: 1_760_000_000,
+    });
+    for (const on of ["soon", -5, 0, 1.5, undefined]) {
+      expect(leavingSearch.parse({ on })).toStrictEqual({ on: undefined });
+    }
+  });
+
+  it("sends a visitor with nothing to see home, and lets a page with something through", () => {
+    let thrown: unknown;
+    try {
+      homeIfNothingToSay({ state: "none" });
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(isRedirect(thrown)).toBe(true);
+    expect(thrown).toMatchObject({ options: { to: "/" } });
+    expect(() => {
+      homeIfNothingToSay({ state: "ask", day: "Sat, Oct 4" });
+    }).not.toThrow();
+    expect(() => {
+      homeIfNothingToSay({ state: "scheduled", day: "Sat, Oct 4" });
+    }).not.toThrow();
+  });
+});
+
+describe("accountSectionSearch and the way back from Google (ACC-9)", () => {
+  it("is deleting only on the way back", () => {
+    expect(accountSectionSearch.parse({})).toStrictEqual({ deleting: false });
+    expect(accountSectionSearch.parse({ deleting: 1 })).toStrictEqual({
+      deleting: true,
+    });
+    expect(DELETE_REAUTH_RETURN).toBe("/account/sign-in?deleting=1");
+  });
+});
 
 describe("gateOnHandle (the root's O0 gate, memoised)", () => {
   beforeEach(() => {

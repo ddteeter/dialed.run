@@ -24,6 +24,7 @@ import { checkOwnPassword, type PasswordCheck } from "./password-check";
 import {
   optionalUserIdFrom,
   sessionIdFrom,
+  signedInSince,
   userIdOrThrow,
 } from "./session-user";
 
@@ -84,5 +85,18 @@ export async function checkCurrentPassword(
       headers: getRequestHeaders(),
     },
     password,
+  );
+}
+
+/**
+ * The signed-in runner and when their session was made — for a change a
+ * fresh sign-in can prove (ACC-9's Google re-auth).
+ */
+export async function requireSignedInSince(): Promise<{
+  userId: string;
+  signedInAt: number;
+}> {
+  return signedInSince(
+    await auth.api.getSession({ headers: getRequestHeaders() }),
   );
 }

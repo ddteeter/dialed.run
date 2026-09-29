@@ -25,14 +25,15 @@ import {
   confirmLinkUrl,
   type Background,
   type EmailChangeRequest,
-  type OwedMail,
 } from "../../src/modules/account/verification";
-import { settleOutbox } from "../../src/modules/ops/outbox";
 import {
-  emailHandler,
-  outboxHandlers,
-} from "../../src/modules/ops/outbox-handlers";
-import { core, fakeMail, ORIGIN, seedUser } from "../email/helpers";
+  core,
+  fakeMail,
+  ORIGIN,
+  owedTo,
+  quiet,
+  seedUser,
+} from "../email/helpers";
 
 /**
  * Confirming and changing an address (ACC-3, ACC-8; round 26 #11) on real
@@ -1057,41 +1058,6 @@ describe("requestEmailChange", () => {
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
   });
 });
-
-/**
- * Where a change's owed email goes after the answer: held until the test
- * lets it go, so a test can look before it is sent and after, and sent
- * through `mail`.
- */
-function owedTo(mail: ReturnType<typeof fakeMail>): {
-  owed: OwedMail;
-  settled: () => Promise<void>;
-} {
-  const work: Promise<unknown>[] = [];
-  const { promise: gate, resolve: release } =
-    Promise.withResolvers<undefined>();
-  const handlers = { ...outboxHandlers, email: emailHandler(() => mail) };
-  return {
-    owed: {
-      keepAlive: (promise) => {
-        work.push(promise);
-      },
-      report: quiet,
-      settle: async (database, debt, report) => {
-        await gate;
-        await settleOutbox(database, debt, report, handlers);
-      },
-    },
-    settled: async () => {
-      release(undefined);
-      await Promise.all(work);
-    },
-  };
-}
-
-function quiet(): void {
-  // these sends succeed, so there is nothing to report
-}
 
 /**
  * The background a request hands its after-the-answer work to — collected

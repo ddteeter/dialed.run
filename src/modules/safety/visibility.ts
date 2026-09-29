@@ -18,6 +18,7 @@ import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
+  accountDeletions,
   blocks,
   outfitEntries,
   reports,
@@ -26,7 +27,7 @@ import {
 
 /**
  * The entry is shared by its author, nothing is pending or settled against
- * it, and its author is not banned — and, when a viewer is named, the
+ * it, and its author is neither banned nor leaving — and, when a viewer is named, the
  * viewer and the author have not blocked each other and the viewer has not
  * reported it.
  *
@@ -55,6 +56,7 @@ export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
     eq(outfitEntries.isPublic, true),
     eq(outfitEntries.moderationStatus, "ok"),
     authorNotBanned(),
+    runnerNotLeaving(outfitEntries.userId),
     ...(viewerId === undefined
       ? []
       : [
@@ -83,6 +85,21 @@ export function entryVisibleTo(viewerId: string): SQL | undefined {
  */
 function authorNotBanned(): SQL {
   return sql`not exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${outfitEntries.userId} and ${userProfiles.bannedAt} is not null)`;
+}
+
+/**
+ * A runner who asked to delete their account is gone from everyone else
+ * at once (task 126, ACC-9; round 27 #14: "Shared runs leave the feed at
+ * once and stop counting toward anyone's Call"), for the week before the
+ * purge. The claim row is the hide, as a ban's column is: nothing about
+ * the entries is written, so "Keep my account" brings them back as they
+ * were. A primary-key probe per candidate.
+ *
+ * `runnerId` is the column naming the runner — an entry's author here, a
+ * profile row's user in the feed's search and H (seam 6: one rule).
+ */
+export function runnerNotLeaving(runnerId: SQLiteColumn): SQL {
+  return sql`not exists (select 1 from ${accountDeletions} where ${accountDeletions.userId} = ${runnerId})`;
 }
 
 /**

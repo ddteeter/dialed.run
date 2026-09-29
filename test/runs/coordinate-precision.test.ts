@@ -17,7 +17,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { imports } from "../../src/db/schema-core";
 import { visualCrossingObservationFixture } from "../weather/fixtures/visual-crossing-observation";
 import validGpx from "./fixtures/valid.gpx?raw";
-import { batchOf, fakeMessage } from "../queue-fakes";
+import { batchOf, fakeMessage, oweInCore } from "../queue-fakes";
 
 /**
  * STR-14 (register D-110): a run's start point is kept, and sent to the
@@ -118,6 +118,7 @@ describe("a stored run carries the rounded point", () => {
       captureException: (error) => {
         errors.push(error);
       },
+      owe: oweInCore,
     });
 
     expect(errors).toStrictEqual([]);

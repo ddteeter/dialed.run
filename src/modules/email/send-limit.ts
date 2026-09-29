@@ -5,7 +5,7 @@
  * Counted per address whatever the address is: see `email_send_limits`
  * for why an unknown address is counted too.
  */
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -33,6 +33,15 @@ export const SEND_WINDOW_S = 60 * 60;
  */
 export type LimitedSend = "verify" | "reset" | "change" | "access";
 
+/**
+The sends counted by email address; `access` is counted by IP.
+*/
+const ADDRESS_SENDS = [
+  "verify",
+  "reset",
+  "change",
+] as const satisfies readonly LimitedSend[];
+
 export type SendClaim =
   | { readonly isAllowed: true }
   | {
@@ -48,6 +57,23 @@ The limiter's row for one kind of send to one address.
 */
 function sendLimitKey(kind: LimitedSend, address: string): string {
   return `${kind}:${address.toLowerCase()}`;
+}
+
+/**
+ * Forget an address's counters (ACC-9): a deleted account's address is
+ * not kept, even as a key in an hour's count. One statement, for the
+ * purge's batch; each key is a primary-key probe.
+ */
+export function forgetSendLimits(
+  db: ReturnType<typeof drizzle>,
+  address: string,
+) {
+  return db.delete(emailSendLimits).where(
+    inArray(
+      emailSendLimits.key,
+      ADDRESS_SENDS.map((kind) => sendLimitKey(kind, address)),
+    ),
+  );
 }
 
 /**

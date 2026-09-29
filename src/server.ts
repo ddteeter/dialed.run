@@ -14,6 +14,7 @@ import {
   handleScheduled,
   secureResponse,
 } from "./modules/ops";
+import { purgeDueAccounts } from "./modules/account/purge";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 
@@ -40,7 +41,11 @@ export default {
   },
   async scheduled(controller): Promise<void> {
     try {
-      await handleScheduled(controller);
+      // Account deletion's purge rides the daily firing (task 126, ACC-9):
+      // handed in here because `ops` cannot import it without a cycle.
+      await handleScheduled(controller, undefined, {
+        purgeAccounts: purgeDueAccounts,
+      });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });
       throw error;

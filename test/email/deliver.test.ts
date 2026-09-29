@@ -20,6 +20,7 @@ import {
   emailDebt,
   emailDepsFromEnv,
   emailPreferencesOf,
+  forgetSendLimits,
   setEmailPreference,
   isEmailWanted,
 } from "../../src/modules/email";
@@ -750,5 +751,28 @@ describe("an owed email", () => {
       mail,
     );
     expect(mail.sent[0]?.headers).toBeUndefined();
+  });
+});
+
+describe("forgetSendLimits (ACC-9)", () => {
+  it("forgets an address's counters for every emailed kind, whatever its case, and nothing else", async () => {
+    const kept = ["verify:other@example.com", "access:1.2.3.4"];
+    await db
+      .insert(emailSendLimits)
+      .values(
+        [
+          "verify:gone@example.com",
+          "reset:gone@example.com",
+          "change:gone@example.com",
+          ...kept,
+        ].map((key) => ({ key, windowStartedAt: 1, sends: 1 })),
+      );
+    await forgetSendLimits(db, "Gone@Example.com");
+    const left = await db
+      .select({ key: emailSendLimits.key })
+      .from(emailSendLimits);
+    expect(
+      left.map((row) => row.key).toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(kept.toSorted((a, b) => a.localeCompare(b)));
   });
 });

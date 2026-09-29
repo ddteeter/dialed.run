@@ -1,6 +1,10 @@
 import { vi } from "vitest";
 import type { Mock } from "vitest";
 
+import type { OutboxMessage } from "../src/lib/outbox";
+import { outboxInsert, oweOutbox } from "../src/modules/ops/outbox";
+import { coreDb } from "../src/modules/runs/core-db";
+
 /**
  * A real `Message`, with `ack`/`retry` replaced by spies. A consumer's only
  * outward effect on a message is which of those two it calls, so they are
@@ -36,4 +40,12 @@ export function batchOf(queue: string, messages: SpiedMessage[]): MessageBatch {
     ackAll: nothing,
     retryAll: nothing,
   };
+}
+
+/**
+ * The imports consumer's `owe`, as the queue entry wires it: an outbox
+ * row in the core database, for the caller's batch.
+ */
+export function oweInCore(message: OutboxMessage) {
+  return outboxInsert(coreDb(), oweOutbox(message));
 }

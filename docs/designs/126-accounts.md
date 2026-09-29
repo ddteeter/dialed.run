@@ -405,16 +405,17 @@ clause for the runner, so they leave search. Nothing is written to the
 entries: **Keep brings everything back as it was**, share state included.
 
 **Logging in during the week never cancels silently** (round 27 #14):
-sign-in works, and `requireSession` — the one loader gate — sends a
-runner with a pending deletion to `/account/leaving`: "Keep your
-account?" · Keep my account / Log out. Keep deletes the claim row, but
-only while the purge has not started. Log out leaves the date.
+sign-in works, and the root's gate (`handleGate`, which already sends a
+runner with no handle to O0 on every navigation) answers `leaving` for a
+runner with a pending deletion and sends them to `/account/leaving`:
+"Keep your account?" · Keep my account / Log out. Keep deletes the claim
+row, but only while the purge has not started. Log out leaves the date.
 
 **The purge** — **reconciliation, not an outbox** (law 8c). The claim row
 is already the durable "not finished" marker, and something already re-runs
 it: the daily firing. So each firing claims what is due (`UPDATE … SET
 purge_started_at = now WHERE purge_after <= now AND (purge_started_at IS
-NULL OR purge_started_at < now − 1h)`, law 2, at most 5 accounts) and walks
+NULL OR purge_started_at < now − 1h)`, law 2, at most 3 accounts) and walks
 the steps; every step deletes what is left, so a purge that dies at any
 step finishes on the next firing. The claim row is deleted in the **same
 batch as the `user` row**, last. In order:
