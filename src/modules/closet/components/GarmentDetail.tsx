@@ -11,7 +11,6 @@ import {
   ControlFailureBand,
   FileWell,
   FormStatus,
-  Icon,
   inFlight,
   Mono,
   PendingLabel,
@@ -23,6 +22,8 @@ import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { retiredLabel } from "../retired-label";
 import { useRunnerZone } from "./use-runner-zone";
 import { CompositionBlock } from "./Composition";
+import { BackToCloset } from "./BackToCloset";
+import { DeleteWithRuns } from "./DeleteWithRuns";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
 import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
 import type {
@@ -232,6 +233,7 @@ export function GarmentDetail({
   removePhoto,
   renderPhotoStep,
   photoChecking,
+  bandCount = 0,
 }: Readonly<{
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -252,6 +254,11 @@ export function GarmentDetail({
    * under the photo while `isPhotoBeingChecked` says so.
    */
   photoChecking?: ReactNode;
+  /**
+   * How many 5 °C bands the piece has a verdicted run in — feed's count,
+   * composed by the route — for round 26's "Its record in {b} bands".
+   */
+  bandCount?: number | undefined;
 }>) {
   const navigate = useNavigate();
   const router = useRouter();
@@ -338,10 +345,15 @@ export function GarmentDetail({
   const deleting = useControlAction({
     action: async () => {
       await remove({ data: { itemId } });
-      await navigate({ to: "/closet" });
+      // Round 26 #3: "On success: C, with a status line '{name} deleted.'"
+      await navigate({ to: "/closet", search: { deleted: item.name } });
     },
     kicker: "Not deleted",
   });
+
+  // Round 26 #3: a piece with runs is asked whether to retire it instead,
+  // in its own sheet; round 22's plain confirm stays for one with none.
+  const isDeletingWorn = confirming === "delete" && runCount > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-5 px-4 py-8 wide:px-6">
@@ -355,13 +367,7 @@ export function GarmentDetail({
       </FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">
-        <Link
-          to="/closet"
-          className="target inline-flex items-center gap-2 self-start text-body text-quiet no-underline"
-        >
-          <Icon name="back" />
-          Closet
-        </Link>
+        <BackToCloset />
         <IdentityKicker item={item} isGeneric={isGeneric} />
         <h1 className="m-0 font-display text-title">{label}</h1>
         <Colorway item={item} />
@@ -491,7 +497,7 @@ export function GarmentDetail({
       />
 
       <GarmentConfirm
-        kind={confirming}
+        kind={isDeletingWorn ? undefined : confirming}
         name={item.name}
         runCount={runCount}
         action={confirming === "delete" ? deleting : retiring}
@@ -499,6 +505,19 @@ export function GarmentDetail({
           setConfirming(undefined);
         }}
       />
+      {runCount > 0 ? (
+        <DeleteWithRuns
+          open={isDeletingWorn}
+          name={item.name}
+          runCount={runCount}
+          bandCount={bandCount}
+          retire={retiring}
+          remove={deleting}
+          onClose={() => {
+            setConfirming(undefined);
+          }}
+        />
+      ) : undefined}
     </div>
   );
 }

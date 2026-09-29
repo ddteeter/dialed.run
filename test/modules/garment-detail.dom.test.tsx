@@ -40,6 +40,7 @@ async function renderWithRouter(element: ReactElement) {
     path: "/closet",
     validateSearch: (search: Record<string, unknown>) => ({
       retired: search.retired === true,
+      deleted: typeof search.deleted === "string" ? search.deleted : undefined,
     }),
     component: () => <p>The closet</p>,
   });
@@ -150,8 +151,15 @@ function isAfter(first: Element, second: Element): boolean {
   );
 }
 
+/**
+ * The sheet that is open: a piece with runs has two on the page, round
+ * 22's confirm and round 26's delete, and only one is ever showing.
+ */
 function sheet(): HTMLElement {
-  return part("sheet");
+  const open = document.querySelector<HTMLElement>(
+    "dialog[open] [data-part='sheet']",
+  );
+  return open ?? part("sheet");
 }
 
 describe("GarmentDetail: the order round 22 fixes", () => {
@@ -928,6 +936,8 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
 
     expect(remove).not.toHaveBeenCalled();
     expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
+    // No runs, so round 26's sheet is not on the page at all.
+    expect(document.querySelectorAll("[data-part='sheet']")).toHaveLength(1);
     expect(
       within(sheet()).getByRole("heading", { name: "Delete the Harrier?" }),
     ).toBeVisible();
@@ -944,45 +954,11 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     });
     expect(remove).toHaveBeenCalledWith({ data: { itemId: "01ITEM" } });
     expect(retire).not.toHaveBeenCalled();
-    expect(router.state.location.search).toMatchObject({ retired: false });
-  });
-
-  it("offers delete on a piece with runs, and says plainly what it costs", async () => {
-    // Owner's ruling (task 122): Retire stays the recommended action, and
-    // Delete's sheet spells out the kit, the band record, and no undo.
-    const user = userEvent.setup();
-    const remove = vi.fn<Props["remove"]>(deleted);
-    await renderWithRouter(
-      garment({ performance: performance({ runCount: 14 }) }, { remove }),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-
-    expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
-    expect(
-      within(sheet()).getByText(
-        "Its 14 runs keep their verdicts but lose this piece from their kit, and its record in every band is gone. This can't be undone. Retire keeps the history.",
-      ),
-    ).toBeVisible();
-    await user.click(within(sheet()).getByRole("button", { name: "Delete" }));
-    await waitFor(() => {
-      expect(remove).toHaveBeenCalledWith({ data: { itemId: "01ITEM" } });
+    // Round 26 #3: C says which piece went.
+    expect(router.state.location.search).toMatchObject({
+      retired: false,
+      deleted: "Harrier",
     });
-  });
-
-  it("says one run in the singular", async () => {
-    const user = userEvent.setup();
-    await renderWithRouter(
-      garment({ performance: performance({ runCount: 1 }) }),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-
-    expect(
-      within(sheet()).getByText(
-        "Its 1 run keeps its verdict but loses this piece from its kit, and its record in every band is gone. This can't be undone. Retire keeps the history.",
-      ),
-    ).toBeVisible();
   });
 
   it("says [ Deleting ] while it waits, and Not deleted when it fails", async () => {
@@ -1000,6 +976,135 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     });
 
     expect(await within(sheet()).findByText("Not deleted")).toBeVisible();
+  });
+});
+
+describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
+  it("asks whether to retire it instead, with the runs and bands it costs", async () => {
+    const user = userEvent.setup();
+    const remove = vi.fn<Props["remove"]>(deleted);
+    await renderWithRouter(
+      garment(
+        { performance: performance({ runCount: 14 }) },
+        { remove, bandCount: 4 },
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(remove).not.toHaveBeenCalled();
+    expect(sheet()).toHaveAttribute("data-state", "delete-with-runs");
+    expect(
+      within(sheet()).getByRole("heading", {
+        name: "Delete the Harrier? Retire it instead.",
+      }),
+    ).toBeVisible();
+    expect(within(sheet()).getByText(/^It's on 14 runs\./)).toBeVisible();
+    expect(
+      within(sheet()).getByText("It comes off the kit of all 14 runs"),
+    ).toBeVisible();
+    expect(within(sheet()).getByText("Its record in 4 bands")).toBeVisible();
+  });
+
+  it("counts no bands when the route has none to give", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      garment({ performance: performance({ runCount: 2 }) }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(sheet()).toHaveAttribute("data-state", "delete-with-runs");
+    expect(within(sheet()).queryByText(/^Its record in/)).toBeNull();
+  });
+
+  it("deletes straight from the sheet, and lands on the closet saying so", async () => {
+    const user = userEvent.setup();
+    const remove = vi.fn<Props["remove"]>(deleted);
+    const retire = vi.fn<Props["retire"]>(nothing);
+    const { router } = await renderWithRouter(
+      garment(
+        { performance: performance({ runCount: 14 }) },
+        { remove, retire },
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      within(sheet()).getByRole("button", { name: "Delete it and its record" }),
+    );
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/closet");
+    });
+    expect(remove).toHaveBeenCalledExactlyOnceWith({
+      data: { itemId: "01ITEM" },
+    });
+    expect(retire).not.toHaveBeenCalled();
+    expect(router.state.location.search).toMatchObject({ deleted: "Harrier" });
+  });
+
+  it("retires from the same sheet, landing where a retire lands", async () => {
+    const user = userEvent.setup();
+    const remove = vi.fn<Props["remove"]>(deleted);
+    const retire = vi.fn<Props["retire"]>(nothing);
+    const { router } = await renderWithRouter(
+      garment(
+        { performance: performance({ runCount: 14 }) },
+        { remove, retire },
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      within(sheet()).getByRole("button", { name: "Retire it" }),
+    );
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ retired: true });
+    });
+    expect(retire).toHaveBeenCalledExactlyOnceWith({
+      data: { itemId: "01ITEM" },
+    });
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sheet open under Not deleted when the delete fails", async () => {
+    const user = userEvent.setup();
+    const remove = vi
+      .fn<Props["remove"]>()
+      .mockRejectedValue(new Error("D1 down"));
+    await renderWithRouter(
+      garment({ performance: performance({ runCount: 3 }) }, { remove }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      within(sheet()).getByRole("button", { name: "Delete it and its record" }),
+    );
+
+    expect(await within(sheet()).findByText("Not deleted")).toBeVisible();
+    expect(sheet()).toHaveAttribute("data-state", "delete-with-runs");
+  });
+
+  it("closes on Cancel, deleting nothing", async () => {
+    const user = userEvent.setup();
+    const remove = vi.fn<Props["remove"]>(deleted);
+    await renderWithRouter(
+      garment({ performance: performance({ runCount: 3 }) }, { remove }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(within(sheet()).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", {
+          name: "Delete the Harrier? Retire it instead.",
+        }),
+      ).toBeNull();
+    });
+    expect(remove).not.toHaveBeenCalled();
   });
 });
 
