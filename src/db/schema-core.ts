@@ -44,6 +44,11 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // all gate on the same column.
     bannedAt: integer("banned_at"),
     banReason: text("ban_reason"),
+    // Set when a moderator force-renames the runner (task 128, round 27
+    // #16): the reason from the fixed list, which O0's "USERNAME CHANGED BY
+    // A MODERATOR" field quotes on their next load. Null means no re-pick
+    // is owed; 126's screen clears it on Save or Keep.
+    usernameResetReason: text("username_reset_reason"),
   },
   (t) => [
     // One index, two jobs. **Uniqueness regardless of case**: a handle is
@@ -71,7 +76,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
  *
  * **Never reclaimable by another runner.** A retired handle stays here, so
  * the old link can never start pointing at a different person. Its own
- * runner may take it back, which deletes the row.
+ * runner may take it back, which deletes the row — unless it is locked.
  */
 export const usernameHistory = /*#__PURE__*/ sqliteTable(
   "username_history",
@@ -79,6 +84,11 @@ export const usernameHistory = /*#__PURE__*/ sqliteTable(
     username: text("username").primaryKey(),
     userId: text("user_id").notNull(),
     retiredAt: integer("retired_at").notNull(),
+    // Set when a moderator took the handle away (task 128, round 27 #16):
+    // a locked handle is refused to **everyone**, its former holder
+    // included, so a force-rename cannot be undone from Settings. Null for
+    // a handle the runner gave up themselves.
+    lockedAt: integer("locked_at"),
   },
   (t) => [
     // Account deletion's read: every handle one runner held.
@@ -158,14 +168,11 @@ export const emailSendLimits = /*#__PURE__*/ sqliteTable("email_send_limits", {
  * through it, so without this a session holder could guess the password
  * without limit. One row per runner, cleared by a right answer.
  */
-export const passwordAttempts = /*#__PURE__*/ sqliteTable(
-  "password_attempts",
-  {
-    userId: text("user_id").primaryKey(),
-    windowStartedAt: integer("window_started_at").notNull(),
-    attempts: integer("attempts").notNull(),
-  },
-);
+export const passwordAttempts = /*#__PURE__*/ sqliteTable("password_attempts", {
+  userId: text("user_id").primaryKey(),
+  windowStartedAt: integer("window_started_at").notNull(),
+  attempts: integer("attempts").notNull(),
+});
 
 export const brands = /*#__PURE__*/ sqliteTable(
   "brands",
@@ -871,5 +878,80 @@ export const blocks = /*#__PURE__*/ sqliteTable(
     // The reverse direction is a query too: "who has blocked me" filters
     // my content out of their feed, and without this it is a table scan.
     index("blocks_blocked").on(t.blockedId),
+  ],
+);
+
+/**
+ * What a person at the Desk did to someone's content, and why (task 128 ·
+ * SAF-5, SAF-6, SAF-4): the audit a DMCA takedown needs ("who, what and
+ * why"), the record the EU DSA's statement of reasons is written from, and
+ * the only place a quarantine's preserved object is named.
+ *
+ * Append-only. A subject can be acted on more than once (banned, unbanned,
+ * banned again), so nothing here is unique but the id. `subjectOwnerId`
+ * is the runner the action was taken against, kept so their notice and any
+ * later appeal can find it after the subject itself is gone.
+ */
+export const moderationActions = /*#__PURE__*/ sqliteTable(
+  "moderation_actions",
+  {
+    id: text("id").primaryKey(),
+    actorId: text("actor_id").notNull(),
+    action: text("action", {
+      enum: ["remove", "quarantine", "takedown", "ban", "unban", "rename"],
+    }).notNull(),
+    subjectType: text("subject_type", {
+      enum: ["entry", "photo", "profile"],
+    }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    subjectOwnerId: text("subject_owner_id"),
+    // The operator's words, word for word — what the runner is told.
+    reason: text("reason").notNull(),
+    // Where a quarantined object was moved to; null for everything else.
+    preservedKey: text("preserved_key"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    index("moderation_actions_subject").on(t.subjectType, t.subjectId),
+    index("moderation_actions_owner").on(t.subjectOwnerId, t.createdAt),
+  ],
+);
+
+/**
+ * Suspected CSAM, held for the owner's report to NCMEC (task 128 · SAF-5;
+ * decision D-70). A quarantine deletes the entry or photo from every table
+ * a read touches — which is what hides it at once, from everyone, with no
+ * filter to forget — and moves what it was here first: the rows as they
+ * stood, the uploader, and where the bytes were copied to.
+ *
+ * **Locked and admin-only.** Nothing updates or deletes a row, no runner-
+ * facing read joins this table, and its one read (`quarantinedContent` in
+ * `modules/safety`) refuses anyone but an admin. `retainUntil` is a year
+ * after the quarantine; nothing purges on it yet (deployment plan §8).
+ * No foreign keys, on purpose: deleting the account must not take the
+ * evidence with it.
+ */
+export const quarantinedContent = /*#__PURE__*/ sqliteTable(
+  "quarantined_content",
+  {
+    id: text("id").primaryKey(),
+    // The audit row that records who quarantined it and why.
+    moderationActionId: text("moderation_action_id").notNull(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    uploaderId: text("uploader_id").notNull(),
+    entryId: text("entry_id").notNull(),
+    // JSON: the entry row, its items and its tags, as they stood.
+    entrySnapshot: text("entry_snapshot").notNull(),
+    // JSON: each photo row, where its bytes were copied to, and when R2
+    // says they were uploaded.
+    photosSnapshot: text("photos_snapshot").notNull(),
+    quarantinedAt: integer("quarantined_at").notNull(),
+    retainUntil: integer("retain_until").notNull(),
+  },
+  (t) => [
+    // The admin read, newest first; and a purge, when one exists, by date.
+    index("quarantined_content_quarantined").on(t.quarantinedAt),
+    index("quarantined_content_retain").on(t.retainUntil),
   ],
 );

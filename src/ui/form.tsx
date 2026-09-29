@@ -683,6 +683,13 @@ interface ChoosableProps<TOption extends string> {
 }
 
 /**
+ * The value of `ChoiceField`'s "—" option: nothing chosen. Exported so a
+ * caller that models "nothing chosen" as `undefined` maps it to the select
+ * with the option's own value, not a second copy of it.
+ */
+export const NO_CHOICE = "";
+
+/**
  * A `<select>` over a set the schema already holds.
  *
  * `GarmentForm` had three of these written out — layer, weight, fabric —
@@ -729,11 +736,11 @@ export function ChoiceField<TOption extends string>({
           const picked = options.find(
             (option) => option === event.target.value,
           );
-          onChange(picked ?? "");
+          onChange(picked ?? NO_CHOICE);
         }}
         className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
       >
-        <option value="">—</option>
+        <option value={NO_CHOICE}>—</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {optionLabels[option]}

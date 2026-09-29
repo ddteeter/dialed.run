@@ -232,6 +232,34 @@
       "when": 1790570967556,
       "tag": "0032_add_password_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790602457980,
+      "tag": "0033_add_moderation_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1790602458326,
+      "tag": "0034_add_username_reset_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1790602458684,
+      "tag": "0035_add_username_history_locked_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1790602459035,
+      "tag": "0036_add_quarantined_content",
+      "breakpoints": true
     }
   ]
 }

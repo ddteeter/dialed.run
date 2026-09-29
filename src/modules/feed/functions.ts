@@ -41,6 +41,8 @@ import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
+import { decideReview, moderateContent } from "./moderation";
+import { requireAdmin, reviewActionInput, takedownInput } from "../safety";
 import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
 import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
@@ -310,4 +312,36 @@ export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await deleteEntryPhoto(drizzle(env.DIALED_CORE), userId, data.photoId);
+  });
+
+/**
+ * A review queue decision that can take content down (task 128 · SAF-5).
+ * Admin-only; the decision lives in `./moderation`.
+ */
+export const decideReviewAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => reviewActionInput.parse(input))
+  .handler(async ({ data }) => {
+    const reviewerId = requireAdmin(await requireUserId());
+    return {
+      outcome: await decideReview(drizzle(env.DIALED_CORE), reviewerId, data),
+    };
+  });
+
+/**
+A copyright takedown from the Desk (SAF-6).
+*/
+export const takedownAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => takedownInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await requireUserId());
+    return {
+      outcome: await moderateContent(drizzle(env.DIALED_CORE), {
+        actorId,
+        action: "takedown",
+        subjectType: data.subjectType,
+        subjectId: data.subjectId,
+        reason: "copyright",
+        notice: data.notice,
+      }),
+    };
   });

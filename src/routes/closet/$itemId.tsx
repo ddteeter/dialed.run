@@ -10,6 +10,7 @@ import {
   unretireItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
+import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { Layout } from "../../ui";
 
@@ -32,6 +33,7 @@ function GarmentDetailPage() {
         uploadPhoto={uploadPhotoFn}
         removePhoto={removePhotoFn}
         renderPhotoStep={photoBlurStep}
+        photoChecking={<PhotoBeingChecked />}
       />
     </Layout>
   );

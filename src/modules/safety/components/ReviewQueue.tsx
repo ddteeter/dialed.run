@@ -1,9 +1,23 @@
+import { useState } from "react";
 import type { JSX } from "react";
 
-import { Bracketed, ListSection, Mono } from "../../../ui";
-import { reportReasonLabels } from "../contracts";
-import type { ReportReason } from "../contracts";
+import {
+  Bracketed,
+  ListSection,
+  Mono,
+  SubmitButton,
+  useFormSubmit,
+} from "../../../ui";
+import {
+  removalReasonSchema,
+  removalReasons,
+  removalStatements,
+  reportReasonLabels,
+} from "../contracts";
+import type { RemovalReason, ReportReason } from "../contracts";
+import { reviewActionInput, type ReviewActionValues } from "../inputs";
 import type { QueueRow } from "../review";
+import { DeskForm, PickOne } from "./DeskForm";
 import { useSettled } from "./use-settled";
 
 /**
@@ -94,23 +108,160 @@ function ListOfReasons({
   );
 }
 
-export function ReviewQueue({
-  queue,
-  resolve,
+/**
+ * A reason, as the Desk lists them: the sentence the author will read.
+ * Keyed by value so `ChoiceField` shows the words and submits the key.
+ */
+const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
+  removalStatements;
+
+type Decide = (input: { data: ReviewActionValues }) => Promise<unknown>;
+
+/**
+ * One row, and the three things a reviewer can do with it (task 128 ·
+ * SAF-5). **Remove deletes** the entry or photo and tells its author why;
+ * **Remove as suspected CSAM** does the same but keeps one copy out of
+ * every route's reach for the preservation period. Both need a reason —
+ * it is the statement the author is sent — and Approve does not.
+ *
+ * The row leaves the list only once the server has said so: a remove
+ * that failed must stay where the reviewer can try it again.
+ */
+function Decision({
+  row,
+  decide,
+  onSettled,
 }: Readonly<{
-  queue: readonly QueueRow[];
-  resolve: (input: {
-    data: { queueId: string; decision: "approve" | "remove" };
-  }) => Promise<unknown>;
+  row: QueueRow;
+  decide: Decide;
+  onSettled: (id: string) => void;
 }>): JSX.Element {
+  // Nothing chosen is `undefined`, which the schema refuses with its own
+  // message; the select sees it as the "—" option's value.
+  const [reason, setReason] = useState<RemovalReason | undefined>();
+  const form = useFormSubmit({
+    schema: reviewActionInput,
+    action: (values) => decide({ data: values }),
+    onSuccess: () => {
+      onSettled(row.id);
+    },
+    successMessage: "Decided.",
+  });
+
+  function send(action: "remove" | "quarantine"): void {
+    void form.submit({ queueId: row.id, action, reason });
+  }
+
+  return (
+    <DeskForm
+      form={form}
+      className="flex flex-col gap-2"
+      onSubmit={() => {
+        send("remove");
+      }}
+      action={
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="target"
+            type="button"
+            onClick={() => {
+              void form.submit({ queueId: row.id, action: "approve" });
+            }}
+          >
+            <Mono step="xs">Approve</Mono>
+          </button>
+          <SubmitButton
+            label="Remove"
+            pendingLabel="Removing"
+            pending={form.pending}
+          />
+          <button
+            className="target"
+            type="button"
+            onClick={() => {
+              send("quarantine");
+            }}
+          >
+            <Mono step="xs">Remove as suspected CSAM</Mono>
+          </button>
+        </div>
+      }
+    >
+      <PickOne<RemovalReason>
+        name="reason"
+        label="Why it comes down"
+        options={removalReasons}
+        optionLabels={REASON_LABELS}
+        schema={removalReasonSchema}
+        value={reason}
+        onChange={setReason}
+        field={form.field}
+        error={form.fieldErrors.reason}
+      />
+    </DeskForm>
+  );
+}
+
+/**
+ * A waiting row. Only the row being decided carries the decision, so the
+ * page holds one reason picker — and a reviewer decides one thing at a
+ * time, the oldest first unless they pick another.
+ */
+function ReviewRow({
+  row,
+  active,
+  onActivate,
+  decide,
+  onSettled,
+}: Readonly<{
+  row: QueueRow;
+  active: boolean;
+  onActivate: () => void;
+  decide: Decide;
+  onSettled: (id: string) => void;
+}>): JSX.Element {
+  return (
+    <li className="flex flex-col gap-2 border border-hairline p-3">
+      <span className="text-body font-semibold">
+        {row.subjectType} · {row.subject.label ?? row.subjectId}
+      </span>
+      <ReportedPhotos keys={row.subject.photoKeys} />
+      <ReportedFor row={row} />
+      <span className="text-micro text-quiet">
+        <Bracketed>{row.source}</Bracketed>
+      </span>
+      {active ? (
+        <Decision row={row} decide={decide} onSettled={onSettled} />
+      ) : (
+        <button
+          className="target self-start"
+          type="button"
+          onClick={onActivate}
+        >
+          <Mono step="xs">Decide this one</Mono>
+        </button>
+      )}
+    </li>
+  );
+}
+
+/**
+A queue row's identity, for `useSettled`.
+*/
+function queueRowId(row: QueueRow): string {
+  return row.id;
+}
+
+export function ReviewQueue(
+  props: Readonly<{ queue: readonly QueueRow[]; resolve: Decide }>,
+): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
   // is safe.
-  const { remaining: waiting, settle } = useSettled(queue, (row) => row.id);
-
-  function decide(queueId: string, decision: "approve" | "remove"): void {
-    settle(queueId);
-    void resolve({ data: { queueId, decision } });
-  }
+  const { remaining: waiting, settle } = useSettled(props.queue, queueRowId);
+  const [chosen, setChosen] = useState<string | undefined>();
+  const activeId = waiting.some((row) => row.id === chosen)
+    ? chosen
+    : waiting[0]?.id;
 
   return (
     <div className="flex flex-col gap-4">
@@ -125,39 +276,16 @@ export function ReviewQueue({
         }
       >
         {(row) => (
-          <li
+          <ReviewRow
             key={row.id}
-            className="flex flex-col gap-2 border border-hairline p-3"
-          >
-            <span className="text-body font-semibold">
-              {row.subjectType} · {row.subject.label ?? row.subjectId}
-            </span>
-            <ReportedPhotos keys={row.subject.photoKeys} />
-            <ReportedFor row={row} />
-            <span className="text-micro text-quiet">
-              <Bracketed>{row.source}</Bracketed>
-            </span>
-            <div className="flex gap-2">
-              <button
-                className="target"
-                type="button"
-                onClick={() => {
-                  decide(row.id, "approve");
-                }}
-              >
-                <Mono step="xs">Approve</Mono>
-              </button>
-              <button
-                className="target"
-                type="button"
-                onClick={() => {
-                  decide(row.id, "remove");
-                }}
-              >
-                <Mono step="xs">Remove</Mono>
-              </button>
-            </div>
-          </li>
+            row={row}
+            active={row.id === activeId}
+            onActivate={() => {
+              setChosen(row.id);
+            }}
+            decide={props.resolve}
+            onSettled={settle}
+          />
         )}
       </ListSection>
     </div>

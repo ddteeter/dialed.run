@@ -1,0 +1,1 @@
+ALTER TABLE `user_profiles` ADD `username_reset_reason` text;

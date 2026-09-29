@@ -142,8 +142,15 @@ export function ReportSheet({
       ? "They are never told who reported it."
       : `${subject.authorName} is never told who reported it.`;
 
+  // Round 26 #7 (SAF-15): the sheet names whose entry it is, by handle,
+  // once there is a handle to name.
+  const title =
+    subject.authorName === undefined
+      ? "Report this entry"
+      : `Report @${subject.authorName}'s entry?`;
+
   return (
-    <Sheet open={open} onClose={onClose} label="Report this entry">
+    <Sheet open={open} onClose={onClose} label={title}>
       <form
         ref={form.formRef}
         noValidate
@@ -167,7 +174,7 @@ export function ReportSheet({
         />
 
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lead font-semibold">Report this entry</h2>
+          <h2 className="text-lead font-semibold">{title}</h2>
           {/* W1's ✕ (round 22, item 21): "closes and discards without
               confirm". A button, not the form's reset — nothing is asked,
               and the caller mounts a fresh sheet for the next report. */}

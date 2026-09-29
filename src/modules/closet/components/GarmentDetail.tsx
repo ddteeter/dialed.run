@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { GarmentVisibility } from "../../../lib/contracts";
@@ -19,7 +19,7 @@ import {
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import { garmentLabel } from "../label";
-import { photoUrlFor } from "../photo-url";
+import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { retiredLabel } from "../retired-label";
 import { useRunnerZone } from "./use-runner-zone";
 import { CompositionBlock } from "./Composition";
@@ -231,6 +231,7 @@ export function GarmentDetail({
   uploadPhoto,
   removePhoto,
   renderPhotoStep,
+  photoChecking,
 }: Readonly<{
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -245,6 +246,12 @@ export function GarmentDetail({
    * face in it is somebody's face whatever screen it was taken on.
    */
   renderPhotoStep?: PhotoStep | undefined;
+  /**
+   * D-69's "being checked" band (round 27 #21), composed by the route
+   * because its copy is safety's and this module may not import it. Shown
+   * under the photo while `isPhotoBeingChecked` says so.
+   */
+  photoChecking?: ReactNode;
 }>) {
   const navigate = useNavigate();
   const router = useRouter();
@@ -394,6 +401,7 @@ export function GarmentDetail({
             retryRef={removal.retryRef}
           />
           {photo.step(setStatus)}
+          {isPhotoBeingChecked(item) ? photoChecking : undefined}
         </div>
       )}
 

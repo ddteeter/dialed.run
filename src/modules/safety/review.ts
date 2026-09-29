@@ -24,7 +24,7 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere } from "../../lib/keyed-read";
+import { columnWhere, firstRowWhere } from "../../lib/keyed-read";
 import { orSqlNull } from "../../lib/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -424,7 +424,12 @@ export async function releaseStaleClaims(
   return { released: released.length };
 }
 
-export type ReviewDecision = "approve" | "remove";
+/**
+ * What a reviewer decided. A quarantine is a Remove that also keeps a copy
+ * (task 128 · SAF-5), so for the queue row and a subject safety settles
+ * itself — a product, a profile — it is a Remove.
+ */
+export type ReviewDecision = "approve" | "remove" | "quarantine";
 
 export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
 
@@ -468,6 +473,24 @@ async function openRow(queueId: string): Promise<OpenRow> {
     return "already_resolved";
   }
   return { subjectType: row.subjectType, subjectId: row.subjectId };
+}
+
+/**
+ * The subject of a queue row still waiting on a decision, or nothing — for
+ * a caller that acts only on open rows and leaves "why not" to
+ * `resolveReview`.
+ */
+export async function openSubject(
+  queueId: string,
+): Promise<{ subjectType: ReportSubjectType; subjectId: string } | undefined> {
+  return firstRowWhere(
+    db(),
+    reviewQueue,
+    and(
+      eq(reviewQueue.id, queueId),
+      inArray(reviewQueue.status, ["pending", "reviewing"]),
+    ),
+  );
 }
 
 /**

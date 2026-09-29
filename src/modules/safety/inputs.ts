@@ -15,7 +15,12 @@ import { z } from "zod";
 
 import { ulidSchema } from "../../lib/ids";
 
-import { reportReasonSchema, reportSubjectTypeSchema } from "./contracts";
+import {
+  removalReasonSchema,
+  renameReasonSchema,
+  reportReasonSchema,
+  reportSubjectTypeSchema,
+} from "./contracts";
 
 /**
  * Free text on a report. Optional by design — W1's own copy is "One or two
@@ -59,6 +64,69 @@ export const blockRunnerInput = z.object({
 export const reviewDecisionInput = z.object({
   queueId: ulidSchema,
   decision: z.enum(["approve", "remove"]),
+});
+
+/**
+ * A review decision that can take content down (task 128 · SAF-5): the
+ * reason is the statement the author is sent, and `quarantine` is the
+ * suspected-CSAM Remove, which keeps one copy out of every route's reach.
+ */
+export const reviewActionInput = z.discriminatedUnion("action", [
+  z.object({ queueId: ulidSchema, action: z.literal("approve") }),
+  z.object({
+    queueId: ulidSchema,
+    action: z.literal("remove"),
+    reason: removalReasonSchema,
+  }),
+  z.object({
+    queueId: ulidSchema,
+    action: z.literal("quarantine"),
+    reason: removalReasonSchema,
+  }),
+]);
+
+export type ReviewActionValues = z.infer<typeof reviewActionInput>;
+
+/**
+ * A copyright takedown from the Desk (SAF-6): a named photo or entry, and
+ * the notice it answers — kept on the audit row, "who, what and why".
+ */
+export const takedownInput = z.object({
+  subjectType: z.enum(["entry", "photo"], {
+    message: "Pick a photo or an entry.",
+  }),
+  subjectId: ulidSchema,
+  notice: z
+    .string()
+    .trim()
+    .min(1, "Say who sent the notice and its reference.")
+    .max(500, "Keep it under 500 characters."),
+});
+
+/**
+A moderator's force-rename (round 27 #16).
+*/
+export const forceRenameInput = z.object({
+  userId: z.string().min(1).max(64),
+  // Not `reason`: D8 draws Rename beside Close account, whose field is
+  // `reason`, and a field's name is its id.
+  nameReason: renameReasonSchema,
+});
+
+/**
+Reopening a closed account from D8.
+*/
+export const unbanUserInput = z.object({
+  userId: z.string().min(1).max(64),
+});
+
+/**
+ * D8's search and filter (round 27 #22). Both optional: the page opens on
+ * everyone.
+ */
+export const runnersFilterInput = z.object({
+  query: z.string().trim().max(254).optional(),
+  filter: z.enum(["all", "reported", "closed"]).default("all"),
 });
 
 export const banUserInput = z.object({

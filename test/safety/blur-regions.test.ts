@@ -401,9 +401,9 @@ describe("the keyboard's cells (D-84(b))", () => {
       { ...cell, width: 99 },
       { ...cell, height: 99 },
     ]) {
-      expect(
-        isCellBlurred([{ ...off, source: "tapped" }], 0, 300, 300),
-      ).toBe(false);
+      expect(isCellBlurred([{ ...off, source: "tapped" }], 0, 300, 300)).toBe(
+        false,
+      );
     }
   });
 });

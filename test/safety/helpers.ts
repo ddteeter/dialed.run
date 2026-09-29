@@ -18,6 +18,10 @@ import {
   products,
   reports,
   reviewQueue,
+  moderationActions,
+  outbox,
+  quarantinedContent,
+  usernameHistory,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 
@@ -45,6 +49,10 @@ export async function resetSafetyTables(): Promise<void> {
     blocks,
     domainDenylist,
     photoScreenings,
+    moderationActions,
+    quarantinedContent,
+    outbox,
+    usernameHistory,
   ]);
   await resetSharedTables();
 }

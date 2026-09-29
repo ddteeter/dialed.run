@@ -88,3 +88,65 @@ export const reportSubjectTypeSchema = z.enum(reportSubjectTypes);
  * where three reports from one person do not.
  */
 export const autoHideReporterThreshold = 3;
+
+/**
+ * Why a moderator removed something, and the words the runner reads for
+ * it — the statement of reasons the EU DSA asks for (task 128 · SAF-8,
+ * decision D-40), after "A moderator removed this photo:" (round 27 #20,
+ * whose one drawn example is `home`). A fixed list rather than free text,
+ * so the runner is told a rule and not an operator's mood.
+ */
+export const removalStatements = {
+  home: "it shows where someone lives",
+  explicit: "it's sexual or explicit",
+  harassment: "it harasses someone",
+  spam: "it's an ad or spam",
+  copyright: "it uses someone else's work",
+  rules: "it breaks the community rules",
+} as const;
+
+export type RemovalReason = keyof typeof removalStatements;
+
+/**
+The reasons in the Desk's order, read from the table above.
+*/
+export const removalReasons = Object.keys(removalStatements) as [
+  RemovalReason,
+  ...RemovalReason[],
+];
+
+export const removalReasonSchema = z.enum(removalReasons, {
+  message: "Pick why it's coming down.",
+});
+
+/**
+ * What the author is told (round 27 #20): the same sentence in the bell
+ * row, the band where the thing was, and — once 126's outbox lands — the
+ * email.
+ */
+export function removalSentence(
+  subjectType: "entry" | "photo",
+  reason: RemovalReason,
+): string {
+  const what =
+    subjectType === "photo" ? "this photo" : "this entry from the feed";
+  return `A moderator removed ${what}: ${removalStatements[reason]}.`;
+}
+
+/**
+ * Why a moderator took a runner's handle away (round 27 #16): the fixed
+ * list D8's Rename control offers, quoted back on O0's "USERNAME CHANGED
+ * BY A MODERATOR" field.
+ */
+export const renameReasons = [
+  "Offensive or sexual",
+  "Pretends to be someone else",
+  "Contains personal information",
+  "Advertising",
+] as const;
+
+export type RenameReason = (typeof renameReasons)[number];
+
+export const renameReasonSchema = z.enum(renameReasons, {
+  message: "Pick why the name has to go.",
+});

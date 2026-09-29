@@ -18,6 +18,17 @@ export function entryPhotoPrefix(userId: string, entryId?: string): string {
     : `entries/${userId}/${entryId}/`;
 }
 
+/**
+ * Where a quarantined photo is copied to (task 128 · SAF-5): outside
+ * `entries/`, so no runner's photo route can reach it and the entry's
+ * media reconcile never clears it, and named by the key it had so the
+ * preservation record reads back to the entry. Only an admin's
+ * `reviewerPhotoResponse` serves it.
+ */
+export function quarantineKeyFor(photoKey: string): string {
+  return `quarantine/${photoKey}`;
+}
+
 export function entryPhotoKeyFor(
   userId: string,
   entryId: string,

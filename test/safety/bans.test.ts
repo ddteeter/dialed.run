@@ -3,10 +3,16 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { session, user } from "../../src/db/schema-auth";
-import { userProfiles } from "../../src/db/schema-core";
+import { outbox, userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { banStateOf, banUser, unbanUser } from "../../src/modules/safety";
+import { outboxInsert, oweOutbox } from "../../src/modules/ops";
+import {
+  banEmail,
+  banStateOf,
+  banUser,
+  unbanUser,
+} from "../../src/modules/safety";
 
 import { makeUser, NOW, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
@@ -99,6 +105,31 @@ describe("banning", () => {
     expect(row?.bannedAt).toBeLessThanOrEqual(now + 5);
   });
 
+  it("owes the ban email in the ban's own batch", async () => {
+    const userId = await signedInUser();
+    const ban = { userId, reason: "Spam accounts", bannedBy: "op" };
+    const message = banEmail(ban);
+
+    expect(message).toStrictEqual({
+      kind: "email",
+      payload: {
+        dedupeKey: `account_closed:${userId}`,
+        email: {
+          to: { userId },
+          template: { kind: "account_closed", reason: "Spam accounts" },
+        },
+      },
+    });
+    await banUser(ban, (database) => [
+      outboxInsert(database, oweOutbox(message)),
+    ]);
+    const owed = await core()
+      .select({ dedupeKey: outbox.dedupeKey })
+      .from(outbox)
+      .where(eq(outbox.kind, "email"));
+    expect(owed).toStrictEqual([{ dedupeKey: `account_closed:${userId}` }]);
+  });
+
   it("leaves other people's sessions alone", async () => {
     const banned = await signedInUser(2);
     const bystander = await signedInUser(2);
@@ -136,7 +167,7 @@ describe("unbanning", () => {
     const banState = await banStateOf(userId);
     expect(banState.banned).toBe(true);
 
-    await unbanUser(userId);
+    await unbanUser(userId, "desk-operator");
 
     // This is the regression guard for a real bug: `.set({ bannedAt:
     // undefined })` type-checks and drizzle DROPS the undefined, so the
@@ -152,7 +183,7 @@ describe("unbanning", () => {
   it("does not restore the revoked sessions", async () => {
     const userId = await signedInUser(2);
     await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
-    await unbanUser(userId);
+    await unbanUser(userId, "desk-operator");
 
     // They sign in again, which is correct — the rows were deleted, not
     // suspended, and inventing new ones would be forging a login.

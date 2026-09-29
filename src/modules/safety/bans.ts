@@ -15,14 +15,19 @@
  * them looks like it works.
  */
 import { eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { drizzle } from "drizzle-orm/d1";
 
 import { session } from "../../db/schema-auth";
 import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { firstRowWhere } from "../../lib/keyed-read";
+import type { OutboxMessage } from "../../lib/outbox";
 import { orSqlNull } from "../../lib/sql-null";
 import { nowSeconds } from "../../lib/now";
+import { emailDebt } from "../email";
+
+import { moderationActionInsert } from "./moderation-actions";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -46,7 +51,10 @@ export interface BanInput {
  * than failing. A moderator clicking twice on a slow connection should not
  * see an error about the thing they wanted to happen.
  */
-export async function banUser(input: BanInput): Promise<void> {
+export async function banUser(
+  input: BanInput,
+  also: (database: ReturnType<typeof db>) => BatchItem<"sqlite">[] = () => [],
+): Promise<void> {
   const bannedAt = nowSeconds();
   await db().batch([
     db()
@@ -57,7 +65,33 @@ export async function banUser(input: BanInput): Promise<void> {
     // Better Auth has to be trusted to reject, and a deleted one cannot be
     // got wrong by anybody.
     db().delete(session).where(eq(session.userId, input.userId)),
+    moderationActionInsert(db(), {
+      actorId: input.bannedBy,
+      action: "ban",
+      subjectType: "profile",
+      subjectId: input.userId,
+      subjectOwnerId: input.userId,
+      reason: input.reason,
+    }),
+    ...also(db()),
   ]);
+}
+
+/**
+ * The ban's email (round 27 #15, "Email ban"), as an outbox message: the
+ * server function owes it through `ops` and hands `banUser` its insert
+ * (`also`), so it lands in the ban's batch. Safety cannot reach `ops`
+ * itself — `ops` imports safety. Keyed by the runner, so a second click
+ * on Close account replaces the debt rather than sending twice.
+ */
+export function banEmail(input: BanInput): OutboxMessage {
+  return emailDebt(
+    {
+      to: { userId: input.userId },
+      template: { kind: "account_closed", reason: input.reason },
+    },
+    { dedupeKey: `account_closed:${input.userId}` },
+  );
 }
 
 /**
@@ -68,8 +102,11 @@ export async function banUser(input: BanInput): Promise<void> {
  * Sessions are not restored, and could not be: they were deleted. The user
  * signs in again, which is the correct outcome.
  */
-export async function unbanUser(userId: string): Promise<void> {
-  await db()
+export async function unbanUser(
+  userId: string,
+  unbannedBy: string,
+): Promise<void> {
+  const lift = db()
     .update(userProfiles)
     // orSqlNull, not `undefined`. Drizzle DROPS an undefined set-value, so
     // the plain version of this silently did nothing at all — the row kept
@@ -78,6 +115,18 @@ export async function unbanUser(userId: string): Promise<void> {
     // it still got written once before the docblock was taken seriously.
     .set({ bannedAt: orSqlNull(undefined), banReason: orSqlNull(undefined) })
     .where(eq(userProfiles.userId, userId));
+  // The lift is recorded beside the ban it undoes.
+  await db().batch([
+    lift,
+    moderationActionInsert(db(), {
+      actorId: unbannedBy,
+      action: "unban",
+      subjectType: "profile",
+      subjectId: userId,
+      subjectOwnerId: userId,
+      reason: "Reopened from the Desk",
+    }),
+  ]);
 }
 
 export interface BanState {
