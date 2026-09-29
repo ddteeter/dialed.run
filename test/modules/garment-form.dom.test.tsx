@@ -44,6 +44,7 @@ function selectFor(label: string): HTMLSelectElement {
 function renderForm(overrides: Partial<GarmentFormProps> = {}) {
   const save: SaveMock = vi.fn(() => Promise.resolve({ id: "01ITEM" }));
   const props: GarmentFormProps = {
+    heading: "Add a garment",
     save,
     // navigation is the route's, not the form's
     onSaved: () => Promise.resolve(),

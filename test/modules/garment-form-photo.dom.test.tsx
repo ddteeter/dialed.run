@@ -46,6 +46,7 @@ function renderForm(
   const onSaved = vi.fn<GarmentFormProps["onSaved"]>(() => Promise.resolve());
   render(
     <GarmentForm
+      heading="Add a garment"
       save={save}
       onSaved={onSaved}
       submitLabel="Save"
@@ -280,44 +281,71 @@ describe("GarmentForm: a picked photo", () => {
     });
   });
 
-  it("says the garment saved and the photo didn't, and marks the well with why", async () => {
-    // Owner's words (task 122). The save is not undone and not repeated.
+  it("becomes the saved garment when the photo is refused: fields gone, the reason, Pick another only", async () => {
+    // Round 26 #4. The save is not undone and not repeated.
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
-    const { onSaved, save } = renderForm({
+    const { onSaved, save } = renderForm(
+      {
+        upload: () =>
+          Promise.resolve({
+            ok: false,
+            error: "IMG_2231.HEIC isn't a JPG, PNG or WebP.",
+          }),
+      },
+      { initial: { name: "Rover Half-zip", brand: "Janji" } },
+    );
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const band = await screen.findByText("Photo not added");
+    const region = band.closest("[data-part='failure-band']");
+    expect(region).toHaveTextContent("Garment saved, photo didn't. Try again?");
+    expect(region).toHaveTextContent("IMG_2231.HEIC isn't a JPG, PNG or WebP.");
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Garment saved, photo didn't. Try again?",
+      );
+    });
+    // The fields have gone, because the row exists.
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(screen.queryByLabelText(/Model \/ name/)).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Janji Rover Half-zip" }),
+    ).toBeVisible();
+    expect(screen.getByText("Saved to closet · Top")).toHaveClass(
+      "text-dialed-text",
+    );
+    // A refusal would refuse the same file again: another file is the fix.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByLabelText("Pick another")).toHaveAttribute(
+      "type",
+      "file",
+    );
+    // The well is empty again, and marks nothing: the reason is the band's.
+    expect(well()).toHaveAttribute("data-state", "empty");
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("names a piece with no brand by its name alone", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    renderForm({
       upload: () =>
-        Promise.resolve({
-          ok: false,
-          error: "Photo must be 10 MB or smaller.",
-        }),
+        Promise.resolve({ ok: false, error: "Photo file is empty." }),
     });
 
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(
-      await screen.findByText("Photo must be 10 MB or smaller."),
+      await screen.findByRole("heading", { level: 1, name: "Harrier" }),
     ).toBeVisible();
-    const band = await screen.findByText("Photo not saved");
-    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
-      "Garment saved, photo didn't. Try again?",
-    );
-    await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "Garment saved, photo didn't. Try again?",
-      );
-    });
-    expect(onSaved).not.toHaveBeenCalled();
-    expect(save).toHaveBeenCalledTimes(1);
-    // The well is let go of: the held photo shows again, not a busy well.
-    expect(well()).toHaveAttribute("data-state", "filled");
-
-    // Another file is the fix, and picking one clears the mark.
-    await user.upload(fileInput(), png("smaller.png"));
-    expect(screen.queryByText("Photo must be 10 MB or smaller.")).toBeNull();
   });
 
-  it("retries only the photo, against the saved garment, and then moves on", async () => {
+  it("offers Try again for a dropped connection, and it re-sends the same file", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
     const upload = vi
@@ -326,12 +354,12 @@ describe("GarmentForm: a picked photo", () => {
       .mockResolvedValueOnce({ ok: true });
     const { onSaved, save } = renderForm({ upload });
 
-    await user.upload(fileInput(), png());
+    await user.upload(fileInput(), png("kit.png"));
     await user.click(screen.getByRole("button", { name: "Save" }));
-    await screen.findByText("Photo not saved");
-    // A dropped connection is not the file's fault: the well stays clean.
-    expect(well()).not.toHaveAttribute("aria-invalid");
-    expect(fileInput()).not.toHaveAttribute("aria-invalid");
+    const band = await screen.findByText("Photo not added");
+    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
+      "Your connection dropped.",
+    );
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
@@ -340,47 +368,51 @@ describe("GarmentForm: a picked photo", () => {
     });
     expect(save).toHaveBeenCalledTimes(1);
     expect(upload).toHaveBeenCalledTimes(2);
-    expect(upload.mock.calls[1]?.[0].data.get("itemId")).toBe("01SAVED");
-    expect(screen.queryByText("Photo not saved")).toBeNull();
+    const retried = upload.mock.calls[1]?.[0].data;
+    expect(retried?.get("itemId")).toBe("01SAVED");
+    expect((retried?.get("photo") as File | null)?.name).toBe("kit.png");
   });
 
-  it("sends the photo once when Save is pressed while Try again is in flight", async () => {
+  it("offers no Try again when our end failed rather than the connection", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
-    const pending = Promise.withResolvers<{ ok: true }>();
+    renderForm({ upload: () => Promise.reject(new Error("R2 down")) });
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const band = await screen.findByText("Photo not added");
+    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
+      "Our end failed. Nothing changed.",
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("sends another photo straight to the saved garment, and moves on", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
     const upload = vi
       .fn<Upload>()
       .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
-      .mockReturnValueOnce(pending.promise)
-      .mockResolvedValue({ ok: true });
+      .mockResolvedValueOnce({ ok: true });
     const { onSaved, save } = renderForm({ upload });
 
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
-    await user.click(await screen.findByRole("button", { name: "Try again" }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => {
-      expect(save).toHaveBeenCalledTimes(2);
-    });
-    // Past the form's announce-then-move grace, so the second save has
-    // reached the photo step — where the guard turns it away.
-    await act(async () => {
-      await new Promise((resolve) => {
-        globalThis.setTimeout(resolve, 200);
-      });
-    });
-    expect(upload).toHaveBeenCalledTimes(2);
+    await screen.findByText("Photo not added");
 
-    await act(async () => {
-      pending.resolve({ ok: true });
-      await pending.promise;
-    });
+    await user.upload(screen.getByLabelText("Pick another"), png("other.png"));
+
     await waitFor(() => {
-      expect(onSaved).toHaveBeenCalledTimes(1);
+      expect(onSaved).toHaveBeenCalledWith({ id: "01SAVED" });
     });
+    expect(save).toHaveBeenCalledTimes(1);
+    const sent = upload.mock.calls[1]?.[0].data;
+    expect(sent?.get("itemId")).toBe("01SAVED");
+    expect((sent?.get("photo") as File | null)?.name).toBe("other.png");
   });
 
-  it("clears the band when a later attempt succeeds", async () => {
+  it("takes a photo dropped on the saved garment's well the same way", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
     const upload = vi
@@ -391,84 +423,53 @@ describe("GarmentForm: a picked photo", () => {
 
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
-    await screen.findByText("Photo not saved");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(onSaved).toHaveBeenCalled();
-    });
-    expect(screen.queryByText("Photo not saved")).toBeNull();
-    expect(screen.queryByText("Photo file is empty.")).toBeNull();
-  });
-
-  it("updates the row it already made when the runner fixes a field and resubmits", async () => {
-    // The create succeeded and the photo was refused. Resending the create
-    // returns the first row unchanged (idempotent on the form's key), so
-    // the edit would be dropped while the form said "Added".
-    const user = userEvent.setup();
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
-    const upload = vi
-      .fn<Upload>()
-      .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
-      .mockResolvedValueOnce({ ok: true });
-    const updateSaved = vi.fn<NonNullable<GarmentFormProps["updateSaved"]>>(
-      (itemId) => Promise.resolve({ id: itemId }),
-    );
-    const { save, onSaved } = renderForm({ upload }, { updateSaved });
-
-    await user.upload(fileInput(), png());
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    await screen.findByText("Photo file is empty.");
-
-    await user.clear(screen.getByLabelText(/Model \/ name/));
-    await user.type(screen.getByLabelText(/Model \/ name/), "Harrier II");
-    await user.upload(fileInput(), png("other.png"));
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo not added");
+    await user.upload(fileInput(), png("again.png"));
 
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledWith({ id: "01SAVED" });
     });
-    expect(save).toHaveBeenCalledTimes(1);
-    expect(updateSaved).toHaveBeenCalledWith(
-      "01SAVED",
-      expect.objectContaining({ name: "Harrier II" }),
-    );
-    expect(upload.mock.calls[1]?.[0].data.get("itemId")).toBe("01SAVED");
+    expect(upload).toHaveBeenCalledTimes(2);
   });
 
-  it("resaves through save when there is no update to use — the edit form", async () => {
+  it("keeps the band when the next photo is refused too, with its reason", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
     const upload = vi
       .fn<Upload>()
       .mockResolvedValueOnce({ ok: false, error: "Photo file is empty." })
-      .mockResolvedValueOnce({ ok: true });
-    const { save, onSaved } = renderForm({ upload });
+      .mockResolvedValueOnce({
+        ok: false,
+        error: "Photo must be 10 MB or smaller.",
+      });
+    const { onSaved } = renderForm({ upload });
 
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
-    await screen.findByText("Photo file is empty.");
-    await user.upload(fileInput(), png("other.png"));
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo not added");
+    await user.upload(screen.getByLabelText("Pick another"), png("big.png"));
 
-    await waitFor(() => {
-      expect(onSaved).toHaveBeenCalled();
-    });
-    expect(save).toHaveBeenCalledTimes(2);
+    expect(
+      await screen.findByText("Photo must be 10 MB or smaller."),
+    ).toBeVisible();
+    expect(screen.queryByText("Photo file is empty.")).toBeNull();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
-  it("creates through save the first time, even when it could update", async () => {
+  it("goes to the garment on Done, with its photo still owed", async () => {
     const user = userEvent.setup();
-    const updateSaved = vi.fn<NonNullable<GarmentFormProps["updateSaved"]>>();
-    const { save, onSaved } = renderForm({}, { updateSaved });
-
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(onSaved).toHaveBeenCalled();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+    const { onSaved } = renderForm({
+      upload: () =>
+        Promise.resolve({ ok: false, error: "Photo file is empty." }),
     });
-    expect(save).toHaveBeenCalledTimes(1);
-    expect(updateSaved).not.toHaveBeenCalled();
+
+    await user.upload(fileInput(), png());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Photo not added");
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(onSaved).toHaveBeenCalledExactlyOnceWith({ id: "01SAVED" });
   });
 
   it("drops a held photo on Remove, and lets its preview go", async () => {
