@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { isValidElement } from "react";
@@ -813,6 +813,15 @@ describe("photoBlurStep", () => {
   });
 });
 
+/**
+Which ninths of the photo the overlay marks as the focused cell's.
+*/
+function focusedNinths(): (string | undefined)[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>("[data-ninth][data-focused]"),
+  ].map((ninth) => ninth.dataset.ninth);
+}
+
 describe("the keyboard path (D-84(b))", () => {
   it("offers nine buttons named by position, once the photo has decoded", async () => {
     const { pipeline } = fakePipeline();
@@ -824,11 +833,11 @@ describe("the keyboard path (D-84(b))", () => {
         storage={emptyStorage()}
       />,
     );
-    const group = await screen.findByRole("group", {
-      name: "Blur part of the photo",
-    });
+    const group = await screen.findByRole("group", { name: "Blur by area" });
     expect(
-      [...group.querySelectorAll("button")].map((b) => b.textContent),
+      within(group)
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label")),
     ).toStrictEqual([
       "Blur top-left",
       "Blur top",
@@ -856,6 +865,8 @@ describe("the keyboard path (D-84(b))", () => {
     );
     const cell = await screen.findByRole("button", { name: "Blur top-left" });
     expect(cell).toHaveAttribute("aria-pressed", "false");
+    // Unpressed, the cell shows nothing: its name says where it is.
+    expect(cell.querySelector("svg")).toBeNull();
 
     cell.focus();
     await user.keyboard("{Enter}");
@@ -872,6 +883,8 @@ describe("the keyboard path (D-84(b))", () => {
       ]);
     });
     expect(cell).toHaveAttribute("aria-pressed", "true");
+    // Pressed is ink with the pack's check (round 27 #27).
+    expect(cell.querySelector("path")).toHaveAttribute("d", "M4 13l5 5L20 6");
     // Digits, always (round 26 #18).
     expect(
       screen.getByText("You blurred 1 spot. Tap one to undo."),
@@ -882,6 +895,40 @@ describe("the keyboard path (D-84(b))", () => {
       expect(painted.at(-1)).toStrictEqual([]);
     });
     expect(cell).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("outlines the focused cell's ninth of the photo, and only while it has focus", async () => {
+    const user = userEvent.setup();
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await screen.findByRole("group", { name: "Blur by area" });
+    // Nine, laid over the canvas, and nothing marked before any focus.
+    expect(document.querySelectorAll("[data-ninth]")).toHaveLength(9);
+    expect(focusedNinths()).toStrictEqual([]);
+    const overlay = document.querySelector("[data-ninth]")?.parentElement;
+    expect(overlay).toHaveAttribute("aria-hidden", "true");
+    expect(overlay?.parentElement?.querySelector("canvas")).not.toBeNull();
+
+    screen.getByRole("button", { name: "Blur bottom-right" }).focus();
+    await waitFor(() => {
+      expect(focusedNinths()).toStrictEqual(["bottom-right"]);
+    });
+    await user.tab({ shift: true });
+    await waitFor(() => {
+      expect(focusedNinths()).toStrictEqual(["bottom"]);
+    });
+    await user.tab();
+    await user.tab();
+    await waitFor(() => {
+      expect(focusedNinths()).toStrictEqual([]);
+    });
   });
 
   it("is not there with blur off", async () => {
@@ -949,10 +996,12 @@ describe("with blur off from the start (SAF-2)", () => {
     );
     expect(await screen.findByText("Photo not added")).toBeInTheDocument();
     expect(
-      screen.getByText("This photo couldn't be prepared for upload."),
+      screen.getByText(
+        "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
+      ),
     ).toBeInTheDocument();
     expect(announce).toHaveBeenCalledExactlyOnceWith(
-      "This photo couldn't be prepared for upload.",
+      "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
     );
     expect(toFile).toHaveBeenCalledTimes(1);
     expect(onReady).not.toHaveBeenCalled();
