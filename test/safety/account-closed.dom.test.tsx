@@ -51,17 +51,20 @@ describe("D4 · the notice", () => {
     const link = screen.getByRole("link", { name: APPEAL_ADDRESS });
     expect(link.getAttribute("href")).toBe("mailto:desk@dialed.run");
     expect(screen.queryByRole("button")).toBeNull();
-    expect(
-      screen.getByText(
-        /A person reads every message and answers within a week\./,
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(/A person reads every message\./)).toBeTruthy();
     // The word before the link and the address itself are separate text
     // nodes either side of the `<a>`, so a missing space between them reads
     // fine as two `getByText` matches and wrong as continuous prose.
     expect(link.parentElement?.textContent).toBe(
-      `If you think this is wrong, write to ${APPEAL_ADDRESS}. A person reads every message and answers within a week.`,
+      `If you think this is wrong, write to ${APPEAL_ADDRESS}. A person reads every message.`,
     );
+  });
+
+  it("promises no time to an answer (D-73)", () => {
+    render(<AccountClosed reason={reason} closedAt={closedAt} />);
+    const appeal = screen.getByRole("link", { name: APPEAL_ADDRESS })
+      .parentElement?.textContent;
+    expect(appeal).not.toMatch(/within|week|\bdays?\b/u);
   });
 
   it("draws the plain lockup, with no pink brackets", () => {

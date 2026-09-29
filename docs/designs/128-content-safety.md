@@ -141,15 +141,23 @@ two): "Delete the {name}? Retire it instead.", "It's on {n} runs. …", the
 `IF YOU DELETE IT` rows, pink **Retire it**, hairline **Delete it and its
 record**, Cancel (focused, as Keep it is). Retire it runs the existing
 retire; Delete runs the existing `deleteItem` with no second confirm, lands
-on C, and C says "{name} deleted." (a one-shot `deleted` search value the
-grid reads into its status region). Failure keeps the sheet open under the
+on C, and C says "{name} deleted." (the name rides the navigation as
+history state, `deletedGarment`, which the grid reads into its status
+region — not a search value, which a crafted link could fill with any
+sentence: PR #129 review). Failure keeps the sheet open under the
 `Not deleted` band. **"{b} bands"** is the number of 5 °C bands the piece
 has a verdicted run in — the unit A3's band record uses — and it needs the
 cross-database walk feed already owns (`observationsForEntries`,
 `judgedFeelsLikeC`). Closet may not import feed (the arrow is feed →
 closet), so the count is a new feed export, `garmentBandCount`, in a new
 file (`feed/garment-bands.ts`) with a server function beside feed's
-others, and the garment route passes it down. A piece with no runs keeps
+others, and the garment route passes the function down. **The sheet asks
+for it when it opens, never the page's loader** (PR #129 review, law 5):
+the count walks every verdicted run and then the weather, so with the page
+it cost every view and a weather failure failed the page. A failed count
+is `undefined` and reported (`garmentBandCountOrNone`); the band row is
+left out while the count is on its way or missing. Retire it and Delete
+share one in-flight guard (`aria-disabled`, never `disabled`). A piece with no runs keeps
 round 22's plain confirm. **Retire, don't delete** is honoured by the
 sheet's shape: retiring is the primary, and deleting keeps every entry and
 verdict (the owner's task-122 ruling that delete stays available).
@@ -160,14 +168,19 @@ not, F stops being a form: the fields go, the kicker reads
 is empty, and a §4a band under it says `PHOTO NOT ADDED` · "Garment saved,
 photo didn't. Try again?" plus the reason. The reason is the server's
 refusal sentence for a type or size refusal (`{ ok: false }`), and the
-cause line (`classifyFailure`) for a throw. **Try again** shows only when
+control pattern's cause line (`causeLine`: "Our end failed.", "Your
+connection dropped.") for a throw — not the form's, whose "Nothing
+changed." contradicted the garment that saved (PR #129 review; exporting
+`causeLine` is the one `ui/` change, additive). **Try again** shows only when
 `classifyFailure` says `network`, and re-sends the held file; **Pick
 another** is always there (a file input, as Replace is) and sends the new
 photo through W3's step straight to the saved row. The action becomes
 **Done**, to Y. A photo that lands from this state goes to Y too. The band
 is composed in closet from `Mono` and the band's classes: `ui`'s
 `FailureBand` has one button and no reason line, and `ui/` is not ours to
-change (named in the PR).
+change (named in the PR). On Edit, a failed photo _removal_ is not this
+state — there is no photo to add — but the control failure band under the
+well, "Photo kept", as on Y.
 
 **SAF-18 · F at the desk.** `GarmentForm` takes the runner's closet as
 `nearby` and, when given it (the add form only), renders inside
@@ -205,7 +218,10 @@ is not ours). `safety/quarantine.ts · purgeExpiredQuarantine`:
 1. Read up to 50 rows with `retain_until <= now`, oldest first
    (`quarantined_content_retain`).
 2. **Claim** each by compare-and-swap on the `retain_until` it read,
-   moving it a day on (`RETURNING`), in one batch: an overlapping run read
+   moving it a twelve-hour lease on (`RETURNING`), in one batch — shorter
+   than the daily interval, because `now` is read partway into the digest
+   and a full day taken late would skip the next firing (PR #129 review).
+   An overlapping run read
    the same value, finds it moved, and claims nothing (law 2). Retention
    is only ever lengthened, so no evidence goes early.
 3. **Work** each claimed row: delete its copies from R2 — the
