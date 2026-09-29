@@ -391,9 +391,13 @@ describe("GarmentForm: a picked photo", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     const band = await screen.findByText("Photo not added");
-    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
-      "Our end failed. Nothing changed.",
+    const refused = band.closest("[data-part='failure-band']");
+    // The cause, and only the cause: "Nothing changed." under "Garment
+    // saved, photo didn't." would contradict the garment that saved.
+    expect(refused).toHaveTextContent(
+      "Photo not addedGarment saved, photo didn't. Try again?Our end failed.Pick another",
     );
+    expect(refused).not.toHaveTextContent("Nothing changed");
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     // The caught-error path announces the same sentence the band shows,
     // through the screen's one status region — not just the visible band.
@@ -544,6 +548,44 @@ describe("GarmentForm: editing a garment that has a photo", () => {
     });
     expect(calls).toStrictEqual(["save", "remove"]);
     expect(removePhoto).toHaveBeenCalledWith({ data: { itemId: "01SAVED" } });
+  });
+
+  it("says the photo was kept, under the well, when removing it fails", async () => {
+    const user = userEvent.setup();
+    const remove = vi
+      .fn<RemovePhoto>()
+      .mockRejectedValueOnce(new Error("R2 down"))
+      .mockResolvedValueOnce(undefined);
+    const { onSaved, save } = renderForm({
+      url: "/closet/photo/01ITEM/card",
+      remove,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    // Not round 26 #4's state: there is no photo to add and nothing to
+    // pick, so the fields stay and the control's band says what is true.
+    const band = await screen.findByText("Photo kept");
+    expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
+      "Photo keptOur end failed.",
+    );
+    expect(screen.queryByText("Photo not added")).toBeNull();
+    expect(screen.queryByText("Pick another")).toBeNull();
+    expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Photo kept. Our end failed.",
+    );
+    expect(onSaved).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith({ id: "01SAVED" });
+    });
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect(remove).toHaveBeenLastCalledWith({ data: { itemId: "01SAVED" } });
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the stored photo when nothing was changed", async () => {

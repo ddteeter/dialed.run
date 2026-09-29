@@ -41,7 +41,7 @@ export { TabBar } from "./TabBar";
 export { TABS, tabToLight } from "./tabs";
 export { Turnstile } from "./Turnstile";
 export { classifyFailure, useFormSubmit } from "./use-form-submit";
-export { useControlAction } from "./use-control-action";
+export { causeLine, useControlAction } from "./use-control-action";
 export type { ControlAction } from "./use-control-action";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export type { ControlFailure } from "./form";

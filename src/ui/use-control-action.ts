@@ -49,8 +49,12 @@ export interface ControlAction<TArgs extends unknown[]> {
  * reads "Our end failed. Nothing changed."; a control's kicker already says
  * what did not change, so its sentence stops at the cause (§4a: *"Our end
  * failed." in place of the connection line*).
+ *
+ * Exported for a band that says what did not change in its own words and
+ * needs only the cause under them — closet's `PHOTO NOT ADDED`, where
+ * "Nothing changed" would contradict the garment that did save.
  */
-function causeLine(error: unknown): string {
+export function causeLine(error: unknown): string {
   const failure = classifyFailure(error);
   return failure.kind === "server" ? "Our end failed." : failure.message;
 }

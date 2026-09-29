@@ -25,9 +25,11 @@ import {
 import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
+  causeLine,
   ChoiceField,
   ChoiceList,
   classifyFailure,
+  ControlFailureBand,
   DeskSplit,
   FileWell,
   FormErrorSummary,
@@ -38,6 +40,7 @@ import {
   SubmitButton,
   TextField,
   ToggleField,
+  useControlAction,
   useFormSubmit,
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
@@ -361,39 +364,48 @@ export function GarmentForm({
   });
 
   /**
-   * The photo's write, after the row it belongs to exists — the add form
-   * has no id before then. Any failure turns the screen into round 26 #4's
-   * saved state, because the garment is saved and only the photo is owed:
-   * a refusal carries the server's reason and offers another file, a
-   * throw carries its cause and, if it was the connection, Try again.
+   * Edit's Remove, once the row is saved. A removal that fails is not
+   * round 26 #4's state — there is no photo to add and nothing to pick —
+   * so it is the control failure band under the well, in the words Y's
+   * own Remove uses ("Photo kept"), with the fields left as they are.
+   * Try again removes it and moves on; so does saving again.
+   */
+  const photoRemoval = useControlAction({
+    action: async (itemId: string) => {
+      await photo.remove({ data: { itemId } });
+    },
+    onSuccess: async (itemId) => {
+      await onSaved({ id: itemId });
+    },
+    kicker: "Photo kept",
+  });
+
+  /**
+   * The upload, after the row it belongs to exists — the add form has no
+   * id before then. Any failure turns the screen into round 26 #4's saved
+   * state, because the garment is saved and only the photo is owed: a
+   * refusal carries the server's reason and offers another file, a throw
+   * carries its cause and, if it was the connection, Try again. The cause
+   * is the control's (`causeLine`), not the form's: the form's server line
+   * ends "Nothing changed.", and the garment did change.
    * Returns whether the photo is now as the runner left it.
    */
-  async function didWritePhoto(
-    itemId: string,
-    file: File | undefined,
-  ): Promise<boolean> {
+  async function didUploadPhoto(itemId: string, file: File): Promise<boolean> {
     setPhotoPending(true);
     try {
-      if (file !== undefined) {
-        const data = new FormData();
-        data.set("itemId", itemId);
-        data.set("photo", file);
-        const result = await photo.upload({ data });
-        if (!result.ok) {
-          setRefused({ itemId, reason: result.error, canRetry: false });
-          form.announce(PHOTO_NOT_SAVED);
-          return false;
-        }
-      } else if (removed && photo.url !== undefined) {
-        await photo.remove({ data: { itemId } });
-      }
-      return true;
+      const data = new FormData();
+      data.set("itemId", itemId);
+      data.set("photo", file);
+      const result = await photo.upload({ data });
+      if (result.ok) return true;
+      setRefused({ itemId, reason: result.error, canRetry: false });
+      form.announce(PHOTO_NOT_SAVED);
+      return false;
     } catch (error) {
-      const failure = classifyFailure(error);
       setRefused({
         itemId,
-        reason: failure.message,
-        canRetry: failure.kind === "network",
+        reason: causeLine(error),
+        canRetry: classifyFailure(error).kind === "network",
       });
       form.announce(PHOTO_NOT_SAVED);
       return false;
@@ -405,16 +417,22 @@ export function GarmentForm({
   /**
    * Write the photo, and move on only if it landed. One at a time: the
    * guard is a ref because two presses inside one render would both read
-   * `photoPending` as false.
+   * `photoPending` as false. A removal is its own control, with its own
+   * guard.
    */
   async function finishWithPhoto(
     itemId: string,
     file: File | undefined,
   ): Promise<void> {
+    if (file === undefined) {
+      if (removed && photo.url !== undefined) await photoRemoval.run(itemId);
+      else await onSaved({ id: itemId });
+      return;
+    }
     if (photoInFlight.current) return;
     photoInFlight.current = true;
     try {
-      if (await didWritePhoto(itemId, file)) await onSaved({ id: itemId });
+      if (await didUploadPhoto(itemId, file)) await onSaved({ id: itemId });
     } finally {
       photoInFlight.current = false;
     }
@@ -720,7 +738,7 @@ export function GarmentForm({
       <FileWell
         part="photo-well"
         copy={GARMENT_PHOTO_COPY}
-        pending={pick.stepping || (photoPending && held !== undefined)}
+        pending={pick.stepping || photoPending}
         accept={photoAcceptAttribute}
         preview={
           preview === undefined ? undefined : { src: preview, alt: values.name }
@@ -732,6 +750,11 @@ export function GarmentForm({
         onFiles={pickFrom}
       />
       {pick.step(form.announce)}
+      <ControlFailureBand
+        failure={photoRemoval.failure}
+        onRetry={photoRemoval.retry}
+        retryRef={photoRemoval.retryRef}
+      />
 
       <FormFailureBand
         failure={form.failure}
@@ -750,7 +773,7 @@ export function GarmentForm({
     <>
       {/* The one status region, outside both views: the sentence that
           says the photo did not go up is written as the fields leave. */}
-      <FormStatus>{form.status}</FormStatus>
+      <FormStatus>{photoRemoval.status || form.status}</FormStatus>
       {back}
       <FormHeading
         heading={heading}
