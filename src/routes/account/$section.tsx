@@ -108,7 +108,7 @@ function AccountSectionRoute() {
                   hasPassword={page.account.hasPassword}
                   request={requestDeletionFn}
                   reauth={<GoogleButton google={google} />}
-                  isReturningFromGoogle={search.deleting}
+                  isReturningFromGoogle={search.deleting === true}
                   onScheduled={async (purgeAfter) => {
                     await router.invalidate();
                     await navigate({

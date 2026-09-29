@@ -194,10 +194,15 @@ export const DELETE_REAUTH_RETURN = "/account/sign-in?deleting=1";
  * that sign-in. Anything else is ignored.
  */
 export const accountSectionSearch = z.object({
+  // `true` or absent, never `false`: the router writes a parsed search
+  // back into the URL, and a `deleting=false` there would read as present
+  // on the next load and open the sheet on every visit.
   deleting: z
     .unknown()
     .optional()
-    .transform((value) => value !== undefined),
+    .transform((value) =>
+      value === 1 || value === "1" ? (true as const) : undefined,
+    ),
 });
 
 /**

@@ -186,10 +186,18 @@ describe("leavingSearch and homeIfNothingToSay", () => {
 
 describe("accountSectionSearch and the way back from Google (ACC-9)", () => {
   it("is deleting only on the way back", () => {
-    expect(accountSectionSearch.parse({})).toStrictEqual({ deleting: false });
+    expect(accountSectionSearch.parse({}).deleting).toBeUndefined();
     expect(accountSectionSearch.parse({ deleting: 1 })).toStrictEqual({
       deleting: true,
     });
+    expect(accountSectionSearch.parse({ deleting: "1" })).toStrictEqual({
+      deleting: true,
+    });
+    // Whatever else lands in the URL — the router's own write-back of a
+    // `false` included — is not the way back from Google.
+    for (const deleting of [false, "false", 0, "0", "yes"]) {
+      expect(accountSectionSearch.parse({ deleting }).deleting).toBeUndefined();
+    }
     expect(DELETE_REAUTH_RETURN).toBe("/account/sign-in?deleting=1");
   });
 });
