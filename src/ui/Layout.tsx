@@ -1,4 +1,4 @@
-import { useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { TabBar } from "./TabBar";
@@ -106,6 +106,31 @@ export function SignedOutLayout({
     <div className="flex min-h-dvh flex-col bg-ground text-ink">
       <LandingBar action={action} />
       <div className="mx-auto w-full max-w-page flex-1">{children}</div>
+      <LegalFooter />
     </div>
+  );
+}
+
+/**
+ * The signed-out footer's legal links (task 126, ACC-13; D-52; round 27
+ * #12: "Footer order everywhere: Privacy · Terms · Copyright"). Only the
+ * texts that exist are linked: Terms and Copyright join, in that order,
+ * when the owner's texts do.
+ */
+function LegalFooter() {
+  return (
+    <footer
+      data-part="legal-footer"
+      className="border-t border-hairline px-6 py-4 text-small text-muted"
+    >
+      <p className="mx-auto m-0 w-full max-w-page">
+        <Link
+          to="/privacy"
+          className="target text-muted underline underline-offset-4"
+        >
+          Privacy
+        </Link>
+      </p>
+    </footer>
   );
 }

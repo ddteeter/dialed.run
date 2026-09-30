@@ -1,7 +1,8 @@
 /**
  * Covers: Settings › Account (ACC-7, ACC-8), Change password, Settings ›
  * Notifications (ACC-11), the unsubscribe link and its landing (round 26
- * #19), and Sign out everywhere — one journey, one video.
+ * #19), Sign out everywhere, Export your data (ACC-10), and Delete account
+ * with Keep inside the week (ACC-9; round 27 #14) — one journey, one video.
  *
  * Exactly one test() per demo spec (see e2e/auth/auth.demo.spec.ts).
  */
@@ -22,10 +23,10 @@ Not a secret: a throwaway account on the local dev database.
 */
 const PASSPHRASE = ["an", "account", "demo", "passphrase"].join("-");
 
-test("account settings -> change password -> reminder emails off and on -> sign out everywhere", async ({
+test("account settings -> change password -> reminder emails off and on -> sign out everywhere -> export -> delete and keep", async ({
   page,
 }, testInfo) => {
-  testInfo.setTimeout(150_000);
+  testInfo.setTimeout(420_000);
   const email = `account-${String(Date.now())}@example.com`;
 
   // A confirmed runner with a handle, the way the auth demo makes one.
@@ -119,4 +120,75 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
   await page.goto("/call");
   await expect(page).toHaveURL(/\/auth\/login/u, { timeout: 15_000 });
+
+  // Back in, with the password changed above.
+  await logIn(page, email, `${PASSPHRASE}-2`);
+
+  await scene(page, "Export your data: one file, downloaded (ACC-10)");
+  await page.goto("/account/sign-in");
+  await expect(page.getByRole("heading", { name: "Account" })).toBeVisible({
+    timeout: 15_000,
+  });
+  await hydrated(page);
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: /^Export your data/u }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(
+    /^dialed-run-export-\d{4}-\d{2}-\d{2}\.json$/u,
+  );
+
+  await scene(page, "Delete account: the password once more, then 7 days");
+  await page.getByRole("button", { name: /^Delete account/u }).click();
+  const sheet = page.getByRole("dialog", { name: "Delete your account?" });
+  await expect(sheet).toBeVisible();
+  await sheet.getByLabel("Current password").fill(`${PASSPHRASE}-2`);
+  await sheet.getByRole("button", { name: "Delete my account" }).click();
+  await expect(
+    page.getByRole("heading", { name: /^Your account goes on /u }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Deletion scheduled")).toBeVisible();
+  // Signed out on every device.
+  await page.goto("/call");
+  await expect(page).toHaveURL(/\/auth\/login/u, { timeout: 15_000 });
+
+  await scene(page, "Logging in inside the week asks: keep it?");
+  await logIn(page, email, `${PASSPHRASE}-2`);
+  await expect(
+    page.getByRole("heading", { name: "Keep your account?" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
+  // Every page asks first; nothing is cancelled silently.
+  await page.goto("/onboarding/settings");
+  await expect(
+    page.getByRole("heading", { name: "Keep your account?" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
+  // Keep brings everything back but Strava, and says so.
+  await expect(
+    page.getByText(
+      "Strava is disconnected, and stays that way until you connect it again.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Keep my account" }).click();
+  // Kept: back into the app (this runner lands on onboarding, which the
+  // demo skipped), and never asked again.
+  await expect(page).not.toHaveURL(/\/account\/leaving/u, {
+    timeout: 15_000,
+  });
+  await page.goto("/onboarding/settings");
+  await expect(page.getByRole("link", { name: /^Account/u })).toBeVisible({
+    timeout: 15_000,
+  });
 });
+
+async function logIn(page: Page, email: string, password: string) {
+  await page.goto("/auth/login");
+  await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible({
+    timeout: 15_000,
+  });
+  await hydrated(page);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).not.toHaveURL(/\/auth\/login/u, { timeout: 15_000 });
+}

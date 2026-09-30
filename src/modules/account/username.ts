@@ -21,8 +21,13 @@ import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { userProfiles, usernameHistory } from "../../db/schema-core";
+import {
+  accountDeletions,
+  userProfiles,
+  usernameHistory,
+} from "../../db/schema-core";
 import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
+import { hasRowWhere } from "../../lib/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/profanity";
 import type { ScreenHandle } from "./handle-screen";
@@ -433,11 +438,16 @@ export async function forceRename(
  * - `changed` — a handle someone gave up: *"This runner changed their
  *   name."*, and never a redirect, because a redirect would link the old
  *   handle to the new one (round 26 #7);
+ * - `gone` — a handle whose runner's account was deleted (ACC-9): *"This
+ *   runner isn't here."* (decision D-82), which says neither that, nor a rename,
+ *   nor a removal. Known by the profile being gone: the purge keeps the
+ *   handle in the history and deletes the profile;
  * - `undefined` — nobody ever held it.
  */
 export type HandleLookup =
   | { readonly kind: "current"; readonly userId: string }
-  | { readonly kind: "changed" };
+  | { readonly kind: "changed" }
+  | { readonly kind: "gone" };
 
 export async function lookUpHandle(
   db: Db,
@@ -446,13 +456,19 @@ export async function lookUpHandle(
   const parsed = usernameSchema.safeParse(typed);
   if (!parsed.success) return undefined;
   const handle = parsed.data;
-  const [current, retired] = await db.batch([
+  const [current, [retired]] = await db.batch([
     holdersNow(db, sameHandle(handle)),
-    holdersBefore(db, eq(usernameHistory.username, handle)),
+    db
+      .select({ profile: userProfiles.userId })
+      .from(usernameHistory)
+      .leftJoin(userProfiles, eq(userProfiles.userId, usernameHistory.userId))
+      .where(eq(usernameHistory.username, handle))
+      .limit(1),
   ]);
   const holder = current[0];
   if (holder !== undefined) return { kind: "current", userId: holder.userId };
-  return retired.length > 0 ? { kind: "changed" } : undefined;
+  if (retired === undefined) return undefined;
+  return retired.profile === null ? { kind: "gone" } : { kind: "changed" };
 }
 
 /**
@@ -474,12 +490,18 @@ export async function usernameOf(
  * only thing they can see, and a redirect to a screen that needs a session
  * would be a loop.
  *
- * Three answers rather than a boolean because the browser remembers only
- * the last (`route-decisions`' `gateOnHandle`): a handle, once claimed, is
- * never cleared, while "signed out" and "no handle yet" both change the
- * moment the runner signs in or picks one.
+ * Several answers rather than a boolean because the browser remembers only
+ * "has a handle" (`route-decisions`' `gateOnHandle`): a handle, once
+ * claimed, is never cleared, while the others change the moment the runner
+ * signs in, picks one, or keeps their account.
+ *
+ * **"leaving"** (ACC-9; round 27 #14) is a runner who asked to delete
+ * their account and signed in again inside the week: every page sends them
+ * to "Keep your account?" first, since logging in never cancels a
+ * deletion silently. It outranks everything else about them.
  */
-export type HandleGate = "signed-out" | "needs-handle" | "has-handle";
+export type HandleGate =
+  "signed-out" | "needs-handle" | "has-handle" | "leaving";
 
 /**
  * The gate's answer, with whom it is about: the browser keys what it
@@ -498,6 +520,18 @@ export async function handleGate(
   userId: string | undefined,
 ): Promise<HandleGateAnswer> {
   if (userId === undefined) return { gate: "signed-out", userId };
-  const hasHandle = (await usernameOf(db, userId)) !== undefined;
-  return { gate: hasHandle ? "has-handle" : "needs-handle", userId };
+  const [isLeaving, username] = await Promise.all([
+    hasRowWhere(
+      db,
+      accountDeletions,
+      accountDeletions.userId,
+      eq(accountDeletions.userId, userId),
+    ),
+    usernameOf(db, userId),
+  ]);
+  if (isLeaving) return { gate: "leaving", userId };
+  return {
+    gate: username === undefined ? "needs-handle" : "has-handle",
+    userId,
+  };
 }

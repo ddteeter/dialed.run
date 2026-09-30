@@ -14,6 +14,7 @@ import { columnWhere } from "../../lib/keyed-read";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
+import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import {
   captureException,
@@ -54,10 +55,13 @@ export interface ScheduledOutcome {
  *
  * `reporter` is a parameter so a test can read the check-ins and digest
  * events a firing produced. Production passes nothing and gets Sentry.
+ * `upkeep` is the daily work `ops` cannot import (`DailyUpkeep`), which
+ * the Worker entry hands in.
  */
 export async function handleScheduled(
   controller: ScheduledController,
   reporter: CronReporter = sentryCronReporter,
+  upkeep: DailyUpkeep = {},
 ): Promise<ScheduledOutcome> {
   const db = drizzle(env.DIALED_CORE);
   const cronName = cronNameFor(controller.cron);
@@ -85,7 +89,7 @@ export async function handleScheduled(
     schedule: controller.cron,
   });
   try {
-    const anomalies = await runCron(cronName, reporter);
+    const anomalies = await runCron(cronName, reporter, upkeep);
     checkIn.finish("ok");
     return { cronName, anomalies };
   } catch (error) {
@@ -94,13 +98,35 @@ export async function handleScheduled(
   }
 }
 
+/**
+ * What the daily firing does beyond `ops`'s own checks, handed in by the
+ * Worker entry (`src/server.ts`).
+ *
+ * **Account deletion's purge** (task 126, ACC-9) cannot be imported here:
+ * it lives in `modules/account` and calls feed's delete primitives, and
+ * both of those import `ops` — so `ops` importing them back is a cycle.
+ * It reports what it could not finish into the digest's
+ * `account-deletion` lines (law 6).
+ *
+ * **The digest's email** (OPS-11) is ops' own; it is a field here so a
+ * test can name the operators it goes to.
+ *
+ * Both are optional: a firing handed neither purges nothing and mails
+ * the digest the live way (`oweDigestEmail`'s default).
+ */
+export interface DailyUpkeep {
+  readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
+  readonly digestMail?: DigestMail | undefined;
+}
+
 async function runCron(
   cronName: CronName,
   reporter: CronReporter,
+  upkeep: DailyUpkeep,
 ): Promise<readonly string[]> {
   switch (cronName) {
     case "daily-digest": {
-      return runDailyDigest(reporter);
+      return runDailyDigest(reporter, upkeep);
     }
     case "weather-retry": {
       // docs/tasks/103-weather.md requirement 4/5: the hourly
@@ -485,6 +511,7 @@ export const digestKinds = [
   "outbox",
   "stalled-import",
   "review-queue",
+  "account-deletion",
 ] as const;
 
 export type DigestKind = (typeof digestKinds)[number];
@@ -509,7 +536,10 @@ export function digestReport(
  * Exception-based alerting: checks run, thresholds compare, and ONLY
  * anomalies get surfaced — one Sentry event per kind that found any.
  */
-async function runDailyDigest(reporter: CronReporter): Promise<string[]> {
+async function runDailyDigest(
+  reporter: CronReporter,
+  upkeep: DailyUpkeep,
+): Promise<string[]> {
   const db = drizzle(env.DIALED_CORE);
   // The generic outbox rides the same firing as the Strava one: drain
   // first, so the backlog check counts only what is still owed.
@@ -529,6 +559,9 @@ async function runDailyDigest(reporter: CronReporter): Promise<string[]> {
     },
     "stalled-import": redispatchStalledImports,
     "review-queue": checkReviewQueueDepth,
+    "account-deletion": async (anomalies) => {
+      await upkeep.purgeAccounts?.(anomalies);
+    },
   };
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)
@@ -560,6 +593,9 @@ async function runDailyDigest(reporter: CronReporter): Promise<string[]> {
       quarantineId: failure.id,
     });
   }
+  // D5: the morning email, every day, even when every number is zero
+  // (task 125 · OPS-11, through task 126's email module).
+  await oweDigestEmail(db, upkeep.digestMail);
   return everything;
 }
 

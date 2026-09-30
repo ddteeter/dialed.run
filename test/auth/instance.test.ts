@@ -137,6 +137,12 @@ describe("the app auth instance", () => {
     );
   });
 
+  it("carries the deletion gate, so a runner whose purge has started cannot sign in (task 126)", () => {
+    expect(auth.options.plugins.map((plugin) => plugin.id)).toContain(
+      "deletion-gate",
+    );
+  });
+
   it("has no Google provider without credentials", () => {
     // The test bindings set neither, so this is the degraded path — and
     // asserting it is what stops `googleCredentials` being wired backwards.

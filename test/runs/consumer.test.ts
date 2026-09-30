@@ -6,6 +6,7 @@ import {
   notifications,
   runs,
   stravaConnections,
+  outbox,
   stravaRevocations,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -26,6 +27,7 @@ import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 import { nowSeconds } from "../../src/lib/now";
+import { oweInCore } from "../queue-fakes";
 
 function fakeMessage(body: unknown) {
   let wasAcked = false;
@@ -72,6 +74,19 @@ function fakeBatch(messages: readonly { body: unknown }[]) {
   return { batch, wrapped };
 }
 
+/**
+The outbox's owed emails to one runner, as their payloads.
+*/
+async function owedEmailsTo(userId: string): Promise<unknown[]> {
+  const rows = await coreDb()
+    .select({ payload: outbox.payload })
+    .from(outbox)
+    .where(eq(outbox.kind, "email"));
+  return rows
+    .map((row): unknown => JSON.parse(row.payload))
+    .filter((payload) => JSON.stringify(payload).includes(userId));
+}
+
 function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
   exceptions: { error: unknown; context: Record<string, string> }[];
 } {
@@ -82,6 +97,7 @@ function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
     captureException: (error, context) => {
       exceptions.push({ error, context });
     },
+    owe: oweInCore,
     exceptions,
     ...overrides,
   };
@@ -950,6 +966,17 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
       .from(stravaRevocations)
       .where(eq(stravaRevocations.refreshToken, refreshToken));
     expect(owed).toHaveLength(1);
+    // And the runner is told by email (round 27 #19), owed in the same
+    // batch through the outbox, once per disconnect.
+    expect(await owedEmailsTo(userId)).toStrictEqual([
+      {
+        dedupeKey: `strava_disconnected:${userId}:1516126040`,
+        email: {
+          to: { userId },
+          template: { kind: "strava_disconnected" },
+        },
+      },
+    ]);
   });
 
   it("leaves a connection made after the event alone", async () => {
@@ -1011,6 +1038,7 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
       .where(eq(stravaConnections.athleteId, athleteId));
     expect(left).toStrictEqual([]);
     expect(await revokedRows(userId)).toHaveLength(1);
+    expect(await owedEmailsTo(userId)).toHaveLength(1);
   });
 
   it("is a no-op on redelivery", async () => {
@@ -1023,6 +1051,7 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
 
     expect(wrapped[0]?.wasAcked).toBe(true);
     expect(await revokedRows(userId)).toHaveLength(1);
+    expect(await owedEmailsTo(userId)).toHaveLength(1);
   });
 
   it("writes one row even when two deliveries race past the read", async () => {

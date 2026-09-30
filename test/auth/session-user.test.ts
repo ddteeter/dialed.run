@@ -5,6 +5,7 @@ import { sessionFromRequest } from "../../src/modules/auth/session";
 import {
   optionalUserIdFrom,
   sessionIdFrom,
+  signedInSince,
   userIdOrThrow,
   type SessionWithUser,
 } from "../../src/modules/auth/session-user";
@@ -71,5 +72,23 @@ describe("sessionIdFrom", () => {
       new Request("https://dialed.run/account/verify"),
     );
     expect(sessionIdFrom(nobody)).toBeUndefined();
+  });
+});
+
+describe("signedInSince (ACC-9)", () => {
+  it("says who, and when this session was made, in whole epoch seconds", () => {
+    expect(
+      signedInSince({
+        ...SIGNED_IN,
+        session: { createdAt: new Date(1_760_000_000_999) },
+      }),
+    ).toStrictEqual({ userId: "01JABCDEF", signedInAt: 1_760_000_000 });
+  });
+
+  it("refuses nobody signed in, as requireUserId does", async () => {
+    const nobody = await sessionFromRequest(
+      new Request("https://dialed.run/account/sign-in"),
+    );
+    expect(() => signedInSince(nobody)).toThrow(AuthRequiredError);
   });
 });

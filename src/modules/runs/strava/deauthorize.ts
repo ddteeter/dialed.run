@@ -17,11 +17,15 @@
  * forged one it closes the grant. The daily digest drains it.
  */
 import { and, eq, isNull, lte, or } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import { firstRowWhere } from "../../../lib/keyed-read";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
+import { STRAVA_DISCONNECTED_LINE } from "../../../lib/email";
+import type { OutboxMessage } from "../../../lib/outbox";
+import { emailDebt } from "../../email";
 import { notificationInsert } from "../../notifications";
 import type { CoreDb } from "../core-db";
 
@@ -33,12 +37,20 @@ import type { CoreDb } from "../core-db";
  * connection is no longer working" — nothing else writes it now that the
  * refresh path is gone.
  */
-export const STRAVA_REVOKED_BODY =
-  "Strava says dialed.run was disconnected, so run reminders have stopped.";
+export const STRAVA_REVOKED_BODY = STRAVA_DISCONNECTED_LINE;
+
+/**
+ * An outbox row owed, as a statement for the caller's batch — ops'
+ * `outboxInsert(db, oweOutbox(message))`, handed in by the queue entry:
+ * `ops` imports this module for its consumer, so this module cannot
+ * import `ops`.
+ */
+export type Owe = (message: OutboxMessage) => BatchItem<"sqlite">;
 
 /**
  * Delete the connection for this athlete, owe Strava the revoke, and tell
- * its runner — together.
+ * its runner — together, in the app and by email (round 27 #19's "Email
+ * Strava disconnected", through task 126's interface).
  *
  * **Only a grant the event can be about.** An event older than the
  * connection is about an earlier grant — a redelivery that arrives after
@@ -61,6 +73,7 @@ export async function deauthorizeAthlete(
   db: CoreDb,
   athleteId: string,
   eventTime: number,
+  owe: Owe,
 ): Promise<void> {
   const aboutThisGrant = and(
     eq(stravaConnections.athleteId, athleteId),
@@ -72,6 +85,17 @@ export async function deauthorizeAthlete(
   const connection = await firstRowWhere(db, stravaConnections, aboutThisGrant);
   if (connection === undefined) return;
 
+  // Account mail (D-43), once per disconnect: keyed by the event, as the
+  // notification is, so a redelivery owes the same row.
+  const told = emailDebt(
+    {
+      to: { userId: connection.userId },
+      template: { kind: "strava_disconnected" },
+    },
+    {
+      dedupeKey: `strava_disconnected:${connection.userId}:${String(eventTime)}`,
+    },
+  );
   await db.batch([
     db.delete(stravaConnections).where(aboutThisGrant),
     db.insert(stravaRevocations).values({
@@ -85,8 +109,6 @@ export async function deauthorizeAthlete(
       subjectId: String(eventTime),
       body: STRAVA_REVOKED_BODY,
     }),
+    owe(told),
   ]);
-  // The call site for the "Strava revoked" transactional email (decision
-  // D-43), which lands here, after the batch, once task 126 publishes
-  // `modules/email` (ACC-2). Never the binding directly.
 }

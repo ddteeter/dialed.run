@@ -26,12 +26,25 @@ describe("emailTemplateSchema", () => {
       { kind: "content_removed", subject: "photo", reason: "it's spam" },
       { kind: "content_removed", subject: "entry", reason: "it's spam" },
       { kind: "account_closed", reason: "spam" },
+      { kind: "invite", code: "DIAL-7K2Q" },
+      { kind: "strava_disconnected" },
+      { kind: "deletion_scheduled", day: "Sat, Oct 4" },
+      {
+        kind: "digest",
+        day: "Tue Sep 16",
+        waiting: 4,
+        oldestHours: 3,
+        screenerUnfinished: 1,
+        bansThisWeek: 2,
+      },
     ];
     for (const payload of payloads) {
+      // Parsed back to exactly itself: every field the kind carries is a
+      // field its variant declares, so nothing is stripped on the way.
       expect(
         emailTemplateSchema.safeParse(payload),
         JSON.stringify(payload),
-      ).toMatchObject({ success: true });
+      ).toStrictEqual({ success: true, data: payload });
     }
   });
 

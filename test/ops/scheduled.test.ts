@@ -687,7 +687,40 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "outbox",
       "stalled-import",
       "review-queue",
+      "account-deletion",
     ]);
+  });
+
+  it("runs the purge it is handed and reports what it could not finish (ACC-9)", async () => {
+    const { reporter, events } = recordingReporter();
+    const purged: string[][] = [];
+
+    const outcome = await handleScheduled(DIGEST, reporter, {
+      purgeAccounts: (anomalies) => {
+        purged.push(anomalies);
+        anomalies.push("1 account deletion failed and is retried tomorrow");
+        return Promise.resolve();
+      },
+    });
+
+    expect(purged).toHaveLength(1);
+    expect(outcome.anomalies).toStrictEqual([
+      "1 account deletion failed and is retried tomorrow",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "account-deletion" },
+    ]);
+  });
+
+  it("purges only on the daily firing", async () => {
+    let calls = 0;
+    await handleScheduled(ENRICHMENT_RETRY, undefined, {
+      purgeAccounts: () => {
+        calls += 1;
+        return Promise.resolve();
+      },
+    });
+    expect(calls).toBe(0);
   });
 });
 

@@ -502,7 +502,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       as H's empty-state lead, and nothing else — no avatar, no Follow, no
       report. **The ask:** confirm the page is the sentence alone.
 
-33. **ACC-8 asks for the current password (PR #119 review).** **CLOSED
+34. **ACC-8 asks for the current password (PR #119 review).** **CLOSED
     by round 27 (items 9 and 11): the field is drawn in "U1 Change email",
     a wrong one reads "That's not your current password." (built, for
     Change password too), and reset no longer waits (D-63 stands). The U1
@@ -515,7 +515,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       many tries." plus the send limit's clock (`currentPasswordLimited`
       in `lib/contracts.ts`), placeholder copy. **The ask:** word it.
 
-34. **The unsubscribe landing asks before it unsubscribes (D-64).**
+35. **The unsubscribe landing asks before it unsubscribes (D-64).**
     **CLOSED by round 27 (item 8), and built:** "Stop run reminder
     emails?" with the address masked, one ink Unsubscribe button, the
     `STILL SUBSCRIBED` band, the done state on any later visit, and "Turn
@@ -526,7 +526,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     connected." "Turn them back on" is the inline link grammar in ink:
     the board's `#C21A6B` is not a T1 role.
 
-35. **Task 128 PR 2a's Desk and notice placeholders.** Built from existing
+36. **Task 128 PR 2a's Desk and notice placeholders.** Built from existing
     `ui/` primitives, bracket text and no new glyph; each wants a drawing.
     - **Review queue decisions.** Each row picks a reason from the removal
       list (the sentence the author is sent, round 27 #20) and offers
@@ -550,7 +550,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the board's "See the community rules" has no page yet. The ban email
       names no handle ("We closed your account…") and drops the board's
       "No case number." from its foot; it has no button, as drawn.
-36. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
+37. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
     Round 26 #20 drew Au2's code, Au5, its receipt and D7; these are the
     states it did not draw, each built from existing primitives and copy
     in the register:
@@ -582,7 +582,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       DIAL-XXXX." Ages are mono `5h` / `3d` (the board's `5H`, in the
       contract's lowercase mono).
 
-37. **Task 128 PR 2b's deltas and undesigned surfaces (PR #129), for
+38. **Task 128 PR 2b's deltas and undesigned surfaces (PR #129), for
     design round 28.** Six the PR shipped, and two its review added. The
     first three ship as built by the owner's decision (D-77); each is the
     build's reading of a board against a contract or an existing pattern,
@@ -615,6 +615,65 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       fields stay, and round 23's control failure band sits under the
       well with Y's own Remove kicker, "Photo kept", the cause line and
       Try again. **The ask:** confirm the borrowed band here.
+
+39. **What task 126 PR 2b-2 built beside or without a drawing.** Legal
+    pages, export, deletion and the email hookups, from existing
+    primitives and the register's copy:
+    - **The legal footer** on the signed-out shell reads only "Privacy":
+      Terms and Copyright join (round 27 #12's order) when the owner's
+      texts exist. The links show while `/privacy` is still a 404 (D-81).
+    - **Settings › About, for design round 28** (decision D-80: it stays).
+      U1 draws no About group; the build has one, with one row, "Privacy
+      policy · What we keep, and who sees it" (the sub-line is ours), after
+      Strava and before Log out. The settings conformance spec leaves it
+      out by name until design draws it. **The ask:** draw Settings ›
+      About — its place in U1, its rows (Privacy, and Terms and Copyright
+      when they exist), and their sub-lines.
+    - **Au2's lines** are round 26 #14's privacy line and round 27 #12's
+      age line; round 27's "you agree to the Terms" waits for the terms.
+    - **The reading page** takes round 26 #14's composition with the
+      contract's type (round 27 #5). Two choices of ours: the contents'
+      title is mono `CONTENTS`, and "↑ Contents" is a small muted link at
+      each section's foot. The page draws no "LAST UPDATED" line of its
+      own — the owner's text says its date.
+    - **Export** is a JSON file downloaded at once (the packet's ACC-10),
+      the interim until round 27 #13's emailed ZIP, which the owner has
+      decided ships before launch (D-79, register D-116). The row's
+      sub-line says what the file holds: "Runs, closet, entries and photo
+      links, as one file"; "Get a copy" downloads rather than preparing.
+    - **Delete account's sheet** follows round 27 #14. For an account made
+      with Google, the sheet asks nothing; if the Google sign-in is more
+      than ten minutes old, the sheet treats it as a refused field, as it
+      does a wrong password: the status says "Nothing saved. One field
+      needs a fix.", and "Sign in with Google again to confirm it's you."
+      is the field's hi-viz message above the Google button, which takes
+      focus. The way back reopens the sheet. "Keep my account" pressed
+      after the purge has begun says "Your account is already being
+      deleted." Both pages wear the signed-out panel, with the kicker
+      `DELETION SCHEDULED` in the cold text cut.
+    - **"Keep your account?" says Keep does not restore Strava**: under
+      the drawn line, "Strava is disconnected, and stays that way until
+      you connect it again." in the quiet body cut — built from the
+      Strava email's "Strava is disconnected". The request revoked the
+      grant; nothing reconnects it.
+    - **A deleted account's old `/@handle`** says "This runner isn't
+      here." (decision D-82's words) in the shape of "This runner changed
+      their name.": H's column, the back link, the sentence as H's
+      empty-state lead. Signing in while the purge runs answers log-in's
+      own "wrong email or password".
+    - **The handle is not released** at day 7 (D-56, D-72(6); round 27
+      #14 said it would be).
+    - **The deletion email** is round 27's "Email delete scheduled"; its
+      date is the day the week ends, in UTC.
+    - **The invite email**'s foot is ours: "You asked for an invite.
+      Didn't? Ignore this and nothing happens."
+    - **The Strava disconnected email** opens with 127's neutral line —
+      "Strava says dialed.run was disconnected…" — because the event can
+      be forged; its foot is S1's "Runs you already added stay."
+    - **The digest email** (D5) is sent from `hello@dialed.run`, not the
+      board's `desk@`, and D5's three rows read as three sentences in the
+      one-paragraph template. Its third number is Today's "bans this week",
+      not D5's "since yesterday", so the email and the Desk agree.
 
 ## Answered in round 27 (imported 2026-09-27)
 

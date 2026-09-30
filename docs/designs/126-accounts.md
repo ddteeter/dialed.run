@@ -201,13 +201,13 @@ among them). Force-rename is lane 128's, through the account API (#126).
   public gate.
 - **Where the code is checked: Better Auth's own hooks, not a wrapper
   server function.** A `before` hook on `/sign-up/email` and on
-  `/sign-in/social` *with `requestSignUp`* checks Turnstile then the code
+  `/sign-in/social` _with `requestSignUp`_ checks Turnstile then the code
   (`modules/auth/access-hook.ts`), so both ways in are refused before
   Better Auth does anything — for Google, before the redirect. The code
   and token ride in two headers (`x-invite-code`, `x-turnstile-token`):
   Better Auth's body is its own.
 - **Google's code survives the round trip in Better Auth's OAuth state**,
-  as *server* context (`addOAuthServerContext`, Better Auth 1.7): written
+  as _server_ context (`addOAuthServerContext`, Better Auth 1.7): written
   by the hook only after the code checked out, so it is validated before
   the redirect, carried in the state Better Auth already signs, stores and
   expires, and cannot be supplied by the client. Google is configured with
@@ -218,14 +218,14 @@ among them). Force-rename is lane 128's, through the account API (#126).
   account needs no code, **from either page** (PR #127 review): Au2's
   press cannot know whether the Google address has an account, so a
   Google attempt from Au2 with the field empty is let through (Turnstile
-  still asked), and a *new* account with no code is refused by the create
+  still asked), and a _new_ account with no code is refused by the create
   hook after the round trip, landing back on Au2 as
   `?error=INVITE_MISSING` with the field's own sentence in the band. A
   typed code is still checked before the redirect.
 - **"Consumed at account creation, in the same batch".** Better Auth makes
   the user row, so no batch of ours can hold it. The user create hook
   (`claimInvite`) mints the account's id itself (Better Auth creates with
-  `forceAllowId`) and claims the code against that id *before* the row is
+  `forceAllowId`) and claims the code against that id _before_ the row is
   written, in one batch: one conditional `INSERT … SELECT` that writes
   only if the code is live and has a use left (or this address already
   holds a live, unconfirmed claim on it — a retry), then read it back.
@@ -283,6 +283,237 @@ among them). Force-rename is lane 128's, through the account API (#126).
 Migrations (core): `0037_add_invite_codes_and_access_requests` (three new
 tables, additive), `0038_blank_user_names` (data only) and
 `0039_add_invite_redemption_confirmed_at` (one nullable column, additive).
+
+## PR 2b-2 (legal pages, terms line, export, deletion, email hookups)
+
+Branch `feat/126-accounts-2b2`. ACC-13, ACC-6, ACC-10, ACC-9 and the email
+hookups. Built to round 27's drawings (#12–#15, #19) where they exist, and
+to the owner's decisions where the two differ.
+
+### Reconciling the packet against what is built
+
+| item   | state                                                                                                                                                                                                                          |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ACC-1  | built (PR 1, 2b-1)                                                                                                                                                                                                             |
+| ACC-2  | built (2a)                                                                                                                                                                                                                     |
+| ACC-3  | built (2a)                                                                                                                                                                                                                     |
+| ACC-4  | built (2a)                                                                                                                                                                                                                     |
+| ACC-5  | built (2b-1); **the invite email is here**                                                                                                                                                                                     |
+| ACC-6  | here: the age line (D-71). **The terms line and its recorded acceptance wait for the terms text** (below)                                                                                                                      |
+| ACC-7  | built (2a)                                                                                                                                                                                                                     |
+| ACC-8  | built (2a)                                                                                                                                                                                                                     |
+| ACC-9  | here                                                                                                                                                                                                                           |
+| ACC-10 | here, as the packet's JSON download (below)                                                                                                                                                                                    |
+| ACC-11 | built (2a)                                                                                                                                                                                                                     |
+| ACC-12 | **outstanding, not in 2b-2.** Lane 128's Desk control writes `user_profiles.username_reset_reason`, but the runner-facing half (round 27 #16: O0's "USERNAME CHANGED BY A MODERATOR" field, Save / Keep) reads it nowhere yet. |
+| ACC-13 | here: the reading layout and `/privacy`, gated on a finished text (below); `/terms` and `/copyright` wait for their text                                                                                                       |
+| ACC-14 | built (`auth/breached-password.ts`)                                                                                                                                                                                            |
+| ACC-15 | built (PR 1)                                                                                                                                                                                                                   |
+| ACC-16 | built (PR 1)                                                                                                                                                                                                                   |
+
+Not an ACC item but in the same seam: **127's STR-9 reminder email** is
+not a one-line call — it needs the 20-minute hold, the one-a-day count and
+the skip rule checked when due — so it stays 127's (needs from other
+lanes). The `run_reminder` template and the switch it reads are built.
+
+### ACC-13 · legal pages
+
+- **One reading page for every legal text** (`account/components/
+ReadingPage.tsx`): the 620 document measure (`max-w-column`), the
+  `lead` step, a sticky contents column at the desk and a plain list under
+  the H1 on the phone, an id and "↑ Contents" on every H2, underlined
+  inline links, no accordions; the signed-in shell when signed in, the
+  signed-out one otherwise.
+- **The text is the file**: `docs/legal/*.md`, read at build time as a
+  raw string and parsed server-side by a small parser for the subset the
+  texts use (`account/legal-markdown.ts`: headings, paragraphs, lists,
+  tables, block quotes, bold, code and links). No markdown dependency, and
+  the text never reaches the client bundle — the loader returns the
+  parsed blocks.
+- **Nothing is published until the owner marks it so** (review of PR
+  #130). A text shows only once its first three lines are exactly
+  `---` / `published: true` / `---`; without them `legalDoc()` answers
+  nothing and the route answers X1. The first version refused the draft's
+  banner and `[OWNER:` notes instead — a blacklist, which a reworded
+  banner or a `TODO` would have walked past. The source's own comment at
+  the top of `docs/legal/privacy-policy.md` tells the owner how, and the
+  page drops that comment (and any other) with the mark. The links show
+  meanwhile (decision D-81).
+- **`/terms` and `/copyright` are not routes yet**: their texts do not
+  exist, and a route with nothing to render would be a placeholder on a
+  public path. Adding one is a line in the doc table plus a route file.
+- Links (D-52, round 27 #12): a footer on the signed-out shell (Privacy;
+  Terms and Copyright join it with their texts, in that order), a
+  **Settings › About** group (Privacy policy), and every email footer
+  (already). Not under the log-in form.
+
+### ACC-6 · the lines under sign-up
+
+The age line ships now: "dialed.run is for runners 16 and over." (D-71,
+round 27 #12). Round 27's terms line ("By creating an account you agree to
+the Terms and have read the Privacy policy.") and the server's record of
+the terms version and time need terms that exist; that record is an
+additive migration (`add_terms_acceptance`) and a line in the sign-up hook,
+and it is held rather than recording acceptance of a version nobody has
+written. Until then the line under the form is the privacy half alone:
+"Creating an account means you've read our Privacy policy." (round 26
+#14). **Owner question.**
+
+### ACC-10 · data export
+
+**A JSON download, as the packet and the development plan say**, from
+Settings › Account › "Export your data" · Get a copy: a `GET
+/account/export` server route, the runner's own session, `Content-
+Disposition: attachment`. It holds the profile (handle, place label, units,
+calibration, share default), the closet (every garment, retired included),
+every run with its **derived conditions only** — the per-run temperature,
+feels-like, wind and sky the app shows, never a raw Visual Crossing row
+(licence, §1.8) — and every entry with its items, tags, verdict, caption,
+and photo links.
+
+**Photos are links to the app's own photo route**, which serves a runner
+their own photos, private or shared, while they are signed in (D-69: no
+signed links). The export says so in its `photos` note. Run files are
+listed by name and date, not included.
+
+Round 27 #13 draws something bigger: a ZIP of CSVs, original run files and
+photos, built by a queued job, stored in R2 and emailed as a 7-day link,
+one a day. That is a queue message type, an R2 prefix with a lifecycle
+rule, a ZIP library and an email — 125's queue and R2 as well as this
+lane's — and it contradicts the packet's JSON. **The owner has decided
+the ZIP ships before launch** (decision D-79), in a follow-up PR
+(register D-116); the JSON ships here as the interim. Garment photos
+link their full size, not the closet's card.
+
+### ACC-9 · account deletion
+
+Round 27 #14 draws it, and it is followed except where the owner decided
+otherwise (the handle).
+
+**Request** (Settings › Account › Delete account, a sheet): the current
+password, or — for an account with no password — a Google sign-in within
+the last 10 minutes ("Continue with Google" comes back to the sheet).
+Then one batch: the claim row in `account_deletions` (`user_id` PK,
+`requested_at`, `purge_after` = +7 days), **every session deleted**, and
+the "delete scheduled" email owed through the outbox. Strava is
+disconnected straight after, through runs' `disconnectStrava` — the grant
+is revoked at request, as the packet says; a runner who keeps the account
+connects again. The page lands on "Your account goes on {day}" (signed
+out). Idempotent: a second request keeps the first date.
+
+**Hidden at once, through the one rule.** `publiclyVisibleEntry` gains
+`authorNotLeaving()` (a `NOT EXISTS` on `account_deletions`' primary key,
+beside `authorNotBanned`), so the feed, profiles, photos and the Call's
+consensus all drop the runner's entries without a second rule; and
+`runnerVisibleToViewer` (feed's floor for search and H) gains the same
+clause for the runner, so they leave search. Nothing is written to the
+entries: **Keep brings everything back as it was**, share state included.
+
+**Logging in during the week never cancels silently** (round 27 #14):
+sign-in works, and the root's gate (`handleGate`, which already sends a
+runner with no handle to O0 on every navigation) answers `leaving` for a
+runner with a pending deletion and sends them to `/account/leaving`:
+"Keep your account?" · Keep my account / Log out. Keep deletes the claim
+row, but only while the purge has not started. Log out leaves the date.
+Keep does not reconnect Strava, and the page says so.
+
+**The server refuses a leaving runner too** (review of PR #130), because
+a redirect is the client's to skip — the browser's has-handle memo skips
+the question that carries it — and a garment saved after the purge's
+closet step would outlive the account. In the one gate
+(`auth/leaving-gate.ts`): `requireUserId` refuses any runner with an
+`account_deletions` row (`AccountLeavingError`), reads and writes alike,
+and only Keep's server function uses `requireUserIdWhileLeaving`, which
+lets a runner inside the week through. Once the purge starts, the claim's
+batch deletes the runner's sessions and a Better Auth session hook
+(`deletionGate`, the ban gate's shape) makes no new one — answering
+log-in's own "wrong email or password", so a sign-in says no more than
+the handle page does (decision D-82). `requireSession` is unchanged: a
+leaving runner who reaches a page loads its data through `requireUserId`,
+which refuses.
+
+**The purge** — **reconciliation, not an outbox** (law 8c). The claim row
+is already the durable "not finished" marker, and something already re-runs
+it: the daily firing. So each firing claims what is due (`UPDATE … SET
+purge_started_at = now WHERE purge_after <= now AND (purge_started_at IS
+NULL OR purge_started_at < now − 1h)`, law 2, at most 3 accounts) and walks
+the steps; every step deletes what is left, so a purge that dies at any
+step finishes on the next firing. The claim row is deleted in the **same
+batch as the `user` row**, last. In order:
+
+1. **`manual_conditions` in `DIALED_WEATHER`**, by the runner's run ids —
+   first, because once the runs are gone nothing names these rows. A
+   second database, so it is its own write (law 8c); a failure throws and
+   the next firing redoes it.
+2. **Runs and entries** through feed's `deleteRuns(db, userId, "all")`
+   (128 · SAF-3): runs, entries, items, tags, reactions on them, photos,
+   notifications about them, imports with a run, and the R2 debts for the
+   entry prefix and each run file.
+3. **The closet**: every garment and a `photo_delete` debt per garment,
+   plus imports with no run and their files. Written here, beside the
+   runs: closet's `deleteItem` refuses a garment an entry used (retire,
+   don't delete) and is one garment per call; step 2 has already removed
+   every entry, and deletion is **the stated exception to "retire, don't
+   delete"**.
+4. **The social rows**: follows and blocks both ways, the runner's
+   reactions and notifications, their email switches, confirm links,
+   password tries, send limits, access request, and any Strava row left.
+   **Reports they filed stay, the reporter replaced** (decision D-78;
+   open question 3's default): `reporter_id` becomes `deleted:{report id}`, which keeps
+   one-per-reporter counts true and names nobody. Reports filed _about_
+   them stay, as SAF-3 keeps them. Moderation actions and quarantined
+   content stay (D-70: evidence outlives the account).
+5. **The invite's use stays spent** (2b-1): the redemption row is kept
+   with its address replaced by `deleted:{user id}`. **Every address the
+   runner is known by** — the account's, the one they redeemed with, any
+   they were moving to — loses its access request, its send counters and
+   any invite code label naming it. D7 no longer copies a request's
+   address onto its code at all: "{address} (request)" is read from the
+   request at display time, so the purge forgetting the request takes the
+   address off the Desk (review of PR #130).
+6. **The handle is never released** (D-56, D-72(6) — round 27 #14's
+   "handle is released" is overruled): it moves to `username_history`, as
+   any handle given up does, and the profile row goes. Its `/@handle`, and
+   any handle the runner gave up before, then says "This runner isn't
+   here." (decision D-82), told apart from a rename by the missing
+   profile.
+7. **Better Auth last**: `session`, `account`, `user`, and the claim row,
+   one batch.
+
+**Where it runs.** The daily firing, as the packet says, but not as a
+line in `ops/scheduled.ts`'s imports: `ops` → `account` → `ops` is a cycle
+(account owes email through `ops`, and so does feed's `deleteRuns`).
+`handleScheduled` takes the daily upkeep as a parameter and the Worker
+entry (`src/server.ts`, 125's) hands it `purgeDueAccounts`; a digest kind,
+`account-deletion`, reports a purge that failed or a backlog past the cap
+(law 6).
+
+### The email hookups
+
+New kinds in `lib/email.ts`, all transactional (no switch):
+
+- `invite` — D7's Send invite, owed in the same batch as the code (round
+  26 #20: "Your dialed.run invite" · "Here's your code: DIAL-XXXX. It
+  works once." · Create your account → `/join?code=`). The code is minted
+  before the batch, and a batch that loses a double press to another
+  deletes its own debt in the same batch, so no email carries a code that
+  was never stored.
+- `strava_disconnected` — 127's deauthorization, owed in its batch (round
+  27 #19's email, with 127's neutral first line, since the event can be
+  forged). A one-line hookup at 127's call site; `runs` reaches `ops`
+  only through an injected `owe`, since `ops` imports `runs`.
+- `deletion_scheduled` — ACC-9 (round 27's "Email delete scheduled").
+- `digest` — 125's OPS-11 (Operator Screens D5): Today's three numbers,
+  sent to each admin every morning from the daily firing, even at zero.
+  Once a UTC day: the outbox key collapses overlapping firings, but the
+  fast path deletes the row on success, so the day is also marked in
+  `cron_checkpoints` (`digest-email`), in the batch that owes the mail —
+  no migration.
+
+### Migration
+
+`0040_add_account_deletions` (core, additive: one new table). Lane 128's
+safety 2b may also take 0040; whoever merges second renumbers.
 
 ## Contract touches
 

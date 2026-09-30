@@ -126,6 +126,7 @@ export {
   profileNotReportedBy,
   publicPhotoStatus,
   publiclyVisibleEntry,
+  runnerNotLeaving,
 } from "./visibility";
 
 export { classifierFromEnv } from "./classifier/from-env";

@@ -82,11 +82,16 @@ describe("the index (U1/N)", () => {
       "/onboarding/settings/units",
     );
     expect(row(/^Units/u)).toHaveTextContent("Fahrenheit, miles");
-    expect(row(/^Privacy/u)).toHaveAttribute(
+    expect(row(/^Privacy New/u)).toHaveAttribute(
       "href",
       "/onboarding/settings/sharing",
     );
-    expect(row(/^Privacy/u)).toHaveTextContent("New runs go to the feed");
+    expect(row(/^Privacy New/u)).toHaveTextContent("New runs go to the feed");
+    // Settings › About (ACC-13, D-52): the privacy policy.
+    expect(row(/^Privacy policy/u)).toHaveAttribute("href", "/privacy");
+    expect(row(/^Privacy policy/u)).toHaveTextContent(
+      /^Privacy policyWhat we keep, and who sees it›$/u,
+    );
     expect(row(/^Blocked runners/u)).toHaveAttribute("href", "/safety/blocked");
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
     expect(row(/^Connections/u)).toHaveAttribute("href", "/runs/strava");
@@ -106,7 +111,7 @@ describe("the index (U1/N)", () => {
     );
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["You", "Who sees what", "Review", "Data"]);
+    ).toEqual(["You", "Who sees what", "Review", "Data", "About"]);
     const you = screen.getByRole("heading", { name: "You" }).closest("section");
     expect(
       within(you ?? document.body)
@@ -138,7 +143,7 @@ describe("the index (U1/N)", () => {
     expect(row(/^Notifications/u)).toHaveTextContent(
       "Run reminders in the app only",
     );
-    expect(row(/^Privacy/u)).toHaveTextContent("New runs stay private");
+    expect(row(/^Privacy New/u)).toHaveTextContent("New runs stay private");
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
     // An account that has not reached O0 has no handle to show.

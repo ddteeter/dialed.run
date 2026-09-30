@@ -191,6 +191,16 @@ export function SettingsIndex({
           value="Strava"
         />
       </SettingsGroup>
+      {/* Settings › About (ACC-13; round 26 #14, D-52): the legal texts.
+          Terms and Copyright join when the owner's texts exist. */}
+      <SettingsGroup title="About">
+        <SettingsRow
+          to="/privacy"
+          params={{}}
+          label="Privacy policy"
+          value="What we keep, and who sees it"
+        />
+      </SettingsGroup>
       {signOut}
     </div>
   );
@@ -546,8 +556,9 @@ export function NotificationsForm({
 }
 
 /**
- * U1 · Account (ACC-7, ACC-8): the address and whether it is confirmed,
- * the handle, the password, and signing out everywhere. A row with
+ * U1 · Account (ACC-7, ACC-8, ACC-10, ACC-9): the address and whether it
+ * is confirmed, the handle, the password, signing out everywhere, the
+ * export, and deleting the account (round 27 #13, #14). A row with
  * nowhere to go is absent — an account made with Google has no password
  * to change.
  */
@@ -556,6 +567,7 @@ export function AccountIndex({
   username,
   confirmBand,
   signOutEverywhere,
+  deletion,
 }: Readonly<{
   account: { email: string; isVerified: boolean; hasPassword: boolean };
   username: string | undefined;
@@ -565,6 +577,10 @@ export function AccountIndex({
    */
   confirmBand: ReactNode;
   signOutEverywhere: ReactNode;
+  /**
+  U1's last row, Delete account, and its sheet (ACC-9; the route's to wire).
+  */
+  deletion: ReactNode;
 }>): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
@@ -598,6 +614,29 @@ export function AccountIndex({
         ) : undefined}
       </SettingsGroup>
       {signOutEverywhere}
+      {/* Round 27 #13: "Export your data" · Get a copy (ACC-10). */}
+      <SettingsGroup title="Your data">
+        <li>
+          {/* A file the server answers with, not a page: fetched by the
+              browser as a download, never drawn by the router. */}
+          <Link
+            to="/account/export"
+            reloadDocument
+            download
+            data-part="settings-row"
+            className="target flex items-center justify-between gap-3 border-b border-hairline py-3 text-ink no-underline"
+          >
+            <span className="flex flex-col gap-1">
+              <span className="text-body font-semibold">Export your data</span>
+              <span className="text-small text-muted">
+                Runs, closet, entries and photo links, as one file
+              </span>
+            </span>
+            <span className="shrink-0 text-body">Get a copy</span>
+          </Link>
+        </li>
+      </SettingsGroup>
+      {deletion}
     </div>
   );
 }

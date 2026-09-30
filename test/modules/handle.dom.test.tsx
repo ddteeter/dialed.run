@@ -92,9 +92,7 @@ describe("RunnerAtHandle", () => {
 
     expect(screen.getByRole("heading", { name: "@ravi_k" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Following" })).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Report 01RAVI" }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Report 01RAVI" })).toBeVisible();
     expect(reportFor).toHaveBeenCalledWith(ravi);
   });
 
@@ -109,14 +107,34 @@ describe("RunnerAtHandle", () => {
       />,
     );
 
-    expect(
-      screen.getByText("This runner changed their name."),
-    ).toBeVisible();
+    expect(screen.getByText("This runner changed their name.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
       "href",
       "/feed",
     );
     // Nobody to follow, report or name.
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(reportFor).not.toHaveBeenCalled();
+  });
+
+  it("says only that a deleted account's runner isn't here — not a rename, not a deletion — with the way back", async () => {
+    const reportFor = vi.fn((): ReactNode => NOTHING);
+    await renderFeedScreen(
+      <RunnerAtHandle
+        found={{ kind: "gone" }}
+        follow={done}
+        unfollow={done}
+        reportAffordanceFor={reportFor}
+      />,
+    );
+
+    expect(screen.getByText("This runner isn't here.")).toBeVisible();
+    expect(screen.queryByText(/changed their name/u)).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
+      "href",
+      "/feed",
+    );
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
     expect(reportFor).not.toHaveBeenCalled();

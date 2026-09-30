@@ -40,7 +40,11 @@ describe("LandingBar", () => {
     // "Below 720, no bar." Hidden by CSS rather than unmounted, like the
     // product bar, so SSR and the first client render agree at any width.
     expect(landingBar()).toHaveClass("hidden", "wide:block");
-    expect(landingBar()).toHaveClass("border-b", "border-hairline", "bg-ground");
+    expect(landingBar()).toHaveClass(
+      "border-b",
+      "border-hairline",
+      "bg-ground",
+    );
     // Not an inverted block: "paper all the way up".
     expect(landingBar()).not.toHaveAttribute("data-ground");
     expect(landingBar()).toHaveAttribute("data-part", "top-bar");
@@ -99,6 +103,20 @@ describe("SignedOutLayout", () => {
       expect(document.documentElement.dataset.hydrated).toBe("true");
     });
   });
+
+  it("ends with the legal footer: Privacy, the one text there is (ACC-13)", async () => {
+    await renderAt(<SignedOutLayout action="none">page</SignedOutLayout>);
+
+    const footer = document.querySelector("[data-part='legal-footer']");
+    expect(footer?.tagName).toBe("FOOTER");
+    expect(footer).toHaveClass("border-t", "border-hairline");
+    // Last in the shell, after the page.
+    expect(footer?.parentElement?.lastElementChild).toBe(footer);
+    const privacy = screen.getByRole("link", { name: "Privacy" });
+    expect(privacy).toHaveAttribute("href", "/privacy");
+    expect(privacy).toHaveClass("underline");
+    expect(footer).toContainElement(privacy);
+  });
 });
 
 describe("the You tab holds settings and the blocked list", () => {
@@ -120,10 +138,7 @@ describe("the You tab holds settings and the blocked list", () => {
   });
 
   it("lets the deepest owner win across a tab's own path and its extras", () => {
-    const tabs = [
-      { to: "/a", also: ["/b/c"] },
-      { to: "/b" },
-    ];
+    const tabs = [{ to: "/a", also: ["/b/c"] }, { to: "/b" }];
     // `/b/c` is deeper than `/b`, so the first tab keeps it even though
     // the second tab comes later and also owns the path.
     expect(activeTabIndex("/b/c/d", tabs)).toBe(0);

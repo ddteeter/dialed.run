@@ -14,6 +14,15 @@ describe("photoUrlFor", () => {
     ).toBe("/closet/photo/01ITEM/card?v=01V2");
   });
 
+  it("points at another size when asked — the data export's full one", () => {
+    expect(
+      photoUrlFor(
+        wardrobeItem({ id: "01ITEM", photoKey: "items/01USER/01ITEM/01V2" }),
+        "full",
+      ),
+    ).toBe("/closet/photo/01ITEM/full?v=01V2");
+  });
+
   it("changes when the photo is replaced, so an immutable cache cannot serve the old one", () => {
     const before = photoUrlFor(
       wardrobeItem({ id: "01ITEM", photoKey: "items/u/01ITEM/01V1" }),

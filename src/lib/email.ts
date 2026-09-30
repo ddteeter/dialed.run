@@ -37,32 +37,44 @@ const address = z.email();
 const link = z.url({ protocol: /^https?$/u });
 
 /**
+ * One email kind: the literal that names it, plus whatever it carries.
+ * Every variant below is this shape and nothing else — factored out because
+ * `z.object({ kind: z.literal(k), ...fields })` repeated at every variant is
+ * the DSL boilerplate `dupes` finds, not a design each kind actually shares.
+ * `Kind` is inferred from the literal passed in, so `emailTemplateSchema`'s
+ * discriminated union still narrows on it exactly as if it had been written
+ * out by hand.
+ */
+function emailKind<Kind extends string, Fields extends z.core.$ZodShape>(
+  kind: Kind,
+  fields: Fields,
+) {
+  return z.object({ kind: z.literal(kind), ...fields });
+}
+
+/**
  * Round 26 #11's "Email verify": the link that confirms the address. Sent
  * now, never through the outbox — it carries a live token.
  */
-const verifyEmail = z.object({ kind: z.literal("verify_email"), url: link });
+const verifyEmail = emailKind("verify_email", { url: link });
 
 /**
  * Round 26 #11's "Email existing account": what a sign-up for a
  * registered address sends instead, so the page can say the same thing
  * whoever typed it.
  */
-const existingAccount = z.object({ kind: z.literal("existing_account") });
+const existingAccount = emailKind("existing_account", {});
 
 /**
 ACC-4: the link that sets a new password. Sent now, like `verify_email`.
 */
-const resetPassword = z.object({
-  kind: z.literal("reset_password"),
-  url: link,
-});
+const resetPassword = emailKind("reset_password", { url: link });
 
 /**
  * ACC-8: the link that moves the account to a new address, sent to that
  * new address — confirming it is how the runner proves they hold it.
  */
-const emailChange = z.object({
-  kind: z.literal("email_change"),
+const emailChange = emailKind("email_change", {
   url: link,
   newEmail: address,
 });
@@ -72,18 +84,14 @@ const emailChange = z.object({
  * change the runner did not make is seen by the one inbox that can say
  * so. Secondary to the change, so it rides the outbox.
  */
-const emailChanged = z.object({
-  kind: z.literal("email_changed"),
-  newEmail: address,
-});
+const emailChanged = emailKind("email_changed", { newEmail: address });
 
 /**
  * Round 26 #19: the Strava run reminder — the one optional email. What
  * the sender knows is when the run landed, already in the runner's own
  * time ("6:58 AM"), and how many runs the one-a-day email is counting.
  */
-const runReminder = z.object({
-  kind: z.literal("run_reminder"),
+const runReminder = emailKind("run_reminder", {
   landedAt: z.string().min(1),
   runs: z.int().min(1),
 });
@@ -94,8 +102,7 @@ const runReminder = z.object({
  * the reason from the removal list, word for word. Account mail, so always
  * sent. A suspected-CSAM quarantine sends nothing (decision D-70).
  */
-const contentRemoved = z.object({
-  kind: z.literal("content_removed"),
+const contentRemoved = emailKind("content_removed", {
   subject: z.enum(["entry", "photo"]),
   reason: z.string().min(1),
 });
@@ -105,9 +112,51 @@ const contentRemoved = z.object({
  * SAF-4), with the reason the notice quotes. Account mail, so always sent,
  * and no button — there is nothing to log in to.
  */
-const accountClosed = z.object({
-  kind: z.literal("account_closed"),
+const accountClosed = emailKind("account_closed", {
   reason: z.string().min(1),
+});
+
+/**
+ * Round 26 #20's invite (task 126, ACC-5): the code D7's Send invite
+ * minted for an access request, and the way in with it filled.
+ */
+const invite = emailKind("invite", { code: z.string().min(1) });
+
+/**
+ * What a deauthorization tells the runner, in the app (S1's row) and by
+ * email — one sentence, here where both can read it. Strava's word for
+ * what happened rather than the runner's: the event may be forged.
+ */
+export const STRAVA_DISCONNECTED_LINE =
+  "Strava says dialed.run was disconnected, so run reminders have stopped.";
+
+/**
+ * Round 27 #19's "Email Strava disconnected" (task 127 · STR-3): a
+ * deauthorization arrived, the connection is gone, reminders have
+ * stopped. It says nothing else — the event may not be the runner's.
+ */
+const stravaDisconnected = emailKind("strava_disconnected", {});
+
+/**
+ * Round 27 #14's "Email delete scheduled" (task 126, ACC-9): the day the
+ * account goes ("Sat, Oct 4"), and the way to keep it.
+ */
+const deletionScheduled = emailKind("deletion_scheduled", {
+  day: z.string().min(1),
+});
+
+/**
+ * Operator Screens D5, the morning digest (task 125 · OPS-11): the Desk's
+ * three numbers, every day, even at zero — so a missing email is a broken
+ * pipeline and never a quiet one. `oldestHours` is absent when nothing is
+ * waiting.
+ */
+const digest = emailKind("digest", {
+  day: z.string().min(1),
+  waiting: z.int().min(0),
+  oldestHours: z.int().min(0).optional(),
+  screenerUnfinished: z.int().min(0),
+  bansThisWeek: z.int().min(0),
 });
 
 export const emailTemplateSchema = z.discriminatedUnion("kind", [
@@ -119,6 +168,10 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   runReminder,
   contentRemoved,
   accountClosed,
+  invite,
+  stravaDisconnected,
+  deletionScheduled,
+  digest,
 ]);
 
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
@@ -161,6 +214,10 @@ const PREFERENCE_OF: Readonly<
   run_reminder: "run_reminder",
   content_removed: undefined,
   account_closed: undefined,
+  invite: undefined,
+  strava_disconnected: undefined,
+  deletion_scheduled: undefined,
+  digest: undefined,
 };
 
 /**

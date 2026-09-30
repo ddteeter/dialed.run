@@ -38,46 +38,48 @@ import type { CarriedForm } from "./sign-in-search";
  * form, or-divider, google, cross-link — so the conformance specs compare
  * region to region against the drawing rather than against memory.
  */
-export function AuthPage(props: Readonly<{
-  heading: string;
-  submitLabel: string;
-  pendingLabel: string;
-  /**
-   * The form's own state, as one prop — see `FormShell`, which is picked
-   * off the hook rather than restated.
-   */
-  form: FormShell;
-  /**
+export function AuthPage(
+  props: Readonly<{
+    heading: string;
+    submitLabel: string;
+    pendingLabel: string;
+    /**
+     * The form's own state, as one prop — see `FormShell`, which is picked
+     * off the hook rather than restated.
+     */
+    form: FormShell;
+    /**
   What the last failed submit threw, so the band can name it (Au4).
   */
-  cause: unknown;
-  onSubmit: () => void;
-  google: GoogleSignIn;
-  /**
+    cause: unknown;
+    onSubmit: () => void;
+    google: GoogleSignIn;
+    /**
   Au7's notice, above the heading. Absent on every ordinary visit.
   */
-  notice?: ReactNode;
-  /**
+    notice?: ReactNode;
+    /**
   Au1's legal line, at micro, above the cross-link.
   */
-  legal?: ReactNode;
-  /**
-   * The link to the other page. Absent on Au7: *"No cross-link: a
-   * signed-out runner has an account."*
-   */
-  crossLink?: ReactNode;
-  /**
-   * Au2's Turnstile (round 27 #12): managed, directly above the primary.
-   * It covers Google too — the Google attempt carries its token, checked
-   * before the redirect. Not on Au1.
-   */
-  turnstile?: ReactNode;
-  /**
+    legal?: ReactNode;
+    /**
+     * The link to the other page. Absent on Au7: *"No cross-link: a
+     * signed-out runner has an account."*
+     */
+    crossLink?: ReactNode;
+    /**
+     * Au2's Turnstile (round 27 #12): managed, directly above the primary.
+     * It covers Google too — the Google attempt carries its token, checked
+     * before the redirect. Not on Au1.
+     */
+    turnstile?: ReactNode;
+    /**
   Au2's "No code? Request access", under Google (round 26 #20).
   */
-  requestLink?: ReactNode;
-  children: ReactNode;
-}>): JSX.Element {
+    requestLink?: ReactNode;
+    children: ReactNode;
+  }>,
+): JSX.Element {
   // The slots (notice, legal, cross-link, Turnstile, request link) are read
   // off `props` where they are placed; the rest are the page's own.
   const { heading, submitLabel, pendingLabel, form, cause, google } = props;
@@ -226,13 +228,31 @@ export function LoginCrossLink({
 }
 
 /**
-Au1's legal line: micro, muted, above the cross-link.
-*/
+ * The lines under Au2 (ACC-6, ACC-13; round 26 #14, round 27 #12; D-52,
+ * D-71): micro, muted, above the cross-link — the privacy line, linking
+ * the policy, and the age line. Never under Au1 (D-52).
+ *
+ * Round 27's line also has the runner agree to the Terms, and the server
+ * record which version and when. The terms are the owner's to write and
+ * do not exist yet, so that half waits for them rather than asking anyone
+ * to agree to a page that is not there.
+ */
 export function AuthLegal(): JSX.Element {
   return (
-    <p className="m-0 text-micro text-muted">
-      By creating an account you agree to the terms and privacy policy.
-    </p>
+    <div className="flex flex-col gap-1 text-micro text-muted">
+      <p className="m-0">
+        Creating an account means you&apos;ve read our{" "}
+        <Link
+          data-target="inline"
+          to="/privacy"
+          className="text-ink underline underline-offset-4"
+        >
+          Privacy policy
+        </Link>
+        .
+      </p>
+      <p className="m-0">dialed.run is for runners 16 and over.</p>
+    </div>
   );
 }
 
@@ -274,7 +294,10 @@ export const CREDENTIAL_LABELS = { email: "Email", password: "Password" };
 /**
 Au2's, with the invite code first (ACC-5).
 */
-export const SIGN_UP_LABELS = { inviteCode: "Invite code", ...CREDENTIAL_LABELS };
+export const SIGN_UP_LABELS = {
+  inviteCode: "Invite code",
+  ...CREDENTIAL_LABELS,
+};
 
 /**
  * Au2's first field, above email and Google (round 26 #20): INVITE CODE,
@@ -319,7 +342,10 @@ export function RequestAccessLink({
 }: Readonly<{ isInviteOnly?: boolean }>): JSX.Element | undefined {
   if (!isInviteOnly) return undefined;
   return (
-    <p data-part="request-access" className="m-0 text-center text-body text-quiet">
+    <p
+      data-part="request-access"
+      className="m-0 text-center text-body text-quiet"
+    >
       No code?{" "}
       <Link
         data-target="inline"

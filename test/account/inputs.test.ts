@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deskRowInput,
+  legalPageInput,
   newInviteInput,
   newInviteSchema,
   requestAccessInput,
@@ -94,8 +95,18 @@ describe("deskRowInput", () => {
     expect(deskRowInput.safeParse({ id: "r" }).success).toBe(true);
     expect(deskRowInput.safeParse({ id: "r".repeat(64) }).success).toBe(true);
     expect(deskRowInput.safeParse({ id: "" }).success).toBe(false);
-    expect(deskRowInput.safeParse({ id: "r".repeat(65) }).success).toBe(
-      false,
-    );
+    expect(deskRowInput.safeParse({ id: "r".repeat(65) }).success).toBe(false);
+  });
+});
+
+describe("legalPageInput (ACC-13)", () => {
+  it("names only a legal text that exists", () => {
+    expect(legalPageInput.parse({ slug: "privacy" })).toStrictEqual({
+      slug: "privacy",
+    });
+    for (const slug of ["terms", "copyright", "", undefined]) {
+      expect(legalPageInput.safeParse({ slug }).success).toBe(false);
+    }
+    expect(legalPageInput.safeParse({}).success).toBe(false);
   });
 });

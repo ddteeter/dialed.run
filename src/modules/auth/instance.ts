@@ -8,6 +8,7 @@ import { captureException, verifyTurnstileToken } from "../ops";
 import { banGate } from "../safety";
 import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
+import { deletionGate } from "./leaving-gate";
 
 /**
 The app auth instance. Server-side only — never import from client code.
@@ -21,7 +22,13 @@ export const auth = createAuth({
   google: googleCredentials(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
   // The ban gate (task 128 · SAF-4): a banned runner's session is refused
   // wherever one is made — email, Google, any provider added later.
-  plugins: [tanstackStartCookies(), banGate()],
+  // The deletion gate (task 126, ACC-9): once an account's purge has
+  // started, no session is made for it, by any provider.
+  plugins: [
+    tanstackStartCookies(),
+    banGate(),
+    deletionGate(drizzle(env.DIALED_CORE)),
+  ],
   passwordScreen: {
     verdict: (password) => breachVerdict(password),
     report: captureException,

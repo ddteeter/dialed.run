@@ -1,3 +1,4 @@
+import type { PhotoSize } from "./photos";
 import type { WardrobeItemRow } from "./service";
 
 /**
@@ -14,6 +15,9 @@ import type { WardrobeItemRow } from "./service";
  */
 export function photoUrlFor(
   item: Pick<WardrobeItemRow, "id" | "photoKey">,
+  // The card the screens draw; the data export links the full size
+  // (task 126, ACC-10), which is the most of the photo the app keeps.
+  size: PhotoSize = "card",
 ): string | undefined {
   if (item.photoKey === null) return undefined;
   // **Versioned**, because the GET route caches as `immutable`: each
@@ -21,7 +25,7 @@ export function photoUrlFor(
   // the URL, so a replaced photo is a new address rather than a stale
   // cache entry. The route ignores the query; only the cache reads it.
   const version = item.photoKey.split("/").at(-1);
-  return `/closet/photo/${item.id}/card?v=${String(version)}`;
+  return `/closet/photo/${item.id}/${size}?v=${String(version)}`;
 }
 
 /**

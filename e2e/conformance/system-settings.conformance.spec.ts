@@ -18,6 +18,16 @@ import { partsIn, wordsOf } from "./auth-parts";
 test.use({ storageState: storageStateFor("closet") });
 
 /**
+ * **Settings › About is the build's, not U1's, and stays** (decision D-80, owner
+ * 2026-09-29). U1 draws no About group; ACC-13 needs the legal texts
+ * reachable from Settings (D-52), so the group and its one row ship as a
+ * placeholder and go to design round 28 (design-deltas item 38). Left out
+ * of the comparison by name — the rest of the index is still held to U1.
+ */
+const UNDRAWN_GROUP = "About";
+const UNDRAWN_ROWS: ReadonlySet<string> = new Set(["Privacy policy"]);
+
+/**
  * Whether `wanted` appears in `words` in order, each matched by prefix.
  */
 function inOrder(
@@ -52,18 +62,20 @@ test("the index: U1's groups and rows, in U1's order, keeping the tab bar", asyn
   await page.goto("/onboarding/settings");
   await hydrated(page);
 
-  const headings = await page
+  const allHeadings = await page
     .getByRole("heading", { level: 2 })
     .allTextContents();
+  const headings = allHeadings.filter((heading) => heading !== UNDRAWN_GROUP);
   const headingsInBoard = inOrder(
     drawn,
     headings.map((heading) => heading.toUpperCase()),
   );
   expect(headingsInBoard.missing).toBeUndefined();
 
-  const rows = await page
+  const allRows = await page
     .locator("[data-part='settings-row'] .font-semibold")
     .allTextContents();
+  const rows = allRows.filter((row) => !UNDRAWN_ROWS.has(row));
   expect(rows.length).toBeGreaterThan(0);
   const rowsInBoard = inOrder(
     drawn,

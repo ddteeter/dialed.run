@@ -174,6 +174,11 @@ flowchart TD
     FEED -->|index.ts only| ACCT
     FEED -->|index.ts only: the removal email| MAIL
     SAFE -->|index.ts only: D8's run counts| RUNS
+    ACCT -->|index.ts only: Strava revoked on deletion| RUNS
+    ACCT -->|index.ts only: the one visibility rule| SAFE
+    PURGE[account/purge.ts] -->|index.ts only: SAF-3's deletes| FEED
+    WORKER[src/server.ts] -->|hands the daily firing its upkeep| PURGE
+    RUNS -->|index.ts only: the Strava-disconnected email| MAIL
 
     CLOSET --> UI[ui]
     RUNS --> UI
@@ -192,6 +197,17 @@ flowchart TD
 Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
+
+Task 126 (ACC-9) added account deletion's purge, `modules/account/purge.ts`,
+which is **not** in `account`'s barrel and is imported by nothing but the
+Worker entry. It calls `feed`'s delete primitives, and both `feed` and
+`ops` import `account`'s barrel, so a barrel export — or an import from
+`ops/scheduled.ts` — would be a cycle. `handleScheduled` takes it as
+daily upkeep instead, and `src/server.ts` hands it over
+(`test/architecture/daily-upkeep.test.ts` reads that wiring). For the same
+reason the imports consumer takes an injected `owe` for the Strava
+deauthorization's email: `ops` imports `runs`, so `runs` cannot import
+`ops`'s outbox.
 
 Lane 101 added `CLOSET/PROD -->|index.ts only| AUTH`: every `closet.*` /
 `products.*` server function scopes its query to the signed-in user, which
@@ -404,6 +420,17 @@ flowchart LR
   the same batch as its event, keyed by its writer, optionally held back
   (`notBefore`), and drained on the three hourly firings as well as the
   digest, so a held reminder goes within the half hour it falls due.
+- **Account deletion** (task 126, ACC-9) is **reconciliation**, not an
+  outbox: the claim row in `account_deletions` is the durable "not
+  finished" marker. A request writes it with every session's deletion and
+  the "delete scheduled" email in one batch; the runner's content is
+  hidden through safety's one visibility rule while it exists. After seven
+  days the daily firing claims due rows (lease an hour, three a firing) and
+  purges step by step — `manual_conditions` in `DIALED_WEATHER` first,
+  then Strava, feed's SAF-3 deletes (which owe the R2 prefixes), the
+  closet and uploads (their R2 owed to the drain), and last, in one batch,
+  every remaining row, Better Auth's, and the claim. Each step deletes what
+  is left, so a purge that stops anywhere is finished by the next firing.
 - **Email** (task 126, decision D-42): `modules/email` is the only sender
   and the only reader of the `send_email` binding `EMAIL`
   (`test/bindings-conformance.test.ts` pins both). What the runner just

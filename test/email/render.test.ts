@@ -132,10 +132,129 @@ describe("emailContent", () => {
         footer: [PRIVACY],
       },
     ],
+    [
+      { kind: "invite", code: "DIAL-7K3P" },
+      {
+        subject: "Your dialed.run invite",
+        body: "Here's your code: DIAL-7K3P. It works once.",
+        button: {
+          label: "Create your account",
+          href: `${ORIGIN}/join?code=DIAL-7K3P`,
+        },
+        foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
+        footer: [PRIVACY],
+      },
+    ],
+    [
+      { kind: "strava_disconnected" },
+      {
+        subject: "Strava is disconnected",
+        body: "Strava says dialed.run was disconnected, so run reminders have stopped. Your runs here haven't changed.",
+        button: { label: "Connect again", href: `${ORIGIN}/runs/strava` },
+        foot: "Runs you already added stay.",
+        footer: [PRIVACY],
+      },
+    ],
+    [
+      { kind: "deletion_scheduled", day: "Sat, Oct 4" },
+      {
+        subject: "Your dialed.run account goes on Sat, Oct 4",
+        body: "You asked to delete your account. Everything in it goes on Sat, Oct 4.",
+        button: { label: "Keep my account", href: `${ORIGIN}/auth/login` },
+        foot: "Didn't ask? Log in and keep it, then change your password.",
+        footer: [PRIVACY],
+      },
+    ],
+    [
+      {
+        kind: "digest",
+        day: "Tue Sep 16",
+        waiting: 4,
+        oldestHours: 19,
+        screenerUnfinished: 1,
+        bansThisWeek: 0,
+      },
+      {
+        subject: "Tue Sep 16 — 4 waiting, 1 photo needs eyes",
+        body: "4 waiting for a decision. The oldest has waited 19 hours. 1 photo the screener couldn't finish. It's hidden until someone looks. 0 bans this week.",
+        button: { label: "Open the Desk", href: `${ORIGIN}/desk` },
+        foot: "Sent every morning, even when every number is zero. If it stops arriving, something is broken.",
+        footer: [PRIVACY],
+      },
+    ],
   ])("says what round 26 draws for %o", (template, expected) => {
     expect(
       emailContent(template, { origin: ORIGIN, unsubscribe: UNSUBSCRIBE }),
     ).toStrictEqual(expected);
+  });
+
+  it("escapes the invite's code in its link", () => {
+    expect(
+      emailContent({ kind: "invite", code: "A&B C" }, { origin: ORIGIN })
+        .button,
+    ).toStrictEqual({
+      label: "Create your account",
+      href: `${ORIGIN}/join?code=A%26B%20C`,
+    });
+  });
+
+  it("says the digest's zero day in its own words, and counts in the plural", () => {
+    const zero = emailContent(
+      {
+        kind: "digest",
+        day: "Wed Sep 17",
+        waiting: 0,
+        screenerUnfinished: 0,
+        bansThisWeek: 1,
+      },
+      { origin: ORIGIN },
+    );
+    expect(zero.subject).toBe("Wed Sep 17 — Nothing waiting. Nothing failed.");
+    expect(zero.body).toBe(
+      "0 waiting for a decision. 0 photos the screener couldn't finish. 1 ban this week.",
+    );
+    const many = emailContent(
+      {
+        kind: "digest",
+        day: "Thu Sep 18",
+        waiting: 2,
+        oldestHours: 1,
+        screenerUnfinished: 2,
+        bansThisWeek: 3,
+      },
+      { origin: ORIGIN },
+    );
+    expect(many.subject).toBe("Thu Sep 18 — 2 waiting, 2 photos need eyes");
+    expect(many.body).toBe(
+      "2 waiting for a decision. The oldest has waited 1 hour. 2 photos the screener couldn't finish. It's hidden until someone looks. 3 bans this week.",
+    );
+    // Reports alone are still a day with something waiting.
+    expect(
+      emailContent(
+        {
+          kind: "digest",
+          day: "Fri Sep 19",
+          waiting: 1,
+          oldestHours: 0,
+          screenerUnfinished: 0,
+          bansThisWeek: 0,
+        },
+        { origin: ORIGIN },
+      ).subject,
+    ).toBe("Fri Sep 19 — 1 waiting, 0 photos need eyes");
+    // …and so is an unfinished photo alone.
+    expect(
+      emailContent(
+        {
+          kind: "digest",
+          day: "Sat Sep 20",
+          waiting: 0,
+          screenerUnfinished: 1,
+          bansThisWeek: 0,
+        },
+        { origin: ORIGIN },
+      ).subject,
+    ).toBe("Sat Sep 20 — 0 waiting, 1 photo needs eyes");
   });
 
   it("counts every run the one-a-day reminder covers", () => {
