@@ -3,11 +3,17 @@ import { describe, expect, it } from "vitest";
 import privacyDraft from "../../docs/legal/privacy-policy.md?raw";
 import {
   headingId,
-  isFinished,
   parseInline,
   parseLegalDoc,
   plainText,
+  publishedText,
 } from "../../src/modules/account/legal-markdown";
+
+/**
+ * The owner's published mark, written out rather than imported: the test
+ * pins the three lines the source comment tells the owner to type.
+ */
+const MARK = "---\npublished: true\n---\n";
 
 /**
  * The legal texts' markdown (ACC-13): the subset `docs/legal/` uses, read
@@ -270,8 +276,12 @@ describe("parseLegalDoc", () => {
     );
   });
 
-  it("reads the privacy draft end to end: every H2 in the contents, every link's anchor on one", () => {
-    const doc = parseLegalDoc(privacyDraft);
+  it("reads the privacy draft end to end, once marked: every H2 in the contents, every link's anchor on one, and none of the source's note", () => {
+    const text = publishedText(`${MARK}${privacyDraft}`);
+    if (text === undefined) throw new Error("the marked draft was refused");
+    const doc = parseLegalDoc(text);
+    expect(JSON.stringify(doc)).not.toContain("Publishing this text");
+    expect(JSON.stringify(doc)).not.toContain("<!--");
     expect(doc.title).toBe("[dialed.run] privacy policy");
     const ids = new Set(doc.contents.map((entry) => entry.id));
     expect(ids).toContain("your-choices");
@@ -293,16 +303,34 @@ describe("plainText", () => {
   });
 });
 
-describe("isFinished", () => {
-  it("is false for a text carrying an owner's note or the draft banner", () => {
-    expect(isFinished("# T\n\nEffective: [OWNER: a date]")).toBe(false);
-    expect(isFinished("> **DRAFT: not reviewed.**\n\n# T")).toBe(false);
-    expect(isFinished(privacyDraft)).toBe(false);
+describe("publishedText", () => {
+  it("publishes nothing without the owner's mark, whatever the text says", () => {
+    // The draft as it stands: its banner and notes are no longer what
+    // keeps it off the page — the missing mark is.
+    expect(publishedText(privacyDraft)).toBeUndefined();
+    // A finished-looking text with no mark, and ones a blacklist missed.
+    expect(publishedText("# T\n\nThe owner's words.")).toBeUndefined();
+    const reworded = "> Draft, reworded.\n\n# T\n\nA date goes here.";
+    expect(publishedText(reworded)).toBeUndefined();
   });
 
-  it("is true for a text with neither", () => {
-    expect(isFinished("# T\n\nThe owner's words, with an OWNER mention.")).toBe(
-      true,
-    );
+  it("publishes nothing when the mark is anywhere but the first three lines, or not exactly the mark", () => {
+    expect(publishedText(`\n${MARK}# T`)).toBeUndefined();
+    expect(publishedText(`# T\n\n${MARK}`)).toBeUndefined();
+    expect(publishedText("---\npublished: false\n---\n# T")).toBeUndefined();
+    expect(publishedText("---\npublished: true\n# T")).toBeUndefined();
+  });
+
+  it("gives the text after the mark", () => {
+    expect(publishedText(`${MARK}# T\n\nWords.`)).toBe("# T\n\nWords.");
+  });
+
+  it("drops every source comment, however many lines, and keeps what is between them", () => {
+    expect(
+      publishedText(
+        `${MARK}<!--\n  a note, over\n  two lines -->\n# T\n\nKept.<!-- x -->\n\nKept too.`,
+      ),
+    ).toBe("\n# T\n\nKept.\n\nKept too.");
+    expect(publishedText(`${MARK}<!---->Kept.`)).toBe("Kept.");
   });
 });

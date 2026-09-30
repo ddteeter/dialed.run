@@ -1,3 +1,16 @@
+<!--
+  Publishing this text (task 126, ACC-13). /privacy shows this file only
+  once its first three lines are exactly these, with nothing above them:
+
+  ---
+  published: true
+  ---
+
+  Add them when the text is final and reviewed. Until then /privacy
+  answers "not found", whatever the text below says. The page never shows
+  those three lines or this note.
+-->
+
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-09-25 for the owner to edit. Every `[OWNER: …]` note is a decision or
 > a fact the code cannot supply. Every factual claim is mapped to the code

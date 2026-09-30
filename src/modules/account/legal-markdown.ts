@@ -266,11 +266,33 @@ export function plainText(inlines: readonly Inline[]): string {
 }
 
 /**
- * The marks of a text nobody has finished: the draft's banner and an
- * owner's note. A text holding either is not published (see `legalDoc`).
+ * The owner's word that a text is final (review of PR #130): the file's
+ * first three lines, exactly —
+ *
+ *     ---
+ *     published: true
+ *     ---
+ *
+ * **A positive mark, not a list of unfinished ones.** The gate used to
+ * refuse a text holding the draft banner or an `[OWNER:` note, so a
+ * reworded banner or a to-do note would have published a draft. Nothing is
+ * published until somebody says it is, and saying so is one edit the
+ * owner makes on purpose. The source's own comment says how
+ * (`docs/legal/privacy-policy.md`).
  */
-const UNFINISHED = ["[OWNER:", "**DRAFT"] as const;
+const PUBLISHED_MARK = "---\npublished: true\n---\n";
 
-export function isFinished(text: string): boolean {
-  return UNFINISHED.every((mark) => !text.includes(mark));
+/**
+ * A notes-to-self comment in a text's source, which the page never shows:
+ * the one at the top of each file says how to publish it.
+ */
+const SOURCE_COMMENT = /<!--[\s\S]*?-->/gu;
+
+/**
+ * The text a page may show: everything after the published mark, with the
+ * source's comments dropped — or nothing, for a text not marked published.
+ */
+export function publishedText(text: string): string | undefined {
+  if (!text.startsWith(PUBLISHED_MARK)) return undefined;
+  return text.slice(PUBLISHED_MARK.length).replaceAll(SOURCE_COMMENT, "");
 }

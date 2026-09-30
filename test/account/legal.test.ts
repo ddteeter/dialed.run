@@ -13,11 +13,23 @@ import { legalDoc, legalPage } from "../../src/modules/account/legal";
  */
 const db = drizzle(env.DIALED_CORE);
 
-const FINISHED = { privacy: "# Privacy policy\n\n## Who we are\n\nUs." };
+const FINISHED = {
+  privacy:
+    "---\npublished: true\n---\n# Privacy policy\n\n## Who we are\n\nUs.",
+};
+
+/**
+The same text, which the owner has not marked published.
+*/
+const UNMARKED = { privacy: "# Privacy policy\n\n## Who we are\n\nUs." };
 
 describe("legalDoc", () => {
   it("publishes nothing while the privacy text is the owner's unreviewed draft", () => {
     expect(legalDoc("privacy")).toBeUndefined();
+  });
+
+  it("publishes nothing for a finished-looking text the owner has not marked", () => {
+    expect(legalDoc("privacy", UNMARKED)).toBeUndefined();
   });
 
   it("publishes a finished text, parsed", () => {
