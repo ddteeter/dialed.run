@@ -25,7 +25,18 @@
  * barrel, so either importing this would be a cycle. The Worker entry
  * hands it to the daily firing (`handleScheduled`'s upkeep).
  */
-import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -39,6 +50,7 @@ import {
   entryPhotos,
   follows,
   imports,
+  inviteCodes,
   inviteRedemptions,
   notificationPreferences,
   notifications,
@@ -57,6 +69,7 @@ import { manualConditions } from "../../db/schema-weather";
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere, firstRowWhere } from "../../lib/keyed-read";
+import { orSqlNull } from "../../lib/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { forgetSendLimits } from "../email";
 import { deleteRuns } from "../feed";
@@ -151,6 +164,15 @@ function due(now: number) {
 /**
  * Claim, then work (law 2): only the rows this statement moved are this
  * firing's, however many firings overlap.
+ *
+ * **Every session of a runner whose purge has started goes with the
+ * claim**, in its batch: a runner who signed in during the week and never
+ * pressed Keep is signed out the moment the purge owns the account, and
+ * `auth`'s deletion gate makes no new session for them. So nothing can be
+ * written behind the purge's back — a garment saved after the closet step
+ * would outlive the account (review of PR #130). Every started purge, not
+ * only this firing's: the batch cannot branch on the claim's result, and a
+ * started purge's runner is owed no session whichever firing holds it.
  */
 async function claimDue(db: Db, now: number): Promise<string[]> {
   const oldest = db
@@ -159,11 +181,19 @@ async function claimDue(db: Db, now: number): Promise<string[]> {
     .where(due(now))
     .orderBy(asc(accountDeletions.purgeAfter))
     .limit(PURGE_PER_FIRING);
-  const rows = await db
-    .update(accountDeletions)
-    .set({ purgeStartedAt: now })
-    .where(and(inArray(accountDeletions.userId, oldest), due(now)))
-    .returning({ userId: accountDeletions.userId });
+  const started = db
+    .select({ userId: accountDeletions.userId })
+    .from(accountDeletions)
+    .where(isNotNull(accountDeletions.purgeStartedAt));
+  const claimable = and(inArray(accountDeletions.userId, oldest), due(now));
+  const [rows] = await db.batch([
+    db
+      .update(accountDeletions)
+      .set({ purgeStartedAt: now })
+      .where(claimable)
+      .returning({ userId: accountDeletions.userId }),
+    db.delete(session).where(inArray(session.userId, started)),
+  ]);
   return rows.map((row) => row.userId);
 }
 
@@ -323,6 +353,48 @@ function involvingEither(
 }
 
 /**
+ * Every address this runner is known by, lower-cased: the account's (none
+ * once the `user` row is gone), the one they redeemed their invite with,
+ * and any they were moving to. Each is kept somewhere by address rather
+ * than by id, so each is forgotten by address (`forgetAddress`).
+ */
+async function addressesOf(db: Db, userId: string): Promise<string[]> {
+  // One round trip: each read is by the runner's id, on its own index.
+  const found = await db.batch([
+    db.select({ address: user.email }).from(user).where(eq(user.id, userId)),
+    db
+      .select({ address: inviteRedemptions.email })
+      .from(inviteRedemptions)
+      .where(eq(inviteRedemptions.userId, userId)),
+    db
+      .select({ address: emailVerifications.email })
+      .from(emailVerifications)
+      .where(eq(emailVerifications.userId, userId)),
+  ]);
+  const known = found.flat().map((row) => row.address.toLowerCase());
+  return [...new Set(known)];
+}
+
+/**
+ * What is kept by one address: an access request, the send counters, and
+ * an invite code's label that names it — which D7 no longer writes
+ * (`invites.ts`' `requestLabelOr`), but a code made before that did, and
+ * an operator may type one. `instr` rather than `LIKE`, so an address's
+ * `_` is a letter and not a wildcard; a scan of a table one operator
+ * writes to by hand, once per deletion.
+ */
+function forgetAddress(db: Db, address: string) {
+  return [
+    db.delete(accessRequests).where(eq(accessRequests.email, address)),
+    forgetSendLimits(db, address),
+    db
+      .update(inviteCodes)
+      .set({ label: orSqlNull(undefined) })
+      .where(sql`instr(lower(${inviteCodes.label}), ${address}) > 0`),
+  ] as const;
+}
+
+/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
@@ -331,25 +403,7 @@ async function deleteAccountRows(
   userId: string,
   now: number,
 ): Promise<void> {
-  const row = await firstRowWhere(db, user, eq(user.id, userId));
-  // What is kept by address. A claim whose `user` row is already gone
-  // has no address left to forget.
-  const byAddress =
-    row === undefined
-      ? []
-      : [
-          db
-            .delete(accessRequests)
-            .where(eq(accessRequests.email, row.email.toLowerCase())),
-          forgetSendLimits(db, row.email),
-        ];
-  // An address the runner was moving to holds counters of its own.
-  const movingTo = await columnWhere(
-    db,
-    emailVerifications,
-    emailVerifications.email,
-    eq(emailVerifications.userId, userId),
-  );
+  const addresses = await addressesOf(db, userId);
   const profile = await firstRowWhere(
     db,
     userProfiles,
@@ -401,8 +455,7 @@ async function deleteAccountRows(
     ...byUserId.map((table) =>
       db.delete(table).where(eq(table.userId, userId)),
     ),
-    ...byAddress,
-    ...movingTo.map((address) => forgetSendLimits(db, address)),
+    ...addresses.flatMap((address) => forgetAddress(db, address)),
     // Reports they filed stay — what was said about someone else's post
     // is that runner's record too — but name nobody (the development
     // plan's default; an owner question). A per-report id keeps them

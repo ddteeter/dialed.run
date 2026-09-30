@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, or } from "drizzle-orm";
+import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,7 @@ import {
   entryTags,
   follows,
   imports,
+  inviteCodes,
   inviteRedemptions,
   notificationPreferences,
   notifications,
@@ -43,6 +44,7 @@ import {
   purgeDueAccounts,
 } from "../../src/modules/account/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge";
+import { drainOutbox } from "../../src/modules/ops/outbox";
 
 /**
  * ACC-9: the purge at the end of a deletion's week. Every assertion is
@@ -98,6 +100,10 @@ interface Seeded {
   */
   readonly email: string;
   readonly handle: string;
+  /**
+  The address they redeemed their invite with, before changing it.
+  */
+  readonly redeemedAs: string;
   readonly runIds: readonly string[];
   readonly entryId: string;
   readonly garmentIds: readonly string[];
@@ -121,7 +127,9 @@ async function seedAccount(): Promise<Seeded> {
   const photoId = newUlid();
   const garmentIds = [newUlid(), newUlid()];
   const screeningIds = [newUlid(), newUlid()];
-  const looseUploadKey = `uploads/${userId}/${newUlid()}.gpx`;
+  const looseUploadKey = `imports/${userId}/${newUlid()}.gpx`;
+  const runUploadKey = `imports/${userId}/${newUlid()}.fit`;
+  const redeemedAs = firstAddress(email);
   await core.batch([
     core.insert(user).values({
       id: userId,
@@ -272,12 +280,32 @@ async function seedAccount(): Promise<Seeded> {
     core
       .insert(passwordAttempts)
       .values({ userId, windowStartedAt: NOW, attempts: 2 }),
-    core.insert(accessRequests).values({
-      id: newUlid(),
-      email: email.toLowerCase(),
-      createdAt: NOW,
-      updatedAt: NOW,
-    }),
+    // An access request under every address they are known by.
+    core.insert(accessRequests).values(
+      [email, redeemedAs, movingTo(email)].map((address) => ({
+        id: newUlid(),
+        email: address.toLowerCase(),
+        createdAt: NOW,
+        updatedAt: NOW,
+      })),
+    ),
+    // Invite codes whose label names them: one written before D7 stopped
+    // copying a request's address onto its code, and one an operator
+    // typed, in the address's own mixed case.
+    core.insert(inviteCodes).values([
+      {
+        id: newUlid(),
+        code: `DIAL-${tail.slice(-4)}`,
+        label: `${redeemedAs} (request)`,
+        createdAt: NOW,
+      },
+      {
+        id: newUlid(),
+        code: `DIAL-${tail.slice(-8, -4)}`,
+        label: `Club night, ${email}`,
+        createdAt: NOW,
+      },
+    ]),
     core.insert(emailSendLimits).values(
       limitKeysOf(email).map((key) => ({
         key,
@@ -288,7 +316,7 @@ async function seedAccount(): Promise<Seeded> {
     core.insert(inviteRedemptions).values({
       userId,
       codeId: newUlid(),
-      email: email.toLowerCase(),
+      email: redeemedAs,
       heldUntil: NOW,
       redeemedAt: NOW,
       confirmedAt: NOW,
@@ -306,7 +334,7 @@ async function seedAccount(): Promise<Seeded> {
         // One that did: its run's delete takes it.
         id: newUlid(),
         userId,
-        r2Key: `uploads/${userId}/${newUlid()}.fit`,
+        r2Key: runUploadKey,
         status: "done",
         runId: runIds[1] ?? "",
         createdAt: NOW,
@@ -322,10 +350,23 @@ async function seedAccount(): Promise<Seeded> {
   await weather
     .insert(manualConditions)
     .values({ runId: runIds[0] ?? "", tempC: 4, setAt: NOW, sky: "dry" });
+  // What R2 holds for them: a garment photo's sizes, an entry photo, and
+  // both uploads' files.
+  for (const key of [
+    `items/${userId}/${garmentIds[0] ?? ""}/photo.webp/card.webp`,
+    `items/${userId}/${garmentIds[0] ?? ""}/photo.webp/full.webp`,
+    `entries/${userId}/${entryId}/${photoId}.webp`,
+  ]) {
+    await env.MEDIA.put(key, "bytes");
+  }
+  for (const key of [looseUploadKey, runUploadKey]) {
+    await env.IMPORTS.put(key, "bytes");
+  }
   return {
     userId,
     email,
     handle,
+    redeemedAs,
     runIds,
     entryId,
     garmentIds,
@@ -355,10 +396,51 @@ function movingTo(email: string): string {
 }
 
 /**
+The address a seeded runner redeemed their invite with, lower-cased.
+*/
+function firstAddress(email: string): string {
+  return `first-${email.toLowerCase()}`;
+}
+
+/**
+Every address a seeded runner is known by, lower-cased.
+*/
+function addressesOf(email: string): string[] {
+  return [email, firstAddress(email), movingTo(email)].map((address) =>
+    address.toLowerCase(),
+  );
+}
+
+/**
 Every counter a seeded runner's addresses hold.
 */
 function limitKeysOf(email: string): string[] {
-  return [...sendLimitKeys(email), ...sendLimitKeys(movingTo(email))];
+  return addressesOf(email).flatMap((address) => sendLimitKeys(address));
+}
+
+/**
+ * What R2 still holds under the runner's prefixes — the garment photos',
+ * the entry photos' and the uploads' — once the outbox's R2 debts have
+ * been drained, as the daily firing drains them.
+ */
+async function r2Left(userId: string): Promise<string[]> {
+  await drainOutbox(core, [], {
+    now: nowSeconds() + 86_400,
+    kinds: ["photo_delete", "entry_media_delete", "import_file_delete"],
+    report: () => {
+      // a debt that fails stays owed, and its object shows below
+    },
+  });
+  return r2Keys(userId);
+}
+
+async function r2Keys(userId: string): Promise<string[]> {
+  const pages = [
+    await env.MEDIA.list({ prefix: `items/${userId}/` }),
+    await env.MEDIA.list({ prefix: `entries/${userId}/` }),
+    await env.IMPORTS.list({ prefix: `imports/${userId}/` }),
+  ];
+  return pages.flatMap((page) => page.objects.map((object) => object.key));
 }
 
 async function claim(
@@ -462,7 +544,18 @@ async function footprint(seeded: Seeded) {
     accessRequests: await core
       .select()
       .from(accessRequests)
-      .where(eq(accessRequests.email, seeded.email.toLowerCase())),
+      .where(inArray(accessRequests.email, addressesOf(seeded.email))),
+    inviteLabels: await core
+      .select({ label: inviteCodes.label })
+      .from(inviteCodes)
+      .where(
+        or(
+          ...addressesOf(seeded.email).map(
+            (address) =>
+              sql`instr(lower(${inviteCodes.label}), ${address}) > 0`,
+          ),
+        ),
+      ),
     sendLimits: await core
       .select()
       .from(emailSendLimits)
@@ -507,6 +600,7 @@ const GONE = {
   verifications: [],
   passwordAttempts: [],
   accessRequests: [],
+  inviteLabels: [],
   sendLimits: [],
   resetLinks: [],
   garments: [],
@@ -701,7 +795,7 @@ describe("purgeDueAccounts — a full purge", () => {
     ).toStrictEqual(
       [
         { userId: runner.userId, email: `deleted:${runner.userId}` },
-        { userId: other.userId, email: other.email.toLowerCase() },
+        { userId: other.userId, email: other.redeemedAs },
       ].toSorted((a, b) => a.userId.localeCompare(b.userId)),
     );
 
@@ -750,6 +844,25 @@ describe("purgeDueAccounts — a full purge", () => {
       .from(outbox)
       .where(like(outbox.dedupeKey, `${other.userId}:%`));
     expect(otherOwes).toStrictEqual([]);
+
+    // And once those are paid, R2 holds nothing of theirs — and all of
+    // the other runner's.
+    const otherObjects = await r2Keys(other.userId);
+    expect(otherObjects).toHaveLength(5);
+    expect(await r2Left(runner.userId)).toStrictEqual([]);
+    expect(await r2Keys(other.userId)).toStrictEqual(otherObjects);
+    // The codes that named them are kept, labelled by nothing.
+    const codes = await core
+      .select({ label: inviteCodes.label })
+      .from(inviteCodes)
+      .where(
+        inArray(inviteCodes.code, [
+          `DIAL-${runner.userId.toLowerCase().slice(-4)}`,
+          `DIAL-${runner.userId.toLowerCase().slice(-8, -4)}`,
+        ]),
+      );
+    expect(codes).toHaveLength(2);
+    for (const code of codes) expect(code.label).toBeNull();
   });
 
   it("writes no retired handle for a runner who never chose one", async () => {
@@ -934,38 +1047,173 @@ describe("purgeDueAccounts — a purge that stops part way", () => {
     expect(nextAnomalies).toStrictEqual([]);
     expect(await footprint(runner)).toStrictEqual(GONE);
   });
+});
 
-  it("finishes from a failure at the last step", async () => {
+/**
+ * Makes the purge's `n`th `core.batch` fail, once — counted from the
+ * firing's first, which is the claim.
+ */
+function failBatch(n: number): void {
+  const batch = core.batch.bind(core);
+  let batches = 0;
+  vi.spyOn(core, "batch").mockImplementation((queries) => {
+    batches += 1;
+    return batches === n
+      ? Promise.reject(new Error("D1 is down"))
+      : batch(queries);
+  });
+}
+
+type Footprint = Awaited<ReturnType<typeof footprint>>;
+
+/**
+ * Each of `purgeAccount`'s six steps, stopped in turn: how to stop it,
+ * and what the rows say about where it stopped — the step before it done,
+ * its own not — so each case proves it interrupted the step it names.
+ */
+const STEPS: readonly {
+  readonly step: string;
+  readonly stop: (runner: Seeded) => Recorded;
+  readonly stoppedAt: (partial: Footprint, revoked: readonly string[]) => void;
+}[] = [
+  {
+    step: "1 · the runner's bands in DIALED_WEATHER",
+    stop: () => {
+      vi.spyOn(weather, "delete").mockImplementationOnce(() => {
+        throw new Error("DIALED_WEATHER is down");
+      });
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial, revoked) => {
+      expect(partial.manualConditions).toHaveLength(1);
+      expect(revoked).toStrictEqual([]);
+    },
+  },
+  {
+    step: "2 · the Strava grant",
+    stop: (runner) => depsAt(NOW, [runner.userId]),
+    stoppedAt: (partial, revoked) => {
+      expect(partial.manualConditions).toStrictEqual([]);
+      expect(revoked).toHaveLength(1);
+      expect(partial.screenings).toHaveLength(2);
+    },
+  },
+  {
+    step: "3 · the photo screenings",
+    stop: () => {
+      failBatch(2);
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial, revoked) => {
+      expect(revoked).toHaveLength(1);
+      expect(partial.screenings).toHaveLength(2);
+      expect(partial.runs).toHaveLength(2);
+    },
+  },
+  {
+    step: "4 · the runs and entries",
+    stop: () => {
+      failBatch(3);
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial) => {
+      expect(partial.screenings).toStrictEqual([]);
+      expect(partial.runs).toHaveLength(2);
+      expect(partial.garments).toHaveLength(2);
+    },
+  },
+  {
+    step: "5 · the closet",
+    stop: () => {
+      failBatch(4);
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial) => {
+      expect(partial.runs).toStrictEqual([]);
+      expect(partial.garments).toHaveLength(2);
+      expect(partial.user).toHaveLength(1);
+    },
+  },
+  {
+    step: "6 · the account itself",
+    stop: () => {
+      // Its last batch: the fifth reads the runner's addresses.
+      failBatch(6);
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial) => {
+      expect(partial.garments).toStrictEqual([]);
+      expect(partial.imports).toStrictEqual([]);
+      // The account and its claim did not go, so a claim that exists is
+      // still a purge owed.
+      expect(partial.user).toHaveLength(1);
+      expect(partial.claim).toHaveLength(1);
+    },
+  },
+];
+
+describe("purgeDueAccounts — a purge stopped at any step", () => {
+  it.each(STEPS)(
+    "is finished by the next firing when it stops at $step",
+    async ({ stop, stoppedAt }) => {
+      const runner = await seedAccount();
+      await claim(runner.userId, NOW - 1);
+      const first = stop(runner);
+      const anomalies: string[] = [];
+
+      await purgeDueAccounts(anomalies, first.deps);
+      vi.restoreAllMocks();
+
+      expect(first.reported).toHaveLength(1);
+      expect(anomalies).toStrictEqual([
+        "1 account deletion(s) stopped part way and are finished on the next firing",
+      ]);
+      stoppedAt(await footprint(runner), first.revoked);
+
+      const next = depsAt(NOW + PURGE_LEASE_S + 1);
+      const nextAnomalies: string[] = [];
+      await purgeDueAccounts(nextAnomalies, next.deps);
+
+      expect(next.reported).toStrictEqual([]);
+      expect(nextAnomalies).toStrictEqual([]);
+      expect(await footprint(runner)).toStrictEqual(GONE);
+      expect(await r2Left(runner.userId)).toStrictEqual([]);
+    },
+  );
+});
+
+describe("purgeDueAccounts — nobody signs in behind the purge", () => {
+  it("signs out a runner the moment their purge starts, even one that stops, and leaves a runner still inside the week signed in", async () => {
     const runner = await seedAccount();
+    const inTheWeek = await seedAccount();
     await claim(runner.userId, NOW - 1);
-    const { deps, reported } = depsAt(NOW);
-    const batch = core.batch.bind(core);
-    const spy = vi.spyOn(core, "batch");
-    // The purge's fourth batch is its last: screenings, the runs, the
-    // closet, then the account. The assertions below prove which it was.
-    let batches = 0;
-    spy.mockImplementation((queries) => {
-      batches += 1;
-      return batches === 4
-        ? Promise.reject(new Error("D1 is down"))
-        : batch(queries);
+    await claim(inTheWeek.userId, NOW + 86_400);
+    // Stopped at its first step: the sign-out is the claim's, not a step's.
+    vi.spyOn(weather, "delete").mockImplementationOnce(() => {
+      throw new Error("DIALED_WEATHER is down");
     });
 
-    await purgeDueAccounts([], deps);
-    spy.mockRestore();
+    await purgeDueAccounts([], depsAt(NOW).deps);
 
-    expect(reported).toHaveLength(1);
     const partial = await footprint(runner);
-    // Everything up to the last batch went; the account and its claim did
-    // not, so a claim that exists is still a purge owed.
-    expect(partial.runs).toStrictEqual([]);
-    expect(partial.garments).toStrictEqual([]);
+    expect(partial.session).toStrictEqual([]);
+    expect(partial.claim[0]?.purgeStartedAt).toBe(NOW);
     expect(partial.user).toHaveLength(1);
-    expect(partial.claim).toHaveLength(1);
+    const stillInTheWeek = await footprint(inTheWeek);
+    expect(stillInTheWeek.session).toHaveLength(1);
+  });
 
-    await purgeDueAccounts([], depsAt(NOW + PURGE_LEASE_S + 1).deps);
+  it("signs out the runner of a purge another firing already holds", async () => {
+    const runner = await seedAccount();
+    // Held by a firing ten minutes ago, which this one leaves alone.
+    await claim(runner.userId, NOW - 86_400, NOW - 600);
+    const { deps, revoked } = depsAt(NOW);
 
-    expect(await footprint(runner)).toStrictEqual(GONE);
+    await purgeDueAccounts([], deps);
+
+    expect(revoked).toStrictEqual([]);
+    const held = await footprint(runner);
+    expect(held.session).toStrictEqual([]);
   });
 });
 

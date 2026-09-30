@@ -467,7 +467,8 @@ describe("Desk D7", () => {
     expect(await db.select().from(inviteCodes)).toMatchObject([
       {
         code: first?.code,
-        label: "sam@x.test (request)",
+        // No address is copied onto the code: D7 reads it from the request.
+        label: NOTHING,
         maxUses: 1,
         createdBy: "op",
         requestId,
@@ -480,6 +481,44 @@ describe("Desk D7", () => {
     expect(request).toMatchObject({ status: "invited", updatedAt: 9 });
     const desk = await accessDesk(db);
     expect(desk.requests).toStrictEqual([]);
+    expect(desk.codes.map((listed) => listed.label)).toStrictEqual([
+      "sam@x.test (request)",
+    ]);
+  });
+
+  it("labels a code by its request while the request is there, and by its own label otherwise", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "gone@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await db.insert(inviteCodes).values([
+      { id: newUlid(), code: "DIAL-REQS", requestId, createdAt: 3 },
+      {
+        id: newUlid(),
+        code: "DIAL-OWNL",
+        label: "Tuesday track group",
+        createdAt: 2,
+      },
+    ]);
+    const labels = async () => {
+      const desk = await accessDesk(db);
+      return desk.codes.map(({ code, label }) => ({ code, label }));
+    };
+    expect(await labels()).toStrictEqual([
+      { code: "DIAL-REQS", label: "gone@x.test (request)" },
+      { code: "DIAL-OWNL", label: "Tuesday track group" },
+    ]);
+
+    // The request forgotten — as account deletion forgets it by address —
+    // takes the address off the Desk with it.
+    await db.delete(accessRequests).where(eq(accessRequests.id, requestId));
+    expect(await labels()).toStrictEqual([
+      { code: "DIAL-REQS", label: NOTHING },
+      { code: "DIAL-OWNL", label: "Tuesday track group" },
+    ]);
   });
 
   it("emails nothing when another press answered the request first", async () => {

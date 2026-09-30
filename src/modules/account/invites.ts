@@ -241,6 +241,23 @@ function spender(row: { username: string | null; email: string }): string {
   return row.username === null ? row.email : `@${row.username}`;
 }
 
+/**
+ * A code's label as D7 draws it: "{address} (request)" for a code that
+ * answered a request, read from the request at display time, and the
+ * operator's own label otherwise.
+ *
+ * **Read, never stored.** The label used to be written with the address
+ * in it, and account deletion's purge — which forgets the request by its
+ * address — left the address behind on the code (review of PR #130). A
+ * code whose request is gone shows the label it was made with, which a
+ * request's code never has.
+ */
+function requestLabelOr(label: SQLiteColumn) {
+  return sql<
+    string | null
+  >`coalesce(${accessRequests.email} || ' (request)', ${label})`;
+}
+
 export async function accessDesk(db: Db): Promise<AccessDesk> {
   const listed = inArray(inviteRedemptions.codeId, listedCodeIds(db));
   const [requests, codes, spent] = await db.batch([
@@ -259,12 +276,13 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
       .select({
         id: inviteCodes.id,
         code: inviteCodes.code,
-        label: inviteCodes.label,
+        label: requestLabelOr(inviteCodes.label),
         maxUses: inviteCodes.maxUses,
         createdAt: inviteCodes.createdAt,
         revokedAt: inviteCodes.revokedAt,
       })
       .from(inviteCodes)
+      .leftJoin(accessRequests, eq(accessRequests.id, inviteCodes.requestId))
       .orderBy(desc(inviteCodes.createdAt))
       .limit(DESK_LIST_LIMIT),
     // Only accounts that exist — a claim whose account never arrived
@@ -344,9 +362,9 @@ export async function createInviteCode(
 }
 
 /**
- * D7's Send invite: mints a single-use code for a pending request,
- * labelled "{address} (request)" as the board draws it, and moves the
- * request to invited — one batch, and a second press returns the code the first one minted
+ * D7's Send invite: mints a single-use code for a pending request —
+ * which D7 labels "{address} (request)", as the board draws it — and
+ * moves the request to invited — one batch, and a second press returns the code the first one minted
  * (`invite_codes.request_id` is unique).
  *
  * **The email that carries it** ("Your dialed.run invite", round 26 #20)
@@ -432,9 +450,11 @@ function unlessStored(db: Db, debt: OutboxDebt, code: string) {
 }
 
 /**
- * A single-use code for a pending request, labelled as the board draws
- * it. Nothing for a request already answered; a second code for the same
- * request is refused by its unique index.
+ * A single-use code for a pending request, with no label of its own: D7
+ * reads "{address} (request)" from the request (`requestLabelOr`), so no
+ * address is copied onto the code. Nothing for a request already
+ * answered; a second code for the same request is refused by its unique
+ * index.
  */
 function codeForRequest(
   db: Db,
@@ -442,11 +462,10 @@ function codeForRequest(
   code: string,
   now: number,
 ) {
-  const label = sql`${accessRequests.email} || ' (request)'`;
   return db
     .insert(inviteCodes)
     .select(
-      sql`SELECT ${newUlid()}, ${code}, ${label}, 1, ${input.operatorId}, NULL, ${accessRequests.id}, ${now}, NULL FROM ${accessRequests} WHERE ${accessRequests.id} = ${input.requestId} AND ${accessRequests.status} = 'pending'`,
+      sql`SELECT ${newUlid()}, ${code}, NULL, 1, ${input.operatorId}, NULL, ${accessRequests.id}, ${now}, NULL FROM ${accessRequests} WHERE ${accessRequests.id} = ${input.requestId} AND ${accessRequests.status} = 'pending'`,
     )
     .onConflictDoNothing({ target: inviteCodes.requestId });
 }
