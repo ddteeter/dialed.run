@@ -231,7 +231,9 @@ as a var, secret as a secret. Free.
 - **Do a restore drill** on a scratch database once before friends.
 - **R2 has no versioning or backup**, and `MEDIA` is the source of truth.
   126's 7-day deletion tombstone (ACC-9) is the mitigation for a bad bulk
-  delete; a real R2 backup is soon-after.
+  delete; a real R2 backup is soon-after. What each prefix holds, what
+  losing it costs, and three options with a recommendation are in
+  `docs/deployment.md` §10.
 
 ---
 

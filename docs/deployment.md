@@ -294,6 +294,71 @@ then roll the code back. The restore also rewinds `d1_migrations`, so the
 same migration applies again on the next `migrations apply` — fix or
 remove it before the next deploy.
 
-R2 has no point-in-time history: `MEDIA` is the source of truth for photos,
-and a deleted object is gone. Task 126's account-deletion tombstone delays
-the purge; nothing else protects R2 yet (a soon-after item).
+R2 has no point-in-time history; see §10 for what that costs.
+
+## 10. R2 has no backup
+
+R2 keeps no versions and has no Time Travel. An object deleted or
+overwritten is gone, and so is a bucket someone deletes. Nothing in this
+app copies either bucket anywhere today. Task 126's account-deletion
+tombstone delays a purge by seven days, which protects against a bad
+account deletion and nothing else.
+
+**What is in `dialed-media` (`MEDIA`), by key prefix, and what losing it
+costs:**
+
+| Prefix                               | What                                                                                 | If it is lost                                                                                                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `items/<user>/<item>/…`              | Garment photos (the original and its variants)                                       | **Unrecoverable.** The garment rows survive in D1 with a `photo_key` pointing at nothing, so the closet shows a garment with no photo. Only the runner has the original. |
+| `entries/<user>/<entry>/<photo>`     | Entry photos                                                                         | **Unrecoverable**, the same way: the entry, its kit and verdict survive, and the photo is a missing image.                                                               |
+| `quarantine/entries/…`               | Copies of photos a moderator removed, kept as the record of what was removed (SAF-5) | **Unrecoverable, and the worst one.** The original was taken down, so this copy is the only one, and the decision it backs can no longer be shown.                       |
+| `products/<product>/snapshot-*.html` | The product page enrichment fetched                                                  | Re-fetchable. The extracted fields are already in D1; a lost snapshot only means re-running extraction has to fetch the page again.                                      |
+| `products/<product>/image-*`         | Product images enrichment fetched                                                    | Re-fetchable by re-running enrichment for the product.                                                                                                                   |
+| `health-probe`                       | `/api/health`'s probe (a `head`, never written)                                      | Nothing.                                                                                                                                                                 |
+
+**`dialed-imports` (`IMPORTS`)** holds uploaded `.fit`/`.gpx`/`.tcx` files
+under `imports/<user>/<import>.<ext>`, for 30 days at most (§2), and
+deletes a file early when its run is retracted. A parsed file has done its
+job: the run is in D1. Losing the bucket loses only imports still waiting
+in the queue, which fail and dead-letter, and the runner sees that import
+failed and can upload the file again. **It does not need a backup**, and
+keeping a copy of GPS traces somewhere else would undo the reason for the
+30-day rule.
+
+**A D1 restore does not bring R2 back with it.** Restoring core to before
+a photo was removed brings back a row whose object the reconcile has
+already deleted: the same missing image as above. There is nothing to
+reconcile it against.
+
+**The options, cheapest first.** None is built. The first needs nothing;
+the other two need a binding or a workflow, which are the owner's.
+
+1. **Accept it until public launch.** Before friends, the photos are few
+   and their owners still have them; everything else a runner logged is in
+   D1 and covered by Time Travel. Say so to the friends cohort. The one
+   prefix this is weakest for is `quarantine/`.
+2. **A second bucket, copied into by a cron.** A `dialed-media-backup`
+   bucket the app only ever writes to, never deletes from, filled by the
+   daily cron copying objects uploaded since its last run (R2's `list`
+   returns each object's upload time; `cron_checkpoints` already holds
+   "since when"). Costs a second copy of storage (R2 standard storage is
+   priced per GB-month; check the current rate on Cloudflare's R2 pricing
+   page) and one write per object. It covers a bad delete or overwrite by
+   the app. It does not cover losing the Cloudflare account. Needs a new
+   R2 binding in `wrangler.jsonc` and a line in
+   `test/bindings-conformance.test.ts`.
+3. **A copy off Cloudflare.** R2 speaks the S3 API, so `rclone sync` with a
+   read-only R2 API token can copy `dialed-media` to another provider on a
+   schedule: a GitHub Actions workflow, or any machine that runs cron. This
+   is the only option that survives losing the account, and it keeps
+   runners' photos with a second processor, which the privacy policy would
+   have to name. Needs a new secret and a workflow file.
+
+For `quarantine/` specifically, R2 **bucket locks** (retention rules that
+refuse deletion for a set period, by prefix) may fit better than a copy.
+Confirm on the R2 docs that they cover this case before relying on it:
+they are newer than the rest of this runbook.
+
+**Recommendation:** option 1 for the friends cohort, and either 2 or 3
+before public launch. 3 if losing the account is a risk worth paying for,
+2 if not.
