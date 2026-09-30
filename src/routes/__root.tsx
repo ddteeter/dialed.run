@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
+import { ZOD_JITLESS_SCRIPT } from "../lib/zod-jitless";
 import { handleGateQuery } from "../modules/account/functions";
 import { gateOnHandle } from "../modules/account/route-decisions";
 import { signedInQuery } from "../modules/auth/functions";
@@ -95,6 +96,9 @@ export const Route = createRootRoute({
         href: appCss,
       },
     ],
+    // zod's JIT off before any module runs, so its `new Function` probe
+    // is not a CSP report on every page view (OPS-8, lib/zod-jitless).
+    scripts: [{ children: ZOD_JITLESS_SCRIPT }],
   }),
   // O0 before anything else, on every navigation (round 26 #7): the one
   // place no sign-in redirect, bookmark or typed URL can go around. The

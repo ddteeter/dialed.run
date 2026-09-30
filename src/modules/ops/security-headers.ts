@@ -48,6 +48,10 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
  * - `'wasm-unsafe-eval'`: MediaPipe's face detector compiles WebAssembly
  *   in the browser (`safety/blur/detect.ts`), which a CSP refuses without
  *   it. It permits compiling wasm, not `eval` of JavaScript.
+ * - No `'unsafe-eval'`: zod would use it to compile its parsers, and runs
+ *   jitless instead (`lib/zod-jitless`, an inline head script the root
+ *   route writes, so it runs before any module).
+ *   The e2e check in `e2e/desk/desk-door.spec.ts` fails on any report.
  * - `blob:` workers: MediaPipe runs its model in a worker it builds from a
  *   blob.
  * - `img-src blob: data:`: photo previews before upload are object URLs.
