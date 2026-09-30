@@ -16,6 +16,13 @@ function outsideARequest(): unknown {
   throw new Error("No Start context found in AsyncLocalStorage.");
 }
 
+/**
+What `getGlobalStartContext` does in the browser: answers nothing.
+*/
+function inTheBrowser(): void {
+  // The client half of the isomorphic function returns `void 0`.
+}
+
 describe("mintNonce", () => {
   it("is 128 bits of base64", () => {
     const nonce = mintNonce();
@@ -40,24 +47,56 @@ describe("mintNonce", () => {
   });
 });
 
+/**
+The four builds the router is made in.
+*/
+const BROWSER_DEV = { DEV: true, SSR: false };
+const SERVER_DEV = { DEV: true, SSR: true };
+const SERVER_PROD = { DEV: false, SSR: true };
+
 describe("routerSsr", () => {
-  it("reads the nonce server.ts put in the request context", () => {
-    expect(routerSsr(() => ({ nonce: "abc123==" }))).toStrictEqual({
-      nonce: "abc123==",
-    });
-  });
+  it.each([SERVER_DEV, SERVER_PROD])(
+    "reads the nonce server.ts put in the request context (%o)",
+    (side) => {
+      expect(routerSsr(() => ({ nonce: "abc123==" }), side)).toStrictEqual({
+        nonce: "abc123==",
+      });
+    },
+  );
 
-  it("has none, rather than failing the request, outside a request context", () => {
-    expect(routerSsr(outsideARequest)).toStrictEqual({});
-  });
+  it.each([SERVER_DEV, SERVER_PROD])(
+    "has none, rather than failing a redirect, outside a request context (%o)",
+    (side) => {
+      expect(routerSsr(outsideARequest, side)).toStrictEqual({});
+    },
+  );
 
-  it.each([
-    // The browser's answer: its scripts were written by the server.
-    ["no context, as in the browser", undefined],
+  it.each([BROWSER_DEV, { DEV: false, SSR: false }])(
+    "needs none in the browser, whose context is undefined (%o)",
+    (side) => {
+      expect(routerSsr(inTheBrowser, side)).toStrictEqual({});
+    },
+  );
+
+  const noNonce = [
     ["an empty nonce", { nonce: "" }],
     ["a nonce that is not text", { nonce: 42 }],
     ["a context without one", { other: "x" }],
-  ])("ignores %s", (_label, context) => {
-    expect(routerSsr(() => context)).toStrictEqual({});
-  });
+  ] as const;
+
+  it.each(noNonce)(
+    "throws in dev when a request's context has %s",
+    (_label, context) => {
+      expect(() => routerSsr(() => context, SERVER_DEV)).toThrow(
+        "The request context has no CSP nonce",
+      );
+    },
+  );
+
+  it.each(noNonce)(
+    "degrades to no nonce in production when a request's context has %s",
+    (_label, context) => {
+      expect(routerSsr(() => context, SERVER_PROD)).toStrictEqual({});
+    },
+  );
 });

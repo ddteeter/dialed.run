@@ -49,9 +49,13 @@ export function getRouter() {
      * as request context: the framework stamps it on every inline script
      * it writes, so the policy can refuse the ones it did not. The router
      * is built per request on the server, so this is read per request;
-     * `lib/csp-nonce` holds the decision.
+     * `lib/csp-nonce` holds the decision, including why a request with no
+     * nonce throws in dev and only reports in production.
      */
-    ssr: routerSsr(getGlobalStartContext),
+    ssr: routerSsr(getGlobalStartContext, {
+      DEV: import.meta.env.DEV,
+      SSR: import.meta.env.SSR,
+    }),
   });
 
   return router;
