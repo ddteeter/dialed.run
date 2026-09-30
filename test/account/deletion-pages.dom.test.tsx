@@ -18,6 +18,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CURRENT_PASSWORD_WRONG,
   DELETION_GRACE_S,
+  DELETION_NEEDS_GOOGLE,
   currentPasswordLimited,
 } from "../../src/lib/contracts";
 import { clockLabel, deviceTimeZone, proseDayLabel } from "../../src/lib/dates";
@@ -209,12 +210,23 @@ describe("DeleteAccount (U1's last row)", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "Delete my account" }),
     );
-    const reauth = await within(sheet).findByText(
-      "Sign in with Google again to confirm it's you.",
-    );
-    expect(reauth.closest("[data-state='reauth']")).toContainElement(
+    const reauth = await within(sheet).findByText(DELETION_NEEDS_GOOGLE);
+    const group = reauth.closest("[data-state='reauth']");
+    expect(group).toContainElement(
       within(sheet).getByRole("button", { name: "Continue with Google" }),
     );
+    // Not scheduled, so never announced as scheduled: the refusal is a
+    // field's, with focus on the group that holds the Google button.
+    expect(within(sheet).getByRole("status")).toHaveTextContent(
+      "Nothing saved. One field needs a fix.",
+    );
+    await waitFor(() => {
+      expect(group).toHaveFocus();
+    });
+    expect(group).toHaveAttribute("aria-describedby", "reauth-message");
+    // Focusable by script only: a group is not a tab stop.
+    expect(group).toHaveAttribute("tabindex", "-1");
+    expect(reauth).toHaveAttribute("id", "reauth-message");
     expect(request).toHaveBeenCalledWith({ data: {} });
     expect(onScheduled).not.toHaveBeenCalled();
   });
@@ -299,6 +311,12 @@ describe("Leaving (round 27 #14)", () => {
     expect(
       screen.getByText(
         "It's set to be deleted on Sat, Oct 4, with everything in it. Keep it and it all comes back as it was.",
+      ),
+    ).toBeInTheDocument();
+    // Except Strava, which the request disconnected and Keep does not.
+    expect(
+      screen.getByText(
+        "Strava is disconnected, and stays that way until you connect it again.",
       ),
     ).toBeInTheDocument();
     // Nothing is too late until Keep has been pressed and said so.

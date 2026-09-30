@@ -366,6 +366,14 @@ export const accountDeletionSchema = accountDeletionInput.extend({
 export const DELETION_GRACE_S = 7 * 24 * 60 * 60;
 
 /**
+ * The server's refusal of a deletion from an account with no password
+ * whose Google sign-in is more than ten minutes old (ACC-9; round 27
+ * #14): where the password field would be, above "Continue with Google".
+ */
+export const DELETION_NEEDS_GOOGLE =
+  "Sign in with Google again to confirm it's you.";
+
+/**
  * ACC-8: the address the account moves to, once its link is opened, and
  * the current password that proves it is the runner asking.
  */

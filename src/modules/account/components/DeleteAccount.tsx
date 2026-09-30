@@ -4,6 +4,7 @@ import type { JSX, ReactNode } from "react";
 import {
   CURRENT_PASSWORD_WRONG,
   DELETION_GRACE_S,
+  DELETION_NEEDS_GOOGLE,
   currentPasswordLimited,
   accountDeletionInput,
   accountDeletionSchema,
@@ -11,6 +12,7 @@ import {
 import { clockLabel, deviceTimeZone, proseDayLabel } from "../../../lib/dates";
 import { nowSeconds } from "../../../lib/now";
 import {
+  FieldMessage,
   FormFailureBand,
   FormStatus,
   Sheet,
@@ -99,16 +101,26 @@ export function DeleteAccount({
 }
 
 /**
- * The server's refusal of the current password, where `useFormSubmit`
- * lands a field's issue — as ChangeEmail does.
+ * A refusal the server gave, where `useFormSubmit` lands a field's issue
+ * — as ChangeEmail does. Two fields can be refused: the current password,
+ * and for an account with none the Google sign-in that stands in for it
+ * (`REAUTH`). Either way the submission is over and nothing was
+ * scheduled, so the status says "Nothing saved", never "scheduled".
  */
-class PasswordRefused extends Error {
+class Refused extends Error {
   readonly issues: readonly { path: string[]; message: string }[];
-  constructor(message: string) {
+  constructor(field: string, message: string) {
     super(message);
-    this.issues = [{ path: ["currentPassword"], message }];
+    this.issues = [{ path: [field], message }];
   }
 }
+
+/**
+ * The "field" a Google-only account proves itself with: the group that
+ * holds "Continue with Google" (round 27 #14: "the field is replaced by
+ * 'Continue with Google'"). Named, so the refusal focuses it.
+ */
+const REAUTH = "reauth";
 
 function DeleteSheet({
   hasPassword,
@@ -122,8 +134,9 @@ function DeleteSheet({
   }
 >): JSX.Element {
   const [currentPassword, setCurrentPassword] = useState("");
-  const [needsGoogle, setNeedsGoogle] = useState(false);
   const [keep, setKeep] = useState<HTMLButtonElement | undefined>();
+  // In UTC, as every other place that names this day does (`deletion.ts`'
+  // `deletionDay`): the sheet and the email must not name different days.
   const day = proseDayLabel(nowSeconds() + DELETION_GRACE_S);
   const form = useFormSubmit({
     // An account with no password sends none; the field is asked for
@@ -132,20 +145,19 @@ function DeleteSheet({
     action: async (values) => {
       const result = await request({ data: values });
       if (result.status === "wrong-password") {
-        throw new PasswordRefused(CURRENT_PASSWORD_WRONG);
+        throw new Refused("currentPassword", CURRENT_PASSWORD_WRONG);
       }
       if (result.status === "password-limited") {
         const clock = clockLabel(result.until, deviceTimeZone());
-        throw new PasswordRefused(currentPasswordLimited(clock));
+        throw new Refused("currentPassword", currentPasswordLimited(clock));
+      }
+      if (result.status === "reauth") {
+        throw new Refused(REAUTH, DELETION_NEEDS_GOOGLE);
       }
       return result;
     },
     successMessage: "Deletion scheduled.",
     onSuccess: async (result) => {
-      if (result.status === "reauth") {
-        setNeedsGoogle(true);
-        return;
-      }
       await onScheduled(result.purgeAfter);
     },
   });
@@ -186,14 +198,20 @@ function DeleteSheet({
             error={form.fieldErrors.currentPassword}
           />
         ) : undefined}
-        {needsGoogle ? (
-          <div data-state="reauth" className="flex flex-col gap-3">
-            <p className="m-0 text-body">
-              Sign in with Google again to confirm it&apos;s you.
-            </p>
+        {form.fieldErrors[REAUTH] === undefined ? undefined : (
+          // A group, not a control: `tabIndex` lets the refusal's focus
+          // land on it, with its message and the Google button inside.
+          <fieldset
+            name={REAUTH}
+            tabIndex={-1}
+            data-state="reauth"
+            aria-describedby={`${REAUTH}-message`}
+            className="m-0 flex flex-col gap-3 border-0 p-0"
+          >
+            <FieldMessage name={REAUTH} error={form.fieldErrors[REAUTH]} />
             {reauth}
-          </div>
-        ) : undefined}
+          </fieldset>
+        )}
         <FormFailureBand
           failure={form.failure}
           onRetry={form.retry}

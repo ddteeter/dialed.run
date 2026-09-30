@@ -94,6 +94,18 @@ export function deletionEffectsFromEnv(): DeletionEffects {
 }
 
 /**
+ * The day a deletion lands, as the email and both pages of the week say
+ * it — **in UTC, on purpose**. A profile carries no time zone to say it in
+ * (a run's zone is the run's own, D-96), and the purge runs on the daily
+ * firing, which is scheduled in UTC. `proseDayLabel` with no zone is UTC;
+ * passing the string would say the same thing and leave a mutant no input
+ * could tell apart. The delete sheet says its day the same way.
+ */
+function deletionDay(epochSeconds: number): string {
+  return proseDayLabel(epochSeconds);
+}
+
+/**
  * The proof a deletion needs: the current password, or — for an account
  * made with Google, which has none — a Google sign-in within the last ten
  * minutes. `undefined` when it is proved.
@@ -131,7 +143,7 @@ export async function requestAccountDeletion(
   const { userId } = request;
   const existing = await pendingDeletionOf(db, userId);
   const purgeAfter = existing?.purgeAfter ?? now + DELETION_GRACE_S;
-  const day = proseDayLabel(purgeAfter);
+  const day = deletionDay(purgeAfter);
   const debt = oweOutbox(
     emailDebt(
       { to: { userId }, template: { kind: "deletion_scheduled", day } },
@@ -218,9 +230,9 @@ export async function leavingView(
     const pending = await pendingDeletionOf(db, userId);
     return pending === undefined
       ? { state: "none" }
-      : { state: "ask", day: proseDayLabel(pending.purgeAfter) };
+      : { state: "ask", day: deletionDay(pending.purgeAfter) };
   }
   return on === undefined
     ? { state: "none" }
-    : { state: "scheduled", day: proseDayLabel(on) };
+    : { state: "scheduled", day: deletionDay(on) };
 }
