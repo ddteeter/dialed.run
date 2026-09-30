@@ -122,6 +122,20 @@
       // so the ignore covers the data and not the behaviour. A column of
       // quoted words matches any other column of quoted words.
       "src/lib/profanity-words.ts",
+      // Task 126's email-kind table: every `emailKind(name, fields)` call is
+      // a schema DSL declaration (the zod analogue of a Drizzle table), so a
+      // run of them reads as a duplicate of any other run regardless of
+      // which kind each names. Split from `email.ts` so the ignore covers
+      // the table and not `preferenceFor` or the recipient/payload schemas
+      // beside it -- same shape as `tap-list-data.ts` (D-34).
+      "src/lib/email-kinds.ts",
+      // Task 126's export ZIP sheets: the five CSV column tables
+      // (`{ name, about, value }` per column) are a reporting schema, not
+      // behaviour -- a run of columns in one sheet reads as a duplicate of a
+      // run of columns in any other. Split from `export-files.ts` so the
+      // ignore covers the table and not the photo/CSV/README rendering
+      // beside it.
+      "src/modules/account/export-sheets.ts",
     ],
   },
 }

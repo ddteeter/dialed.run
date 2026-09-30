@@ -567,6 +567,7 @@ export function AccountIndex({
   username,
   confirmBand,
   signOutEverywhere,
+  dataExport,
   deletion,
 }: Readonly<{
   account: { email: string; isVerified: boolean; hasPassword: boolean };
@@ -577,6 +578,10 @@ export function AccountIndex({
    */
   confirmBand: ReactNode;
   signOutEverywhere: ReactNode;
+  /**
+  "Export your data" (ACC-10; account's `ExportRow`, the route's to wire).
+  */
+  dataExport: ReactNode;
   /**
   U1's last row, Delete account, and its sheet (ACC-9; the route's to wire).
   */
@@ -615,27 +620,7 @@ export function AccountIndex({
       </SettingsGroup>
       {signOutEverywhere}
       {/* Round 27 #13: "Export your data" · Get a copy (ACC-10). */}
-      <SettingsGroup title="Your data">
-        <li>
-          {/* A file the server answers with, not a page: fetched by the
-              browser as a download, never drawn by the router. */}
-          <Link
-            to="/account/export"
-            reloadDocument
-            download
-            data-part="settings-row"
-            className="target flex items-center justify-between gap-3 border-b border-hairline py-3 text-ink no-underline"
-          >
-            <span className="flex flex-col gap-1">
-              <span className="text-body font-semibold">Export your data</span>
-              <span className="text-small text-muted">
-                Runs, closet, entries and photo links, as one file
-              </span>
-            </span>
-            <span className="shrink-0 text-body">Get a copy</span>
-          </Link>
-        </li>
-      </SettingsGroup>
+      <SettingsGroup title="Your data">{dataExport}</SettingsGroup>
       {deletion}
     </div>
   );

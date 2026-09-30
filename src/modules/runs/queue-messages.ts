@@ -64,6 +64,16 @@ export const importsQueueMessageSchema = z.discriminatedUnion("type", [
     athleteId: z.string().min(1),
     eventTime: z.number().int(),
   }),
+
+  // A runner's emailed data export (task 126, ACC-10; D-79). A pointer to
+  // the `data_exports` row, which holds everything else: the row is the
+  // claim and the source of truth, so a duplicate delivery finds it
+  // already built and a lost one is re-sent by the hourly sweep. The work
+  // is `account`'s, handed to this queue's consumer as a dependency.
+  // Added as a new variant (law 9) — no existing message changed shape.
+  jobSchema("account_export", {
+    exportId: z.string().min(1),
+  }),
 ]);
 
 /**
@@ -81,4 +91,8 @@ export type RevokeJob = Extract<ImportsQueueMessage, { type: "strava_revoke" }>;
 export type DeauthorizeJob = Extract<
   ImportsQueueMessage,
   { type: "strava_deauthorize" }
+>;
+export type ExportJob = Extract<
+  ImportsQueueMessage,
+  { type: "account_export" }
 >;

@@ -11,6 +11,7 @@ import {
   handleImportsBatch,
   handleImportsDlqBatch,
   stravaApiFromEnv,
+  type ExportWork,
 } from "../runs";
 import { outboxInsert, oweOutbox } from "./outbox";
 import { captureException } from "./sentry";
@@ -59,8 +60,16 @@ function oweInCore(message: OutboxMessage) {
  * Queue consumer entry (000 §10): lane 102 owns the dialed-imports consumer
  * + DLQ user-notification; lane 107 owns dialed-enrichment. Every consumer
  * acks or retries per message, so one bad message never blocks a batch.
+ *
+ * `exports` is task 126's data export (ACC-10), which rides dialed-imports
+ * but is built in `account` — a module `ops` cannot import without a
+ * cycle, so the Worker entry hands it in, as it hands the purge to
+ * `handleScheduled`.
  */
-export async function handleQueueBatch(batch: MessageBatch): Promise<void> {
+export async function handleQueueBatch(
+  batch: MessageBatch,
+  exports?: ExportWork,
+): Promise<void> {
   switch (batch.queue) {
     case "dialed-imports": {
       await handleImportsBatch(batch, {
@@ -69,6 +78,7 @@ export async function handleQueueBatch(batch: MessageBatch): Promise<void> {
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
+        exports,
       });
       break;
     }
@@ -82,6 +92,7 @@ export async function handleQueueBatch(batch: MessageBatch): Promise<void> {
         importBucket: env.IMPORTS,
         captureException,
         owe: oweInCore,
+        exports,
       });
       break;
     }

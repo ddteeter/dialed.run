@@ -8,10 +8,12 @@ import {
 import { ChangeEmail } from "../../modules/account/components/ChangeEmail";
 import { DeleteAccount } from "../../modules/account/components/DeleteAccount";
 import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
+import { ExportRow } from "../../modules/account/components/ExportRow";
 import {
   accountPageQuery,
   requestDeletionFn,
   requestEmailChangeFn,
+  requestExportFn,
   resendConfirmationFn,
 } from "../../modules/account/functions";
 import {
@@ -101,6 +103,13 @@ function AccountSectionRoute() {
                     await router.invalidate();
                     await navigate({ to: "/" });
                   }}
+                />
+              }
+              dataExport={
+                <ExportRow
+                  state={page.dataExport}
+                  request={requestExportFn}
+                  onRequested={() => router.invalidate()}
                 />
               }
               deletion={

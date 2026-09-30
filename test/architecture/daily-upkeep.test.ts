@@ -11,15 +11,29 @@ import { withoutComments } from "./source-text";
  * pulls TanStack Start's server entry — so the wiring is read from its
  * source, as `routes-stamp-hydration` reads routes. Without this, a purge
  * nobody passes in never runs, and every test of it still passes.
+ *
+ * The data export (ACC-10) is wired the same way twice over: its sweep to
+ * the hourly firing, and its build to the imports queue's consumer.
  */
-describe("the Worker entry hands the daily firing its upkeep", () => {
-  it("passes account deletion's purge to handleScheduled", () => {
+describe("the Worker entry hands the firings and the queue their upkeep", () => {
+  it("passes account deletion's purge and the export sweep to handleScheduled", () => {
     const code = withoutComments(serverSource);
     expect(code).toContain(
       'import { purgeDueAccounts } from "./modules/account/purge";',
     );
-    expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*\}\)/u,
+    expect(code).toContain(
+      'import { sweepExports } from "./modules/account/export-sweep";',
     );
+    expect(code).toMatch(
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*\}\)/u,
+    );
+  });
+
+  it("passes the export's build to handleQueueBatch", () => {
+    const code = withoutComments(serverSource);
+    expect(code).toContain(
+      'import { exportWorkFromEnv } from "./modules/account/export-build";',
+    );
+    expect(code).toContain("handleQueueBatch(batch, exportWorkFromEnv())");
   });
 });

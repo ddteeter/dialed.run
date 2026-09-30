@@ -111,12 +111,18 @@ export async function handleScheduled(
  * **The digest's email** (OPS-11) is ops' own; it is a field here so a
  * test can name the operators it goes to.
  *
- * Both are optional: a firing handed neither purges nothing and mails
- * the digest the live way (`oweDigestEmail`'s default).
+ * **The data export's sweep** (task 126, ACC-10) is the one hourly field:
+ * it deletes expired ZIPs and re-sends exports whose queue send was lost,
+ * and rides the `:00` firing so a lost send costs a runner an hour, not a
+ * day. `account` again, so handed in for the same reason as the purge.
+ *
+ * All are optional: a firing handed none purges and sweeps nothing and
+ * mails the digest the live way (`oweDigestEmail`'s default).
  */
 export interface DailyUpkeep {
   readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
   readonly digestMail?: DigestMail | undefined;
+  readonly sweepExports?: ((anomalies: string[]) => Promise<void>) | undefined;
 }
 
 async function runCron(
@@ -132,7 +138,9 @@ async function runCron(
       // docs/tasks/103-weather.md requirement 4/5: the hourly
       // pending-observation retry, claim-then-work at the module level.
       await retryPendingWeather();
-      return drainOwedEmail([]);
+      const anomalies: string[] = [];
+      await upkeep.sweepExports?.(anomalies);
+      return drainOwedEmail(anomalies);
     }
     case "enrichment-retry": {
       const anomalies: string[] = [];

@@ -11,6 +11,7 @@
  * change, the changed notice) have no drawing and are placeholders in the
  * same voice, listed under the PR's "Design deltas".
  */
+import { EXPORT_LINK_DAYS } from "../../lib/data-export";
 import { STRAVA_DISCONNECTED_LINE, type EmailTemplate } from "../../lib/email";
 
 export interface EmailLink {
@@ -232,6 +233,19 @@ export function emailContent(
         body: `You asked to delete your account. Everything in it goes on ${template.day}.`,
         button: { label: "Keep my account", href: `${origin}/auth/login` },
         foot: "Didn't ask? Log in and keep it, then change your password.",
+        footer,
+      };
+    }
+    case "export_ready": {
+      // Round 27 #13's "Email export", word for word.
+      return {
+        subject: "Your dialed.run export is ready",
+        body: "Your runs, closet, entries, photos and original run files are in one ZIP.",
+        button: {
+          label: "Download export",
+          href: `${origin}/account/export/${template.token}`,
+        },
+        foot: `The link works for ${String(EXPORT_LINK_DAYS)} days, only while you're logged in.`,
         footer,
       };
     }

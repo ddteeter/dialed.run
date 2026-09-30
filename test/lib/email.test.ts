@@ -29,6 +29,7 @@ describe("emailTemplateSchema", () => {
       { kind: "invite", code: "DIAL-7K2Q" },
       { kind: "strava_disconnected" },
       { kind: "deletion_scheduled", day: "Sat, Oct 4" },
+      { kind: "export_ready", token: "0123456789abcdef0123456789abcdef" },
       {
         kind: "digest",
         day: "Tue Sep 16",
@@ -122,6 +123,28 @@ describe("preferenceFor", () => {
     expect(preferenceFor("email_changed")).toBeUndefined();
     expect(preferenceFor("content_removed")).toBeUndefined();
     expect(preferenceFor("account_closed")).toBeUndefined();
+    expect(preferenceFor("export_ready")).toBeUndefined();
+  });
+});
+
+function isExportTokenAccepted(token: string): boolean {
+  return emailTemplateSchema.safeParse({ kind: "export_ready", token }).success;
+}
+
+describe("export_ready", () => {
+  it("carries only a link token: 32 lower-case hex digits", () => {
+    expect(isExportTokenAccepted("0123456789abcdef0123456789abcdef")).toBe(
+      true,
+    );
+    expect(isExportTokenAccepted("0123456789ABCDEF0123456789ABCDEF")).toBe(
+      false,
+    );
+    expect(isExportTokenAccepted("0123456789abcdef0123456789abcde")).toBe(
+      false,
+    );
+    expect(isExportTokenAccepted("0123456789abcdef0123456789abcdef0")).toBe(
+      false,
+    );
   });
 });
 

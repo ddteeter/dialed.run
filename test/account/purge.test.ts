@@ -7,6 +7,7 @@ import {
   accessRequests,
   accountDeletions,
   blocks,
+  dataExports,
   emailSendLimits,
   emailVerifications,
   entryPhotos,
@@ -86,6 +87,7 @@ function depsAt(now: number, failFor: readonly string[] = []): Recorded {
         }
         return Promise.resolve();
       },
+      exportBucket: env.IMPORTS,
       report: (error, context) => {
         reported.push({ error, context });
       },
@@ -362,6 +364,25 @@ async function seedAccount(): Promise<Seeded> {
   for (const key of [looseUploadKey, runUploadKey]) {
     await env.IMPORTS.put(key, "bytes");
   }
+  // A data export (ACC-10): one ready, with its ZIP, and one ZIP a build
+  // staged with no row to name it — the purge lists the prefix for both.
+  const exportId = newUlid();
+  await core.insert(dataExports).values({
+    id: exportId,
+    userId,
+    idempotencyKey: newUlid(),
+    linkToken: newUlid().toLowerCase(),
+    status: "ready",
+    requestedAt: NOW - 60,
+    readyAt: NOW - 30,
+    expiresAt: NOW + 86_400,
+  });
+  for (const key of [
+    `exports/${userId}/${exportId}.zip`,
+    `exports/${userId}/${newUlid()}.zip`,
+  ]) {
+    await env.IMPORTS.put(key, "zip");
+  }
   return {
     userId,
     email,
@@ -439,6 +460,7 @@ async function r2Keys(userId: string): Promise<string[]> {
     await env.MEDIA.list({ prefix: `items/${userId}/` }),
     await env.MEDIA.list({ prefix: `entries/${userId}/` }),
     await env.IMPORTS.list({ prefix: `imports/${userId}/` }),
+    await env.IMPORTS.list({ prefix: `exports/${userId}/` }),
   ];
   return pages.flatMap((page) => page.objects.map((object) => object.key));
 }
@@ -576,6 +598,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(stravaConnections)
       .where(eq(stravaConnections.userId, userId)),
+    exports: await core
+      .select()
+      .from(dataExports)
+      .where(eq(dataExports.userId, userId)),
     claim: await claimOf(userId),
   };
 }
@@ -606,6 +632,7 @@ const GONE = {
   garments: [],
   imports: [],
   strava: [],
+  exports: [],
   claim: [],
 };
 
@@ -848,7 +875,7 @@ describe("purgeDueAccounts — a full purge", () => {
     // And once those are paid, R2 holds nothing of theirs — and all of
     // the other runner's.
     const otherObjects = await r2Keys(other.userId);
-    expect(otherObjects).toHaveLength(5);
+    expect(otherObjects).toHaveLength(7);
     expect(await r2Left(runner.userId)).toStrictEqual([]);
     expect(await r2Keys(other.userId)).toStrictEqual(otherObjects);
     // The codes that named them are kept, labelled by nothing.

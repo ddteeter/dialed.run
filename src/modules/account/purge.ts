@@ -46,6 +46,7 @@ import {
   accessRequests,
   accountDeletions,
   blocks,
+  dataExports,
   emailVerifications,
   entryPhotos,
   follows,
@@ -69,6 +70,7 @@ import { manualConditions } from "../../db/schema-weather";
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere, firstRowWhere } from "../../lib/keyed-read";
+import { listedPages } from "../../lib/r2-pages";
 import { orSqlNull } from "../../lib/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { forgetSendLimits } from "../email";
@@ -76,6 +78,7 @@ import { deleteRuns } from "../feed";
 import { captureException, outboxInsert, oweOutbox } from "../ops";
 import { disconnectStrava } from "../runs";
 import { settleOpenReviews } from "../safety";
+import { exportPrefixFor } from "./data-exports";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = (error: unknown, context: Record<string, string>) => void;
@@ -100,6 +103,10 @@ export interface PurgeDeps {
   Runs' `disconnectStrava`, bound to the queue (seam 5).
   */
   readonly revokeStrava: (userId: string) => Promise<void>;
+  /**
+  `IMPORTS`, where the runner's data export ZIPs are staged (ACC-10).
+  */
+  readonly exportBucket: Pick<R2Bucket, "list" | "delete">;
   readonly report: Report;
   readonly now: number;
 }
@@ -111,6 +118,7 @@ function liveDeps(): PurgeDeps {
     weather: drizzle(env.DIALED_WEATHER),
     revokeStrava: (userId) =>
       disconnectStrava(core, env.IMPORTS_QUEUE, userId, captureException),
+    exportBucket: env.IMPORTS,
     report: captureException,
     now: nowSeconds(),
   };
@@ -216,7 +224,24 @@ export async function purgeAccount(
   // items, tags, reactions, photos and notifications — and the R2 owed.
   await deleteRuns(core, userId, "all", report);
   await deleteCloset(core, userId);
+  await deleteExportFiles(deps.exportBucket, userId);
   await deleteAccountRows(core, userId, deps.now);
+}
+
+/**
+ * The runner's data export ZIPs (ACC-10), found by listing their prefix
+ * rather than from the rows — so a ZIP a build staged before its row said
+ * so goes too. The rows go in the last batch with the other by-user
+ * tables; a listing that stops part way is finished by the next firing.
+ */
+async function deleteExportFiles(
+  bucket: PurgeDeps["exportBucket"],
+  userId: string,
+): Promise<void> {
+  const pages = listedPages(bucket, exportPrefixFor(userId));
+  for await (const objects of pages) {
+    await bucket.delete(objects.map((object) => object.key));
+  }
 }
 
 /**
@@ -433,6 +458,7 @@ async function deleteAccountRows(
     emailVerifications,
     passwordAttempts,
     stravaConnections,
+    dataExports,
   ] as const;
   // The trailing rows below share the same "found by nothing but the
   // runner's id" shape as `byUserId`, just on a column that is not always

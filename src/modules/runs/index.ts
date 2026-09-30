@@ -5,6 +5,7 @@
  * (ops, for the queue entry point) import from here.
  */
 export { handleImportsBatch, handleImportsDlqBatch } from "./consumer";
+export type { ExportWork } from "./consumer";
 export { stravaApiFromEnv } from "./strava/api-from-env";
 export { runsAwaitingVerdict } from "./awaiting-verdict";
 export { runCountsOf } from "./counts";
