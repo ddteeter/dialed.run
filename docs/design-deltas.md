@@ -69,6 +69,9 @@ from the other side: _"never a sixth type."_
     carries the counts. What it does not draw is the dead-letter list
     itself, so the ask stands and now has a place to live.
     Nothing is blocked; the digest carries the count meanwhile.
+    **Still not built (task 125 leftovers, 2026-09-30):** the board's row
+    needs a reason, a try count and a time that no dead-letter handler
+    records, so the page waits on one additive table (register row D-119).
 
 11. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
     Epic 200 opens, incl. multi-part fabric display on garment/product
@@ -487,7 +490,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 33. **Two surfaces task 129's follow-up built without a drawing.** Both
     are composed from existing primitives; neither adds a glyph, colour or
     motion.
-    - **D-62's under-review marker, on the card and on D** (FEED-6,
+    - **The under-review marker (register row D-62, not decision D-62),
+      on the card and on D** (FEED-6,
       `feed/components/PostCard.tsx`, `feed/components/EntryDetail.tsx`).
       The author of an entry hidden pending review still sees it in their
       own Following feed and on D (D-67), marked `[UNDER REVIEW]` —

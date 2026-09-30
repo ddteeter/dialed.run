@@ -22,7 +22,7 @@
  * is why `eval/run.ts` has always been able to call `console.log`. So this
  * runs under `tsx`, exactly as the evals do.
  */
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import path from "node:path";
 
 const ASSETS = path.join("dist", "client", "assets");
@@ -93,6 +93,39 @@ for (const name of entry) {
 if (names.every((name) => !name.includes("vision_bundle"))) {
   throw new Error(
     "no mediapipe chunk emitted — the dynamic import may have been dropped",
+  );
+}
+
+/**
+ * **The entry chunk's size budget.** Every visitor downloads the entry
+ * chunk before anything renders, and nothing else here notices it
+ * growing: the markers above catch server-only code, not a client
+ * dependency that is merely large, or a dynamic import someone flattened
+ * that no marker names. The production-readiness audit (§performance)
+ * found the bundle guarded against leaks and not by size.
+ *
+ * Measured 2026-09-30 (task 125): **269,735 bytes** raw, 85.5 kB gzipped.
+ * The budget is that plus ~10 kB of headroom. Raw bytes rather than
+ * gzipped, because raw is what the build decides and gzip is what the
+ * zlib on the machine decides.
+ *
+ * **Raising it** is a one-line change here, and it should be a decision,
+ * not a reflex: say in the PR what grew and why it has to be in the entry
+ * rather than behind a dynamic import (the MediaPipe split above is the
+ * worked example), and re-measure with `npm run build`, which prints the
+ * size on every run.
+ */
+const ENTRY_BUDGET_BYTES = 280_000;
+
+for (const name of entry) {
+  const bytes = statSync(path.join(ASSETS, name)).size;
+  if (bytes > ENTRY_BUDGET_BYTES) {
+    throw new Error(
+      `the entry chunk ${name} is ${String(bytes)} bytes, over its ${String(ENTRY_BUDGET_BYTES)}-byte budget — see ENTRY_BUDGET_BYTES in scripts/check-bundle.ts`,
+    );
+  }
+  console.log(
+    `entry chunk ${name}: ${String(bytes)} of ${String(ENTRY_BUDGET_BYTES)} bytes`,
   );
 }
 

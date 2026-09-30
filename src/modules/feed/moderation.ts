@@ -324,12 +324,6 @@ export async function moderateContent(
 }
 
 /**
- * A review queue decision. Approve is safety's; a Remove or quarantine of
- * an entry or a photo is `moderateContent`, which settles the queue row
- * with everything else. A product or a profile keeps safety's own path —
- * a product is hidden, and a person is banned from the Desk.
- */
-/**
 Whether a queue subject is one `moderateContent` takes down.
 */
 function isModerated(subject: {
@@ -339,6 +333,12 @@ function isModerated(subject: {
   return subject.subjectType === "entry" || subject.subjectType === "photo";
 }
 
+/**
+ * A review queue decision. Approve is safety's; a Remove or quarantine of
+ * an entry or a photo is `moderateContent`, which settles the queue row
+ * with everything else. A product or a profile keeps safety's own path —
+ * a product is hidden, and a person is banned from the Desk.
+ */
 export async function decideReview(
   db: Db,
   reviewerId: string,

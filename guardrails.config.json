@@ -93,11 +93,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/weather/read.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement",
-      "reason": "Equivalent mutant, proof at the site: the result map is filled by a loop over `keyed`, so returning early on an empty one changes no answer. It saves a query that would otherwise scan every non-manual observation.",
-      "count": 1
-    },
-    {
       "key": "src/modules/weather/read.ts|mutation-suppress|// Stryker disable next-line ArrowFunction",
       "reason": "Equivalent mutant, proof at the site: emptying the cell-condition callback widens the WHERE to every non-manual row, and the rows are looked up by cell key afterwards \u2014 so the answer is identical and only the scan grows.",
       "count": 1
