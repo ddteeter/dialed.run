@@ -163,6 +163,12 @@ test("account settings -> change password -> reminder emails off and on -> sign 
     page.getByRole("heading", { name: "Keep your account?" }),
   ).toBeVisible({ timeout: 15_000 });
   await hydrated(page);
+  // Keep brings everything back but Strava, and says so.
+  await expect(
+    page.getByText(
+      "Strava is disconnected, and stays that way until you connect it again.",
+    ),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Keep my account" }).click();
   // Kept: back into the app (this runner lands on onboarding, which the
   // demo skipped), and never asked again.
