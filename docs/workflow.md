@@ -177,14 +177,14 @@ git worktree add ../dialed-129 -b lane/129-feed
 
 Where the old checklist's items went:
 
-| old item                                            | now                                                                                                   |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 1. Run task 106                                     | Done; the audit found its ban mechanics unfinished, which is 128 · SAF-4                              |
-| 2. Enable the CSAM scanning tool                    | Deployment plan §8. It only sees public photos once 128 · SAF-7 serves them cacheable (decision D-46) |
-| 3. Observability config (tracing off, logs sampled) | Deployment plan §1                                                                                    |
-| 4. Design-deltas round trip before strangers        | The development plan's design dependencies, and the D-45 copy pass as a stage-2 gate                  |
-| 5. Motion Doctrine sweep                            | Closed by task 114 (design-deltas item 12)                                                            |
-| 6. Publish a privacy policy (D-105)                 | 126 · ACC-13 (page and links); deployment plan §9 (the text; PR #109 drafted it)                      |
+| old item                                            | now                                                                                                                                                                                            |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Run task 106                                     | Done; the audit found its ban mechanics unfinished, which is 128 · SAF-4                                                                                                                       |
+| 2. Enable the CSAM scanning tool                    | Deployment plan §8. Photos stay private behind sign-in (decision D-69, superseding D-46), so the tool would scan nothing; CSAM coverage for public content is decided before the public launch |
+| 3. Observability config (tracing off, logs sampled) | Deployment plan §1                                                                                                                                                                             |
+| 4. Design-deltas round trip before strangers        | The development plan's design dependencies, and the D-45 copy pass as a stage-2 gate                                                                                                           |
+| 5. Motion Doctrine sweep                            | Closed by task 114 (design-deltas item 12)                                                                                                                                                     |
+| 6. Publish a privacy policy (D-105)                 | 126 · ACC-13 (page and links); deployment plan §9 (the text; PR #109 drafted it)                                                                                                               |
 
 ## After v1
 

@@ -475,7 +475,11 @@ flowchart LR
     origin (`BETTER_AUTH_URL`) rather than by `NODE_ENV`, keyed on
     `cf-connecting-ip`, with its counters in D1 (`rate_limit`) so every
     isolate shares them; secure cookies on the same condition.
-  - **Not built yet**: invite-only sign-up (decision D-39, task 126).
+  - **Built (task 126)**: invite-only sign-up (decision D-39). Turnstile,
+    then an open invite code, on both email and Google sign-up, and the
+    code claimed as the account is created (`auth/access-hook.ts`);
+    everyone else can request access, and codes and requests live on Desk
+    D7.
   - **Not built, and not code**: WAF and rate-limiting rules at the zone,
     which need the custom domain (deployment plan). A Workers Rate Limiting
     binding would be a `wrangler.jsonc` change, which is the owner's.
