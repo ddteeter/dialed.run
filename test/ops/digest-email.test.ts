@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { outbox } from "../../src/db/schema-core";
+import { cronCheckpoints, outbox } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { dayLabel } from "../../src/lib/dates";
 import { nowSeconds } from "../../src/lib/now";
@@ -34,6 +34,7 @@ const COUNTS: TodayCounts = {
 
 beforeEach(async () => {
   await db.delete(outbox);
+  await db.delete(cronCheckpoints);
 });
 
 describe("digestTemplate", () => {
@@ -118,6 +119,71 @@ describe("oweDigestEmail", () => {
     await oweDigestEmail(db, mail, now);
     await oweDigestEmail(db, mail, now);
     expect(await owedDigests()).toHaveLength(1);
+  });
+
+  it("owes nothing more the same UTC day once the first digest was sent and its row settled", async () => {
+    const DAY = 86_400;
+    const midnight = 20_000 * DAY;
+    let sends = 0;
+    // The live fast path's effect: sent, then the row deleted.
+    const mail = digestMail(["op-a"], async (_db, debt) => {
+      sends += 1;
+      await db.delete(outbox).where(eq(outbox.id, debt.id));
+    });
+
+    await oweDigestEmail(db, mail, midnight);
+    expect(sends).toBe(1);
+    expect(await owedDigests()).toStrictEqual([]);
+
+    // Re-fired later that day, and at its last second: nothing.
+    await oweDigestEmail(db, mail, midnight + 3 * 3600);
+    await oweDigestEmail(db, mail, midnight + DAY - 1);
+    expect(sends).toBe(1);
+
+    // The next day is owed again, and marked again: once that day too.
+    await oweDigestEmail(db, mail, midnight + DAY);
+    await oweDigestEmail(db, mail, midnight + DAY + 60);
+    expect(sends).toBe(2);
+    // The mark is its own row, beside the firing's heartbeat.
+    const marks = await db
+      .select()
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, "digest-email"));
+    expect(marks).toStrictEqual([
+      { cronName: "digest-email", lastRunAt: midnight + DAY },
+    ]);
+  });
+
+  it("owes a day whose last mark was the second before it began", async () => {
+    const midnight = 20_000 * 86_400;
+    let sends = 0;
+    const mail = digestMail(["op-a"], () => {
+      sends += 1;
+      return Promise.resolve();
+    });
+    await oweDigestEmail(db, mail, midnight - 1);
+    await db.delete(outbox);
+    await oweDigestEmail(db, mail, midnight);
+    expect(sends).toBe(2);
+  });
+
+  it("marks nothing when no operator is configured, so one added later that day is mailed", async () => {
+    const midnight = 20_000 * 86_400;
+    await oweDigestEmail(
+      db,
+      digestMail([], () => Promise.resolve()),
+      midnight,
+    );
+    let sends = 0;
+    await oweDigestEmail(
+      db,
+      digestMail(["op-a"], () => {
+        sends += 1;
+        return Promise.resolve();
+      }),
+      midnight + 60,
+    );
+    expect(sends).toBe(1);
   });
 
   it("owes nothing when no operator is configured", async () => {

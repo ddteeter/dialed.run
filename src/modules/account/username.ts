@@ -438,11 +438,16 @@ export async function forceRename(
  * - `changed` — a handle someone gave up: *"This runner changed their
  *   name."*, and never a redirect, because a redirect would link the old
  *   handle to the new one (round 26 #7);
+ * - `gone` — a handle whose runner's account was deleted (ACC-9): *"This
+ *   runner isn't here."* (decision D-82), which says neither that, nor a rename,
+ *   nor a removal. Known by the profile being gone: the purge keeps the
+ *   handle in the history and deletes the profile;
  * - `undefined` — nobody ever held it.
  */
 export type HandleLookup =
   | { readonly kind: "current"; readonly userId: string }
-  | { readonly kind: "changed" };
+  | { readonly kind: "changed" }
+  | { readonly kind: "gone" };
 
 export async function lookUpHandle(
   db: Db,
@@ -451,13 +456,19 @@ export async function lookUpHandle(
   const parsed = usernameSchema.safeParse(typed);
   if (!parsed.success) return undefined;
   const handle = parsed.data;
-  const [current, retired] = await db.batch([
+  const [current, [retired]] = await db.batch([
     holdersNow(db, sameHandle(handle)),
-    holdersBefore(db, eq(usernameHistory.username, handle)),
+    db
+      .select({ profile: userProfiles.userId })
+      .from(usernameHistory)
+      .leftJoin(userProfiles, eq(userProfiles.userId, usernameHistory.userId))
+      .where(eq(usernameHistory.username, handle))
+      .limit(1),
   ]);
   const holder = current[0];
   if (holder !== undefined) return { kind: "current", userId: holder.userId };
-  return retired.length > 0 ? { kind: "changed" } : undefined;
+  if (retired === undefined) return undefined;
+  return retired.profile === null ? { kind: "gone" } : { kind: "changed" };
 }
 
 /**

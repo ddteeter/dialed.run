@@ -203,7 +203,9 @@ export async function accountExport(
       productUrl: garment.productUrl ?? undefined,
       retired: garment.retired,
       addedAt: iso(garment.createdAt),
-      photo: withOrigin(origin, photoUrlFor(garment)),
+      // The full size, not the card the closet draws: an export is the
+      // runner's copy of what they put in (review of PR #130).
+      photo: withOrigin(origin, photoUrlFor(garment, "full")),
     })),
     runs: runRows.map((run) => ({
       id: run.id,

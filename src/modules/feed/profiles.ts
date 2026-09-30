@@ -242,7 +242,9 @@ export async function otherProfile(
 What `/@handle` answers (round 26 #7): the runner who holds it now, the
 viewer themself, or a handle somebody used to hold — which says "This
 runner changed their name." and never who they are now, because a
-redirect would link the old handle to the new one (decision D-56).
+redirect would link the old handle to the new one (decision D-56) — or
+one whose runner's account was deleted, which says only "This runner
+isn't here." (decision D-82).
 */
 export type ProfileAtHandle =
   | {
@@ -251,7 +253,8 @@ export type ProfileAtHandle =
       readonly isFollowing: boolean;
     }
   | { readonly kind: "own" }
-  | { readonly kind: "changed" };
+  | { readonly kind: "changed" }
+  | { readonly kind: "gone" };
 
 /**
 `undefined` for a handle nobody has held, and for one whose holder the

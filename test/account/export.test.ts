@@ -346,7 +346,7 @@ describe("accountExport", () => {
           productUrl: "https://example.test/harrier",
           retired: false,
           addedAt: iso(NOW - 300),
-          photo: `${ORIGIN}/closet/photo/${shirtId}/card?v=01V3`,
+          photo: `${ORIGIN}/closet/photo/${shirtId}/full?v=01V3`,
         },
         {
           id: tightsId,

@@ -12,10 +12,13 @@
  * To every operator (`ADMIN_USER_IDS`), looked up at send time like any
  * runner, so the address is the one their account holds.
  */
+import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
+import { cronCheckpoints } from "../../db/schema-core";
 import { dayLabel } from "../../lib/dates";
 import type { EmailTemplate } from "../../lib/email";
+import { firstColumnWhere } from "../../lib/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 import { adminUserIds } from "../safety";
@@ -77,15 +80,48 @@ const LIVE: DigestMail = {
 };
 
 /**
+ * The row that says the morning's digest was owed: `cron_checkpoints`'
+ * "when did this last run", for the email as the daily firing's own row is
+ * for the firing.
+ */
+const DIGEST_OWED = "digest-email";
+
+const DAY_SECONDS = 86_400;
+
+/**
+ * Whether this UTC day's digest was already owed — by a firing that ran
+ * before this one today, whose emails may long since have been sent and
+ * their outbox rows deleted.
+ */
+async function isOwedToday(db: Db, now: number): Promise<boolean> {
+  const last = await firstColumnWhere(
+    db,
+    cronCheckpoints,
+    cronCheckpoints.lastRunAt,
+    eq(cronCheckpoints.cronName, DIGEST_OWED),
+  );
+  // Never owed reads as owed at the epoch, which is before any day.
+  return (last ?? 0) >= now - (now % DAY_SECONDS);
+}
+
+/**
  * Owe each operator this morning's digest, in one batch, then send it by
- * the fast path; the drain retries a send that fails. Keyed by the day
- * and the operator, so a firing that runs twice owes one email each.
+ * the fast path; the drain retries a send that fails.
+ *
+ * **Once a day, however often the firing runs.** The outbox's key (the
+ * day and the operator) collapses two firings that overlap, but the fast
+ * path deletes the row the moment the send lands (`settleOutbox`), so a
+ * firing re-run an hour later found no row and mailed every operator
+ * again (review of PR #130). The day's mark outlives the row: it is
+ * written in the same batch as the debts, so a digest is marked owed
+ * exactly when it is, and a later firing that reads it owes nothing.
  */
 export async function oweDigestEmail(
   db: Db,
   mail: DigestMail = LIVE,
   now = nowSeconds(),
 ): Promise<void> {
+  if (await isOwedToday(db, now)) return;
   const template = digestTemplate(await mail.counts(), now);
   const debts = mail
     .admins()
@@ -99,6 +135,16 @@ export async function oweDigestEmail(
     );
   const [first, ...rest] = debts.map((debt) => outboxInsert(db, debt, now));
   if (first === undefined) return;
-  await db.batch([first, ...rest]);
+  await db.batch([
+    first,
+    ...rest,
+    db
+      .insert(cronCheckpoints)
+      .values({ cronName: DIGEST_OWED, lastRunAt: now })
+      .onConflictDoUpdate({
+        target: cronCheckpoints.cronName,
+        set: { lastRunAt: now },
+      }),
+  ]);
   for (const debt of debts) await mail.settle(db, debt, captureException);
 }

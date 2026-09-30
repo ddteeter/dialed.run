@@ -625,6 +625,25 @@ describe("lookUpHandle", () => {
     });
   });
 
+  it("says a deleted account's handle, and the one it gave up before, is nobody's — never that it changed", async () => {
+    const userId = await runner({ username: "maya_runs" });
+    await claimUsername(db, userId, "maya_trails", CLEAR);
+    // What the purge leaves (ACC-9): both handles in the history, no
+    // profile.
+    await db.batch([
+      db
+        .insert(usernameHistory)
+        .values({ username: "maya_trails", userId, retiredAt: 1 }),
+      db.delete(userProfiles).where(eq(userProfiles.userId, userId)),
+    ]);
+    expect(await lookUpHandle(db, "maya_trails")).toStrictEqual({
+      kind: "gone",
+    });
+    expect(await lookUpHandle(db, "maya_runs")).toStrictEqual({
+      kind: "gone",
+    });
+  });
+
   it("knows nothing of a handle nobody held, or one that is not a handle", async () => {
     expect(await lookUpHandle(db, "nobody_here")).toBeUndefined();
     expect(await lookUpHandle(db, "no")).toBeUndefined();
