@@ -8,7 +8,7 @@ import { and, desc, eq, gte, inArray, lte, notInArray } from "drizzle-orm";
 import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
 import { roundCoordinate } from "../../lib/coords";
 import { calendarDay } from "../../lib/dates";
-import { chunked, readInChunks } from "../../lib/chunked";
+import { readInChunks } from "../../lib/chunked";
 import type { ManualSky, RunDraft } from "../../lib/contracts";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import type { Ulid } from "../../lib/ids";
@@ -277,13 +277,6 @@ async function entriesByRun(
 }
 
 /**
- * Runs per read of the weather cache. Each run is three bound parameters
- * there — a latitude, a longitude and an hour — and D1 refuses a statement
- * with more than a hundred; a full list of fifty is a hundred and fifty.
- */
-const CELLS_PER_READ = 30;
-
-/**
  * Each run's conditions, as the list and run detail show them.
  *
  * `DIALED_WEATHER` is a second database, so this is correlated in code,
@@ -300,19 +293,14 @@ async function conditionsFor(
   list: readonly RunRow[],
 ): Promise<Map<string, RunConditions | undefined>> {
   const ids = list.map((run) => ulidSchema.parse(run.id));
-  const [pages, bands] = await Promise.all([
-    Promise.all(
-      chunked(ids, CELLS_PER_READ).map(async (chunk) =>
-        observationsForRuns(chunk),
-      ),
-    ),
+  // Any length: the weather read chunks itself under D1's parameter cap.
+  const [observations, bands] = await Promise.all([
+    observationsForRuns(ids),
     manualReadingsForRuns(ids),
   ]);
   const conditions = new Map<string, RunConditions | undefined>();
-  for (const page of pages) {
-    for (const [runId, observation] of page) {
-      conditions.set(runId, asRunConditions(observation, false));
-    }
+  for (const [runId, observation] of observations) {
+    conditions.set(runId, asRunConditions(observation, false));
   }
   for (const [runId, band] of bands) {
     conditions.set(runId, asRunConditions(band, true));

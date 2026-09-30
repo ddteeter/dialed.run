@@ -4,12 +4,13 @@
  * touches `dialed-weather` (docs/architecture.md), so any other module
  * needs a read path through here.
  */
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
 import { env } from "../../env";
+import { readInChunks } from "../../lib/chunked";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
 import {
@@ -60,29 +61,41 @@ export async function manualReadingsForRuns(
 }
 
 /**
+ * Runs per read of the weather cache. Each is three bound parameters — a
+ * latitude, a longitude and an hour — and D1 refuses a statement with
+ * more than a hundred, so 33 is the ceiling; 30 leaves a margin.
+ */
+const CELLS_PER_READ = 30;
+
+/**
  * Consensus batch read (104's "your conditions" block): real observations
  * only — a band is never in the cache (contracts.md). Bounded
  * by the caller's own scan window (104's packet requires the EXPLAIN +
  * row-scan cap on its side); this only matches the exact cache cells the
  * given runs land in.
+ *
+ * **Any number of runs.** Both reads are chunked under D1's
+ * hundred-parameter cap here (D-117), so a caller hands over its whole
+ * list rather than having to know that a run costs three parameters on
+ * the weather side. No runs, or no located runs, send no query at all:
+ * there is nothing to chunk.
  */
 export async function observationsForRuns(
-  runIds: Ulid[],
+  runIds: readonly Ulid[],
 ): Promise<Map<Ulid, WeatherObservation>> {
   const result = new Map<Ulid, WeatherObservation>();
-  if (runIds.length === 0) {
-    return result;
-  }
-
-  const runRows = await drizzle(env.DIALED_CORE)
-    .select({
-      id: runs.id,
-      lat: runs.lat,
-      lng: runs.lng,
-      startedAt: runs.startedAt,
-    })
-    .from(runs)
-    .where(or(...runIds.map((id) => eq(runs.id, id))));
+  const core = drizzle(env.DIALED_CORE);
+  const runRows = await readInChunks(runIds, (chunk) =>
+    core
+      .select({
+        id: runs.id,
+        lat: runs.lat,
+        lng: runs.lng,
+        startedAt: runs.startedAt,
+      })
+      .from(runs)
+      .where(inArray(runs.id, chunk)),
+  );
 
   // Dropped rather than keyed, and the distinction matters: `cacheKeyFor`
   // rounds, so a null coordinate keys to 0 — a run with no location would
@@ -98,32 +111,32 @@ export async function observationsForRuns(
           },
         ],
   );
-  // Equivalent mutant: skipping this return changes no answer — the loop
-  // at the bottom is keyed off `keyed`, so an empty one yields an empty
-  // map either way. What it saves is a query that would otherwise scan
-  // every observation.
-  // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement
-  if (keyed.length === 0) {
-    return result;
-  }
 
-  // Equivalent mutant: emptying this callback widens the scan to every
-  // row and cannot change the result, which is looked up by
-  // cell key afterwards. It is a query-cost guard, and cost is the one
-  // thing no assertion here can see.
-  // Stryker disable next-line ArrowFunction
-  const cellConditions = keyed.map(({ key }) =>
-    and(
-      eq(weatherObservations.latR, key.latR),
-      eq(weatherObservations.lngR, key.lngR),
-      eq(weatherObservations.hourBucket, key.hourBucket),
-    ),
+  const weather = drizzle(env.DIALED_WEATHER);
+  const rows = await readInChunks(
+    keyed,
+    (chunk) =>
+      weather
+        .select()
+        .from(weatherObservations)
+        .where(
+          or(
+            // Equivalent mutant: emptying this callback widens the scan to
+            // every row and cannot change the result, which is looked up
+            // by cell key afterwards. It is a query-cost guard, and cost
+            // is the one thing no assertion here can see.
+            // Stryker disable next-line ArrowFunction
+            ...chunk.map(({ key }) =>
+              and(
+                eq(weatherObservations.latR, key.latR),
+                eq(weatherObservations.lngR, key.lngR),
+                eq(weatherObservations.hourBucket, key.hourBucket),
+              ),
+            ),
+          ),
+        ),
+    CELLS_PER_READ,
   );
-
-  const rows = await drizzle(env.DIALED_WEATHER)
-    .select()
-    .from(weatherObservations)
-    .where(or(...cellConditions));
 
   const bySourceKey = new Map(
     rows.map((row) => [keyString(row.latR, row.lngR, row.hourBucket), row]),

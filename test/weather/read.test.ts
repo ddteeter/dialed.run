@@ -155,8 +155,9 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
   });
 
   it("returns an empty map for no runs, even with runs in the table", async () => {
-    // The early return, not the query returning nothing: without it, an
-    // empty id list builds a `WHERE` that matches every run in the table.
+    // No chunks, so no query, rather than the query returning nothing: an
+    // `or()` of no conditions is no `WHERE` at all, which matches every
+    // run in the table.
     const cached = await insertRun({ lat: 76.1, lng: 36.1 });
     await upsertRealObservation(
       cacheKeyFor(76.1, 36.1, new Date(1_768_500_000 * 1000)),
@@ -199,5 +200,42 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
     const results = await observationsForRuns([asked]);
     expect(results.size).toBe(1);
     expect(results.has(asked)).toBe(true);
+  });
+});
+
+describe("observationsForRuns takes any number of runs (D-117)", () => {
+  it("answers for 120 located runs, past D1's hundred-parameter cap on both databases", async () => {
+    // Each run is one parameter on the core read and three on the weather
+    // read, so unchunked this fails at 101 runs on core and at 34 on
+    // weather — "too many SQL variables", for the whole list.
+    const at = new Date(1_768_500_000 * 1000);
+    const planted = new Map<Ulid, number>();
+    const asked: Ulid[] = [];
+    for (let index = 0; index < 120; index += 1) {
+      const lat = 10.1 + index / 10;
+      const runId = await insertRun({ lat, lng: -60.1 });
+      await upsertRealObservation(
+        cacheKeyFor(lat, -60.1, at),
+        {
+          tempC: index,
+          feelsLikeC: index,
+          humidity: 50,
+          windKph: 5,
+          precipMm: 0,
+          condition: "clear",
+        },
+        runId,
+      );
+      planted.set(runId, index);
+      asked.push(runId);
+    }
+
+    const results = await observationsForRuns(asked);
+
+    // Every run, each with its own cell's reading: a chunk that lost its
+    // tail, or matched a neighbour's cell, shows up as a wrong number.
+    expect(
+      new Map([...results].map(([runId, reading]) => [runId, reading.tempC])),
+    ).toStrictEqual(planted);
   });
 });
