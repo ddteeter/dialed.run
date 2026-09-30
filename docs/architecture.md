@@ -495,7 +495,11 @@ flowchart LR
     origin (`BETTER_AUTH_URL`) rather than by `NODE_ENV`, keyed on
     `cf-connecting-ip`, with its counters in D1 (`rate_limit`) so every
     isolate shares them; secure cookies on the same condition.
-  - **Not built yet**: invite-only sign-up (decision D-39, task 126).
+  - **Built (task 126)**: invite-only sign-up (decision D-39). Turnstile,
+    then an open invite code, on both email and Google sign-up, and the
+    code claimed as the account is created (`auth/access-hook.ts`);
+    everyone else can request access, and codes and requests live on Desk
+    D7.
   - **Not built, and not code**: WAF and rate-limiting rules at the zone,
     which need the custom domain (deployment plan). A Workers Rate Limiting
     binding would be a `wrangler.jsonc` change, which is the owner's.
@@ -506,8 +510,14 @@ flowchart LR
   without them. A report-only CSP reporting to Sentry (the static copy has
   no report-uri, which comes from a secret),
   `frame-ancestors 'none'`, HSTS, Referrer-Policy, Permissions-Policy and
-  nosniff. The CSP allows inline script until a nonce is threaded through
-  `router.tsx`.
+  nosniff. Inline script runs on a per-request nonce (`lib/csp-nonce`:
+  minted in `server.ts`, stamped on the framework's scripts through
+  `router.tsx`'s `ssr.nonce`), never on `'unsafe-inline'`.
+- **A size budget on the client entry chunk**: `npm run check:bundle`,
+  which `postbuild` runs, fails a build whose entry chunk is over
+  **280,000 bytes** (measured at 269,735 raw, 85.5 kB gzipped, on
+  2026-09-30). The number, and what raising it should come with, live in
+  `scripts/check-bundle.ts`; the build prints the size every time.
 - **The Desk** (`/desk`, decision D-35): the operator's surface, behind the
   admin gate as not-found for anyone else. Task 125 built the shell and
   Today; 126 adds Access (D7), 128 the ban panel and Runners.

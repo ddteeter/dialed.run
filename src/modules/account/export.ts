@@ -23,7 +23,7 @@ import {
   userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
-import { chunked, readInChunks } from "../../lib/chunked";
+import { readInChunks } from "../../lib/chunked";
 import { ulidSchema, type Ulid } from "../../lib/ids";
 import { firstRowWhere } from "../../lib/keyed-read";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
@@ -32,28 +32,19 @@ import type { WeatherReading } from "../weather";
 type Db = ReturnType<typeof drizzle>;
 
 /**
- * How many runs one observation read may name. `observationsForRuns` binds
- * three parameters a run on the weather database (its place and hour), so
- * D1's hundred-parameter cap is 33 runs, not `IN_LIST_CHUNK`'s 80 — the
- * same arithmetic as runs' own `CELLS_PER_READ`.
- */
-const RUNS_PER_OBSERVATION_READ = 30;
-
-/**
  * Each run's conditions: the band the runner set, else the observation
  * at its place and hour. Two databases, so assembled here (CLAUDE.md's
- * one exception to "filter in SQL"), in chunks under D1's parameter cap.
+ * one exception to "filter in SQL"); both reads chunk themselves under
+ * D1's parameter cap (D-117).
  */
 async function conditionsFor(
   runIds: readonly Ulid[],
 ): Promise<Map<string, WeatherReading>> {
   const bands = await manualReadingsForRuns(runIds);
   const readings = new Map<string, WeatherReading>();
-  for (const chunk of chunked(runIds, RUNS_PER_OBSERVATION_READ)) {
-    const observed = await observationsForRuns(chunk);
-    for (const [runId, observation] of observed) {
-      readings.set(runId, { ...observation, source: "visualcrossing" });
-    }
+  const observed = await observationsForRuns(runIds);
+  for (const [runId, observation] of observed) {
+    readings.set(runId, { ...observation, source: "visualcrossing" });
   }
   for (const [runId, band] of bands) readings.set(runId, band);
   return readings;

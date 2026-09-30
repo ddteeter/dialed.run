@@ -41,15 +41,20 @@ export const IN_LIST_CHUNK = 80;
  * order — so a query written as `inArray(column, chunk)` stays under D1's
  * parameter cap however long the list grows.
  *
+ * `size` is for a read that binds more than one parameter an id (the
+ * weather cache's place-and-hour, three a run); an `IN (…)` list takes
+ * the default.
+ *
  * No ids, no query: there are no chunks to read, which is also what an
  * empty `inArray` would have matched.
  */
 export async function readInChunks<TId, TRow>(
   ids: readonly TId[],
   read: (chunk: TId[]) => Promise<TRow[]>,
+  size = IN_LIST_CHUNK,
 ): Promise<TRow[]> {
   const pages = await Promise.all(
-    chunked(ids, IN_LIST_CHUNK).map(async (chunk) => read(chunk)),
+    chunked(ids, size).map(async (chunk) => read(chunk)),
   );
   return pages.flat();
 }

@@ -17,6 +17,7 @@ import {
 import { exportWorkFromEnv } from "./modules/account/export-build";
 import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
+import { mintNonce } from "./lib/csp-nonce";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 
@@ -27,7 +28,14 @@ export default {
       // security headers, set here so no route can forget them. Static
       // assets never reach this; public/_headers covers them. A thrown
       // error gets none: the platform answers it with its own error page.
-      return secureResponse(await startFetch(request));
+      // The nonce goes to the framework as request context, where
+      // router.tsx reads it onto every inline script, and to the CSP that
+      // admits exactly those scripts.
+      const nonce = mintNonce();
+      return secureResponse(
+        await startFetch(request, { context: { nonce } }),
+        nonce,
+      );
     } catch (error) {
       captureException(error, { surface: "fetch" });
       throw error;

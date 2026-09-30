@@ -348,8 +348,11 @@ failure. Rendered spec: `Form Contract.dc.html`.
 
 ## Launch posture
 
-Dogfood privately with invited runners as soon as lanes land. Public sign-ups
-open only after task 106 (trust & safety floor) merges and the dashboard-side
-CSAM scanning is enabled. Launch narrow — seed one or two cities so the
+Dogfood privately with invited runners as soon as lanes land: sign-up needs
+an invite code (decision D-39), and codes come from the Desk. Public sign-ups
+open at the stage 2 gate (`docs/launch/deployment-plan.md` §11), which
+includes deciding CSAM coverage for public content; the dashboard's scanning
+tool sees nothing while photos stay private behind sign-in (decision D-69).
+Launch narrow — seed one or two cities so the
 conditions consensus (and later the cohort prior) has density; this is an
 ops/marketing decision the code doesn't depend on.

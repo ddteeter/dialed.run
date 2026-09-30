@@ -15,11 +15,15 @@
  * `Content-Security-Policy` is that step. It reports to Sentry's security endpoint, derived from the
  * DSN, so a violation lands where every other failure does.
  *
- * **Inline scripts are allowed, and that is the known gap.** TanStack
- * Start writes its hydration state as inline `<script>`s. Refusing them
- * needs a per-request nonce threaded through `router.tsx` (the router's
- * `ssr.nonce`), which is not this lane's file; until then the policy
- * allows inline script and says so here rather than pretending otherwise.
+ * **Inline script runs on a nonce, never on `'unsafe-inline'`.** TanStack
+ * Start writes its hydration state as inline `<script>`s. `server.ts`
+ * mints a nonce per request (`lib/csp-nonce`), hands it to the framework,
+ * which stamps it on every script it and React's stream renderer write
+ * (the router's `ssr.nonce`, read in `router.tsx`), and names it here. An
+ * inline script without it — one nobody wrote, or an injected one — is a
+ * report. Only a response the Worker generates has a nonce; the static
+ * assets' copy in `public/_headers` names none, and needs none, because
+ * none of those files is a document that runs script.
  * Framing, object embeds, base-tag hijacking and foreign form targets are
  * refused regardless.
  */
@@ -39,19 +43,29 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 /**
  * The policy, one directive per line so a diff shows what changed.
  *
+ * - `'nonce-…'`: the request's script nonce, when the Worker generated the
+ *   response (see above).
  * - `'wasm-unsafe-eval'`: MediaPipe's face detector compiles WebAssembly
  *   in the browser (`safety/blur/detect.ts`), which a CSP refuses without
  *   it. It permits compiling wasm, not `eval` of JavaScript.
+ * - No `'unsafe-eval'`: zod would use it to compile its parsers, and runs
+ *   jitless instead (`lib/zod-jitless`, an inline head script the root
+ *   route writes, so it runs before any module).
+ *   The e2e check in `e2e/desk/desk-door.spec.ts` fails on any report.
  * - `blob:` workers: MediaPipe runs its model in a worker it builds from a
  *   blob.
  * - `img-src blob: data:`: photo previews before upload are object URLs.
  * - `form-action`: Google and Strava sign-in leave by redirect, which a
  *   browser checks against `form-action` when a form started it.
  */
-export function contentSecurityPolicy(reportUri: string | undefined): string {
+export function contentSecurityPolicy(
+  reportUri: string | undefined,
+  nonce?: string,
+): string {
+  const scriptNonce = nonce === undefined ? "" : ` 'nonce-${nonce}'`;
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${TURNSTILE_ORIGIN}`,
+    `script-src 'self'${scriptNonce} 'wasm-unsafe-eval' ${TURNSTILE_ORIGIN}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
@@ -102,8 +116,9 @@ export function sentryReportUri(dsn: string | undefined): string | undefined {
  */
 export function securityHeaders(
   reportUri: string | undefined,
+  nonce?: string,
 ): readonly (readonly [string, string])[] {
-  const csp = contentSecurityPolicy(reportUri);
+  const csp = contentSecurityPolicy(reportUri, nonce);
   return [
     [CSP_HEADER, csp],
     ["X-Frame-Options", "DENY"],
@@ -127,9 +142,10 @@ export function securityHeaders(
 export function withSecurityHeaders(
   response: Response,
   reportUri: string | undefined,
+  nonce?: string,
 ): Response {
   const secured = new Response(response.body, response);
-  for (const [name, value] of securityHeaders(reportUri)) {
+  for (const [name, value] of securityHeaders(reportUri, nonce)) {
     if (!secured.headers.has(name)) secured.headers.set(name, value);
   }
   return secured;
