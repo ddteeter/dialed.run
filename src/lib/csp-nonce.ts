@@ -45,12 +45,10 @@ const nonceContext = z.object({ nonce: z.string().min(1) });
  * costs a CSP report, a throw here costs the page.
  */
 export function routerSsr(readContext: () => unknown): { nonce?: string } {
-  let context: unknown;
   try {
-    context = readContext();
+    // A context without a nonce parses to no `data`, and spreads to `{}`.
+    return { ...nonceContext.safeParse(readContext()).data };
   } catch {
     return {};
   }
-  const parsed = nonceContext.safeParse(context);
-  return parsed.success ? { nonce: parsed.data.nonce } : {};
 }
