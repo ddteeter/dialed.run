@@ -1,7 +1,8 @@
 /**
  * Covers: Settings › Account (ACC-7, ACC-8), Change password, Settings ›
  * Notifications (ACC-11), the unsubscribe link and its landing (round 26
- * #19), Sign out everywhere, Export your data (ACC-10), and Delete account
+ * #19), Sign out everywhere, Export your data (ACC-10: Get a copy, Preparing,
+ * the queued ZIP, Download), and Delete account
  * with Keep inside the week (ACC-9; round 27 #14) — one journey, one video.
  *
  * Exactly one test() per demo spec (see e2e/auth/auth.demo.spec.ts).
@@ -124,17 +125,39 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   // Back in, with the password changed above.
   await logIn(page, email, `${PASSPHRASE}-2`);
 
-  await scene(page, "Export your data: one file, downloaded (ACC-10)");
+  await scene(
+    page,
+    "Export your data: Get a copy, and it's Preparing (ACC-10)",
+  );
   await page.goto("/account/sign-in");
   await expect(page.getByRole("heading", { name: "Account" })).toBeVisible({
     timeout: 15_000,
   });
   await hydrated(page);
+  const exportRow = page.locator("[data-part='export-row']");
+  await exportRow.getByRole("button", { name: "Get a copy" }).click();
+  await expect(
+    exportRow.getByText("We'll email a link when it's ready."),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(exportRow).toContainText("[Preparing]");
+
+  // The queued build runs in the local stack's own consumer; the email
+  // goes to the local send_email binding. What the page shows once it has
+  // run is the day's copy, offered here as well as by email.
+  await scene(page, "The ZIP is built and emailed; today the row offers it");
+  await expect(async () => {
+    await page.reload();
+    await expect(exportRow.getByRole("link", { name: "Download" })).toBeVisible(
+      { timeout: 2000 },
+    );
+  }).toPass({ timeout: 60_000 });
+  await expect(exportRow).toContainText("Emailed. The link works until");
+  await hydrated(page);
   const download = page.waitForEvent("download");
-  await page.getByRole("link", { name: /^Export your data/u }).click();
+  await exportRow.getByRole("link", { name: "Download" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(
-    /^dialed-run-export-\d{4}-\d{2}-\d{2}\.json$/u,
+    /^dialed-run-export-\d{4}-\d{2}-\d{2}\.zip$/u,
   );
 
   await scene(page, "Delete account: the password once more, then 7 days");

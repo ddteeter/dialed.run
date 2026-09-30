@@ -648,6 +648,22 @@ Server-only: the build file is imported by `src/server.ts` alone, and
 `npm run build`'s `check:bundle` confirms nothing of it reaches the
 client chunk.
 
+**The files, as built.** `data-exports.ts` (request, row state, DLQ fail,
+download), `export.ts` (the reads), `export-files.ts` (which R2 objects
+go in, and under what name), `export-sheets.ts` (the five CSVs' column
+tables: name, README sentence, value), `export-format.ts` (CSV cells,
+the README's lines), `export-build.ts`, `export-sweep.ts`. **Two
+additions to `.fallowrc.jsonc`'s `ignore`** came from the commit gate's
+clone check: `export-sheets.ts` (a column table reads as a copy of any
+other) and `src/lib/email-kinds.ts`, the email kinds split out of
+`lib/email.ts` for the same reason, beside `tap-list-data.ts`'s
+precedent. Both are data tables only; the behaviour beside them stayed
+in files the check still reads. **Owner question 4.**
+
+A CSV text cell starting `=`, `+`, `-`, `@`, a tab or a CR is prefixed
+with `'` (OWASP's CSV-injection advice): product names and captions are
+other people's words, opened in a spreadsheet.
+
 ### Delivery
 
 `GET /account/export/$token` (a server route, glue; `exportFileResponse`
@@ -732,6 +748,8 @@ stale is listed in `docs/legal/privacy-policy-sources.md`, not edited in
 1. `kit.csv` and `profile.csv` beyond the board's three CSVs [ship them].
 2. A ready export shows Download on the row for its first day [yes].
 3. A lifecycle rule on `IMPORTS` `exports/` as a second net [not needed].
+4. The two `.fallowrc.jsonc` ignore entries (`email-kinds.ts`,
+   `export-sheets.ts`) [keep; each file is a table and nothing else].
 
 ## Contract touches
 
