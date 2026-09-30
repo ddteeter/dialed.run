@@ -89,9 +89,56 @@ function minted(ids: string[]): string {
 }
 
 /**
+ * How often a teardown statement is tried against a busy database, and
+ * how long it waits before the next try (multiplied by the attempt).
+ */
+const BUSY_ATTEMPTS = 5;
+const BUSY_BACKOFF_MS = 200;
+
+/**
+ * Whether `error`, or anything in its `cause` chain, is SQLite saying the
+ * database is locked. Drizzle wraps the driver's error ("Failed query:
+ * …") and keeps the original as its cause.
+ */
+function isBusy(error: unknown): boolean {
+  for (let current = error; current instanceof Error; current = current.cause) {
+    if (/SQLITE_BUSY|database is locked/.test(current.message)) return true;
+  }
+  return false;
+}
+
+/**
+ * Runs one teardown statement, retrying while the database is busy.
+ *
+ * The dev server writes to the same local D1 file this process deletes
+ * from, and a write it is still finishing (a notification it records
+ * when a page opens, say) can hold the lock at the moment teardown runs.
+ * That failed `notifications-m` once on CI as SQLITE_BUSY. A bounded
+ * retry is fine here: this is test support, not a request handler, and
+ * law 3's "no retry loops" is about the app. Anything that is not
+ * SQLITE_BUSY, or a lock that outlasts the last attempt, still fails.
+ */
+async function whileBusy(statement: () => Promise<unknown>): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await statement();
+      return;
+    } catch (error) {
+      if (attempt >= BUSY_ATTEMPTS || !isBusy(error)) throw error;
+      await new Promise((resolve) => {
+        setTimeout(resolve, BUSY_BACKOFF_MS * attempt);
+      });
+    }
+  }
+}
+
+/**
  * Deletes every row of `table` whose `column` is one of `ids` — the one
- * shape every teardown statement in `removeSeeded` shares. An empty `ids`
- * deletes nothing.
+ * shape every teardown statement in `removeSeeded` shares.
+ *
+ * An empty `ids` sends nothing: drizzle renders `inArray` over an empty
+ * list as `where false`, which deletes nothing but still takes the
+ * database's write lock, and so still meets the dev server's writes.
  */
 async function deleteByIds(
   db: DrizzleD1Database,
@@ -99,7 +146,8 @@ async function deleteByIds(
   column: Column,
   ids: readonly string[],
 ): Promise<void> {
-  await db.delete(table).where(inArray(column, ids));
+  if (ids.length === 0) return;
+  await whileBusy(() => db.delete(table).where(inArray(column, ids)));
 }
 
 export async function removeSeeded(rows: Seeded): Promise<void> {
