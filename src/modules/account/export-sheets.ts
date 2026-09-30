@@ -230,8 +230,19 @@ export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
       {
         name: "photos",
         about: "its photos, in photos/entries/, separated by semicolons.",
-        value: (entry) =>
-          list((entryPhotos.get(entry.id) ?? []).map((photo) => photo.name)),
+        value: (entry) => {
+          // export-files.ts builds this map from these same entries, so
+          // every id here is already a key in it — a missing key is a bug
+          // in that construction, not a shape this sheet should paper
+          // over with an empty cell.
+          const resolved = entryPhotos.get(entry.id);
+          if (resolved === undefined) {
+            throw new Error(
+              `export-sheets: no resolved photos for entry ${entry.id}`,
+            );
+          }
+          return list(resolved.map((photo) => photo.name));
+        },
       },
       {
         name: "created_at",

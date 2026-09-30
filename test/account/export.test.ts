@@ -19,12 +19,14 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { exportData } from "../../src/modules/account/export";
+import { readmeSection } from "../../src/modules/account/export-format";
 import {
   csvCell,
   exportFiles,
   type ExportText,
   type StoredObjects,
 } from "../../src/modules/account/export-files";
+import { buildSheets } from "../../src/modules/account/export-sheets";
 import { cacheKeyFor } from "../../src/modules/weather";
 import { core } from "../email/helpers";
 
@@ -529,13 +531,92 @@ describe("exportData and exportFiles", () => {
     ).toBe(true);
   });
 
-  it("names every column of every CSV in the README, with what it holds", async () => {
-    const userId = await seedRunner(`readme-${newUlid()}@example.test`);
-    const { texts } = exportFiles(
+  it("leaves out a garment's photo when it has none, even if R2 happens to hold a key that would spell 'null'", async () => {
+    // photoKey null must gate the whole search, not just happen to find
+    // nothing: a garment with no key must never resolve a photo even when
+    // R2 holds an object at the key the candidate search would build by
+    // blindly interpolating a null photoKey into a template literal.
+    const userId = await seedRunner(`nullkey-${newUlid()}@example.test`);
+    const garmentId = newUlid();
+    await db.insert(wardrobeItems).values({
+      id: garmentId,
+      userId,
+      category: "top",
+      name: "No photo",
+      createdAt: NOW - 100,
+    });
+
+    const { objects } = exportFiles(
       await exportData(db, userId),
-      NOTHING_STORED,
+      {
+        media: new Map([
+          [`null/original.jpg`, 999],
+          [`null/full.webp`, 999],
+        ]),
+        imports: new Map(),
+      },
       NOW,
     );
+
+    expect(objects).toStrictEqual([]);
+  });
+
+  it("never lets an upload that did not become a run's own file claim that run's run_file column", async () => {
+    // A duplicate (or any non-'done') upload can still point its runId at
+    // a real run — that is what makes it a duplicate — but it must never
+    // be read as the run's own imported file.
+    const userId = await seedRunner(`notfile-${newUlid()}@example.test`);
+    const runId = await seedRun(userId, NOW - 3600);
+    const uploadId = newUlid();
+    await db.insert(imports).values({
+      id: uploadId,
+      userId,
+      r2Key: `imports/${userId}/${uploadId}.tcx`,
+      status: "duplicate",
+      runId,
+      createdAt: NOW - 60,
+    });
+
+    const { texts } = exportFiles(
+      await exportData(db, userId),
+      {
+        media: new Map(),
+        imports: new Map([[`imports/${userId}/${uploadId}.tcx`, 5]]),
+      },
+      NOW,
+    );
+
+    const [, row] = linesOf(texts, "runs.csv");
+    expect(row?.endsWith(",")).toBe(true);
+  });
+
+  it("keeps a kit-less entry's tags and photos as real empty arrays, not the fallback's raw junk", async () => {
+    // (tagsOf.get(id) ?? []).map(...) and photosOf.get(id) ?? [] both use
+    // an array fallback that a broken guard could replace with a
+    // single-element placeholder — which a naive check of the *rendered*
+    // CSV text cannot tell apart from a real empty list, since joining a
+    // one-element array of a bad shape collapses to the same "" cell. The
+    // raw array read directly off exportData does not have that blind spot.
+    const userId = await seedRunner(`bare-${newUlid()}@example.test`);
+    const runId = await seedRun(userId, NOW - 3600);
+    const entryId = newUlid();
+    await db.insert(outfitEntries).values({
+      id: entryId,
+      runId,
+      userId,
+      createdAt: NOW - 60,
+    });
+
+    const data = await exportData(db, userId);
+    const entry = data.entries.find((candidate) => candidate.id === entryId);
+    expect(entry?.tags).toStrictEqual([]);
+    expect(entry?.photos).toStrictEqual([]);
+  });
+
+  it("names every column of every CSV in the README, with what it holds", async () => {
+    const userId = await seedRunner(`readme-${newUlid()}@example.test`);
+    const data = await exportData(db, userId);
+    const { texts } = exportFiles(data, NOTHING_STORED, NOW);
     const readme = textNamed(texts, "README.txt");
     expect(readme.startsWith(`dialed.run export\nMade ${iso(NOW)}.\n`)).toBe(
       true,
@@ -552,6 +633,40 @@ describe("exportData and exportFiles", () => {
     }
     expect(readme).toContain(
       "  verdict: -2 (too cold) to +2 (too warm); 0 is dialed.",
+    );
+    // The loop above only proves every column NAME appears somewhere with
+    // SOME non-space text after it — it cannot see a blank separator line
+    // turning into junk, or the fixed paragraph between the title and the
+    // first sheet going missing, because neither is a "\n  name: " line.
+    // Rebuilding the exact expected text from the same sheets (built
+    // independently here, not reused from exportFiles' own call) pins
+    // both.
+    const { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet } =
+      buildSheets({
+        data,
+        runFileOf: new Map(),
+        entryPhotos: new Map(),
+        garmentPhotos: new Map(),
+      });
+    expect(readme).toBe(
+      [
+        "dialed.run export",
+        `Made ${iso(NOW)}.`,
+        "",
+        "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.",
+        "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps. run-files/ holds the GPX, FIT and TCX files you uploaded, as uploaded.",
+        "",
+        readmeSection(profileSheet),
+        "",
+        readmeSection(runsSheet),
+        "",
+        readmeSection(entriesSheet),
+        "",
+        readmeSection(kitSheet),
+        "",
+        readmeSection(garmentsSheet),
+        "",
+      ].join("\n"),
     );
   });
 

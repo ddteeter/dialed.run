@@ -299,6 +299,43 @@ describe("buildExport", () => {
     expect(settled).toStrictEqual([]);
   });
 
+  it("throws the underlying error, not the missing-file message, when the write itself fails", async () => {
+    // The `isMissing` flag must start false and only flip when R2 answers
+    // null for a listed key — never fire for an unrelated failure such as
+    // the upload write itself rejecting.
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    const exported = await seedExport(userId, "pending");
+    const failure = new Error("boom: imports.put rejected");
+    const { deps } = depsWith({
+      imports: {
+        list: (options) => env.IMPORTS.list(options),
+        get: (key) => env.IMPORTS.get(key),
+        put: () => Promise.reject(failure),
+      },
+    });
+
+    await expect(buildExport(deps, exported.id)).rejects.toThrow(
+      "boom: imports.put rejected",
+    );
+  });
+
+  it("stamps every ZIP entry with the build's own clock, not a raw reinterpretation of it", async () => {
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    const exported = await seedExport(userId, "pending");
+    const { deps } = depsWith();
+
+    await buildExport(deps, exported.id);
+
+    const { zip } = await stagedZip(userId, exported.id);
+    const stamped = zip.modified.get("README.txt");
+    // NOW is 1_800_000_000 seconds — 2027. `deps.now / 1000` would land
+    // within seconds of the epoch, which DOS's date field cannot even
+    // represent as 2027, so any year this far off kills the mutant.
+    expect(stamped?.getFullYear()).toBe(new Date(NOW * 1000).getFullYear());
+  });
+
   it("finds every garment photo past one listing page", async () => {
     const userId = await seedRunner();
     const seeded = await seedEverything(userId);
@@ -334,6 +371,25 @@ describe("exportWorkFromEnv", () => {
     expect(
       await env.IMPORTS.head(exportKeyFor(userId, exported.id)),
     ).not.toBeNull();
+  });
+
+  it("settles the ready email through the real outbox, not a no-op", async () => {
+    const userId = await seedRunner();
+    const exported = await seedExport(userId, "pending");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {
+      /*
+      Sentry is disabled in tests; the capture logs instead.
+      */
+    });
+
+    await exportWorkFromEnv().build(exported.id);
+
+    const owed = await owedFor(exported.id);
+    // A stubbed `settle` never touches the outbox at all, so either
+    // outcome — the real fast path settled the row, or it tried and
+    // reported why it could not — is proof it actually ran.
+    expect(owed.length === 0 || error.mock.calls.length > 0).toBe(true);
+    error.mockRestore();
   });
 
   it("marks a dead-lettered export failed and tells Sentry its ids", async () => {

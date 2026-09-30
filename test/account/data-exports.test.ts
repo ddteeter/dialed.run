@@ -10,6 +10,7 @@ import {
 } from "../../src/lib/data-export";
 import { newUlid } from "../../src/lib/ids";
 import {
+  canRequest,
   exportFileResponse,
   exportKeyFor,
   exportPrefixFor,
@@ -106,6 +107,41 @@ async function rowWith(
   return row;
 }
 
+/**
+A row for `canRequest` and `rowState`, asked for at `requestedAt`.
+*/
+function rowLike(status: Status, requestedAt: number) {
+  return rowWith(status, { requestedAt });
+}
+
+describe("canRequest", () => {
+  it("blocks while a build is in flight, however long it has been waiting", async () => {
+    // The in-flight check must gate on its own, before the once-a-day
+    // arithmetic ever runs — an old enough `pending`/`building` row would
+    // otherwise clear the elapsed-time check on its own.
+    expect(
+      canRequest(await rowLike("pending", NOW - EXPORT_EVERY_S - 1), NOW),
+    ).toBe(false);
+    expect(
+      canRequest(await rowLike("building", NOW - EXPORT_EVERY_S - 1), NOW),
+    ).toBe(false);
+  });
+
+  it("allows one a day once nothing is in flight, never before", async () => {
+    expect(canRequest(await rowLike("ready", NOW - EXPORT_EVERY_S), NOW)).toBe(
+      true,
+    );
+    expect(
+      canRequest(await rowLike("ready", NOW - EXPORT_EVERY_S + 1), NOW),
+    ).toBe(false);
+  });
+
+  it("always allows another after a failure, and the very first request", async () => {
+    expect(canRequest(await rowLike("failed", NOW), NOW)).toBe(true);
+    expect(canRequest(undefined, NOW)).toBe(true);
+  });
+});
+
 describe("rowState", () => {
   it("is idle with nothing asked for", () => {
     expect(rowState(undefined, NOW)).toStrictEqual({ state: "idle" });
@@ -141,6 +177,12 @@ describe("rowState", () => {
       "ready",
     );
     expect(rowState(ready, requestedAt + EXPORT_EVERY_S)).toStrictEqual({
+      state: "idle",
+    });
+  });
+
+  it("never fills in a ready state's token and expiry when there is no expiry to key it to", async () => {
+    expect(rowState(await rowLike("ready", NOW), NOW)).toStrictEqual({
       state: "idle",
     });
   });
@@ -211,6 +253,30 @@ describe("requestExport", () => {
     ).toStrictEqual({ state: "preparing" });
     expect(await rowsOf(userId)).toHaveLength(1);
     expect(second.sent).toStrictEqual([]);
+  });
+
+  it("answers a repeat of an old failed press with that press's failure, even while a newer one is in flight", async () => {
+    // The repeat lookup is keyed by idempotencyKey, which is not
+    // necessarily the user's latest row — a skipped repeat check would
+    // fall through to the *latest* row's state instead of the one this
+    // exact key made.
+    const userId = newUlid();
+    const oldFailed = await seedExport(userId, "failed", {
+      requestedAt: NOW - 2 * EXPORT_EVERY_S,
+    });
+    await seedExport(userId, "pending", { requestedAt: NOW - 10 });
+    const { sent, effects: live } = effects();
+
+    expect(
+      await requestExport(
+        db,
+        { userId, idempotencyKey: oldFailed.idempotencyKey },
+        live,
+        NOW,
+      ),
+    ).toStrictEqual({ state: "failed" });
+    expect(sent).toStrictEqual([]);
+    expect(await rowsOf(userId)).toHaveLength(2);
   });
 
   it("answers a repeat of a press whose export failed with the failure", async () => {

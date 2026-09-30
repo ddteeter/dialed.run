@@ -62,7 +62,28 @@ function sizeAndOffset(
 }
 
 /**
-One central-directory entry at `at`: its name, its bytes, and where the next begins.
+ * The MS-DOS date/time a central-directory entry carries at `at+12`
+ * (time) and `at+14` (date), decoded with the same local-calendar fields
+ * `client-zip`'s own encoder writes them with (`getSeconds`, `getMinutes`,
+ * `getHours`, `getDate`, `getMonth`, `getFullYear`) — so a round trip
+ * through this reads back whatever `Date` the build actually stamped,
+ * rather than assuming a timezone the encoder never asserted.
+ */
+function dosModified(view: DataView, at: number): Date {
+  const time = view.getUint16(at + 12, true);
+  const date = view.getUint16(at + 14, true);
+  const seconds = (time & 0x1f) * 2;
+  const minutes = (time >> 5) & 0x3f;
+  const hours = (time >> 11) & 0x1f;
+  const day = date & 0x1f;
+  const month = (date >> 5) & 0x0f;
+  const year = ((date >> 9) & 0x7f) + 1980;
+  return new Date(year, month - 1, day, hours, minutes, seconds);
+}
+
+/**
+One central-directory entry at `at`: its name, its bytes, when it says it
+was modified, and where the next begins.
 */
 function readEntry(bytes: Uint8Array, view: DataView, at: number) {
   if (view.getUint32(at, true) !== CENTRAL) {
@@ -77,6 +98,7 @@ function readEntry(bytes: Uint8Array, view: DataView, at: number) {
   if (view.getUint16(at + 10, true) !== 0) {
     throw new Error(`${name} is not stored`);
   }
+  const modified = dosModified(view, at);
   const wide = zip64Values(view, at + 46 + nameLength, extraLength);
   const { size, offset } = sizeAndOffset(view, at, wide);
   if (view.getUint32(offset, true) !== LOCAL) {
@@ -94,6 +116,7 @@ function readEntry(bytes: Uint8Array, view: DataView, at: number) {
   return {
     name,
     data,
+    modified,
     next: at + 46 + nameLength + extraLength + commentLength,
   };
 }
@@ -101,6 +124,7 @@ function readEntry(bytes: Uint8Array, view: DataView, at: number) {
 export function readZip(buffer: ArrayBuffer): {
   names: string[];
   files: Map<string, Uint8Array>;
+  modified: Map<string, Date>;
 } {
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
@@ -110,13 +134,15 @@ export function readZip(buffer: ArrayBuffer): {
   let at = view.getUint32(end + 16, true);
   const names: string[] = [];
   const files = new Map<string, Uint8Array>();
+  const modified = new Map<string, Date>();
   for (let index = 0; index < count; index += 1) {
     const entry = readEntry(bytes, view, at);
     names.push(entry.name);
     files.set(entry.name, entry.data);
+    modified.set(entry.name, entry.modified);
     at = entry.next;
   }
-  return { names, files };
+  return { names, files, modified };
 }
 
 export function textOf(files: Map<string, Uint8Array>, name: string): string {

@@ -70,7 +70,10 @@ async function latestExport(
  * while one is in flight, and otherwise once a day has passed since the
  * last (round 27 #13, "One export a day").
  */
-function canRequest(latest: ExportRow | undefined, now: number): boolean {
+export function canRequest(
+  latest: ExportRow | undefined,
+  now: number,
+): boolean {
   if (latest === undefined || latest.status === "failed") return true;
   if ((IN_FLIGHT as readonly string[]).includes(latest.status)) return false;
   return now - latest.requestedAt >= EXPORT_EVERY_S;

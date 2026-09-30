@@ -102,13 +102,13 @@ async function writeZip(
   // throwing inside the zip library, which cannot hand a source's error
   // back without leaving a rejection nobody holds. Short of its length,
   // the stream refuses to close, the upload fails, and this says why.
-  const found = { isMissing: false };
+  const missing: string[] = [];
   async function* entries() {
     yield* texts;
     for (const object of files.objects) {
       const stored = await buckets[object.bucket].get(object.key);
       if (stored === null) {
-        found.isMissing = true;
+        missing.push(object.key);
         return;
       }
       yield {
@@ -128,7 +128,7 @@ async function writeZip(
       makeZip(entries()).pipeTo(writable),
     ]);
   } catch (error) {
-    throw found.isMissing ? new Error("an export file went missing") : error;
+    throw missing.length > 0 ? new Error("an export file went missing") : error;
   }
 }
 

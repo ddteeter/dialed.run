@@ -95,6 +95,14 @@ beforeEach(async () => {
 });
 
 describe("sweepExports", () => {
+  it("runs on the live bindings when no deps are handed in", async () => {
+    // The default parameter (`liveSweepDeps()`) is only ever evaluated when
+    // a caller omits `deps` entirely — every other test here always passes
+    // one explicitly, so this is the only thing that reaches it at all.
+    const anomalies: string[] = [];
+    await expect(sweepExports(anomalies)).resolves.toBeUndefined();
+  });
+
   it("deletes an expired ZIP and its row, and leaves one still live", async () => {
     const expired = await stagedFor(
       await seedExport("ready", { expiresAt: NOW }),

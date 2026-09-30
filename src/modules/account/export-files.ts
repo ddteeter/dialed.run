@@ -111,11 +111,12 @@ export function exportFiles(
   const garmentPhotos = new Map(
     data.garments.map((garment) => [garment.id, garmentPhoto(garment, stored)]),
   );
+  const photosByEntry = data.entries.map((entry) => ({
+    id: entry.id,
+    files: entry.photos.flatMap((photo) => entryPhoto(photo, stored) ?? []),
+  }));
   const entryPhotos = new Map(
-    data.entries.map((entry) => [
-      entry.id,
-      entry.photos.flatMap((photo) => entryPhoto(photo, stored) ?? []),
-    ]),
+    photosByEntry.map((entry) => [entry.id, entry.files]),
   );
   const uploaded = data.uploads.flatMap((upload) => {
     const file = runFile(upload, stored);
@@ -159,8 +160,10 @@ export function exportFiles(
     readmeSection(garmentsSheet),
     "",
   ].join("\n");
+  // Read from the list the map was built from, not looked back up by id:
+  // there is no entry the map lacks, so no fallback for one.
   const objects = [
-    ...data.entries.flatMap((entry) => entryPhotos.get(entry.id) ?? []),
+    ...photosByEntry.flatMap((entry) => entry.files),
     ...data.garments.flatMap((garment) => garmentPhotos.get(garment.id) ?? []),
     ...uploaded.map(({ file }) => file),
   ];
