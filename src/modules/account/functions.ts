@@ -16,6 +16,7 @@ import {
   optionalUserId,
   requireSignedInSince,
   requireUserId,
+  requireUserIdWhileLeaving,
 } from "../auth";
 import { emailDepsFromEnv } from "../email";
 import {
@@ -284,10 +285,11 @@ export const requestDeletionFn = createServerFn({ method: "POST" })
   );
 
 /**
-"Keep your account?" · Keep my account (ACC-9).
-*/
+ * "Keep your account?" · Keep my account (ACC-9): the one server function
+ * a runner inside their deletion's week may call.
+ */
 export const keepAccountFn = createServerFn({ method: "POST" }).handler(
-  async () => keepAccount(db(), await requireUserId()),
+  async () => keepAccount(db(), await requireUserIdWhileLeaving()),
 );
 
 /**

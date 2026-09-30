@@ -20,6 +20,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { auth } from "./instance";
+import { activeUserId, keepableUserId } from "./leaving-gate";
 import { checkOwnPassword, type PasswordCheck } from "./password-check";
 import {
   optionalUserIdFrom,
@@ -28,15 +29,30 @@ import {
   userIdOrThrow,
 } from "./session-user";
 
+function db() {
+  return drizzle(env.DIALED_CORE);
+}
+
 /**
- * The signed-in user's id, or `AuthRequiredError`. Server-function side
- * only — route loaders want `requireSession` from ./functions, which
- * redirects instead of throwing.
+ * The signed-in user's id, or `AuthRequiredError` — and
+ * `AccountLeavingError` for a runner whose account is set to be deleted
+ * (ACC-9; ./leaving-gate says why the server, and not only the root
+ * route, says no). Server-function side only — route loaders want
+ * `requireSession` from ./functions, which redirects instead of throwing.
  */
 export async function requireUserId(): Promise<string> {
-  return userIdOrThrow(
-    await auth.api.getSession({ headers: getRequestHeaders() }),
-  );
+  const session = await auth.api.getSession({ headers: getRequestHeaders() });
+  return activeUserId(db(), userIdOrThrow(session));
+}
+
+/**
+ * `requireUserId` for "Keep your account?" alone: a runner inside their
+ * deletion's week may keep it, and nothing else. Any other caller wants
+ * `requireUserId`.
+ */
+export async function requireUserIdWhileLeaving(): Promise<string> {
+  const session = await auth.api.getSession({ headers: getRequestHeaders() });
+  return keepableUserId(db(), userIdOrThrow(session));
 }
 
 /**
@@ -80,7 +96,7 @@ export async function checkCurrentPassword(
   return checkOwnPassword(
     {
       auth,
-      db: drizzle(env.DIALED_CORE),
+      db: db(),
       userId: await requireUserId(),
       headers: getRequestHeaders(),
     },
@@ -90,13 +106,16 @@ export async function checkCurrentPassword(
 
 /**
  * The signed-in runner and when their session was made — for a change a
- * fresh sign-in can prove (ACC-9's Google re-auth).
+ * fresh sign-in can prove (ACC-9's Google re-auth). Refused, as
+ * `requireUserId` is, for an account already set to be deleted.
  */
 export async function requireSignedInSince(): Promise<{
   userId: string;
   signedInAt: number;
 }> {
-  return signedInSince(
+  const signedIn = signedInSince(
     await auth.api.getSession({ headers: getRequestHeaders() }),
   );
+  await activeUserId(db(), signedIn.userId);
+  return signedIn;
 }

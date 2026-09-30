@@ -29,6 +29,7 @@ export {
   optionalUserId,
   requireSignedInSince,
   requireUserId,
+  requireUserIdWhileLeaving,
 } from "./require-user";
 export type { PasswordCheck } from "./password-check";
 export { deploymentPosture } from "./create-auth";
