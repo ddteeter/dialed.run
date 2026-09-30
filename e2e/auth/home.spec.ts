@@ -47,8 +47,11 @@ test("preloads the self-hosted fonts from the served HTML", async ({
     "/fonts/archivo-black-latin.woff2",
     "/fonts/ibm-plex-mono-400-latin.woff2",
   ]) {
+    // Open-ended on purpose: the router stamps the request's CSP nonce
+    // (OPS-8) on every head tag after these attributes, and the nonce is
+    // different on every response.
     expect(head, `${face} is not preloaded in the served head`).toContain(
-      `<link rel="preload" as="font" type="font/woff2" href="${face}" crossorigin="anonymous"/>`,
+      `<link rel="preload" as="font" type="font/woff2" href="${face}" crossorigin="anonymous"`,
     );
   }
 
