@@ -221,6 +221,9 @@ describe("which type an edge resolves to", () => {
       ["/onboarding/settings", "/account/sign-in"],
       ["/auth/signup", "/account/check-email"],
       ["/auth/login", "/account/forgot"],
+      // Task 126 (ACC-13): the privacy policy, from Au2 and Settings.
+      ["/auth/signup", "/privacy"],
+      ["/onboarding/settings", "/privacy"],
       ["/onboarding/name", "/onboarding/calibrate"],
       ["/onboarding/calibrate", "/onboarding/taplist"],
       ["/onboarding/taplist", "/onboarding/settings"],
