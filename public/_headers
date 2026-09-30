@@ -2,10 +2,12 @@
 # these files without running the Worker, so server.ts's wrapper never sees
 # them; Cloudflare applies this file instead, and to nothing the Worker
 # generates. The values are ops/security-headers.ts's, without a report-uri
-# (it is derived from the SENTRY_DSN secret, which this file cannot read),
+# (it is derived from the SENTRY_DSN secret, which this file cannot read)
+# and without a script nonce (one is minted per Worker response; none of
+# these files is a document that runs script),
 # and test/ops/static-headers.dom.test.tsx fails if the two drift.
 /*
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://www.strava.com
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://www.strava.com
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

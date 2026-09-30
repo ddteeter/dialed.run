@@ -486,8 +486,9 @@ flowchart LR
   without them. A report-only CSP reporting to Sentry (the static copy has
   no report-uri, which comes from a secret),
   `frame-ancestors 'none'`, HSTS, Referrer-Policy, Permissions-Policy and
-  nosniff. The CSP allows inline script until a nonce is threaded through
-  `router.tsx`.
+  nosniff. Inline script runs on a per-request nonce (`lib/csp-nonce`:
+  minted in `server.ts`, stamped on the framework's scripts through
+  `router.tsx`'s `ssr.nonce`), never on `'unsafe-inline'`.
 - **The Desk** (`/desk`, decision D-35): the operator's surface, behind the
   admin gate as not-found for anyone else. Task 125 built the shell and
   Today; 126 adds Access (D7), 128 the ban panel and Runners.

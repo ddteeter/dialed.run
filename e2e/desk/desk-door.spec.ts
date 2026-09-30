@@ -32,6 +32,30 @@ test.describe("anyone who is not an operator", () => {
   });
 });
 
+/**
+The script nonce a response's CSP names, or "" for none.
+*/
+function nonceIn(headers: Record<string, string>): string {
+  const policy = headers["content-security-policy-report-only"] ?? "";
+  return /'nonce-([^']+)'/.exec(policy)?.[1] ?? "";
+}
+
+/**
+The opening tag of every `<script>` without a `src`: the inline ones.
+*/
+function inlineScriptTags(html: string): string[] {
+  return (html.match(/<script\b[^>]*>/g) ?? []).filter(
+    (tag) => !/\ssrc=/.test(tag),
+  );
+}
+
+/**
+A tag's `nonce` attribute; React quotes it one way, the router another.
+*/
+function nonceAttribute(tag: string): string | undefined {
+  return /\snonce=["']([^"']*)["']/.exec(tag)?.[1];
+}
+
 test.describe("security headers (OPS-8)", () => {
   test("a page carries every one", async ({ request }) => {
     const response = await request.get("/auth/login");
@@ -46,6 +70,27 @@ test.describe("security headers (OPS-8)", () => {
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["permissions-policy"]).toContain("geolocation=(self)");
     expect(headers["strict-transport-security"]).toBe("max-age=31536000");
+  });
+
+  test("every inline script carries this response's nonce, and no other", async ({
+    request,
+  }) => {
+    const first = await request.get("/auth/login");
+    const second = await request.get("/auth/login");
+    const nonce = nonceIn(first.headers());
+
+    // One per response: a nonce two responses share is a nonce an attacker
+    // who read one page can reuse on the next.
+    expect(nonce).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    expect(nonceIn(second.headers())).not.toBe(nonce);
+
+    // The framework's hydration state and React's stream are inline
+    // scripts; each one must carry the nonce or the policy reports it.
+    const inline = inlineScriptTags(await first.text());
+    expect(inline.length).toBeGreaterThan(0);
+    expect(inline.map((tag) => nonceAttribute(tag))).toStrictEqual(
+      inline.map(() => nonce),
+    );
   });
 
   test("the photo route still answers as itself", async ({ request }) => {
