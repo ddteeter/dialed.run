@@ -489,6 +489,11 @@ flowchart LR
   nosniff. Inline script runs on a per-request nonce (`lib/csp-nonce`:
   minted in `server.ts`, stamped on the framework's scripts through
   `router.tsx`'s `ssr.nonce`), never on `'unsafe-inline'`.
+- **A size budget on the client entry chunk**: `npm run check:bundle`,
+  which `postbuild` runs, fails a build whose entry chunk is over
+  **280,000 bytes** (measured at 269,735 raw, 85.5 kB gzipped, on
+  2026-09-30). The number, and what raising it should come with, live in
+  `scripts/check-bundle.ts`; the build prints the size every time.
 - **The Desk** (`/desk`, decision D-35): the operator's surface, behind the
   admin gate as not-found for anyone else. Task 125 built the shell and
   Today; 126 adds Access (D7), 128 the ban panel and Runners.
