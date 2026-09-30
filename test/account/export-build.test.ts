@@ -336,6 +336,37 @@ describe("buildExport", () => {
     expect(stamped?.getFullYear()).toBe(new Date(NOW * 1000).getFullYear());
   });
 
+  it("lists only the runner's own prefixes, never the whole bucket", async () => {
+    const userId = await seedRunner();
+    const exported = await seedExport(userId, "pending");
+    const listed: (string | undefined)[] = [];
+    const { deps } = depsWith({
+      media: {
+        get: (key) => env.MEDIA.get(key),
+        list: (options) => {
+          listed.push(options?.prefix);
+          return env.MEDIA.list(options);
+        },
+      },
+      imports: {
+        get: (key) => env.IMPORTS.get(key),
+        put: (key, value, options) => env.IMPORTS.put(key, value, options),
+        list: (options) => {
+          listed.push(options?.prefix);
+          return env.IMPORTS.list(options);
+        },
+      },
+    });
+
+    await buildExport(deps, exported.id);
+
+    expect(listed).toStrictEqual([
+      `entries/${userId}/`,
+      `items/${userId}/`,
+      `imports/${userId}/`,
+    ]);
+  });
+
   it("finds every garment photo past one listing page", async () => {
     const userId = await seedRunner();
     const seeded = await seedEverything(userId);

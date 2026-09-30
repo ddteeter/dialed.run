@@ -214,6 +214,8 @@ describe("sweepExports", () => {
     await seedExport("pending", {
       requestedAt: NOW - EXPORT_STALL_S,
     });
+    // Ten minutes is a send still in flight, not a lost one.
+    await seedExport("pending", { requestedAt: NOW - 10 * 60 });
     const dead = await seedExport("building", {
       requestedAt: NOW - 2 * EXPORT_LEASE_S,
       claimedAt: NOW - EXPORT_LEASE_S - 1,

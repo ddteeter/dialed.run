@@ -194,6 +194,13 @@ describe("rowState", () => {
     expect(rowState(await rowWith("expiring"), NOW)).toStrictEqual({
       state: "idle",
     });
+    // Even with its expiry still set and asked for today: an expiring copy
+    // is on its way out, and the row never offers it.
+    const expiring = await rowWith("expiring", {
+      requestedAt: NOW - 60,
+      expiresAt: NOW + 60,
+    });
+    expect(rowState(expiring, NOW)).toStrictEqual({ state: "idle" });
   });
 });
 

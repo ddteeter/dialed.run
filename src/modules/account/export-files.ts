@@ -124,12 +124,14 @@ export function exportFiles(
   });
   // The file a run was imported from: the upload that became it. A
   // duplicate upload names a run too, but it was not the run's source.
+  // Asked run by run, so only a run's own id is ever a key.
   const runFileOf = new Map(
-    uploaded.flatMap(({ upload, file }) =>
-      upload.status === "done" && upload.runId !== null
-        ? [[upload.runId, file.name] as const]
-        : [],
-    ),
+    data.runs.flatMap((run) => {
+      const source = uploaded.find(
+        ({ upload }) => upload.status === "done" && upload.runId === run.id,
+      );
+      return source === undefined ? [] : [[run.id, source.file.name] as const];
+    }),
   );
 
   const { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet } =
