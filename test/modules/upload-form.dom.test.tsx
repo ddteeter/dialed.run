@@ -27,6 +27,7 @@ import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
 } from "../../src/modules/runs/upload-limits";
+import { DURATION } from "../../src/ui/motion";
 import { expectBusy } from "../ui/unavailable";
 import {
   RUN_ID,
@@ -224,6 +225,29 @@ beforeEach(() => {
   configure({ unstable_advanceTimersWrapper: (work) => move(test, work) });
 });
 
+/**
+ * How long a form may go on finishing once it is gone: the longest motion
+ * there is. What legitimately outlives an unmount here is a grace before a
+ * success moves on (`useFormSubmit` waits `DURATION.instant`), and nothing
+ * in the product animates longer than `reveal`. A timer still pending past
+ * that is not a tail but a leak.
+ */
+const SETTLED_AFTER_MS = DURATION.reveal;
+
+/**
+ * Every test ends with the form unmounted and its timers run out, on this
+ * file's clock.
+ *
+ * `test/dom-setup.ts` fails a file that leaves a timer pending, but it
+ * watches only real timers, and in this file every timer is a fake one
+ * that `useRealTimers` throws away. So a stall timer the form forgot to
+ * clear, or a five-minute garbage collection its query client scheduled on
+ * the way out, passed here unseen. This is that drain in fake time: unmount,
+ * give whatever was finishing its last moment, and count what is left.
+ *
+ * It moves the clock under an owner of its own, once the test's last move
+ * has landed, so a body that outlived its test cannot share the `act()`.
+ */
 afterEach(async () => {
   clock.owner.isOpen = false;
   try {
@@ -231,10 +255,21 @@ afterEach(async () => {
   } catch {
     // The test has already failed, with its own error.
   }
-  clock.moving = undefined;
-  vi.unstubAllGlobals();
-  vi.useRealTimers();
-  vi.restoreAllMocks();
+  try {
+    cleanup();
+    await move({ isOpen: true }, () =>
+      vi.advanceTimersByTimeAsync(SETTLED_AFTER_MS),
+    );
+    expect(
+      vi.getTimerCount(),
+      `timer(s) still pending ${String(SETTLED_AFTER_MS)}ms after the form unmounted`,
+    ).toBe(0);
+  } finally {
+    clock.moving = undefined;
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  }
 });
 
 /**
@@ -549,19 +584,26 @@ describe("A1: sending and reading", () => {
     // and react-query's default scheduled a five-minute collection of a
     // cache that only this form's own client could ever reach. Both fired
     // into a torn-down window in this project (test/dom-setup.ts).
-    const upload = vi.fn<Upload>(() =>
-      Promise.resolve({ importId: "01IMPORT" }),
-    );
-    await renderWithRouter(form({ upload }));
+    //
+    // That drain only sees real timers, and this file's are fake, so every
+    // test here ends with the same count taken in fake time (`afterEach`).
+    // This one is the case it exists for, taken mid-read: the watch is what
+    // starts the stall timer and the query whose last observer leaving
+    // would schedule the collection, so the first poll is the moment both
+    // can exist. Before it there is nothing to leak.
+    const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
+    await renderWithRouter(form({ getOutcome }));
     fireEvent.change(dropInput(), { target: { files: [gpx()] } });
-    await waitFor(() => {
-      expect(upload).toHaveBeenCalledTimes(1);
-    });
-    await waitFor(() => {
-      expect(well()).toHaveAttribute("data-state", "uploading");
-    });
+    await firstPoll(getOutcome);
+    await elapse(0);
+    // The stall timer, at least: the count below is not zero by default.
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
 
     cleanup();
+    // Whatever unmounting itself queued for now — react-query batches its
+    // notifications on a zero-delay timer — runs; a timer set for later
+    // does not, and is what this counts.
+    await elapse(0);
 
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -678,29 +720,34 @@ describe("A1: sending and reading", () => {
   });
 
   it("never shows a new import the last one's answer", async () => {
+    // Two imports, one client: the form's cache outlives the first watch,
+    // so what keeps the second from being served the first one's settled
+    // answer is that each import is its own entry. The check is made once
+    // the second import is being asked about — before that the well is
+    // still sending, and shows the right file whatever the cache holds.
     const user = setupUser();
     const upload = vi
       .fn<Upload>()
       .mockResolvedValueOnce({ importId: "01IMPORT" })
       .mockResolvedValueOnce({ importId: "02IMPORT" });
     const answers = parsed();
-    await renderWithRouter(
-      form({
-        upload,
-        getOutcome: ({ data }) =>
-          data.importId === "01IMPORT" ? answers() : neverAnswers(),
-      }),
+    const getOutcome = vi.fn<GetOutcome>(({ data }) =>
+      data.importId === "01IMPORT" ? answers() : neverAnswers(),
     );
+    await renderWithRouter(form({ upload, getOutcome }));
     await user.upload(dropInput(), gpx());
     await screen.findByText("Parsed · run.gpx");
     await user.click(screen.getByRole("button", { name: "Replace" }));
 
     await user.upload(dropInput(), gpx("second.gpx"));
-
     await waitFor(() => {
-      expect(upload).toHaveBeenCalledTimes(2);
+      expect(getOutcome).toHaveBeenCalledWith({
+        data: { importId: "02IMPORT" },
+      });
     });
-    expect(await within(well()).findByText("Reading second.gpx")).toBeVisible();
+    await elapse(0);
+
+    expect(within(well()).getByText("Reading second.gpx")).toBeVisible();
     expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
   });
 
